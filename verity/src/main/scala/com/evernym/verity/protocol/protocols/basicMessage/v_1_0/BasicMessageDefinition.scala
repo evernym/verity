@@ -7,7 +7,6 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
 import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition, Scope}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.Participator
-import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupProtoDef.msgFamily
 
 object BasicMessageDefinition extends ProtocolDefinition[BasicMessage, Role, Msg, Event, State, String] {
   val msgFamily: MsgFamily = BasicMessageMsgFamily

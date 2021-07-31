@@ -6,7 +6,6 @@ import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, MSG_STATUS_RECEIVED}
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.SpanUtil._
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, NotifyMsgDetail, OutgoingMsgParam}
@@ -38,6 +37,7 @@ import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.R
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsReqMsg, UpdateMsgStatusReqMsg}
+import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.SendConfig
 
 import scala.concurrent.Future
@@ -59,7 +59,7 @@ trait UserAgentCommon
   type StateType <: AgentStateInterface with UserAgentCommonState
 
   def failedMsgTracker: Option[FailedMsgTracker] = None
-  override lazy val msgStore: MsgStore = new MsgStore(appConfig, this, failedMsgTracker)
+  override lazy val msgStore: MsgStore = new MsgStore(appConfig, this, failedMsgTracker, metricsWriter)
   /**
    * handler for common message types supported by 'user agent' and 'user agent pairwise' actor
    * @param reqMsgContext request message context
@@ -166,7 +166,7 @@ trait UserAgentCommon
   }
 
   def handleUpdateConfigPackedReq(updateConf: UpdateConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    runWithInternalSpan("handleUpdateConfigPackedReq", "UserAgentCommon") {
+    metricsWriter.runWithSpan("handleUpdateConfigPackedReq", "UserAgentCommon", InternalSpan) {
       val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
       val resourceName = reqMsgContext.msgFamilyDetail.map(ResourceUsageUtil.getMessageResourceName)
         .getOrElse(MSG_TYPE_UPDATE_CONFIGS)
@@ -175,7 +175,7 @@ trait UserAgentCommon
       postUpdateConfig(updateConf, reqMsgContext.latestMsgSenderVerKey)
       val configUpdatedRespMsg = UpdateConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
       sendRespMsg("ConfigUpdated", rp, sender)
     }
   }
@@ -193,7 +193,7 @@ trait UserAgentCommon
   def encParamFromThisAgentToOwner: EncryptParam
 
   def handleRemoveConfigMsg(removeConf: RemoveConfigReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    runWithInternalSpan("handleRemoveConfigMsg", "UserAgentCommon") {
+    metricsWriter.runWithSpan("handleRemoveConfigMsg", "UserAgentCommon", InternalSpan) {
       val userId = userIdForResourceUsageTracking(reqMsgContext.latestMsgSenderVerKey)
       val resourceName = ResourceUsageUtil.getMessageResourceName(removeConf.msgFamilyDetail)
       addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
@@ -203,7 +203,7 @@ trait UserAgentCommon
       }
       val configRemovedRespMsg = RemoveConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configRemovedRespMsg, reqMsgContext.wrapInBundledMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
       sendRespMsg("ConfigRemoved", rp, sender)
     }
   }
@@ -213,11 +213,11 @@ trait UserAgentCommon
   }
 
   def handleGetConfigsMsg(getConfs: GetConfigsReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    runWithInternalSpan("handleGetConfigsMsg", "UserAgentCommon") {
+    metricsWriter.runWithSpan("handleGetConfigsMsg", "UserAgentCommon", InternalSpan) {
       val confs = getFilteredConfigs(getConfs.configs)
       val getConfRespMsg = GetConfigsMsgHelper.buildRespMsg(confs)(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, getConfRespMsg, reqMsgContext.wrapInBundledMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
       sendRespMsg("Configs", rp, sender)
     }
   }

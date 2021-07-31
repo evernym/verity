@@ -1,15 +1,12 @@
 package com.evernym.verity.app_launcher
 
 import akka.Done
-
-import java.time.LocalDateTime
-import java.time.temporal.ChronoUnit
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.actor.Platform
-import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, CauseDetail, ErrorEvent, ListeningSuccessful, SeriousSystemError, StartDraining, SuccessEvent}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
+import com.evernym.verity.actor.appStateManager._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.{HttpServerBindResult, HttpServerUtil}
 import com.evernym.verity.logging.LoggingUtil
@@ -20,6 +17,8 @@ import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 import sun.misc.{Signal, SignalHandler}
 
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
@@ -32,6 +31,8 @@ class HttpServer(val platform: Platform, routes: Route)
   implicit lazy val system: ActorSystem = platform.agentActorContext.system
   lazy implicit val executor: ExecutionContextExecutor = system.dispatcher
 
+  lazy val metricsWriter : MetricsWriter = platform.agentActorContext.metricsWriter
+
   var httpBinding: Option[ServerBinding] = None
 
   def start(): Unit = {
@@ -41,8 +42,8 @@ class HttpServer(val platform: Platform, routes: Route)
 
   def stop(): Future[Done] = {
     httpBinding match {
-      case Some(hb) => hb.terminate(Duration(30, SECONDS)).map( _ => Done)
-      case None     => Future(Done)
+      case Some(hb) => hb.terminate(Duration(30, SECONDS)).map(_ => Done)
+      case None => Future(Done)
     }
   }
 
@@ -50,7 +51,7 @@ class HttpServer(val platform: Platform, routes: Route)
     startNewServer(routes, appConfig)
   }
 
-  private def startService(f:() => Future[Seq[HttpServerBindResult]]): Unit = {
+  private def startService(f: () => Future[Seq[HttpServerBindResult]]): Unit = {
     try {
       val serviceStartTime = LocalDateTime.now
       val bindResultFut = f()
@@ -71,8 +72,8 @@ class HttpServer(val platform: Platform, routes: Route)
           }
           val serviceStartFinishTime = LocalDateTime.now
           val millis = ChronoUnit.MILLIS.between(serviceStartTime, serviceStartFinishTime)
-          MetricsWriter.gaugeApi.updateWithTags(AS_START_TIME, millis)
-          initGaugeMetrics()
+          metricsWriter.gaugeUpdate(AS_START_TIME, millis)
+          initGaugeMetrics(metricsWriter)
         case Failure(e) =>
           throw e
       }

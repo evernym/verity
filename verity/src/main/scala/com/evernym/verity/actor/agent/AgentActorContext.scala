@@ -18,6 +18,7 @@ import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExe
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher, OAuthAccessTokenRefresherImplV1}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.OAUTH2_VERSION_1
+import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.ProtocolRegistry
 import com.evernym.verity.protocol.protocols
@@ -46,8 +47,9 @@ trait AgentActorContext extends ActorContext {
     new LedgerGetCredDefCacheFetcher(ledgerSvc, appConfig)
   ).map(f => f.fetcherParam -> f).toMap
 
-  lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers)
-  lazy val msgSendingSvc: MsgSendingSvc = new AkkaHttpMsgSendingSvc(appConfig.config)
+  lazy val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()
+  lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers, metricsWriter)
+  lazy val msgSendingSvc: MsgSendingSvc = new AkkaHttpMsgSendingSvc(appConfig.config, metricsWriter)
   lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] = protocols.protocolRegistry
   lazy val smsSvc: SMSSender = createSmsSender()
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter

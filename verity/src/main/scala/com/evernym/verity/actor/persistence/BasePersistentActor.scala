@@ -11,7 +11,6 @@ import com.evernym.verity.util2.Exceptions._
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
@@ -24,7 +23,7 @@ import com.evernym.verity.protocol.engine.MultiEvent
 import com.evernym.verity.util.Util._
 import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
 import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.transformations.transformers.<=>
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
@@ -111,15 +110,15 @@ trait BasePersistentActor
 
   def trackPersistenceFailure(): Unit = {
     val duration = System.currentTimeMillis() - persistStart
-    MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_PERSIST_FAILED_COUNT)
+    metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_PERSIST_FAILED_COUNT)
     //TODO: is below metrics needs to be captured in case of failure too?
-    MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_PERSIST_DURATION, duration)
+    metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_PERSIST_DURATION, duration)
   }
 
   private def trackPersistenceSuccess(): Unit = {
     val duration = System.currentTimeMillis() - persistStart
-    MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_PERSIST_SUCCEED_COUNT)
-    MetricsWriter.gaugeApi.increment(AS_SERVICE_DYNAMODB_PERSIST_DURATION, duration)
+    metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_PERSIST_SUCCEED_COUNT)
+    metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_PERSIST_DURATION, duration)
   }
 
   private final def persistEvent(events: List[Any], sync: Boolean)(handler: Any => Unit): Unit = {
@@ -178,20 +177,20 @@ trait BasePersistentActor
   def writeAndApply(evt: Any): Unit = persistExt(evt)(receiveRecover)
 
   def writeAndApplyAll(events: List[Any]): Unit = {
-    runWithInternalSpan("writeAndApplyAll", "BasePersistentActor") {
+    metricsWriter.runWithSpan("writeAndApplyAll", "BasePersistentActor", InternalSpan) {
       persistExtAll(events)(receiveRecover)
     }
   }
 
   def asyncWriteAndApply(evt: Any): Unit= {
-    runWithInternalSpan("asyncWriteAndApply", "BasePersistentActor") {
+    metricsWriter.runWithSpan("asyncWriteAndApply", "BasePersistentActor", InternalSpan) {
       asyncWriteWithoutApply(evt)
       applyEvent(evt)
     }
   }
 
   def asyncWriteAndApplyAll(events: List[Any]): Unit= {
-    runWithInternalSpan("asyncWriteAndApplyAll", "BasePersistentActor") {
+    metricsWriter.runWithSpan("asyncWriteAndApplyAll", "BasePersistentActor", InternalSpan) {
       asyncWriteWithoutApplyAll(events)
       events.map(applyEvent)
     }
@@ -302,7 +301,7 @@ trait BasePersistentActor
   }
 
   def handleRecoveryCompleted(): Unit = {
-    runWithInternalSpan("handleRecoveryCompleted", "BasePersistentActor") {
+    metricsWriter.runWithSpan("handleRecoveryCompleted", "BasePersistentActor", InternalSpan) {
       val curTime = LocalDateTime.now
       val millis = ChronoUnit.MILLIS.between(preStartTime, curTime)
       val actorRecoveryMsg = s"[$actorId] actor recovery completed (" +
@@ -324,7 +323,7 @@ trait BasePersistentActor
   var postActorRecoveryStarted = LocalDateTime.now
   def postRecoveryCompleted(): Unit = {
     postActorRecoveryStarted = LocalDateTime.now
-    runWithInternalSpan("postRecoveryCompleted", "BasePersistentActor") {
+    metricsWriter.runWithSpan("postRecoveryCompleted", "BasePersistentActor", InternalSpan) {
       context.setReceiveTimeout(entityReceiveTimeout)
       logger.debug("post actor recovery started", (LOG_KEY_PERSISTENCE_ID, persistenceId))
       basePostActorRecoveryCompleted()

@@ -5,7 +5,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, DEPRECATED_AccessSetupNewWallet, AccessRight, AccessStoreTheirDiD, AccessVerKey}
+import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessRight, AccessStoreTheirDiD, AccessVerKey, DEPRECATED_AccessSetupNewWallet}
 import com.evernym.verity.protocol.engine.{MsgName, _}
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AskUserAgentCreator}
 

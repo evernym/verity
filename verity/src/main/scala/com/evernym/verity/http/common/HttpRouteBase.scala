@@ -2,7 +2,6 @@ package com.evernym.verity.http.common
 
 import java.net.{Inet4Address, InetAddress, NetworkInterface}
 import java.util.{Enumeration => JavaEnumeration}
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.MediaType.NotCompressible
 import akka.http.scaladsl.model._
@@ -32,6 +31,8 @@ trait HttpRouteBase
 
   def logger: Logger
   def appConfig: AppConfig
+
+  def metricsWriter: MetricsWriter
 
   protected lazy val internalApiAllowedFromIpAddresses: List[SubnetUtilsExt] = {
     var allowedIPs: List[String] = appConfig.getStringListReq(INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES)
@@ -110,10 +111,10 @@ trait HttpRouteBase
   def clientIpAddress(implicit remoteAddress: RemoteAddress): String =
     remoteAddress.getAddress().get.getHostAddress
 
-  def incrementAgentMsgCount: Unit = MetricsWriter.gaugeApi.increment(AS_ENDPOINT_HTTP_AGENT_MSG_COUNT)
-  def incrementAgentMsgSucceedCount: Unit = MetricsWriter.gaugeApi.increment(AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT)
+  def incrementAgentMsgCount: Unit = metricsWriter.gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_COUNT)
+  def incrementAgentMsgSucceedCount: Unit = metricsWriter.gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT)
   def incrementAgentMsgFailedCount(tags: Map[String, String] = Map.empty): Unit =
-    MetricsWriter.gaugeApi.incrementWithTags(AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT, tags)
+    metricsWriter.gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT, tags = tags)
 }
 
 

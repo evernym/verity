@@ -16,13 +16,12 @@ import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil, TestAppC
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, SignMsg, SignedMsg}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
-import com.evernym.verity.agentmsg.msgpacker.AgentMsgParseUtil
 import com.evernym.verity.agentmsg.tokenizer.SendToken
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.metrics.AllNodeMetricsData
+import com.evernym.verity.metrics.{MetricDetail, PrometheusMetricsParser}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
@@ -726,9 +725,10 @@ trait AgentMsgSenderHttpWrapper
     require(metrics.contains(expectedMetricName), "expected metrics not found: " + expectedMetricName)
   }
 
-  def getAllNodeMetrics(): AllNodeMetricsData = {
-    val r = getMetrics(fetchFromAllNodes = true)
-    AgentMsgParseUtil.convertTo[AllNodeMetricsData](r)
+  def getAllNodeMetrics(metricsHost: String): List[MetricDetail] = {
+    val url = UrlParam(metricsHost)
+    val data = sendGetRequest(None)(url, "/metrics")
+    PrometheusMetricsParser.parseString(data.toString)
   }
 
   def getMetrics(fetchFromAllNodes: Boolean): String = {

@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.coinflip
 
 import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi}
-import org.scalatest.{PrivateMethodTester}
+import org.scalatest.PrivateMethodTester
 import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
 import com.evernym.verity.testkit.BasicFixtureSpec
 

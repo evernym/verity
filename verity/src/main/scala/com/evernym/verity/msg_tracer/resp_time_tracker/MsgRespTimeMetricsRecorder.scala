@@ -1,18 +1,18 @@
 package com.evernym.verity.msg_tracer.resp_time_tracker
 
 import java.time.Instant
-
 import com.evernym.verity.actor.msg_tracer.resp_time_tracker._
 import com.evernym.verity.actor.base.{AlreadyDone, Done}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.{METRICS_LATENCY_RECORDING_HISTOGRAM, METRICS_LATENCY_RECORDING_SPAN}
-import kamon.Kamon
+import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}
 
 /**
  * class responsible to keep state related to one msg tracking
- * @param appConfig
+ * @param appConfig application config
+ * @param metricsWriter metrics writer
  */
-class MsgRespTimeMetricsRecorder(appConfig: AppConfig) {
+class MsgRespTimeMetricsRecorder(appConfig: AppConfig, metricsWriter: MetricsWriter) {
 
   private var reqReceivedAtEpochMillis: Option[Long] = None
   private var respMode: Option[RespMode] = None
@@ -47,24 +47,17 @@ class MsgRespTimeMetricsRecorder(appConfig: AppConfig) {
 
   private def updateSpanLatencyMetrics(msgTypeName: String, nextHop: String): Unit = {
     if (isSpanLatencyRecordingEnabled) {
-      val tags = List(MetricTag(TAG_NAME_MSG_TYPE, msgTypeName), MetricTag(TAG_NAME_NEXT_HOP, nextHop))
-      val span = Kamon.spanBuilder("msg-latency").start(
-        Instant.ofEpochMilli(startedTimeEpochMillis))
-      val taggedSpan = tags.foldLeft(span) { case (sp, mt) =>
-        sp.tagMetrics(mt.name, mt.value.toString)
-      }
-      taggedSpan.finish(Instant.now())
+      val tags = Map(TAG_NAME_MSG_TYPE -> msgTypeName, TAG_NAME_NEXT_HOP -> nextHop)
+      val start = Instant.ofEpochMilli(startedTimeEpochMillis)
+      metricsWriter.taggedSpan("msg-latency", start, tags)
     }
   }
 
   private def updateHistogramMetrics(msgTypeName: String, nextHop: String): Unit = {
     if (isHistogramLatencyRecordingEnabled) {
       val metricsName = "histogram.processing.time.millis"
-      Kamon
-        .histogram(metricsName)
-        .withTag(TAG_NAME_MSG_TYPE, msgTypeName)
-        .withTag(TAG_NAME_NEXT_HOP, nextHop)
-        .record(timeTakenInMillis)
+      val tags = Map (TAG_NAME_MSG_TYPE -> msgTypeName, TAG_NAME_NEXT_HOP -> nextHop)
+      metricsWriter.histogramUpdate(metricsName, MetricsUnit.None, timeTakenInMillis, tags)
     }
   }
 

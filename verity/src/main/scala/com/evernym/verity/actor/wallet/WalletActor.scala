@@ -6,7 +6,6 @@ import akka.actor.{ActorRef, NoSerializationVerificationNeeded, Stash}
 import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.util2.Status.{INVALID_VALUE, StatusDetail, UNHANDLED}
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -14,10 +13,11 @@ import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionCo
 import com.evernym.verity.actor.agent.{DidPair, PayloadMetadata}
 import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.vault.operation_executor.CryptoOpExecutor.buildErrorDetail
+import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.WalletUtil._
+import com.evernym.verity.vault.operation_executor.DidOpExecutor.buildErrorDetail
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
 import com.evernym.verity.vault.{KeyParam, WalletDoesNotExist, WalletExt, WalletProvider}
 import com.typesafe.scalalogging.Logger
@@ -156,7 +156,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
   }
 
   def openWalletIfExists(): Unit = {
-    runWithInternalSpan(s"openWallet", "WalletActor") {
+    metricsWriter.runWithSpan(s"openWallet", "WalletActor", InternalSpan) {
       openWallet()
         .map(w => SetWallet(Option(w)))
         .recover {
@@ -183,7 +183,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
     if (walletExtOpt.isEmpty) {
       logger.debug("WalletActor try to close not opened wallet")
     } else {
-      runWithInternalSpan(s"closeWallet", "WalletActor") {
+      metricsWriter.runWithSpan("closeWallet", "WalletActor", InternalSpan) {
         walletProvider.close(walletExt)
       }
     }

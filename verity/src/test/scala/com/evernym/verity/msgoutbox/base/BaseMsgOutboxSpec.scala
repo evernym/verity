@@ -31,6 +31,7 @@ import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.GetTokenSuccess
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.OAUTH2_VERSION_1
+import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
 import com.evernym.verity.testkit.TestWallet
@@ -64,6 +65,7 @@ trait BaseMsgOutboxSpec { this: BehaviourSpecBase =>
   lazy val appConfig = new TestAppConfig(Option(APP_CONFIG), clearValidators = true)
   lazy val storageAPI: MockBlobStore = StorageAPI.loadFromConfig(appConfig)(system.classicSystem).asInstanceOf[MockBlobStore]
   lazy val sharding: ClusterSharding = ClusterSharding(system)
+  lazy val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()
 
   lazy val testWallet = new TestWallet(createWallet = true)
   lazy val myKey1: NewKeyCreated = testWallet.executeSync[NewKeyCreated](CreateNewKey())
@@ -72,7 +74,7 @@ trait BaseMsgOutboxSpec { this: BehaviourSpecBase =>
 
   val testWalletOpExecutor: Behavior[WalletOpExecutor.Cmd] = TestWalletOpExecutor(testWallet.testWalletAPI)
   val testDIDCommV1Packager: Behavior[DIDCommV1Packager.Cmd] =
-    DIDCommV1Packager(new AgentMsgTransformer(testWallet.testWalletAPI), testWalletOpExecutor)
+    DIDCommV1Packager(new AgentMsgTransformer(testWallet.testWalletAPI), testWalletOpExecutor, metricsWriter)
 
   val testMsgTransports: MsgTransports = new MsgTransports {
     override val httpTransporter: Behavior[HttpTransporter.Cmd] = TestHttpTransport.apply()

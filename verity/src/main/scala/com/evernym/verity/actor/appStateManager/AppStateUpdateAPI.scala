@@ -10,6 +10,9 @@ import com.typesafe.scalalogging.Logger
  * around app state manager around how it should handle failure and do auto recovery
  */
 class AppStateUpdateAPIImpl(val as: ActorSystem) extends Extension {
+
+  //TODO: how to make sure this extension is thread safe?
+
   //this is to make sure code doesn't keep publishing "RecoverIfNeeded" event
   // even if the app state is already recovered
   var failedContexts = Set.empty[String]

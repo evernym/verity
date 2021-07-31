@@ -22,7 +22,6 @@ class ConsumerEndpointHandlerSpec
     with UpdateConnectionStatusSpec
     with UrlMappingSpec {
 
-
   override def testEdgeAgent(): Unit = {
     "Consumer edge 1 (MFV 0.5)" - {
       testAnswerFirstInvitation(mockEntEdgeEnv)

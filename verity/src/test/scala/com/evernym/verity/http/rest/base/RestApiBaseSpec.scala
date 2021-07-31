@@ -2,7 +2,6 @@ package com.evernym.verity.http.rest.base
 
 import java.time.LocalDateTime
 import java.util.UUID
-
 import akka.http.scaladsl.model.ContentTypes._
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.headers.{RawHeader, `Content-Type`}

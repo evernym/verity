@@ -9,7 +9,6 @@ import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersist
 import com.evernym.verity.actor.{ActorMessage, WindowActivityDefined, WindowRules}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.{DID, DomainId}
 import com.evernym.verity.util.TimeUtil
 import com.evernym.verity.util.TimeUtil.{IsoDateTime, dateAfterDuration, isDateExpired, toMonth}
@@ -154,7 +153,7 @@ class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMs
    */
   def recordAgentMetric(window: ActiveWindowRules, activity: AgentActivity): Unit = {
     logger.info(s"track activity: $activity, window: $window, tags: ${agentTags(window, activity.domainId)}")
-    MetricsWriter.gaugeApi.incrementWithTags(window.activityType.metricBase, agentTags(window, activity.domainId))
+    metricsWriter.gaugeIncrement(window.activityType.metricBase, tags = agentTags(window, activity.domainId))
     val recording = RecordingAgentActivity(
       activity.domainId,
       activity.timestamp,

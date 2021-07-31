@@ -14,6 +14,8 @@ import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
  */
 class ResourceBlockingStatusMngrCacheImpl extends ResourceBlockingStatusMngrCommon with Extension {
 
+  //TODO: how to make sure this extension is thread safe?
+
   def initBlockingList(cubs: UsageBlockingStatusChunk): Unit = {
     if (cubs.currentChunkNumber == 1) {
       entityBlockingStatus = cubs.usageBlockingStatus

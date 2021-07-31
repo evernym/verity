@@ -24,6 +24,8 @@ import com.evernym.verity.actor.typed.base.{PersistentEventAdapter, PersistentSt
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.metrics.CustomMetrics.{AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT}
+import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.RetryParam
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.AccessTokenRefreshers
 import com.evernym.verity.util.TimeZoneUtil
@@ -111,6 +113,7 @@ object Outbox {
 
           val setup = SetupOutbox(actorContext,
             entityContext,
+            MetricsWriterExtension(actorContext.system).get(),
             config,
             buffer,
             dispatcher,
@@ -186,6 +189,7 @@ object Outbox {
         Effect
           .persist(Events.MsgAdded(TimeZoneUtil.getMillisForCurrentUTCZonedDateTime, expiryDuration.toMillis, msgId))
           .thenRun((st: State) => processPendingDeliveries(st))
+          .thenRun((_: State) => setup.metricsWriter.gaugeIncrement(AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT))
           .thenReply(replyTo)((_: State) => StatusReply.success(Replies.MsgAdded))
       }
 
@@ -203,6 +207,10 @@ object Outbox {
       Effect
         .persist(MsgSentSuccessfully(rsa.msgId, rsa.comMethodId, isDelivered))
         .thenRun((_: State) => if (rsa.sendAck) setup.dispatcher.ack(rsa.msgId))
+        .thenRun((_: State) => if (isDelivered && ! rsa.isItANotification) {
+          setup.metricsWriter.gaugeIncrement(AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT, tags = comMethodTypeTags(st.comMethods.get(rsa.comMethodId)))
+          setup.metricsWriter.gaugeDecrement(AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT)
+        })
         .thenRun((st: State) => sendMsgActivityToMessageMeta(st, rsa.msgId, rsa.comMethodId, None))
         .thenNoReply()
 
@@ -213,6 +221,10 @@ object Outbox {
         .persist(MsgSendingFailed(rfa.msgId, rfa.comMethodId, isDeliveryFailed))
         .thenRun((_: State) => setup.itemManagerEntityHelper.register())
         .thenRun((_: State) => if (rfa.sendAck) setup.dispatcher.ack(rfa.msgId))
+        .thenRun((_: State) => if (isDeliveryFailed && ! rfa.isItANotification) {
+          setup.metricsWriter.gaugeIncrement(AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, tags = comMethodTypeTags(st.comMethods.get(rfa.comMethodId)))
+          setup.metricsWriter.gaugeDecrement(AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT)
+        })
         .thenRun((st: State) => sendMsgActivityToMessageMeta(st, rfa.msgId, rfa.comMethodId, Option(rfa.statusDetail)))
         .thenNoReply()
 
@@ -307,6 +319,7 @@ object Outbox {
 
   private def signalHandler(implicit setup: SetupOutbox): PartialFunction[(State, Signal), Unit] = {
     case (st: State, RecoveryCompleted) =>
+      setup.metricsWriter.gaugeUpdate(AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, getPendingMsgs(st).size)
       updateDispatcher(setup.dispatcher, st)
       val outboxIdParam = OutboxIdParam(setup.entityContext.entityId)
       fetchOutboxParam(outboxIdParam)
@@ -519,6 +532,17 @@ object Outbox {
     else retentionCriteria
   }
 
+  private def comMethodTypeTags(comMethod: Option[ComMethod]): Map[String, String] = {
+    val comMethodTypeStr =
+      comMethod.map(_.typ) match {
+        case Some(COM_METHOD_TYPE_HTTP_ENDPOINT) =>
+          "webhook-" + comMethod.flatMap(_.authentication).map(_.`type`).getOrElse("plain")
+        case _ =>
+          "unknown"
+      }
+    Map("com-method-type" -> comMethodTypeStr)
+  }
+
   def prepareRetryParam(comMethodType: Int,
                         failedAttemptCount: Int,
                         config: Config): RetryParam = {
@@ -551,7 +575,7 @@ object Outbox {
     setup.dispatcher.dispatch(msgId, msg.deliveryAttempts)
   }
 
-  val processedMsgStatusCodes: Seq[String] = List(
+  private val processedMsgStatusCodes: Seq[String] = List(
     Status.MSG_DELIVERY_STATUS_SENT,
     Status.MSG_DELIVERY_STATUS_FAILED
   ).map(_.statusCode)
@@ -580,6 +604,7 @@ case class OutboxIdParam(relId: RelId, recipId: RecipId, destId: DestId) {
 
 case class SetupOutbox(actorContext: ActorContext[Cmd],
                        entityContext: EntityContext[Cmd],
+                       metricsWriter: MetricsWriter,
                        config: Config,
                        buffer: StashBuffer[Cmd],
                        dispatcher: Dispatcher,

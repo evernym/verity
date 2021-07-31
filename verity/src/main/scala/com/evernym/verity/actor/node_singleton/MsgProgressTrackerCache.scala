@@ -4,6 +4,8 @@ import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvi
 
 class MsgProgressTrackerCacheImpl extends Extension{
 
+  //TODO: how to make sure this extension is thread safe?
+
   private var trackingParams: Set[TrackingParam] = Set.empty
 
   def startProgressTracking(trackingParam: TrackingParam): Unit = {

@@ -42,7 +42,7 @@ class CacheMaxSizeSpec
   lazy val fetchers: Map[FetcherParam, AsyncCacheValueFetcher] = Map(mockFetcher -> mockMaxSizeFetcher)
 
   def buildCache(name: String = "MockCache", fetchers: Map[FetcherParam, CacheValueFetcher] = fetchers): Cache = {
-    new Cache(name, fetchers)
+    new Cache(name, fetchers, metricsWriter)
   }
 }
 

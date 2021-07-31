@@ -9,6 +9,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.DIDCommV1Packa
 import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.WalletOpExecutor.Replies.PackagedPayload
 import com.evernym.verity.msgoutbox.{RecipPackaging, RoutePackaging, VerKey, WalletId}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer}
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.vault.WalletAPIParam
 
 import scala.concurrent.duration.DurationInt
@@ -36,24 +37,26 @@ object DIDCommV1Packager {
   }
 
   def apply(agentMsgTransformer: AgentMsgTransformer,
-            walletOpExecutor: Behavior[WalletOpExecutor.Cmd]): Behavior[Cmd] = {
+            walletOpExecutor: Behavior[WalletOpExecutor.Cmd],
+            metricsWriter: MetricsWriter): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
       actorContext.setReceiveTimeout(10.seconds, Commands.TimedOut) //TODO: finalize this
       val walletOpExecutorReplyAdapter = actorContext.messageAdapter(reply => WalletOpExecutorReplyAdapter(reply))
-      initialized(agentMsgTransformer, walletOpExecutor)(actorContext, walletOpExecutorReplyAdapter)
+      initialized(agentMsgTransformer, walletOpExecutor)(actorContext, walletOpExecutorReplyAdapter, metricsWriter)
     }
   }
 
   def initialized(agentMsgTransformer: AgentMsgTransformer,
                   walletOpExecutor: Behavior[WalletOpExecutor.Cmd])
                  (implicit actorContext: ActorContext[Cmd],
-                  walletOpExecutorReplyAdapter: ActorRef[WalletOpExecutor.Reply]): Behavior[Cmd] = Behaviors.receiveMessage {
+                  walletOpExecutorReplyAdapter: ActorRef[WalletOpExecutor.Reply],
+                  metricsWriter: MetricsWriter): Behavior[Cmd] = Behaviors.receiveMessage {
 
     case PackMsg(msgType, msgPayload, recipPackaging, routePackaging, walletId, senderVerKey, replyTo) =>
       val walletOpExecutorRef = actorContext.spawnAnonymous(walletOpExecutor)
       walletOpExecutorRef ! WalletOpExecutor.Commands.PackMsg(
         msgPayload, recipPackaging.recipientKeys.toSet, senderVerKey, walletId, walletOpExecutorReplyAdapter)
-      handleRecipPackedMsg(msgType, walletId, routePackaging, agentMsgTransformer, replyTo)
+      handleRecipPackedMsg(msgType, walletId, routePackaging, agentMsgTransformer, replyTo, metricsWriter)
 
     case cmd => baseBehavior(cmd)
   }
@@ -62,7 +65,8 @@ object DIDCommV1Packager {
                            walletId: WalletId,
                            routePackaging: Option[RoutePackaging],
                            agentMsgTransformer: AgentMsgTransformer,
-                           replyTo: ActorRef[Reply]): Behavior[Cmd] = Behaviors.receiveMessage {
+                           replyTo: ActorRef[Reply],
+                           metricsWriter: MetricsWriter): Behavior[Cmd] = Behaviors.receiveMessage {
     case WalletOpExecutorReplyAdapter(reply: PackagedPayload) =>
       routePackaging match {
         case None =>
@@ -78,7 +82,7 @@ object DIDCommV1Packager {
             reply.payload,
             routingKeys,
             msgType
-          )(agentMsgTransformer, WalletAPIParam(walletId))
+          )(agentMsgTransformer, WalletAPIParam(walletId), metricsWriter)
           future.map { pm =>
             replyTo ! Replies.PackedMsg(pm.msg)
           }

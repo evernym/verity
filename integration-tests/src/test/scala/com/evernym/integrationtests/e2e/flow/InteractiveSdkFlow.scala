@@ -1625,9 +1625,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$protoRef] validation" in {
         eventually(timeout(30 seconds), Interval(2 seconds)) {
           //Get metrics for specific app
-          val allNodeMetrics = app.getAllNodeMetrics()
-          allNodeMetrics.data.headOption.nonEmpty shouldBe true
-          val currentNodeMetrics = allNodeMetrics.data.flatMap(_.metrics)
+          val currentNodeMetrics = app.getAllNodeMetrics(app.metricsHost)
           if (dumpToFile) dumpMetrics(currentNodeMetrics, app)
           val expectedTags = Map("proto_ref" -> protoRef)
           val protoMetric =

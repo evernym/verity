@@ -51,7 +51,7 @@ object UserGuardian {
       val msgPackagers: MsgPackagers = new MsgPackagers {
         override val didCommV1Packager: Behavior[DIDCommV1Packager.Cmd] = {
           val walletOpExecutor: Behavior[WalletOpExecutor.Cmd] = didcom_v1.WalletOpExecutor(agentActorContext.walletAPI)
-          DIDCommV1Packager(agentActorContext.agentMsgTransformer, walletOpExecutor)
+          DIDCommV1Packager(agentActorContext.agentMsgTransformer, walletOpExecutor, agentActorContext.metricsWriter)
         }
       }
 

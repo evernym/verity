@@ -20,8 +20,7 @@ object TokenizerDefinition
 
   override def createInitMsg(params: Parameters): Control = Init(params)
 
-  override def create(context: ProtocolContextApi[Tokenizer, Role, Msg, Any, TokenizerState, String]):
-  Protocol[Tokenizer, Role, Msg, Any, TokenizerState, String] = {
+  override def create(context: ProtocolContextApi[Tokenizer, Role, Msg, Any, TokenizerState, String]): Protocol[Tokenizer, Role, Msg, Any, TokenizerState, String] = {
     new Tokenizer(context)
   }
 

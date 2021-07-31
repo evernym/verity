@@ -8,8 +8,7 @@ import com.evernym.verity.protocol.engine._
 object OutOfBandDef extends ProtocolDefinition[OutOfBand, Role, Msg, OutOfBandEvent, State, String] {
   override val msgFamily: MsgFamily = OutOfBandMsgFamily
 
-  override def create(context: ProtocolContextApi[OutOfBand, Role, Msg, OutOfBandEvent,
-    State, String]): Protocol[OutOfBand, Role, Msg, OutOfBandEvent, State, String] = {
+  override def create(context: ProtocolContextApi[OutOfBand, Role, Msg, OutOfBandEvent, State, String]): Protocol[OutOfBand, Role, Msg, OutOfBandEvent, State, String] = {
     new OutOfBand(context)
   }
 

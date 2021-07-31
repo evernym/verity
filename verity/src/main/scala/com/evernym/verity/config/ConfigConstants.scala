@@ -182,8 +182,8 @@ object ConfigConstants {
 
   private val METRICS = s"$VERITY.metrics"
   val METRICS_ENABLED = s"$METRICS.enabled"
-  val METRICS_UTIL_FILTERS = s"$METRICS.util.filters"
-  val RESET_METRICS_NAME_SUFFIX = s"$METRICS.reset-metrics-suffix"
+  val METRICS_BACKEND = s"$METRICS.backend"
+
   val LIBINDY_METRICS_COLLECTION_FREQUENCY = s"$METRICS.libindy-metrics-collection-frequency"
   private val ACTIVITY_TRACKING = s"$METRICS.activity-tracking"
   val ACTIVE_USER_METRIC = s"$ACTIVITY_TRACKING.active-user"

@@ -32,7 +32,6 @@ import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyServic
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.typed.base.UserGuardian
 import com.evernym.verity.libindy.Libraries
-import com.evernym.verity.metrics.MetricsReader
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -53,10 +52,6 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
 
   //initialize required libraries (libindy/libmysqlstorage etc)
   Libraries.initialize(appConfig)
-
-  //start prometheus reporter
-  // intention behind this is to have 'PrometheusReporter' get loaded and it's configuration is validated as well
-  MetricsReader.initialize(appConfig)
 
   def startExtensionIfEnabled[T <: Extension](t: ExtensionId[T], confPath: String)(start: T => Unit): Unit = {
     val isEnabled = appConfig

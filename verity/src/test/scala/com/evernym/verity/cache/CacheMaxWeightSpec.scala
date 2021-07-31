@@ -88,7 +88,7 @@ class CacheMaxWeightSpec
   lazy val fetchers: Map[FetcherParam, AsyncCacheValueFetcher] = Map(mockFetcher -> mockMaxWeightObjectFetcher)
 
   def buildCache(name: String = "MockCache", fetchers: Map[FetcherParam, CacheValueFetcher] = fetchers): Cache = {
-    new Cache(name, fetchers)
+    new Cache(name, fetchers, metricsWriter)
   }
 }
 

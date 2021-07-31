@@ -9,10 +9,10 @@ import com.evernym.verity.config.AgentAuthKeyUtil
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 import com.evernym.verity.actor.resourceusagethrottling.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX, UserId}
+import com.evernym.verity.metrics.InternalSpan
 
 import scala.concurrent.Future
 
@@ -36,7 +36,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
 
     //agent-msg-processor-actor -> this actor
     case um: UnhandledMsg                 =>
-      runWithInternalSpan(s"${um.amw.msgType}", "AgentIncomingMsgHandler") {
+      metricsWriter.runWithSpan(s"${um.amw.msgType}", "AgentIncomingMsgHandler", InternalSpan) {
         try {
           if (incomingMsgHandler(um.rmc).isDefinedAt(um.amw)) {
             recordInMsgEvent(um.rmc.id,

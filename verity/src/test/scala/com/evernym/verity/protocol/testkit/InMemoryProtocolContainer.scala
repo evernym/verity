@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.Relationship
+import com.evernym.verity.metrics.{MetricsWriter, NoOpMetricsWriter}
 import com.evernym.verity.protocol.container.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
@@ -50,6 +51,9 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
     override val threadId = pce.threadId
   } with ProtocolContainer[P,R,M,E,S,I]
     with HasInbox[Any,Any] {
+
+
+  override def metricsWriter: MetricsWriter = NoOpMetricsWriter()
 
   override val _threadId: Option[ThreadId] = pce.threadId
   override val _storageId: Option[StorageId] = Some(pce.pinstId)

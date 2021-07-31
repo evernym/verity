@@ -97,29 +97,10 @@ case class OverrideConfigOnAllNodes(configStr: String) extends ActorMessage
 case class OverrideNodeConfig(configStr: String) extends ActorMessage
 case object NodeConfigOverridden extends ActorMessage
 
-case class GetNodeMetrics(filters: MetricsFilterCriteria) extends ActorMessage
-case class SendMetricsOfAllNodes(filters: MetricsFilterCriteria) extends ActorMessage
-
 case class StartProgressTracking(trackingId: TrackingParam) extends ActorMessage
 case class StopProgressTracking(trackingId: String) extends ActorMessage
 case object NodeMetricsResetDone extends ActorMessage
 case object AllNodeMetricsResetDone extends ActorMessage
-
-case class MetricsFilterCriteria(includeMetaData: Boolean = true,
-                                 includeTags: Boolean = true,
-                                 filtered: Boolean = true)
-
-object MetricsFilterCriteria {
-
-  def apply(includeMetaData: String, includeTags: String, filtered: String): MetricsFilterCriteria = {
-    MetricsFilterCriteria(
-      strToBoolean(includeMetaData),
-      strToBoolean(includeTags),
-      strToBoolean(filtered)
-    )
-  }
-}
-
 
 trait Bad {
   def statusCode: String

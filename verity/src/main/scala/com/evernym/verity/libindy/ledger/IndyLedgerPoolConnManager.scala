@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
-import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, MildSystemError, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.ConfigConstants.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT
 import com.evernym.verity.config.ConfigUtil.{findTAAConfig, nowTimeOfAcceptance}
@@ -17,6 +17,7 @@ import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util.{HashUtil, Util}
 import com.evernym.verity.util2.Exceptions
+import com.evernym.verity.util2.Exceptions.NoResponseFromLedgerPoolServiceException
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.pool.Pool
@@ -55,7 +56,15 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
 
   def poolConn: Option[Pool] = heldPoolConn
 
-  def poolConn_! : Pool = poolConn.getOrElse(throw new RuntimeException("pool not opened"))
+  def poolConn_! : Pool = poolConn match {
+    case Some(pc) =>
+      AppStateUpdateAPI(actorSystem).publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
+      pc
+    case None     =>
+      val ex = new RuntimeException("pool not opened")
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, ex))
+      throw ex
+  }
 
   def isConnected: Boolean = poolConn.isDefined
   def isNotConnected: Boolean = poolConn.isEmpty

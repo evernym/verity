@@ -249,7 +249,10 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
       } else {
         prepareRequest(submitterDetail, request)
           .flatMap(submitRequest(_, pool.get))
-          .map(parseResponse)
+          .map { resp =>
+            AppStateUpdateAPI(actorSystem).publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
+            parseResponse(resp)
+          }
           .recoverWith(retryRecovery(submitterDetail, LedgerRequest(request.req, request.needsSigning)))
           .recover(handleError)
       }
@@ -271,7 +274,6 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
   private def submitWriteRequest(submitterDetail: Submitter,
                                  reqDetail: LedgerRequest):Future[TxnResp] ={
     completeRequest(submitterDetail, reqDetail).map { resp =>
-      AppStateUpdateAPI(actorSystem).publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
       buildTxnRespForWriteOp(resp)
     }.recover {
       case e: StatusDetailException => throw e
@@ -284,7 +286,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
     toFuture(buildGetAttribRequest(submitter.did, did, attrName, null, null)) flatMap { req =>
       submitGetRequest(submitter, req, needsSigning=true).map{ r =>
         val txnResp = buildTxnRespForReadOp(r)
-        val data = getOptFieldFromResult(r, DATA).map(_.toString)
+        getOptFieldFromResult(r, DATA).map(_.toString)
         GetAttribResp(txnResp)
       }
     }

@@ -9,14 +9,19 @@ import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.hyperledger.indy.sdk.pool.Pool
 
+import scala.concurrent.ExecutionContext
+
 
 class LedgerTxnExecutorV1(val actorSystem: ActorSystem,
                           val appConfig: AppConfig,
                           val walletAPI: Option[WalletAPI],
                           val pool: Option[Pool],
-                          val currentTAA: Option[TransactionAuthorAgreement]
+                          val currentTAA: Option[TransactionAuthorAgreement],
+                          executionContext: ExecutionContext
                          )
   extends LedgerTxnExecutorBase {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   override def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp = {
     // When something is not found on the ledger, data, txnTime, and seqNo will be null. When any of these three

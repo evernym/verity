@@ -3,7 +3,6 @@ package com.evernym.verity.actor.cluster_singleton.watcher
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.cluster_singleton.ForWatcherManagerChild
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
@@ -22,6 +21,7 @@ import com.evernym.verity.actor.itemmanager.ItemConfigManager.versionedItemManag
 import com.evernym.verity.util2.ActorErrorResp
 import com.typesafe.scalalogging.Logger
 
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 
@@ -30,12 +30,12 @@ import scala.util.Try
  * (as of today there is only one such watcher manager called 'uap-actor-watcher' [uap = user agent pairwise])
  * @param appConfig application configuration
  */
-class WatcherManager(val appConfig: AppConfig)
+class WatcherManager(val appConfig: AppConfig, ec: ExecutionContext)
   extends CoreActorExtended {
   val logger: Logger = getLoggerByClass(classOf[WatcherManager])
 
   //NOTE: don't make below statement lazy, it needs to start as soon as possible
-  val actorWatcher: ActorRef = context.actorOf(ActorWatcher.props(appConfig), "ActorWatcher")
+  val actorWatcher: ActorRef = context.actorOf(ActorWatcher.props(appConfig, ec), "ActorWatcher")
 
   override def receiveCmd: Receive = {
     case fwmc: ForWatcherManagerChild => actorWatcher forward fwmc.cmd
@@ -44,15 +44,16 @@ class WatcherManager(val appConfig: AppConfig)
 
 object WatcherManager {
   val name: String = WATCHER_MANAGER
-  def props(appConfig: AppConfig): Props = Props(new WatcherManager(appConfig))
+  def props(appConfig: AppConfig, ec: ExecutionContext): Props = Props(new WatcherManager(appConfig, ec))
 }
 
-class ActorWatcher(val appConfig: AppConfig)
+class ActorWatcher(val appConfig: AppConfig, ec: ExecutionContext)
   extends CoreActorExtended
     with HasActorResponseTimeout
     with HasAppConfig {
 
   import ActorWatcher._
+  implicit val executionContext = ec
 
   val logger: Logger = getLoggerByClass(classOf[ActorWatcher])
 
@@ -199,7 +200,7 @@ object ActorWatcher {
    */
 
   lazy val itemManagerEntityIdPrefix: String = "watcher"
-  def props(config: AppConfig): Props = Props(new ActorWatcher(config))
+  def props(config: AppConfig, ec: ExecutionContext): Props = Props(new ActorWatcher(config, ec))
 }
 
 case object CheckWatchedItem extends ActorMessage

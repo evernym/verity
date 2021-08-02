@@ -8,10 +8,12 @@ import com.evernym.verity.actor.ComMethodUpdated
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_PLAIN}
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_TYPE_UPDATE_COM_METHOD}
 import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, ComMethodAuthentication, ComMethodPackaging, UpdateComMethodReqMsg, UpdateConfigReqMsg}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.integration.base.PortProvider
 import com.evernym.verity.integration.base.sdk_provider.msg_listener.{JsonMsgListener, MsgListenerBase, PackedMsgListener, ReceivedMsgCounter}
@@ -26,12 +28,13 @@ import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResul
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
-
 import java.util.UUID
+
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.reflect.ClassTag
 
-abstract class VeritySdkBase(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends SdkBase(param) {
+abstract class VeritySdkBase(param: SdkParam, ec: ExecutionContext, wec: ExecutionContext, oauthParam: Option[OAuthParam]=None) extends SdkBase(param, ec, wec) {
 
   def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created]
@@ -134,7 +137,10 @@ abstract class VeritySdkBase(param: SdkParam, oauthParam: Option[OAuthParam]=Non
  *
  * @param param sdk parameters
  */
-abstract class IssuerVerifierSdk(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends VeritySdkBase(param, oauthParam) {
+abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+  extends VeritySdkBase(param, executionContext, walletExecutionContext, oauthParam) {
+
+  def appConfig: AppConfig = testAppConfig
 
   def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
     val packaging = Option(ComMethodPackaging(MPF_INDY_PACK.toString, Option(Set(myLocalAgentVerKey))))
@@ -204,11 +210,16 @@ abstract class IssuerVerifierSdk(param: SdkParam, oauthParam: Option[OAuthParam]
 
 }
 
-case class IssuerSdk(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends IssuerVerifierSdk(param, oauthParam)
+case class IssuerSdk(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+  extends IssuerVerifierSdk(param, executionContext, walletExecutionContext, oauthParam)
 
-case class VerifierSdk(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends IssuerVerifierSdk(param, oauthParam)
+case class VerifierSdk(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+  extends IssuerVerifierSdk(param, executionContext, walletExecutionContext, oauthParam)
 
-case class IssuerRestSDK(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends VeritySdkBase(param, oauthParam) {
+case class IssuerRestSDK(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+  extends VeritySdkBase(param, executionContext, walletExecutionContext, oauthParam) {
+
+  def appConfig: AppConfig = testAppConfig
   import scala.collection.immutable
 
   def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {

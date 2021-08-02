@@ -7,14 +7,16 @@ import com.evernym.verity.actor.testkit.{ActorSpec, AppStateManagerTestKit}
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.push_notification.{Pusher, SendPushNotif}
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.util2.ExecutionContextProvider
 
 class PusherSpec
   extends ActorSpec
     with BasicSpec {
 
-  val asmTestKit = new AppStateManagerTestKit(this, appConfig)
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  val asmTestKit = new AppStateManagerTestKit(this, appConfig, ecp.futureExecutionContext)
 
-  lazy val pusher: ActorRef = system.actorOf(Pusher.props(AppConfigWrapper), s"pusher-1")
+  lazy val pusher: ActorRef = system.actorOf(Pusher.props(AppConfigWrapper, ecp.futureExecutionContext), s"pusher-1")
 
   "Pusher" - {
     "when sent 'SendPushNotif' command with 'InvalidRegistration' token" - {
@@ -42,4 +44,6 @@ class PusherSpec
       }
     }
   }
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

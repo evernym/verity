@@ -5,25 +5,25 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Sink, Source}
-import com.evernym.verity.util2.Status.MSG_DELIVERY_STATUS_SENT
-import com.evernym.verity.config.AppConfigWrapper
+import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.config.ConfigConstants.MCM_SEND_MSG
 import com.evernym.verity.util2.UrlParam
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import com.evernym.verity.util2.Status.MSG_DELIVERY_STATUS_SENT
 
 /**
  * this is disabled by default and only enabled via configuration for integration tests
  */
-object MockPusher extends PushServiceProvider {
-  import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+class MockPusher(val appConfig: AppConfig, executionContext: ExecutionContext) extends PushServiceProvider {
+  private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
+
   val logger: Logger = getLoggerByClass(classOf[Pusher])
 
-  override lazy val comMethodPrefix = "MCM"
+  override lazy val comMethodPrefix = MockPusher.comMethodPrefix
 
-  val pushedMsg = scala.collection.mutable.Map.empty[String, RegIdPushNotifs]
 
   lazy val sendToEndpointEnabled: Boolean =
     AppConfigWrapper.config.getBoolean(MCM_SEND_MSG)
@@ -40,8 +40,8 @@ object MockPusher extends PushServiceProvider {
   }
 
   def addToPushedMsgs(regId: String, pushNotifPayload: PushNotifPayload): Unit = {
-    val updatedPushNotids = pushedMsg.get(regId).map(_.allNotifs).getOrElse(List.empty) ++ List(pushNotifPayload)
-    pushedMsg += (regId -> RegIdPushNotifs(pushNotifPayload, updatedPushNotids))
+    val updatedPushNotids = MockPusher.pushedMsg.get(regId).map(_.allNotifs).getOrElse(List.empty) ++ List(pushNotifPayload)
+    MockPusher.pushedMsg += (regId -> RegIdPushNotifs(pushNotifPayload, updatedPushNotids))
   }
 
   //TODO: The service decorator used with the provision tokenizer could inherit this functionality i.e
@@ -77,8 +77,13 @@ object MockPusher extends PushServiceProvider {
     }
   }
 
-  def getLastSentPushNotif(regId: String): Option[PushNotifPayload] = pushedMsg.get(regId).map(_.lastPushNotifPayload)
+  def getLastSentPushNotif(regId: String): Option[PushNotifPayload] = MockPusher.pushedMsg.get(regId).map(_.lastPushNotifPayload)
 }
 
 case class PushNotifPayload(sendAsAlertPushNotif: Boolean, notifData: Map[String, Any], extraData: Map[String, Any], jsonPayload: String)
 case class RegIdPushNotifs(lastPushNotifPayload: PushNotifPayload, allNotifs: List[PushNotifPayload])
+
+object MockPusher {
+  val pushedMsg = scala.collection.mutable.Map.empty[String, RegIdPushNotifs]
+  val comMethodPrefix = "MCM"
+}

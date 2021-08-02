@@ -3,7 +3,6 @@ package com.evernym.verity.actor.agent.user
 import akka.event.LoggingReceive
 import akka.pattern.ask
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, MSG_STATUS_RECEIVED}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
@@ -40,7 +39,7 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsReqMsg, UpdateMsgS
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.SendConfig
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * common logic between 'UserAgent' and 'UserAgentPairwise' actor
@@ -55,6 +54,7 @@ trait UserAgentCommon
     with LEGACY_connectingSignalHandler {
 
   this: AgentPersistentActor with MsgNotifierForUserAgentCommon =>
+  implicit def executionContext: ExecutionContext = futureExecutionContext
 
   type StateType <: AgentStateInterface with UserAgentCommonState
 
@@ -160,7 +160,8 @@ trait UserAgentCommon
     cds.find(_.name == PUSH_COM_METHOD).foreach { pcmConfig =>
       PusherUtil.checkIfValidPushComMethod(
         ComMethodDetail(COM_METHOD_TYPE_PUSH, pcmConfig.value, hasAuthEnabled = false),
-        appConfig
+        appConfig,
+        futureExecutionContext
       )
     }
   }

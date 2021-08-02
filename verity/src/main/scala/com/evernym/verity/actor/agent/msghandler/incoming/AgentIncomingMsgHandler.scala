@@ -8,7 +8,6 @@ import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.config.AgentAuthKeyUtil
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.ReqMsgContext
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 import com.evernym.verity.actor.resourceusagethrottling.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX, UserId}
@@ -17,6 +16,7 @@ import com.evernym.verity.metrics.InternalSpan
 import scala.concurrent.Future
 
 trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor =>
+  private implicit val executionContext = futureExecutionContext
 
   def agentIncomingCommonCmdReceiver[A]: Receive = {
 
@@ -116,7 +116,8 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
             agentActorContext.walletAPI,
             agentActorContext.agentMsgRouter,
             agentActorContext.protocolRegistry,
-            param
+            param,
+            agentActorContext.futureExecutionContext
           )), "amp-" + UUID.randomUUID().toString)
       msgProcessor.tell(cmd, sndr)
     }.recover {

@@ -4,6 +4,7 @@ import java.util.UUID
 
 import akka.actor.PoisonPill
 import akka.testkit.ImplicitSender
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.base.Done
@@ -478,6 +479,8 @@ class WalletActorSpec
       credReq.credReqJson, credReq.credReqMetadataJson)
   }
 
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 case class CredReqData(schemaId: String,

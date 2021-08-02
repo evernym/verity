@@ -16,6 +16,7 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.util.Util.getActorRefFromSelection
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.Random
 
@@ -28,8 +29,10 @@ import scala.util.Random
  *
  * @param appConfig application config
  */
-class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
+class LegacyAgentRouteStore(executionContext: ExecutionContext)(implicit val appConfig: AppConfig)
   extends BasePersistentActor {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case sr: LegacySetRoute if routes.contains(sr.forDID) => sender ! RouteAlreadySet(sr.forDID)
@@ -171,7 +174,8 @@ class OrderedRoutes {
 }
 
 object LegacyAgentRouteStore {
-  def props(implicit appConfig: AppConfig): Props = Props(new LegacyAgentRouteStore)
+  def props(executionContext: ExecutionContext)(implicit appConfig: AppConfig): Props =
+    Props(new LegacyAgentRouteStore(executionContext))
 }
 
 //cmds

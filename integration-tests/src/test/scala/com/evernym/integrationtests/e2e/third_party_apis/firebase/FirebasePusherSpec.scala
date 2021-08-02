@@ -1,6 +1,7 @@
 package com.evernym.integrationtests.e2e.third_party_apis.firebase
 
 import akka.testkit.TestKit
+import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.ConfigConstants.{FCM_API_HOST, FCM_API_KEY, FCM_API_PATH}
@@ -24,7 +25,11 @@ class FirebasePusherSpec extends TestKit(AkkaTestBasic.system()) with BasicSpec 
   val serverKey: String = AppConfigWrapper.getStringReq(FCM_API_KEY)
   val serverHost: String = AppConfigWrapper.getStringReq(FCM_API_HOST)
   val serverPath: String = AppConfigWrapper.getStringReq(FCM_API_PATH)
-  val pusher = new FirebasePusher(FirebasePushServiceParam(serverKey, serverHost, serverPath))
+  val pusher =
+    new FirebasePusher(
+      FirebasePushServiceParam(serverKey, serverHost, serverPath),
+      TestExecutionContextProvider.ecp.futureExecutionContext
+    )
 
   "FCM pusher" - {
     /*Note: This test depends on real pusher object which has dependency on internet's availability

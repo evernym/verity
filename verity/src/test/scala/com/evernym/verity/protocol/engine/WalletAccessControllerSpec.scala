@@ -1,9 +1,11 @@
 package com.evernym.verity.protocol.engine
 
 import akka.actor.ActorRef
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet._
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.{SchemaCreated, WalletAccessAPI}
@@ -12,10 +14,11 @@ import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessSign, Ac
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.testkit.MockableWalletAccess
 import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet, TestWallet}
-import com.evernym.verity.util.ParticipantUtil
+import com.evernym.verity.util.{ParticipantUtil, TestExecutionContextProvider}
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 
@@ -24,7 +27,8 @@ class WalletAccessControllerSpec
     with MockAsyncOpRunner {
 
   implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
-  val testWallet = new TestWallet(false)
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  val testWallet = new TestWallet(ecp.walletFutureExecutionContext, false)
   implicit val wap: WalletAPIParam = testWallet.wap
 
   "Wallet access controller" - {
@@ -168,5 +172,11 @@ object WalletAccessTest
   val _selfParticipantId: ParticipantId = ParticipantUtil.participantId(newKey.did, None)
   def walletAccess(selfParticipantId: ParticipantId=_selfParticipantId) =
     new WalletAccessAPI(testWalletAPI, selfParticipantId)
+
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 

@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.container.actor
 
 import akka.actor.Props
 import akka.testkit.EventFilter
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship}
@@ -13,6 +14,7 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredenti
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.Sent
 import com.typesafe.config.{Config, ConfigFactory}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -20,15 +22,20 @@ import scala.language.postfixOps
 class ExtractEventsActorSpec
   extends BaseProtocolActorSpec {
 
-    val credDefId = "1"
-    val credValue = Map("name" -> "Alice")
+  val credDefId = "1"
+  val credValue = Map("name" -> "Alice")
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  lazy implicit val executionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+  override def executionContextProvider: ExecutionContextProvider = ecp
 
   "ExtractEventsActor" - {
 
     "empty event stream should return ExtractionComplete imminently" in {
       EventFilter.debug(pattern = ".*in post stop", occurrences = 1) intercept {
         ConfigUtil.getProtoStateRetentionPolicy(appConfig, "", "")
-        system.actorOf(ExtractEventsActor.prop(appConfig, "test", "test", testActor))
+        system.actorOf(ExtractEventsActor.prop(appConfig, "test", "test", testActor, executionContext))
         expectMsgPF() {
           case ProtocolCmd(e: ExtractionComplete, None) => e
         }
@@ -37,7 +44,7 @@ class ExtractEventsActorSpec
 
     "empty event stream should stop after sending ExtractionComplete" in {
       EventFilter.debug(pattern = ".*in post stop", occurrences = 1) intercept {
-        system.actorOf(ExtractEventsActor.prop(appConfig, "test", "test", testActor))
+        system.actorOf(ExtractEventsActor.prop(appConfig, "test", "test", testActor, executionContext))
         expectMsgPF() {
           case ProtocolCmd(e: ExtractionComplete, None) => e
         }
@@ -55,11 +62,14 @@ class ExtractEventsActorSpec
       val pinstIdPair = mockController1.sendControlCmd(Propose(credDefId, credValue))
       mockController1.expectMsgType[Sent]()
 
-      system.actorOf(ExtractEventsActor.prop(
-        appConfig,
-        "issue-credential-1.0-protocol",
-        pinstIdPair.id,
-        testActor)
+      system.actorOf(
+        ExtractEventsActor.prop(
+          appConfig,
+          "issue-credential-1.0-protocol",
+          pinstIdPair.id,
+          testActor,
+          executionContext
+        )
       )
       val events = receiveWhile(5 seconds, .25 seconds) {
         case ProtocolCmd(e: ExtractedEvent, None)     => e
@@ -100,11 +110,14 @@ class ExtractEventsActorSpec
       mockController2.sendCmd(SendToProtocolActor(FromProtocol(pinstIdPair.id, mockRel), newPinstIdPair))
       Thread.sleep(1000)
 
-      system.actorOf(ExtractEventsActor.prop(
-        appConfig,
-        "issue-credential-1.0-protocol",
-         pinstIdPair.id,
-        testActor)
+      system.actorOf(
+        ExtractEventsActor.prop(
+          appConfig,
+          "issue-credential-1.0-protocol",
+           pinstIdPair.id,
+          testActor,
+          executionContext
+        )
       )
       val events = receiveWhile(5 seconds, .25 seconds) {
         case ProtocolCmd(e: ExtractedEvent, None)     => e
@@ -116,7 +129,7 @@ class ExtractEventsActorSpec
     }
   }
 
-  override lazy val mockControllerActorProps: Props = MockIssueCredControllerActor.props(appConfig, agentActorContext)
+  override lazy val mockControllerActorProps: Props = MockIssueCredControllerActor.props(appConfig, agentActorContext, executionContext)
 
   override def overrideSpecificConfig: Option[Config] = Option {
     ConfigFactory.parseString {
@@ -130,8 +143,13 @@ class ExtractEventsActorSpec
 }
 
 object MockIssueCredControllerActor {
-  def props(ac: AppConfig, aac: AgentActorContext): Props = Props(new MockIssueCredControllerActor(ac, aac))
+  def props(ac: AppConfig, aac: AgentActorContext, ec: ExecutionContext): Props = Props(new MockIssueCredControllerActor(ac, aac, ec))
 }
 
-class MockIssueCredControllerActor(appConfig: AppConfig, aac: AgentActorContext)
-  extends MockControllerActorBase(appConfig, aac)
+class MockIssueCredControllerActor(appConfig: AppConfig, aac: AgentActorContext, ec: ExecutionContext)
+  extends MockControllerActorBase(appConfig, aac, ec) {
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ec
+}

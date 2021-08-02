@@ -12,7 +12,6 @@ import akka.util.Timeout
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidValueException}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.RouteId
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
@@ -33,7 +32,7 @@ import com.evernym.verity.util.Util._
 import com.evernym.verity.util.{Base58Util, ReqMsgContext, RestMsgContext}
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -41,9 +40,11 @@ import scala.util.{Failure, Success, Try}
  * @param appConfig application config
  * @param system actor system
  */
-class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
+class AgentMsgRouter(executionContext: ExecutionContext)(implicit val appConfig: AppConfig, val system: ActorSystem)
   extends ShardRegionNameFromActorSystem
-   with HasLegacyRegionNames {
+    with HasLegacyRegionNames {
+
+  implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   def execute: PartialFunction[Any, Future[Any]] = {
     case cmd: Any => withAskTimeoutLogged(executeCmd(cmd, None))
@@ -77,9 +78,9 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   val logger: Logger = getLoggerByClass(classOf[AgentMsgRouter])
 
   lazy val fetchers: Map[FetcherParam, CacheValueFetcher] = Map (
-    ROUTING_DETAIL_CACHE_FETCHER -> new RoutingDetailCacheFetcher(system, appConfig)
+    ROUTING_DETAIL_CACHE_FETCHER -> new RoutingDetailCacheFetcher(system, appConfig, futureExecutionContext)
   )
-  lazy val routingCache: Cache = new Cache("RC", fetchers, MetricsWriterExtension(system).get())
+  lazy val routingCache: Cache = new Cache("RC", fetchers, MetricsWriterExtension(system).get(), futureExecutionContext)
 
   lazy val agencyAgentRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_REGION_ACTOR_NAME)
   lazy val agencyAgentPairwiseRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME)

@@ -1,9 +1,12 @@
 package com.evernym.verity.config
-import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.testkit.BasicSpec
 
 class AppConfigSpec extends BasicSpec with ConfigUtilBaseSpec with CommonSpecUtil {
+
+  lazy val testAppConfig: AppConfig = new TestAppConfig()
+  override def appConfig: AppConfig = testAppConfig
 
   val configFile = "verity/target/scala-2.12/test-classes/application.conf"
 

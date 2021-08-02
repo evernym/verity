@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.tokenizer
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.SignedMsg
@@ -8,7 +9,9 @@ import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{AskFo
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}
 import com.evernym.verity.util.Base64Util.getBase64Encoded
+import com.evernym.verity.util.TestExecutionContextProvider
 
+import scala.concurrent.ExecutionContext
 import scala.language.{implicitConversions, reflectiveCalls}
 import scala.util.{Failure, Try}
 
@@ -99,9 +102,20 @@ class TokenizerSpec
   }
 
   override val containerNames: Set[ContainerName] = Set(TestingVars.REQUESTER, TestingVars.TOKENIZER)
+
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
-object TestingVars extends CommonSpecUtil {
+object TestingVars {
   val REQUESTER = "requester"
   val TOKENIZER = "tokenizer"
   val ID = "abc"

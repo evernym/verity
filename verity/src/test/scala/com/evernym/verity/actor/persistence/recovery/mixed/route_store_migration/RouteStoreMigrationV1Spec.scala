@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.persistence.recovery.mixed.route_store_migration
 
 import akka.actor.ActorRef
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.agent.msgrouter.legacy.{GetRouteStoreMigrationStatus, RouteStoreMigrationStatus}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}
@@ -16,6 +17,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
+import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 //testing for those systems who has legacy routing actors,
@@ -178,4 +180,12 @@ class RouteStoreMigrationV1Spec
         """.stripMargin
     )
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

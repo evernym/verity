@@ -13,6 +13,9 @@ import com.evernym.verity.msgoutbox.outbox.Outbox
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.{GetRelParam, SendOutboxParam}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Replies.{OutboxParam, RelParam}
+import com.evernym.verity.util2.ExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 
 class OutboxRouterSpec
   extends CloudAgentOutboxRouterBaseSpec {
@@ -56,9 +59,14 @@ class OutboxRouterSpec
         testRelResolver,
         testMsgStore,
         testMsgPackagers,
-        testMsgTransports
+        testMsgTransports,
+        executionContext
       )
     })
+
+  lazy val ecp = new ExecutionContextProvider(appConfig)
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 object TestAgentRelResolver {

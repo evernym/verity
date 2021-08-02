@@ -4,6 +4,9 @@ import akka.cluster.MemberStatus
 import akka.cluster.MemberStatus.{Down, Removed, Up}
 import akka.testkit.TestKit
 import com.evernym.verity.integration.base.PortProvider
+import com.evernym.verity.util2.HasExecutionContextProvider
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
 import com.evernym.verity.testkit.mock.blob_store.MockBlobStore
@@ -11,13 +14,16 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
 case class VerityEnv(seed: String,
-                     nodes: Seq[VerityNode])
+                     nodes: Seq[VerityNode],
+                     executionContext: ExecutionContext)
   extends Eventually
     with Matchers {
+  implicit lazy val ec: ExecutionContext = executionContext
 
   var isVerityBootstrapped: Boolean = false
 

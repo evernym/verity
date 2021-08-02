@@ -5,7 +5,6 @@ import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.actor._
@@ -64,18 +63,24 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_t
 import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
 import com.evernym.verity.util2.ActorErrorResp
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 /**
  Represents user's agent
  */
-class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: ActorRef)
+class UserAgent(val agentActorContext: AgentActorContext,
+                val metricsActorRef: ActorRef,
+                executionContext: ExecutionContext,
+                walletExecutionContext: ExecutionContext)
   extends UserAgentCommon
     with UserAgentStateUpdateImpl
     with HasAgentActivity
     with MsgNotifierForUserAgent
     with AgentSnapshotter[UserAgentState] {
+
+  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
+  implicit def futureExecutionContext: ExecutionContext = executionContext
 
   type StateType = UserAgentState
   var state = new UserAgentState
@@ -216,7 +221,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
 
   def handleOwnerDIDSet(did: DID, verKey: VerKey): Unit = {
     val myDidDoc =
-      DidDocBuilder()
+      DidDocBuilder(futureWalletExecutionContext)
         .withDid(did)
         .withAuthKey(did, verKey, Set(EDGE_AGENT_KEY))
         .didDoc
@@ -543,7 +548,8 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
         case COM_METHOD_TYPE_PUSH =>
           PusherUtil.checkIfValidPushComMethod(
             ComMethodDetail(COM_METHOD_TYPE_PUSH, ucm.comMethod.value, hasAuthEnabled = ucm.comMethod.authentication.isDefined),
-            appConfig
+            appConfig,
+            executionContext
           )
           ucm.comMethod
         case COM_METHOD_TYPE_HTTP_ENDPOINT =>
@@ -836,7 +842,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
         case Some(auth) if auth.`type` == AUTH_TYPE_OAUTH2 =>
           context.child(oAuthHolderKey(hc)) match {
             case Some(child) =>
-              child ! UpdateParams(auth.data, OAuthAccessTokenRefresher.getRefresher(auth.version))
+              child ! UpdateParams(auth.data, OAuthAccessTokenRefresher.getRefresher(auth.version, executionContext))
             case None =>
               context.spawn(
                 OAuthAccessTokenHolder(

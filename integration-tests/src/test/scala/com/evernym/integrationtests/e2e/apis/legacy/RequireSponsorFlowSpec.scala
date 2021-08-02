@@ -5,6 +5,7 @@ import com.evernym.integrationtests.e2e.scenario.Scenario
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.{Config, ConfigValueFactory}
 import com.typesafe.scalalogging.Logger
 
@@ -48,4 +49,7 @@ class RequireSponsorFlowSpec
   if ( isRunScenario("scenario1") ) {
     oldProvisioningProtocolsFail(clientEnv1)(agencyAdminEnv)
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

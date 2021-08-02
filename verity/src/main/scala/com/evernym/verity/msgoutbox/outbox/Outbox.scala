@@ -32,8 +32,9 @@ import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.Status
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
-
 import java.time.ZonedDateTime
+
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 //persistent entity, holds undelivered messages
@@ -94,7 +95,8 @@ object Outbox {
             relResolver: Behavior[RelationshipResolver.Cmd],
             msgStore: ActorRef[MsgStore.Cmd],
             msgPackagers: MsgPackagers,
-            msgTransports: MsgTransports): Behavior[Cmd] = {
+            msgTransports: MsgTransports,
+            executionContext: ExecutionContext): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
       Behaviors.withTimers { timer =>
         timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery, scheduledJobInterval(config))
@@ -108,7 +110,8 @@ object Outbox {
             config,
             msgStore,
             msgPackagers,
-            msgTransports
+            msgTransports,
+            executionContext
           )
 
           val setup = SetupOutbox(actorContext,

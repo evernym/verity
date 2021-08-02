@@ -6,23 +6,22 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model.{FormData, HttpMethods, HttpRequest}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.{GetTokenFailed, GetTokenSuccess}
 import com.evernym.verity.util2.Exceptions
 import org.json.JSONObject
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 //responsible for getting oauth access token
 object OAuthAccessTokenRefresherImplV1 {
 
-  def apply(): Behavior[OAuthAccessTokenRefresher.Cmd] = {
+  def apply(executionContext: ExecutionContext): Behavior[OAuthAccessTokenRefresher.Cmd] = {
     Behaviors.setup { actorContext =>
-      initialized(actorContext.system)
+      initialized(actorContext.system, executionContext)
     }
   }
 
-  private def initialized(implicit system: ActorSystem[Nothing]):
+  private def initialized(implicit system: ActorSystem[Nothing], executionContext: ExecutionContext):
   Behavior[OAuthAccessTokenRefresher.Cmd] = Behaviors.receiveMessage {
     case OAuthAccessTokenRefresher.Commands.GetToken(params, _, replyTo) =>
       getAccessToken(params).map { resp =>
@@ -32,7 +31,7 @@ object OAuthAccessTokenRefresherImplV1 {
   }
 
   private def getAccessToken(params: Map[String, String])
-                            (implicit system: ActorSystem[Nothing]): Future[OAuthAccessTokenRefresher.Reply] = {
+                            (implicit system: ActorSystem[Nothing], executionContext: ExecutionContext): Future[OAuthAccessTokenRefresher.Reply] = {
     try {
       val url = params("url")
       val formData = Seq("grant_type", "client_id", "client_secret").map(attrName =>

@@ -66,9 +66,10 @@ object DeadDropProtoDef
     case _: DeadDropCtrlMsg =>
   }
 
+  override def initialState: DeadDropState = DeadDropState.Uninitialized()
+
   def create(ctx: ProtocolContextApi[DeadDropProtocol, Role, DeadDropProtoMsg, DeadDropEvt, DeadDropState, String]): DeadDropProtocol = { // TODO can this be generically implemented in the base class?
     new DeadDropProtocol(ctx)
   }
 
-  override def initialState: DeadDropState = DeadDropState.Uninitialized()
 }

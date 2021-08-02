@@ -4,7 +4,6 @@ import java.time.ZonedDateTime
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.event.LoggingReceive
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.node_singleton.{ResourceBlockingStatusMngrCache, ResourceWarningStatusMngrCache}
@@ -23,11 +22,17 @@ import com.evernym.verity.config.ConfigConstants.USAGE_RULES
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.util2.Exceptions
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViolationActionExecutor)
+
+class ResourceUsageTracker (val appConfig: AppConfig,
+                            actionExecutor: UsageViolationActionExecutor,
+                            executionContext: ExecutionContext)
   extends BasePersistentActor
     with SnapshotterExt[ResourceUsageState]{
+
+  override def futureExecutionContext: ExecutionContext = executionContext
+  private implicit val executionContextImplc: ExecutionContext = executionContext
 
   override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case aru: AddResourceUsage              => addResourceUsage(aru)
@@ -166,8 +171,8 @@ class ResourceUsageTracker (val appConfig: AppConfig, actionExecutor: UsageViola
 
 object ResourceUsageTracker {
 
-  def props(appConfig: AppConfig, actionExecutor: UsageViolationActionExecutor): Props =
-    Props(new ResourceUsageTracker(appConfig, actionExecutor))
+  def props(appConfig: AppConfig, actionExecutor: UsageViolationActionExecutor, executionContext: ExecutionContext): Props =
+    Props(new ResourceUsageTracker(appConfig, actionExecutor, executionContext))
 
   /**
    *

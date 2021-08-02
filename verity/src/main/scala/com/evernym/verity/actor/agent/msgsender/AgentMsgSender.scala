@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.msgsender
 
 import com.evernym.verity.util2.Exceptions._
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
 import com.evernym.verity.actor.appStateManager.{AppStateEvent, ErrorEvent, MildSystemError}
@@ -20,7 +20,7 @@ import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.util2.Exceptions
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Left
 
 
@@ -29,7 +29,10 @@ import scala.util.Left
  */
 trait AgentMsgSender
   extends HasGeneralCache
-    with HasLogger {
+    with HasLogger
+    with HasExecutionContextProvider {
+
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   def publishAppStateEvent (event: AppStateEvent): Unit
   def msgSendingSvc: MsgSendingSvc

@@ -4,7 +4,6 @@ import java.util.concurrent.ExecutionException
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException}
 import com.evernym.verity.util2.Status.{ALREADY_EXISTS, INVALID_VALUE, UNHANDLED, logger}
 import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, GetVerKeyResp, NewKeyCreated, StoreTheirKey, TheirKeyStored}
-import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.protocol.engine.DID
@@ -14,13 +13,15 @@ import org.hyperledger.indy.sdk.InvalidStructureException
 import org.hyperledger.indy.sdk.did.{Did, DidJSONParameters}
 import org.hyperledger.indy.sdk.wallet.WalletItemAlreadyExistsException
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 object DidOpExecutor extends OpExecutorBase {
 
   def getVerKey(did: DID,
                 getKeyFromPool: Boolean,
-                ledgerPoolManager: Option[LedgerPoolConnManager])(implicit we: WalletExt): Future[GetVerKeyResp] = {
+                ledgerPoolManager: Option[LedgerPoolConnManager])
+               (implicit we: WalletExt, ec: ExecutionContext): Future[GetVerKeyResp] = {
     val result = (getKeyFromPool, ledgerPoolManager) match {
       case (true, Some(lpm: IndyLedgerPoolConnManager)) => Did.keyForDid(lpm.poolConn_!, we.wallet, did)
       case _ => Did.keyForLocalDid(we.wallet, did)
@@ -32,7 +33,7 @@ object DidOpExecutor extends OpExecutorBase {
       }
   }
 
-  def handleCreateDID(d: CreateDID)(implicit we: WalletExt): Future[NewKeyCreated] = {
+  def handleCreateDID(d: CreateDID)(implicit we: WalletExt, ec: ExecutionContext): Future[NewKeyCreated] = {
     val didJson = s"""{"crypto_type": "${d.keyType}"}"""
     Did
       .createAndStoreMyDid(we.wallet, didJson)
@@ -44,7 +45,7 @@ object DidOpExecutor extends OpExecutorBase {
       }
   }
 
-  def handleCreateNewKey(cnk: CreateNewKey)(implicit we: WalletExt): Future[NewKeyCreated] = {
+  def handleCreateNewKey(cnk: CreateNewKey)(implicit we: WalletExt, ec: ExecutionContext): Future[NewKeyCreated] = {
     try {
       val DIDJson = new DidJSONParameters.CreateAndStoreMyDidJSONParameter(
         cnk.DID.orNull, cnk.seed.orNull, null, null)
@@ -78,7 +79,7 @@ object DidOpExecutor extends OpExecutorBase {
     }
   }
 
-  def handleStoreTheirKey(stk: StoreTheirKey)(implicit we: WalletExt): Future[TheirKeyStored] = {
+  def handleStoreTheirKey(stk: StoreTheirKey)(implicit we: WalletExt, ec: ExecutionContext): Future[TheirKeyStored] = {
     try {
       val DIDJson = s"""{\"did\":\"${stk.theirDID}\",\"verkey\":\"${stk.theirDIDVerKey}\"}"""
       Did.storeTheirDid(we.wallet, DIDJson)

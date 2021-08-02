@@ -12,9 +12,11 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.{OAuthAc
 import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam, msg_packager}
 import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, MsgId, RecipPackaging}
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
@@ -193,4 +195,9 @@ class OAuthWebhookSenderSpec
       |""".stripMargin
   }
 
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

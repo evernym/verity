@@ -1,6 +1,8 @@
 package com.evernym.verity.integration.with_basic_sdk.data_retention.expire_after_days
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.with_basic_sdk.data_retention.DataRetentionBaseSpec
@@ -14,13 +16,19 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.Presentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults.ProofValidated
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
+import com.evernym.verity.util.TestExecutionContextProvider
 import com.typesafe.config.ConfigFactory
+
+import scala.concurrent.ExecutionContext
 
 
 class PresentProofSpec
   extends VerityProviderBaseSpec
     with DataRetentionBaseSpec
     with SdkProvider {
+
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   lazy val issuerVerityEnv =
     VerityEnvBuilder
@@ -38,9 +46,9 @@ class PresentProofSpec
 
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
-  lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
+  lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv, executionContext, ecp.walletFutureExecutionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
 
   val issuerHolderConn = "connId1"
   val verifierHolderConn = "connId2"
@@ -201,4 +209,10 @@ class PresentProofSpec
       |""".stripMargin
   }
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

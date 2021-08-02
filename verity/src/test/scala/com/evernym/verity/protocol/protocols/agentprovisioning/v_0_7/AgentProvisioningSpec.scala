@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
-import com.evernym.verity.util2.Base64Encoded
+import com.evernym.verity.util2.{Base64Encoded, ExecutionContextProvider}
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOneDomain
 import com.evernym.verity.protocol.engine.VerKey
@@ -12,7 +12,9 @@ import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}
 import com.evernym.verity.util.TimeUtil.{longToDateString, now}
 import com.evernym.verity.util.Base64Util.getBase64Encoded
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
+import com.evernym.verity.util.TestExecutionContextProvider
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import scala.language.{implicitConversions, reflectiveCalls}
 
@@ -233,9 +235,20 @@ class AgentProvisioningSpec
   }
 
   override val containerNames: Set[ContainerName] = Set(TestingVars.REQUESTER, TestingVars.PROVISIONER)
+
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
-object TestingVars extends CommonSpecUtil with HasTestWalletAPI {
+object TestingVars {
 
   val REQUESTER = "requester"
   val PROVISIONER = "provisioner"

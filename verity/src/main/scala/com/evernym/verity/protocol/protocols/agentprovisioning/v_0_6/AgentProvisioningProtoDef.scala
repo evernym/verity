@@ -44,8 +44,7 @@ object AgentProvisioningProtoDef
 
   override def createInitMsg(params: Parameters): Control = Init(params)
 
-  override def create(context: ProtocolContextApi[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String]):
-  Protocol[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String] =
+  override def create(context: ProtocolContextApi[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String]): Protocol[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String] =
     new AgentProvisioningProtocol(context)
 
   override def initialState: State = State.Uninitialized()

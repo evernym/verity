@@ -12,8 +12,10 @@ import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, MsgId, RecipPackagi
 import com.evernym.verity.actor.typed.BehaviourSpecBase
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.util2.ExecutionContextProvider
 import org.scalatest.concurrent.Eventually
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
@@ -164,5 +166,7 @@ class PlainWebhookSenderSpec
     )
     spawn(sender)
   }
-
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

@@ -7,7 +7,7 @@ import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import scala.concurrent.Future
 
 case class LedgerExecutorException(message: String,
-                              cause: Throwable = None.orNull) extends Exception(message, cause)
+                                   cause: Throwable = None.orNull) extends Exception(message, cause)
 
 trait LedgerTxnExecutor {
 

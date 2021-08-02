@@ -98,6 +98,7 @@ object Outbox {
             msgTransports: MsgTransports,
             executionContext: ExecutionContext): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
+
       Behaviors.withTimers { timer =>
         timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery, scheduledJobInterval(config))
         Behaviors.withStash(100) { buffer =>                     //TODO: finalize this

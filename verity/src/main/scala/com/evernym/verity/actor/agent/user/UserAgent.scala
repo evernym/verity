@@ -172,12 +172,16 @@ class UserAgent(val agentActorContext: AgentActorContext,
       val comMethods =
         state.myDidDoc.flatMap(_.endpoints.map(_.endpoints)).getOrElse(Seq.empty)
           .map { ep =>
-            val packaging = msgoutbox.RecipPackaging(MPF_INDY_PACK.toString, state.myDidAuthKey.map(_.verKey).toSeq)
-            val authentication = ep.endpointADTX match {
-              case hp: HttpEndpointType => hp.authentication.map(a => msgoutbox.Authentication(a.`type`, a.version, a.data))
-              case _                    => None
+            val (recipPackaging, authentication) = ep.endpointADTX match {
+              case hp: HttpEndpointType =>
+                val packFormat = hp.packagingContext.map(_.packFormat.toString()).getOrElse(MPF_INDY_PACK.toString)
+                val packaging = Option(msgoutbox.RecipPackaging(packFormat, state.myDidAuthKey.map(_.verKey).toSeq))
+                val auth = hp.authentication.map(a => msgoutbox.Authentication(a.`type`, a.version, a.data))
+                (packaging, auth)
+              case _                    =>
+                (None, None)
             }
-            ep.id -> msgoutbox.ComMethod(ep.`type`, ep.value, Option(packaging), authentication = authentication)
+            ep.id -> msgoutbox.ComMethod(ep.`type`, ep.value, recipPackaging, authentication = authentication)
           }.toMap
       sndr ! OutboxParamResp(state.getAgentWalletId, state.thisAgentVerKeyReq, comMethods)
     } else {

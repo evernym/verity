@@ -509,8 +509,14 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
           }
         )
       )
-      logger.info(s"update com method updated - id=${comMethod.id} - type: ${comMethod.`type`} - " +
-        s"value: ${comMethod.value}")
+      logger.info(
+        s"update com method updated => " +
+          s"id:${comMethod.id}, " +
+          s"type: ${comMethod.`type`}, " +
+          s"value: ${comMethod.value}, " +
+          s"packaging: ${comMethod.packaging.map(p => s"pkg-type: ${p.pkgType}")}, " +
+          s"authentication: ${comMethod.authentication.map(a => s"auth-type: ${a.`type`}[${a.version}]")}"
+      )
       logger.debug(
         s"update com method => updated (userDID=<${state.myDid}>, id=${comMethod.id}, " +
           s"old=$existingEndpointOpt): new: $comMethod", (LOG_KEY_SRC_DID, state.myDid))

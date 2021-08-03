@@ -119,10 +119,9 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
             .mapTo[NewKeyCreated].map(_.didPair)
       }
 
-    val createNewKeyFut = WalletMsgHandler.executeAsync(CreateNewKey()).mapTo[NewKeyCreated]
     val fut = for (
       odp <- ownerKeyFut;
-      nks <- createNewKeyFut
+      nks <- WalletMsgHandler.executeAsync(CreateNewKey()).mapTo[NewKeyCreated]
     ) yield {
       AgentWalletSetupCompleted(odp, nks)
     }

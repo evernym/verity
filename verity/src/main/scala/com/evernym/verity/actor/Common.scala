@@ -5,8 +5,7 @@ import com.evernym.verity.actor.node_singleton.TrackingParam
 import com.evernym.verity.protocol.engine.Ledgers
 import com.evernym.verity.util.TokenProvider
 import com.evernym.verity.util.Util._
-import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.util2.Status
 import scalapb.GeneratedMessage
 

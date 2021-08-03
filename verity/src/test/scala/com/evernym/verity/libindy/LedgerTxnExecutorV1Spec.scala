@@ -3,13 +3,12 @@ package com.evernym.verity.libindy
 import com.evernym.verity.util2.Exceptions.InvalidValueException
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.{StatusDetail, StatusDetailException}
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.ledger._
 import com.evernym.verity.libindy.ledger.{IndyLedgerPoolConnManager, LedgerTxnExecutorV1, SubmitToLedger}
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.{DID, DidPair}
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -194,7 +193,7 @@ class LedgerTxnExecutorV1Spec
             doReturn(Future(ivr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
             val response = Await.ready(
-              ledgerTxnExecutor.getNym(submitter, targetDidPair.DID), maxWaitTime
+              ledgerTxnExecutor.getNym(submitter, targetDidPair.did), maxWaitTime
             ).value.get
             response match {
               case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
@@ -207,7 +206,7 @@ class LedgerTxnExecutorV1Spec
       "and if underlying wallet api throw an exception" - {
         "should return error response" taggedAs (UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
           val response = Await.ready(
-            ledgerTxnExecutor.getNym(submitter, targetDidPair.DID), maxWaitTime
+            ledgerTxnExecutor.getNym(submitter, targetDidPair.did), maxWaitTime
           ).value.get
           response match {
             case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]

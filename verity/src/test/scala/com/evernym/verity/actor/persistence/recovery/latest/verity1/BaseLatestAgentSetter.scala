@@ -68,9 +68,9 @@ trait UserAgentPairwiseEventSetter extends AgentIdentifiers with BasePersistentS
   private def setupBasicUserAgentPairwiseWalletData(): Unit = {
     createNewKey(mySelfRelAgentEntityId, Option(myPairwiseRelDIDKeySeed))
     createNewKey(mySelfRelAgentEntityId, Option(myPairwiseRelAgentKeySeed))
-    storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelDIDPair.toAgentDidPair)
-    storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelAgentDIDPair.toAgentDidPair)
-    storeTheirKey(mySelfRelAgentEntityId, theirAgencyAgentDIDPair.toAgentDidPair)
+    storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelDIDPair)
+    storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelAgentDIDPair)
+    storeTheirKey(mySelfRelAgentEntityId, theirAgencyAgentDIDPair)
   }
 
   private def storeUserAgentPairwiseEvents(): Unit = {

@@ -4,8 +4,7 @@ import java.time.ZonedDateTime
 import akka.actor.ActorSystem
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.{DID, DidPair}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.vault.WalletAPIParam
@@ -216,7 +215,7 @@ trait LedgerSvc {
   final def addNym(submitterDetail: Submitter, targetDid: DidPair): Future[TxnResp] = {
     ledgerTxnExecutor.addNym(submitterDetail, targetDid) recover {
       case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
-        s"error while trying to add nym with DID ${targetDid.DID}: " + e.getMessage))
+        s"error while trying to add nym with DID ${targetDid.did}: " + e.getMessage))
     }
   }
 

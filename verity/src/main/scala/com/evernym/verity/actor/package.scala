@@ -1,10 +1,9 @@
 package com.evernym.verity
 
 import akka.actor.{ActorRef, Props}
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.util.Base58Util
 
 import scala.util.Success

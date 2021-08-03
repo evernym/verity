@@ -4,7 +4,6 @@ import akka.actor.ActorSystem
 import com.evernym.verity.util2.Exceptions.{InvalidValueException, MissingReqFieldException, NoResponseFromLedgerPoolServiceException}
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.{TIMEOUT, UNHANDLED, _}
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, MildSystemError, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -14,7 +13,7 @@ import com.evernym.verity.config.{AppConfig, ConfigConstants, ConfigUtil}
 import com.evernym.verity.ledger._
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.{DID, DidPair}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.util.LogUtil.logFutureDuration
@@ -445,7 +444,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
   override def addNym(submitterDetail: Submitter, targetDid: DidPair): Future[TxnResp] = {
     toFuture(buildNymRequest(
       submitterDetail.did,
-      targetDid.DID,
+      targetDid.did,
       targetDid.verKey,
       null,
       null

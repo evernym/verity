@@ -135,7 +135,7 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
     val apd = parseHttpResponseAs[AgencyPublicDid](resp)
     require(apd.DID.nonEmpty, "agency DID should not be empty")
     require(apd.verKey.nonEmpty, "agency verKey should not be empty")
-    storeTheirKey(DidPair(apd.didPair.DID, apd.didPair.verKey))
+    storeTheirKey(DidPair(apd.didPair.did, apd.didPair.verKey))
     agencyPublicDidOpt = Option(apd)
     apd
   }

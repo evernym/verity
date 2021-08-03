@@ -1,7 +1,6 @@
 package com.evernym.verity.ledger
 
-import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.{DID, DidPair}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 
 import scala.concurrent.Future

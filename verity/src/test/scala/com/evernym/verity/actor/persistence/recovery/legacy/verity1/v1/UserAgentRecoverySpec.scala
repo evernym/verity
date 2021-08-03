@@ -34,8 +34,8 @@ class UserAgentRecoverySpec
         val uaEventsBeforeRestart = getEvents(mySelfRelAgentPersistenceId)
         uaEventsBeforeRestart shouldBe uaEventsBeforeStart  ++ getAuthKeyAddedEvents(
           List(
-            mySelfRelDIDPair.toAgentDidPair,
-            mySelfRelAgentDIDPair.toAgentDidPair
+            mySelfRelDIDPair,
+            mySelfRelAgentDIDPair
           )
         )
 

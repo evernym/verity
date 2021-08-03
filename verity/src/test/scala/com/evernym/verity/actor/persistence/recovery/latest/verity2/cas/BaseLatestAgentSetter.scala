@@ -57,7 +57,7 @@ trait UserAgentEventSetter extends AgentIdentifiers with BasePersistentStore { t
   private def setupBasicUserAgentWalletData(): Unit = {
     createWallet(mySelfRelAgentEntityId)
     createNewKey(mySelfRelAgentEntityId, Option(mySelfRelAgentDIDKeySeed))
-    storeTheirKey(mySelfRelAgentEntityId, mySelfRelDIDPair.toAgentDidPair)
+    storeTheirKey(mySelfRelAgentEntityId, mySelfRelDIDPair)
   }
 }
 
@@ -72,7 +72,7 @@ trait UserAgentPairwiseEventSetter extends AgentIdentifiers with BasePersistentS
 
   private def setupBasicUserAgentPairwiseWalletData(): Unit = {
     createNewKey(mySelfRelAgentEntityId, Option(myPairwiseRelAgentKeySeed))
-    storeTheirKey(mySelfRelAgentEntityId, myPairwiseRelDIDPair.toAgentDidPair)
+    storeTheirKey(mySelfRelAgentEntityId, myPairwiseRelDIDPair)
   }
 
   private def storeUserAgentPairwiseEvents(): Unit = {

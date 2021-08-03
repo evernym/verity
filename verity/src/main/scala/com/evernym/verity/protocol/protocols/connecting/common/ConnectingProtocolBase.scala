@@ -9,7 +9,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
 import com.evernym.verity.did.didcomm.v1.Thread
-import com.evernym.verity.actor.agent.{AttrName, AttrValue, DidPair, EncryptionParamBuilder, MsgPackFormat, PayloadMetadata}
+import com.evernym.verity.actor.agent.{AttrName, AttrValue, EncryptionParamBuilder, MsgPackFormat, PayloadMetadata}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -19,7 +19,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.cache.base.Cache
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Constants._
@@ -657,7 +657,7 @@ trait DEPRECATED_HasWallet {
   protected def prepareNewAgentWalletData(forDIDPair: DidPair, walletId: String): NewKeyCreated = {
     val agentWAP = WalletAPIParam(walletId)
     ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[WalletCreated.type](CreateWallet())(agentWAP))
-    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(forDIDPair.DID, forDIDPair.verKey))(agentWAP))
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(forDIDPair.did, forDIDPair.verKey))(agentWAP))
     ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[NewKeyCreated](CreateNewKey())(agentWAP))
   }
 

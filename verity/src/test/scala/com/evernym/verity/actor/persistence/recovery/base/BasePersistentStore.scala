@@ -2,7 +2,6 @@ package com.evernym.verity.actor.persistence.recovery.base
 
 import akka.persistence.testkit.{PersistenceTestKitSnapshotPlugin, SnapshotMeta}
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.msgrouter.RoutingAgentUtil
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
@@ -18,7 +17,7 @@ import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.transformations.transformers.v1._
 import com.evernym.verity.transformations.transformers.legacy._
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.testkit.HasTestWalletAPI
 import com.evernym.verity.transformations.transformers.{<=>, legacy, v1}
 import com.evernym.verity.vault.WalletAPIParam
@@ -49,7 +48,7 @@ trait BasePersistentStore
   }
 
   def storeTheirKey(walletId: String, didPair: DidPair): TheirKeyStored = {
-    storeTheirKey(walletId, didPair.DID, didPair.verKey)
+    storeTheirKey(walletId, didPair.did, didPair.verKey)
   }
 
   def storeTheirKey(walletId: String, theirDID: DID, theirDIDVerKey: VerKey): TheirKeyStored = {

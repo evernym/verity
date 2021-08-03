@@ -49,7 +49,7 @@ class AgencyAgentRecoverySpec
 
         val aaEventsBeforeRestart = getEvents(myAgencyAgentPersistenceId)
         aaEventsBeforeRestart shouldBe aaEventsBeforeStart ++ getAuthKeyAddedEvents(
-          myAgencyAgentDIDPair.toAgentDidPair
+          myAgencyAgentDIDPair
         )
 
         restartActor(aaRegion)

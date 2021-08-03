@@ -39,10 +39,10 @@ class UserAgentPairwiseRecoverySpec
 
         uapEventsBeforeRestart shouldBe uapEventsBeforeStart ++ getAuthKeyAddedEvents(
           List(
-            myPairwiseRelDIDPair.toAgentDidPair,
-            myPairwiseRelAgentDIDPair.toAgentDidPair,
-            mySelfRelAgentDIDPair.toAgentDidPair,
-            theirPairwiseRelDIDPair.toAgentDidPair
+            myPairwiseRelDIDPair,
+            myPairwiseRelAgentDIDPair,
+            mySelfRelAgentDIDPair,
+            theirPairwiseRelDIDPair
           )
         )
         restartActor(uapRegion)

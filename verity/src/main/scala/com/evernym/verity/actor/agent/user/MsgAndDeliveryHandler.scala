@@ -12,7 +12,7 @@ import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import MsgHelper._
 import com.evernym.verity.actor.agent.user.msgstore.MsgStore
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.util.Util.checkIfDIDLengthIsValid
 
 trait MsgAndDeliveryHandler { this: AgentCommon =>
@@ -95,7 +95,7 @@ object MsgHelper {
 
   def buildMsgCreatedEvt(msgId: MsgId,
                          mType: String,
-                         senderDID: DID,
+                         senderDID: DidStr,
                          sendMsg: Boolean,
                          msgStatus: String,
                          threadOpt: Option[Thread],

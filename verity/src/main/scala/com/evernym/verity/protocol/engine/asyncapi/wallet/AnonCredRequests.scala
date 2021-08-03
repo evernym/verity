@@ -2,19 +2,19 @@ package com.evernym.verity.protocol.engine.asyncapi.wallet
 
 import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, ProofCreated, ProofVerifResult}
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 
 import scala.util.Try
 
 trait AnonCredRequests {
 
-  def createSchema(issuerDID: DID,
+  def createSchema(issuerDID: DidStr,
                    name: String,
                    version: String,
                    data: String)
                   (handler: Try[SchemaCreated] => Unit): Unit
 
-  def createCredDef(issuerDID: DID,
+  def createCredDef(issuerDID: DidStr,
                     schemaJson: String,
                     tag: String,
                     sigType: Option[String]=None,
@@ -24,7 +24,7 @@ trait AnonCredRequests {
   def createCredOffer(credDefId: String)(handler: Try[CredOfferCreated] => Unit): Unit
 
   def createCredReq(credDefId: String,
-                    proverDID: DID,
+                    proverDID: DidStr,
                     credDefJson: String,
                     credOfferJson: String)
                    (handler: Try[CredReqCreated] => Unit): Unit

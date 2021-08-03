@@ -12,7 +12,7 @@ import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, Persisten
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, PersistentActorSpec}
 import com.evernym.verity.actor.{ForIdentifier, LegacyRouteSet, ShardUtil}
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.BeforeAndAfterAll
@@ -89,13 +89,13 @@ class ActorStateCleanupManagerSpec
   }
 
   //route store actor entity id and its stored route mapping
-  val entityIdsToRoutes: Map[EntityId, Set[DID]] = (1 to totalRouteEntries).map { i =>
+  val entityIdsToRoutes: Map[EntityId, Set[DidStr]] = (1 to totalRouteEntries).map { i =>
     val routeDID = generateDID(i.toString)
     val routeStoreActorEntityId = RoutingAgentUtil.getBucketEntityId(routeDID)
     (routeStoreActorEntityId, routeDID)
   }.groupBy(_._1).mapValues(_.map(_._2).toSet)
 
-  def generateDID(seed: String): DID =
+  def generateDID(seed: String): DidStr =
     CommonSpecUtil.generateNewDid(Option(UUID.nameUUIDFromBytes(seed.getBytes()).toString)).did
 
   def addRandomRoutes(): Unit = {

@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.basicMessage.v_1_0
 
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.did.didcomm.v1.decorators.{AttachmentDescriptor => Attachment}
@@ -57,7 +57,7 @@ object Ctl {
 sealed trait SignalMsg
 
 object Signal {
-  case class ReceivedMessage(relationship: DID,
+  case class ReceivedMessage(relationship: DidStr,
                              `~l10n`: l10n,
                              sent_time: String,
                              content: String,

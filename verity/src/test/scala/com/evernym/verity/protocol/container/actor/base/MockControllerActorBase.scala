@@ -13,7 +13,7 @@ import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, ActorProtocol, InitProtocolReq, MsgEnvelope}
 import com.evernym.verity.protocol.{Control, engine}
@@ -219,7 +219,7 @@ abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorConte
 }
 
 object ControllerData {
-  def apply(myDID: DID, theirDIDOpt: Option[DID]): ControllerData =
+  def apply(myDID: DidStr, theirDIDOpt: Option[DidStr]): ControllerData =
     ControllerData (UUID.randomUUID().toString, myDID, theirDIDOpt)
 }
 /**
@@ -228,8 +228,8 @@ object ControllerData {
  * @param myDID my DID
  * @param theirDIDOpt optional, present/provided if you want to test their side of the protocol to
  */
-case class ControllerData(walletId: String, myDID: DID, theirDIDOpt: Option[DID]) {
-  def theirDID: DID = theirDIDOpt.getOrElse(throw new RuntimeException("their DID not supplied"))
+case class ControllerData(walletId: String, myDID: DidStr, theirDIDOpt: Option[DidStr]) {
+  def theirDID: DidStr = theirDIDOpt.getOrElse(throw new RuntimeException("their DID not supplied"))
 }
 case class SetupController(data: ControllerData) extends ActorMessage
 

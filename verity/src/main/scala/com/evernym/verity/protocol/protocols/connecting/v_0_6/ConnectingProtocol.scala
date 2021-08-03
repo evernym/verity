@@ -14,7 +14,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
 import com.evernym.verity.protocol.engine._
@@ -39,8 +39,8 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
       with MsgDeliveryResultHandler
       with PushNotifMsgBuilder {
 
-  lazy val myPairwiseDIDReq: DID = ctx.getState.myPairwiseDIDReq
-  lazy val myPairwiseVerKeyReq: VerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq).verKey
+  lazy val myPairwiseDIDReq: DidStr = ctx.getState.myPairwiseDIDReq
+  lazy val myPairwiseVerKeyReq: VerKeyStr = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq).verKey
 
   def initState(params: Seq[ParameterStored]): ConnectingState = {
     val seed = params.find(_.name == THIS_AGENT_WALLET_ID).get.value
@@ -199,7 +199,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
     checkIfKeyNotCreated(createKeymsg.forDID)
   }
 
-  private def checkIfKeyNotCreated(forDID: DID): Unit = {
+  private def checkIfKeyNotCreated(forDID: DidStr): Unit = {
     if (ctx.getState.agentDetail.exists(_.forDID == forDID)) {
       throw new BadRequestErrorException(KEY_ALREADY_CREATED.statusCode)
     }
@@ -249,14 +249,14 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
 
   lazy val inviteDetailVersion: String = "2.0"
 
-  override def getEncryptForDID: DID = ctx.getState.mySelfRelDIDReq
+  override def getEncryptForDID: DidStr = ctx.getState.mySelfRelDIDReq
 }
 
 
 /**
   * Signal
   */
-case class AskPairwiseCreator(fromDID: DID, pairwiseDID: DID, endpointDetailJson: String)
+case class AskPairwiseCreator(fromDID: DidStr, pairwiseDID: DidStr, endpointDetailJson: String)
 
 /**
  * Control Messages

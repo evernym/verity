@@ -14,7 +14,7 @@ import org.iq80.leveldb.util.FileUtils
 import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
 
 import java.util.concurrent.TimeUnit
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.util2.ActorErrorResp
 import com.evernym.verity.metrics.{MetricsBackend, MetricsWriterExtension, TestMetricsBackend}
 
@@ -35,7 +35,7 @@ object AkkaTestBasic extends ActorSystemConfig
  * @param did DID
  * @param verKey ver key
  */
-case class AgentDIDDetail(name: String, DIDSeed: String, did: DID, verKey: VerKey) {
+case class AgentDIDDetail(name: String, DIDSeed: String, did: DidStr, verKey: VerKeyStr) {
   def prepareAgencyIdentity: AgencyPublicDid = AgencyPublicDid(did, verKey)
   def didPair = DidPair(did, verKey)
 }

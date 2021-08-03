@@ -5,7 +5,7 @@ import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, StatusDetail, StatusDetailException}
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import org.json.JSONObject
 
 import java.time.LocalDateTime
@@ -22,8 +22,8 @@ class MockLedgerSvc(val system: ActorSystem) extends LedgerSvc {
 }
 
 object MockLedgerTxnExecutor {
-  def buildTxnResp(from: DID,
-                   dest: Option[DID],
+  def buildTxnResp(from: DidStr,
+                   dest: Option[DidStr],
                    data: Option[Map[String, Any]],
                    txnType: String,
                    txnTime: Option[Long]=None,
@@ -35,7 +35,7 @@ object MockLedgerTxnExecutor {
 
 class MockLedgerTxnExecutor() extends LedgerTxnExecutor {
 
-  case class NymDetail(verKey: VerKey)
+  case class NymDetail(verKey: VerKeyStr)
 
   var taa: Option[LedgerTAA] = None
   var nyms: Map[DID, NymDetail] = Map.empty

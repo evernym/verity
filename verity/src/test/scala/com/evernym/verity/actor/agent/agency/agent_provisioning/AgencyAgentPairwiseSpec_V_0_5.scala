@@ -12,7 +12,7 @@ import com.evernym.verity.protocol.container.actor.ActorProtocol
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, PinstIdResolution}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5.AgentProvisioningProtoDef
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 
 class AgencyAgentPairwiseSpec_V_0_5 extends AgencyAgentPairwiseSpecBase {
 
@@ -31,7 +31,7 @@ class AgencyAgentPairwiseSpec_V_0_5 extends AgencyAgentPairwiseSpecBase {
 
     mockEdgeAgent.getVerKeyFromWallet(mockEdgeAgent.myDIDDetail.did)
 
-    var pairwiseDID: DID = null
+    var pairwiseDID: DidStr = null
 
     "User" - {
 

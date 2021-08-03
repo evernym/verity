@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor
 import com.evernym.verity.did.didcomm.v1.messages.{AdoptableProblemReport, ProblemDescription}
@@ -35,11 +35,11 @@ object OutOfBandMsgFamily extends MsgFamily {
 
 sealed trait SignalMsg
 
-case class Identity(DID: DID, verKey: VerKey)
+case class Identity(DID: DidStr, verKey: VerKeyStr)
 
 object Signal {
-  case class ConnectionReused(`~thread`: Thread, relationship: DID) extends SignalMsg
-  case class MoveProtocol(protoRefStr: String, fromRelationship: DID, toRelationship: DID, threadId: ThreadId)
+  case class ConnectionReused(`~thread`: Thread, relationship: DidStr) extends SignalMsg
+  case class MoveProtocol(protoRefStr: String, fromRelationship: DidStr, toRelationship: DidStr, threadId: ThreadId)
   case class ProblemReport(description: ProblemDescription) extends AdoptableProblemReport with SignalMsg
   def buildProblemReport(description: String, code: String): Signal.ProblemReport = {
     Signal.ProblemReport(

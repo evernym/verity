@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine.asyncapi.wallet
 
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.protocol.engine.ParticipantId
 
 trait WalletAsyncOps extends AnonCredAsyncOps {
@@ -11,26 +11,26 @@ trait WalletAsyncOps extends AnonCredAsyncOps {
 
   def runNewDid(keyType: KeyType = KEY_ED25519): Unit
 
-  def runStoreTheirDid(did: DID, verKey: VerKey, ignoreIfAlreadyExists: Boolean = false): Unit
+  def runStoreTheirDid(did: DidStr, verKey: VerKeyStr, ignoreIfAlreadyExists: Boolean = false): Unit
 
-  def runVerKey(forDID: DID): Unit
+  def runVerKey(forDID: DidStr): Unit
 
-  def runVerKeyOpt(forDID: DID): Unit
+  def runVerKeyOpt(forDID: DidStr): Unit
 
   def runSign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE): Unit
 
-  def runSignRequest(submitterDID: DID, request: String): Unit
+  def runSignRequest(submitterDID: DidStr, request: String): Unit
 
-  def runMultiSignRequest(submitterDID: DID, request: String): Unit
+  def runMultiSignRequest(submitterDID: DidStr, request: String): Unit
 
   def runVerify(signer: ParticipantId,
                 msg: Array[Byte],
                 sig: Array[Byte],
-                verKeyUsed: Option[VerKey] = None,
+                verKeyUsed: Option[VerKeyStr] = None,
                 signType: SignType = SIGN_ED25519_SHA512_SINGLE): Unit
 
   def runVerify(msg: Array[Byte],
                 sig: Array[Byte],
-                verKeyUsed: VerKey,
+                verKeyUsed: VerKeyStr,
                 signType: SignType): Unit
 }

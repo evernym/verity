@@ -18,7 +18,7 @@ import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.legacy.services.{CreateAgentEndpointDetail, CreateKeyEndpointDetail}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
@@ -60,7 +60,7 @@ trait AgencyAgentCommon
     sender ! AgentActorDetailSet(saw.didPair, saw.actorEntityId)
   }
 
-  override def agencyDidPairFutByCache(agencyDID: DID): Future[DidPair] = {
+  override def agencyDidPairFutByCache(agencyDID: DidStr): Future[DidPair] = {
     state.agencyDIDPair match {
       case Some(adp) if adp.DID.nonEmpty && adp.verKey.nonEmpty => Future(adp)
       case _ if state.agentWalletId.isDefined =>
@@ -71,7 +71,7 @@ trait AgencyAgentCommon
     }
   }
 
-  def stateDetailsWithAgencyVerKey(agencyVerKey: VerKey, protoRef: ProtoRef): PartialFunction[String, Parameter] = {
+  def stateDetailsWithAgencyVerKey(agencyVerKey: VerKeyStr, protoRef: ProtoRef): PartialFunction[String, Parameter] = {
         def mapper(newActorId: String,
                    keyEndpointJson: String,
                    agentEndpointJson: String
@@ -210,4 +210,4 @@ trait AgencyAgentCommon
   override def sponsorRel: Option[SponsorRel] = Option(SponsorRel.empty)
 }
 
-case class ProvisioningParam(domainDID: DID, domainVerKey: VerKey, requestVerKey: VerKey)
+case class ProvisioningParam(domainDID: DidStr, domainVerKey: VerKeyStr, requestVerKey: VerKeyStr)

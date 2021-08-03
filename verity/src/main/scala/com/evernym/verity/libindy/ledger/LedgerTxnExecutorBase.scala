@@ -13,7 +13,7 @@ import com.evernym.verity.config.{AppConfig, ConfigConstants, ConfigUtil}
 import com.evernym.verity.ledger._
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.did.{DID, DidPair}
+import com.evernym.verity.did.{DidStr, DidPair}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.util.LogUtil.logFutureDuration
@@ -277,7 +277,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
   }
 
   override def getAttrib(submitter: Submitter,
-                         did: DID,
+                         did: DidStr,
                          attrName: String): Future[GetAttribResp] = {
     toFuture(buildGetAttribRequest(submitter.did, did, attrName, null, null)) flatMap { req =>
       submitGetRequest(submitter, req, needsSigning=true).map{ r =>
@@ -317,7 +317,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     }
   }
 
-  override def getNym(submitterDetail: Submitter, did: DID): Future[GetNymResp] = {
+  override def getNym(submitterDetail: Submitter, did: DidStr): Future[GetNymResp] = {
     toFuture(buildGetNymRequest(submitterDetail.did, did)) flatMap { req =>
       submitGetRequest(submitterDetail, req, needsSigning=false).map{ r =>
         val txnResp = buildTxnRespForReadOp(r)
@@ -335,7 +335,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     }
   }
 
-  override def writeSchema(submitterDID: DID,
+  override def writeSchema(submitterDID: DidStr,
                            schemaJson: String,
                            walletAccess: WalletAccess): Future[TxnResp] = {
     toFuture(buildSchemaRequest(submitterDID, schemaJson)) flatMap { req =>
@@ -354,9 +354,9 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     }
   }
 
-  override def prepareSchemaForEndorsement(submitterDID: DID,
+  override def prepareSchemaForEndorsement(submitterDID: DidStr,
                                            schemaJson: String,
-                                           endorserDID: DID,
+                                           endorserDID: DidStr,
                                            walletAccess: WalletAccess): Future[LedgerRequest] = {
     toFuture(buildSchemaRequest(submitterDID, schemaJson)) flatMap { req =>
       val schemaReq = LedgerRequest(req, needsSigning=false, taa=None)
@@ -370,7 +370,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     }
   }
 
-  def writeCredDef(submitterDID: DID,
+  def writeCredDef(submitterDID: DidStr,
                    credDefJson: String,
                    walletAccess: WalletAccess): Future[TxnResp] = {
     toFuture(buildCredDefRequest(submitterDID, credDefJson)) flatMap { req =>
@@ -389,9 +389,9 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     }
   }
 
-  override def prepareCredDefForEndorsement(submitterDID: DID,
+  override def prepareCredDefForEndorsement(submitterDID: DidStr,
                                             credDefJson: String,
-                                            endorserDID: DID,
+                                            endorserDID: DidStr,
                                             walletAccess: WalletAccess): Future[LedgerRequest] = {
     toFuture(buildCredDefRequest(submitterDID, credDefJson)) flatMap { req =>
       val credDefReq = LedgerRequest(req, needsSigning=false, taa=None)
@@ -454,7 +454,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
   }
 
   override def addAttrib(submitterDetail: Submitter,
-                         did: DID,
+                         did: DidStr,
                          attrName: String,
                          attrValue: String): Future[TxnResp] = {
     val raw = getJsonStringFromMap (Map(attrName -> attrValue))

@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols.walletBackup
 
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
-import com.evernym.verity.did.VerKey
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
 import com.evernym.verity.protocol.engine.DebugProtocols
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily._
@@ -355,7 +355,7 @@ object BackupSpecVars extends CommonSpecUtil {
   val EXPORTER = "exporter"
   val PERSISTER = "persister"
   val RECOVERER = "recoverer"
-  val RECOVERY_VK: VerKey = generateNewDid().verKey
+  val RECOVERY_VK: VerKeyStr = generateNewDid().verKey
   val DD_ADDRESS = "456"
   val CLOUD_ADDRESS = "789"
   val BACKUP_INIT_PARAMS: BackupInitParams = BackupInitParams(RECOVERY_VK, DD_ADDRESS, CLOUD_ADDRESS.getBytes())

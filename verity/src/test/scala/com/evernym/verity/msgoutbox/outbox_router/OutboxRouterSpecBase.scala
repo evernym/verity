@@ -5,7 +5,7 @@ import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.pattern.StatusReply
 import com.evernym.verity.actor.agent.relationship.KeyId
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpecBase
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.msgoutbox.base.BaseMsgOutboxSpec
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Commands
@@ -121,7 +121,7 @@ trait AgentContext {    //represents either VerityEdgeAgent or VerityCloudAgent
 }
 
 trait SelfRelContext {
-  def myDID: DID
+  def myDID: DidStr
   def thisAgentKeyId: KeyId
 
   def selfParticipantId: ParticipantId      //represents thisAgentKeyId participant-id
@@ -131,13 +131,13 @@ trait SelfRelContext {
 }
 
 trait PairwiseRelContext {
-  def selfRelDID: DID
+  def selfRelDID: DidStr
   def thisAgentKeyId: KeyId
 
-  def myPairwiseDID: DID
+  def myPairwiseDID: DidStr
   def selfParticipantId: ParticipantId      //represents myPairwiseDID participant-id
   def myDomainParticipantId: ParticipantId  //represents selfRelDID participant-id
 
-  def theirPairwiseDID: DID
+  def theirPairwiseDID: DidStr
   def otherParticipantId: ParticipantId     //represents theirPairwiseDID participant-id
 }

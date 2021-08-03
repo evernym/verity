@@ -4,7 +4,7 @@ import com.evernym.verity.actor.wallet.{CredCreated, CredOfferCreated, CredReqCr
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.ledger.GetCredDefResp
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.did.didcomm.v1.conventions.CredValueEncoderV1_0
@@ -352,7 +352,7 @@ trait IssueCredentialHelpers
     }
   }
 
-  def handleRequest(credOfferRef: SegmentId, m: Ctl.Request, myPwDid: DID): Unit = {
+  def handleRequest(credOfferRef: SegmentId, m: Ctl.Request, myPwDid: DidStr): Unit = {
     ctx.withSegment[CredOffered](credOfferRef) {
       case Success(o) if o.isDefined => handleRequest(m, myPwDid, buildOfferCred(o))
       case Success(None)  => expiredSegment("Credential Offer")
@@ -360,7 +360,7 @@ trait IssueCredentialHelpers
     }
   }
 
-  def handleRequest(m: Ctl.Request, myPwDid: DID, credOffer: OfferCred): Unit = {
+  def handleRequest(m: Ctl.Request, myPwDid: DidStr, credOffer: OfferCred): Unit = {
     ctx.ledger.getCredDef(m.cred_def_id) {
       case Success(GetCredDefResp(_, Some(cdj))) => sendCredRequest(m, myPwDid, credOffer, DefaultMsgCodec.toJson(cdj))
 
@@ -380,7 +380,7 @@ trait IssueCredentialHelpers
     }
   }
 
-  def sendCredRequest(m: Ctl.Request, myPwDid: DID, credOffer: OfferCred, credDefJson: String): Unit = {
+  def sendCredRequest(m: Ctl.Request, myPwDid: DidStr, credOffer: OfferCred, credDefJson: String): Unit = {
     val credOfferJson = extractCredOfferJson(credOffer)
     ctx.wallet.createCredReq(m.cred_def_id, myPwDid, credDefJson, credOfferJson) {
       case Success(credRequest: CredReqCreated) =>

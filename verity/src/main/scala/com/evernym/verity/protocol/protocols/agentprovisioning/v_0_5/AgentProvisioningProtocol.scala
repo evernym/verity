@@ -7,7 +7,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, TheirKeyStored}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine._
@@ -65,7 +65,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
     case (c: State.Connected, _, SignedUp()) =>
       State.Signedup(c.parameters, c.pdd)
 
-    case (_: State.Signedup, _, AgentPairwiseKeyCreated(did: DID, verKey: VerKey)) =>
+    case (_: State.Signedup, _, AgentPairwiseKeyCreated(did: DidStr, verKey: VerKeyStr)) =>
       State.AgentKeyCreated(did, verKey)
 
     case (_: State.AgentKeyCreated, _, UserAgentCreated()) =>
@@ -140,7 +140,7 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
     }
   }
 
-  private def checkIfDIDBelongsToVerKey(did: DID, verKey: VerKey): Unit = {
+  private def checkIfDIDBelongsToVerKey(did: DidStr, verKey: VerKeyStr): Unit = {
     val verifKey = Base58Util.decode(verKey).get
     val didFromVerKey = Base58Util.encode(verifKey.take(16))
     if (did != didFromVerKey) {

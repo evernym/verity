@@ -10,7 +10,7 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, CreateAgent_MFV_0_7, CreateEdgeAgent_MFV_0_7}
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.mock.agent.MockAgent
 
@@ -24,31 +24,31 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
 
     implicit val msgPackFormat: MsgPackFormat = MPF_INDY_PACK
 
-    def prepareCreateAgentMsgForAgency(forDID: DID, requesterKeys: RequesterKeys, token: Option[ProvisionToken]): PackedMsg = {
+    def prepareCreateAgentMsgForAgency(forDID: DidStr, requesterKeys: RequesterKeys, token: Option[ProvisionToken]): PackedMsg = {
       logger.debug("Prepare create agent msg for agency (MFV 0.7)")
       val agentPayloadMsgs = buildCoreCreateAgentMsg(forDID, requesterKeys, token)
       val fwdRoute = FwdRouteMsg(forDID, Left(sealParamFromEdgeToAgency))
       preparePackedRequestForRoutes(MFV_1_0, agentPayloadMsgs, List(fwdRoute))
     }
 
-    def prepareCreateAgentMsg(forDID: DID, requesterKeys: RequesterKeys, requesterDetails: Option[ProvisionToken])
+    def prepareCreateAgentMsg(forDID: DidStr, requesterKeys: RequesterKeys, requesterDetails: Option[ProvisionToken])
                                      : PackedMsg = {
       preparePackedRequestForAgent(buildCoreCreateAgentMsg(forDID, requesterKeys, requesterDetails))
     }
 
-    def buildCoreCreateAgentMsg(forDID: DID, requesterKeys: RequesterKeys,
-                                        requesterDetails: Option[ProvisionToken]):
+    def buildCoreCreateAgentMsg(forDID: DidStr, requesterKeys: RequesterKeys,
+                                requesterDetails: Option[ProvisionToken]):
     PackMsgParam = {
       val agentMsg = CreateAgent_MFV_0_7(MSG_TYPE_DETAIL_CREATE_AGENT_0_7, requesterKeys, requesterDetails)
       AgentPackMsgUtil(agentMsg, encryptParamFromEdgeToGivenDID(forDID))
     }
 
-    def prepareCreateEdgeAgentMsg(forDID: DID, requesterKeys: RequesterKeys, requesterDetails: Option[ProvisionToken])
+    def prepareCreateEdgeAgentMsg(forDID: DidStr, requesterKeys: RequesterKeys, requesterDetails: Option[ProvisionToken])
     : PackedMsg = {
       preparePackedRequestForAgent(buildCoreCreateEdgeAgentMsg(forDID, requesterKeys.fromVerKey, requesterDetails))
     }
 
-    def buildCoreCreateEdgeAgentMsg(forDID: DID, requesterVk: VerKey, requesterDetails: Option[ProvisionToken]):
+    def buildCoreCreateEdgeAgentMsg(forDID: DidStr, requesterVk: VerKeyStr, requesterDetails: Option[ProvisionToken]):
     PackMsgParam = {
       val agentMsg = CreateEdgeAgent_MFV_0_7(MSG_TYPE_DETAIL_CREATE_EDGE_AGENT_0_7, requesterVk, requesterDetails)
       AgentPackMsgUtil(agentMsg, encryptParamFromEdgeToGivenDID(forDID))

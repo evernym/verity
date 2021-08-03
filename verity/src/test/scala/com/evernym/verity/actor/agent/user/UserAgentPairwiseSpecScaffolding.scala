@@ -21,7 +21,7 @@ import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent}
 import com.evernym.verity.util2.UrlParam
 import org.scalatest.concurrent.Eventually
@@ -48,7 +48,7 @@ trait UserAgentPairwiseSpecScaffolding
 
   val testPushComMethod: String = s"${MockPusher.comMethodPrefix}:12345"
 
-  var pairwiseDID: DID = _
+  var pairwiseDID: DidStr = _
 
   var threadId: ThreadId = _
   var inviteDetail:InviteDetail = _
@@ -84,7 +84,7 @@ trait UserAgentPairwiseSpecScaffolding
     else MockPusher.pushedMsg.size == oldPushMsgCount
   }
 
-  def setPairwiseEntityId(agentPairwiseDID: DID): Unit = {
+  def setPairwiseEntityId(agentPairwiseDID: DidStr): Unit = {
     routeRegion ! ForIdentifier(agentPairwiseDID, GetStoredRoute)
     val addressDetail = expectMsgType[Option[ActorAddressDetail]]
     addressDetail.isDefined shouldBe true

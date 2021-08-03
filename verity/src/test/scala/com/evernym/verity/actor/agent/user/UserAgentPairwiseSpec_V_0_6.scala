@@ -9,7 +9,7 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise.ConnReqAcceptedMsg_MFV_0_6
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.msgpacker.PackMsgParam
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.AgentPackMsgUtil
 import com.evernym.verity.testkit.util.AgentPackMsgUtil.preparePackedRequestForAgent
@@ -75,7 +75,7 @@ trait UserAgentPairwiseSpec_V_0_6
     updateComMethod(COM_METHOD_TYPE_HTTP_ENDPOINT, "localhost:7000")
   }
 
-  var agentPairwiseDID: DID = _
+  var agentPairwiseDID: DidStr = _
 
   val connId1New = "connIdNew1"
   val connId2New = "connIdNew2"

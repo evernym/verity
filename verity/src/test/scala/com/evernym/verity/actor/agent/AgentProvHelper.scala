@@ -9,7 +9,7 @@ import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, SignMsg, SignedMsg}
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, RequesterKeys}
 import com.evernym.verity.testkit.{BasicSpec, TestWallet}
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
@@ -53,7 +53,7 @@ trait AgentProvHelper
   def sponsorKeys(seed: String="000000000000000000000000Trustee1"): NewKeyCreated =
     sponsorWallet.executeSync[NewKeyCreated](CreateNewKey(seed=Some(seed)))
 
-  def sponsorSig(nonce: String, id: String, sponsorId: String, vk: VerKey, timestamp: String): Base64Encoded = {
+  def sponsorSig(nonce: String, id: String, sponsorId: String, vk: VerKeyStr, timestamp: String): Base64Encoded = {
     val signedMsg = sponsorWallet.executeSync[SignedMsg](
       SignMsg(KeyParam.fromVerKey(vk), (nonce + timestamp + id + sponsorId).getBytes())
     )
@@ -65,7 +65,7 @@ trait AgentProvHelper
   }
 
   private def sendCreateAgent(sponsorRel: SponsorRel,
-                              sponsorVk: VerKey,
+                              sponsorVk: VerKeyStr,
                               nonce: String,
                               agent: MockEdgeAgent,
                               timestamp: String,
@@ -81,7 +81,7 @@ trait AgentProvHelper
       sponsorSig(nonce, id=sponsorRel.sponseeId, sponsorId=sponsorRel.sponsorId, vk=sponsorVk, timestamp),
       sponsorVk
     ))
-    val createFn: (DID, RequesterKeys, Option[ProvisionToken]) => PackedMsg =
+    val createFn: (DidStr, RequesterKeys, Option[ProvisionToken]) => PackedMsg =
       if (isEdgeAgent) agent.v_0_7_req.prepareCreateEdgeAgentMsg
       else agent.v_0_7_req.prepareCreateAgentMsg
 
@@ -93,7 +93,7 @@ trait AgentProvHelper
   }
 
   def sendCreateCloudAgent(sponsorRel: SponsorRel,
-                           sponsorVk: VerKey,
+                           sponsorVk: VerKeyStr,
                            nonce: String,
                            agent: MockEdgeAgent,
                            timestamp: String): SendCreateAgent = {
@@ -101,7 +101,7 @@ trait AgentProvHelper
   }
 
   def sendCreateEdgeAgent(sponsorRel: SponsorRel,
-                          sponsorVk: VerKey,
+                          sponsorVk: VerKeyStr,
                           nonce: String,
                           agent: MockEdgeAgent,
                           timestamp: String): SendCreateAgent = {
@@ -110,29 +110,29 @@ trait AgentProvHelper
 
 
   private def createAgent(sponsorRel: SponsorRel,
-                          sponsorVk: VerKey,
+                          sponsorVk: VerKeyStr,
                           nonce: String,
                           agent: MockEdgeAgent = newEdgeAgent(),
                           timestamp: String = TimeUtil.nowDateString,
-                          isEdgeAgent: Boolean): DID = {
+                          isEdgeAgent: Boolean): DidStr = {
     val sentCreateMsg = sendCreateAgent(sponsorRel, sponsorVk, nonce, agent, timestamp, isEdgeAgent)
     val agentCreated = agent.v_0_7_resp.handleAgentCreatedResp(sentCreateMsg.msg)
     agentCreated.selfDID
   }
 
   def createCloudAgent(sponsorRel: SponsorRel,
-                       sponsorVk: VerKey,
+                       sponsorVk: VerKeyStr,
                        nonce: String,
                        agent: MockEdgeAgent = newEdgeAgent(),
-                       timestamp: String = TimeUtil.nowDateString): DID = {
+                       timestamp: String = TimeUtil.nowDateString): DidStr = {
     createAgent(sponsorRel, sponsorVk, nonce, agent, timestamp, isEdgeAgent = false)
   }
 
   def createEdgeAgent(sponsorRel: SponsorRel,
-                      sponsorVk: VerKey,
+                      sponsorVk: VerKeyStr,
                       nonce: String,
                       agent: MockEdgeAgent = newEdgeAgent(),
-                      timestamp: String = TimeUtil.nowDateString): DID = {
+                      timestamp: String = TimeUtil.nowDateString): DidStr = {
     createAgent(sponsorRel, sponsorVk, nonce, agent, timestamp, isEdgeAgent = true)
   }
 

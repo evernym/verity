@@ -11,7 +11,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam}
 import com.evernym.verity.protocol.engine.Constants.{MFV_1_0, MSG_TYPE_CONNECT, MSG_TYPE_CREATE_AGENT, MSG_TYPE_SIGN_UP, MTV_1_0}
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.connecting.common.{InviteDetail, SenderAgencyDetail, SenderDetail}
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, AgentMsgPackagingContext}
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
@@ -120,7 +120,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
       prepareInvalidPackedConnectMsgForAgency(MTV_1_0)
     }
 
-    def prepareConnectMsgWithWrongVerKeyForAgency(fwdMsgTypeVersion: String, wrongVerKey: VerKey): PackedMsg = {
+    def prepareConnectMsgWithWrongVerKeyForAgency(fwdMsgTypeVersion: String, wrongVerKey: VerKeyStr): PackedMsg = {
       val agentMsg = List(Connect_MFV_0_5(
           TypeDetail(MSG_TYPE_CONNECT, fwdMsgTypeVersion), myDIDDetail.did, wrongVerKey))
       val agentPayloadMsgs = AgentPackMsgUtil(agentMsg, encryptParamFromEdgeToAgencyAgent)
@@ -128,7 +128,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
       preparePackedRequestForRoutes(fwdMsgTypeVersion, agentPayloadMsgs, List(fwdRoute))
     }
 
-    def prepareConnectMsgWithWrongVerKeyForAgency(wrongVerKey: VerKey): PackedMsg = {
+    def prepareConnectMsgWithWrongVerKeyForAgency(wrongVerKey: VerKeyStr): PackedMsg = {
       prepareConnectMsgWithWrongVerKeyForAgency(MTV_1_0, wrongVerKey)
     }
 
@@ -389,8 +389,8 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
     }
 
     def buildCoreRedirectConnReqMsg(oldConnId: String, connId: String, inviteDetail: InviteDetail): PackMsgParam = {
-      case class RedirectDetail(DID: DID, verKey: VerKey, publicDID: Option[DID]=None,
-                                theirDID: DID, theirVerKey: VerKey, theirPublicDID: Option[DID]=None)
+      case class RedirectDetail(DID: DidStr, verKey: VerKeyStr, publicDID: Option[DidStr]=None,
+                                theirDID: DidStr, theirVerKey: VerKeyStr, theirPublicDID: Option[DidStr]=None)
       val keyDlgProof = buildAgentKeyDlgProofForConn(connId)
       val pcd = pairwiseConnDetail(oldConnId)
       val redirectDetail = RedirectDetail(pcd.myPairwiseDidPair.did, pcd.myPairwiseDidPair.verKey, None,

@@ -9,7 +9,7 @@ import com.evernym.verity.actor.agent.msgrouter.RouteAlreadySet
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.{PinstId, PinstIdResolution, ProtoRef}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageDefinition
@@ -202,7 +202,7 @@ trait AgentStateCleanupHelper {
     }
   }
 
-  def fixActorState(did: DID, sndrActorRef: ActorRef): Unit = {
+  def fixActorState(did: DidStr, sndrActorRef: ActorRef): Unit = {
     logger.info(
       s"[$persistenceId] received fixActorState (" +
         s"did: $did, domainDID: $domainId, " +
@@ -341,9 +341,9 @@ trait AgentStateCleanupHelper {
 
 case object MigrateThreadContexts extends ActorMessage
 case object FixThreadMigrationState extends ActorMessage
-case class FixActorState(actorDID: DID, senderActorRef: ActorRef) extends ActorMessage
+case class FixActorState(actorDID: DidStr, senderActorRef: ActorRef) extends ActorMessage
 case class CheckActorStateCleanupState(sendCurrentStatus: Boolean = false) extends ActorMessage
-case class ActorStateCleanupStatus(actorDID: DID,
+case class ActorStateCleanupStatus(actorDID: DidStr,
                                    isRouteFixed: Boolean,
                                    pendingCount: Int,
                                    successfullyMigratedCount: Int,
@@ -360,4 +360,4 @@ case class ThreadContextMigrationStatus(candidateProtoActors: Set[ProtoRef],
   def isNotMigrated: Boolean = isAllRespReceived && successResponseFromProtoActors.isEmpty
 }
 
-case class RouteSetStatus(did: DID, isSet: Boolean) extends ActorMessage
+case class RouteSetStatus(did: DidStr, isSet: Boolean) extends ActorMessage

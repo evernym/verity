@@ -5,7 +5,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.resourceusagethrottling.IpAddress
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
-import com.evernym.verity.did.VerKey
+import com.evernym.verity.did.VerKeyStr
 
 import java.time.LocalDateTime
 import java.util.UUID
@@ -27,8 +27,8 @@ case class ReqMsgContext(id: String = UUID.randomUUID().toString,
                          clientIpAddress: Option[IpAddress] = None,
                          msgFamilyDetail: Option[MsgFamilyDetail] = None,
                          msgPackFormat: Option[MsgPackFormat] = None,
-                         originalSenderVerKey: Option[VerKey] = None,
-                         latestMsgSenderVerKey: Option[VerKey] = None) {
+                         originalSenderVerKey: Option[VerKeyStr] = None,
+                         latestMsgSenderVerKey: Option[VerKeyStr] = None) {
 
   val startTime: LocalDateTime = LocalDateTime.now()
 
@@ -41,11 +41,11 @@ case class ReqMsgContext(id: String = UUID.randomUUID().toString,
     throw new RuntimeException("msg pack format not set in request message context")
   )
 
-  def latestMsgSenderVerKeyReq: VerKey = latestMsgSenderVerKey.getOrElse(
+  def latestMsgSenderVerKeyReq: VerKeyStr = latestMsgSenderVerKey.getOrElse(
     throw new RuntimeException("latest msg sender ver key not set in request message context")
   )
 
-  def originalMsgSenderVerKeyReq: VerKey = originalSenderVerKey.getOrElse(
+  def originalMsgSenderVerKeyReq: VerKeyStr = originalSenderVerKey.getOrElse(
     throw new RuntimeException("original msg sender ver key not set in request message context")
   )
 
@@ -53,7 +53,7 @@ case class ReqMsgContext(id: String = UUID.randomUUID().toString,
     copy(msgPackFormat = Option(mpf))
   }
 
-  def withOrigMsgSenderVerKey(verKey: Option[VerKey]): ReqMsgContext = {
+  def withOrigMsgSenderVerKey(verKey: Option[VerKeyStr]): ReqMsgContext = {
     if (originalSenderVerKey.isDefined) this
     else copy(originalSenderVerKey = verKey)
   }

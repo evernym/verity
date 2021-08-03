@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.legacy.services
 
 
-import com.evernym.verity.did.{DID, DidPair}
+import com.evernym.verity.did.{DidStr, DidPair}
 
 import scala.concurrent.Future
 
@@ -30,7 +30,7 @@ trait AgentEndpointServiceProvider {
 
 
 case class CreateKeyEndpointDetail(regionTypeName: String,
-                                   ownerDID: DID,
+                                   ownerDID: DidStr,
                                    ownerAgentKeyDidPair: Option[DidPair]=None,
                                    ownerAgentActorEntityId: Option[String]=None)
 

@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.container.asyncapis.wallet
 
 import com.evernym.verity.actor.wallet._
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine._
@@ -31,15 +31,15 @@ class WalletAccessAPI(protected val walletApi: WalletAPI,
     walletApi.tell(CreateDID(keyType))
   }
 
-  override def runStoreTheirDid(did: DID, verKey: VerKey, ignoreIfAlreadyExists: Boolean = false): Unit = {
+  override def runStoreTheirDid(did: DidStr, verKey: VerKeyStr, ignoreIfAlreadyExists: Boolean = false): Unit = {
     walletApi.tell(StoreTheirKey(did, verKey, ignoreIfAlreadyExists))
   }
   
-  override def runVerKey(forDID: DID): Unit = {
+  override def runVerKey(forDID: DidStr): Unit = {
     walletApi.tell(GetVerKey(forDID))
   }
 
-  override def runVerKeyOpt(forDID: DID): Unit = {
+  override def runVerKeyOpt(forDID: DidStr): Unit = {
     walletApi.tell(GetVerKeyOpt(forDID))
   }
 
@@ -53,13 +53,13 @@ class WalletAccessAPI(protected val walletApi: WalletAPI,
     }
   }
 
-  override def runSignRequest(submitterDID: DID, request: String): Unit = {
+  override def runSignRequest(submitterDID: DidStr, request: String): Unit = {
     val ledgerRequest = LedgerRequest(request)
     val submitter = Submitter(submitterDID, Some(wap))
     walletApi.tell(SignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq, senderActorRef)
   }
 
-  override def runMultiSignRequest(submitterDID: DID, request: String): Unit = {
+  override def runMultiSignRequest(submitterDID: DidStr, request: String): Unit = {
     val ledgerRequest = LedgerRequest(request)
     val submitter = Submitter(submitterDID, Some(wap))
     walletApi.tell(MultiSignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq, senderActorRef)
@@ -68,7 +68,7 @@ class WalletAccessAPI(protected val walletApi: WalletAPI,
   override def runVerify(signer: ParticipantId,
                          msg: Array[Byte],
                          sig: Array[Byte],
-                         verKeyUsed: Option[VerKey] = None,
+                         verKeyUsed: Option[VerKeyStr] = None,
                          signType: SignType = SIGN_ED25519_SHA512_SINGLE): Unit = {
     // currently only one sign type is supported
     if (signType != SIGN_ED25519_SHA512_SINGLE) {
@@ -80,14 +80,14 @@ class WalletAccessAPI(protected val walletApi: WalletAPI,
 
   override def runVerify(msg: Array[Byte],
                          sig: Array[Byte],
-                         verKeyUsed: VerKey,
+                         verKeyUsed: VerKeyStr,
                          signType: SignType): Unit = {
   // libindy currently supports only one VerKey per DID
   // we check the VerKey used belongs to the party who signed the message.
     walletApi.tell(VerifySignature(KeyParam.fromVerKey(verKeyUsed), msg, sig))
   }
 
-  private def getDIDFromParticipantId(participantId: ParticipantId): DID = {
+  private def getDIDFromParticipantId(participantId: ParticipantId): DidStr = {
     ParticipantUtil.DID(participantId)
   }
 }

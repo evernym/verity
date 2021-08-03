@@ -19,7 +19,7 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
 import com.evernym.verity.agentmsg.tokenizer.SendToken
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.{MetricDetail, PrometheusMetricsParser}
@@ -258,18 +258,18 @@ trait AgentMsgSenderHttpWrapper
   }
 
   def bootstrapAgency(ad: AgencyPublicDid,
-                      fromDID: Option[DID]=None,
+                      fromDID: Option[DidStr]=None,
                       withSeed: Option[String]=None,
                       config: Option[AppConfig]=None,
                       withRole: Option[String]=None): Unit = {
     createLedgerUtil(config, fromDID, withSeed).bootstrapNewDID(ad.DID, ad.verKey, withRole.orNull)
   }
 
-  def updateAgencyEndpointInLedger(did: DID, withSeed: String, endpoint: String, config: Option[AppConfig]=None): Unit = {
+  def updateAgencyEndpointInLedger(did: DidStr, withSeed: String, endpoint: String, config: Option[AppConfig]=None): Unit = {
     createLedgerUtil(config, Option(did), Option(withSeed)).setEndpointUrl(did, endpoint)
   }
 
-  def getAttribFromLedger(did: DID, withSeed: String, attribName: String, config: Option[AppConfig]=None): Unit = {
+  def getAttribFromLedger(did: DidStr, withSeed: String, attribName: String, config: Option[AppConfig]=None): Unit = {
     createLedgerUtil(config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
   }
 
@@ -766,7 +766,7 @@ trait AgentMsgSenderHttpWrapper
     r
   }
 
-  def getMsgsFromConns_MPV_0_5(pairwiseDIDs: Option[List[DID]] = None,
+  def getMsgsFromConns_MPV_0_5(pairwiseDIDs: Option[List[DidStr]] = None,
                                excludePayload: Option[String] = None,
                                uids: Option[List[String]] = None,
                                statusCodes: Option[List[String]] = None)
@@ -785,7 +785,7 @@ trait AgentMsgSenderHttpWrapper
     r
   }
 
-  def getMsgsFromConns_MPV_0_6(pairwiseDIDs: Option[List[DID]] = None,
+  def getMsgsFromConns_MPV_0_6(pairwiseDIDs: Option[List[DidStr]] = None,
                                excludePayload: Option[String] = None,
                                uids: Option[List[String]] = None,
                                statusCodes: Option[List[String]] = None)

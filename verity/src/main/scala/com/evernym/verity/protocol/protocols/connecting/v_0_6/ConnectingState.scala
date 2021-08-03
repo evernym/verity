@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols.connecting.v_0_6
 
 import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.constants.InitParamConstants.{MY_PUBLIC_DID, MY_SELF_REL_DID}
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.connecting.common.{ConnectingStateBase, HasPairwiseConnection}
 import com.evernym.verity.util.OptionUtil.blankOption
 
@@ -13,10 +13,10 @@ import com.evernym.verity.util.OptionUtil.blankOption
 case class ConnectingState(isInitialized: Boolean=false)
   extends ConnectingStateBase[ConnectingState] {
 
-  def myPublicDIDOpt: Option[DID] = parameters.paramValue(MY_PUBLIC_DID).flatMap(blankOption)
-  def mySelfRelDIDOpt: Option[DID] = getOwnerDidOpt
-  def myPairwiseDIDOpt: Option[DID] = agentDetail.map(_.forDID)
-  def thisAgentVerKey: Option[VerKey] = thisAgentVerKeyOpt
+  def myPublicDIDOpt: Option[DidStr] = parameters.paramValue(MY_PUBLIC_DID).flatMap(blankOption)
+  def mySelfRelDIDOpt: Option[DidStr] = getOwnerDidOpt
+  def myPairwiseDIDOpt: Option[DidStr] = agentDetail.map(_.forDID)
+  def thisAgentVerKey: Option[VerKeyStr] = thisAgentVerKeyOpt
 
   class State extends HasPairwiseConnection
   type StateType = State
@@ -26,8 +26,8 @@ case class ConnectingState(isInitialized: Boolean=false)
   var sourceId: Option[String] = None
   //TODO why not use OptAgentDetail and the associated helper methods (that seem to be repeated below)
   var agentDetail: Option[AgentDetail] = None
-  var thisAgentVerKeyOpt: Option[VerKey] = None
-  private def getOwnerDidOpt: Option[DID] = {
+  var thisAgentVerKeyOpt: Option[VerKeyStr] = None
+  private def getOwnerDidOpt: Option[DidStr] = {
     Set(
       //if this protocol is launched from agency agent actors then this param would be empty else it should be non empty
       parameters.paramValue(MY_SELF_REL_DID),

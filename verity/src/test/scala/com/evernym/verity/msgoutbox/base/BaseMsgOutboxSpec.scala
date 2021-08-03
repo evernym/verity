@@ -28,7 +28,7 @@ import com.evernym.verity.actor.typed.BehaviourSpecBase
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackMsg, PackedMsg}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
-import com.evernym.verity.did.VerKey
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.GetTokenSuccess
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.OAUTH2_VERSION_1
@@ -248,7 +248,7 @@ object TestHttpTransport {
   }
 }
 
-case class DestParam(walletId: WalletId, myVerKey: VerKey, comMethods: Map[ComMethodId, ComMethod])
+case class DestParam(walletId: WalletId, myVerKey: VerKeyStr, comMethods: Map[ComMethodId, ComMethod])
 
 
 object MockOAuthAccessTokenRefresher {

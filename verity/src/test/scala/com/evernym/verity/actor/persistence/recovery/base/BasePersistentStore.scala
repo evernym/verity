@@ -17,7 +17,7 @@ import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.transformations.transformers.v1._
 import com.evernym.verity.transformations.transformers.legacy._
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.testkit.HasTestWalletAPI
 import com.evernym.verity.transformations.transformers.{<=>, legacy, v1}
 import com.evernym.verity.vault.WalletAPIParam
@@ -51,7 +51,7 @@ trait BasePersistentStore
     storeTheirKey(walletId, didPair.did, didPair.verKey)
   }
 
-  def storeTheirKey(walletId: String, theirDID: DID, theirDIDVerKey: VerKey): TheirKeyStored = {
+  def storeTheirKey(walletId: String, theirDID: DidStr, theirDIDVerKey: VerKeyStr): TheirKeyStored = {
     testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(theirDID, theirDIDVerKey))(WalletAPIParam(walletId))
   }
 
@@ -59,7 +59,7 @@ trait BasePersistentStore
     testWalletAPI.executeSync[Done.type](Close())(WalletAPIParam(walletId))
   }
 
-  def storeAgentRoute(agentDID: DID, actorTypeId: Int, address: EntityId)
+  def storeAgentRoute(agentDID: DidStr, actorTypeId: Int, address: EntityId)
                      (implicit pp: PersistParam = PersistParam()): Unit = {
     val persistenceId = PersistenceIdParam(ROUTE_REGION_ACTOR_NAME, agentDID)
     addEventsToPersistentStorage(persistenceId,
@@ -69,7 +69,7 @@ trait BasePersistentStore
     )(pp.copy(encryptionKey = Option(agentRouteStoreEncKey)))
   }
 
-  def storeLegacyAgentRoute(agentDID: DID, actorTypeId: Int, address: EntityId)
+  def storeLegacyAgentRoute(agentDID: DidStr, actorTypeId: Int, address: EntityId)
                            (implicit pp: PersistParam = PersistParam()): Unit = {
     val entityId = RoutingAgentUtil.getBucketEntityId(agentDID)
     val persistenceId = PersistenceIdParam(LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME, entityId)
@@ -84,7 +84,7 @@ trait BasePersistentStore
    * key value mapper is the actor which gets updated when we setup agency agent
    * this method will store proper event to setup the agency DID in that actor
    */
-  def storeAgencyDIDKeyValueMapping(agencyDID: DID)(implicit pp: PersistParam = PersistParam()): Unit = {
+  def storeAgencyDIDKeyValueMapping(agencyDID: DidStr)(implicit pp: PersistParam = PersistParam()): Unit = {
 
     addEventsToPersistentStorage(keyValueMapperPersistenceId,
       scala.collection.immutable.Seq(

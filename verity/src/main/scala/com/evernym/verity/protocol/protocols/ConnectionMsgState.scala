@@ -9,7 +9,7 @@ import com.evernym.verity.actor.agent.{Msg, MsgDeliveryDetail, PayloadMetadata, 
 import com.evernym.verity.actor.agent.user.MsgHelper
 import com.evernym.verity.actor.agent.{AttrName, AttrValue}
 import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated, MsgDeliveryStatusUpdated, MsgDetailAdded, MsgExpirationTimeUpdated, MsgPayloadStored, MsgStatusUpdated}
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.{MsgId, MsgName, RefMsgId}
 import com.evernym.verity.util.TimeZoneUtil._
 
@@ -171,7 +171,7 @@ class ConnectionMsgState {
 
   def buildMsgCreatedEvt(msgId: MsgId,
                          mType: String,
-                         senderDID: DID,
+                         senderDID: DidStr,
                          sendMsg: Boolean,
                          msgStatus: String,
                          threadOpt: Option[Thread],

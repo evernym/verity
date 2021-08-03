@@ -2,7 +2,7 @@ package com.evernym.verity
 
 import akka.actor.{Actor, ActorRef}
 import com.evernym.verity.config.ConfigUtil.MAX_RETENTION_POLICY
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.MsgId
 import com.typesafe.config.ConfigException
 
@@ -16,7 +16,7 @@ package object util2 {
   type AgentId = String
 
   type ServiceEndpoint = String
-  type SenderDID = DID
+  type SenderDID = DidStr
   type SenderOrder = Int
 
   type SenderActorRef = ActorRef

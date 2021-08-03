@@ -4,7 +4,7 @@ import java.util.UUID
 
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.TransactionAuthorAgreement
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.testkit.util.LedgerUtil
 
@@ -12,7 +12,7 @@ trait LedgerClient extends HasAppConfig {
   import LedgerClient._
 
   def createLedgerUtil(configOpt: Option[AppConfig]=None,
-                       submitterDID: Option[DID]=None,
+                       submitterDID: Option[DidStr]=None,
                        submitterKeySeed: Option[String]=None,
                        submitterRole: String = "STEWARD",
                        taa: Option[TransactionAuthorAgreement]=None): LedgerUtil = {
@@ -23,7 +23,7 @@ trait LedgerClient extends HasAppConfig {
 
 object LedgerClient {
   def buildLedgerUtil(config: AppConfig,
-                      submitterDID: Option[DID]=None,
+                      submitterDID: Option[DidStr]=None,
                       submitterKeySeed: Option[String]=None,
                       submitterRole: String = "STEWARD",
                       taa: Option[TransactionAuthorAgreement]=None,

@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.engine
 import akka.actor.ActorRef
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet._
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.{SchemaCreated, WalletAccessAPI}
@@ -83,9 +83,9 @@ class WalletAccessControllerSpec
 
       override def runNewDid(keyType: KeyType): Unit = Try(NewKeyCreated("Did", "Verkey"))
 
-      override def runVerKey(forDID: DID): Unit = Try(GetVerKeyResp("Verkey"))
+      override def runVerKey(forDID: DidStr): Unit = Try(GetVerKeyResp("Verkey"))
 
-      override def runVerKeyOpt(forDID: DID): Unit = Try(GetVerKeyOptResp(Option("Verkey")))
+      override def runVerKeyOpt(forDID: DidStr): Unit = Try(GetVerKeyOptResp(Option("Verkey")))
 
       override def runSign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE): Unit =
         Try(SignedMsg(Array[Byte](1, 2, 3), "VerKey"))
@@ -93,24 +93,24 @@ class WalletAccessControllerSpec
       override def runVerify(signer: ParticipantId,
                              msg: Array[Byte],
                              sig: Array[Byte],
-                             verKeyUsed: Option[VerKey] = None,
+                             verKeyUsed: Option[VerKeyStr] = None,
                              signType: SignType = SIGN_ED25519_SHA512_SINGLE): Unit = Try(VerifySigResult(true))
 
       override def runVerify(msg: Array[Byte],
                              sig: Array[Byte],
-                             verKeyUsed: VerKey,
+                             verKeyUsed: VerKeyStr,
                              signType: SignType): Unit = Try(VerifySigResult(true))
 
 
-      override def runStoreTheirDid(did: DID, verKey: VerKey, ignoreIfAlreadyExists: Boolean = false): Unit =
+      override def runStoreTheirDid(did: DidStr, verKey: VerKeyStr, ignoreIfAlreadyExists: Boolean = false): Unit =
         Try(TheirKeyStored(did, verKey))
 
-      override def runCreateSchema(issuerDID:  DID,
+      override def runCreateSchema(issuerDID:  DidStr,
                                    name:  String,
                                    version:  String,
                                    data:  String): Unit = ???
 
-      override def runCreateCredDef(issuerDID:  DID,
+      override def runCreateCredDef(issuerDID:  DidStr,
                                     schemaJson:  String,
                                     tag:  String,
                                     sigType:  Option[String],
@@ -119,7 +119,7 @@ class WalletAccessControllerSpec
       override def runCreateCredOffer(credDefId: String): Unit = ???
 
       override def runCreateCredReq(credDefId: String,
-                                    proverDID: DID,
+                                    proverDID: DidStr,
                                     credDefJson: String,
                                     credOfferJson: String): Unit = ???
 
@@ -150,10 +150,10 @@ class WalletAccessControllerSpec
                                   revocRegDefs: String,
                                   revocRegs: String): Unit = ???
 
-      override def runSignRequest(submitterDID: DID,
+      override def runSignRequest(submitterDID: DidStr,
                                   request: String): Unit = ???
 
-      override def runMultiSignRequest(submitterDID: DID, request: String): Unit = ???
+      override def runMultiSignRequest(submitterDID: DidStr, request: String): Unit = ???
   }
 }
 

@@ -10,7 +10,7 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine.MsgType
@@ -220,7 +220,7 @@ class WalletBackupActorSpec
 
 }
 
-case class CloudAgentDetail(did: DID, verKey: VerKey) {
+case class CloudAgentDetail(did: DidStr, verKey: VerKeyStr) {
   def didPair: DidPair = DidPair(did, verKey)
 }
 

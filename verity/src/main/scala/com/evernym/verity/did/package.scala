@@ -6,14 +6,13 @@ import scala.util.Success
 
 package object did {
 
-  type DID = String
-  type DIDKeyStr = String
-  type VerKey = String
+  type DidStr = String
+  type VerKeyStr = String
 
   val VALID_DID_BYTE_LENGTH = 16
   val VALID_VER_KEY_BYTE_LENGTH = 32
 
-  case class DidPair(did: DID, verKey: VerKey) {
+  case class DidPair(did: DidStr, verKey: VerKeyStr) {
     // TODO this should not be needed but helps bridge difference during refactoring
     def toAgentDidPair: com.evernym.verity.actor.agent.DidPair = com.evernym.verity.actor.agent.DidPair(did, verKey)
 

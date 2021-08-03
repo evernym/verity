@@ -15,7 +15,7 @@ import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Commands.MsgStoreReplyAdapter
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.config.ConfigUtil
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.msgoutbox.outbox.Outbox
 import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.{RetentionPolicy, Status}
@@ -102,7 +102,7 @@ object MessageMeta {
   case object LegacyData {
     def apply(lmd: LegacyMsgData): LegacyData = LegacyData(lmd.senderDID, lmd.refMsgId)
   }
-  case class LegacyData(senderDID: DID, refMsgId: Option[MsgId])
+  case class LegacyData(senderDID: DidStr, refMsgId: Option[MsgId])
   case class OutboxDeliveryStatus(status: String = Status.MSG_DELIVERY_STATUS_PENDING.statusCode,
                                   msgActivities: Seq[MsgActivity] = List.empty)
   case class MsgActivity(detail: String, timestamp: Option[ZonedDateTime]=None)

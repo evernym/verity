@@ -8,7 +8,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CRED
 import com.evernym.verity.agentmsg.msgfamily.pairwise.ConnReqAcceptedMsg_MFV_0_6
 import com.evernym.verity.constants.Constants.{COM_METHOD_TYPE_FWD_PUSH, COM_METHOD_TYPE_PUSH, DEFAULT_INVITE_SENDER_LOGO_URL, DEFAULT_INVITE_SENDER_NAME}
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.AgentPackMsgUtil
@@ -46,7 +46,7 @@ trait UserAgentPairwiseSpec_V_0_7
     createUserAgent_0_7()
   }
 
-  var agentPairwiseDID: DID = _
+  var agentPairwiseDID: DidStr = _
 
   val connId1New = "connIdNew1"
   val connId2New = "connIdNew2"

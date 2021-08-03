@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, TestAppConfig}
 import com.evernym.verity.actor.testkit.actor.{MockLedgerSvc, MockLedgerTxnExecutor}
 import com.evernym.verity.cache.base.Cache
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.ledger._
 import com.evernym.verity.metrics.NoOpMetricsWriter
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
@@ -80,12 +80,12 @@ class LedgerAccessControllerSpec
 
     override def runGetCredDefs(credDefIds: Set[String]): Unit = ???
 
-    override def runWriteSchema(submitterDID: DID, schemaJson: String): Unit = ???
+    override def runWriteSchema(submitterDID: DidStr, schemaJson: String): Unit = ???
 
-    override def runPrepareSchemaForEndorsement(submitterDID: DID, schemaJson: String, endorserDID: DID): Unit = ???
+    override def runPrepareSchemaForEndorsement(submitterDID: DidStr, schemaJson: String, endorserDID: DidStr): Unit = ???
 
-    override def runWriteCredDef(submitterDID: DID, credDefJson: String): Unit = ???
+    override def runWriteCredDef(submitterDID: DidStr, credDefJson: String): Unit = ???
 
-    override def runPrepareCredDefForEndorsement(submitterDID: DID, credDefJson: String, endorserDID: DID): Unit = ???
+    override def runPrepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr): Unit = ???
   }
 }

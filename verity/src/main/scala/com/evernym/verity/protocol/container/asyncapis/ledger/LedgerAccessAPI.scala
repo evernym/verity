@@ -4,7 +4,7 @@ import com.evernym.verity.util2.Exceptions.NotFoundErrorException
 import com.evernym.verity.cache.{LEDGER_GET_CRED_DEF_FETCHER, LEDGER_GET_SCHEMA_FETCHER}
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{GetCredDef, GetSchema}
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccessException, LedgerAsyncOps}
@@ -52,19 +52,19 @@ class LedgerAccessAPI(cache: Cache,
     )
   }
 
-  override def runPrepareSchemaForEndorsement(submitterDID: DID, schemaJson: String, endorserDID: DID): Unit = {
+  override def runPrepareSchemaForEndorsement(submitterDID: DidStr, schemaJson: String, endorserDID: DidStr): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec => ledgerSvc.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)}
     )
   }
 
-  override def runWriteCredDef(submitterDID: DID, credDefJson: String): Unit = {
+  override def runWriteCredDef(submitterDID: DidStr, credDefJson: String): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec => ledgerSvc.writeCredDef(submitterDID, credDefJson, walletAccess)}
     )
   }
 
-  override def runPrepareCredDefForEndorsement(submitterDID: DID, credDefJson: String, endorserDID: DID): Unit = {
+  override def runPrepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec => ledgerSvc.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID, walletAccess)}
     )

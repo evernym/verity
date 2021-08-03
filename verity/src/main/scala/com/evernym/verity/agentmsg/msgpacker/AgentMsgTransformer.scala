@@ -3,7 +3,7 @@ package com.evernym.verity.agentmsg.msgpacker
 import com.evernym.verity.actor.agent.{MsgPackFormat, TypeFormat}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.msgfamily._
-import com.evernym.verity.did.VerKey
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -51,8 +51,8 @@ case class AgentMsg(msg: String, msgFamilyDetail: MsgFamilyDetail, msgTypeFormat
  * @param usesLegacyBundledMsgWrapper
  */
 case class AgentBundledMsg(msgs: List[AgentMsg],
-                           senderVerKey: Option[VerKey],
-                           recipVerKey: Option[VerKey],
+                           senderVerKey: Option[VerKeyStr],
+                           recipVerKey: Option[VerKeyStr],
                            legacyMsgFamily: Option[MsgFamilyDetail]=None,
                            usesLegacyGenMsgWrapper: Boolean=false,
                            usesLegacyBundledMsgWrapper: Boolean=false) {

@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.msgrouter
 
 import java.util.UUID
 
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 
 import scala.util.Random
 
@@ -10,9 +10,9 @@ import scala.util.Random
 trait RoutingAgentBucketMapper {
   def versionId: String
 
-  protected def bucketIdByRouteDID(did: DID)(implicit numberOfBuckets: Int): Int
+  protected def bucketIdByRouteDID(did: DidStr)(implicit numberOfBuckets: Int): Int
 
-  final def entityIdByRouteDID(did: DID)(implicit numberOfBuckets: Int): String =
+  final def entityIdByRouteDID(did: DidStr)(implicit numberOfBuckets: Int): String =
     entityIdByBucketId(bucketIdByRouteDID(did))
 
   final def entityIdByBucketId(bucketId: Int): String =
@@ -22,7 +22,7 @@ trait RoutingAgentBucketMapper {
 object RoutingAgentBucketMapperV1 extends RoutingAgentBucketMapper {
   val versionId = "v1"
 
-  override def bucketIdByRouteDID(did: DID)(implicit numberOfBuckets: Int): Int = {
+  override def bucketIdByRouteDID(did: DidStr)(implicit numberOfBuckets: Int): Int = {
     // this logic may have a bug if 'did.hashCode' is equal to Int.MinValue
     // as in that case the math.abs(Int.MinValue) is still Int.MinValue
     // and it will generate negative number (which wasn't the original intention).
@@ -56,9 +56,9 @@ trait RoutingAgentUtil {
   def latestBucketMapperVersionId: String = latestBucketMapper.versionId
   def oldBucketMapperVersionIds: Set[String] = oldBucketMappers.map(_.versionId)
 
-  def getBucketEntityId(did: DID): String = latestBucketMapper.entityIdByRouteDID(did)
+  def getBucketEntityId(did: DidStr): String = latestBucketMapper.entityIdByRouteDID(did)
 
-  def getBucketPersistenceId(did: DID, versionId: String): String = {
+  def getBucketPersistenceId(did: DidStr, versionId: String): String = {
     allBucketMappers.find(_.versionId == versionId).map { bm =>
       bm.entityIdByRouteDID(did)
     }.getOrElse {

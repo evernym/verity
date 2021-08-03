@@ -13,7 +13,7 @@ import com.evernym.sdk.vcx.utils.UtilsApi
 import com.evernym.sdk.vcx.vcx.VcxApi
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.config.ConfigUtil
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.integration.base.sdk_provider.MsgFamilyHelper.buildMsgTypeStr
 import com.evernym.verity.integration.base.sdk_provider.{JsonMsgUtil, MsgFamilyHelper}
@@ -315,8 +315,8 @@ case class IdentityOwner(config: JSONObject) {
     serializedConnection.get(connId1).map(ConnectionApi.connectionDeserialize(_).get)
   }
 
-  def sdkToRemoteDID: DID = config.getString("sdk_to_remote_did")
-  def sdkToRemoteVerKey: VerKey = config.getString("sdk_to_remote_verkey")
+  def sdkToRemoteDID: DidStr = config.getString("sdk_to_remote_did")
+  def sdkToRemoteVerKey: VerKeyStr = config.getString("sdk_to_remote_verkey")
 }
 
 case class CreateSchemaParam(name: String, version: String, attribute: String)

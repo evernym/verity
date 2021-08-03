@@ -7,7 +7,7 @@ import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.did.{DidPair, VerKey}
+import com.evernym.verity.did.{DidPair, VerKeyStr}
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
@@ -365,7 +365,7 @@ class WalletActorSpec
     "when sent SetupNewWallet command for edge agent setup" - {
       "should create wallet and keys" in {
 
-        val requesterVk: VerKey = CommonSpecUtil.generateNewDid(Option(newKeySeed)).verKey
+        val requesterVk: VerKeyStr = CommonSpecUtil.generateNewDid(Option(newKeySeed)).verKey
 
         val newWalletActor = agentRegion(UUID.randomUUID().toString, walletRegionActor)
 

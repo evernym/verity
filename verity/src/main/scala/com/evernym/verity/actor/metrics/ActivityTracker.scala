@@ -8,7 +8,7 @@ import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.{ActorMessage, WindowActivityDefined, WindowRules}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
 import com.evernym.verity.protocol.engine.DomainId
 import com.evernym.verity.util.TimeUtil
@@ -250,7 +250,7 @@ object ActivityWindow {
   }).toSet)
 
 }
-final case class AgentActivity(domainId: DID,
+final case class AgentActivity(domainId: DidStr,
                                timestamp: IsoDateTime,
                                activityType: String,
                                relId: Option[String]=None) extends ActivityTracking {

@@ -14,7 +14,7 @@ import com.evernym.verity.http.base.open.{AgentProvisioningSpec, AriesInvitation
 import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, RestrictedRestApiSpec}
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.http.route_handlers.open.RestAcceptedResponse
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent._
 import com.evernym.verity.testkit.mock.agent.MockEnv
@@ -204,7 +204,7 @@ trait RestApiBaseSpec
   }
 
   def sendMsgWithOthersMsgForRel(mockRestEnv: MockRestEnv,
-                                 othersForRelDID: DID): Unit = {
+                                 othersForRelDID: DidStr): Unit = {
     val jsonObject = new JSONObject()
     jsonObject.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/basicmessage/1.0/send-message")
     jsonObject.put("content", s"basic message")
@@ -300,12 +300,12 @@ trait RestApiBaseSpec
 
 
 case class MockRestEnv(mockEnv: MockEnv) {
-  lazy val myDID: DID = mockEnv.edgeAgent.myDIDDetail.did
-  lazy val myDIDVerKey: VerKey = mockEnv.edgeAgent.myDIDDetail.verKey
+  lazy val myDID: DidStr = mockEnv.edgeAgent.myDIDDetail.did
+  lazy val myDIDVerKey: VerKeyStr = mockEnv.edgeAgent.myDIDDetail.verKey
   lazy val myDIDSignature: String = computeSignature(myDIDVerKey)
   lazy val myDIDApiKey = s"$myDIDVerKey:$myDIDSignature"
 
-  def connRelRoutingDID(connId: String): DID =
+  def connRelRoutingDID(connId: String): DidStr =
     mockEnv.edgeAgent.pairwiseConnDetail(connId).myPairwiseDidPair.did
 
   def connRelDIDApiKey(connId: String): String = {
@@ -314,7 +314,7 @@ case class MockRestEnv(mockEnv: MockEnv) {
     s"${pcd.verKey}:$signature"
   }
 
-  def computeSignature(verKey: VerKey): String = {
+  def computeSignature(verKey: VerKeyStr): String = {
     val signedMsg = mockEnv.edgeAgent.testWalletAPI.executeSync[SignedMsg](
       SignMsg(KeyParam.fromVerKey(verKey), verKey.getBytes))(mockEnv.edgeAgent.wap)
     Base58Util.encode(signedMsg.msg)

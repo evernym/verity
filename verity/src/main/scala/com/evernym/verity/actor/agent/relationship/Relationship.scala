@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.relationship
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.{ANYWISE_RELATIONSHIP, NO_RELATIONSHIP, NWISE_RELATIONSHIP, PAIRWISE_RELATIONSHIP, SELF_RELATIONSHIP}
 import com.evernym.verity.actor.agent.relationship.RelationshipException._
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 //import com.evernym.verity
@@ -65,7 +65,7 @@ object PairwiseRelationship {
     theirDid.toSeq
   )
 
-  def apply(name: RelationshipName, myDid: DID, theirDid: DID): Relationship = apply(
+  def apply(name: RelationshipName, myDid: DidStr, theirDid: DidStr): Relationship = apply(
     name,
     Some(DidDoc(myDid)),
     Some(DidDoc(theirDid))
@@ -147,12 +147,12 @@ trait RelationshipLike { this: Updatable[Relationship] =>
     case _                     => None
   }
 
-  def myDid: Option[DID] = myDidDoc.map(_.did)
-  def myDid_! : DID = myDidDoc_!.did
+  def myDid: Option[DidStr] = myDidDoc.map(_.did)
+  def myDid_! : DidStr = myDidDoc_!.did
   def myDidDoc_! : DidDoc = myDidDoc getOrElse { throw new MyDidNotSetException }
 
-  def theirDid: Option[DID] = theirDidDoc.map(_.did)
-  def theirDid_! : DID = theirDidDoc_!.did
+  def theirDid: Option[DidStr] = theirDidDoc.map(_.did)
+  def theirDid_! : DidStr = theirDidDoc_!.did
   def theirDidDoc_! : DidDoc = theirDidDoc getOrElse {
     throw new TheirDidNotSetException
   }

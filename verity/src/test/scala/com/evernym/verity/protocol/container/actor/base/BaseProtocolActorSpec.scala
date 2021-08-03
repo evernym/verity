@@ -6,7 +6,7 @@ import akka.testkit.TestKitBase
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.{ForIdentifier, ShardUtil}
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.{PinstIdPair, ThreadId}
 import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
@@ -66,7 +66,7 @@ trait BaseProtocolActorSpec
    * @param myDID my DID
    * @param theirDIDOpt their DID, needed if protocol is executed between two different domains
    */
-  def buildSetupController(myDID: DID, theirDIDOpt: Option[DID]): SetupController = {
+  def buildSetupController(myDID: DidStr, theirDIDOpt: Option[DidStr]): SetupController = {
     SetupController(
       ControllerData(
         myDID,
@@ -96,21 +96,21 @@ trait BaseProtocolActorSpec
    */
   def mockControllerActorProps: Props
 
-  def buildMockController(myDID: DID,
-                          theirDID: DID): MockController = {
+  def buildMockController(myDID: DidStr,
+                          theirDID: DidStr): MockController = {
     buildMockController(myDID, Option(theirDID))
   }
 
-  def buildMockController(myDID: DID,
-                          theirDIDOpt: Option[DID] = None): MockController = {
+  def buildMockController(myDID: DidStr,
+                          theirDIDOpt: Option[DidStr] = None): MockController = {
     MockController(UUID.randomUUID().toString,
       myDID, theirDIDOpt, mockControllerRegion, this)
   }
 }
 
 case class MockController(walletId: String,
-                          myDID: DID,
-                          theirDIDOpt: Option[DID] = None,
+                          myDID: DidStr,
+                          theirDIDOpt: Option[DidStr] = None,
                           mockControllerRegion: ActorRef,
                           testKit: TestKitBase) {
 
@@ -132,7 +132,7 @@ case class MockController(walletId: String,
     expectMsg(Done)
   }
 
-  def theirDID: DID = theirDIDOpt.getOrElse(throw new RuntimeException("their DID not supplied"))
+  def theirDID: DidStr = theirDIDOpt.getOrElse(throw new RuntimeException("their DID not supplied"))
 
   /**
    * sends given command to mock controller actor

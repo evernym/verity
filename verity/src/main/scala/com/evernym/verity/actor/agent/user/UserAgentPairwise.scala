@@ -62,7 +62,7 @@ import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.config.ConfigUtil
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.msgoutbox
 import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
 import com.evernym.verity.metrics.InternalSpan
@@ -264,7 +264,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
       throw new BadRequestErrorException(CONNECTION_DOES_NOT_EXIST.statusCode, Option("connection not yet established/completed"))
   }
 
-  def checkMsgSenderIfConnectionIsNotYetEstablished(msgSenderVerKey: VerKey): Unit = {
+  def checkMsgSenderIfConnectionIsNotYetEstablished(msgSenderVerKey: VerKeyStr): Unit = {
     if (state.theirDidDoc.isEmpty)
       AgentMsgProcessor.checkIfMsgSentByAuthedMsgSenders(allAuthedKeys, msgSenderVerKey)
   }
@@ -299,7 +299,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     }
   }
 
-  def authedMsgSenderVerKeys: Set[VerKey] = state.allAuthedVerKeys
+  def authedMsgSenderVerKeys: Set[VerKeyStr] = state.allAuthedVerKeys
 
   def retryEligibilityCriteriaProvider(): RetryEligibilityCriteria = {
     (state.myDid, state.theirDidDoc.isDefined) match {
@@ -361,7 +361,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     }
   }
 
-  def getSenderDIDBySenderVerKey(verKey: VerKey): DID = {
+  def getSenderDIDBySenderVerKey(verKey: VerKeyStr): DidStr = {
     //TODO: Not sure if this is a good way to determine actual sender, need to come back to this
     if (isTheirAgentVerKey(verKey)) {
       state.theirDid_!
@@ -374,7 +374,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     encParamBasedOnMsgSender(reqMsgContext.latestMsgSenderVerKey)
   }
 
-  override def postUpdateConfig(updateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {
+  override def postUpdateConfig(updateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKeyStr]): Unit = {
     val configName = expiryTimeInSecondConfigNameForMsgType(CREATE_MSG_TYPE_CONN_REQ)
 
     updateConf.configs.filter(_.name == configName).foreach { c =>
@@ -773,7 +773,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     self ! uds
   }
 
-  override def senderParticipantId(senderVerKey: Option[VerKey]): ParticipantId = {
+  override def senderParticipantId(senderVerKey: Option[VerKeyStr]): ParticipantId = {
     val edgeVerKey = state.myDidAuthKey.flatMap(_.verKeyOpt)
     val otherEntityEdgeVerKey = state.theirDidAuthKey.flatMap(_.verKeyOpt)
 
@@ -957,13 +957,13 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
 
   def agentConfigs: Map[String, AgentConfig] = state.agentConfigs
 
-  def agencyDIDOpt: Option[DID] = state.agencyDIDPair.map(_.DID)
+  def agencyDIDOpt: Option[DidStr] = state.agencyDIDPair.map(_.DID)
 
-  def ownerDID: Option[DID] = state.mySelfRelDID
+  def ownerDID: Option[DidStr] = state.mySelfRelDID
   def ownerAgentKeyDIDPair: Option[DidPair] = state.ownerAgentDidPair
 
-  def mySelfRelDIDReq: DID = domainId
-  def myPairwiseVerKey: VerKey = state.myDidAuthKeyReq.verKey
+  def mySelfRelDIDReq: DidStr = domainId
+  def myPairwiseVerKey: VerKeyStr = state.myDidAuthKeyReq.verKey
 
   lazy val scheduledJobInterval: Int = appConfig.getIntOption(
     USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(300)

@@ -10,7 +10,7 @@ import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.{
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Replies.{OutboxParam, RelParam}
 import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, DestId, RelId, WalletId}
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
-import com.evernym.verity.did.VerKey
+import com.evernym.verity.did.VerKeyStr
 
 //ephemeral actor (sharded)
 object RelationshipResolver {
@@ -21,7 +21,7 @@ object RelationshipResolver {
     case class GetRelParam(relId: RelId, replyTo: ActorRef[Reply]) extends Cmd
 
     case class OutboxParamResp(walletId: WalletId,
-                               senderVerKey: VerKey,
+                               senderVerKey: VerKeyStr,
                                comMethods: Map[ComMethodId, ComMethod]) extends Cmd {
       if (comMethods.count(_._2.typ == COM_METHOD_TYPE_HTTP_ENDPOINT) > 1) {
         throw new RuntimeException("one outbox can have max one http com method")
@@ -34,7 +34,7 @@ object RelationshipResolver {
   trait Reply extends ActorMessage
   object Replies {
     case class OutboxParam(walletId: WalletId,
-                           senderVerKey: VerKey,
+                           senderVerKey: VerKeyStr,
                            comMethods: Map[ComMethodId, ComMethod]) extends Reply {
       if (comMethods.count(_._2.typ == COM_METHOD_TYPE_HTTP_ENDPOINT) > 1) {
         throw new RuntimeException("one outbox can have max one http com method")

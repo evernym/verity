@@ -39,7 +39,7 @@ import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.R
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsReqMsg, UpdateMsgStatusReqMsg}
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.SendConfig
 
@@ -155,7 +155,7 @@ trait UserAgentCommon
     sender ! AgencyIdentitySet(saw.didPair)
   }
 
-  def postUpdateConfig(updateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {}
+  def postUpdateConfig(updateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKeyStr]): Unit = {}
 
   def notifyUser(nu: NotifyUserViaPushNotif): Unit = sendPushNotif(nu.pushNotifData, None)
 
@@ -233,7 +233,7 @@ trait UserAgentCommon
   override def storeOutgoingMsg(omp: OutgoingMsgParam,
                                 msgId:MsgId,
                                 msgName: MsgName,
-                                senderDID: DID,
+                                senderDID: DidStr,
                                 threadOpt: Option[Thread]): Unit = {
     logger.debug("storing outgoing msg")
     val payloadParam = StorePayloadParam(omp.msgToBeProcessed, omp.metadata)

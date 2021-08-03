@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.AccessRight
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateProtoDef
 import com.evernym.verity.protocol.engine.util.?=>
@@ -115,7 +115,7 @@ abstract class Protocol[P,R,M,E,S,I]
 
 }
 
-case class Participant(role: String, did: DID)
+case class Participant(role: String, did: DidStr)
 
 object Parameters {
   /** Alternate constructor that can be more concise in some circumstances

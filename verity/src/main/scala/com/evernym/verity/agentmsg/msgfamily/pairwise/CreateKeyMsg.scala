@@ -3,31 +3,31 @@ package com.evernym.verity.agentmsg.msgfamily.pairwise
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgBase
 
-case class CreateKeyReqMsg_MFV_0_5(forDID: DID, forDIDVerKey: VerKey) extends MsgBase {
+case class CreateKeyReqMsg_MFV_0_5(forDID: DidStr, forDIDVerKey: VerKeyStr) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("forDID", forDID)
     checkRequired("forDIDVerKey", forDIDVerKey)
   }
 }
 
-case class CreateKeyReqMsg_MFV_0_6(forDID: DID, forDIDVerKey: VerKey) extends MsgBase {
+case class CreateKeyReqMsg_MFV_0_6(forDID: DidStr, forDIDVerKey: VerKeyStr) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("forDID", forDID)
     checkRequired("forDIDVerKey", forDIDVerKey)
   }
 }
 
-case class CreateKeyReqMsg(forDID: DID, forDIDVerKey: VerKey) {
+case class CreateKeyReqMsg(forDID: DidStr, forDIDVerKey: VerKeyStr) {
   def didPair: DidPair = DidPair(forDID, forDIDVerKey)
 }
 
-case class KeyCreatedRespMsg_MFV_0_5(`@type`: TypeDetail, withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey) extends MsgBase
+case class KeyCreatedRespMsg_MFV_0_5(`@type`: TypeDetail, withPairwiseDID: DidStr, withPairwiseDIDVerKey: VerKeyStr) extends MsgBase
 
-case class KeyCreatedRespMsg_MFV_0_6(`@type`: String, withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey) extends MsgBase
+case class KeyCreatedRespMsg_MFV_0_6(`@type`: String, withPairwiseDID: DidStr, withPairwiseDIDVerKey: VerKeyStr) extends MsgBase
 
 
 object CreateKeyMsgHelper extends MsgHelper[CreateKeyReqMsg] {
@@ -50,15 +50,15 @@ object CreateKeyMsgHelper extends MsgHelper[CreateKeyReqMsg] {
     }
   }
 
-  private def buildKeyCreatedResp_MFV_0_5(withDID: DID, withDIDVerKey: VerKey): KeyCreatedRespMsg_MFV_0_5 = {
+  private def buildKeyCreatedResp_MFV_0_5(withDID: DidStr, withDIDVerKey: VerKeyStr): KeyCreatedRespMsg_MFV_0_5 = {
     KeyCreatedRespMsg_MFV_0_5(TypeDetail(MSG_TYPE_KEY_CREATED, MTV_1_0), withDID, withDIDVerKey)
   }
 
-  def buildKeyCreatedResp_MFV_0_6(withDID: DID, withDIDVerKey: VerKey): KeyCreatedRespMsg_MFV_0_6  = {
+  def buildKeyCreatedResp_MFV_0_6(withDID: DidStr, withDIDVerKey: VerKeyStr): KeyCreatedRespMsg_MFV_0_6  = {
     KeyCreatedRespMsg_MFV_0_6(MSG_TYPE_DETAIL_KEY_CREATED, withDID, withDIDVerKey)
   }
 
-  def buildRespMsg(pairwiseDID: DID, pairwiseDIDVerKey: VerKey)
+  def buildRespMsg(pairwiseDID: DidStr, pairwiseDIDVerKey: VerKeyStr)
                   (implicit agentMsgContext: AgentMsgContext): List[Any] = {
     agentMsgContext.familyVersion match {
       case MFV_0_5 => List(buildKeyCreatedResp_MFV_0_5(pairwiseDID, pairwiseDIDVerKey))

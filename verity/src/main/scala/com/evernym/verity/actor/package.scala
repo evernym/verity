@@ -3,7 +3,7 @@ package com.evernym.verity
 import akka.actor.{ActorRef, Props}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.util.Base58Util
 
 import scala.util.Success
@@ -14,8 +14,8 @@ package object actor {
   }
 
   trait DidPairBase {
-    def DID: DID
-    def verKey: VerKey
+    def DID: DidStr
+    def verKey: VerKeyStr
 
     def validate(): Unit = {
       val decodedDID = Base58Util.decode(DID)

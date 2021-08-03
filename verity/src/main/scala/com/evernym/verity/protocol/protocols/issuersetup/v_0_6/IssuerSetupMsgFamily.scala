@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_6
 
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 
@@ -35,7 +35,7 @@ object Ctl  {
 }
 
 sealed trait Sig extends Msg
-case class PublicIdentifier(did: DID, verKey: VerKey) extends Sig
+case class PublicIdentifier(did: DidStr, verKey: VerKeyStr) extends Sig
 case class PublicIdentifierCreated(identifier: PublicIdentifier) extends Sig
 case class ProblemReport(message: String) extends Sig
 object Sig {

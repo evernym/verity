@@ -12,7 +12,7 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.actor.base.CoreActor
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
@@ -232,21 +232,21 @@ case class CreateWallet() extends WalletCommand
 
 case class SetupNewAgentWallet(ownerDidPair: Option[DidPair]) extends WalletCommand
 
-case class CreateNewKey(DID: Option[DID] = None, seed: Option[String] = None) extends WalletCommand
+case class CreateNewKey(DID: Option[DidStr] = None, seed: Option[String] = None) extends WalletCommand
 
 case class CreateDID(keyType: String) extends WalletCommand
 
-case class StoreTheirKey(theirDID: DID, theirDIDVerKey: VerKey, ignoreIfAlreadyExists: Boolean=false)
+case class StoreTheirKey(theirDID: DidStr, theirDIDVerKey: VerKeyStr, ignoreIfAlreadyExists: Boolean=false)
   extends WalletCommand
 
-case class GetVerKeyOpt(did: DID, getKeyFromPool: Boolean = false) extends WalletCommand
+case class GetVerKeyOpt(did: DidStr, getKeyFromPool: Boolean = false) extends WalletCommand
 
-case class GetVerKey(did: DID, getKeyFromPool: Boolean = false) extends WalletCommand
+case class GetVerKey(did: DidStr, getKeyFromPool: Boolean = false) extends WalletCommand
 
 case class SignMsg(keyParam: KeyParam, msg: Array[Byte]) extends WalletCommand
 
 case class VerifySignature(keyParam: KeyParam, challenge: Array[Byte],
-                           signature: Array[Byte], verKeyUsed: Option[VerKey]=None)
+                           signature: Array[Byte], verKeyUsed: Option[VerKeyStr]=None)
   extends WalletCommand
 
 case class PackMsg(msg: Array[Byte], recipVerKeyParams: Set[KeyParam], senderVerKeyParam: Option[KeyParam])
@@ -262,7 +262,7 @@ case class LegacyUnpackMsg(msg: Array[Byte], fromVerKeyParam: Option[KeyParam], 
 
 case class CreateMasterSecret(masterSecretId: String) extends WalletCommand
 
-case class CreateCredDef(issuerDID: DID,
+case class CreateCredDef(issuerDID: DidStr,
                          schemaJson: String,
                          tag: String,
                          sigType: Option[String],
@@ -270,7 +270,7 @@ case class CreateCredDef(issuerDID: DID,
 
 case class CreateCredOffer(credDefId: String) extends WalletCommand
 
-case class CreateCredReq(credDefId: String, proverDID: DID,
+case class CreateCredReq(credDefId: String, proverDID: DidStr,
                          credDefJson: String, credOfferJson: String, masterSecretId: String)
   extends WalletCommand
 
@@ -306,16 +306,16 @@ case class AgentWalletSetupCompleted(ownerDidPair: DidPair, agentKey: NewKeyCrea
 trait WalletCreatedBase extends WalletCmdSuccessResponse
 case object WalletCreated extends WalletCreatedBase
 case object WalletAlreadyCreated extends WalletCreatedBase
-case class NewKeyCreated(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse {
+case class NewKeyCreated(did: DidStr, verKey: VerKeyStr) extends WalletCmdSuccessResponse {
   def didPair: DidPair = DidPair(did, verKey)
 }
-case class GetVerKeyOptResp(verKey: Option[VerKey]) extends WalletCmdSuccessResponse
-case class GetVerKeyResp(verKey: VerKey) extends WalletCmdSuccessResponse
-case class TheirKeyStored(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse {
+case class GetVerKeyOptResp(verKey: Option[VerKeyStr]) extends WalletCmdSuccessResponse
+case class GetVerKeyResp(verKey: VerKeyStr) extends WalletCmdSuccessResponse
+case class TheirKeyStored(did: DidStr, verKey: VerKeyStr) extends WalletCmdSuccessResponse {
   def didPair: DidPair = DidPair(did, verKey)
 }
 case class VerifySigResult(verified: Boolean) extends WalletCmdSuccessResponse
-case class SignedMsg(msg: Array[Byte], fromVerKey: VerKey) extends WalletCmdSuccessResponse {
+case class SignedMsg(msg: Array[Byte], fromVerKey: VerKeyStr) extends WalletCmdSuccessResponse {
   def signatureResult: SignatureResult = SignatureResult(msg, fromVerKey)
 }
 case class MasterSecretCreated(ms: String) extends WalletCmdSuccessResponse
@@ -331,12 +331,12 @@ case class PackedMsg(msg: Array[Byte], metadata: Option[PayloadMetadata]=None)
   extends WalletCmdSuccessResponse
 
 case class UnpackedMsg(msg: Array[Byte],
-                       senderVerKey: Option[VerKey],
-                       recipVerKey: Option[VerKey]) extends WalletCmdSuccessResponse {
+                       senderVerKey: Option[VerKeyStr],
+                       recipVerKey: Option[VerKeyStr]) extends WalletCmdSuccessResponse {
   def msgString: String = new String(msg)
 }
 object UnpackedMsg {
-  def apply(msg: String, senderVerKey: Option[VerKey] = None, recipVerKey: Option[VerKey]=None): UnpackedMsg =
+  def apply(msg: String, senderVerKey: Option[VerKeyStr] = None, recipVerKey: Option[VerKeyStr]=None): UnpackedMsg =
     UnpackedMsg(msg.getBytes, senderVerKey, recipVerKey)
 }
 

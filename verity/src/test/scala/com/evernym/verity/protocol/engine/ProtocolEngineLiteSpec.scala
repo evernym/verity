@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.actor.agent.ThreadContextDetail
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.drivers.TicTacToeAI
 import com.evernym.verity.protocol.{CtlEnvelope, engine}
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
@@ -171,7 +171,7 @@ class TestProtocolEngine(name: String, sendsMsgs: SendsMsgs, cryptoFunctions: Cr
     inbox.process()
   }
 
-  override def handleMsg(myDID: DID, theirDID: DID, threadId: ThreadId, protoRef: ProtoRef, msg: Any): PinstId = {
+  override def handleMsg(myDID: DidStr, theirDID: DidStr, threadId: ThreadId, protoRef: ProtoRef, msg: Any): PinstId = {
     //TODO-rk: confirm few changes done here in fixing the merge conflicts
     val pinstId = super.handleMsg(myDID, theirDID, threadId, protoRef, msg)
     inbox.process()

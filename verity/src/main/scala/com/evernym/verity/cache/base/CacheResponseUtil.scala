@@ -7,8 +7,8 @@ import com.evernym.verity.actor.agent.msgrouter.ActorAddressDetail
 import com.evernym.verity.actor.agent.user.AgentConfigs
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
-import com.evernym.verity.did.DID
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.DidStr
 
 trait CacheResponseUtil {
 
@@ -21,7 +21,7 @@ trait CacheResponseUtil {
 
   def getConfigs: AgentConfigs = AgentConfigs(data.map(e => ConfigDetail(e._1, e._2.toString)).toSet)
 
-  def getAgencyInfoOpt(forDID: DID): Option[AgencyInfo] = {
+  def getAgencyInfoOpt(forDID: DidStr): Option[AgencyInfo] = {
     data.get(forDID) match {
       case Some(ad: AgencyInfo) => Some(ad)
       case None => None
@@ -29,12 +29,12 @@ trait CacheResponseUtil {
     }
   }
 
-  def getAgencyInfoReq(forDID: DID): AgencyInfo = {
+  def getAgencyInfoReq(forDID: DidStr): AgencyInfo = {
     getAgencyInfoOpt(forDID).getOrElse(
       throw new InternalServerErrorException(UNHANDLED.statusCode, Option("agency info not found DID: " + forDID)))
   }
 
-  def getActorAddressDetailOpt(forDID: DID): Option[ActorAddressDetail] = {
+  def getActorAddressDetailOpt(forDID: DidStr): Option[ActorAddressDetail] = {
     data.get(forDID) match {
       case Some(aad: ActorAddressDetail) => Some(aad)
       case None => None
@@ -42,7 +42,7 @@ trait CacheResponseUtil {
     }
   }
 
-  def getAgencyDIDOpt: Option[DID] = {
+  def getAgencyDIDOpt: Option[DidStr] = {
     data.get(AGENCY_DID_KEY) match {
       case Some(ad: String) => Some(ad)
       case None => None

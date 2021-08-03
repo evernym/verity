@@ -12,7 +12,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_TYPE_UPDATE_COM_METHOD}
 import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, ComMethodAuthentication, ComMethodPackaging, UpdateComMethodReqMsg, UpdateConfigReqMsg}
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
-import com.evernym.verity.did.{DidPair, VerKey}
+import com.evernym.verity.did.{DidPair, VerKeyStr}
 import com.evernym.verity.integration.base.PortProvider
 import com.evernym.verity.integration.base.sdk_provider.msg_listener.{JsonMsgListener, MsgListenerBase, PackedMsgListener, ReceivedMsgCounter}
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
@@ -316,7 +316,7 @@ case class IssuerRestSDK(param: SdkParam, oauthParam: Option[OAuthParam]=None) e
     s"$myLocalAgentVerKey:$myDIDSignature"
   }
 
-  private def computeSignature(verKey: VerKey): String = {
+  private def computeSignature(verKey: VerKeyStr): String = {
     val signedMsg = testWalletAPI.executeSync[SignedMsg](
       SignMsg(KeyParam.fromVerKey(verKey), verKey.getBytes))(walletAPIParam)
     Base58Util.encode(signedMsg.msg)

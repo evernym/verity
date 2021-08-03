@@ -1,7 +1,7 @@
 package com.evernym.verity.testkit.mock.agent
 
 import com.evernym.verity.actor.wallet.{StoreTheirKey, TheirKeyStored}
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.testkit.LegacyWalletAPI
 import com.evernym.verity.vault._
@@ -37,13 +37,13 @@ class MockPairwiseConnDetail(val myPairwiseDidPair: DidPair)
       throw new RuntimeException(s"$detailType already defined")
   }
 
-  def setMyCloudAgentPairwiseDidPair(did: DID, verKey: VerKey): Unit = {
+  def setMyCloudAgentPairwiseDidPair(did: DidStr, verKey: VerKeyStr): Unit = {
     checkIfDidPairNotYetSet(myCloudAgentPairwiseDidPair, "myCloudAgentPairwiseDidPair")
     wa.executeSync[TheirKeyStored](StoreTheirKey(did, verKey))
     myCloudAgentPairwiseDidPair = DidPair(did, verKey)
   }
 
-  def setTheirPairwiseDidPair(did: DID, verKey: VerKey): Unit = {
+  def setTheirPairwiseDidPair(did: DidStr, verKey: VerKeyStr): Unit = {
     checkIfDidPairNotYetSet(theirPairwiseDidPair, "theirPairwiseDidPair")
     wa.executeSync[TheirKeyStored](StoreTheirKey(did, verKey))
     theirPairwiseDidPair = DidPair(did, verKey)
@@ -55,7 +55,7 @@ class MockPairwiseConnDetail(val myPairwiseDidPair: DidPair)
   }
 
   //TODO: this should go to specific class
-  def setTheirCloudAgentPairwiseDidPair(did: DID, verKey: VerKey): Unit = {
+  def setTheirCloudAgentPairwiseDidPair(did: DidStr, verKey: VerKeyStr): Unit = {
     checkTheirCloudAgentPairwiseDidPairNotYetSet()
     wa.executeSync[TheirKeyStored](StoreTheirKey(did, verKey))
     theirCloudAgentPairwiseDidPair = DidPair(did, verKey)

@@ -5,7 +5,7 @@ import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.agent.{SetupAgentEndpoint, SetupCreateKeyEndpoint}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
@@ -39,7 +39,7 @@ class AgentProvisioningDriver(cp: ActorDriverGenParam)
 
   def handleCreatePairwiseKey(apc: AskAgencyPairwiseCreator, protoRef: ProtoRef, pinstId: PinstId): Option[Control] = {
 
-    def sendPairwiseCreated(respFut: Future[Any], agentKeyDID: DID, protoRef: ProtoRef, pinstId: PinstId): Unit = {
+    def sendPairwiseCreated(respFut: Future[Any], agentKeyDID: DidStr, protoRef: ProtoRef, pinstId: PinstId): Unit = {
       //TODO this is ignoring the response... What if it's an error?
       respFut.foreach { _ =>
         sendToProto(

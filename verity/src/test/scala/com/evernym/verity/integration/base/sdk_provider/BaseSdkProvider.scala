@@ -28,7 +28,7 @@ import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.LedgerTxnExecutor
 import com.evernym.verity.metrics.NoOpMetricsWriter
@@ -153,7 +153,7 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
     agentCreated
   }
 
-  def sendToRoute[T: ClassTag](msg: Any, fwdToDID: DID): ReceivedMsgParam[T] = {
+  def sendToRoute[T: ClassTag](msg: Any, fwdToDID: DidStr): ReceivedMsgParam[T] = {
     val jsonMsgBuilder = JsonMsgBuilder(msg)
     val packedMsg = packFromLocalAgentKey(jsonMsgBuilder.jsonMsg, Set(KeyParam.fromVerKey(agencyVerKey)))
     val routedPackedMsg = prepareFwdMsg(agencyDID, fwdToDID, packedMsg)
@@ -176,7 +176,7 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
    * @param msg the message to be sent
    * @return
    */
-  protected def prepareFwdMsg(recipDID: DID, fwdToDID: DID, msg: Array[Byte]): Array[Byte] = {
+  protected def prepareFwdMsg(recipDID: DidStr, fwdToDID: DidStr, msg: Array[Byte]): Array[Byte] = {
     val fwdJson = AgentMsgPackagingUtil.buildFwdJsonMsg(MPF_INDY_PACK, fwdToDID, msg)
     val senderKey = if (recipDID == agencyDID) None else Option(KeyParam.fromVerKey(myLocalAgentVerKey))
     packMsg(fwdJson, Set(KeyParam.fromDID(recipDID)), senderKey)
@@ -288,9 +288,9 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
   def verityAgentDidPair: DidPair = verityAgentDidPairOpt.getOrElse(
     throw new RuntimeException("verity agent not yet created")
   )
-  def agencyDID: DID = agencyPublicDid.DID
-  def agencyVerKey: VerKey = agencyPublicDid.verKey
-  def myLocalAgentVerKey: VerKey = localAgentDidPair.verKey
+  def agencyDID: DidStr = agencyPublicDid.DID
+  def agencyVerKey: VerKeyStr = agencyPublicDid.verKey
+  def myLocalAgentVerKey: VerKeyStr = localAgentDidPair.verKey
 
   protected lazy val testWalletAPI: LegacyWalletAPI = {
     val walletProvider = LibIndyWalletProvider
@@ -322,16 +322,16 @@ case class PairwiseRel(myLocalAgentDIDPair: Option[DidPair] = None,
                        theirDIDDoc: Option[DIDDoc] = None) {
 
   def myLocalAgentDIDPairReq: DidPair = myLocalAgentDIDPair.getOrElse(throw new RuntimeException("my pairwise key not exists"))
-  def myPairwiseDID: DID = myLocalAgentDIDPairReq.did
-  def myPairwiseVerKey: VerKey = myLocalAgentDIDPairReq.verKey
+  def myPairwiseDID: DidStr = myLocalAgentDIDPairReq.did
+  def myPairwiseVerKey: VerKeyStr = myLocalAgentDIDPairReq.verKey
 
   def myVerityAgentDIDPairReq: DidPair = verityAgentDIDPair.getOrElse(throw new RuntimeException("verity agent key not exists"))
-  def myVerityAgentDID: DID = myVerityAgentDIDPairReq.did
-  def myVerityAgentVerKey: VerKey = myVerityAgentDIDPairReq.verKey
+  def myVerityAgentDID: DidStr = myVerityAgentDIDPairReq.did
+  def myVerityAgentVerKey: VerKeyStr = myVerityAgentDIDPairReq.verKey
 
   def theirDIDDocReq: DIDDoc = theirDIDDoc.getOrElse(throw new RuntimeException("their DIDDoc not exists"))
-  def theirAgentVerKey: VerKey = theirDIDDocReq.verkey
-  def theirRoutingKeys: Vector[VerKey] = theirDIDDocReq.routingKeys
+  def theirAgentVerKey: VerKeyStr = theirDIDDocReq.verkey
+  def theirRoutingKeys: Vector[VerKeyStr] = theirDIDDocReq.routingKeys
   def theirServiceEndpoint: ServiceEndpoint = theirDIDDocReq.endpoint
 
   def withProvisionalTheirDidDoc(invitation: Invitation): PairwiseRel = {
@@ -449,7 +449,7 @@ object JsonMsgBuilder {
 
 case class JsonMsgBuilder(private val givenMsg: Any,
                           private val threadOpt: Option[MsgThread],
-                          private val forRelId: Option[DID],
+                          private val forRelId: Option[DidStr],
                           private val applyToJsonMsg: String => String = { msg => msg}) {
 
   lazy val thread: MsgThread = threadOpt.getOrElse(MsgThread(Option(UUID.randomUUID().toString)))
@@ -465,7 +465,7 @@ case class JsonMsgBuilder(private val givenMsg: Any,
     applyToJsonMsg(relationshipMsg)
   }
 
-  def forRelDID(did: DID): JsonMsgBuilder = copy(forRelId = Option(did))
+  def forRelDID(did: DidStr): JsonMsgBuilder = copy(forRelId = Option(did))
 
   private def createJsonString(msg: Any, msgFamily: MsgFamily): String = {
     val msgType = msgFamily.msgType(msg.getClass)
@@ -483,7 +483,7 @@ case class JsonMsgBuilder(private val givenMsg: Any,
     coreJson.put("~thread", threadJSON).toString
   }
 
-  private def addForRel(did: DID, jsonMsg: String): String = {
+  private def addForRel(did: DidStr, jsonMsg: String): String = {
     val jsonObject = new JSONObject(jsonMsg)
     jsonObject.put("~for_relationship", did).toString()
   }
@@ -548,6 +548,6 @@ object MsgFamilyHelper {
   }
 }
 
-case class TheirServiceDetail(verKey: VerKey, routingKeys: Vector[VerKey], serviceEndpoint: ServiceEndpoint)
+case class TheirServiceDetail(verKey: VerKeyStr, routingKeys: Vector[VerKeyStr], serviceEndpoint: ServiceEndpoint)
 
 case class OAuthParam(tokenExpiresDuration: FiniteDuration)

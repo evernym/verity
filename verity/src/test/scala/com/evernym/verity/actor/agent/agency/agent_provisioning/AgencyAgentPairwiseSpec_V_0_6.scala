@@ -5,7 +5,7 @@ import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.actor.wallet.PackedMsg
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
@@ -28,7 +28,7 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
 
     "Agent provisioning 0.6" - {
 
-      var pairwiseDID: DID = null
+      var pairwiseDID: DidStr = null
 
       "when sent GetLocalAgencyDIDDetail command" - {
         "should respond with agency DID detail" in {

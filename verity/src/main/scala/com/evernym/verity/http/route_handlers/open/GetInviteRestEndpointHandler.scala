@@ -15,7 +15,7 @@ import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCo
 import com.evernym.verity.actor.{ActorItemDetail, ForIdentifier, GetDetail}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.constants.Constants.{UNKNOWN_RECIP_PARTICIPANT_ID, UNKNOWN_SENDER_PARTICIPANT_ID}
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.protocol.container.actor.{ActorProtocol, MsgEnvelope, ProtocolCmd}
@@ -69,7 +69,7 @@ trait GetInviteRestEndpointHandler
     handleGetInviteDetailFut(getInviteDetailFut)
   }
 
-  protected def getInviteDetailByDIDAndUid(DID: DID, uid: MsgId): Future[Any] = {
+  protected def getInviteDetailByDIDAndUid(DID: DidStr, uid: MsgId): Future[Any] = {
     val gr = GetRoute(DID)
     val respFut = platform.agentActorContext.agentMsgRouter.execute(gr) flatMap {
       case Some(aa: ActorAddressDetail) =>
@@ -106,7 +106,7 @@ trait GetInviteRestEndpointHandler
     }
   }
 
-  protected def handleGetInviteByDIDAndUidReq(DID: DID, uid: MsgId)(implicit remoteAddress: RemoteAddress): Route = {
+  protected def handleGetInviteByDIDAndUidReq(DID: DidStr, uid: MsgId)(implicit remoteAddress: RemoteAddress): Route = {
     addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_did", clientIpAddress, None)
     complete {
       getInviteDetailByDIDAndUid(DID, uid).map[ToResponseMarshallable] {

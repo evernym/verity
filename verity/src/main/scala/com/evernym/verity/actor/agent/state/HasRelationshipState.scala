@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.state
 
 import com.evernym.verity.actor.agent.relationship.{DidDoc, EndpointADTUntyped, EndpointId, HasRelationship, KeyId, Relationship, Tags}
-import com.evernym.verity.did.VerKey
+import com.evernym.verity.did.VerKeyStr
 
 import scala.language.implicitConversions
 
@@ -50,11 +50,11 @@ trait HasRelationshipState extends HasRelationship {
     updateRelationship(updatedRel)
   }
 
-  def addNewAuthKeyToMyDidDoc(keyId: KeyId, verKey: VerKey, tags: Set[Tags]): Unit = {
+  def addNewAuthKeyToMyDidDoc(keyId: KeyId, verKey: VerKeyStr, tags: Set[Tags]): Unit = {
     updateWithNewMyDidDoc(relationship.myDidDoc_!.updatedWithNewAuthKey(keyId, verKey, tags))
   }
 
-  def mergeAuthKeyToMyDidDoc(keyId: KeyId, verKey: VerKey, tags: Set[Tags]): Unit = {
+  def mergeAuthKeyToMyDidDoc(keyId: KeyId, verKey: VerKeyStr, tags: Set[Tags]): Unit = {
     updateWithNewMyDidDoc(relationship.myDidDoc_!.updatedWithMergedAuthKey(keyId, verKey, tags))
   }
 

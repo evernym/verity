@@ -16,7 +16,7 @@ import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.question_answer.AskQuestionMsg
 import com.evernym.verity.agentmsg.wallet_backup.WalletBackupMsg
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_1_0, MFV_0_6, MSG_FAMILY_AGENT_PROVISIONING, MSG_TYPE_CONNECT}
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
@@ -84,7 +84,7 @@ trait AgentMsgHelper
     pcd.lastSentInvite = inviteDetail
   }
 
-  def getDIDToUnsealAgentRespMsg: DID = myDIDDetail.did
+  def getDIDToUnsealAgentRespMsg: DidStr = myDIDDetail.did
 
   /**
    * unseal 'indy packed' message
@@ -92,7 +92,7 @@ trait AgentMsgHelper
    * @param unsealFromDID
    * @return
    */
-  protected def unsealResp_MPV_1_0(rmw: Array[Byte], unsealFromDID: DID)
+  protected def unsealResp_MPV_1_0(rmw: Array[Byte], unsealFromDID: DidStr)
   : AgentMsgWrapper = {
     val fromKeyParam = KeyParam.fromDID(unsealFromDID)
     convertToSyncReq(agentMsgTransformer.unpackAsync(rmw, fromKeyParam))
@@ -104,7 +104,7 @@ trait AgentMsgHelper
    * @param unsealFromDID
    * @return
    */
-  protected def unpackResp_MPV_1_0(pmw: PackedMsg, unsealFromDID: DID): List[AgentMsg] = {
+  protected def unpackResp_MPV_1_0(pmw: PackedMsg, unsealFromDID: DidStr): List[AgentMsg] = {
     val umw = unsealResp_MPV_1_0(pmw.msg, unsealFromDID)
     List(umw.headAgentMsg) ++ umw.tailAgentMsgs
   }
@@ -151,7 +151,7 @@ trait AgentMsgHelper
     )
   }
 
-  def encryptParamFromEdgeToGivenDID(forDID: DID, fromConnIdOpt: Option[String]=None): EncryptParam = {
+  def encryptParamFromEdgeToGivenDID(forDID: DidStr, fromConnIdOpt: Option[String]=None): EncryptParam = {
     val fromDID = fromConnIdOpt.map(pairwiseConnDetail(_).myPairwiseDidPair.did).getOrElse(myDIDDetail.did)
     val receiveVk = if (forDID.equals(myDIDDetail.did)) {
       cloudAgentDetailReq.verKey
@@ -189,9 +189,9 @@ trait AgentMsgHelper
     setAgencyIdentity(agencyKeyIdentity)
   }
 
-  def agencyAgentPairwiseRoutingDID: DID = agencyPairwiseAgentDetailReq.did
+  def agencyAgentPairwiseRoutingDID: DidStr = agencyPairwiseAgentDetailReq.did
 
-  def cloudAgentRoutingDID: DID = cloudAgentDetailReq.did
+  def cloudAgentRoutingDID: DidStr = cloudAgentDetailReq.did
 
   def handleSetAgencyPairwiseAgentKey(DID: String, verKey: String): Unit = {
     setAgencyPairwiseAgentDetail(DID, verKey)
@@ -211,7 +211,7 @@ trait AgentMsgHelper
     pcd.setTheirPairwiseDidPair(inviteDetail.senderDetail.DID, inviteDetail.senderDetail.verKey)
   }
 
-  def prepareAskQuestionMsgForAgent(forDID: DID)
+  def prepareAskQuestionMsgForAgent(forDID: DidStr)
                                    (implicit msgPackagingContext: AgentMsgPackagingContext): PackedMsg = {
     val msg = AskQuestionMsg(
       MSG_TYPE_DETAIL_QUESTION_ANSWER_ASK_QUESTION,
@@ -291,7 +291,7 @@ trait AgentMsgHelper
     preparePackedRequestForRoutes(msgPackagingContext.fwdMsgVersion, agentMsgParam, List(fwdRoute))
   }
 
-  def unpackDeadDropLookupResult(packedMsg: PackedMsg, verKey: VerKey): DeadDropRetrieveResult = {
+  def unpackDeadDropLookupResult(packedMsg: PackedMsg, verKey: VerKeyStr): DeadDropRetrieveResult = {
     unpackPackedMsg[DeadDropRetrieveResult](packedMsg, Option(verKey))
   }
 
@@ -335,7 +335,7 @@ trait AgentMsgHelper
   }
 
   //adds proper routing (optionally adds agency routing based on msgPackagingContext)
-  protected def prepareRoutedAgentMsg(agentMsgPackParam: PackMsgParam, forDIDOpt: Option[DID]=None)
+  protected def prepareRoutedAgentMsg(agentMsgPackParam: PackMsgParam, forDIDOpt: Option[DidStr]=None)
                                    (implicit msgPackagingContext: AgentMsgPackagingContext): PackedMsg = {
     implicit val mpf: MsgPackFormat = msgPackagingContext.msgPackFormat
     val agencyRoute = forDIDOpt match {
@@ -350,7 +350,7 @@ trait AgentMsgHelper
     AgentPackMsgUtil(msgs, ep)
   }
 
-  def unpackPackedMsg[T: ClassTag](packedMsg: PackedMsg, verKey: Option[VerKey]=None, up:UnpackParam = UnpackParam()): T = {
+  def unpackPackedMsg[T: ClassTag](packedMsg: PackedMsg, verKey: Option[VerKeyStr]=None, up:UnpackParam = UnpackParam()): T = {
     unpackAgentMsg(packedMsg.msg, verKey, up)
   }
 
@@ -359,13 +359,13 @@ trait AgentMsgHelper
     unpackAgentMsg(msg, Option(verKey), up)
   }
 
-  def unpackAgentMsg[T: ClassTag](msg: Array[Byte], verKey: Option[VerKey]=None, up:UnpackParam = UnpackParam()): T = {
+  def unpackAgentMsg[T: ClassTag](msg: Array[Byte], verKey: Option[VerKeyStr]=None, up:UnpackParam = UnpackParam()): T = {
     val amw = unpackMsg(msg, verKey, up)
     val um = DefaultMsgCodec.fromJson(amw.headAgentMsg.msg)
     um
   }
 
-  def unpackMsg(msg: Array[Byte], fromVerKey: Option[VerKey]=None, unpackParam:UnpackParam = UnpackParam()): AgentMsgWrapper = {
+  def unpackMsg(msg: Array[Byte], fromVerKey: Option[VerKeyStr]=None, unpackParam:UnpackParam = UnpackParam()): AgentMsgWrapper = {
     val fromKeyParam = fromVerKey match {
       case Some(vk) => KeyParam.fromVerKey(vk)
       case None     => KeyParam.fromDID(getDIDToUnsealAgentRespMsg)

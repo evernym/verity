@@ -7,17 +7,17 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvitation
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 
 import scala.util.{Failure, Success, Try}
 
 object InviteUtil {
-  def withServiced(agencyVerKey: Option[VerKey], ctx: ProtocolContextApi[_, _, _, _, _, _])
+  def withServiced(agencyVerKey: Option[VerKeyStr], ctx: ProtocolContextApi[_, _, _, _, _, _])
                   (handler: Try[Vector[ServiceFormatted]] =>Unit): Unit = {
     (agencyVerKey, ctx.getRoster.selfId) match {
       case (Some(agencyVerKey), Some(did)) =>
         ctx.wallet.verKey(did) {
-          case Success(GetVerKeyResp(verKey: VerKey)) =>
+          case Success(GetVerKeyResp(verKey: VerKeyStr)) =>
             handler(Success(
               DIDDoc(
                 did,
@@ -38,11 +38,11 @@ object InviteUtil {
   }
 
   def buildInviteWithThreadedId(protoRef: ProtoRef,
-                                relationshipId: DID,
+                                relationshipId: DidStr,
                                 threadId: ThreadId,
                                 agentName: Option[String],
                                 logoUrl: Option[String],
-                                publicDid: Option[DID],
+                                publicDid: Option[DidStr],
                                 service: Vector[ServiceFormatted],
                                 attachment: AttachmentDescriptor,
                                 goalCode: Option[String],
@@ -61,7 +61,7 @@ object InviteUtil {
   }
 
 
-  case class ThreadedInviteIdDecoded(ver: String, protoRefStr: String, relationshipId: DID, threadId: ThreadId)
+  case class ThreadedInviteIdDecoded(ver: String, protoRefStr: String, relationshipId: DidStr, threadId: ThreadId)
   val delimiter = '$'
   val encodeVer = "v1"
   /*
@@ -69,7 +69,7 @@ object InviteUtil {
   for the this encoded data to be opaque but the data is not a secret.
    */
   def buildThreadedInviteId(protoRef: ProtoRef,
-                            relationshipId: DID,
+                            relationshipId: DidStr,
                             threadId: ThreadId): String = {
     val preCodedId = s"$encodeVer$delimiter$protoRef$delimiter$relationshipId$delimiter$threadId"
     val encoded = Base58Util.encode(preCodedId.getBytes())

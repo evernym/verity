@@ -4,7 +4,7 @@ import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.wallet.VerifySigResult
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
-import com.evernym.verity.did.VerKey
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine._
@@ -137,7 +137,7 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
     }
   }
 
-  def provisionEdgeRole(requesterVk: VerKey,
+  def provisionEdgeRole(requesterVk: VerKeyStr,
                         provisionToken: Option[ProvisionToken],
                         r: ParticipantIndex,
                         p: ParticipantIndex): Unit = {
@@ -163,7 +163,7 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
     })
   }
 
-  private def isValidSignature(token: ProvisionToken, sponsorVk: VerKey)(handler: Try[VerifySigResult] => Unit): Unit = {
+  private def isValidSignature(token: ProvisionToken, sponsorVk: VerKeyStr)(handler: Try[VerifySigResult] => Unit): Unit = {
     val msg = (token.nonce + token.timestamp + token.sponseeId + token.sponsorId).getBytes
     ctx.wallet.verify(msg, getBase64Decoded(token.sig), sponsorVk, SIGN_ED25519_SHA512_SINGLE){handler(_)}
   }

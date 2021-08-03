@@ -13,7 +13,7 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateComMethodReqMsg
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateKeyReqMsg_MFV_0_6, GetMsgsByConnsReqMsg_MFV_0_6, GetMsgsByConnsRespMsg_MFV_0_6, GetMsgsReqMsg_MFV_0_6, GetMsgsRespMsg_MFV_0_6, KeyCreatedRespMsg_MFV_0_6, MsgStatusUpdatedRespMsg_MFV_0_6, UpdateMsgStatusReqMsg_MFV_0_6}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer}
 import com.evernym.verity.constants.Constants.NO
-import com.evernym.verity.did.{DID, DidPair}
+import com.evernym.verity.did.{DidStr, DidPair}
 import com.evernym.verity.integration.base.sdk_provider.MsgFamilyHelper.buildMsgTypeStr
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerTxnExecutor, Submitter}
 import com.evernym.verity.metrics.NoOpMetricsWriter
@@ -351,7 +351,7 @@ case class HolderSdk(param: SdkParam,
   }
 
   //this function/logic will only work for registered protocols (and not for legacy message types)
-  def expectMsg[T: ClassTag](pairwiseDIDs: Option[List[DID]] = None,
+  def expectMsg[T: ClassTag](pairwiseDIDs: Option[List[DidStr]] = None,
                              msgIds: Option[List[MsgId]] = None,
                              excludePayload: Option[String] = Option(NO),
                              statusCodes: Option[List[String]] = Option(List(Status.MSG_STATUS_RECEIVED.statusCode)),
@@ -361,7 +361,7 @@ case class HolderSdk(param: SdkParam,
   }
 
   def expectMsg[T: ClassTag](msgTypeStr: String,
-                             pairwiseDIDs: Option[List[DID]],
+                             pairwiseDIDs: Option[List[DidStr]],
                              msgIds: Option[List[MsgId]],
                              excludePayload: Option[String],
                              statusCodes: Option[List[String]],

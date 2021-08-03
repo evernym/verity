@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols
 
-import com.evernym.verity.did.VerKey
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.engine.{MsgFamily, MsgTypeStr}
 import com.evernym.verity.util2.Base64Encoded
 
@@ -19,17 +19,17 @@ object CommonProtoTypes {
 
   case class SigBlock(signature: Base64Encoded,
                       sig_data: Base64Encoded,
-                      signers: Seq[VerKey],
+                      signers: Seq[VerKeyStr],
                       `@type`: Option[MsgTypeStr]
-                              = Some(MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, "signature", "1.0", "ed25519Sha512_single"))  //"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/signature/1.0/ed25519Sha512_single")
+                              = Some(MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, "signature", "1.0", "ed25519Sha512_single")) //"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/signature/1.0/ed25519Sha512_single")
                       )
 
   // Aries RFC has replaced `signers` with `signer` and now only 1 verkey is contained.
   // TODO: Reconcile with above SigBlock.
   case class SigBlockCommunity(signature: Base64Encoded,
-                      sig_data: Base64Encoded,
-                      signer: VerKey,
-                      `@type`: Option[MsgTypeStr]
+                               sig_data: Base64Encoded,
+                               signer: VerKeyStr,
+                               `@type`: Option[MsgTypeStr]
                       = Some(MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, "signature", "1.0", "ed25519Sha512_single"))
                      )
 }

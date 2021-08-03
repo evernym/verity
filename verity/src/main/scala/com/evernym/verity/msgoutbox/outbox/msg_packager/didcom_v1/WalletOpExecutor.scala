@@ -8,7 +8,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.WalletOpExecut
 import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.WalletOpExecutor.Replies.PackagedPayload
 import com.evernym.verity.msgoutbox.WalletId
 import com.evernym.verity.actor.{wallet => WalletActor}
-import com.evernym.verity.did.VerKey
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 
@@ -18,8 +18,8 @@ object WalletOpExecutor {
 
   object Commands {
     case class PackMsg(payload: Array[Byte],
-                       recipKeys: Set[VerKey],
-                       senderVerKey: VerKey,
+                       recipKeys: Set[VerKeyStr],
+                       senderVerKey: VerKeyStr,
                        walletId: WalletId,
                        replyTo: ActorRef[Reply]) extends Cmd
 

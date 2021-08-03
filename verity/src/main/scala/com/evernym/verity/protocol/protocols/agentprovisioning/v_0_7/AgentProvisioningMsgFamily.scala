@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_AGENT_CREATED
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_7, MSG_FAMILY_AGENT_PROVISIONING, MSG_TYPE_CREATE_AGENT}
 import com.evernym.verity.protocol.engine.util.DbcUtil.requireNotNull
@@ -54,7 +54,7 @@ object AgentProvisioningMsgFamily extends MsgFamily {
     def nonce: Nonce
     def timestamp: IsoDateTime
     def sig: Base64Encoded
-    def sponsorVerKey: VerKey
+    def sponsorVerKey: VerKeyStr
   }
 /**
   *
@@ -77,7 +77,7 @@ object AgentProvisioningMsgFamily extends MsgFamily {
                             nonce: Nonce,
                             timestamp: IsoDateTime,
                             sig: Base64Encoded,
-                            sponsorVerKey: VerKey) extends ProvisioningToken {
+                            sponsorVerKey: VerKeyStr) extends ProvisioningToken {
     def asEvent(): TokenDetails = TokenDetails(
       requireNotNull(sponseeId, "sponseeId"),
       requireNotNull(sponsorId, "sponsorId"),
@@ -92,7 +92,7 @@ object AgentProvisioningMsgFamily extends MsgFamily {
       ProvisionToken(s.sponseeId, s.sponsorId, s.nonce, s.timestamp, s.sig, s.sponsorVerKey)
   }
 
-  case class Keys(verKey: VerKey)
+  case class Keys(verKey: VerKeyStr)
   case class SponsorDetails(name: String, id: String, keys: List[Keys], endpoint: String, active: Boolean=false, pushService: Option[SponsorPushService] = None)
   case class SponsorPushService(service: String, host: String, path: String, key: String)
   object SponsorDetails {
@@ -124,7 +124,7 @@ object AgentProvisioningMsgFamily extends MsgFamily {
     * Types of messages are from the perspective of the 'sender' of the message
     */
   sealed trait Msg extends MsgBase
-  case class RequesterKeys(fromDID: DID, fromVerKey: VerKey) {
+  case class RequesterKeys(fromDID: DidStr, fromVerKey: VerKeyStr) {
     def asEvent(): RequesterKeysOpt = RequesterKeysOpt(fromDID, fromVerKey)
   }
   object RequesterKeys {
@@ -134,9 +134,9 @@ object AgentProvisioningMsgFamily extends MsgFamily {
 
   case class CreateCloudAgent(requesterKeys: RequesterKeys,
                               provisionToken: Option[ProvisionToken]) extends Msg
-  case class CreateEdgeAgent(requesterVk: VerKey,
+  case class CreateEdgeAgent(requesterVk: VerKeyStr,
                              provisionToken: Option[ProvisionToken])  extends Msg
-  case class AgentCreated(selfDID: DID, agentVerKey: VerKey)          extends Msg
+  case class AgentCreated(selfDID: DidStr, agentVerKey: VerKeyStr)          extends Msg
   case class ProblemReport(msg: String=DefaultProblem.err)            extends Msg
 
   /**
@@ -152,16 +152,16 @@ object AgentProvisioningMsgFamily extends MsgFamily {
     def asCreateAgent(): CreateCloudAgent = CreateCloudAgent(requesterKeys, provisionToken)
   }
 
-  case class ProvisionEdgeAgent(requesterVk: VerKey, provisionToken: Option[ProvisionToken])               extends Provision {
+  case class ProvisionEdgeAgent(requesterVk: VerKeyStr, provisionToken: Option[ProvisionToken])               extends Provision {
     def asCreateAgent(): CreateEdgeAgent = CreateEdgeAgent(requesterVk, provisionToken)
   }
 
   case class GiveSponsorDetails(sponsor: Option[SponsorDetails], cacheUsedTokens: Boolean,
                                 tokenWindow: Duration)                    extends Ctl
   case class InvalidToken()                                               extends Ctl
-  case class AlreadyProvisioned(requesterVerKey: VerKey)                  extends Ctl
+  case class AlreadyProvisioned(requesterVerKey: VerKeyStr)                  extends Ctl
   case class NoSponsorNeeded()                                            extends Ctl
-  case class CompleteAgentProvisioning(selfDID: DID, agentVerKey: VerKey) extends Ctl
+  case class CompleteAgentProvisioning(selfDID: DidStr, agentVerKey: VerKeyStr) extends Ctl
 
   /**
     * Errors
@@ -210,6 +210,6 @@ object AgentProvisioningMsgFamily extends MsgFamily {
   case class IdentifySponsor(provisionDetails: Option[ProvisionToken])                 extends Signal
   case class NeedsCloudAgent(requesterKeys: RequesterKeys,
                              sponsorRel: Option[SponsorRel]=None)  extends Signal with ProvisioningNeeded
-  case class NeedsEdgeAgent(requesterVk: VerKey,
+  case class NeedsEdgeAgent(requesterVk: VerKeyStr,
                             sponsorRel: Option[SponsorRel]=None)            extends Signal with ProvisioningNeeded
 }

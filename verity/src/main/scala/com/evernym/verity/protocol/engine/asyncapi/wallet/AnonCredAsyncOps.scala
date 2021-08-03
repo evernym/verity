@@ -1,12 +1,12 @@
 package com.evernym.verity.protocol.engine.asyncapi.wallet
 
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 
 trait AnonCredAsyncOps {
 
-  def runCreateSchema(issuerDID: DID, name: String, version: String, data: String): Unit
+  def runCreateSchema(issuerDID: DidStr, name: String, version: String, data: String): Unit
 
-  def runCreateCredDef(issuerDID: DID,
+  def runCreateCredDef(issuerDID: DidStr,
                        schemaJson: String,
                        tag: String,
                        sigType: Option[String] = None,
@@ -14,7 +14,7 @@ trait AnonCredAsyncOps {
 
   def runCreateCredOffer(credDefId: String): Unit
 
-  def runCreateCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String): Unit
+  def runCreateCredReq(credDefId: String, proverDID: DidStr, credDefJson: String, credOfferJson: String): Unit
 
   def runCreateCred(credOfferJson: String, credReqJson: String, credValuesJson: String,
                     revRegistryId: String, blobStorageReaderHandle: Int): Unit

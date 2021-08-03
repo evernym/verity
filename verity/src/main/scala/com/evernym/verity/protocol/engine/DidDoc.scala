@@ -1,8 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.util2.ServiceEndpoint
-import com.evernym.verity.did
-import com.evernym.verity.did.{DID, DIDKeyStr, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.did.methods.DIDKey
 
 
@@ -13,19 +12,19 @@ object DidDocConstants {
 }
 
 // This is the according to the community.
-case class PublicKeyFormatted(id: String, `type`: String = "Ed25519VerificationKey2018", controller: String, publicKeyBase58: VerKey)
+case class PublicKeyFormatted(id: String, `type`: String = "Ed25519VerificationKey2018", controller: String, publicKeyBase58: VerKeyStr)
 
-case class ServiceFormatted(id: String, `type`: String, recipientKeys: Vector[VerKey], routingKeys: Option[Vector[VerKey]], serviceEndpoint: String){
-  def routingKeys_! : Vector[VerKey] = routingKeys.getOrElse(Vector.empty)
+case class ServiceFormatted(id: String, `type`: String, recipientKeys: Vector[VerKeyStr], routingKeys: Option[Vector[VerKeyStr]], serviceEndpoint: String){
+  def routingKeys_! : Vector[VerKeyStr] = routingKeys.getOrElse(Vector.empty)
 }
 
 case class ServiceFormatter(service: ServiceFormatted) {
-  val recipientKeys : Vector[DIDKeyStr] = for (key <- service.recipientKeys) yield new DIDKey(key).toString
-  val routingKeys : Vector[DIDKeyStr] = for (key <- service.routingKeys.getOrElse(Vector.empty)) yield new DIDKey(key).toString
+  val recipientKeys : Vector[DidStr] = for (key <- service.recipientKeys) yield new DIDKey(key).toString
+  val routingKeys : Vector[DidStr] = for (key <- service.routingKeys.getOrElse(Vector.empty)) yield new DIDKey(key).toString
   def toDidKeyFormat(): ServiceFormatted = ServiceFormatted(service.id, service.`type`, recipientKeys, Some(routingKeys), service.serviceEndpoint)
 }
 
-case class DIDDocFormatted(`@context`: String = DidDocConstants.DID_CONTEXT, id: DID, publicKey: Vector[PublicKeyFormatted], service: Vector[ServiceFormatted]) {
+case class DIDDocFormatted(`@context`: String = DidDocConstants.DID_CONTEXT, id: DidStr, publicKey: Vector[PublicKeyFormatted], service: Vector[ServiceFormatted]) {
   def toDIDDoc: DIDDoc = {
     if (publicKey.isEmpty) {
       throw new RuntimeException("publicKey should not be empty")
@@ -46,9 +45,9 @@ case class DIDDocFormatted(`@context`: String = DidDocConstants.DID_CONTEXT, id:
   }
 }
 
-case class DIDDoc(id: DID, verkey: VerKey, endpoint: ServiceEndpoint, routingKeys: Vector[VerKey]) {
-  def getDID: DID = id
-  def getVerkey: VerKey = verkey
+case class DIDDoc(id: DidStr, verkey: VerKeyStr, endpoint: ServiceEndpoint, routingKeys: Vector[VerKeyStr]) {
+  def getDID: DidStr = id
+  def getVerkey: VerKeyStr = verkey
   def getEndpoint: ServiceEndpoint = endpoint
   def toDIDDocFormatted: DIDDocFormatted = {
     // only one verkey for now

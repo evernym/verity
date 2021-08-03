@@ -9,7 +9,7 @@ import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.actor.{AgencyPublicDid, KeyCreated, agentRegion}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.typesafe.config.{Config, ConfigFactory}
 
 
@@ -32,7 +32,7 @@ class AgencyAgentPairwiseSnapshotSpec
   import mockEdgeAgent.v_0_5_req._
   import mockEdgeAgent.v_0_5_resp._
 
-  var pairwiseDID: DID = _
+  var pairwiseDID: DidStr = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -76,7 +76,7 @@ class AgencyAgentPairwiseSnapshotSpec
     setPairwiseEntityId(pairwiseDID)
   }
 
-  def checkKeyCreatedEvent(keyCreated: KeyCreated, expectedForDID: DID): Unit = {
+  def checkKeyCreatedEvent(keyCreated: KeyCreated, expectedForDID: DidStr): Unit = {
     keyCreated.forDID shouldBe expectedForDID
   }
 

@@ -5,7 +5,7 @@ import com.evernym.verity.actor.testkit.{AgentDIDDetail, CommonSpecUtil}
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, SenderDetail}
 import com.evernym.verity.testkit.{HasDefaultTestWallet, HasTestWalletAPI}
@@ -50,7 +50,7 @@ trait MockAgent
 
   init()
 
-  def getVerKeyFromWallet(did: DID): VerKey = testWalletAPI.executeSync[GetVerKeyResp](GetVerKey(did)).verKey
+  def getVerKeyFromWallet(did: DidStr): VerKeyStr = testWalletAPI.executeSync[GetVerKeyResp](GetVerKey(did)).verKey
 
   def buildInviteSenderDetail(connId: String, kdpOpt: Option[AgentKeyDlgProof]): SenderDetail = {
     val pcd = pairwiseConnDetail(connId)
@@ -99,7 +99,7 @@ trait MockAgent
     mpcd
   }
 
-  def storeTheirKey(did: DID, verKey: VerKey, ignoreIfAlreadyExists: Boolean = false): Unit = {
+  def storeTheirKey(did: DidStr, verKey: VerKeyStr, ignoreIfAlreadyExists: Boolean = false): Unit = {
     logger.debug(s"Store their key for did: $did")
     val stk = StoreTheirKey(did, verKey, ignoreIfAlreadyExists)
     testWalletAPI.executeSync[TheirKeyStored](stk)(wap)

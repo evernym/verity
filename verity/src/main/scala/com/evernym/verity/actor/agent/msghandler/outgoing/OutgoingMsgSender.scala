@@ -5,7 +5,7 @@ import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.agent.msghandler.{SendMsgToMyDomain, SendMsgToTheirDomain}
 import com.evernym.verity.actor.base.CoreActorExtended
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.{MsgId, MsgName}
 import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfully}
 
@@ -85,7 +85,7 @@ object ProcessSendMsgToMyDomain {
 case class ProcessSendMsgToMyDomain(om: OutgoingMsgParam,
                                     msgId: MsgId,
                                     msgName: MsgName,
-                                    senderDID: DID,
+                                    senderDID: DidStr,
                                     threadOpt: Option[Thread]) extends ActorMessage
 
 object ProcessSendMsgToTheirDomain {
@@ -95,7 +95,7 @@ object ProcessSendMsgToTheirDomain {
 case class ProcessSendMsgToTheirDomain(om: OutgoingMsgParam,
                                        msgId: MsgId,
                                        msgName: MsgName,
-                                       senderDID: DID,
+                                       senderDID: DidStr,
                                        threadOpt: Option[Thread]) extends ActorMessage
 
 

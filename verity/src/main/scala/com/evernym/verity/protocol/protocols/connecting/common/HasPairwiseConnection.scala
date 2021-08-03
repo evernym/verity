@@ -6,7 +6,7 @@ import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.util2.Status.{CONN_STATUS_NOT_CONNECTED, MSG_STATUS_ACCEPTED}
 import com.evernym.verity.actor.agent.ConnectionStatus
 import com.evernym.verity.actor.{ConnectionCompleted, ConnectionStatusUpdated}
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 
 
 /**
@@ -23,11 +23,11 @@ trait HasPairwiseConnection {
   def theirDIDDocReq: LegacyDIDDoc = _theirDIDDoc.getOrElse(
     throw new BadRequestErrorException(CONN_STATUS_NOT_CONNECTED.statusCode))
 
-  def theirPairwiseDID: Option[DID] = _theirDIDDoc.flatMap(_.DID)
-  def theirPairwiseDIDReq: DID = theirPairwiseDID.getOrElse(
+  def theirPairwiseDID: Option[DidStr] = _theirDIDDoc.flatMap(_.DID)
+  def theirPairwiseDIDReq: DidStr = theirPairwiseDID.getOrElse(
     throw new BadRequestErrorException(CONN_STATUS_NOT_CONNECTED.statusCode))
 
-  def isTheirAgentVerKey(verKey: VerKey): Boolean = {
+  def isTheirAgentVerKey(verKey: VerKeyStr): Boolean = {
     _theirDIDDoc.exists(_.isTheirAgentVerKey(verKey))
   }
 
@@ -35,7 +35,7 @@ trait HasPairwiseConnection {
    * that agent (belonging to other part of the connection)
    * @return
    */
-  def theirAgentKeyDID: Option[DID] =
+  def theirAgentKeyDID: Option[DidStr] =
     (_theirDIDDoc.flatMap(_.legacyRoutingDetail), _theirDIDDoc.flatMap(_.routingDetail)) match {
       case (Some(v1), None) => Option(v1.agentKeyDID)
       case _                => None
@@ -107,11 +107,11 @@ trait HasPairwiseConnectionState {
  * @param legacyRoutingDetail legacy (based on old connecting 0.5 and 0.6 protocols) routing details
  * @param routingDetail new routing details (based on new aries connections 1.0 protocol)
  */
-case class LegacyDIDDoc(DID: Option[DID],
+case class LegacyDIDDoc(DID: Option[DidStr],
                         legacyRoutingDetail: Option[LegacyRoutingDetail]=None,
                         routingDetail: Option[RoutingDetail]=None) {
 
-  def isTheirAgentVerKey(verKey: VerKey): Boolean = {
+  def isTheirAgentVerKey(verKey: VerKeyStr): Boolean = {
     if (legacyRoutingDetail.isDefined) legacyRoutingDetail.exists(_.agentVerKey == verKey)
     else if (routingDetail.isDefined) routingDetail.exists(_.verKey == verKey)
     else false
@@ -130,9 +130,9 @@ case class LegacyDIDDoc(DID: Option[DID],
 sealed trait RoutingDetailProvider
 
 case class LegacyRoutingDetail(
-                                agencyDID: DID,
-                                agentKeyDID: DID,
-                                agentVerKey: VerKey,
+                                agencyDID: DidStr,
+                                agentKeyDID: DidStr,
+                                agentVerKey: VerKeyStr,
                                 agentKeyDlgProofSignature: String)
   extends RoutingDetailProvider
 
@@ -142,9 +142,9 @@ case class LegacyRoutingDetail(
  * @param endpoint recipient's endpoint
  * @param routingKeys recipient's routing keys
  */
-case class RoutingDetail(verKey: VerKey,
+case class RoutingDetail(verKey: VerKeyStr,
                          endpoint: ServiceEndpoint,
-                         routingKeys: Seq[VerKey])
+                         routingKeys: Seq[VerKeyStr])
   extends RoutingDetailProvider
 
 /**
@@ -152,7 +152,7 @@ case class RoutingDetail(verKey: VerKey,
  * in new routing details, it used to be the endpoint itself
  * @param route either DID or service endpoint itself
  */
-case class TheirRoutingParam(route: Either[DID, ServiceEndpoint]) {
+case class TheirRoutingParam(route: Either[DidStr, ServiceEndpoint]) {
 
   def routingTarget: String = route match {
     case Left(did)  => did
@@ -161,14 +161,14 @@ case class TheirRoutingParam(route: Either[DID, ServiceEndpoint]) {
 }
 
 
-case class AgentKeyDlgProof(agentDID: DID, agentDelegatedKey: String, signature: String) {
+case class AgentKeyDlgProof(agentDID: DidStr, agentDelegatedKey: String, signature: String) {
   def buildChallenge: String = agentDID + agentDelegatedKey
 
   def toAbbreviated: AgentKeyDlgProofAbbreviated = AgentKeyDlgProofAbbreviated(agentDID, agentDelegatedKey, signature)
 }
 
-case class AgentKeyDlgProofAbbreviated(d: DID, k: String, s: String) {
+case class AgentKeyDlgProofAbbreviated(d: DidStr, k: String, s: String) {
   def buildChallenge: String = d + k
 }
 
-case class RemoteAgencyIdentity(did: DID, verKey: VerKey, endpoint: String)
+case class RemoteAgencyIdentity(did: DidStr, verKey: VerKeyStr, endpoint: String)

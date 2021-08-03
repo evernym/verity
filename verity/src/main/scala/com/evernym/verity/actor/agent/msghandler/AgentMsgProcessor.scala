@@ -28,7 +28,7 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWra
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.MSG_LIMITS
 import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
-import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.msg_tracer.MsgTraceProvider
@@ -677,7 +677,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   }
 
   def extract(imp: IncomingMsgParam, msgRespDetail: Option[MsgRespConfig], msgThread: Option[Thread]=None):
-  (TypedMsg, ThreadId, Option[DID], Option[MsgRespConfig]) = try {
+  (TypedMsg, ThreadId, Option[DidStr], Option[MsgRespConfig]) = try {
     val m = msgExtractor.extract(imp.msgToBeProcessed, imp.msgPackFormatReq, imp.msgType)
     val tmsg = TypedMsg(m.msg, imp.msgType)
     val thId = msgThread.flatMap(_.thid).getOrElse(m.meta.threadId)
@@ -837,7 +837,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    * @param msgType message type
    * @param senderVerKey message sender ver key
    */
-  private def preMsgProcessing(msgType: MsgType, senderVerKey: Option[VerKey])(implicit reqMsgContext: ReqMsgContext): Unit = {
+  private def preMsgProcessing(msgType: MsgType, senderVerKey: Option[VerKeyStr])(implicit reqMsgContext: ReqMsgContext): Unit = {
     val userId = param.userIdForResourceUsageTracking(senderVerKey)
     reqMsgContext.clientIpAddress.foreach { ipAddress =>
       addUserResourceUsage(RESOURCE_TYPE_MESSAGE, getResourceName(msgType), ipAddress, userId)
@@ -910,10 +910,10 @@ case class StateParam(agentActorRef: ActorRef,
                       sponsorRel: Option[SponsorRel],
                       protoInitParams: ProtoRef => PartialFunction[String, Parameter],
                       selfParticipantId: ParticipantId,
-                      senderParticipantId: Option[VerKey] => ParticipantId,
+                      senderParticipantId: Option[VerKeyStr] => ParticipantId,
                       allowedUnAuthedMsgTypes: Set[MsgType],
-                      allAuthedKeys: Set[VerKey],
-                      userIdForResourceUsageTracking: Option[VerKey] => Option[UserId],
+                      allAuthedKeys: Set[VerKeyStr],
+                      userIdForResourceUsageTracking: Option[VerKeyStr] => Option[UserId],
                       trackingIdParam: TrackingIdParam)
 
 case class ProcessUnpackedMsg(amw: AgentMsgWrapper,
@@ -956,13 +956,13 @@ case class SendPushNotif(pcms: Set[ComMethodDetail],
 case class SendMsgToMyDomain(om: OutgoingMsgParam,
                              msgId: MsgId,
                              msgName: MsgName,
-                             senderDID: DID,
+                             senderDID: DidStr,
                              threadOpt: Option[Thread]) extends ActorMessage
 
 case class SendMsgToTheirDomain(om: OutgoingMsgParam,
                                 msgId: MsgId,
                                 msgName: MsgName,
-                                senderDID: DID,
+                                senderDID: DidStr,
                                 threadOpt: Option[Thread]) extends ActorMessage
 
 case class SendUnStoredMsgToMyDomain(omp: OutgoingMsgParam, msgId: MsgId, msgName: String) extends ActorMessage
@@ -973,7 +973,7 @@ case class SendUnStoredMsgToMyDomain(omp: OutgoingMsgParam, msgId: MsgId, msgNam
  * @param isSyncReq determines if the incoming request expects a synchronous response
  * @param packForVerKey determines if the outgoing/signal messages should be packed with this ver key instead
  */
-case class MsgRespConfig(isSyncReq:Boolean, packForVerKey: Option[VerKey]=None)
+case class MsgRespConfig(isSyncReq:Boolean, packForVerKey: Option[VerKeyStr]=None)
 
 /**
  * used to store information related to incoming msg which will be used during outgoing/signal message processing
@@ -982,7 +982,7 @@ case class MsgRespConfig(isSyncReq:Boolean, packForVerKey: Option[VerKey]=None)
  *                      'wallet backup restore' message
  * @param senderActorRef actor reference (of waiting http connection) to which the response needs to be sent
  */
-case class MsgRespContext(senderPartiId: ParticipantId, packForVerKey: Option[VerKey]=None, senderActorRef:Option[ActorRef]=None)
+case class MsgRespContext(senderPartiId: ParticipantId, packForVerKey: Option[VerKeyStr]=None, senderActorRef:Option[ActorRef]=None)
 
 case class SendToProtocolActor(pinstIdPair: PinstIdPair,
                                msgEnvelope: Any,
@@ -1003,7 +1003,7 @@ object AgentMsgProcessor {
   val REST_LIMIT = "rest-limit"
   val PACKED_MSG_LIMIT = "packed-msg-limit"
 
-  def checkIfMsgSentByAuthedMsgSenders(allAuthKeys:Set[VerKey], msgSenderVerKey: VerKey): Unit = {
+  def checkIfMsgSentByAuthedMsgSenders(allAuthKeys:Set[VerKeyStr], msgSenderVerKey: VerKeyStr): Unit = {
     if (allAuthKeys.nonEmpty && ! allAuthKeys.contains(msgSenderVerKey)) {
       throw new UnauthorisedErrorException
     }

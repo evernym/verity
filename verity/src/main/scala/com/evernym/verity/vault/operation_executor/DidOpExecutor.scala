@@ -7,7 +7,7 @@ import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, GetVerKeyResp, 
 import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.WalletExt
 import org.hyperledger.indy.sdk.InvalidStructureException
@@ -18,7 +18,7 @@ import scala.concurrent.Future
 
 object DidOpExecutor extends OpExecutorBase {
 
-  def getVerKey(did: DID,
+  def getVerKey(did: DidStr,
                 getKeyFromPool: Boolean,
                 ledgerPoolManager: Option[LedgerPoolConnManager])(implicit we: WalletExt): Future[GetVerKeyResp] = {
     val result = (getKeyFromPool, ledgerPoolManager) match {

@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.metrics.backend.NoOpMetricsBackend
@@ -40,7 +40,7 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
     container.handleMsg(msg)
   }
 
-  def handleMsg(myDID: DID, theirDID: DID, threadId: ThreadId, protoRef: ProtoRef, msg: Any): PinstId = {
+  def handleMsg(myDID: DidStr, theirDID: DidStr, threadId: ThreadId, protoRef: ProtoRef, msg: Any): PinstId = {
     val safeThreadId = cryptoFunctions.computeSafeThreadId(myDID, threadId)
     val pinstId = calcPinstId(safeThreadId, protoRef, msg)
     val container = getOrCreateContainer(myDID, theirDID, pinstId, protoRef)
@@ -58,8 +58,8 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
     })
   }
 
-  class BaseProtocolContainer[P,R,M,E,S,I](val myDID: DID,
-                                           val theirDID: DID,
+  class BaseProtocolContainer[P,R,M,E,S,I](val myDID: DidStr,
+                                           val theirDID: DidStr,
                                            val pinstId: PinstId,
                                            val definition: ProtocolDefinition[P,R,M,E,S,I],
                                            val segmentStoreStrategy: Option[SegmentStoreStrategy],
@@ -113,12 +113,12 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
   }
 
   //TODO merge with next
-  private def getOrCreateContainer(myDID: DID, theirDID: DID, pinstId: PinstId, protoRef: ProtoRef): Container = {
+  private def getOrCreateContainer(myDID: DidStr, theirDID: DidStr, pinstId: PinstId, protoRef: ProtoRef): Container = {
     containers.getOrElse(pinstId, createContainer(myDID, theirDID, pinstId, extension_!(protoRef)))
   }
 
 
-  private def createContainer[P,R,M,E,S,I](myDID: DID, theirDID: DID, pinstId: PinstId, reg: Registration): Container = {
+  private def createContainer[P,R,M,E,S,I](myDID: DidStr, theirDID: DidStr, pinstId: PinstId, reg: Registration): Container = {
     val container = new BaseProtocolContainer(myDID, theirDID, pinstId, reg._1, reg._5, reg._2(), reg._3, reg._4())
     containers = containers + (pinstId -> container)
     container.recoverOrInit()

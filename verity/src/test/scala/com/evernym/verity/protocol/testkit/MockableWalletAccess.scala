@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.testkit
 import akka.actor.ActorRef
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, ProofCreated, ProofVerifResult, SignedMsg, TheirKeyStored, VerifySigResult}
-import com.evernym.verity.did.{DID, DidPair, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.{SchemaCreated, WalletAccessAPI}
@@ -71,8 +71,8 @@ object MockableWalletAccess {
 
 
 class MockableWalletAccess(mockNewDid: () => Try[NewKeyCreated] = randomDid  _,
-                           mockVerKey: DID => Try[GetVerKeyResp] =  randomVerKey,
-                           mockVerKeyOpt: DID => Try[GetVerKeyOptResp] = randomVerKeyOpt,
+                           mockVerKey: DidStr => Try[GetVerKeyResp] =  randomVerKey,
+                           mockVerKeyOpt: DidStr => Try[GetVerKeyOptResp] = randomVerKeyOpt,
                            mockSign:   () => Try[SignedMsg]  = randomSig  _,
                            mockVerify: () => Try[VerifySigResult]  = trueVerify _,
                            anonCreds: AnonCredRequests = MockableAnonCredRequests.basic
@@ -83,41 +83,41 @@ class MockableWalletAccess(mockNewDid: () => Try[NewKeyCreated] = randomDid  _,
 
   override def newDid(keyType: KeyType)(handler: Try[NewKeyCreated] => Unit): Unit = handler(mockNewDid())
 
-  override def verKey(forDID: DID)(handler: Try[GetVerKeyResp] => Unit): Unit = handler(mockVerKey(forDID))
+  override def verKey(forDID: DidStr)(handler: Try[GetVerKeyResp] => Unit): Unit = handler(mockVerKey(forDID))
 
-  override def verKeyOpt(forDID: DID)(handler: Try[GetVerKeyOptResp] => Unit): Unit = handler(mockVerKeyOpt(forDID))
+  override def verKeyOpt(forDID: DidStr)(handler: Try[GetVerKeyOptResp] => Unit): Unit = handler(mockVerKeyOpt(forDID))
 
   override def sign(msg: Array[Byte], signType: SignType)(handler: Try[SignedMsg] => Unit): Unit = handler(mockSign())
 
-  override def signRequest(submitterDID: DID, request: String)(handler: Try[LedgerRequest] => Unit): Unit = handler(Try(LedgerRequest(request)))
+  override def signRequest(submitterDID: DidStr, request: String)(handler: Try[LedgerRequest] => Unit): Unit = handler(Try(LedgerRequest(request)))
 
-  override def multiSignRequest(submitterDID: DID, request:  String)(handler: Try[LedgerRequest] => Unit): Unit = handler(Try(LedgerRequest(request)))
+  override def multiSignRequest(submitterDID: DidStr, request:  String)(handler: Try[LedgerRequest] => Unit): Unit = handler(Try(LedgerRequest(request)))
 
   override def verify(signer: ParticipantId,
                       msg: Array[Byte],
                       sig: Array[Byte],
-                      verKeyUsed: Option[VerKey] = None,
+                      verKeyUsed: Option[VerKeyStr] = None,
                       signType: SignType)
                      (handler: Try[VerifySigResult] => Unit): Unit = handler(mockVerify())
 
   override def verify(msg: Array[Byte],
                       sig: Array[Byte],
-                      verKeyUsed: VerKey,
+                      verKeyUsed: VerKeyStr,
                       signType: SignType)
                      (handler: Try[VerifySigResult] => Unit): Unit = handler(mockVerify())
 
   // Other party's DID is not needed for routing in tests. Secondly, tests don't have a wallet.
-  override def storeTheirDid(did: DID, verKey: VerKey, ignoreIfAlreadyExists: Boolean = false)(handler: Try[TheirKeyStored] => Unit): Unit =
+  override def storeTheirDid(did: DidStr, verKey: VerKeyStr, ignoreIfAlreadyExists: Boolean = false)(handler: Try[TheirKeyStored] => Unit): Unit =
     handler(Try(TheirKeyStored(did, verKey)))
 
-  override def createSchema(issuerDID:  DID,
+  override def createSchema(issuerDID:  DidStr,
                             name:  String,
                             version:  String,
                             data:  String)
                            (handler: Try[SchemaCreated] => Unit): Unit =
     anonCreds.createSchema(issuerDID, name, version, data)(handler)
 
-  override def createCredDef(issuerDID:  DID,
+  override def createCredDef(issuerDID:  DidStr,
                              schemaJson:  String,
                              tag:  String,
                              sigType:  Option[String],
@@ -129,7 +129,7 @@ class MockableWalletAccess(mockNewDid: () => Try[NewKeyCreated] = randomDid  _,
     anonCreds.createCredOffer(credDefId)(handler)
 
   override def createCredReq(credDefId: String,
-                             proverDID: DID,
+                             proverDID: DidStr,
                              credDefJson: String,
                              credOfferJson: String)
                             (handler: Try[CredReqCreated] => Unit): Unit =

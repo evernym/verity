@@ -9,7 +9,7 @@ import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsMsgHelper, GetMsgsReqMsg, UpdateMsgStatusMsgHelper, UpdateMsgStatusReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
-import com.evernym.verity.did.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.MsgId
@@ -117,7 +117,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   def storeMsg(msgId: MsgId,
                msgName: String,
-               senderDID: DID,
+               senderDID: DidStr,
                msgStatusCode: String,
                sendMsg: Boolean,
                threadOpt: Option[Thread],
@@ -135,8 +135,8 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   def buildMsgStoredEventsV1(msgId: MsgId,
                              msgName: String,
-                             myPairwiseDID: DID,
-                             senderDID: DID,
+                             myPairwiseDID: DidStr,
+                             senderDID: DidStr,
                              sendMsg: Boolean,
                              threadOpt: Option[Thread],
                              refMsgId: Option[MsgId],
@@ -147,7 +147,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   def buildMsgStoredEventsV2(msgId: MsgId,
                              msgName: String,
-                             senderDID: DID,
+                             senderDID: DidStr,
                              statusCode: String,
                              sendMsg: Boolean,
                              threadOpt: Option[Thread],
@@ -174,7 +174,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   private def buildMsgCreatedEvt(msgId: MsgId,
                                  mType: String,
-                                 senderDID: DID,
+                                 senderDID: DidStr,
                                  sendMsg: Boolean,
                                  msgStatus: String,
                                  threadOpt: Option[Thread],

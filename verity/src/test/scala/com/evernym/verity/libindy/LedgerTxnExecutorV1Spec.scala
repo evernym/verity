@@ -8,7 +8,7 @@ import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_
 import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.ledger._
 import com.evernym.verity.libindy.ledger.{IndyLedgerPoolConnManager, LedgerTxnExecutorV1, SubmitToLedger}
-import com.evernym.verity.did.{DID, DidPair}
+import com.evernym.verity.did.{DidStr, DidPair}
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -40,7 +40,7 @@ class LedgerTxnExecutorV1Spec
       override def ledgerSubmitAPI:SubmitToLedger = mockLedgerSubmitAPI
     }
 
-  lazy val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y"
+  lazy val submitterDID: DidStr = "Th7MpTaRZVRYnPiabds81Y"
   implicit lazy val wap: WalletAPIParam =  WalletAPIParam(submitterDID)
   lazy val submitter: Submitter = Submitter(submitterDID, Some(wap))
 

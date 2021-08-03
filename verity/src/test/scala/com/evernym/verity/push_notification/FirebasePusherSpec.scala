@@ -15,10 +15,10 @@ class FirebasePusherSpec extends BasicSpec with CancelGloballyAfterFailure {
   lazy val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
 
 
-  val serverKey: String = AppConfigWrapper.getStringReq(FCM_API_KEY)
-  val serverHost: String = AppConfigWrapper.getStringReq(FCM_API_HOST)
-  val serverPath: String = AppConfigWrapper.getStringReq(FCM_API_PATH)
-  val pusher = new FirebasePusher(FirebasePushServiceParam(serverKey, serverHost, serverPath), executionContext)
+  val serverKey: String = TestExecutionContextProvider.testAppConfig.getStringReq(FCM_API_KEY)
+  val serverHost: String = TestExecutionContextProvider.testAppConfig.getStringReq(FCM_API_HOST)
+  val serverPath: String = TestExecutionContextProvider.testAppConfig.getStringReq(FCM_API_PATH)
+  val pusher = new FirebasePusher(FirebasePushServiceParam(serverKey, serverHost, serverPath), executionContext, TestExecutionContextProvider.testAppConfig)
   val cm = "foo"
   val regId = "This is an id registered with Firebase for Connect.Me"
   val failureResponse = "{\"multicast_id\":1545725540981982271,\"success\":0,\"failure\":1,\"canonical_ids\":0,\"results\":[{\"error\":\"MismatchSenderId\"}]}"

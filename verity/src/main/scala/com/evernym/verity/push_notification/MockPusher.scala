@@ -26,7 +26,7 @@ class MockPusher(val appConfig: AppConfig, executionContext: ExecutionContext) e
 
 
   lazy val sendToEndpointEnabled: Boolean =
-    AppConfigWrapper.config.getBoolean(MCM_SEND_MSG)
+    appConfig.config.getBoolean(MCM_SEND_MSG)
 
   def push(notifParam: PushNotifParam)
           (implicit system: ActorSystem): Future[PushNotifResponse] = {

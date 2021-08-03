@@ -158,7 +158,7 @@ class OAuthWebhookSenderSpec
       comMethod.routePackaging,
       testMsgPackagers)
 
-    val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam)
+    val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, appConfig)
     val sender = OAuthWebhookSender(
       buildOAuthAccessTokenHolder(tokenExpiresInSeconds = 5),
       dispatchParam,

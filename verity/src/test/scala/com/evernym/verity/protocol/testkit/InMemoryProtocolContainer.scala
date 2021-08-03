@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.Relationship
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.metrics.{MetricsWriter, NoOpMetricsWriter}
 import com.evernym.verity.protocol.container.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine._
@@ -40,7 +41,7 @@ case class ProtocolContainerElements[P,R,M,E,S,I](system: SimpleProtocolSystem,
   *
   * @tparam E Event type
   */
-class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[P,R,M,E,S,I], ec: ExecutionContext)(implicit tag: ClassTag[M])
+class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[P,R,M,E,S,I], ec: ExecutionContext, ac: AppConfig)(implicit tag: ClassTag[M])
   extends {
     val pinstId = pce.pinstId
     val definition = pce.definition
@@ -119,6 +120,8 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
   }
 
   override def executionContext: ExecutionContext = ec
+
+  override def appConfig: AppConfig = ac
 }
 
 trait Logs {

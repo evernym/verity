@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
 import com.evernym.verity.util2.{Base64Encoded, ExecutionContextProvider}
 import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOneDomain
 import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{NoSponsor, _}
@@ -246,6 +247,7 @@ class AgentProvisioningSpec
    * custom thread pool executor
    */
   override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }
 
 object TestingVars {

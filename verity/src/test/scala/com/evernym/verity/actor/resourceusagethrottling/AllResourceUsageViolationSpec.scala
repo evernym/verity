@@ -6,10 +6,9 @@ import com.evernym.verity.actor.CallerResourceBlocked
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.ForResourceBlockingStatusMngr
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{BlockResourceForCaller, GetBlockedList, UsageBlockingStatusChunk}
-import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper
+import com.evernym.verity.actor.resourceusagethrottling.helper.{ResourceUsageRuleHelper, ResourceUsageRuleHelperExtension}
 import com.evernym.verity.actor.resourceusagethrottling.tracking.{GetAllResourceUsages, ResourceUsages}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
-import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.http.route_handlers.restricted.{ResourceUsageCounterDetail, UpdateResourcesUsageCounter}
 import com.typesafe.config.{Config, ConfigValueFactory}
 import org.scalatest.time.{Seconds, Span}
@@ -22,17 +21,19 @@ class AllResourceUsageViolationSpec extends BaseResourceUsageTrackerSpec {
 
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   override def executionContextProvider: ExecutionContextProvider = ecp
+  lazy val resourceUsageRuleHelper: ResourceUsageRuleHelper = ResourceUsageRuleHelperExtension(platform.actorSystem).get()
+  val baseConfig: Config = appConfig.config
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    AppConfigWrapper.setConfig(customizeConfig(AppConfigWrapper.config))
-    ResourceUsageRuleHelper.loadResourceUsageRules()
+    appConfig.setConfig(customizeConfig(appConfig.config))
+    resourceUsageRuleHelper.loadResourceUsageRules(appConfig.config)
   }
 
   override def afterAll(): Unit = {
     try {
-      AppConfigWrapper.reload()
-      ResourceUsageRuleHelper.loadResourceUsageRules()
+      appConfig.setConfig(baseConfig)
+      resourceUsageRuleHelper.loadResourceUsageRules(appConfig.config)
     } finally {
       super.afterAll()
     }
@@ -79,7 +80,7 @@ class AllResourceUsageViolationSpec extends BaseResourceUsageTrackerSpec {
                                             resourceName: ResourceName,
                                             ipAddress: IpAddress,
                                             userIdOpt: Option[UserId]): Unit = {
-    sendToResourceUsageTracker(resourceType, resourceName, ipAddress, userIdOpt)
+    sendToResourceUsageTracker(resourceType, resourceName, ipAddress, userIdOpt, resourceUsageRuleHelper.resourceUsageRules)
     expectNoMessage()
     Thread.sleep(100)
   }
@@ -106,7 +107,7 @@ class AllResourceUsageViolationSpec extends BaseResourceUsageTrackerSpec {
       sendToResourceUsageTrackerAndWaitABit(RESOURCE_TYPE_MESSAGE, "connecting/CREATE_MSG_connReqAnswer", ipAddress, None)
     }
 
-    assert(messageAllError.respCode.equals("GNR-123") && endpointAllError.getMessage.equals("usage blocked"))
+    assert(messageAllError.respCode.equals("GNR-123") && messageAllError.getMessage.equals("usage blocked"))
 
     // Give time for the system to process all of the AddResourceUsage messages
     eventually (timeout(Span(10, Seconds)), interval(Span(1, Seconds))) {

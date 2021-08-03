@@ -35,6 +35,8 @@ class BasicMessageSpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
+
 
   private implicit def EnhancedScenario(s: Scenario) = new {
     val alice: TestEnvir = s(PARTICIPATOR)

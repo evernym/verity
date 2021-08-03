@@ -1,23 +1,23 @@
 package com.evernym.verity.metrics
 
-import com.evernym.verity.config.AppConfigWrapper
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.MetricDetail.convertToProviderName
-import com.evernym.verity.metrics.PrometheusMetricsParser.targetConnector
+import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.typesafe.scalalogging.Logger
 
 object PrometheusMetricsParser {
 
   val logger: Logger = getLoggerByClass(getClass)
 
-  def parseString(inputStr: String): List[MetricDetail] = {
+  def parseString(inputStr: String, ac: AppConfig): List[MetricDetail] = {
     try {
       inputStr.split("\n").
         filter(l => l.nonEmpty).
         filterNot(_.startsWith("#")).
         toList.flatMap { metricLine =>
-        buildMetric(metricLine)
+        buildMetric(metricLine, ac)
       }
     } catch {
       case _: Throwable =>
@@ -29,13 +29,13 @@ object PrometheusMetricsParser {
   private def getCleanedInputStr(metricLine: String): String =
     metricLine.stripMargin.replaceAll("\n", " ")
 
-  def buildMetric(metricLine: String): Option[MetricDetail] = {
+  def buildMetric(metricLine: String, ac: AppConfig): Option[MetricDetail] = {
     try {
       val cleanedInputStr = getCleanedInputStr(metricLine)
       val parsedMetricParam = parse(cleanedInputStr)
       val name = parsedMetricParam.name
       val value = parsedMetricParam.value
-      val target = buildTarget(parsedMetricParam)
+      val target = buildTarget(parsedMetricParam, ac)
       val tags = Option(parsedMetricParam.tags)
       Option(MetricDetail(name, target, value, tags))
     } catch {
@@ -72,20 +72,20 @@ object PrometheusMetricsParser {
     result
   }
 
-  private def buildTarget(parsedMetricParam: ParsedMetricParam): String = {
+  private def buildTarget(parsedMetricParam: ParsedMetricParam, ac: AppConfig): String = {
     val name = parsedMetricParam.name
-    TargetBuilder.targetBuilders.find(tb => name.startsWith(tb._1) || name.contains(tb._1)).map { case (_, tb) =>
+    new TargetBuilder(ac).targetBuilders.find(tb => name.startsWith(tb._1) || name.contains(tb._1)).map { case (_, tb) =>
       tb.buildTarget(parsedMetricParam.tags)
     }.getOrElse(DEFAULT_TARGET)
   }
 
   val DEFAULT_TARGET = "unknown"
-  lazy val targetConnector: String = AppConfigWrapper.getStringOption(METRICS_TARGET_CONNECTOR).getOrElse("-")
 }
 
-trait TargetBuilder {
+trait ITargetBuilder extends HasAppConfig {
 
-  def getConfiguredTagsByTargetType(typ: String): Option[Set[String]] = AppConfigWrapper.getStringSetOption(typ)
+  def getConfiguredTagsByTargetType(typ: String): Option[Set[String]] = appConfig.getStringSetOption(typ)
+  lazy val targetConnector: String = appConfig.getStringOption(METRICS_TARGET_CONNECTOR).getOrElse("-")
 
   def getTagsKeyByType(typ: String, defaultKeys: Set[String]): Set[String] =
     getConfiguredTagsByTargetType(typ).getOrElse(defaultKeys).filter(_.nonEmpty)
@@ -103,47 +103,63 @@ trait TargetBuilder {
   }
 }
 
-object AkkaSystemTargetBuilder extends TargetBuilder {
+class AkkaSystemTargetBuilder(val ac: AppConfig) extends ITargetBuilder {
   override def buildTarget(tags: Map[String, String]): String = "actor_system"
+
+  override def appConfig: AppConfig = ac
 }
 
-object AkkaGroupTargetBuilder extends TargetBuilder {
+class AkkaGroupTargetBuilder(val ac: AppConfig) extends ITargetBuilder {
   override def defaultKeys = Set("group")
+
+  override def appConfig: AppConfig = ac
 }
 
-object AkkaActorTargetBuilder extends TargetBuilder {
+class AkkaActorTargetBuilder(val ac: AppConfig) extends ITargetBuilder {
   override def defaultKeys = Set("path", "type", "id")
+
+  override def appConfig: AppConfig = ac
 }
 
-object ExecutorPoolTargetBuilder extends TargetBuilder {
+class ExecutorPoolTargetBuilder(val ac: AppConfig) extends ITargetBuilder {
   override def defaultKeys = Set("name", "type", "setting")
+
+  override def appConfig: AppConfig = ac
 }
 
-object ExecutorTaskTargetBuilder extends TargetBuilder {
+class ExecutorTaskTargetBuilder(val ac: AppConfig) extends ITargetBuilder {
   override def defaultKeys = Set("name", "type", "state")
+
+  override def appConfig: AppConfig = ac
 }
 
-object ExecutorQueueTargetBuilder extends TargetBuilder {
+class ExecutorQueueTargetBuilder(val ac: AppConfig) extends ITargetBuilder {
   override def defaultKeys = Set("name", "type")
+
+  override def appConfig: AppConfig = ac
 }
 
-object ExecutorThreadsTargetBuilder extends TargetBuilder {
+class ExecutorThreadsTargetBuilder(val ac: AppConfig) extends ITargetBuilder {
   override def defaultKeys = Set("name", "type", "state")
+
+  override def appConfig: AppConfig = ac
 }
 
-object TargetBuilder extends TargetBuilder {
+class TargetBuilder(val ac: AppConfig) extends ITargetBuilder {
 
-  lazy val targetBuilders: Map[String, TargetBuilder] = Map(
-    "akka_system" -> AkkaSystemTargetBuilder,
-    "akka_group" -> AkkaGroupTargetBuilder,
-    "akka_actor" -> AkkaActorTargetBuilder,
-    "executor_pool" -> ExecutorPoolTargetBuilder,
-    "executor_tasks" -> ExecutorTaskTargetBuilder,
-    "executor_queue" -> ExecutorQueueTargetBuilder,
-    "executor_threads" -> ExecutorThreadsTargetBuilder
+  lazy val targetBuilders: Map[String, ITargetBuilder] = Map(
+    "akka_system" -> new AkkaSystemTargetBuilder(ac),
+    "akka_group" -> new AkkaGroupTargetBuilder(ac),
+    "akka_actor" -> new AkkaActorTargetBuilder(ac),
+    "executor_pool" -> new ExecutorPoolTargetBuilder(ac),
+    "executor_tasks" -> new ExecutorTaskTargetBuilder(ac),
+    "executor_queue" -> new ExecutorQueueTargetBuilder(ac),
+    "executor_threads" -> new ExecutorThreadsTargetBuilder(ac)
   )
 
-  def getByType(typ: String): TargetBuilder = targetBuilders(typ)
+  def getByType(typ: String): ITargetBuilder = targetBuilders(typ)
+
+  override def appConfig: AppConfig = ac
 }
 
 case class ParsedMetricParam(name: String, value: Double, tags: Map[String, String])

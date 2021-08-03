@@ -2,10 +2,11 @@ package com.evernym.verity.actor.typed.base
 
 import com.evernym.verity.actor.PersistentMsg
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
+import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.transformations.transformers.{<=>, IdentityTransformer}
 import com.evernym.verity.transformations.transformers.v1.{PERSISTENCE_TRANSFORMATION_ID_V1, createPersistenceTransformerV1}
 
-trait PersistentAdapterBase {
+trait PersistentAdapterBase extends HasAppConfig {
   def encryptionKey: String
   def objectCodeMapper: ObjectCodeMapperBase
 
@@ -37,7 +38,7 @@ trait PersistentAdapterBase {
    * persistence transformer, optimized compared to legacy event/state transformers
    */
   private lazy val persistenceTransformerV1: Any <=> PersistentMsg =
-    createPersistenceTransformerV1(encryptionKey, persistentObjectMapper, schemaEvolTransformation)
+    createPersistenceTransformerV1(encryptionKey, appConfig, persistentObjectMapper, schemaEvolTransformation)
 
 
   //maps events to a unique code to be used during recovery to

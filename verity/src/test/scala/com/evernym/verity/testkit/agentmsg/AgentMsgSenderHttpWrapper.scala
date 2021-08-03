@@ -733,7 +733,7 @@ trait AgentMsgSenderHttpWrapper
   def getAllNodeMetrics(metricsHost: String): List[MetricDetail] = {
     val url = UrlParam(metricsHost)
     val data = sendGetRequest(None)(url, "/metrics")
-    PrometheusMetricsParser.parseString(data.toString)
+    PrometheusMetricsParser.parseString(data.toString, appConfig)
   }
 
   def getMetrics(fetchFromAllNodes: Boolean): String = {

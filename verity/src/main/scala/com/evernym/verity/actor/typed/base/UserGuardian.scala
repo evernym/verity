@@ -60,7 +60,8 @@ object UserGuardian {
       sharding.init(Entity(MessageMeta.TypeKey) { entityContext =>
         MessageMeta(
           entityContext,
-          msgStore
+          msgStore,
+          appConfig
         )
       })
 
@@ -71,7 +72,7 @@ object UserGuardian {
 
         Outbox(
           entityContext,
-          appConfig.config,
+          appConfig,
           agentActorContext.oAuthAccessTokenRefreshers,
           relResolver,
           msgStore,

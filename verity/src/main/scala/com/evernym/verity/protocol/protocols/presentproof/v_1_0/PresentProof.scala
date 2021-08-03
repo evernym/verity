@@ -2,6 +2,8 @@ package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
 import com.evernym.verity.actor.wallet.CredForProofReqCreated
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
@@ -327,7 +329,7 @@ class PresentProof(implicit val ctx: PresentProofContext)
   }
 
   def sendInvite(presentationRequest: Msg.RequestPresentation, stateData: StateData): Unit = {
-    buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData) {
+    buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData, ctx.appConfig) {
       case Success(invite) =>
         ctx.urlShortening.shorten(invite.inviteURL) {
           case Success(us: UrlShortened) =>
@@ -518,7 +520,7 @@ object PresentProof {
     ctx.signal(Sig.buildProblemReport(errorMsg, segmentedStoreFailed))
   }
 
-  def buildOobInvite(protoRef: ProtoRef, request: Msg.RequestPresentation, stateData: StateData)
+  def buildOobInvite(protoRef: ProtoRef, request: Msg.RequestPresentation, stateData: StateData, appConfig: AppConfig)
                     (handler: Try[ShortenInvite] => Unit)
                     (implicit ctx: PresentProofContext): Unit = {
     InviteUtil.withServiced(stateData.agencyVerkey, ctx) {
@@ -540,6 +542,7 @@ object PresentProof {
           attachement,
           goalCode = Some("request-proof"),
           goal = Some("To request a proof"),
+          serviceKeyDidFormat = ctx.appConfig.getBooleanReq(SERVICE_KEY_DID_FORMAT)
         )
 
         handler(Success(

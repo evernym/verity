@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.engine
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.ThreadContextDetail
 import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.drivers.TicTacToeAI
 import com.evernym.verity.protocol.{CtlEnvelope, engine}
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
@@ -49,7 +50,7 @@ class ProtocolEngineLiteSpec extends BasicSpec with Eventually {
       aliceEngine.register(TicTacToeProtoDef, controllerProvider, recordsEventsProvider, None)
 
       val ctlEnvelope = CtlEnvelope(MakeOffer(), "msgId", threadId)
-      aliceEngine.handleMsg("toDID", "fromDID", threadId, protoRef, ctlEnvelope, executionContext)
+      aliceEngine.handleMsg("toDID", "fromDID", threadId, protoRef, ctlEnvelope, executionContext, TestExecutionContextProvider.testAppConfig)
     }
 
     "should be able to run the TicTacToe protocol" in {
@@ -104,14 +105,14 @@ class ProtocolEngineLiteSpec extends BasicSpec with Eventually {
 
         val ctlEnvelope1 = CtlEnvelope(MakeOffer(), "msgId", threadId)
 
-        aliceEngine.handleMsg(aliceDID, bobDID, threadId, protoRef, ctlEnvelope1, executionContext)
+        aliceEngine.handleMsg(aliceDID, bobDID, threadId, protoRef, ctlEnvelope1, executionContext, TestExecutionContextProvider.testAppConfig)
         aliceEngine.processAllBoxes()
         bobEngine.inbox.process() // Handle Offer message
         bobEngine.processAllBoxes()
         aliceEngine.inbox.process() // Handle Accept message
 
         val ctlEnvelope2 = CtlEnvelope(MakeMove(X, "b2"), "msgId", threadId)
-        aliceEngine.handleMsg(aliceDID, bobDID, threadId, protoRef, ctlEnvelope2, executionContext)
+        aliceEngine.handleMsg(aliceDID, bobDID, threadId, protoRef, ctlEnvelope2, executionContext, TestExecutionContextProvider.testAppConfig)
         eventually {
           aliceEngine.processAllBoxes()
           bobEngine.inbox.process() // Handle move message, send move
@@ -150,7 +151,7 @@ class Inbox(engine: ProtocolEngineLite, val nickname: String, val ec: ExecutionC
   override protected def processOneItem(pom: ProtocolOutgoingMsg): Any = {
     pom match {
       case pmfp: ProtocolOutgoingMsg
-                          => engine.handleMsg(pmfp.to, pmfp.from, pmfp.threadContextDetail.threadId, protoRef, pmfp.envelope, ec)
+                          => engine.handleMsg(pmfp.to, pmfp.from, pmfp.threadContextDetail.threadId, protoRef, pmfp.envelope, ec, TestExecutionContextProvider.testAppConfig)
       case _              => throw new RuntimeException("not supported")
     }
 
@@ -173,9 +174,9 @@ class TestProtocolEngine(name: String, sendsMsgs: SendsMsgs, cryptoFunctions: Cr
     inbox.process()
   }
 
-  override def handleMsg(myDID: DID, theirDID: DID, threadId: ThreadId, protoRef: ProtoRef, msg: Any, executionContext: ExecutionContext): PinstId = {
+  override def handleMsg(myDID: DID, theirDID: DID, threadId: ThreadId, protoRef: ProtoRef, msg: Any, executionContext: ExecutionContext, ac: AppConfig): PinstId = {
     //TODO-rk: confirm few changes done here in fixing the merge conflicts
-    val pinstId = super.handleMsg(myDID, theirDID, threadId, protoRef, msg, executionContext)
+    val pinstId = super.handleMsg(myDID, theirDID, threadId, protoRef, msg, executionContext, ac)
     inbox.process()
     pinstId
   }

@@ -6,6 +6,7 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning._
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelperExtension
 import com.evernym.verity.actor.resourceusagethrottling.tracking._
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
@@ -15,7 +16,6 @@ import com.evernym.verity.http.route_handlers.restricted.{ResourceUsageCounterDe
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
 import org.scalatest.time.{Seconds, Span}
-
 import com.evernym.verity.util2.ExecutionContextProvider
 
 
@@ -41,6 +41,7 @@ class ResourceUsageViolationSpec
   val createMsgConnReq: String = MSG_FAMILY_CONNECTING + "/" + MSG_TYPE_CREATE_MSG + "_" + CREATE_MSG_TYPE_CONN_REQ
 
   def resourceUsageTrackerSpec() {
+    val resourceUsageRules = ResourceUsageRuleHelperExtension(system).get().resourceUsageRules
 
     // Begin resources and helper functions used in the testResourceGetsBlockedWarnedIfExceedsSetLimit test
     val resourceUsageParams: List[ResourceUsageParam] = List(
@@ -87,7 +88,7 @@ class ResourceUsageViolationSpec
         resourceUsageParams.foreach { rup =>
           try {
             logger.debug(s"Adding resource usage for resourceName: ${rup.resourceName} and IP: ${rup.ipAddress} and user DID: ${rup.userId}")
-            sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, rup.resourceName, rup.ipAddress, rup.userId)
+            sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, rup.resourceName, rup.ipAddress, rup.userId, resourceUsageRules)
             expectNoMessage()
           } catch {
             case e: BadRequestErrorException =>
@@ -315,7 +316,7 @@ class ResourceUsageViolationSpec
           )))
         expectMsg(Done)
 
-        sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, createMsgConnReq, user1IpAddress, None)
+        sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, createMsgConnReq, user1IpAddress, None, resourceUsageRules)
         expectNoMessage()
 
         // Expect usageBlockingStatus and usageWarningStatus to continue to be empty
@@ -336,9 +337,9 @@ class ResourceUsageViolationSpec
 
       "when sent AddResourceUsage command for two different IP addresses" - {
         "should succeed and respond with no message (async)" in {
-          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user1IpAddress, Some(user1DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user1IpAddress, Some(user1DID), resourceUsageRules)
           expectNoMessage()
-          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user2IpAddress, Some(user2DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user2IpAddress, Some(user2DID), resourceUsageRules)
           expectNoMessage()
         }
       }
@@ -368,9 +369,9 @@ class ResourceUsageViolationSpec
 
       "when sent same AddResourceUsage commands again" - {
         "should respond with no message (async)" in {
-          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user1IpAddress, Some(user1DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user1IpAddress, Some(user1DID), resourceUsageRules)
           expectNoMessage()
-          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user2IpAddress, Some(user2DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user2IpAddress, Some(user2DID), resourceUsageRules)
           expectNoMessage()
         }
       }
@@ -400,9 +401,9 @@ class ResourceUsageViolationSpec
 
       "when sent same AddResourceUsage command for another resource type" - {
         "should respond with no message (async)" in {
-          sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, createMsgConnReq, user1IpAddress, None)
+          sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, createMsgConnReq, user1IpAddress, None, resourceUsageRules)
           expectNoMessage()
-          sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, DUMMY_MSG, user2IpAddress, Some(user2DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, DUMMY_MSG, user2IpAddress, Some(user2DID), resourceUsageRules)
           expectNoMessage()
         }
       }

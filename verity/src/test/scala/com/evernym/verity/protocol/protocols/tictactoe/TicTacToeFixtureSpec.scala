@@ -174,4 +174,6 @@ class TicTacToeFixtureSpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }

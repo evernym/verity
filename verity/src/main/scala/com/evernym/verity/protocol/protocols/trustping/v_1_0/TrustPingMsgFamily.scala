@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.trustping.v_1_0
 
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming}

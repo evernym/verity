@@ -5,7 +5,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.resourceusagethrottling.IpAddress
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
-import com.evernym.verity.protocol.engine.VerKey
+import com.evernym.verity.did.VerKey
 
 import java.time.LocalDateTime
 import java.util.UUID

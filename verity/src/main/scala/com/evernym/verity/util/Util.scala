@@ -9,7 +9,7 @@ import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.AgentKeyDlgProof
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes

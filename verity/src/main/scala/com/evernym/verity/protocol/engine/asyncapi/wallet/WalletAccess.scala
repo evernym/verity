@@ -1,9 +1,10 @@
 package com.evernym.verity.protocol.engine.asyncapi.wallet
 
-import com.evernym.verity.actor.agent.DidPair
+
 import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, SignedMsg, TheirKeyStored, VerifySigResult}
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.ledger.LedgerRequest
-import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
+import com.evernym.verity.protocol.engine.ParticipantId
 import com.evernym.verity.util.Base64Util
 
 import scala.util.Try

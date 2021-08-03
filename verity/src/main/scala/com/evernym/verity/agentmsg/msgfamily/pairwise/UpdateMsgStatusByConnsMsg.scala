@@ -4,8 +4,9 @@ import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{DID, MsgBase}
+import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.util2.Status
 
 

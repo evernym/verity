@@ -3,7 +3,8 @@ package com.evernym.verity.protocol.protocols.connecting.common
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.protocol.engine.{DID, Parameters, UNINITIALIZED, VerKey}
+import com.evernym.verity.did.{DID, VerKey}
+import com.evernym.verity.protocol.engine.{Parameters, UNINITIALIZED}
 import com.evernym.verity.protocol.protocols._
 
 trait ConnectingStateBase[S]

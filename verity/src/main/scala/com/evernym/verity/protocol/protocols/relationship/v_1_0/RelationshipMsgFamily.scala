@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.relationship.v_1_0
 
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.did.didcomm.v1.messages.ProblemDescription

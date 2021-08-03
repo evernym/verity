@@ -4,8 +4,9 @@ import akka.pattern.ask
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, TokenToActorItemMapperProvider}
-import com.evernym.verity.actor.agent.{DidPair, SetupAgentEndpoint, SetupCreateKeyEndpoint}
+import com.evernym.verity.actor.agent.{SetupAgentEndpoint, SetupCreateKeyEndpoint}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.did.DidPair
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
 import com.evernym.verity.protocol.engine.{MsgId, PinstId, ProtoRef, ProtocolContainer}
@@ -50,15 +51,27 @@ extends TokenToActorMappingProvider
    */
   def setupCreateKeyEndpoint(forDIDPair: DidPair, agentKeyDIDPair: DidPair, endpointDetailJson: String): Future[Any] = {
     val endpointDetail = DefaultMsgCodec.fromJson[CreateKeyEndpointDetail](endpointDetailJson)
-    val cmd = SetupCreateKeyEndpoint(agentKeyDIDPair, forDIDPair, endpointDetail.ownerDID,
-      endpointDetail.ownerAgentKeyDidPair, endpointDetail.ownerAgentActorEntityId, Option(getProtocolIdDetail))
+    val cmd = SetupCreateKeyEndpoint(
+      agentKeyDIDPair.toAgentDidPair,
+      forDIDPair.toAgentDidPair,
+      endpointDetail.ownerDID,
+      endpointDetail.ownerAgentKeyDidPair.map(_.toAgentDidPair),
+      endpointDetail.ownerAgentActorEntityId,
+      Option(getProtocolIdDetail)
+    )
     sendCmdToRegionActor(endpointDetail.regionTypeName, newEndpointActorEntityId, cmd)
   }
 
   def setupNewAgentEndpoint(forDIDPair: DidPair, agentKeyDIDPair: DidPair, endpointDetailJson: String): Future[Any] = {
     val endpointSetupDetail = DefaultMsgCodec.fromJson[CreateAgentEndpointDetail](endpointDetailJson)
-    sendCmdToRegionActor(endpointSetupDetail.regionTypeName, endpointSetupDetail.entityId,
-      SetupAgentEndpoint(forDIDPair, agentKeyDIDPair))
+    sendCmdToRegionActor(
+      endpointSetupDetail.regionTypeName,
+      endpointSetupDetail.entityId,
+      SetupAgentEndpoint(
+        forDIDPair.toAgentDidPair,
+        agentKeyDIDPair.toAgentDidPair
+      )
+    )
   }
 
   //NOTE: this method is used to compute entity id of the new pairwise actor this protocol will use

@@ -1,9 +1,7 @@
 package com.evernym.verity.did.Key
 
-import com.evernym.verity.did.DID
 import com.evernym.verity.did.methods.DIDKey
 import com.evernym.verity.did.exception.InvalidDidKeyFormatException
-import com.evernym.verity.protocol.engine.VerKey
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.testkit.BasicSpec
 

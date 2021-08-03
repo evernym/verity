@@ -3,7 +3,7 @@ package com.evernym.verity.http.base.open
 import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.util.Util
 
 trait AgencyIdentitySpec { this : EdgeEndpointBaseSpec =>

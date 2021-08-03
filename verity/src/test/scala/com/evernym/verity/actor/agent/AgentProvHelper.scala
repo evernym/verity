@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent
 
 import java.util.UUID
-
 import akka.testkit.TestKitBase
 import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
@@ -10,7 +9,7 @@ import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, SignMsg, SignedMsg}
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, RequesterKeys}
 import com.evernym.verity.testkit.{BasicSpec, TestWallet}
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent

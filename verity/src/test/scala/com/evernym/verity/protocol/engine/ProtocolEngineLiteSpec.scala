@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.actor.agent.ThreadContextDetail
+import com.evernym.verity.did.DID
 import com.evernym.verity.drivers.TicTacToeAI
 import com.evernym.verity.protocol.{CtlEnvelope, engine}
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
@@ -11,7 +12,6 @@ import com.evernym.verity.protocol.protocols.tictactoe.{Board, State, TicTacToeP
 import com.evernym.verity.util.intTimes
 import org.scalatest.concurrent.Eventually
 import com.evernym.verity.testkit.BasicSpec
-
 
 import scala.concurrent.Future
 

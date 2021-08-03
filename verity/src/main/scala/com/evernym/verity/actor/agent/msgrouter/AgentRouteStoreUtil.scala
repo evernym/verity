@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.msgrouter
 
 import java.util.UUID
 
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 
 import scala.util.Random
 

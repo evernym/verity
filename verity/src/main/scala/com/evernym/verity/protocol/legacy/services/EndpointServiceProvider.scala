@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.legacy.services
 
-import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.protocol.engine.DID
+
+import com.evernym.verity.did.{DID, DidPair}
 
 import scala.concurrent.Future
 

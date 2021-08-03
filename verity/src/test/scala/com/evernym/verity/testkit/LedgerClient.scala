@@ -4,7 +4,7 @@ import java.util.UUID
 
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.TransactionAuthorAgreement
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.testkit.util.LedgerUtil
 

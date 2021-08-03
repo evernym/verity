@@ -62,7 +62,7 @@ class LibIndyWalletProviderSpec extends BasicSpecWithIndyCleanup with CommonSpec
     "when asked to store their key" - {
       "should be able to store it successfully" in {
         val did1 = generateNewDid()
-        val DIDJson = s"""{\"did\":\"${did1.DID}\",\"verkey\":\"${did1.verKey}\"}"""
+        val DIDJson = s"""{\"did\":\"${did1.did}\",\"verkey\":\"${did1.verKey}\"}"""
         Did.storeTheirDid(lip1Wallet.wallet, DIDJson)
       }
     }

@@ -2,7 +2,7 @@ package com.evernym.verity.testkit.agentmsg
 
 import com.evernym.verity.util2.Status.FORBIDDEN
 import com.evernym.verity.util2.Version
-import com.evernym.verity.actor.agent.{DidPair, MsgPackFormat}
+import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey, TheirKeyStored}
@@ -16,6 +16,7 @@ import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.question_answer.AskQuestionMsg
 import com.evernym.verity.agentmsg.wallet_backup.WalletBackupMsg
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_1_0, MFV_0_6, MSG_FAMILY_AGENT_PROVISIONING, MSG_TYPE_CONNECT}
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
@@ -73,9 +74,9 @@ trait AgentMsgHelper
 
   def agencyAgentDetailReq: AgencyPublicDid = agencyPublicDid.getOrElse(throw new RuntimeException("no agency detail found"))
 
-  def agencyPairwiseAgentDetailReq: DidPair = getDIDDetail(agencyPairwiseAgentDetail)
+  def agencyPairwiseAgentDetailReq: DidPair = getDIDDetail(agencyPairwiseAgentDetail.map(d => DidPair(d.did, d.verKey)))
 
-  def cloudAgentDetailReq: DidPair = getAgentDIDDetail(cloudAgentDetail)
+  def cloudAgentDetailReq: DidPair = getAgentDIDDetail(cloudAgentDetail.map(d => DidPair(d.did, d.verKey)))
 
   def createNewLocalPairwiseConnDetail(name: String): MockPairwiseConnDetail = addNewLocalPairwiseKey(name)
 
@@ -132,7 +133,7 @@ trait AgentMsgHelper
 
   def encryptParamFromEdgeToAgencyAgentPairwise: EncryptParam =
     EncryptParam(
-      Set(KeyParam.fromDID(agencyPairwiseAgentDetailReq.DID)),
+      Set(KeyParam.fromDID(agencyPairwiseAgentDetailReq.did)),
       Option(KeyParam.fromDID(myDIDDetail.did))
     )
 
@@ -145,13 +146,13 @@ trait AgentMsgHelper
   def encryptParamFromEdgeToCloudAgentPairwise(connId: String): EncryptParam = {
     val pcd = pairwiseConnDetail(connId)
     EncryptParam(
-      Set(KeyParam.fromDID(pcd.myCloudAgentPairwiseDidPair.DID)),
-      Option(KeyParam.fromDID(pcd.myPairwiseDidPair.DID))
+      Set(KeyParam.fromDID(pcd.myCloudAgentPairwiseDidPair.did)),
+      Option(KeyParam.fromDID(pcd.myPairwiseDidPair.did))
     )
   }
 
   def encryptParamFromEdgeToGivenDID(forDID: DID, fromConnIdOpt: Option[String]=None): EncryptParam = {
-    val fromDID = fromConnIdOpt.map(pairwiseConnDetail(_).myPairwiseDidPair.DID).getOrElse(myDIDDetail.did)
+    val fromDID = fromConnIdOpt.map(pairwiseConnDetail(_).myPairwiseDidPair.did).getOrElse(myDIDDetail.did)
     val receiveVk = if (forDID.equals(myDIDDetail.did)) {
       cloudAgentDetailReq.verKey
     } else { getVerKeyFromWallet(forDID) }
@@ -188,9 +189,9 @@ trait AgentMsgHelper
     setAgencyIdentity(agencyKeyIdentity)
   }
 
-  def agencyAgentPairwiseRoutingDID: DID = agencyPairwiseAgentDetailReq.DID
+  def agencyAgentPairwiseRoutingDID: DID = agencyPairwiseAgentDetailReq.did
 
-  def cloudAgentRoutingDID: DID = cloudAgentDetailReq.DID
+  def cloudAgentRoutingDID: DID = cloudAgentDetailReq.did
 
   def handleSetAgencyPairwiseAgentKey(DID: String, verKey: String): Unit = {
     setAgencyPairwiseAgentDetail(DID, verKey)

@@ -2,10 +2,9 @@ package com.evernym.verity.testkit.mock.agent
 
 import com.evernym.verity.util2.Status.MSG_STATUS_CREATED
 import com.evernym.verity.actor.AgencyPublicDid
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.constants.Constants.DEFAULT_INVITE_RECEIVER_USER_NAME
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{InviteDetail, SenderAgencyDetail}
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util2.UrlParam
@@ -42,14 +41,14 @@ trait HasCloudAgent { this: MockAgent =>
   private def setPairwiseData(connId: String, mockEdgeCloudAgent: MockCloudAgent): MockPairwiseConnDetail = {
     val edgePcd = addNewLocalPairwiseKey(connId)
     val edgeCloudPcd = mockEdgeCloudAgent.addNewLocalPairwiseKey(connId)
-    edgeCloudPcd.setTheirPairwiseDidPair(edgePcd.myPairwiseDidPair.DID, edgePcd.myPairwiseDidPair.verKey)
-    edgePcd.setMyCloudAgentPairwiseDidPair(edgeCloudPcd.myPairwiseDidPair.DID, edgeCloudPcd.myPairwiseDidPair.verKey)
+    edgeCloudPcd.setTheirPairwiseDidPair(edgePcd.myPairwiseDidPair.did, edgePcd.myPairwiseDidPair.verKey)
+    edgePcd.setMyCloudAgentPairwiseDidPair(edgeCloudPcd.myPairwiseDidPair.did, edgeCloudPcd.myPairwiseDidPair.verKey)
     edgePcd
   }
 
   def setCloudAgentDetail(agentDID: DidPair): Unit = {
-    logger.debug(s"Set cloud agent detail for did: ${agentDID.DID}")
-    storeTheirKey(agentDID.DID, agentDID.verKey)
+    logger.debug(s"Set cloud agent detail for did: ${agentDID.did}")
+    storeTheirKey(agentDID.did, agentDID.verKey)
     logger.debug("Set mock client cloudAgentDetail")
     cloudAgentDetail = Option(agentDID)
   }
@@ -63,7 +62,7 @@ trait HasCloudAgent { this: MockAgent =>
     if (agencyPublicDid.isDefined)
       throw new RuntimeException("agency detail is already set")
     val dd = generateNewDid()
-    setAgencyIdentity(AgencyPublicDid(dd.DID, dd.verKey))
+    setAgencyIdentity(AgencyPublicDid(dd.did, dd.verKey))
   }
 
   def updateCloudAgentPairwiseKeys(connId: String, did: DID, verKey: VerKey): Unit = {

@@ -8,7 +8,7 @@ import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.ledger.{AttribResult, LedgerSvc, Submitter}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 
 import scala.concurrent.Future
 

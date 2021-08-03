@@ -5,7 +5,8 @@ import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.agent.msghandler.{SendMsgToMyDomain, SendMsgToTheirDomain}
 import com.evernym.verity.actor.base.CoreActorExtended
-import com.evernym.verity.protocol.engine.{DID, MsgId, MsgName}
+import com.evernym.verity.did.DID
+import com.evernym.verity.protocol.engine.{MsgId, MsgName}
 import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfully}
 
 import scala.concurrent.duration._

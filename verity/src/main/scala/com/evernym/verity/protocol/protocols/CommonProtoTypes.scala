@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols
 
-import com.evernym.verity.protocol.engine.{MsgFamily, MsgTypeStr, VerKey}
+import com.evernym.verity.did.VerKey
+import com.evernym.verity.protocol.engine.{MsgFamily, MsgTypeStr}
 import com.evernym.verity.util2.Base64Encoded
 
 object CommonProtoTypes {

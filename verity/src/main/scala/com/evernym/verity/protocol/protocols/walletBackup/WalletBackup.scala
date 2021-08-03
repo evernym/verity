@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.walletBackup
 
+import com.evernym.verity.did.VerKey
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status.BAD_REQUEST
 import com.evernym.verity.protocol.engine._

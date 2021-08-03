@@ -10,12 +10,12 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
-import com.evernym.verity.actor.agent.{DidPair, PayloadMetadata}
+import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.actor.base.CoreActor
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
-import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.operation_executor.DidOpExecutor.buildErrorDetail
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
@@ -110,7 +110,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
       snw.ownerDidPair match {
         case Some(odp) =>
           WalletMsgHandler
-            .executeAsync(StoreTheirKey(odp.DID, odp.verKey))
+            .executeAsync(StoreTheirKey(odp.did, odp.verKey))
             .mapTo[TheirKeyStored].map(_.didPair)
         case None =>
           WalletMsgHandler

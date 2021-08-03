@@ -5,10 +5,11 @@ import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.agent.{SetupAgentEndpoint, SetupCreateKeyEndpoint}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
-import com.evernym.verity.protocol.engine.{DID, PinstId, ProtoRef, SignalEnvelope}
+import com.evernym.verity.protocol.engine.{PinstId, ProtoRef, SignalEnvelope}
 import com.evernym.verity.protocol.legacy.services.{CreateAgentEndpointDetail, CreateKeyEndpointDetail}
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AskUserAgentCreator}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5._
@@ -55,11 +56,16 @@ class AgentProvisioningDriver(cp: ActorDriverGenParam)
     val endpointDetail = DefaultMsgCodec.fromJson[CreateKeyEndpointDetail](apc.endpointDetailJson)
     val newActorEntityId = getNewActorId
     val protocolDetail = ProtocolIdDetail(protoRef, pinstId)
-    val cmd = SetupCreateKeyEndpoint(apc.newAgentKeyDIDPair, apc.theirPairwiseDIDPair,
-      endpointDetail.ownerDID, endpointDetail.ownerAgentKeyDidPair,
-      endpointDetail.ownerAgentActorEntityId, Option(protocolDetail))
+    val cmd = SetupCreateKeyEndpoint(
+      apc.newAgentKeyDIDPair.toAgentDidPair,
+      apc.theirPairwiseDIDPair.toAgentDidPair,
+      endpointDetail.ownerDID,
+      endpointDetail.ownerAgentKeyDidPair.map(_.toAgentDidPair),
+      endpointDetail.ownerAgentActorEntityId,
+      Option(protocolDetail)
+    )
     val respFut = agencyPairwiseRegion ? ForIdentifier(newActorEntityId, cmd)
-    sendPairwiseCreated(respFut, apc.newAgentKeyDIDPair.DID, protoRef, pinstId)
+    sendPairwiseCreated(respFut, apc.newAgentKeyDIDPair.did, protoRef, pinstId)
     None
   }
 
@@ -77,7 +83,7 @@ class AgentProvisioningDriver(cp: ActorDriverGenParam)
 
     val endpointSetupDetail = DefaultMsgCodec.fromJson[CreateAgentEndpointDetail](apc.endpointDetailJson)
 
-    val cmd = SetupAgentEndpoint(apc.forDIDPair, apc.agentKeyDIDPair)
+    val cmd = SetupAgentEndpoint(apc.forDIDPair.toAgentDidPair, apc.agentKeyDIDPair.toAgentDidPair)
     val respFut = userRegion ? ForIdentifier(endpointSetupDetail.entityId, cmd)
     sendAgentCreated(respFut, protoRef, pinstId)
     None

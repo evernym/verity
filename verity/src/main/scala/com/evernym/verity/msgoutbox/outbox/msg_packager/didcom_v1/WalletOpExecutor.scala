@@ -6,8 +6,9 @@ import akka.actor.typed.{ActorRef, Behavior}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.WalletOpExecutor.Commands.WalletReplyAdapter
 import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.WalletOpExecutor.Replies.PackagedPayload
-import com.evernym.verity.msgoutbox.{VerKey, WalletId}
+import com.evernym.verity.msgoutbox.WalletId
 import com.evernym.verity.actor.{wallet => WalletActor}
+import com.evernym.verity.did.VerKey
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 

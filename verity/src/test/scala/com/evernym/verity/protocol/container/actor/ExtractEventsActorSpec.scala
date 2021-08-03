@@ -45,8 +45,8 @@ class ExtractEventsActorSpec
     }
 
     "extract events actor should extract all events from protocol actor" in {
-      val CTRL_ID_1: String = generateNewDid().DID
-      val CTRL_ID_2: String = generateNewDid().DID
+      val CTRL_ID_1: String = generateNewDid().did
+      val CTRL_ID_2: String = generateNewDid().did
 
       val mockController1 = buildMockController(CTRL_ID_1, CTRL_ID_2) //domain 1 controller
 
@@ -71,9 +71,9 @@ class ExtractEventsActorSpec
     }
 
     "single event stream should return the single event" in {
-      val CTRL_ID_1: String = generateNewDid().DID
-      val CTRL_ID_2: String = generateNewDid().DID
-      val CTRL_ID_OTHER: String = generateNewDid().DID
+      val CTRL_ID_1: String = generateNewDid().did
+      val CTRL_ID_2: String = generateNewDid().did
+      val CTRL_ID_OTHER: String = generateNewDid().did
 
       val mockController1 = buildMockController(CTRL_ID_1, CTRL_ID_OTHER) //domain 1 controller
       val mockController2 = buildMockController(CTRL_ID_2, CTRL_ID_OTHER) //domain 2 controller

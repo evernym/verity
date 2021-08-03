@@ -4,6 +4,7 @@ import com.evernym.verity.actor.wallet.CredDefCreated
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine._

@@ -3,7 +3,7 @@ package com.evernym.verity.push_notification
 import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.actor.testkit.actor.MockAppConfig
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 
 

@@ -15,6 +15,7 @@ import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common._
 import com.evernym.verity.push_notification.PushNotifMsgBuilder
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.did.{DID, VerKey}
 
 
 //noinspection ScalaDeprecation

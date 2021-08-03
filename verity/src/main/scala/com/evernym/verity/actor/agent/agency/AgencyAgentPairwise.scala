@@ -19,8 +19,9 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentBundledMsg, AgentMsgParseUtil
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey, _}
+import com.evernym.verity.protocol.engine.{ParticipantId, _}
 import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
 import com.evernym.verity.util.ParticipantUtil
 

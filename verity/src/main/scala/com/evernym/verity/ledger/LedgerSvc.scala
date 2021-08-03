@@ -5,7 +5,7 @@ import akka.actor.ActorSystem
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.vault.WalletAPIParam

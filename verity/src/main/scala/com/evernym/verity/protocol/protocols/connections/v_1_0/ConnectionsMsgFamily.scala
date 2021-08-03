@@ -2,8 +2,9 @@ package com.evernym.verity.protocol.protocols.connections.v_1_0
 
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.URL
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.{DID, DIDDocFormatted, MsgBase, MsgFamily, MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName, Parameters, VerKey}
+import com.evernym.verity.protocol.engine.{DIDDocFormatted, MsgBase, MsgFamily, MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName, Parameters}
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.SigBlockCommunity
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.Init
 

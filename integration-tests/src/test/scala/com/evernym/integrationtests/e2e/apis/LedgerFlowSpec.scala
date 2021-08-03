@@ -2,12 +2,12 @@ package com.evernym.integrationtests.e2e.apis
 
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
 import com.evernym.integrationtests.e2e.tag.annotation.Integration
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.ConfigUtil.nowTimeOfAcceptance
 import com.evernym.verity.config.{ConfigConstants, ConfigUtil}
+import com.evernym.verity.did.DidPair
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.ledger.{LedgerPoolConnManager, OpenConnException, TransactionAuthorAgreement}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
@@ -129,7 +129,7 @@ class LedgerFlowSpec extends BasicSpec
               )
               appConfig.setConfig(c)
               val caught = intercept[Exception] {
-                ledgerUtil.bootstrapNewDID(newDID.DID, newDID.verKey, "ENDORSER")
+                ledgerUtil.bootstrapNewDID(newDID.did, newDID.verKey, "ENDORSER")
               }
               //TaaRequiredButDisabledError
               caught.getMessage should include (Status.TAA_REQUIRED_BUT_DISABLED.statusCode)
@@ -160,7 +160,7 @@ class LedgerFlowSpec extends BasicSpec
                 )
               appConfig.setConfig(c1)
               val caught = intercept[Exception] {
-                ledgerUtil.bootstrapNewDID(newDID.DID, newDID.verKey, "ENDORSER")
+                ledgerUtil.bootstrapNewDID(newDID.did, newDID.verKey, "ENDORSER")
               }
               caught shouldBe a [OpenConnException]
               caught.getMessage shouldBe "Configured TAA Digest doesn't match ledger TAA"
@@ -181,7 +181,7 @@ class LedgerFlowSpec extends BasicSpec
                 )
               appConfig.setConfig(c2)
               val caught2 = intercept[Exception] {
-                ledgerUtil.bootstrapNewDID(newDID.DID, newDID.verKey, "ENDORSER")
+                ledgerUtil.bootstrapNewDID(newDID.did, newDID.verKey, "ENDORSER")
               }
               caught2 shouldBe a [OpenConnException]
               caught2.getMessage shouldBe "TAA is not configured"
@@ -225,7 +225,7 @@ class LedgerFlowSpec extends BasicSpec
                   )
                 )
                 val e = intercept[Exception] {
-                  ledgerUtil.bootstrapNewDID(newDID.DID, newDID.verKey, "ENDORSER")
+                  ledgerUtil.bootstrapNewDID(newDID.did, newDID.verKey, "ENDORSER")
                 }
                 //TaaNotRequiredButIncludedError
                 e.getMessage should include (Status.TAA_NOT_REQUIRED_BUT_INCLUDED.statusMsg)

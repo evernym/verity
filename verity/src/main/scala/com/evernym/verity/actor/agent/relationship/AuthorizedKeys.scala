@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.relationship
 
-import com.evernym.verity.protocol.engine.VerKey
+import com.evernym.verity.did.VerKey
 import com.evernym.verity.util.OptionUtil
 
 import scala.language.implicitConversions

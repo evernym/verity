@@ -10,7 +10,8 @@ import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam}
 import com.evernym.verity.agentmsg.wallet_backup.{WalletBackupProvisionMsg, WalletBackupRestoreMsg}
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_6, MFV_1_0, MTV_1_0}
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
-import com.evernym.verity.protocol.engine.{DID, MsgFamilyVersion, ThreadId, VerKey}
+import com.evernym.verity.protocol.engine.{MsgFamilyVersion, ThreadId}
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.walletBackup
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, InviteDetail}
@@ -81,7 +82,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
     def buildCorePairwiseCreateKeyMsg(fromConnId: String, forDID: DID): PackMsgParam = {
       val npc = createNewLocalPairwiseConnDetail(fromConnId)
       val agentMsgs = CreateKey_MFV_0_6(MSG_TYPE_DETAIL_CREATE_KEY,
-        npc.myPairwiseDidPair.DID, npc.myPairwiseDidPair.verKey)
+        npc.myPairwiseDidPair.did, npc.myPairwiseDidPair.verKey)
       AgentPackMsgUtil(agentMsgs, encryptParamFromEdgeToGivenDID(forDID))
     }
     def buildCoreCreateInviteMsg(forDID: DID, fromConnId: Option[String],
@@ -176,7 +177,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
     def prepareCreateKeyMsgBeforeAgentCreatedForAgency(msgTypeVersion: String): PackedMsg = {
       val npc = addNewLocalPairwiseKey("tmp-test-1")
       val agentMsg = CreateKey_MFV_0_6(MSG_TYPE_DETAIL_CREATE_KEY,
-        npc.myPairwiseDidPair.DID, npc.myPairwiseDidPair.verKey)
+        npc.myPairwiseDidPair.did, npc.myPairwiseDidPair.verKey)
       val agentPayloadMsgs = AgentPackMsgUtil(agentMsg, encryptParamFromEdgeToAgencyAgent)
       val fwdRoute = FwdRouteMsg(myDIDDetail.did, Left(sealParamFromEdgeToAgency))
       preparePackedRequestForRoutes(msgTypeVersion, agentPayloadMsgs, List(fwdRoute))
@@ -232,7 +233,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
     def prepareCreateKeyMsgForAgency(msgTypeVersion: String, connId: String): PackedMsg = {
       val fwdRoute = FwdRouteMsg(cloudAgentRoutingDID, Left(sealParamFromEdgeToAgency))
       preparePackedRequestForRoutes(msgTypeVersion,
-        buildCorePairwiseCreateKeyMsg(connId, cloudAgentDetailReq.DID), List(fwdRoute))
+        buildCorePairwiseCreateKeyMsg(connId, cloudAgentDetailReq.did), List(fwdRoute))
     }
 
     def prepareCreateKeyMsgForAgency(connId: String): PackedMsg = {
@@ -254,8 +255,8 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper 
                                 theirDID: DID, theirVerKey: VerKey, theirPublicDID: Option[DID]=None)
       val keyDlgProof = buildAgentKeyDlgProofForConn(connId)
       val pcd = pairwiseConnDetail(oldConnId)
-      val redirectDetail = RedirectDetail(pcd.myPairwiseDidPair.DID, pcd.myPairwiseDidPair.verKey, None,
-        pcd.theirPairwiseDidPair.DID, pcd.theirPairwiseDidPair.verKey, None)
+      val redirectDetail = RedirectDetail(pcd.myPairwiseDidPair.did, pcd.myPairwiseDidPair.verKey, None,
+        pcd.theirPairwiseDidPair.did, pcd.theirPairwiseDidPair.verKey, None)
       val redirectJsonObject = new JSONObject(DefaultMsgCodec.toJson(redirectDetail))
       val connReqRedirectMsg = RedirectConnReqMsg_MFV_0_6(
         MSG_TYPE_DETAIL_REDIRECT_CONN_REQ,

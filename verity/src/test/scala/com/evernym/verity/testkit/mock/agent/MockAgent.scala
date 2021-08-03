@@ -1,12 +1,11 @@
 package com.evernym.verity.testkit.mock.agent
 
 import java.util.UUID
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.{AgentDIDDetail, CommonSpecUtil}
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, SenderDetail}
 import com.evernym.verity.testkit.{HasDefaultTestWallet, HasTestWalletAPI}
@@ -55,7 +54,7 @@ trait MockAgent
 
   def buildInviteSenderDetail(connId: String, kdpOpt: Option[AgentKeyDlgProof]): SenderDetail = {
     val pcd = pairwiseConnDetail(connId)
-    SenderDetail(pcd.myPairwiseDidPair.DID, pcd.myPairwiseDidPair.verKey,
+    SenderDetail(pcd.myPairwiseDidPair.did, pcd.myPairwiseDidPair.verKey,
       kdpOpt, Option(myDIDDetail.name), Option("some-logo-url"), None)
   }
 
@@ -69,7 +68,7 @@ trait MockAgent
   }
 
   def cloudAgentPairwiseDIDForConn(connId: String): String =
-    pairwiseConnDetail(connId).myCloudAgentPairwiseDidPair.DID
+    pairwiseConnDetail(connId).myCloudAgentPairwiseDidPair.did
 
   private def addNewPairwiseConnDetail(connId: String, mpcd: MockPairwiseConnDetail): Unit = {
     pairwiseConnDetails = pairwiseConnDetails ++ Map(connId -> mpcd)
@@ -94,7 +93,7 @@ trait MockAgent
     }
     if (storeKey)
       storeTheirKey(dp)
-    val dd = DidPair(dp.DID, dp.verKey)
+    val dd = DidPair(dp.did, dp.verKey)
     val mpcd = new MockPairwiseConnDetail(dd)(testWalletAPI, wap)
     addNewPairwiseConnDetail(connId, mpcd)
     mpcd
@@ -107,11 +106,11 @@ trait MockAgent
   }
 
   def storeTheirKey(DIDDetail: DidPair): Unit = {
-    storeTheirKey(DIDDetail.DID, DIDDetail.verKey)
+    storeTheirKey(DIDDetail.did, DIDDetail.verKey)
   }
 
   private def buildAgentKeyDlgProof(pcd: MockPairwiseConnDetail): AgentKeyDlgProof = {
-    getAgentKeyDlgProof(pcd.myPairwiseDidPair.verKey, pcd.myCloudAgentPairwiseDidPair.DID,
+    getAgentKeyDlgProof(pcd.myPairwiseDidPair.verKey, pcd.myCloudAgentPairwiseDidPair.did,
       pcd.myCloudAgentPairwiseDidPair.verKey)(testWalletAPI, wap)
   }
 

@@ -6,7 +6,7 @@ import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, StatusDetail, StatusDeta
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, VerKey}
 import org.json.JSONObject
 
 import java.time.LocalDateTime

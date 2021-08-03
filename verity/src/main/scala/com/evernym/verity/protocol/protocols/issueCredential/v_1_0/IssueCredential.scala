@@ -4,6 +4,7 @@ import com.evernym.verity.actor.wallet.{CredCreated, CredOfferCreated, CredReqCr
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.DID
 import com.evernym.verity.ledger.GetCredDefResp
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.did.didcomm.v1.conventions.CredValueEncoderV1_0

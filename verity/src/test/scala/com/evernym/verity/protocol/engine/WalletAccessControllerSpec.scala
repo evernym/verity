@@ -1,9 +1,9 @@
 package com.evernym.verity.protocol.engine
 
 import akka.actor.ActorRef
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet._
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.{SchemaCreated, WalletAccessAPI}

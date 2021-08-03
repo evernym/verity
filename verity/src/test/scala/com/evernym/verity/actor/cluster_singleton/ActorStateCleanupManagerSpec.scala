@@ -12,7 +12,7 @@ import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, Persisten
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, PersistentActorSpec}
 import com.evernym.verity.actor.{ForIdentifier, LegacyRouteSet, ShardUtil}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.BeforeAndAfterAll
@@ -96,7 +96,7 @@ class ActorStateCleanupManagerSpec
   }.groupBy(_._1).mapValues(_.map(_._2).toSet)
 
   def generateDID(seed: String): DID =
-    CommonSpecUtil.generateNewDid(Option(UUID.nameUUIDFromBytes(seed.getBytes()).toString)).DID
+    CommonSpecUtil.generateNewDid(Option(UUID.nameUUIDFromBytes(seed.getBytes()).toString)).did
 
   def addRandomRoutes(): Unit = {
     entityIdsToRoutes.values.map(_.size).sum shouldBe totalRouteEntries

@@ -11,7 +11,7 @@ import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.constants.ActorNameConstants.{ACTOR_TYPE_AGENCY_AGENT_ACTOR, ACTOR_TYPE_AGENCY_AGENT_PAIRWISE_ACTOR, ACTOR_TYPE_USER_AGENT_ACTOR, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, ROUTE_REGION_ACTOR_NAME}
 import com.evernym.verity.constants.Constants.YES
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
@@ -152,7 +152,7 @@ class RouteStoreMigrationV1Spec
       val didPair = CommonSpecUtil.generateNewDid()
       val index = Random.nextInt(entityTypes.size-1)
       val actorType = entityTypes(index)
-      didPair.DID -> ActorAddressDetail(actorType, didPair.DID)
+      didPair.did -> ActorAddressDetail(actorType, didPair.did)
     }.toMap
 
   override def overrideSpecificConfig: Option[Config] = Option{

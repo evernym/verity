@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.engine.asyncapi.ledger
 
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerRequest, TxnResp}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 
 import scala.util.Try

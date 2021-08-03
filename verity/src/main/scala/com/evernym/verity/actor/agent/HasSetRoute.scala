@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent
 
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, SetRoute}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 
 import scala.concurrent.Future
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext

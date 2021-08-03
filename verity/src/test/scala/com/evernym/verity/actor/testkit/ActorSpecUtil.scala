@@ -8,14 +8,13 @@ import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.testkit.actor.{ActorSystemConfig, MockAppConfig, OverrideConfig, ProvidesMockPlatform}
 import com.evernym.verity.actor.testkit.checks.ChecksAkkaEvents
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.testkit.{BasicSpecBase, CleansUpIndyClientFirst}
 import com.typesafe.config.Config
 import org.iq80.leveldb.util.FileUtils
 import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
 
 import java.util.concurrent.TimeUnit
-import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.util2.ActorErrorResp
 import com.evernym.verity.metrics.{MetricsBackend, MetricsWriterExtension, TestMetricsBackend}
 

@@ -5,7 +5,7 @@ import com.evernym.verity.actor.agent.{AgentProvHelper, HasAgentActivity, Sponso
 import com.evernym.verity.actor.metrics._
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.metrics.MetricHelpers._
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.util.TimeUtil
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.BeforeAndAfterEach

@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.engine.asyncapi.AccessRight
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateProtoDef
 import com.evernym.verity.protocol.engine.util.?=>

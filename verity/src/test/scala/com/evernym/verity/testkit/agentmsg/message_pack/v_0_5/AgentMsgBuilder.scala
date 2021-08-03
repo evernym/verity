@@ -11,7 +11,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam}
 import com.evernym.verity.protocol.engine.Constants.{MFV_1_0, MSG_TYPE_CONNECT, MSG_TYPE_CREATE_AGENT, MSG_TYPE_SIGN_UP, MTV_1_0}
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{InviteDetail, SenderAgencyDetail, SenderDetail}
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, AgentMsgPackagingContext}
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
@@ -170,7 +170,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
     def prepareCreateKeyMsgBeforeAgentCreatedForAgency(msgTypeVersion: String): PackedMsg = {
       val npc = addNewLocalPairwiseKey("tmp-test-1")
       val bundledMsgs = List(CreateKey_MFV_0_5(TypeDetail(MSG_TYPE_CREATE_KEY, msgTypeVersion),
-        npc.myPairwiseDidPair.DID, npc.myPairwiseDidPair.verKey))
+        npc.myPairwiseDidPair.did, npc.myPairwiseDidPair.verKey))
       val agentPayloadMsgs = AgentPackMsgUtil(bundledMsgs, encryptParamFromEdgeToAgencyAgent)
       val fwdRoute = FwdRouteMsg(myDIDDetail.did, Left(sealParamFromEdgeToAgency))
       preparePackedRequestForRoutes(msgTypeVersion, agentPayloadMsgs, List(fwdRoute))
@@ -320,7 +320,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
     def buildCoreCreateKeyMsgWithVersion(msgTypeVersion: String, connId: String): PackMsgParam = {
       val npc = createNewLocalPairwiseConnDetail(connId)
       val bundledMsgs = List(CreateKey_MFV_0_5(TypeDetail(MSG_TYPE_CREATE_KEY, msgTypeVersion),
-        npc.myPairwiseDidPair.DID, npc.myPairwiseDidPair.verKey))
+        npc.myPairwiseDidPair.did, npc.myPairwiseDidPair.verKey))
       AgentPackMsgUtil(bundledMsgs, encryptParamFromEdgeToCloudAgent)
     }
 
@@ -393,8 +393,8 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
                                 theirDID: DID, theirVerKey: VerKey, theirPublicDID: Option[DID]=None)
       val keyDlgProof = buildAgentKeyDlgProofForConn(connId)
       val pcd = pairwiseConnDetail(oldConnId)
-      val redirectDetail = RedirectDetail(pcd.myPairwiseDidPair.DID, pcd.myPairwiseDidPair.verKey, None,
-        pcd.theirPairwiseDidPair.DID, pcd.theirPairwiseDidPair.verKey, None)
+      val redirectDetail = RedirectDetail(pcd.myPairwiseDidPair.did, pcd.myPairwiseDidPair.verKey, None,
+        pcd.theirPairwiseDidPair.did, pcd.theirPairwiseDidPair.verKey, None)
       val redirectJsonObject = new JSONObject(DefaultMsgCodec.toJson(redirectDetail))
 
       val agentMsgs = List(
@@ -560,7 +560,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
       val remoteAgencySealInfo = SealParam(
         KeyParam.fromDID(pcd.lastSentInvite.senderAgencyDetail.DID))
 
-      val fwdRouteForAgentPairwiseActor = FwdRouteMsg(pcd.myCloudAgentPairwiseDidPair.DID, Left(remoteAgencySealInfo))
+      val fwdRouteForAgentPairwiseActor = FwdRouteMsg(pcd.myCloudAgentPairwiseDidPair.did, Left(remoteAgencySealInfo))
 
       preparePackedRequestForRoutes(msgTypeVersion, agentPayloadMsgs, List(fwdRouteForAgentPairwiseActor))
     }
@@ -634,7 +634,7 @@ trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =
 
       val theirAgentEncParam = EncryptParam(
         Set(KeyParam.fromDID(remoteAgentAndAgencyIdentity.agentDID)),
-        Option(KeyParam.fromDID(pairwiseConnDetail(connId).myPairwiseDidPair.DID))
+        Option(KeyParam.fromDID(pairwiseConnDetail(connId).myPairwiseDidPair.did))
       )
 
       val agentPayloadMsgs = buildCoreCreateGeneralMsgWithVersion(msgTypeVersion, includeSendMsg, msgType,

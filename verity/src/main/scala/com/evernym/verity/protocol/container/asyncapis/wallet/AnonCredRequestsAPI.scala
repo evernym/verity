@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.container.asyncapis.wallet
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.ConfigConstants.SALT_WALLET_NAME
 import com.evernym.verity.vault.operation_executor.{AnoncredsWalletOpExecutor, FutureConverter}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.engine.asyncapi.wallet.AnonCredAsyncOps
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.{HashUtil, Util}

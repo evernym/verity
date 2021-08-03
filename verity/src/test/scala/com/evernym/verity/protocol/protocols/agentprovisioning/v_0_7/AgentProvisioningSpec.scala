@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOneDomain
-import com.evernym.verity.protocol.engine.VerKey
+import com.evernym.verity.did.VerKey
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{NoSponsor, _}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.State.{AgentCreated => AgentCreatedState, _}
 import com.evernym.verity.protocol.testkit.DSL.signal

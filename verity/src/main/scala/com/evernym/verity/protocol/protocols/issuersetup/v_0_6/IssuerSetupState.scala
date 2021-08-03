@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_6
 
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.IssuerSetup.Nonce
 
 trait Event

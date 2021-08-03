@@ -1,8 +1,9 @@
 package com.evernym.verity.protocol.protocols.walletBackup.legacy
 
+import com.evernym.verity.did.VerKey
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi, VerKey}
+import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi}
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily.{BackupMsg, _}
 import com.evernym.verity.protocol.protocols.walletBackup.{BackupState, State => S, _}

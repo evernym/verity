@@ -18,6 +18,7 @@ import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.legacy.services.{CreateAgentEndpointDetail, CreateKeyEndpointDetail}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
@@ -102,9 +103,11 @@ trait AgencyAgentCommon
     lazy val newActorId = getNewActorId
 
     lazy val keyEndpointJson = DefaultMsgCodec.toJson(
-      CreateKeyEndpointDetail(AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME,
+      CreateKeyEndpointDetail(
+        AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME,
         ownerDIDReq,
-        ownerAgentKeyDIDPair)
+        ownerAgentKeyDIDPair.map(d => com.evernym.verity.did.DidPair(d.DID, d.verKey))
+      )
     )
 
     lazy val agentEndpointJson = DefaultMsgCodec.toJson(
@@ -159,7 +162,17 @@ trait AgencyAgentCommon
 
     val (setupNewWalletCmd, requesterVerKey) = requester match {
       case NeedsCloudAgent(requesterKeys, _) =>
-        (SetupNewAgentWallet(Option(DidPair(requesterKeys.fromDID, requesterKeys.fromVerKey))), requesterKeys.fromVerKey)
+        (
+          SetupNewAgentWallet(
+            Option(
+              com.evernym.verity.did.DidPair(
+                requesterKeys.fromDID,
+                requesterKeys.fromVerKey
+              )
+            )
+          ),
+          requesterKeys.fromVerKey
+        )
       case NeedsEdgeAgent(requesterVk, _) =>
         //NOTE: earlier, at this point a "new key" used to get created in agency agent's wallet
         // and then that key used to stored in the newly to be provisioned user agent's wallet
@@ -173,8 +186,8 @@ trait AgencyAgentCommon
     prepareNewAgentWalletData(setupNewWalletCmd, newActorId).flatMap { wsc =>
       val setupEndpoint = SetupAgentEndpoint_V_0_7(
         threadId,
-        wsc.ownerDidPair ,
-        wsc.agentKey.didPair,
+        wsc.ownerDidPair.toAgentDidPair ,
+        wsc.agentKey.didPair.toAgentDidPair,
         requesterVerKey,
         requester.sponsorRel
       )

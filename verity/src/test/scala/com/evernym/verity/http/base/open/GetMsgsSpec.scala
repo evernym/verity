@@ -103,7 +103,7 @@ trait GetMsgsSpec extends HasMsgStore { this : EndpointHandlerBaseSpec =>
   }
 
   private def pairwiseIdForConn(mockEdgeAgent: MockEdgeAgent, connId: String): String =
-    mockEdgeAgent.pairwiseConnDetails(connId).myPairwiseDidPair.DID
+    mockEdgeAgent.pairwiseConnDetails(connId).myPairwiseDidPair.did
 
 }
 

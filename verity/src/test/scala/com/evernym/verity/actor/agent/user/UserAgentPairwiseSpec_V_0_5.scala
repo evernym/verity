@@ -294,7 +294,7 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
   private def updateMsgStatusByConns(statusCode: String, uidsByConnIds: Map[String, List[String]]): Unit = {
     val msgUidsByConns = uidsByConnIds.map { case (k, v) =>
       val connDetail = mockEdgeAgent.pairwiseConnDetail(k)
-      PairwiseMsgUids(connDetail.myPairwiseDidPair.DID, v)
+      PairwiseMsgUids(connDetail.myPairwiseDidPair.did, v)
     }.toList
 
     val msg = prepareUpdateMsgStatusByConns(msgUidsByConns, statusCode)

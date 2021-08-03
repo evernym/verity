@@ -22,7 +22,7 @@ class AgentMsgWrapperBuilderSpec extends BasicSpec with CommonSpecUtil {
     "when asked to prepare CREATE_AGENT msg wrapper with parameters" - {
       "should be able to create it successfully" in {
         val newDID = generateNewDid()
-        val amw = AgentMsgWrapperBuilder.buildCreateAgentMsgWrapper_MFV_0_6(newDID.DID, newDID.verKey)
+        val amw = AgentMsgWrapperBuilder.buildCreateAgentMsgWrapper_MFV_0_6(newDID.did, newDID.verKey)
         expectMsgType[AgentMsgWrapper](amw)
       }
     }

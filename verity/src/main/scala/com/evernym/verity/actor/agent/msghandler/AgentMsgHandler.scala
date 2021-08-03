@@ -8,6 +8,7 @@ import com.evernym.verity.actor.agent._
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.vault.KeyParam

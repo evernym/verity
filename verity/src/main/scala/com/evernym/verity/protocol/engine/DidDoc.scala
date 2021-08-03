@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.did
+import com.evernym.verity.did.{DID, DIDKeyStr, VerKey}
 import com.evernym.verity.did.methods.DIDKey
 
 

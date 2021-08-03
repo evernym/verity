@@ -1,14 +1,14 @@
 package com.evernym.verity.protocol.testkit
 
 import akka.actor.ActorRef
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, ProofCreated, ProofVerifResult, SignedMsg, TheirKeyStored, VerifySigResult}
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.{SchemaCreated, WalletAccessAPI}
 import com.evernym.verity.protocol.engine.WalletAccessTest.testWalletAPI
-import com.evernym.verity.protocol.engine.{DID, ParticipantId, ParticipantIndex, VerKey}
+import com.evernym.verity.protocol.engine.{ParticipantId, ParticipantIndex}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.{AnonCredRequests, WalletAccess}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.{KeyType, SignType}
 import com.evernym.verity.protocol.testkit.MockableWalletAccess._

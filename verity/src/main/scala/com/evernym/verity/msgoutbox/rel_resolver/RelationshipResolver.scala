@@ -8,8 +8,9 @@ import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRout
 import com.evernym.verity.actor.agent.relationship.Relationship
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.{OutboxParamResp, RelParamResp}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Replies.{OutboxParam, RelParam}
-import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, DestId, RelId, VerKey, WalletId}
+import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, DestId, RelId, WalletId}
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
+import com.evernym.verity.did.VerKey
 
 //ephemeral actor (sharded)
 object RelationshipResolver {

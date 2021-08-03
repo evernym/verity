@@ -39,6 +39,7 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.metrics.MetricsUnit
@@ -380,8 +381,18 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
 
   def createNewPairwiseEndpoint(): Future[Option[ControlMsg]] = {
     walletAPI.executeAsync[NewKeyCreated](CreateNewKey()).flatMap { requesterKey =>
-      val respFut = createNewPairwiseEndpointBase(requesterKey, requesterKey.didPair, Option(requesterKey.verKey))
-      respFut.map(_ => Option(ControlMsg(Ctl.KeyCreated(requesterKey.did, requesterKey.verKey))))
+      val respFut = createNewPairwiseEndpointBase(
+        requesterKey,
+        requesterKey.didPair.toAgentDidPair,
+        Option(requesterKey.verKey)
+      )
+      respFut.map { _ =>
+        Option(
+          ControlMsg(
+            Ctl.KeyCreated(requesterKey.did, requesterKey.verKey)
+          )
+        )
+      }
     }
   }
 
@@ -758,7 +769,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       CreateKeyEndpointDetail(
         userAgentPairwiseRegionName,
         state.myDid_!,
-        state.thisAgentAuthKey.map(ak => DidPair(ak.keyId, ak.verKey)),
+        state.thisAgentAuthKey.map(ak => com.evernym.verity.did.DidPair(ak.keyId, ak.verKey)),
         agentWalletId)
     )
     val filteredConfs = getFilteredConfigs(Set(NAME_KEY, LOGO_URL_KEY))

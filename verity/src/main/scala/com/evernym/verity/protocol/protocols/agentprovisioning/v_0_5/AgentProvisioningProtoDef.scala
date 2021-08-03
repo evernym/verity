@@ -1,8 +1,8 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5
 
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine.Constants._

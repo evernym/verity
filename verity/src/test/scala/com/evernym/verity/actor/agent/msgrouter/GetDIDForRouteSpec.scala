@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.msgrouter
 import com.evernym.verity.constants.Constants.{VALID_DID_BYTE_LENGTH, VALID_VER_KEY_BYTE_LENGTH}
 import com.evernym.verity.util2.Exceptions.InvalidValueException
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter.getDIDForRoute
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.testkit.BasicSpec
 

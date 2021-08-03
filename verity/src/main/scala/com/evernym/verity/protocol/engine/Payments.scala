@@ -1,5 +1,7 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.did.DID
+
 import scala.util.Try
 
 trait Payments {

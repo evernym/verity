@@ -4,9 +4,10 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidValueException}
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.{AgentDetail, DidPair}
+import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, TheirKeyStored}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine._
@@ -157,7 +158,11 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
             ctx.apply(ProvisioningInitiaterPartiSet(provisionerPartiId))
             ctx.apply(PairwiseDIDSet(crm.fromDID, nkc.did))
             val endpointDetail = initParameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)
-            val askPairwiseCreator = AskAgencyPairwiseCreator(nkc.didPair, crm.didPair, endpointDetail)
+            val askPairwiseCreator = AskAgencyPairwiseCreator(
+              nkc.didPair,
+              crm.didPair,
+              endpointDetail
+            )
             ctx.signal(askPairwiseCreator)
           case Failure(e) => throw e
         }

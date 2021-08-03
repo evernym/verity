@@ -4,9 +4,10 @@ import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.{Msg, PayloadMetadata}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.UpdateMsgStatusReqMsg
-import com.evernym.verity.protocol.engine.{DID, MsgId}
+import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.agent.user.MsgHelper._
+import com.evernym.verity.did.DID
 
 //this is to store legacy connection related messages
 trait ConnectionMsgAndDeliveryState {

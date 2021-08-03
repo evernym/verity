@@ -6,6 +6,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_PLAIN
 import com.evernym.verity.actor.agent.msghandler.{MsgParam, MsgRespConfig}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.msgpacker.{AgentMessageWrapper, AgentMsgWrapper}
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.protocol.engine.MsgFamily._
 import com.evernym.verity.protocol.engine._

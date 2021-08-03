@@ -5,7 +5,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.util.Util.replaceVariables
 

@@ -6,17 +6,17 @@ import akka.http.scaladsl.model.StatusCodes.{Accepted, OK}
 import akka.http.scaladsl.model.headers.RawHeader
 import com.evernym.verity.actor.ComMethodUpdated
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_PLAIN}
 import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_TYPE_UPDATE_COM_METHOD}
 import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, ComMethodAuthentication, ComMethodPackaging, UpdateComMethodReqMsg, UpdateConfigReqMsg}
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
+import com.evernym.verity.did.{DidPair, VerKey}
 import com.evernym.verity.integration.base.PortProvider
 import com.evernym.verity.integration.base.sdk_provider.msg_listener.{JsonMsgListener, MsgListenerBase, PackedMsgListener, ReceivedMsgCounter}
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
-import com.evernym.verity.protocol.engine.{MsgFamily, VerKey}
+import com.evernym.verity.protocol.engine.MsgFamily
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateEdgeAgent}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete, ConnRequestReceived, ConnResponseSent}
@@ -105,7 +105,7 @@ abstract class VeritySdkBase(param: SdkParam, oauthParam: Option[OAuthParam]=Non
 
   protected def addForRel(connId: String, jsonMsgParam: JsonMsgBuilder): JsonMsgBuilder = {
     val relationship = myPairwiseRelationships(connId)
-    jsonMsgParam.forRelDID(relationship.verityAgentDIDPair.get.DID)
+    jsonMsgParam.forRelDID(relationship.verityAgentDIDPair.get.did)
   }
 
   def defaultAuthentication: Option[ComMethodAuthentication] = oauthParam.map { _ =>
@@ -184,7 +184,7 @@ abstract class IssuerVerifierSdk(param: SdkParam, oauthParam: Option[OAuthParam]
   private def addForRelAndPackForConn(connId: String, jsonMsgBuilder: JsonMsgBuilder): Array[Byte] = {
     val forRelMsg = addForRel(connId, jsonMsgBuilder).jsonMsg
     val verityAgentPackedMsg = packFromLocalAgentKey(forRelMsg, Set(KeyParam.fromVerKey(verityAgentDidPair.verKey)))
-    prepareFwdMsg(agencyDID, verityAgentDidPair.DID, verityAgentPackedMsg)
+    prepareFwdMsg(agencyDID, verityAgentDidPair.did, verityAgentPackedMsg)
   }
 
   /**
@@ -235,7 +235,7 @@ case class IssuerRestSDK(param: SdkParam, oauthParam: Option[OAuthParam]=None) e
               applyToJsonMsg: String => String = { msg => msg },
               expectedRespStatus: StatusCode = Accepted): HttpResponse = {
     val jsonMsgBuilder = JsonMsgBuilder(msg, threadOpt, applyToJsonMsg)
-    checkResponse(sendPostReqBase(jsonMsgBuilder, verityAgentDidPair.DID, myDIDApiKey), Accepted)
+    checkResponse(sendPostReqBase(jsonMsgBuilder, verityAgentDidPair.did, myDIDApiKey), Accepted)
   }
 
   def sendMsgForConn(connId: String,
@@ -244,7 +244,7 @@ case class IssuerRestSDK(param: SdkParam, oauthParam: Option[OAuthParam]=None) e
                      applyToJsonMsg: String => String = { msg => msg},
                      expectedRespStatus: StatusCode = Accepted): HttpResponse = {
     val jsonMsgBuilder = addForRel(connId, JsonMsgBuilder(msg, threadOpt, applyToJsonMsg))
-    checkResponse(sendPostReqBase(jsonMsgBuilder, verityAgentDidPair.DID, myDIDApiKey), expectedRespStatus)
+    checkResponse(sendPostReqBase(jsonMsgBuilder, verityAgentDidPair.did, myDIDApiKey), expectedRespStatus)
   }
 
   private def sendPostReqBase(jsonMsgBuilder: JsonMsgBuilder,
@@ -260,12 +260,12 @@ case class IssuerRestSDK(param: SdkParam, oauthParam: Option[OAuthParam]=None) e
                                            threadOpt: Option[MsgThread] = None): RestGetResponse[T] = {
     val forRel = myPairwiseRelationships(connId).myVerityAgentDID
     val queryParam = Option(s"~for_relationship=$forRel")
-    sendGetReqBase(msgFamily, verityAgentDidPair.DID, myDIDApiKey, threadOpt, queryParam)
+    sendGetReqBase(msgFamily, verityAgentDidPair.did, myDIDApiKey, threadOpt, queryParam)
   }
 
   def sendGetStatusReq[T: ClassTag](threadOpt: Option[MsgThread] = None): RestGetResponse[T] = {
     val msgFamily = MsgFamilyHelper.getMsgFamily
-    sendGetReqBase(msgFamily, verityAgentDidPair.DID, myDIDApiKey, threadOpt)
+    sendGetReqBase(msgFamily, verityAgentDidPair.did, myDIDApiKey, threadOpt)
   }
 
   private def sendGetReqBase[T: ClassTag](msgFamily: MsgFamily,

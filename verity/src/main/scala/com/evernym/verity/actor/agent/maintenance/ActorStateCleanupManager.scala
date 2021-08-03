@@ -11,7 +11,7 @@ import com.evernym.verity.actor.{ActorMessage, Completed, ExecutorDeleted, ForId
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.ActorNameConstants._
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 

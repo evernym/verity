@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols.connecting.v_0_6
 
 import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.constants.InitParamConstants.{MY_PUBLIC_DID, MY_SELF_REL_DID}
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{ConnectingStateBase, HasPairwiseConnection}
 import com.evernym.verity.util.OptionUtil.blankOption
 

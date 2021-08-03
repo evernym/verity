@@ -121,11 +121,11 @@ class ConnectionsSpec extends TestsProtocolsImpl(ConnectionsDef)
 
   lazy val inviterDIDDoc: DIDDoc = {
     val dd = generateNewDid(Option("11111111111111111111111111111111"))
-    DIDDoc(dd.DID, dd.verKey, "http://localhost:9001/agency/msg", Vector.empty)
+    DIDDoc(dd.did, dd.verKey, "http://localhost:9001/agency/msg", Vector.empty)
   }
 
   lazy val inviteeDIDDoc: DIDDoc = {
     val dd = generateNewDid(Option("22222222222222222222222222222222"))
-    DIDDoc(dd.DID, dd.verKey, "http://localhost:9002/agency/msg", Vector.empty)
+    DIDDoc(dd.did, dd.verKey, "http://localhost:9002/agency/msg", Vector.empty)
   }
 }

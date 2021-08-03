@@ -658,7 +658,7 @@ trait LegacyApiFlowBaseSpec
             AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
           eventually (timeout(Span(10, Seconds)), interval(Span(2, Seconds))) {
             val pairwiseDIDs = connsIds.map { cids =>
-              mockClientAgent.pairwiseConnDetails.filter(cids.contains).values.map(_.myPairwiseDidPair.DID).toList
+              mockClientAgent.pairwiseConnDetails.filter(cids.contains).values.map(_.myPairwiseDidPair.did).toList
             }
 
             val gmr = expectMsgType[MsgsByConns_MFV_0_5](getMsgsFromConns_MPV_0_5(pairwiseDIDs))
@@ -701,7 +701,7 @@ trait LegacyApiFlowBaseSpec
           val msgUidsByPairwiseDIDs = connIds.map { connId =>
             val con = mockClientAgent.pairwiseConnDetail(connId)
             val connMsgUids = msgsByConns(connId).map(_._2.uid).toList
-            PairwiseMsgUids(con.myPairwiseDidPair.DID, connMsgUids)
+            PairwiseMsgUids(con.myPairwiseDidPair.did, connMsgUids)
           }.toList
           val umr = updateMsgStatusByConns(statusCode, msgUidsByPairwiseDIDs)
         }

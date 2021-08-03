@@ -15,7 +15,7 @@ class ActionExecutorSpec
   }
 
   val ipAddressEntityId1 = "1.2.3.4"
-  val ownerUserEntityId = "owner-" + CommonSpecUtil.generateNewDid().DID
+  val ownerUserEntityId = "owner-" + CommonSpecUtil.generateNewDid().did
   val counterPartyUserEntityId = "counterparty-" + CommonSpecUtil.generateNewDid().verKey
 
   val actionExecutor = new UsageViolationActionExecutor(system, appConfig)

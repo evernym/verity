@@ -1,11 +1,11 @@
 package com.evernym.verity.protocol.engine.asyncapi.wallet
 
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, ProofCreated, ProofVerifResult, SignedMsg, TheirKeyStored, VerifySigResult}
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessRight, AccessSign, AccessStoreTheirDiD, AccessVerKey, AccessVerify, AnonCreds, AsyncOpRunner, BaseAccessController, DEPRECATED_AccessSetupNewWallet}
-import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey}
+import com.evernym.verity.protocol.engine.ParticipantId
 
 import scala.util.Try
 
@@ -18,8 +18,14 @@ class WalletAccessController(val accessRights: Set[AccessRight],
 
   import WalletAccess._
 
-  def DEPRECATED_setupNewWallet(walletId: String, ownerDidPair: DidPair)(handler: Try[AgentWalletSetupCompleted] => Unit): Unit =
-    runIfAllowed(DEPRECATED_AccessSetupNewWallet, {walletExecutor.DEPRECATED_setupNewWallet(walletId, ownerDidPair)}, handler)
+  def DEPRECATED_setupNewWallet(walletId: String,
+                                ownerDidPair: DidPair)
+                               (handler: Try[AgentWalletSetupCompleted] => Unit): Unit =
+    runIfAllowed(
+      DEPRECATED_AccessSetupNewWallet,
+      {walletExecutor.DEPRECATED_setupNewWallet(walletId, ownerDidPair)},
+      handler
+    )
 
   override def newDid(keyType: KeyType = KEY_ED25519)(handler: Try[NewKeyCreated] => Unit): Unit =
     runIfAllowed(AccessNewDid, {walletExecutor.runNewDid(keyType)}, handler)

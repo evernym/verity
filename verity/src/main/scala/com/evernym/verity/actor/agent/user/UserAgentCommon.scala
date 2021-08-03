@@ -39,6 +39,7 @@ import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.R
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsReqMsg, UpdateMsgStatusReqMsg}
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.SendConfig
 

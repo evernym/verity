@@ -3,8 +3,10 @@ package com.evernym.verity.actor.agent.relationship
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.{ANYWISE_RELATIONSHIP, NO_RELATIONSHIP, NWISE_RELATIONSHIP, PAIRWISE_RELATIONSHIP, SELF_RELATIONSHIP}
 import com.evernym.verity.actor.agent.relationship.RelationshipException._
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
+//import com.evernym.verity
 import scalapb.lenses.Updatable
 
 

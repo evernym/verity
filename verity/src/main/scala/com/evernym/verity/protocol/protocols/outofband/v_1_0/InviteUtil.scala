@@ -7,6 +7,7 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvitation
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.config.ConfigConstants._
+import com.evernym.verity.did.{DID, VerKey}
 
 import scala.util.{Failure, Success, Try}
 

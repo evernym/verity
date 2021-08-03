@@ -1,13 +1,13 @@
 package com.evernym.verity.actor.agent.user
 
 import com.evernym.verity.util2.Status.UNSUPPORTED_MSG_TYPE
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.TestConfigDetail
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.did.DidPair
 
 class UserAgentSpec_V_0_5 extends UserAgentSpecScaffolding {
   import mockEdgeAgent.v_0_5_req._

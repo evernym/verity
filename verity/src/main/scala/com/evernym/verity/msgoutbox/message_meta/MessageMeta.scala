@@ -9,12 +9,13 @@ import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffec
 import com.evernym.verity.msgoutbox.message_meta.Events.LegacyMsgData
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies.Msg
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.States.{Initialized, Processed}
-import com.evernym.verity.msgoutbox.{DID, MsgId, OutboxId, RecipPackaging}
+import com.evernym.verity.msgoutbox.{MsgId, OutboxId, RecipPackaging}
 import com.evernym.verity.actor.typed.base.PersistentEventAdapter
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Commands.MsgStoreReplyAdapter
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.config.ConfigUtil
+import com.evernym.verity.did.DID
 import com.evernym.verity.msgoutbox.outbox.Outbox
 import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.{RetentionPolicy, Status}

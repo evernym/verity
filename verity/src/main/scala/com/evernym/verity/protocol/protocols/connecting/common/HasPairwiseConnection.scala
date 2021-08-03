@@ -6,7 +6,7 @@ import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.util2.Status.{CONN_STATUS_NOT_CONNECTED, MSG_STATUS_ACCEPTED}
 import com.evernym.verity.actor.agent.ConnectionStatus
 import com.evernym.verity.actor.{ConnectionCompleted, ConnectionStatusUpdated}
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, VerKey}
 
 
 /**

@@ -9,8 +9,9 @@ import com.evernym.verity.actor.agent.msgrouter.RouteAlreadySet
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.config.ConfigConstants._
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.container.actor._
-import com.evernym.verity.protocol.engine.{DID, PinstId, PinstIdResolution, ProtoRef}
+import com.evernym.verity.protocol.engine.{PinstId, PinstIdResolution, ProtoRef}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageDefinition
 import com.evernym.verity.util2.Exceptions
 

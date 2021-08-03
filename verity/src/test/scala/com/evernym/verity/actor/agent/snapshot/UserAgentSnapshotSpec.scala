@@ -11,7 +11,7 @@ import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.constants.ActorNameConstants.USER_AGENT_REGION_ACTOR_NAME
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import com.typesafe.config.{Config, ConfigFactory}
@@ -66,7 +66,7 @@ class UserAgentSnapshotSpec
 
   def initUserAgent(): Unit = {
     val agentPairwiseKey = prepareNewAgentWalletData(userDID.didPair, userAgentEntityId)
-    ua ! SetupAgentEndpoint(userDID.didPair, agentPairwiseKey.didPair)
+    ua ! SetupAgentEndpoint(userDID.didPair.toAgentDidPair, agentPairwiseKey.didPair.toAgentDidPair)
     expectMsg(Done)
     mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.didPair)
   }

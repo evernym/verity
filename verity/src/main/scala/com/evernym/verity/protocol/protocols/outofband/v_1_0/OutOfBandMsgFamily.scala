@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor
 import com.evernym.verity.did.didcomm.v1.messages.{AdoptableProblemReport, ProblemDescription}

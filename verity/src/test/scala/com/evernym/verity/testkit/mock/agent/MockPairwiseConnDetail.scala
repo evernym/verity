@@ -1,8 +1,7 @@
 package com.evernym.verity.testkit.mock.agent
 
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.wallet.{StoreTheirKey, TheirKeyStored}
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.testkit.LegacyWalletAPI
 import com.evernym.verity.vault._
@@ -65,8 +64,8 @@ class MockPairwiseConnDetail(val myPairwiseDidPair: DidPair)
   //TODO: this should go to specific class
   def getEncryptParamForOthersCloudAgent: EncryptParam = {
     EncryptParam(
-      Set(KeyParam.fromDID(theirCloudAgentPairwiseDidPair.DID)),
-      Option(KeyParam.fromDID(myPairwiseDidPair.DID))
+      Set(KeyParam.fromDID(theirCloudAgentPairwiseDidPair.did)),
+      Option(KeyParam.fromDID(myPairwiseDidPair.did))
     )
   }
 

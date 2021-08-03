@@ -7,14 +7,14 @@ import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.headers.{RawHeader, `Content-Type`}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.util.ByteString
-import com.evernym.verity.actor.agent.{AgentActorContext, DidPair}
+import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.actor.wallet.{PackedMsg, SignMsg, SignedMsg}
 import com.evernym.verity.http.base.open.{AgentProvisioningSpec, AriesInvitationDecodingSpec, ProvisionRelationshipSpec, UpdateComMethodSpec}
 import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, RestrictedRestApiSpec}
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.http.route_handlers.open.RestAcceptedResponse
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent._
 import com.evernym.verity.testkit.mock.agent.MockEnv
@@ -144,7 +144,7 @@ trait RestApiBaseSpec
 
     val jsonObject = new JSONObject()
     jsonObject.put("@type", "did:sov:123456789abcdefghi1234;spec/connecting/0.6/CREATE_KEY")
-    jsonObject.put("forDID", le.myPairwiseDidPair.DID)
+    jsonObject.put("forDID", le.myPairwiseDidPair.did)
     jsonObject.put("forDIDVerKey", le.myPairwiseDidPair.verKey)
     val payload = ByteString(jsonObject.toString)
 
@@ -306,7 +306,7 @@ case class MockRestEnv(mockEnv: MockEnv) {
   lazy val myDIDApiKey = s"$myDIDVerKey:$myDIDSignature"
 
   def connRelRoutingDID(connId: String): DID =
-    mockEnv.edgeAgent.pairwiseConnDetail(connId).myPairwiseDidPair.DID
+    mockEnv.edgeAgent.pairwiseConnDetail(connId).myPairwiseDidPair.did
 
   def connRelDIDApiKey(connId: String): String = {
     val pcd = mockEnv.edgeAgent.pairwiseConnDetail(connId).myPairwiseDidPair

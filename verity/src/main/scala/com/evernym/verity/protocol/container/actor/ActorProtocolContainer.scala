@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.container.actor
 
 import akka.actor.ActorRef
+import com.evernym.verity.actor.{ActorMessage, ParameterStored}
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.RelationshipLike
@@ -8,7 +9,6 @@ import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE
 import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
 import com.evernym.verity.actor.agent.{SponsorRel, _}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}

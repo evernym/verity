@@ -14,6 +14,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
 import com.evernym.verity.protocol.engine._
@@ -133,7 +134,10 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
 
     val endpointDetail = ctx.getState.parameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)
     val fut = ctx.SERVICES_DEPRECATED.connectEndpointServiceProvider.setupCreateKeyEndpoint(
-      edgePairwiseKey.didPair, edgePairwiseKey.didPair, endpointDetail)
+      edgePairwiseKey.didPair,
+      edgePairwiseKey.didPair,
+      endpointDetail
+    )
     val kdp = getAgentKeyDlgProof(edgePairwiseKey.verKey, edgePairwiseKey.did,
       edgePairwiseKey.verKey)(walletAPI, wap)
     val ccamw = ConnReqMsgHelper.buildConnReqAgentMsgWrapper_MFV_0_6(kdp, cc.phoneNo, cc.includePublicDID, amw)
@@ -164,8 +168,14 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
     val event = AgentDetailSet(createKeyReqMsg.forDID, pairwiseKeyResult.did)
     ctx.apply(event)
     val endpointDetail = ctx.getState.parameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)
-    val fut = ctx.SERVICES_DEPRECATED.connectEndpointServiceProvider.setupCreateKeyEndpoint(
-      createKeyReqMsg.didPair, pairwiseKeyResult.didPair, endpointDetail)
+    val fut = ctx
+      .SERVICES_DEPRECATED
+      .connectEndpointServiceProvider
+      .setupCreateKeyEndpoint(
+        createKeyReqMsg.didPair,
+        pairwiseKeyResult.didPair,
+        endpointDetail
+      )
     val pm = processCreateKeyAfterEndpointSetup(createKeyReqMsg, pairwiseKeyResult)
     fut.map(_ => pm)
   }

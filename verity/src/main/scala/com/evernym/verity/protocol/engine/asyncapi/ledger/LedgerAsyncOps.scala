@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine.asyncapi.ledger
 
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 
 trait LedgerAsyncOps {

@@ -12,6 +12,7 @@ import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 import com.evernym.verity.actor.resourceusagethrottling.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX, UserId}
+import com.evernym.verity.did.VerKey
 import com.evernym.verity.metrics.InternalSpan
 
 import scala.concurrent.Future

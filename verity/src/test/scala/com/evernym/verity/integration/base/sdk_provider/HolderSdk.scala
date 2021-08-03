@@ -4,7 +4,6 @@ import akka.http.scaladsl.model.{HttpResponse, StatusCode}
 import akka.http.scaladsl.model.StatusCodes.OK
 import com.evernym.verity.actor.ComMethodUpdated
 import com.evernym.verity.util2.Status.StatusDetailException
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.actor.wallet.{CreateCredReq, CreateMasterSecret, CreateProof, CredForProofReq, CredForProofReqCreated, CredReqCreated, CredStored, MasterSecretCreated, ProofCreated, StoreCred}
@@ -14,13 +13,14 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateComMethodReqMsg
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateKeyReqMsg_MFV_0_6, GetMsgsByConnsReqMsg_MFV_0_6, GetMsgsByConnsRespMsg_MFV_0_6, GetMsgsReqMsg_MFV_0_6, GetMsgsRespMsg_MFV_0_6, KeyCreatedRespMsg_MFV_0_6, MsgStatusUpdatedRespMsg_MFV_0_6, UpdateMsgStatusReqMsg_MFV_0_6}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer}
 import com.evernym.verity.constants.Constants.NO
+import com.evernym.verity.did.{DID, DidPair}
 import com.evernym.verity.integration.base.sdk_provider.MsgFamilyHelper.buildMsgTypeStr
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerTxnExecutor, Submitter}
 import com.evernym.verity.metrics.NoOpMetricsWriter
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
-import com.evernym.verity.protocol.engine.{DID, DIDDoc, MsgId, ThreadId}
+import com.evernym.verity.protocol.engine.{DIDDoc, MsgId, ThreadId}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateCloudAgent, RequesterKeys}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg.{ConnRequest, ConnResponse, Connection}
@@ -59,13 +59,13 @@ case class HolderSdk(param: SdkParam,
   }
 
   def provisionVerityCloudAgent(): AgentCreated = {
-    val reqKeys = RequesterKeys(localAgentDidPair.DID, localAgentDidPair.verKey)
+    val reqKeys = RequesterKeys(localAgentDidPair.did, localAgentDidPair.verKey)
     provisionVerityAgentBase(CreateCloudAgent(reqKeys, None))
   }
 
   def sendCreateNewKey(connId: String): PairwiseRel = {
     val myPairwiseKey = createNewKey()
-    val createKey = CreateKeyReqMsg_MFV_0_6(myPairwiseKey.DID, myPairwiseKey.verKey)
+    val createKey = CreateKeyReqMsg_MFV_0_6(myPairwiseKey.did, myPairwiseKey.verKey)
     val routedPackedMsg = packForMyVerityAgent(JsonMsgBuilder(createKey).jsonMsg)
     val receivedMsg = parseAndUnpackResponse[KeyCreatedRespMsg_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg)))
     val createdMsg = receivedMsg.msg

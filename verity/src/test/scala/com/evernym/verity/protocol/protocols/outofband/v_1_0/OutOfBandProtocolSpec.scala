@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.did.DidPair
 import com.evernym.verity.protocol.engine.DebugProtocols
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredMsgFamily
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Ctl.Reuse

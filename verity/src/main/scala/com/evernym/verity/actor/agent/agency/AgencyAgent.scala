@@ -21,6 +21,7 @@ import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.ledger.Submitter
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.engine._
@@ -165,7 +166,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
     maFut map {
       case _: MappingAdded =>
         setAgencyRouteInfo(sndr, fck.createdKey)
-        self ! SetAgentActorDetail(fck.createdKey.didPair, entityId)
+        self ! SetAgentActorDetail(fck.createdKey.didPair.toAgentDidPair, entityId)
       case e =>
         sndr ! e
     }

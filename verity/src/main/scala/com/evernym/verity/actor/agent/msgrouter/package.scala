@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent
 
 import akka.actor.ActorRef
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 
 package object msgrouter {
   case class RouteAlreadySet(forDID: DID) extends ActorMessage

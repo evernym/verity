@@ -2,6 +2,7 @@ package com.evernym.verity.actor.agent.state.base
 
 import com.evernym.verity.actor.agent.relationship.{EndpointADT, EndpointADTUntyped, EndpointId, KeyId, Relationship, Tags}
 import com.evernym.verity.actor.agent.{ProtocolRunningInstances, ThreadContext, ThreadContextDetail}
+import com.evernym.verity.did.VerKey
 import com.evernym.verity.protocol.engine._
 
 //NOTE: over the period of time, as we make all agent actors starts using

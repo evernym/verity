@@ -4,6 +4,7 @@ import com.evernym.verity.actor.State
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, OWNER_AGENT_KEY}
 import com.evernym.verity.actor.agent.relationship.{AuthorizedKey, AuthorizedKeyLike, DidDoc, KeyId, Relationship}
 import com.evernym.verity.actor.agent.{ConnectionStatus, DidPair, ProtocolRunningInstances, ThreadContext, ThreadContextDetail}
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.protocol.engine._
 
 /**

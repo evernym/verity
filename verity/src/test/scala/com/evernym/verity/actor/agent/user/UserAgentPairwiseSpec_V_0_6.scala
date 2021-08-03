@@ -9,7 +9,7 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise.ConnReqAcceptedMsg_MFV_0_6
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.msgpacker.PackMsgParam
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.AgentPackMsgUtil
 import com.evernym.verity.testkit.util.AgentPackMsgUtil.preparePackedRequestForAgent
@@ -102,7 +102,7 @@ trait UserAgentPairwiseSpec_V_0_6
 
     s"when sent CREATE_KEY msg ($connId)" - {
       "should respond with KEY_CREATED msg" taggedAs (UNSAFE_IgnoreLog) in {
-        val msg = preparePairwiseCreateKey(mockEdgeAgent.cloudAgentDetailReq.DID, connId)
+        val msg = preparePairwiseCreateKey(mockEdgeAgent.cloudAgentDetailReq.did, connId)
         ua ! ProcessPackedMsg(msg, reqMsgContext)
         val pm = expectMsgType[PackedMsg]
         val resp = handlePairwiseKeyCreatedResp(pm, buildConnIdMap(connId))
@@ -121,7 +121,7 @@ trait UserAgentPairwiseSpec_V_0_6
     "when sent connection request msg" - {
       "should respond with connection request detail" taggedAs (UNSAFE_IgnoreLog) in {
         val msg = prepareCreateInvite(
-          mockEdgeAgent.pairwiseConnDetail(connId1New).myCloudAgentPairwiseDidPair.DID,
+          mockEdgeAgent.pairwiseConnDetail(connId1New).myCloudAgentPairwiseDidPair.did,
           Option(connId1New), includeKeyDlgProof = true)
         uap ! ProcessPackedMsg(msg, reqMsgContext)
         val pm = expectMsgType[PackedMsg]

@@ -5,7 +5,7 @@ import com.evernym.verity.util.Util._
 import com.google.common.base.Charsets
 import com.google.common.io.BaseEncoding
 import com.evernym.verity.util2.Exceptions.InvalidValueException
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 
 import com.evernym.verity.testkit.BasicSpec
 

@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.state
 
 import com.evernym.verity.actor.agent.relationship.{DidDoc, EndpointADTUntyped, EndpointId, HasRelationship, KeyId, Relationship, Tags}
-import com.evernym.verity.protocol.engine.VerKey
+import com.evernym.verity.did.VerKey
 
 import scala.language.implicitConversions
 

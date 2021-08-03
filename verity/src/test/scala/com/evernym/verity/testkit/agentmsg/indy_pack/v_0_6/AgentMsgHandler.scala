@@ -2,7 +2,7 @@ package com.evernym.verity.testkit.agentmsg.indy_pack.v_0_6
 
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnReqRedirectResp_MFV_0_6, ConnReqRespMsg_MFV_0_6, RemoteMsgSent_MFV_0_6}
 import com.evernym.verity.agentmsg.msgpacker.{ParseParam, UnpackParam}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.testkit.Matchers
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.util.{AgentCreated_MFV_0_6, ComMethodUpdated_MFV_0_6, ConnReqAccepted_MFV_0_6, KeyCreated_MFV_0_6, MsgsByConns_MFV_0_6, PublicIdentifierCreated_MFV_0_6}

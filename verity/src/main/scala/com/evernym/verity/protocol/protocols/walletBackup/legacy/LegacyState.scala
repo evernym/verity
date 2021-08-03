@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.walletBackup.legacy
 
-import com.evernym.verity.protocol.engine.VerKey
+import com.evernym.verity.did.VerKey
 import com.evernym.verity.protocol.protocols.walletBackup.BackupState
 
 trait LegacyState {

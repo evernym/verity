@@ -4,11 +4,12 @@ import com.evernym.verity.util2.Exceptions.NotFoundErrorException
 import com.evernym.verity.cache.{LEDGER_GET_CRED_DEF_FETCHER, LEDGER_GET_SCHEMA_FETCHER}
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{GetCredDef, GetSchema}
+import com.evernym.verity.did.DID
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccessException, LedgerAsyncOps}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.protocol.engine.{BaseAsyncOpExecutorImpl, DID}
+import com.evernym.verity.protocol.engine.BaseAsyncOpExecutorImpl
 
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -63,11 +63,11 @@ class UserAgentPairwiseRecoverySpec
   }
 
   def assertUserAgentPairwiseState(uas: UserAgentPairwiseState): Unit = {
-    uas.mySelfRelDID shouldBe Option(mySelfRelDIDPair.DID)
-    uas.ownerAgentDidPair shouldBe Some(mySelfRelAgentDIDPair)
+    uas.mySelfRelDID shouldBe Option(mySelfRelDIDPair.did)
+    uas.ownerAgentDidPair shouldBe Some(mySelfRelAgentDIDPair.toAgentDidPair)
     uas.configs shouldBe Map.empty
-    uas.thisAgentKeyId shouldBe Some(myPairwiseRelAgentDIDPair.DID)
-    uas.agencyDIDPair shouldBe Some(myAgencyAgentDIDPair)
+    uas.thisAgentKeyId shouldBe Some(myPairwiseRelAgentDIDPair.did)
+    uas.agencyDIDPair shouldBe Some(myAgencyAgentDIDPair.toAgentDidPair)
     uas.agentWalletId shouldBe Some(mySelfRelAgentEntityId)
     uas.msgAndDelivery.isDefined shouldBe true    //add more tests
     uas.relationship shouldBe Some(
@@ -75,11 +75,11 @@ class UserAgentPairwiseRecoverySpec
         PAIRWISE_RELATIONSHIP,
         "pairwise",
         Some(DidDoc(
-          myPairwiseRelDIDPair.DID,
+          myPairwiseRelDIDPair.did,
           Some(AuthorizedKeys(Seq(
-            AuthorizedKey(myPairwiseRelDIDPair.DID, myPairwiseRelDIDPair.verKey, Set(EDGE_AGENT_KEY)),
-            AuthorizedKey(myPairwiseRelAgentDIDPair.DID, myPairwiseRelAgentDIDPair.verKey, Set(CLOUD_AGENT_KEY)),
-            AuthorizedKey(mySelfRelAgentDIDPair.DID, mySelfRelAgentDIDPair.verKey, Set(OWNER_AGENT_KEY))
+            AuthorizedKey(myPairwiseRelDIDPair.did, myPairwiseRelDIDPair.verKey, Set(EDGE_AGENT_KEY)),
+            AuthorizedKey(myPairwiseRelAgentDIDPair.did, myPairwiseRelAgentDIDPair.verKey, Set(CLOUD_AGENT_KEY)),
+            AuthorizedKey(mySelfRelAgentDIDPair.did, mySelfRelAgentDIDPair.verKey, Set(OWNER_AGENT_KEY))
           ))),
           Some(Endpoints(Vector.empty))
         ))

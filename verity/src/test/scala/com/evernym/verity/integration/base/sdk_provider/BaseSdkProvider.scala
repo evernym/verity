@@ -5,7 +5,6 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model._
 import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
@@ -29,6 +28,7 @@ import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.LedgerTxnExecutor
 import com.evernym.verity.metrics.NoOpMetricsWriter
@@ -135,7 +135,7 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
     val apd = parseHttpResponseAs[AgencyPublicDid](resp)
     require(apd.DID.nonEmpty, "agency DID should not be empty")
     require(apd.verKey.nonEmpty, "agency verKey should not be empty")
-    storeTheirKey(apd.didPair)
+    storeTheirKey(DidPair(apd.didPair.DID, apd.didPair.verKey))
     agencyPublicDidOpt = Option(apd)
     apd
   }
@@ -162,7 +162,7 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
 
   protected def packForMyVerityAgent(msg: String): Array[Byte] = {
     val packedMsgForVerityAgent = packFromLocalAgentKey(msg, Set(KeyParam.fromVerKey(verityAgentDidPair.verKey)))
-    prepareFwdMsg(agencyDID, verityAgentDidPair.DID, packedMsgForVerityAgent)
+    prepareFwdMsg(agencyDID, verityAgentDidPair.did, packedMsgForVerityAgent)
   }
 
   protected def packFromLocalAgentKey(msg: String, recipVerKeyParams: Set[KeyParam]): Array[Byte] = {
@@ -279,7 +279,7 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
   }
 
   def storeTheirKey(didPair: DidPair): Unit = {
-    testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(didPair.DID, didPair.verKey))
+    testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(didPair.did, didPair.verKey))
   }
 
   def agencyPublicDid: AgencyPublicDid = agencyPublicDidOpt.getOrElse(
@@ -322,11 +322,11 @@ case class PairwiseRel(myLocalAgentDIDPair: Option[DidPair] = None,
                        theirDIDDoc: Option[DIDDoc] = None) {
 
   def myLocalAgentDIDPairReq: DidPair = myLocalAgentDIDPair.getOrElse(throw new RuntimeException("my pairwise key not exists"))
-  def myPairwiseDID: DID = myLocalAgentDIDPairReq.DID
+  def myPairwiseDID: DID = myLocalAgentDIDPairReq.did
   def myPairwiseVerKey: VerKey = myLocalAgentDIDPairReq.verKey
 
   def myVerityAgentDIDPairReq: DidPair = verityAgentDIDPair.getOrElse(throw new RuntimeException("verity agent key not exists"))
-  def myVerityAgentDID: DID = myVerityAgentDIDPairReq.DID
+  def myVerityAgentDID: DID = myVerityAgentDIDPairReq.did
   def myVerityAgentVerKey: VerKey = myVerityAgentDIDPairReq.verKey
 
   def theirDIDDocReq: DIDDoc = theirDIDDoc.getOrElse(throw new RuntimeException("their DIDDoc not exists"))

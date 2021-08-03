@@ -2,7 +2,7 @@ package com.evernym.verity.testkit.agentmsg.message_pack.v_0_5
 
 import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.testkit.Matchers
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, CreateInviteResp_MFV_0_5, GeneralMsgCreatedResp_MFV_0_5, InviteAcceptedResp_MFV_0_5}
 import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent}
@@ -117,7 +117,7 @@ trait AgentMsgHandler {
     def handleInviteAnsweredResp(connId: String, rmw: PackedMsg):
     MsgCreated_MFV_0_5 = {
       val pcd = pairwiseConnDetail(connId)
-      val um = unpackRespMsgs_MPV_0_5(rmw, pcd.myPairwiseDidPair.DID)
+      val um = unpackRespMsgs_MPV_0_5(rmw, pcd.myPairwiseDidPair.did)
       parseMsgCreatedRespMsg(um.head)
     }
 

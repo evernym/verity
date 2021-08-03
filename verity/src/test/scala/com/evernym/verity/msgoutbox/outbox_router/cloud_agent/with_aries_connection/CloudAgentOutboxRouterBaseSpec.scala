@@ -1,6 +1,6 @@
 package com.evernym.verity.msgoutbox.outbox_router.cloud_agent.with_aries_connection
 
-import com.evernym.verity.msgoutbox.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.msgoutbox.outbox_router.{AgentContext, OutboxRouterSpecBase, PairwiseRelContext, SelfRelContext}
 import com.evernym.verity.protocol.engine.ParticipantId
 import com.evernym.verity.util.ParticipantUtil

@@ -1,11 +1,11 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{DID, MsgBase, VerKey}
+import com.evernym.verity.protocol.engine.MsgBase
 
 case class CreateKeyReqMsg_MFV_0_5(forDID: DID, forDIDVerKey: VerKey) extends MsgBase {
   override def validate(): Unit = {

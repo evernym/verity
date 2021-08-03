@@ -1,16 +1,16 @@
 package com.evernym.verity.protocol.protocols
 
 import java.time.ZoneId
-
 import akka.actor.Actor.Receive
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.did.didcomm.v1.Thread
-import com.evernym.verity.actor.agent.{Msg, PayloadWrapper, MsgDeliveryDetail, PayloadMetadata}
+import com.evernym.verity.actor.agent.{Msg, MsgDeliveryDetail, PayloadMetadata, PayloadWrapper}
 import com.evernym.verity.actor.agent.user.MsgHelper
 import com.evernym.verity.actor.agent.{AttrName, AttrValue}
 import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated, MsgDeliveryStatusUpdated, MsgDetailAdded, MsgExpirationTimeUpdated, MsgPayloadStored, MsgStatusUpdated}
-import com.evernym.verity.protocol.engine.{DID, MsgId, MsgName, RefMsgId}
+import com.evernym.verity.did.DID
+import com.evernym.verity.protocol.engine.{MsgId, MsgName, RefMsgId}
 import com.evernym.verity.util.TimeZoneUtil._
 
 

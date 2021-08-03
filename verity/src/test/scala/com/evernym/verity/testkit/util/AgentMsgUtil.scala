@@ -1,7 +1,7 @@
 package com.evernym.verity.testkit.util
 
 import java.util.UUID
-import com.evernym.verity.actor.agent.{DidPair, MsgPackFormat}
+import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
@@ -14,8 +14,8 @@ import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof
 import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.did.{DID, DidPair, VerKey}
 import com.evernym.verity.metrics.NoOpMetricsWriter
-
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._

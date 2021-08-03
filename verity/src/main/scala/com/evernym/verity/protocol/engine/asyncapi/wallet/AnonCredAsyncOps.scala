@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine.asyncapi.wallet
 
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 
 trait AnonCredAsyncOps {
 

@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.relationship
 
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, VerKey}
 import scalapb.lenses.{Lens, Mutation, Updatable}
 
 trait DidDocLike { this: Updatable[DidDoc] =>

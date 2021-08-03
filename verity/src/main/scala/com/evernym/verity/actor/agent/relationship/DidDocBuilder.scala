@@ -4,7 +4,7 @@ import com.evernym.verity.actor.wallet.{GetVerKeyOpt, GetVerKeyOptResp}
 import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.agent.AuthKey
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail}
 import com.evernym.verity.util.Util.buildAgencyEndpoint
 import com.evernym.verity.vault.AgentWalletAPI

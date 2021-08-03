@@ -1,7 +1,6 @@
 package com.evernym.integrationtests.e2e.sdk.vcx
 
 import java.util.{Base64, UUID}
-
 import com.evernym.integrationtests.e2e.msg.VcxGetMsg.{vcxPayloadObject, _}
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces.UndefinedCommittedAnswer_1_0
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxCommittedAnswer.HolderCommittedAnswer
@@ -9,7 +8,8 @@ import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider.Interaction
 import com.evernym.sdk.vcx.connection.ConnectionApi
 import com.evernym.verity.actor.agent.TypeFormat
 import com.evernym.verity.agentmsg.buildAgentMsg
-import com.evernym.verity.protocol.engine.{DID, MsgFamily}
+import com.evernym.verity.did.DID
+import com.evernym.verity.protocol.engine.MsgFamily
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.Msg.Answer
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.{CommittedAnswerDefinition, CommittedAnswerMsgFamily, CommittedAnswerProtocol, Sig}
 import com.evernym.verity.sdk.protocols.questionanswer.v1_0.CommittedAnswerV1_0

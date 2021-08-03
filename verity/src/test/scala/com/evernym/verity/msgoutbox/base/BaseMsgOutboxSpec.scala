@@ -11,7 +11,7 @@ import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies.{AddMsgReply, MsgAdded}
-import com.evernym.verity.msgoutbox.{Authentication, ComMethod, ComMethodId, DestId, OutboxId, RecipPackaging, VerKey, WalletId}
+import com.evernym.verity.msgoutbox.{Authentication, ComMethod, ComMethodId, DestId, OutboxId, RecipPackaging, WalletId}
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter.Commands.{SendBinary, SendJson}
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter.Replies.SendResponse
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.SendOutboxParam
@@ -28,6 +28,7 @@ import com.evernym.verity.actor.typed.BehaviourSpecBase
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackMsg, PackedMsg}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
+import com.evernym.verity.did.VerKey
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.GetTokenSuccess
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.OAUTH2_VERSION_1

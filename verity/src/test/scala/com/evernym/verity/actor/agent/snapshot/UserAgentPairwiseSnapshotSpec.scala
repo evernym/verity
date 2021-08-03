@@ -11,7 +11,7 @@ import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.constants.ActorNameConstants.USER_AGENT_PAIRWISE_REGION_ACTOR_NAME
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DID
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.typesafe.config.{Config, ConfigFactory}
@@ -91,11 +91,11 @@ class UserAgentPairwiseSnapshotSpec
     state.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair)
     state.agentWalletId shouldBe Option(userAgentEntityId)
     state.thisAgentKeyId.isDefined shouldBe true
-    state.thisAgentKeyId.contains(myDIDDetail.DID) shouldBe false
+    state.thisAgentKeyId.contains(myDIDDetail.did) shouldBe false
 
     state.relationshipReq.name shouldBe "pairwise"
     state.relationshipReq.myDidDoc.isDefined shouldBe true
-    state.relationshipReq.myDidDoc_!.did shouldBe myDIDDetail.DID
+    state.relationshipReq.myDidDoc_!.did shouldBe myDIDDetail.did
 
     //this is found only for pairwise actors and only for those protocols
     // which starts (the first message) from self-relationship actor and then

@@ -6,8 +6,9 @@ import akka.testkit.TestKitBase
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.{ForIdentifier, ShardUtil}
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.{DID, PinstIdPair, ThreadId}
+import com.evernym.verity.protocol.engine.{PinstIdPair, ThreadId}
 import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.BeforeAndAfterAll

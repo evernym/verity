@@ -5,6 +5,7 @@ import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor.JsonStr
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.agentmsg.AgentJsonMsg
+import com.evernym.verity.did.DID
 import com.evernym.verity.protocol.engine._
 
 import scala.reflect.ClassTag

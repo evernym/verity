@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.walletBackup
 
+import com.evernym.verity.did.VerKey
 import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Constants.MFV_0_1_0

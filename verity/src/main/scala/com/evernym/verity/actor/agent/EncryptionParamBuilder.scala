@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent
 
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DID, VerKey}
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 
 case class EncryptionParamBuilder(encryptParam: EncryptParam = EncryptParam(Set.empty, None)) {

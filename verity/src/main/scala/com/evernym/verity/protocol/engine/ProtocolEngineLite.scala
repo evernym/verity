@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.DID
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.metrics.backend.NoOpMetricsBackend

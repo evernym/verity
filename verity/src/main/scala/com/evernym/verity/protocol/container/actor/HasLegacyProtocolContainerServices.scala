@@ -2,18 +2,26 @@ package com.evernym.verity.protocol.container.actor
 
 import akka.pattern.ask
 import akka.cluster.sharding.ClusterSharding
-import com.evernym.verity.Status
-import com.evernym.verity.Exceptions.HandledErrorException
-import com.evernym.verity.actor.{ActorMessage, ForIdentifier, TokenToActorItemMapperProvider}
+import akka.util.Timeout
+import com.evernym.verity.util2.HasExecutionContextProvider
+import com.evernym.verity.util2.Exceptions.HandledErrorException
+import com.evernym.verity.actor.{ActorMessage, AddDetail, ForIdentifier, ForToken}
 import com.evernym.verity.actor.agent.{DidPair, SetupAgentEndpoint, SetupCreateKeyEndpoint}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.config.ConfigConstants.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
+import com.evernym.verity.constants.ActorNameConstants.TOKEN_TO_ACTOR_ITEM_MAPPER_REGION_ACTOR_NAME
+import com.evernym.verity.constants.Constants.DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
 import com.evernym.verity.protocol.engine.{MsgId, PinstId, ProtoRef, ProtocolContainer}
 import com.evernym.verity.protocol.legacy.services.{AgentEndpointServiceProvider, CreateAgentEndpointDetail, CreateKeyEndpointDetail, CreateKeyEndpointServiceProvider, LegacyProtocolServicesImpl, TokenToActorMappingProvider}
+import com.evernym.verity.util.TokenProvider
+import com.evernym.verity.util.Util.buildDuration
+import com.evernym.verity.util2.Status
 import com.github.ghik.silencer.silent
 
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 
 /**
  * this trait contains support for legacy protocols (connecting 0.5/0.6 and agent provisioning 0.5/0.6)
@@ -26,7 +34,8 @@ trait HasLegacyProtocolContainerServices[M,E,I]
 extends TokenToActorMappingProvider
   with MsgQueueServiceProvider
   with CreateKeyEndpointServiceProvider
-  with AgentEndpointServiceProvider {
+  with AgentEndpointServiceProvider
+  with HasExecutionContextProvider {
     this: ActorProtocolContainer[_,_,_,M,E,_,I] with ProtocolContainer[_,_,M,E,_,I] =>
 
   @silent
@@ -81,7 +90,15 @@ extends TokenToActorMappingProvider
   }
 
   override def createToken(uid: String): Future[Either[HandledErrorException, String]] = {
-    TokenToActorItemMapperProvider.createToken(entityType, entityId, uid)(appConfig, agentActorContext.system)
+    val duration: FiniteDuration =
+      buildDuration(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
+    implicit lazy val responseTimeout: Timeout = Timeout(duration)
+    val tokenToActorItemMapperRegion = ClusterSharding(agentActorContext.system).shardRegion(TOKEN_TO_ACTOR_ITEM_MAPPER_REGION_ACTOR_NAME)
+    val token = TokenProvider.getNewToken
+    val fut = tokenToActorItemMapperRegion ? ForToken(token, AddDetail(entityType, entityId, uid))
+    fut.map { _ =>
+      Right(token)
+    }
   }
 }
 

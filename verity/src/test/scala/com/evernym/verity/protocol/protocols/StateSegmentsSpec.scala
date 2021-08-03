@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
@@ -11,8 +12,10 @@ import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.TestObjects._
 import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
 import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.util.TestExecutionContextProvider
 import org.scalatest.concurrent.Eventually
 
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
 
@@ -47,6 +50,11 @@ class StateSegmentsSpec extends TestsProtocolsImpl(PhoneBookProtoDef, Option(Buc
 
     }
   }
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }
 
 object TestObjects {

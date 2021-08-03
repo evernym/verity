@@ -1,7 +1,7 @@
 package com.evernym.verity.libindy.ledger
 
 import akka.actor.ActorSystem
-import com.evernym.verity.Exceptions.MissingReqFieldException
+import com.evernym.verity.util2.Exceptions.MissingReqFieldException
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{TransactionAuthorAgreement, TxnResp}
@@ -11,12 +11,17 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.hyperledger.indy.sdk.pool.Pool
 
+import scala.concurrent.ExecutionContext
+
 class LedgerTxnExecutorV2(val actorSystem: ActorSystem,
                           val appConfig: AppConfig,
                           val walletAPI: Option[WalletAPI],
                           val pool: Option[Pool],
-                          val currentTAA: Option[TransactionAuthorAgreement])
+                          val currentTAA: Option[TransactionAuthorAgreement],
+                          executionContext: ExecutionContext)
   extends LedgerTxnExecutorBase{
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp = {
     // When something is not found on the ledger, data, txnTime, and seqNo will be null. When any of these three

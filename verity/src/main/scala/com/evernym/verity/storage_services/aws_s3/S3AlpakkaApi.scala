@@ -7,20 +7,20 @@ import akka.stream.alpakka.s3.scaladsl.S3
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.S3_FAILURE
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.S3_FAILURE
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 //NOTE: if at all this file gets moved to different package, then it will require configuration change
 // so until it is important, should avoid moving this to different package.
 
-class S3AlpakkaApi(config: AppConfig)(implicit val as: ActorSystem) extends StorageAPI(config) {
+class S3AlpakkaApi(config: AppConfig, executionContext: ExecutionContext)(implicit val as: ActorSystem) extends StorageAPI(config, executionContext) {
+  private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   def s3Settings: S3Settings = S3Settings(config.config.getConfig("alpakka.s3"))
   lazy val s3Attrs: Attributes = S3Attributes.settings(s3Settings)
@@ -41,7 +41,7 @@ class S3AlpakkaApi(config: AppConfig)(implicit val as: ActorSystem) extends Stor
     file.runWith(s3Sink).map(x => StorageInfo(x.location.toString(), "S3"))
   }
 
-  def get(bucketName: String, id: String): Future[Array[Byte]] = {
+  def get(bucketName: String, id: String): Future[Option[Array[Byte]]] = {
     val s3File: Source[Option[(Source[ByteString, NotUsed], ObjectMetadata)], NotUsed] =
       S3 download(bucketName, id) withAttributes s3Attrs
 
@@ -49,10 +49,10 @@ class S3AlpakkaApi(config: AppConfig)(implicit val as: ActorSystem) extends Stor
       case Some((data: Source[ByteString, _], _)) =>
         data.map(_.toByteBuffer.array())
           .runWith(Sink.seq)
-          .map(_.flatten.toArray)
-      case None => throw new S3Failure(S3_FAILURE.statusCode, Some(s"No object for id: $id in bucket: $bucketName"))
+          .map(d => Option(d.flatten.toArray))
+      case None =>
+        Future.successful(None)
     }
-
   }
 
   def getObjectMetadata(bucketName: String, id: String): Future[Map[String, String]] = {

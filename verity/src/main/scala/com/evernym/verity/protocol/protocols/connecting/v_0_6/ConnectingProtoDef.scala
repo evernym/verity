@@ -15,8 +15,6 @@ import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfu
 import com.evernym.verity.util.Util._
 
 
-trait ConnectingRole
-
 object ConnectingMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.EVERNYM_QUALIFIER
   override val name: MsgFamilyName = MSG_FAMILY_CONNECTING
@@ -128,7 +126,7 @@ object ConnectingProtoDef
   }
 
   override def create(context: ProtocolContextApi[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String]):
-      Protocol[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String] =
+  Protocol[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String] =
     new ConnectingProtocol(context)
 
   override def initialState: ConnectingState = ConnectingState()

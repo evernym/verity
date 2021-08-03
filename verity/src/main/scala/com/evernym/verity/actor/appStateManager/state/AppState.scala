@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.appStateManager.state
 
-import com.evernym.verity.Exceptions.TransitionHandlerNotProvidedException
+import com.evernym.verity.util2.Exceptions.TransitionHandlerNotProvidedException
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.appStateManager.{AppStateManagerBase, EventParam, ManualUpdate, Recovered}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._

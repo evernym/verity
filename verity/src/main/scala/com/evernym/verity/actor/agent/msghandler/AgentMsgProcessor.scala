@@ -1,12 +1,9 @@
 package com.evernym.verity.actor.agent.msghandler
 
-import java.util.UUID
-
 import akka.actor.ActorRef
-import com.evernym.verity.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.{ActorErrorResp, Status}
+import com.evernym.verity.util2.{ActorErrorResp, Status}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.actor.agent.msghandler.AgentMsgProcessor.{PACKED_MSG_LIMIT, PAYLOAD_ERROR, REST_LIMIT}
@@ -23,17 +20,18 @@ import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.actor.resourceusagethrottling.{RESOURCE_TYPE_MESSAGE, UserId}
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.agentmsg.buildAgentMsg
-import com.evernym.verity.agentmsg.msgcodec.{AgentJsonMsg, MsgCodecException}
+import com.evernym.verity.agentmsg.AgentMsgBuilder.createAgentMsg
+import com.evernym.verity.agentmsg.AgentJsonMsg
+import com.evernym.verity.agentmsg.msgcodec.MsgCodecException
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, ParseParam, UnpackParam}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig.MSG_LIMITS
+import com.evernym.verity.config.ConfigConstants.MSG_LIMITS
 import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
-import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
+import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
@@ -48,12 +46,13 @@ import com.evernym.verity.protocol.protocols.connecting.common.GetInviteDetail
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.PushToken
 import com.evernym.verity.push_notification.PushNotifData
 import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
+import com.evernym.verity.util2.{ActorErrorResp, Status}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Left, Success}
 
@@ -72,7 +71,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
                         val walletAPI: WalletAPI,
                         val agentMsgRouter: AgentMsgRouter,
                         val registeredProtocols: ProtocolRegistry[ActorDriverGenParam],
-                        param: StateParam)
+                        param: StateParam,
+                        executionContext: ExecutionContext)
   extends CoreActorExtended
     with DoNotRecordLifeCycleMetrics
     with ProtocolEngineExceptionHandler
@@ -84,6 +84,10 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     with HasMsgProgressTracker
     with HasAppConfig
     with HasLogger {
+
+  implicit val ec: ExecutionContext = executionContext
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   val logger: Logger = LoggingUtil.getLoggerByName("AgentMsgProcessor")
 
@@ -173,8 +177,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     logger.debug(s"preparing outgoing agent message: $om")
     logger.debug(s"outgoing msg: native msg: " + om.msg)
 
-    val agentMsg = createAgentMsg(om.msg, om.protoDef,
-      om.context.threadContextDetail, isSignalMsg=isSignalMsg)
+    val agentMsg = createAgentMsg(om.msg, om.protoDef, om.context.threadContextDetail)
     logger.debug("outgoing msg: prepared agent msg: " + om.context.threadContextDetail)
 
     if (!isSignalMsg) {
@@ -387,39 +390,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         sendToAgentActor(SendPushNotif(Set(sd.deliveryMethod), pnd, Some(pushToken.msg.sponsorId)))
       case x => throw new RuntimeException("unsupported Service Decorator: " + x)
     }
-  }
-
-  def createAgentMsg(msg: Any,
-                     protoDef: ProtoDef,
-                     threadContextDetail: ThreadContextDetail,
-                     msgTypeFormat: Option[TypeFormat]=None,
-                     isSignalMsg: Boolean=false): AgentJsonMsg = {
-
-    def getNewMsgId: MsgId = UUID.randomUUID().toString
-
-    val (msgId, mtf, msgOrders) = {
-      val mId = if (threadContextDetail.msgOrders.exists(_.senderOrder == 0)
-        && threadContextDetail.msgOrders.exists(_.receivedOrders.isEmpty) ){
-        //this is temporary workaround to solve an issue between how
-        // thread id is determined by libvcx (and may be by other third parties) vs verity/agency
-        // here, we are basically checking if this msg is 'first' protocol msg and in that case
-        // the @id of the msg is assigned the thread id itself
-        threadContextDetail.threadId
-      } else {
-        getNewMsgId
-      }
-      (mId, msgTypeFormat.getOrElse(threadContextDetail.msgTypeFormat), threadContextDetail.msgOrders)
-    }
-
-    //need to find better way to handle this
-    //during connections protocol, when first message 'request' is received from other side,
-    //that participant is unknown and hence it is stored as 'unknown_sender_participant_id' in the thread context
-    //and when it responds with 'response' message, it just adds that in thread object
-    //but for recipient it may look unfamiliar and for now filtering it.
-    val updatedMsgOrders = msgOrders.map { pmd =>
-      pmd.copy(receivedOrders = pmd.receivedOrders.filter(_._1 != UNKNOWN_SENDER_PARTICIPANT_ID))
-    }
-    buildAgentMsg(msg, msgId, threadContextDetail.threadId, protoDef, mtf, updatedMsgOrders)
   }
 
   def handleProcessPackedMsg(implicit ppm: ProcessPackedMsg): Unit = {
@@ -914,7 +884,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   override def trackingIdParam: TrackingIdParam = param.trackingIdParam
 
   lazy val thisAgentKeyParam: KeyParam = KeyParam(Left(param.thisAgentAuthKey.verKey))
-  lazy val msgExtractor: MsgExtractor = new MsgExtractor(thisAgentKeyParam, walletAPI)(WalletAPIParam(param.agentWalletId))
+  lazy val msgExtractor: MsgExtractor = new MsgExtractor(thisAgentKeyParam, walletAPI, futureExecutionContext)(WalletAPIParam(param.agentWalletId), appConfig)
 
   //NOTE: 2 minutes seems to be sufficient (or may be more) for any
   // one message processing (incoming + outgoing) cycle

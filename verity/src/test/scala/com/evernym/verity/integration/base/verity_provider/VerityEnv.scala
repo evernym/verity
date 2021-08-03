@@ -4,20 +4,26 @@ import akka.cluster.MemberStatus
 import akka.cluster.MemberStatus.{Down, Removed, Up}
 import akka.testkit.TestKit
 import com.evernym.verity.integration.base.PortProvider
+import com.evernym.verity.util2.HasExecutionContextProvider
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
-import com.evernym.verity.integration.with_basic_sdk.data_retention.MockBlobStore
+import com.evernym.verity.testkit.mock.blob_store.MockBlobStore
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
 case class VerityEnv(seed: String,
-                     nodes: Seq[VerityNode])
+                     nodes: Seq[VerityNode],
+                     executionContext: ExecutionContext)
   extends Eventually
     with Matchers {
+  implicit lazy val ec: ExecutionContext = executionContext
 
   var isVerityBootstrapped: Boolean = false
 
@@ -84,23 +90,23 @@ case class VerityEnv(seed: String,
     nodes.foreach(_.restart())
   }
 
+  def checkBlobObjectCount(keyStartsWith: String, expectedCount: Int, bucketName: String = "local-blob-store"): Unit = {
+    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+      mockBlobStore.getBlobObjectCount(keyStartsWith, bucketName) shouldBe expectedCount
+    }
+  }
+
+  lazy val mockBlobStore: MockBlobStore =
+    nodes.head.serviceParam.flatMap(_.storageAPI).map(_.asInstanceOf[MockBlobStore]).getOrElse(
+      throw new RuntimeException("mock blob store not set")
+    )
+
   def init(): Unit = {
     if (! isVerityBootstrapped) {
       nodes.headOption.foreach { node =>
         VerityAdmin.bootstrapApplication(node.portProfile.http, node.appSeed, waitAtMost)
         isVerityBootstrapped = true
       }
-    }
-  }
-
-  lazy val mockBlobStore =
-    nodes.head.serviceParam.flatMap(_.storageAPI).map(_.asInstanceOf[MockBlobStore]).getOrElse(
-    throw new RuntimeException("mock blob store api not set")
-  )
-
-  def checkBlobObjectCount(keyStartsWith: String, expectedCount: Int, bucketName: String = "local-blob-store"): Unit = {
-    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
-      mockBlobStore.getBlobObjectCount(keyStartsWith, bucketName) shouldBe expectedCount
     }
   }
 
@@ -117,9 +123,9 @@ case class VerityEnvUrlProvider(private val _nodes: Seq[VerityNode]) {
 
 object PortProfile {
   def random(): PortProfile = {
-    val arteryPort    = PortProvider.getUnusedPort(2000)
-    val akkaMgmtPort  = PortProvider.getUnusedPort(8000)
-    val httpPort      = PortProvider.getUnusedPort(9000)
+    val arteryPort    = PortProvider.generateUnusedPort(2000)
+    val akkaMgmtPort  = PortProvider.generateUnusedPort(8000)
+    val httpPort      = PortProvider.generateUnusedPort(9000)
     PortProfile(httpPort, arteryPort, akkaMgmtPort)
   }
 }

@@ -8,8 +8,10 @@ import com.evernym.verity.integration.base.verity_provider.node.local.{ServicePa
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.{BeforeAndAfterAll, Suite}
-
 import java.nio.file.{Files, Path}
+
+import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider}
+
 import scala.language.postfixOps
 import scala.util.Random
 
@@ -18,12 +20,7 @@ import scala.util.Random
 // which may/will cause issues sooner or later
 // if try to use multi node cluster in single JVM (like what this VerityProviderBaseSpec does)
 //    1. AppConfigWrapper
-//    2. ResourceBlockingStatusMngrCache
-//    3. ResourceWarningStatusMngrCache
-//    4. MsgProgressTrackerCache
-//    5. MetricsReader and KamonPrometheusMetricsReporter
-//    6. ItemConfigManager
-//    7. AppStateUpdateAPI
+//    2. MetricsReader and KamonPrometheusMetricsReporter
 
 /**
  * base class for specs to use LocalVerity
@@ -31,7 +28,8 @@ import scala.util.Random
 trait VerityProviderBaseSpec
   extends BasicSpec
     with CancelGloballyAfterFailure
-    with BeforeAndAfterAll {
+    with BeforeAndAfterAll
+    with HasExecutionContextProvider {
     this: Suite =>
 
   object VerityEnvBuilder {
@@ -51,7 +49,7 @@ trait VerityProviderBaseSpec
     def withServiceParam(param: ServiceParam): VerityEnvBuilder = copy(serviceParam = Option(param))
     def withConfig(config: Config): VerityEnvBuilder = copy(overriddenConfig = Option(config))
 
-    def build(): VerityEnv = {
+    def build(appType: AppType): VerityEnv = {
       val tmpDir = randomTmpDirPath()
       val totalNodeCount = nodeCount
       val multiNodeServiceParam = if (totalNodeCount > 1) {
@@ -62,7 +60,7 @@ trait VerityProviderBaseSpec
       } else serviceParam
 
       //adding fallback common config (unless overridden) to be needed for multi node testing
-      val multiNodeClusterConfig = buildMultiNodeClusterConfig(overriddenConfig)
+      val multiNodeClusterConfig = buildVerityAppConfig(appType, overriddenConfig)
 
       val appSeed = (0 to 31).map(_ => randomChar()).mkString("")
       val portProfiles = (1 to totalNodeCount)
@@ -81,12 +79,13 @@ trait VerityProviderBaseSpec
           portProfile,
           otherNodesArteryPorts,
           multiNodeServiceParam,
-          multiNodeClusterConfig
+          multiNodeClusterConfig,
+          executionContextProvider
         )
       }
 
       if (verityNodes.isEmpty) throw new RuntimeException("at least one node needed for a verity environment")
-      val verityEnv = VerityEnv(appSeed, verityNodes)
+      val verityEnv = VerityEnv(appSeed, verityNodes, futureExecutionContext)
       allVerityEnvs = allVerityEnvs :+ verityEnv
       verityEnv
     }
@@ -96,7 +95,7 @@ trait VerityProviderBaseSpec
   // implementing class can override it or send specific one for specific verity instance as well
   // but for external storage type of services (like ledger) we should make sure
   // it is the same instance across the all verity environments
-  lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new MockLedgerTxnExecutor())
+  lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new MockLedgerTxnExecutor(futureExecutionContext))
 
   private def randomTmpDirPath(): Path = {
     val tmpDir = TempDir.findSuiteTempDir(this.suiteName)
@@ -121,14 +120,45 @@ trait VerityProviderBaseSpec
     (Random.nextInt(high - low) + low).toChar
   }
 
-  private def buildMultiNodeClusterConfig(overriddenConfig: Option[Config] = None): Option[Config] = {
+  private def buildVerityAppConfig(appType: AppType,
+                                   overriddenConfig: Option[Config] = None): Option[Config] = {
+
+    val appTypeConfig = MULTI_NODE_CLUSTER_CONFIG.withFallback {
+      appType match {
+        case CAS => CAS_DEFAULT_CONFIG
+        case VAS => VAS_DEFAULT_CONFIG
+      }
+    }
+
     Option(
       overriddenConfig match {
-        case Some(c)  => c.withFallback(MULTI_NODE_CLUSTER_CONFIG)
-        case None     => MULTI_NODE_CLUSTER_CONFIG
+        case Some(c)  => c.withFallback(appTypeConfig)
+        case None     => appTypeConfig
       }
     )
   }
+
+  private val VAS_DEFAULT_CONFIG = ConfigFactory.parseString(
+    """
+      |akka {
+      |  sharding-region-name {
+      |    user-agent = "VerityAgent"
+      |    user-agent-pairwise = "VerityAgentPairwise"
+      |  }
+      |}
+      |""".stripMargin
+  )
+
+  private val CAS_DEFAULT_CONFIG = ConfigFactory.parseString(
+    """
+      |akka {
+      |  sharding-region-name {
+      |    user-agent = "ConsumerAgent"
+      |    user-agent-pairwise = "ConsumerAgentPairwise"
+      |  }
+      |}
+      |""".stripMargin
+  )
 
   private val MULTI_NODE_CLUSTER_CONFIG = ConfigFactory.parseString(
     s"""
@@ -139,4 +169,9 @@ trait VerityProviderBaseSpec
       |}
       |""".stripMargin
   )
+  def executionContextProvider: ExecutionContextProvider
 }
+
+trait AppType
+case object CAS extends AppType
+case object VAS extends AppType

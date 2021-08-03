@@ -2,17 +2,16 @@ package com.evernym.verity.http.common
 
 import java.net.{Inet4Address, InetAddress, NetworkInterface}
 import java.util.{Enumeration => JavaEnumeration}
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.MediaType.NotCompressible
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Directive1
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status.FORBIDDEN
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.FORBIDDEN
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.CommonConfig.INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES
+import com.evernym.verity.config.ConfigConstants.INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.metrics.CustomMetrics.{AS_ENDPOINT_HTTP_AGENT_MSG_COUNT, AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT, AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT}
 import com.evernym.verity.metrics.MetricsWriter
@@ -33,8 +32,10 @@ trait HttpRouteBase
   def logger: Logger
   def appConfig: AppConfig
 
+  def metricsWriter: MetricsWriter
+
   protected lazy val internalApiAllowedFromIpAddresses: List[SubnetUtilsExt] = {
-    var allowedIPs: List[String] = appConfig.getConfigListOfStringReq(INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES)
+    var allowedIPs: List[String] = appConfig.getStringListReq(INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES)
     if (allowedIPs.isEmpty) {
       val interfaces: JavaEnumeration[NetworkInterface] = NetworkInterface.getNetworkInterfaces
       while(interfaces.hasMoreElements)
@@ -110,10 +111,10 @@ trait HttpRouteBase
   def clientIpAddress(implicit remoteAddress: RemoteAddress): String =
     remoteAddress.getAddress().get.getHostAddress
 
-  def incrementAgentMsgCount: Unit = MetricsWriter.gaugeApi.increment(AS_ENDPOINT_HTTP_AGENT_MSG_COUNT)
-  def incrementAgentMsgSucceedCount: Unit = MetricsWriter.gaugeApi.increment(AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT)
+  def incrementAgentMsgCount: Unit = metricsWriter.gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_COUNT)
+  def incrementAgentMsgSucceedCount: Unit = metricsWriter.gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT)
   def incrementAgentMsgFailedCount(tags: Map[String, String] = Map.empty): Unit =
-    MetricsWriter.gaugeApi.incrementWithTags(AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT, tags)
+    metricsWriter.gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT, tags = tags)
 }
 
 
@@ -121,10 +122,16 @@ object HttpCustomTypes {
 
   private val HTTP_MEDIA_TYPE_APPLICATION = "application"
   private val HTTP_MEDIA_SUB_TYPE_SSI_AGENT_WIRE = "ssi-agent-wire"
+  private val HTTP_MEDIA_SUB_TYPE_DIDCOMM_ENVELOPE_ENC = "didcomm-envelope-enc"
 
   lazy val MEDIA_TYPE_SSI_AGENT_WIRE = MediaType.customBinary(
     HTTP_MEDIA_TYPE_APPLICATION,
     HTTP_MEDIA_SUB_TYPE_SSI_AGENT_WIRE,
+    NotCompressible)
+
+  lazy val MEDIA_TYPE_DIDCOMM_ENVELOPE_ENC = MediaType.customBinary(
+    HTTP_MEDIA_TYPE_APPLICATION,
+    HTTP_MEDIA_SUB_TYPE_DIDCOMM_ENVELOPE_ENC,
     NotCompressible)
 }
 

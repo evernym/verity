@@ -2,9 +2,8 @@ package com.evernym.verity.actor.agent
 
 import java.time.ZonedDateTime
 import akka.pattern.ask
-import com.evernym.verity.Exceptions.InternalServerErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.InternalServerErrorException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.{ActorMessage, AuthKeyAdded, FirstProtoMsgSent, ProtoMsgReceivedOrderIncremented, ProtoMsgSenderOrderIncremented, ProtocolIdDetailSet, ThreadContextStored}
 import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
@@ -13,11 +12,10 @@ import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByClass
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasAgentWallet
-import com.evernym.verity.Exceptions
+import com.evernym.verity.util2.{Exceptions, HasWalletExecutionContextProvider}
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{HasMsgProgressTracker, TrackingIdParam}
@@ -26,16 +24,16 @@ import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
 import com.evernym.verity.cache.{AGENCY_IDENTITY_CACHE_FETCHER, AGENT_ACTOR_CONFIG_CACHE_FETCHER, KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER}
 import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
-import com.evernym.verity.config.CommonConfig.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VERITY_ENDORSER_DEFAULT_DID}
+import com.evernym.verity.config.ConfigConstants.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VERITY_ENDORSER_DEFAULT_DID}
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.metrics.{InternalSpan, MetricsUnit, MetricsWriter}
 import com.evernym.verity.protocol.container.actor.ProtocolIdDetail
+import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.google.protobuf.ByteString
 import com.typesafe.scalalogging.Logger
-import kamon.metric.MeasurementUnit
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * common interface for any type of agent actor (agencyAgent, agencyPairwiseAgent, userAgent, userPairwiseAgent)
@@ -46,8 +44,12 @@ trait AgentCommon
     with HasAgentWallet
     with HasSetRoute
     with HasMsgProgressTracker
-    with ResourceUsageCommon { this: AgentPersistentActor =>
+    with ResourceUsageCommon
+    with HasWalletExecutionContextProvider { this: AgentPersistentActor =>
 
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
+
+  def metricsWriter : MetricsWriter
 
   def agentCommonCmdReceiver[A]: Receive = {
     case _: AgentActorDetailSet    => //nothing to do
@@ -143,19 +145,19 @@ trait AgentCommon
   def trackingIdParam: TrackingIdParam = TrackingIdParam(domainId, state.myDid, state.theirDid)
 
   lazy val cacheFetchers: Map[FetcherParam, CacheValueFetcher] = Map (
-    AGENT_ACTOR_CONFIG_CACHE_FETCHER -> new AgentConfigCacheFetcher(agentActorContext.agentMsgRouter, agentActorContext.appConfig)
+    AGENT_ACTOR_CONFIG_CACHE_FETCHER -> new AgentConfigCacheFetcher(agentActorContext.agentMsgRouter, agentActorContext.appConfig, futureExecutionContext)
   )
   /**
    * per agent actor cache
    */
-  lazy val agentCache = new Cache("AC", cacheFetchers)
+  lazy val agentCache = new Cache("AC", cacheFetchers, metricsWriter, futureExecutionContext)
 
   /**
    * general/global (per actor system) cache
    */
   lazy val generalCache: Cache = agentActorContext.generalCache
 
-  lazy val defaultEndorserDid: String = appConfig.getConfigStringOption(VERITY_ENDORSER_DEFAULT_DID).getOrElse("")
+  lazy val defaultEndorserDid: String = appConfig.getStringOption(VERITY_ENDORSER_DEFAULT_DID).getOrElse("")
 
   def updateAgentWalletId(actorEntityId: String): Unit = {
     if (agentWalletId.nonEmpty && ! agentWalletId.contains(actorEntityId))
@@ -230,11 +232,11 @@ trait AgentCommon
     try {
       val stateSize = s.serializedSize
       if (stateSize >= 0) { // so only states that can calculate size are part the metric
-        MetricsWriter.histogramApi.recordWithTag(
+        metricsWriter.histogramUpdate(
           AS_ACTOR_AGENT_STATE_SIZE,
-          MeasurementUnit.information.bytes,
+          MetricsUnit.Information.Bytes,
           stateSize,
-          "actor_class" -> this.getClass.getSimpleName,
+          Map("actor_class" -> this.getClass.getSimpleName)
         )
       }
     } catch {
@@ -254,7 +256,7 @@ trait AgentCommon
   }
 
   def fixAgentState(): Unit = {
-    runWithInternalSpan("fixAgentState", s"${getClass.getSimpleName}") {
+    metricsWriter.runWithSpan("fixAgentState", s"${getClass.getSimpleName}", InternalSpan) {
       val sndr = sender()
       val preAddedAuthKeys = _addedAuthKeys
       val preAgencyDidPair = state.agencyDIDPair
@@ -328,12 +330,12 @@ trait AgentCommon
   def updatedDidDocs(explicitlyAddedAuthKeys: Set[AuthKey],
                      didDocs: Seq[DidDoc]): Future[Seq[DidDoc]] =
     Future.traverse(didDocs) { dd =>
-      DidDocBuilder(dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
+      DidDocBuilder(futureWalletExecutionContext, dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
     }
 
   lazy val isVAS: Boolean =
     appConfig
-      .getConfigStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
+      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
       .contains("VerityAgent")
 }
 

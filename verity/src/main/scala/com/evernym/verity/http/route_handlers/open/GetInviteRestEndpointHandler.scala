@@ -6,8 +6,8 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, get, handleExceptions, logRequestResult, parameters, pathPrefix, _}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import com.evernym.verity.Exceptions.{BadRequestErrorException, NotImplementedErrorException}
-import com.evernym.verity.Status.{AGENT_NOT_YET_CREATED, DATA_NOT_FOUND, VALIDATION_FAILED}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, NotImplementedErrorException}
+import com.evernym.verity.util2.Status.{AGENT_NOT_YET_CREATED, DATA_NOT_FOUND, VALIDATION_FAILED}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_ENDPOINT

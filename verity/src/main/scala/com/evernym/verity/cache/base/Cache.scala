@@ -2,22 +2,24 @@ package com.evernym.verity.cache.base
 
 import java.util.UUID
 
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetcher, SyncCacheValueFetcher}
 import com.evernym.verity.cache.providers.{CacheProvider, CaffeineCacheParam, CaffeineCacheProvider}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.metrics.CustomMetrics._
+import com.evernym.verity.metrics.MetricsWriter
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 //TODO: as of now NOT using any distributed cache
 // so in case of multi node cluster,
 // there may/will be edge cases wherein same purpose cache exists on different nodes
 // and they may give different values for same key for certain time (based on cache configured expiration time)
 
-trait CacheBase {
+trait CacheBase extends HasExecutionContextProvider {
+
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   type Key = String
   type FetcherId = Int
@@ -27,6 +29,8 @@ trait CacheBase {
   def name: String
 
   def fetchers: Map[FetcherParam, CacheValueFetcher]
+
+  def metricsWriter: MetricsWriter
 
   //initializes/creates cache provider object for each registered fetchers
   private val cacheByFetcher: Map[FetcherParam, CacheProvider] =
@@ -43,9 +47,9 @@ trait CacheBase {
     val cacheParam =
       CaffeineCacheParam(
         fetcher.initialCapacity,
-        fetcher.expiryTimeInSeconds,
         fetcher.maxSize,
-        fetcher.maxWeightParam
+        fetcher.maxWeightParam,
+        fetcher.expiryTimeInSeconds
       )
     new CaffeineCacheProvider(cacheParam)
   }
@@ -94,10 +98,10 @@ trait CacheBase {
   private def collectMetrics(): Unit = {
     cacheByFetcher.foreach { case (fetcherParam, cacheProvider) =>
       val tags = Map("cache_name" -> name, "fetcher_id" -> fetcherParam.id.toString, "fetcher_name" -> fetcherParam.name)
-      MetricsWriter.gaugeApi.updateWithTags(AS_CACHE_TOTAL_SIZE, allCacheSize, tags)
-      MetricsWriter.gaugeApi.updateWithTags(AS_CACHE_HIT_COUNT, allCacheHitCount, tags)
-      MetricsWriter.gaugeApi.updateWithTags(AS_CACHE_MISS_COUNT, allCacheMissCount, tags)
-      MetricsWriter.gaugeApi.updateWithTags(AS_CACHE_SIZE, cacheProvider.size, tags)
+      metricsWriter.gaugeUpdate(AS_CACHE_TOTAL_SIZE, allCacheSize, tags)
+      metricsWriter.gaugeUpdate(AS_CACHE_HIT_COUNT, allCacheHitCount, tags)
+      metricsWriter.gaugeUpdate(AS_CACHE_MISS_COUNT, allCacheMissCount, tags)
+      metricsWriter.gaugeUpdate(AS_CACHE_SIZE, cacheProvider.size, tags)
     }
   }
 
@@ -208,8 +212,15 @@ trait CacheBase {
  */
 case class CacheQueryResponse(data: Map[String, Any]) extends CacheResponseUtil
 
-class Cache(override val name: String, override val fetchers: Map[FetcherParam, CacheValueFetcher]) extends CacheBase
-
+class Cache(override val name: String,
+            override val fetchers: Map[FetcherParam, CacheValueFetcher],
+            override val metricsWriter: MetricsWriter,
+            executionContext: ExecutionContext) extends CacheBase {
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+}
 /**
  *
  * @param key key used by code for search/lookup purposes

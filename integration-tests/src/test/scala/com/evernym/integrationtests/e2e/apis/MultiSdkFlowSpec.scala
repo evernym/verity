@@ -7,7 +7,7 @@ import com.evernym.integrationtests.e2e.flow.{AdminFlow, InteractiveSdkFlow, Set
 import com.evernym.integrationtests.e2e.scenario.Scenario.runScenario
 import com.evernym.integrationtests.e2e.scenario.{Scenario, ScenarioAppEnvironment}
 import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.ConfigUtilBaseSpec
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -18,9 +18,11 @@ import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.util.StrUtil
 import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually
-
 import java.io.IOException
 import java.util.UUID
+
+import com.evernym.verity.util2.ExecutionContextProvider
+
 import scala.util.Random
 
 class MultiSdkFlowSpec
@@ -38,6 +40,7 @@ class MultiSdkFlowSpec
   override val logger: Logger = getLoggerByClass(getClass)
 
   override def environmentName: String = StrUtil.classToKebab[MultiSdkFlowSpec]
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appEnv.config)
 
   def specifySdkType(env: IntegrationTestEnv): IntegrationTestEnv = env
   def appEnv: IntegrationTestEnv = specifySdkType(testEnv)
@@ -51,7 +54,7 @@ class MultiSdkFlowSpec
     suiteTempDir,
     projectDir)) { implicit scenario =>
 
-    val apps = ScenarioAppEnvironment(scenario, appEnv)
+    val apps = ScenarioAppEnvironment(scenario, appEnv, ecp)
 
     val sdkUnderTest = apps(verity1)
       .sdk
@@ -61,6 +64,8 @@ class MultiSdkFlowSpec
     s"Basic SDK Interaction Test for $sdkUnderTest" - {
       lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
         appEnv.config,
+        ecp.futureExecutionContext,
+        ecp.walletFutureExecutionContext,
         Option(appEnv.ledgerConfig.submitterDID),
         Option(appEnv.ledgerConfig.submitterSeed),
         genesisTxnPath = Some(appEnv.ledgerConfig.genesisFilePath)

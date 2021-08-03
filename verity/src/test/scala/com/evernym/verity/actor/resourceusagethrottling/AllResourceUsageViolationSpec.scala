@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.resourceusagethrottling
 
-import com.evernym.verity.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.CallerResourceBlocked
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.ForResourceBlockingStatusMngr
@@ -18,6 +19,9 @@ import scala.collection.JavaConverters._
 class AllResourceUsageViolationSpec extends BaseResourceUsageTrackerSpec {
 
   val ipAddress = "127.5.0.5"
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 
   override def beforeAll(): Unit = {
     super.beforeAll()

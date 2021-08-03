@@ -1,6 +1,6 @@
 package com.evernym.verity.testkit.util
 
-import com.evernym.verity.Status.StatusDetailException
+import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
@@ -17,16 +17,18 @@ import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.ledger.Ledger._
 import org.hyperledger.indy.sdk.pool.Pool
-
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
-import scala.concurrent.Await
+
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.util.{Failure, Success}
 
 
 class LedgerUtil (val appConfig: AppConfig,
                   val poolConfigName: Option[String],
+                  executionContext: ExecutionContext,
+                  walletExecutionContext: ExecutionContext,
                   val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y",
                   val submitterKeySeed: String = "000000000000000000000000Steward1",
                   val submitterRole: String = "STEWARD",
@@ -47,6 +49,7 @@ class LedgerUtil (val appConfig: AppConfig,
     val pc = new IndyLedgerPoolConnManager(
       ActorSystemVanilla("ledger-pool"),
       appConfig,
+      executionContext,
       poolConfigName,
       genesisTxnPath
     )
@@ -216,4 +219,9 @@ class LedgerUtil (val appConfig: AppConfig,
       case _ =>
     }
   }
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
 }

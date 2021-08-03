@@ -5,6 +5,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
+import com.evernym.verity.util2.HasWalletExecutionContextProvider
 import com.evernym.verity.constants.Constants.URL
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -17,8 +18,6 @@ import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
 import com.evernym.verity.testkit.mock.msgsendingsvc.MockMsgSendingSvcListener
-import com.evernym.verity.testkit.util.TestUtil
-import com.evernym.verity.util._
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent, MockEnvUtil}
 import org.scalatest.concurrent.Eventually
@@ -38,11 +37,12 @@ trait EdgeEndpointBaseSpec
     with MockPushNotifListener
     with MockMsgSendingSvcListener
     with AriesInvitationDecodingSpec
-    with AppStatusHealthCheckSpec {
+    with AppStatusHealthCheckSpec
+    with HasWalletExecutionContextProvider {
 
   lazy val (mockEntEdgeEnv, mockUserEdgeEnv) = {
-    val edge1 = MockEnvUtil.buildNewEnv("edge1", appConfig, "localhost:9001/agency/msg")
-    val edge2 = MockEnvUtil.buildNewEnv("edge2", appConfig, "localhost:9002/agency/msg")
+    val edge1 = MockEnvUtil.buildNewEnv("edge1", appConfig, "localhost:9001/agency/msg", futureExecutionContext, futureWalletExecutionContext)
+    val edge2 = MockEnvUtil.buildNewEnv("edge2", appConfig, "localhost:9002/agency/msg", futureExecutionContext, futureWalletExecutionContext)
     (edge1.withOthersMockEnvSet(edge2), edge2.withOthersMockEnvSet(edge1))
   }
 
@@ -61,7 +61,7 @@ trait EdgeEndpointBaseSpec
   val AKKA_HTTP_ROUTE_TEST_TIMEOUT_CONFIG_NAME = "verity.test.http-route-timeout-in-seconds"
 
   implicit def default(implicit system: ActorSystem): RouteTestTimeout =
-    RouteTestTimeout(buildDurationInSeconds(appConfig.getConfigIntReq(AKKA_HTTP_ROUTE_TEST_TIMEOUT_CONFIG_NAME)))
+    RouteTestTimeout(buildDurationInSeconds(appConfig.getIntReq(AKKA_HTTP_ROUTE_TEST_TIMEOUT_CONFIG_NAME)))
 
   override def checkIfInternalApiCalledFromAllowedIPAddresses(callerIpAddress: String)(implicit req: HttpRequest): Unit = {
     logger.debug("api request allowed from test case: " + req.uri, ("req_uri", req.uri))
@@ -84,10 +84,9 @@ trait EdgeEndpointBaseSpec
 
   def emptyPackedMsgWrapper: PackedMsg = PackedMsg(Array[Byte]())
   def responseTo[T: ClassTag]: T = DefaultMsgCodec.fromJson(responseAs[String])
-  lazy val util: UtilBase = TestUtil
 
   override protected def createActorSystem(): ActorSystem = {
-    val port = appConfig.getConfigIntReq("akka.remote.artery.canonical.port")
+    val port = appConfig.getIntReq("akka.remote.artery.canonical.port")
     val systemName = AkkaTestBasic.systemNameForPort(port)
     ActorSystem(systemName, appConfig.config)
   }

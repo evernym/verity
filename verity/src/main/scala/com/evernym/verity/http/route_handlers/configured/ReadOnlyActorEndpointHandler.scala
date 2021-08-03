@@ -55,27 +55,27 @@ trait ReadOnlyActorEndpointHandler
                   pathPrefix("data") {
                     path("summary") {
                       (get & pathEnd) {
-                        parameters('reload ? "N", 'recoverFromSnapshot ? "Y", 'persEncKeyConfPath.?) {
-                          (reload, recoverFromSnapshot, persEncKeyConfPath) =>
-                          val actorParam = ActorParam(actorTypeName, actorEntityId, recoverFromSnapshot == YES, persEncKeyConfPath)
+                        parameters('reload ? "N", 'recoverFromSnapshot ? "Y", 'persEncKey.?) {
+                          (reload, recoverFromSnapshot, persEncKey) =>
+                          val actorParam = ActorParam(actorTypeName, actorEntityId, recoverFromSnapshot == YES, persEncKey)
                           handleRequest(actorParam, SendSummary, inHtml = NO, reload)
                         }
                       }
                     } ~
                       path("aggregated") {
                         (get & pathEnd) {
-                          parameters('asHtml ? "N", 'reload ? "N", 'recoverFromSnapshot ? "Y", 'persEncKeyConfPath.?) {
-                            (inHtml, reload, recoverFromSnapshot, persEncKeyConfPath) =>
-                            val actorParam = ActorParam(actorTypeName, actorEntityId, recoverFromSnapshot == YES, persEncKeyConfPath)
+                          parameters('asHtml ? "N", 'reload ? "N", 'recoverFromSnapshot ? "Y", 'persEncKey.?) {
+                            (inHtml, reload, recoverFromSnapshot, persEncKey) =>
+                            val actorParam = ActorParam(actorTypeName, actorEntityId, recoverFromSnapshot == YES, persEncKey)
                             handleRequest(actorParam, SendAggregated, inHtml, reload)
                           }
                         }
                       } ~
                         path("all") {
                           (get & pathEnd) {
-                            parameters('asHtml ? "N", 'withData ? "N",'reload ? "N", 'recoverFromSnapshot ? "Y", 'persEncKeyConfPath.?) {
-                              (inHtml, withData, reload, recoverFromSnapshot, persEncKeyConfPath) =>
-                              val actorParam = ActorParam(actorTypeName, actorEntityId, recoverFromSnapshot == YES, persEncKeyConfPath)
+                            parameters('asHtml ? "N", 'withData ? "N",'reload ? "N", 'recoverFromSnapshot ? "Y", 'persEncKey.?) {
+                              (inHtml, withData, reload, recoverFromSnapshot, persEncKey) =>
+                              val actorParam = ActorParam(actorTypeName, actorEntityId, recoverFromSnapshot == YES, persEncKey)
                               handleRequest(actorParam, SendAll(withData), inHtml, reload)
                             }
                           }

@@ -1,7 +1,8 @@
 package com.evernym.verity.testkit.agentmsg.message_pack.v_0_5
 
-import com.evernym.verity.Status.MSG_STATUS_ACCEPTED
-import com.evernym.verity.Version
+import com.evernym.verity.util2.HasExecutionContextProvider
+import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
+import com.evernym.verity.util2.Version
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.testkit.CommonSpecUtil
@@ -21,16 +22,18 @@ import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent, MockClou
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam}
 import org.json.JSONObject
 
+import scala.concurrent.ExecutionContext
 import scala.util.Left
 
 /**
  * this is helper class containing different agent message builder methods
  */
-trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with HasCloudAgent =>
+trait AgentMsgBuilder extends HasExecutionContextProvider { this: AgentMsgHelper with MockAgent with HasCloudAgent =>
 
-  object v_0_5_req {
+  object v_0_5_req { self =>
 
     implicit val msgPackFormat: MsgPackFormat = MPF_MSG_PACK
+    implicit val executionContext: ExecutionContext = futureExecutionContext
 
     def buildCoreSignUpMsgWithVersion(msgTypeVersion: String): PackMsgParam = {
       val agentMsg = SignUp_MFV_0_5(TypeDetail(MSG_TYPE_SIGN_UP, msgTypeVersion))

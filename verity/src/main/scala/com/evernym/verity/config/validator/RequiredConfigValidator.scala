@@ -1,6 +1,6 @@
 package com.evernym.verity.config.validator
 
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.validator.base._
 import com.evernym.verity.constants.Constants.{WALLET_TYPE_DEFAULT, WALLET_TYPE_MYSQL, YES}
 import com.typesafe.config.Config
@@ -20,7 +20,7 @@ trait RequiredConfigValidatorBase extends ConfigValidatorBase {
     commonConfigsToBeValidated ++ conditionalConfigsToBeValidated
 
   def conditionalConfigsToBeValidated: Set[ConfDetail] = {
-    if (getConfigBooleanOption(PUSH_NOTIF_ENABLED).contains(true)) {
+    if (getBooleanOption(PUSH_NOTIF_ENABLED).contains(true)) {
       Set (
         ConfDetail(PUSH_NOTIF_GENERAL_MSG_TITLE_TEMPLATE),
         ConfDetail(PUSH_NOTIF_DEFAULT_LOGO_URL),
@@ -80,7 +80,7 @@ trait RequiredConfigValidatorBase extends ConfigValidatorBase {
     ConfDetail(INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES),
 
     ConfDetail(KAMON_ENV_HOST),
-    ConfDetail(KAMON_PROMETHEUS_START_HTTP_SERVER, allowedValues = Set("no")),
+    ConfDetail(KAMON_PROMETHEUS_START_HTTP_SERVER, allowedValues = Set("yes", "no")),
 
     ConfDetail(AKKA_SHARDING_REGION_NAME_USER_AGENT),
     ConfDetail(AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE),

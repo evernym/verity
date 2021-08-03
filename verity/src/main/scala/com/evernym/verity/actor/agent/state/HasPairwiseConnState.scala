@@ -1,9 +1,9 @@
 package com.evernym.verity.actor.agent.state
 
 import akka.actor.Actor.Receive
-import com.evernym.verity.Exceptions.InvalidValueException
-import com.evernym.verity.Status.MSG_STATUS_ACCEPTED
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Exceptions.InvalidValueException
+import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
+import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship._
@@ -17,16 +17,20 @@ import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, EDGE_AGENT_KEY}
 import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail, TheirRoutingParam}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Left
 
 /**
  * base class for handling a pairwise connection related functions
  * for example: updating connection status, their did doc etc
  */
-trait PairwiseConnStateBase {
+trait PairwiseConnStateBase
+  extends HasExecutionContextProvider
+    with HasWalletExecutionContextProvider {
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   type StateType <: AgentStatePairwiseInterface
   def state: StateType
@@ -57,7 +61,7 @@ trait PairwiseConnStateBase {
                                     relScopeDIDVerKey: VerKey,
                                     lrd: LegacyRoutingDetail): Unit = {
     val theirDidDoc =
-      DidDocBuilder()
+      DidDocBuilder(futureWalletExecutionContext)
         .withDid(relScopeDID)
         .withAuthKey(relScopeDID, relScopeDIDVerKey, Set(EDGE_AGENT_KEY))
         .withAuthKeyAndEndpointDetail(lrd.agentKeyDID, lrd.agentVerKey, Set(AGENT_KEY_TAG), Left(lrd))
@@ -75,7 +79,7 @@ trait PairwiseConnStateBase {
                               relScopeDIDVerKey: VerKey,
                               rd: RoutingDetail): Unit = {
     val theirDidDoc =
-      DidDocBuilder()
+      DidDocBuilder(futureWalletExecutionContext)
         .withDid(relScopeDID)
         .withAuthKeyAndEndpointDetail(relScopeDID, relScopeDIDVerKey, Set(AGENT_KEY_TAG), Right(rd))
         .didDoc
@@ -181,7 +185,8 @@ trait PairwiseConnStateBase {
   def buildReqMsgForTheirRoutingService(msgPackFormat: MsgPackFormat,
                                         agentMsgs: List[Any],
                                         wrapInBundledMsgs: Boolean,
-                                        msgType: String): Future[PackedMsg] = {
+                                        msgType: String,
+                                        mw: MetricsWriter): Future[PackedMsg] = {
     theirRoutingDetail match {
       case Some(Left(_: LegacyRoutingDetail)) =>
         val encryptParam =
@@ -193,14 +198,15 @@ trait PairwiseConnStateBase {
         AgentMsgPackagingUtil.buildAgentMsg(
           msgPackFormat,
           packMsgParam
-        )(agentMsgTransformer, wap).flatMap { pm =>
-          buildRoutedPackedMsgForTheirRoutingService(msgPackFormat, pm.msg, msgType)
+        )(agentMsgTransformer, wap, mw).flatMap { pm =>
+          buildRoutedPackedMsgForTheirRoutingService(msgPackFormat, pm.msg, msgType, mw)
         }
       case x => throw new RuntimeException("unsupported routing detail (for unpacked msg): " + x)
     }
   }
 
-  def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, packedMsg: Array[Byte], msgType: String):
+  def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, packedMsg: Array[Byte], msgType: String,
+                                                 mw: MetricsWriter):
   Future[PackedMsg] = {
     theirRoutingDetail match {
       case Some(Left(ld: LegacyRoutingDetail)) =>
@@ -210,7 +216,7 @@ trait PairwiseConnStateBase {
           msgPackFormat,
           PackedMsg(packedMsg, Option(PayloadMetadata(msgType, msgPackFormat))),
           List(fwdRouteForAgentPairwiseActor)
-        )(agentMsgTransformer, wap)
+        )(agentMsgTransformer, wap, mw, futureExecutionContext)
       case Some(Right(rd: RoutingDetail)) =>
         val routingKeys = AgentMsgPackagingUtil.buildRoutingKeys(rd.verKey, rd.routingKeys)
         AgentMsgPackagingUtil.packMsgForRoutingKeys(
@@ -218,7 +224,7 @@ trait PairwiseConnStateBase {
           packedMsg,
           routingKeys,
           msgType
-        )(agentMsgTransformer, wap)
+        )(agentMsgTransformer, wap, mw, futureExecutionContext)
       case x => throw new RuntimeException("unsupported routing detail (for packed msg): " + x)
     }
   }

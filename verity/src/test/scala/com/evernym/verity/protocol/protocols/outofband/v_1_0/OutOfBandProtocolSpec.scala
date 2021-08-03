@@ -1,7 +1,9 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.DebugProtocols
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredMsgFamily
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Ctl.Reuse
@@ -9,14 +11,24 @@ import com.evernym.verity.protocol.protocols.outofband.v_1_0.Role.{Invitee, Invi
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
 import com.evernym.verity.testkit.BasicFixtureSpec
-import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 import org.json.JSONObject
+
+import scala.concurrent.ExecutionContext
 
 class OutOfBandProtocolSpec
   extends TestsProtocolsImpl(OutOfBandDef, None)
     with BasicFixtureSpec
     with DebugProtocols
     with CommonSpecUtil {
+
+  lazy val testAppConfig: AppConfig = new TestAppConfig()
+  override def appConfig: AppConfig = testAppConfig
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   lazy val newIdentity: DidPair = generateNewDid()
 

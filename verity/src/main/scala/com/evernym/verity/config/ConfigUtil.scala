@@ -1,16 +1,16 @@
 package com.evernym.verity.config
 
-import com.evernym.{PolicyElements, RetentionPolicy}
-import com.evernym.verity.Exceptions.ConfigLoadingFailedException
+import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.metrics._
 import com.evernym.verity.constants.ActorNameConstants._
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.protocol.engine.DomainId
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.SponsorDetails
 import com.evernym.verity.util.TAAUtil.taaAcceptanceDatePattern
+import com.evernym.verity.util2.{PolicyElements, RetentionPolicy}
 import com.typesafe.config.{Config, ConfigException, ConfigFactory, ConfigRenderOptions}
 import com.typesafe.config.ConfigUtil.{joinPath, splitPath}
 import org.apache.commons.lang3.StringUtils
@@ -64,7 +64,7 @@ object ConfigUtil {
   }
 
   def isTAAConfigEnabled(appConfig: AppConfig): Boolean = {
-    appConfig.getConfigBooleanOption(LIB_INDY_LEDGER_TAA_ENABLED).getOrElse(false)
+    appConfig.getBooleanOption(LIB_INDY_LEDGER_TAA_ENABLED).getOrElse(false)
   }
 
   def findTAAConfig(config: AppConfig, version: String): Option[TransactionAuthorAgreement] = {
@@ -88,9 +88,9 @@ object ConfigUtil {
 
     TransactionAuthorAgreement(
       version,
-      config.getConfigStringReq(s"$agreementVersionPath.digest").toLowerCase(),
-      config.getConfigStringReq(s"$agreementVersionPath.mechanism"),
-      config.getConfigStringReq(s"$agreementVersionPath.time-of-acceptance")
+      config.getStringReq(s"$agreementVersionPath.digest").toLowerCase(),
+      config.getStringReq(s"$agreementVersionPath.mechanism"),
+      config.getStringReq(s"$agreementVersionPath.time-of-acceptance")
     )
   }
 
@@ -103,7 +103,7 @@ object ConfigUtil {
 
   def sponsorRequired(appConfig: AppConfig): Boolean =
     appConfig
-      .getConfigBooleanReq(s"$PROVISIONING.sponsor-required")
+      .getBooleanReq(s"$PROVISIONING.sponsor-required")
 
   private def findSponsorConfig(lookupKey: String, lookupValue: String, appConfig: AppConfig): Option[SponsorDetails] =
       appConfig
@@ -126,7 +126,7 @@ object ConfigUtil {
     findSponsorConfig("id", id, appConfig)
 
   def findAgentSpecificConfig(key: String, domainId: Option[DomainId], appConfig: AppConfig): String = {
-    val default = appConfig.getConfigStringReq(key)
+    val default = appConfig.getStringReq(key)
     domainId match {
       case Some(domain) =>
         val (parent, targetKey) = parentKeySegment(key)
@@ -134,19 +134,19 @@ object ConfigUtil {
           if (StringUtils.isBlank(parent)) s"agent-specific.$domain.$targetKey"
           else s"$parent.agent-specific.$domain.$targetKey"
         }
-        val specific = appConfig.getConfigStringOption(specificKey)
+        val specific = appConfig.getStringOption(specificKey)
         specific.getOrElse(default)
       case _ => default
     }
   }
 
   private def _activity(config: AppConfig, key: String, behavior: Behavior): Set[ActiveWindowRules] = {
-    if (config.getConfigBooleanReq(s"$key.enabled")) {
-      val windows = config.getConfigListOfStringReq(s"$key.time-windows")
+    if (config.getBooleanReq(s"$key.enabled")) {
+      val windows = config.getStringListReq(s"$key.time-windows")
         .map(x => ActiveWindowRules(VariableDuration(x), behavior))
 
       val monthly =
-        if (config.getConfigBooleanReq(s"$key.monthly-window")) Seq(ActiveWindowRules(CalendarMonth, behavior))
+        if (config.getBooleanReq(s"$key.monthly-window")) Seq(ActiveWindowRules(CalendarMonth, behavior))
         else Set.empty
 
       (windows ++ monthly).toSet
@@ -161,10 +161,10 @@ object ConfigUtil {
   }
 
   def sponsorMetricTagEnabled(config: AppConfig): Boolean =
-    config.getConfigBooleanReq(PROTOCOL_TAG_USES_SPONSOR)
+    config.getBooleanReq(PROTOCOL_TAG_USES_SPONSOR)
 
   def sponseeMetricTagEnabled(config: AppConfig): Boolean =
-    config.getConfigBooleanReq(PROTOCOL_TAG_USES_SPONSEE)
+    config.getBooleanReq(PROTOCOL_TAG_USES_SPONSEE)
 
   def getSponsorRelTag(config: AppConfig, sponsorRel: SponsorRel): Map[String, String] = {
     var a: Map[String, String] = Map()
@@ -176,10 +176,34 @@ object ConfigUtil {
 
   private def emptyToUndefined(x: String): String = if (x.trim.nonEmpty) x else "undefined"
 
+  def getProtoStateRetentionPolicy(config: AppConfig,
+                                   domainId: String,
+                                   protoRef: String): RetentionPolicy = {
+    try {
+      //TODO: for backward compatibility (in case corresponding new config changes is not rolled out)
+      getRetentionPolicy(config, RETENTION_POLICY, domainId, protoRef)
+    } catch {
+      case _: ConfigException.Missing =>
+        getRetentionPolicy(config, RETENTION_POLICY_PROTOCOL_STATE, domainId, protoRef)
+    }
+  }
+
+  def getOutboxStateRetentionPolicyForIntraDomain(config: AppConfig,
+                                                  domainId: String,
+                                                  protoRef: String): RetentionPolicy = {
+    getRetentionPolicy(config, RETENTION_POLICY_OUTBOX_STATE_INTRA_DOMAIN, domainId, protoRef)
+  }
+
+  def getOutboxStateRetentionPolicyForInterDomain(config: AppConfig,
+                                                  domainId: String,
+                                                  protoRef: String): RetentionPolicy = {
+    getRetentionPolicy(config, RETENTION_POLICY_OUTBOX_STATE_INTER_DOMAIN, domainId, protoRef)
+  }
+
   def getRetentionPolicy(config: AppConfig,
+                         basePath: String,
                          domainId: String,
                          protoRef: String): RetentionPolicy = {
-    val basePath = RETENTION_POLICY
     val domainConfig = config.getConfigOption(s"$basePath.${emptyToUndefined(domainId)}")
     val defaultConfig = config.config.getConfig(s"$basePath.default")
 
@@ -192,11 +216,11 @@ object ConfigUtil {
   }
 
   private def getPolicyFromConfig(config: Config, protoRef: String): RetentionPolicy = {
-    val retentionPolicyConfig = AppConfigWrapper.getConfigOption(config, emptyToUndefined(protoRef)) match {
-        case Some(x)  => x
-        case None     => AppConfigWrapper
-          .getConfigOption(config, UNDEFINED_FALLBACK)
-          .getOrElse(throw new ConfigException.Missing(s"Must define Data Retention Policy '$UNDEFINED_FALLBACK'"))
+    val retentionPolicyConfig = ConfigReadHelper.getConfigOption(config, emptyToUndefined(protoRef)) match {
+      case Some(x)  => x
+      case None     => ConfigReadHelper
+        .getConfigOption(config, UNDEFINED_FALLBACK)
+        .getOrElse(throw new ConfigException.Missing(s"Must define Data Retention Policy '$UNDEFINED_FALLBACK'"))
     }
     getPolicyFromConfigStr(retentionPolicyConfig.root().render(ConfigRenderOptions.concise()))
   }
@@ -205,17 +229,16 @@ object ConfigUtil {
   def getPolicyFromConfigStr(configStr: String): RetentionPolicy = {
     Try(new ConfigReadHelper(ConfigFactory.parseString(configStr))) match {
       case Success(retentionConfig) =>
-        val expireAfterDays = retentionConfig.getConfigStringReq(EXPIRE_AFTER_DAYS)
-        val expireAfterTerminalState = retentionConfig.getConfigBooleanOption(EXPIRE_AFTER_TERMINAL_STATE).getOrElse(false)
+        val expireAfterDays = retentionConfig.getStringReq(EXPIRE_AFTER_DAYS)
+        val expireAfterTerminalState = retentionConfig.getBooleanOption(EXPIRE_AFTER_TERMINAL_STATE).getOrElse(false)
         RetentionPolicy(
           configStr,
           PolicyElements(expireAfterDays, expireAfterTerminalState)
         )
-      case Failure(e: ConfigException.Parse) =>
+      case Failure(_: ConfigException.Parse) =>
         //this is to handle the initial/older retention policy format which used to be just number of days
         // instead of a valid concise typesafe config string
         getPolicyFromConfigStr(s"""{"expire-after-days":"$configStr"}""")
-
       case Failure(e) => throw e
     }
   }
@@ -314,7 +337,7 @@ object ConfigUtil {
 
   private def safeGetAppConfigStringOption(key: String, appConfig: AppConfig): Option[String] =
     try {
-      appConfig.getConfigStringOption(safeKey(key))
+      appConfig.getStringOption(safeKey(key))
     } catch {
       case e: ConfigException =>
         logger.warn(s"exception during getting key: $key from config: $e")
@@ -324,7 +347,7 @@ object ConfigUtil {
 
   private def safeGetAppConfigBooleanOption(key: String, appConfig: AppConfig): Option[Boolean] =
     try {
-      appConfig.getConfigBooleanOption(safeKey(key))
+      appConfig.getBooleanOption(safeKey(key))
     } catch {
       case e: ConfigException =>
         logger.warn(s"exception during getting key: $key from config: $e")

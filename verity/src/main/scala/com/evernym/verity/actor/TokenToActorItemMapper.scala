@@ -1,24 +1,14 @@
 package com.evernym.verity.actor
 
-import akka.actor.{ActorSystem, Props}
-import akka.pattern.ask
-import akka.cluster.sharding.ClusterSharding
-import akka.util.Timeout
-import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException}
-import com.evernym.verity.Status._
-import com.evernym.verity.config.{AppConfig, CommonConfig}
-import com.evernym.verity.constants.ActorNameConstants._
+import akka.actor.Props
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status._
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.util.TokenProvider
-
-import scala.concurrent.Future
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
-import com.evernym.verity.constants.Constants.DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.protocol.engine.MsgId
-import com.evernym.verity.util.Util.buildDuration
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.ExecutionContext
 
 /**
  * this actor is used on inviter side
@@ -31,25 +21,9 @@ import scala.concurrent.duration.FiniteDuration
  * this actor stores that mapping of "token" to "agent pairwise actor"
  */
 
-object TokenToActorItemMapperProvider {
-
-  def createToken(regionTypeName: String, entityId: String, uid: MsgId)(appConfig: AppConfig, system: ActorSystem):
-  Future[Either[HandledErrorException, String]] = {
-    val duration: FiniteDuration =
-      buildDuration(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
-    implicit lazy val responseTimeout: Timeout = Timeout(duration)
-    val tokenToActorItemMapperRegion = ClusterSharding(system).shardRegion(TOKEN_TO_ACTOR_ITEM_MAPPER_REGION_ACTOR_NAME)
-    val token = TokenProvider.getNewToken
-    val fut = tokenToActorItemMapperRegion ? ForToken(token, AddDetail(regionTypeName, entityId, uid))
-    fut.map { _ =>
-      Right(token)
-    }
-  }
-}
-
 object TokenToActorItemMapper {
   def getToken: String = TokenProvider.getNewToken
-  def props(implicit appConfig: AppConfig): Props = Props(new TokenToActorItemMapper(appConfig))
+  def props(executionContext: ExecutionContext)(implicit appConfig: AppConfig): Props = Props(new TokenToActorItemMapper(appConfig, executionContext))
 }
 
 //cmds
@@ -60,14 +34,14 @@ case object GetDetail extends ActorMessage
 case class ActorItemDetail(actorEntityId: String, uid: MsgId, regionTypeName: String) extends ActorMessage
 
 
-class TokenToActorItemMapper(val appConfig: AppConfig)
+class TokenToActorItemMapper(val appConfig: AppConfig, executionContext: ExecutionContext)
   extends BasePersistentActor
   with ShardRegionFromActorContext {
 
   var actorItemDetail: Option[ActorItemDetail] = None
 
   override lazy val persistenceEncryptionKey: String =
-    appConfig.getConfigStringReq(CommonConfig.SECRET_TOKEN_TO_ACTOR_ITEM_MAPPER)
+    appConfig.getStringReq(ConfigConstants.SECRET_TOKEN_TO_ACTOR_ITEM_MAPPER)
 
   val receiveEvent: Receive = {
     case e: TokenToActorItemMappingAdded =>
@@ -84,4 +58,8 @@ class TokenToActorItemMapper(val appConfig: AppConfig)
     case GetDetail => sender ! actorItemDetail
   }
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }

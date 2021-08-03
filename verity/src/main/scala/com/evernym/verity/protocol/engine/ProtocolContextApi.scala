@@ -2,19 +2,18 @@ package com.evernym.verity.protocol.engine
 
 import java.util.concurrent.TimeUnit
 
-import com.evernym.verity.ServiceEndpoint
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.metrics.CustomMetrics._
+import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContextApi
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.github.ghik.silencer.silent
-import kamon.metric.MeasurementUnit
 
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /**
   * A representation of the Container to the protocol it holds that embodies
@@ -44,7 +43,11 @@ trait ProtocolContextApi[P,R,M,E,S,I]
   def send[T](msg: M, toRole: Option[R]=None, fromRole: Option[R]=None): Unit
 
   def serviceEndpoint: ServiceEndpoint
-  
+
+  def metricsWriter: MetricsWriter
+
+  def executionContext: ExecutionContext
+
   //TODO how a message is sent should probably be abstracted; would like to fold this into the general send method above
   //TODO we shouldn't be exposing general sms capabilities to protocol authors
   def sendSMS(toPhoneNumber: String, msg: String): Future[String]
@@ -75,15 +78,16 @@ trait ProtocolContextApi[P,R,M,E,S,I]
   //it is only being used by few existing protocols and sooner we should get rid of usages of the services
   // noinspection ScalaDeprecation
   @silent
-  def SERVICES_DEPRECATED: ProtocolServices[M,E,I] = _services.getOrElse(throw new RuntimeException("services are not available"))
+  def SERVICES_DEPRECATED: ProtocolServices[M,E,I] = _services.getOrElse(
+    throw new RuntimeException("services are not available"))
 
   @silent
   def DEPRECATED_convertAsyncToSync[T](fut: Future[T]): T = {
-    MetricsWriter.histogramApi.recordWithTag(
+    metricsWriter.histogramUpdate(
       AS_BLOCKING_WALLET_API_CALL_COUNT,
-      MeasurementUnit.none,
+      MetricsUnit.None,
       1,
-      "protocol" -> definition.msgFamily.protoRef.toString,
+      Map("protocol" -> definition.msgFamily.protoRef.toString),
     )
     Await.result(fut, FiniteDuration(60, TimeUnit.SECONDS))
   }

@@ -3,31 +3,32 @@ package com.evernym.verity.actor.wallet
 import java.util.UUID
 import akka.pattern.pipe
 import akka.actor.{ActorRef, NoSerializationVerificationNeeded, Stash}
-import com.evernym.verity.Exceptions.HandledErrorException
-import com.evernym.verity.Status.{INVALID_VALUE, StatusDetail, UNHANDLED}
+import com.evernym.verity.util2.Exceptions.HandledErrorException
+import com.evernym.verity.util2.Status.{INVALID_VALUE, StatusDetail, UNHANDLED}
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.agent.{DidPair, PayloadMetadata}
 import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.libindy.wallet.operation_executor.CryptoOpExecutor.buildErrorDetail
+import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.vault.WalletUtil._
+import com.evernym.verity.vault.operation_executor.DidOpExecutor.buildErrorDetail
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
 import com.evernym.verity.vault.{KeyParam, WalletDoesNotExist, WalletExt, WalletProvider}
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
-class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
+class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, executionContext: ExecutionContext)
   extends CoreActor
     with Stash {
+
+  implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   override def receiveCmd: Receive = preInitReceiver orElse openWalletCallbackReceiver
 
@@ -41,27 +42,28 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
     case swp: SetWalletParam  =>
       walletParamOpt = Option(swp.wp)
       wmpOpt = Option(WalletMsgParam(walletProvider, swp.wp, Option(poolManager)))
-      tryOpeningWalletIfExists()
+      openWalletIfExists()
   }
 
   /**
-   * in this receiver it will only entertain 'CreateWallet' command
+   * in this receiver it will only entertain 'CreateWallet' or 'SetupNewAgentWallet' command
    * @return
    */
   def postInitReceiver: Receive = {
     case cmd: CreateWallet =>
       logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
       val sndr = sender()
-      val fut = WalletMsgHandler.handleCreateWalletASync()
+      val fut = WalletMsgHandler.handleCreateWalletAsync()
       sendRespWhenResolved(cmd.id, sndr, fut)
         .map { _ =>
-          tryOpeningWalletIfExists()
+          openWalletIfExists()
         }
 
     case snw: SetupNewAgentWallet =>
       val sndr = sender()
-      WalletMsgHandler.handleCreateWalletASync().map { _ =>
-        tryOpeningWalletIfExists()
+      setNewReceiveBehaviour(openWalletCallbackReceiver)
+      WalletMsgHandler.handleCreateWalletAsync().map { _ =>
+        openWalletIfExists()
         self.tell(snw, sndr)
       }
   }
@@ -108,17 +110,18 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
     val ownerKeyFut =
       snw.ownerDidPair match {
         case Some(odp) =>
-          val stk = StoreTheirKey(odp.DID, odp.verKey)
-          WalletMsgHandler.executeAsync(stk).mapTo[TheirKeyStored].map(_.didPair)
+          WalletMsgHandler
+            .executeAsync(StoreTheirKey(odp.DID, odp.verKey))
+            .mapTo[TheirKeyStored].map(_.didPair)
         case None =>
-          WalletMsgHandler.executeAsync(CreateNewKey()).mapTo[NewKeyCreated].map(_.didPair)
+          WalletMsgHandler
+            .executeAsync(CreateNewKey())
+            .mapTo[NewKeyCreated].map(_.didPair)
       }
-
-    val createNewKeyFut = WalletMsgHandler.executeAsync(CreateNewKey()).mapTo[NewKeyCreated]
 
     val fut = for (
       odp <- ownerKeyFut;
-      nks <- createNewKeyFut
+      nks <- WalletMsgHandler.executeAsync(CreateNewKey()).mapTo[NewKeyCreated]
     ) yield {
       AgentWalletSetupCompleted(odp, nks)
     }
@@ -147,18 +150,13 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
     }
   }
 
-  private def tryOpeningWalletIfExists(): Unit = {
-    setNewReceiveBehaviour(openWalletCallbackReceiver)
-    openWalletIfExists()
-  }
-
   def openWallet(): Future[WalletExt] = {
     walletProvider.openAsync(
       walletParam.walletName, walletParam.encryptionKey, walletParam.walletConfig)
   }
 
   def openWalletIfExists(): Unit = {
-    runWithInternalSpan(s"openWallet", "WalletActor") {
+    metricsWriter.runWithSpan(s"openWallet", "WalletActor", InternalSpan) {
       openWallet()
         .map(w => SetWallet(Option(w)))
         .recover {
@@ -185,7 +183,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager)
     if (walletExtOpt.isEmpty) {
       logger.debug("WalletActor try to close not opened wallet")
     } else {
-      runWithInternalSpan(s"closeWallet", "WalletActor") {
+      metricsWriter.runWithSpan("closeWallet", "WalletActor", InternalSpan) {
         walletProvider.close(walletExt)
       }
     }
@@ -297,9 +295,13 @@ case class MultiSignLedgerRequest(request: LedgerRequest, submitterDetail: Submi
 case class Close() extends WalletCommand
 
 //responses
-trait WalletCmdSuccessResponse extends ActorMessage
+
+trait Reply extends ActorMessage
+
+case class WalletCmdErrorResponse(sd: StatusDetail) extends Reply
+
+trait WalletCmdSuccessResponse extends Reply
 case class AgentWalletSetupCompleted(ownerDidPair: DidPair, agentKey: NewKeyCreated) extends WalletCmdSuccessResponse
-case class WalletCmdErrorResponse(sd: StatusDetail) extends ActorMessage
 
 trait WalletCreatedBase extends WalletCmdSuccessResponse
 case object WalletCreated extends WalletCreatedBase

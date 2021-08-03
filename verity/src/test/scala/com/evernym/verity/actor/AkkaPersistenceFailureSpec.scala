@@ -3,8 +3,9 @@ package com.evernym.verity.actor
 import akka.actor.{ActorRef, Props}
 import akka.persistence.{AtomicWrite, PersistentRepr}
 import akka.serialization.SerializationExtension
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException}
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, PersistentActorSpec, TestAppConfig}
 import com.evernym.verity.config.AppConfig
@@ -15,12 +16,12 @@ import com.google.protobuf.ByteString
 import com.typesafe.config.Config
 
 import scala.collection.immutable
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 class AkkaPersistenceFailureSpec extends PersistentActorSpec with BasicSpec {
 
-  val pa: ActorRef = system.actorOf(Props(new DummyActor))
+  val pa: ActorRef = system.actorOf(Props(new DummyActor(ecp.futureExecutionContext)))
 
   "A persisting actor" - {
     "fails on large event" in {
@@ -33,6 +34,10 @@ class AkkaPersistenceFailureSpec extends PersistentActorSpec with BasicSpec {
   override def overrideConfig: Option[Config] = Option {
     AkkaTestBasic.customJournal("com.evernym.verity.actor.FailsOnLargeEventTestJournal")
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 class FailsOnLargeEventTestJournal extends TestJournal {
@@ -72,7 +77,8 @@ case class BadPersistenceData(data: Array[Byte]) extends ActorMessage
 
 case object RestartNow extends ActorMessage
 
-class DummyActor extends BasePersistentActor {
+class DummyActor(executionContext: ExecutionContext) extends BasePersistentActor {
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   lazy val appConfig: AppConfig = new TestAppConfig
   var didData: Map[String, String] = Map.empty

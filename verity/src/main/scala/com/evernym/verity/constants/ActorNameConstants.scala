@@ -54,5 +54,7 @@ object ActorNameConstants {
   val ACTOR_TYPE_USER_AGENT_ACTOR = 5
   val ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR = 6
 
+  val ACTOR_TYPE_OUTBOX_ACTOR = 7
+
   val DEFAULT_ENTITY_TYPE = "Default"
 }

@@ -9,11 +9,11 @@ import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersist
 import com.evernym.verity.actor.{ActorMessage, WindowActivityDefined, WindowRules}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.{DID, DomainId}
 import com.evernym.verity.util.TimeUtil
 import com.evernym.verity.util.TimeUtil.{IsoDateTime, dateAfterDuration, isDateExpired, toMonth}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 
 /**
@@ -21,12 +21,14 @@ import scala.concurrent.duration.Duration
   1. activity within a specified window
   2. active relationships within a specified window
  */
-class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMsgRouter)
+class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMsgRouter, executionContext: ExecutionContext)
   extends BasePersistentActor
     with DefaultPersistenceEncryption {
   type StateKey = String
   type StateType = State
   var state = new State
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
  /**
   * actor persistent state object
@@ -154,7 +156,7 @@ class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMs
    */
   def recordAgentMetric(window: ActiveWindowRules, activity: AgentActivity): Unit = {
     logger.info(s"track activity: $activity, window: $window, tags: ${agentTags(window, activity.domainId)}")
-    MetricsWriter.gaugeApi.incrementWithTags(window.activityType.metricBase, agentTags(window, activity.domainId))
+    metricsWriter.gaugeIncrement(window.activityType.metricBase, tags = agentTags(window, activity.domainId))
     val recording = RecordingAgentActivity(
       activity.domainId,
       activity.timestamp,
@@ -184,8 +186,8 @@ class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMs
 }
 
 object ActivityTracker {
- def props(implicit config: AppConfig, agentMsgRouter: AgentMsgRouter): Props = {
-  Props(new ActivityTracker(config, agentMsgRouter))
+ def props(implicit config: AppConfig, agentMsgRouter: AgentMsgRouter, executionContext: ExecutionContext): Props = {
+  Props(new ActivityTracker(config, agentMsgRouter, executionContext))
  }
 }
 

@@ -1,9 +1,11 @@
 package com.evernym.verity.protocol.protocols
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
+import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
@@ -14,8 +16,10 @@ import com.evernym.verity.protocol.testkit.InteractionType.OneParty
 import com.evernym.verity.protocol.testkit.{InteractionController, SimpleControllerProviderInputType, TestSimpleProtocolSystem, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.Conversions._
+import com.evernym.verity.util.TestExecutionContextProvider
 import org.scalatest.concurrent.Eventually
 
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
 
@@ -30,14 +34,16 @@ class StateSegments2Spec extends TestsProtocolsImpl(PhoneBookProtoDef, Option(On
 
       implicit val system = new TestSimpleProtocolSystem()
 
-      val controllerProvider = { i: SimpleControllerProviderInputType =>
-        new InteractionController(i) {
-          override def signal[A]: SignalHandler[A] = {
-            case SignalEnvelope(pber: PhoneBookEntryReceived, _, _, _, _) =>
-              None
+      val controllerProvider: DriverGen[SimpleControllerProviderInputType] =
+        Option{{ (i: SimpleControllerProviderInputType, e: ExecutionContext) =>
+            new InteractionController(i) {
+              override def signal[A]: SignalHandler[A] = {
+                case SignalEnvelope(pber: PhoneBookEntryReceived, _, _, _, _) =>
+                  None
+              }
+            }
           }
         }
-      }
 
       val phoneBookService = setup("phone-book-service", controllerProvider, it=OneParty)
 
@@ -47,6 +53,11 @@ class StateSegments2Spec extends TestsProtocolsImpl(PhoneBookProtoDef, Option(On
 
     }
   }
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }
 
 object TestObjects2 {

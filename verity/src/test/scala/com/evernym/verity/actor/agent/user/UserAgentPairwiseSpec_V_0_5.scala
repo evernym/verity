@@ -3,7 +3,8 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.{PoisonPill, ReceiveTimeout}
 import akka.cluster.sharding.ClusterSharding
 import akka.testkit.EventFilter
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}
@@ -21,14 +22,30 @@ import com.evernym.verity.protocol.protocols.connecting.v_0_5.{GetInviteDetail_M
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, CreateMsg_MFV_0_5, TestConfigDetail, TestUtil}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.util.Util
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 import org.scalatest.time.{Seconds, Span}
+
+import scala.concurrent.ExecutionContext
 
 class ConsumerUserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpec_V_0_5 {
   implicit val msgPackagingContext: AgentMsgPackagingContext =
     AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = false)
   establishConnByAnsweringInvite()
   sendReceiveMsgSpecs()
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 class EnterpriseUserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpec_V_0_5 {
@@ -36,6 +53,18 @@ class EnterpriseUserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpec_V_0_5 
     AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = false)
   establishConnBySendAndReceivingInviteResp()
   sendReceiveMsgSpecs()
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
@@ -181,7 +210,7 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
 
     def checkCreateInviteResponse(resp: PackedMsg, connId: String): Boolean = {
       val icr = handleInviteCreatedResp(resp, buildConnIdMap(connId))
-      TestUtil.encodedUrl(icr.md.urlToInviteDetail) == icr.md.urlToInviteDetailEncoded
+      Util.encodedUrl(icr.md.urlToInviteDetail) == icr.md.urlToInviteDetailEncoded
     }
 
     s"when sent GET_MSGS msg after sending invite" - {

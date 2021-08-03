@@ -4,7 +4,6 @@ import akka.actor.typed
 import akka.persistence.testkit.scaladsl.{PersistenceTestKit, SnapshotTestKit}
 import akka.testkit.{ImplicitSender, TestEventListener, TestKit, TestKitBase}
 import akka.{actor => classic}
-import com.evernym.verity.ActorErrorResp
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.testkit.actor.{ActorSystemConfig, MockAppConfig, OverrideConfig, ProvidesMockPlatform}
 import com.evernym.verity.actor.testkit.checks.ChecksAkkaEvents
@@ -14,9 +13,11 @@ import com.evernym.verity.testkit.{BasicSpecBase, CleansUpIndyClientFirst}
 import com.typesafe.config.Config
 import org.iq80.leveldb.util.FileUtils
 import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
-import java.util.concurrent.TimeUnit
 
+import java.util.concurrent.TimeUnit
 import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.util2.ActorErrorResp
+import com.evernym.verity.metrics.{MetricsBackend, MetricsWriterExtension, TestMetricsBackend}
 
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
@@ -102,7 +103,11 @@ trait HasBasicActorSystem extends OverrideConfig with MockAppConfig {
   lazy val (as, conf) = AkkaTestBasic.systemWithConfig(
     overrideConfig
   )
-  implicit lazy val system: classic.ActorSystem = as
+  lazy val metricsBackend: MetricsBackend = new TestMetricsBackend
+  implicit lazy val system: classic.ActorSystem = {
+    MetricsWriterExtension(as).updateMetricsBackend(metricsBackend)
+    as
+  }
   implicit override lazy val appConfig: AppConfig = new TestAppConfig(Option(conf))
 }
 

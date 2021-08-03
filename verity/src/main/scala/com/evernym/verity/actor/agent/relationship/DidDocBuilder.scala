@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.relationship
 
+import com.evernym.verity.util2.HasWalletExecutionContextProvider
 import com.evernym.verity.actor.wallet.{GetVerKeyOpt, GetVerKeyOptResp}
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.agent.AuthKey
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DID, VerKey}
@@ -9,10 +9,14 @@ import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDet
 import com.evernym.verity.util.Util.buildAgencyEndpoint
 import com.evernym.verity.vault.AgentWalletAPI
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
-case class DidDocBuilder(didDoc: DidDoc = DidDoc())(implicit didDocBuilderParam: DidDocBuilderParam) {
+case class DidDocBuilder(executionContext: ExecutionContext, didDoc: DidDoc = DidDoc())
+                        (implicit didDocBuilderParam: DidDocBuilderParam) {
+
+  private implicit def futureWalletExecutionContext: ExecutionContext = executionContext
+
 
   def withDid(did: DID): DidDocBuilder = {
     copy(didDoc = didDoc.copy(did = did))

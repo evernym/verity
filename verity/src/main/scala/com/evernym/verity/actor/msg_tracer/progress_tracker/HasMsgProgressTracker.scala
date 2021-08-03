@@ -4,7 +4,7 @@ import java.time.LocalDateTime
 
 import akka.actor.{Actor, ActorRef}
 import akka.cluster.sharding.ClusterSharding
-import com.evernym.verity.ReqId
+import com.evernym.verity.util2.ReqId
 import com.evernym.verity.actor.agent.HasSingletonParentProxy
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.node_singleton.MsgProgressTrackerCache
@@ -113,7 +113,7 @@ trait HasMsgProgressTracker
 
   private def sendToMsgTracker(cmd: Any): Unit = {
     candidateTrackingIds.foreach { trackingId =>
-      if (MsgProgressTrackerCache.isTracked(trackingId)) {
+      if (MsgProgressTrackerCache(context.system).isTracked(trackingId)) {
         val finalCmd = cmd match {
           case rre: RecordRoutingEvent => rre.withDetailAppended(extraDetail)
           case other                   => other

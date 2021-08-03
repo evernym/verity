@@ -5,8 +5,10 @@ import akka.event.LoggingReceive
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.persistence.SingletonPersistentAgentActorBase
 import com.evernym.verity.actor.{ActorMessage, MappingAdded}
-import com.evernym.verity.config.CommonConfig
+import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.constants.ActorNameConstants._
+
+import scala.concurrent.ExecutionContext
 
 
 /**
@@ -17,7 +19,7 @@ import com.evernym.verity.constants.ActorNameConstants._
  *
  * @param agentActorContext
  */
-class KeyValueMapper(implicit val agentActorContext: AgentActorContext) extends KeyValueMapperBase {
+class KeyValueMapper(executionContext: ExecutionContext)(implicit val agentActorContext: AgentActorContext) extends KeyValueMapperBase {
 
   override val receiveSpecificEvent: Receive = {
     case _ =>
@@ -26,16 +28,22 @@ class KeyValueMapper(implicit val agentActorContext: AgentActorContext) extends 
   override val receiveSpecificCmd: Receive = LoggingReceive.withLabel("receiveSpecificCmd") {
     case _ =>
   }
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 object KeyValueMapper{
   val name: String = KEY_VALUE_MAPPER_ACTOR_NAME
-  def props(implicit agentActorContext: AgentActorContext) = Props(new KeyValueMapper)
+  def props(executionContext: ExecutionContext)(implicit agentActorContext: AgentActorContext) =
+    Props(new KeyValueMapper(executionContext))
 }
 
 trait KeyValueMapperBase extends SingletonPersistentAgentActorBase {
 
-  lazy val secretConfigKeyName: String = CommonConfig.SECRET_KEY_VALUE_MAPPER
+  lazy val secretConfigKeyName: String = ConfigConstants.SECRET_KEY_VALUE_MAPPER
 
   var mapping: Map[String, String] = Map.empty
 

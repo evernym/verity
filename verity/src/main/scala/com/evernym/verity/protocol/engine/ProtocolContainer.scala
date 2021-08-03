@@ -1,7 +1,8 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.Exceptions
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
+import com.evernym.verity.util2.Exceptions
 
 trait ProtocolTypes[P,R,M,E,S,I] {
   type Proto = Protocol[P,R,M,E,S,I]
@@ -12,7 +13,9 @@ trait ProtocolTypes[P,R,M,E,S,I] {
 /**
   * Protocol Containers hold one and only one protocol instance
   */
-trait ProtocolContainer[P,R,M,E,S,I] extends ProtocolTypes[P,R,M,E,S,I] with ProtocolContext[P,R,M,E,S,I] {
+trait ProtocolContainer[P,R,M,E,S,I]
+  extends ProtocolTypes[P,R,M,E,S,I]
+    with ProtocolContext[P,R,M,E,S,I] {
 
   def pinstId: PinstId
 

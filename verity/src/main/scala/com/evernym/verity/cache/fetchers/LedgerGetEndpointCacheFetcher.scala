@@ -1,19 +1,20 @@
 package com.evernym.verity.cache.fetchers
 
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.cache.LEDGER_GET_ENDPOINT_CACHE_FETCHER
 import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.ledger.{AttribResult, LedgerSvc, Submitter}
 import com.evernym.verity.protocol.engine.DID
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class EndpointCacheFetcher (val ledgerSvc: LedgerSvc, val appConfig: AppConfig)
+class EndpointCacheFetcher (val ledgerSvc: LedgerSvc, val appConfig: AppConfig, executionContext: ExecutionContext)
   extends AsyncCacheValueFetcher {
+  override def futureExecutionContext: ExecutionContext = executionContext
+  private implicit val executionContextImpl: ExecutionContext = executionContext
 
   lazy val fetcherParam: FetcherParam = LEDGER_GET_ENDPOINT_CACHE_FETCHER
   lazy val cacheConfigPath: Option[String] = Option(LEDGER_GET_ENDPOINT_CACHE)

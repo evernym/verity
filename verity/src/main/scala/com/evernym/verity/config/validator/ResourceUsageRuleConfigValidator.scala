@@ -1,13 +1,13 @@
 package com.evernym.verity.config.validator
 
-import com.evernym.verity.Exceptions.ConfigLoadingFailedException
-import com.evernym.verity.Status.VALIDATION_FAILED
+import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
+import com.evernym.verity.util2.Status.VALIDATION_FAILED
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.{getResourceUniqueName, isUserIdOrPattern}
 import com.evernym.verity.actor.resourceusagethrottling.{DEFAULT_USAGE_RULE_NAME, ENTITY_ID_GLOBAL}
 import com.evernym.verity.actor.resourceusagethrottling.helper.{BucketRule, Instruction, InstructionDetail, ResourceTypeUsageRule, ResourceUsageRule, ResourceUsageRuleConfig, UsageRule, UsageViolationActionExecutorValidator, ViolationActions}
-import com.evernym.verity.config.CommonConfig.{BLACKLISTED_TOKENS, RESOURCE_USAGE_RULES, RULE_TO_TOKENS, USAGE_RULES, VIOLATION_ACTION, WHITELISTED_TOKENS}
+import com.evernym.verity.config.ConfigConstants.{BLACKLISTED_TOKENS, RESOURCE_USAGE_RULES, RULE_TO_TOKENS, USAGE_RULES, VIOLATION_ACTION, WHITELISTED_TOKENS}
 import com.evernym.verity.config.ConfigUtil.lastKeySegment
-import com.evernym.verity.config.validator.base.{ConfigValidator, ConfigValidatorCreator}
+import com.evernym.verity.config.validator.base.{ConfigReadHelper, ConfigValidator, ConfigValidatorCreator}
 import com.evernym.verity.util.SubnetUtilsExt.{getSubnetUtilsExt, isIpAddressOrCidrNotation}
 import com.typesafe.config.ConfigException.Missing
 import com.typesafe.config.{Config, ConfigValue}
@@ -42,9 +42,9 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
 
   private def getResourceUsageBucketRules(c: Config, key: String): Map[Int, BucketRule] = {
     getSorted(c, key).map { case (k, _) =>
-      val allowedCounts = getConfigIntReq(c, s"$key.$k.allowed-counts")
-      val violationActionId = getConfigStringReq(c, s"$key.$k.violation-action-id")
-      val persistUsageState = getConfigBooleanOption(c, s"$key.$k.persist-usage-state").getOrElse(false)
+      val allowedCounts = ConfigReadHelper.getIntReqFromConfig(c, s"$key.$k.allowed-counts")
+      val violationActionId = getStringReq(c, s"$key.$k.violation-action-id")
+      val persistUsageState = ConfigReadHelper.getBooleanOptionFromConfig(c, s"$key.$k.persist-usage-state").getOrElse(false)
       k.toInt -> BucketRule(allowedCounts, violationActionId, persistUsageState)
     }.toMap
   }
@@ -92,7 +92,7 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
 
   private def getRulesToTokens(c: Config, key: String): Map[String, Set[String]] = {
     c.getObject(key).asScala.map { case (k, _) =>
-      val tokens = getConfigSetOfStringReq(c, s"$key.$k")
+      val tokens = ConfigReadHelper.getStringSetReqFromConfig(c, s"$key.$k")
       k -> tokens
     }.toMap
   }
@@ -246,16 +246,16 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
 
       val persistAllUsageStates = getBoolean(apiUsageRulesConfig, "persist-all-usage-states")
 
-      val snapshotAfterEvents = getConfigIntOption(apiUsageRulesConfig,"snapshot-after-events").getOrElse(200)
+      val snapshotAfterEvents = ConfigReadHelper.getIntOptionFromConfig(apiUsageRulesConfig,"snapshot-after-events").getOrElse(200)
 
       val ruleToTokens =
         try { getRulesToTokens(apiUsageRulesConfig, "rule-to-tokens") }
         catch { case _: Missing => Map.empty[String, Set[String]] }
       val blacklisted =
-        try { getConfigSetOfStringReq(apiUsageRulesConfig, "blacklisted-tokens") }
+        try { ConfigReadHelper.getStringSetReqFromConfig(apiUsageRulesConfig, "blacklisted-tokens") }
         catch { case _: Missing => Set.empty[String] }
       val whitelisted =
-        try { getConfigSetOfStringReq(apiUsageRulesConfig, "whitelisted-tokens") }
+        try { ConfigReadHelper.getStringSetReqFromConfig(apiUsageRulesConfig, "whitelisted-tokens") }
         catch { case _: Missing => Set.empty[String] }
       val rules =
         try { getUsageRules(apiUsageRulesConfig, "usage-rules") }

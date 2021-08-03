@@ -59,7 +59,7 @@ trait AgentMsgHandler
    * @return
    */
   lazy val thisAgentKeyParam: KeyParam = KeyParam(Left(state.thisAgentVerKeyReq))
-  lazy val msgExtractor: MsgExtractor = new MsgExtractor(thisAgentKeyParam, agentActorContext.walletAPI)
+  lazy val msgExtractor: MsgExtractor = new MsgExtractor(thisAgentKeyParam, agentActorContext.walletAPI, futureExecutionContext)
 
   def receiveAgentEvent: Receive
   def receiveAgentCmd: Receive

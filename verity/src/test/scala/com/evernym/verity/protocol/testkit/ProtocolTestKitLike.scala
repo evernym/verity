@@ -4,6 +4,7 @@ import com.evernym.verity.actor.agent.relationship.PairwiseRelationship
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.ProtocolRegistry.{DriverGen, Entry}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
@@ -12,6 +13,7 @@ import com.evernym.verity.protocol.testkit.InteractionType.{OneParty, TwoParty}
 import com.evernym.verity.util.{MsgIdProvider, MsgUtil}
 import org.scalatest.matchers.should.Matchers
 
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
@@ -34,10 +36,13 @@ object DSL {
 }
 
 class ProtocolTestKit[P,R,M,E,S,I](val protoDef: ProtocolDefinition[P,R,M,E,S,I],
+                                   executionContext: ExecutionContext,
                                    val segmentStoreStrategy: Option[SegmentStoreStrategy]=None)(implicit val mtag: ClassTag[M])
-  extends ProtocolTestKitLike[P,R,M,E,S,I]
+  extends ProtocolTestKitLike[P,R,M,E,S,I] {
+  override def futureExecutionContext: ExecutionContext = executionContext
+}
 
-trait ProtocolTestKitLike[P,R,M,E,S,I] {
+trait ProtocolTestKitLike[P,R,M,E,S,I] extends HasExecutionContextProvider {
 
   tk =>
 
@@ -54,7 +59,8 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
   def segmentStoreStrategy: Option[SegmentStoreStrategy]
   type Container = InMemoryProtocolContainer[P,R,M,E,S,I]
 
-  val defaultControllerProvider: DriverGen[SimpleControllerProviderInputType] = Some(new InteractionController(_))
+  val defaultControllerProvider: DriverGen[SimpleControllerProviderInputType] =
+    Some((a: SimpleControllerProviderInputType, b: ExecutionContext) => new InteractionController(a))
 
   def setup(name: String,
             odg: DriverGen[SimpleControllerProviderInputType]=None,
@@ -62,7 +68,7 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
            )(implicit system: TestSystem): TestEnvir = {
     val dg = odg orElse defaultControllerProvider
     val protoReg = ProtocolRegistry[SimpleControllerProviderInputType](Entry(protoDef, defaultPinstIdResolver, dg))
-    new TestEnvir(system, new Domain(name, protoReg, system, defaultInitParams), it)
+    new TestEnvir(system, new Domain(name, protoReg, system, futureExecutionContext, defaultInitParams), it)
   }
 
   def interaction(envirs: TestEnvir *): PlayDSL = {

@@ -11,7 +11,7 @@ import com.evernym.verity.testkit.BasicSpec
 
 class DidKeySpec extends BasicSpec {
   val verkey = "87shCEvKAWw6JncoirStGxkRptVriLeNXytw9iRxpzGY"
-  val didkey = "did:key:z6Mkma8jnVAkW4RZRHTWQRQj84JReTmi8DtjDzoryzPykD3v"
+  val didkey = "did:key:z2DXXwXqC5VKhhDVLCoZSX98Gr33w1TGfNnA3y192dsDjbv"
 
   "When a did:key object is created from a verkey" - {
     "the resulting did:key should be correct" in {

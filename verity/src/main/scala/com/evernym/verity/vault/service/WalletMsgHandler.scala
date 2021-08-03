@@ -1,14 +1,13 @@
 package com.evernym.verity.vault.service
 
-
 import java.util.concurrent.ExecutionException
+import scala.concurrent.ExecutionContext
 
-import com.evernym.verity.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest}
-import com.evernym.verity.libindy.wallet.operation_executor.{AnoncredsWalletOpExecutor, CryptoOpExecutor, DidOpExecutor, LedgerWalletOpExecutor}
+import com.evernym.verity.vault.operation_executor.{AnoncredsWalletOpExecutor, CryptoOpExecutor, DidOpExecutor, LedgerWalletOpExecutor}
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil
 import com.evernym.verity.vault.{KeyParam, WalletConfig, WalletExt, WalletProvider}
@@ -17,7 +16,7 @@ import scala.concurrent.Future
 
 object WalletMsgHandler {
 
-  def executeAsync(cmd: Any)(implicit wmp: WalletMsgParam, walletExt: WalletExt): Future[Any] = {
+  def executeAsync(cmd: Any)(implicit wmp: WalletMsgParam, walletExt: WalletExt, ec: ExecutionContext): Future[Any] = {
     cmd match {
       case cnk: CreateNewKey                => handleCreateNewKey(cnk)
       case slr: SignLedgerRequest           => handleSignLedgerReq(slr)
@@ -44,64 +43,64 @@ object WalletMsgHandler {
     }
   }
 
-  private def handleCloseWallet()(implicit wmp: WalletMsgParam, we: WalletExt): Future[Done.type] = {
+  private def handleCloseWallet()(implicit wmp: WalletMsgParam, we: WalletExt, ec: ExecutionContext): Future[Done.type] = {
     wmp.walletProvider.close(we)
     Future(Done)
   }
 
-  private def handleCreateProof(proof: CreateProof)(implicit we: WalletExt): Future[ProofCreated] = {
+  private def handleCreateProof(proof: CreateProof)(implicit we: WalletExt, ec: ExecutionContext): Future[ProofCreated] = {
     AnoncredsWalletOpExecutor.handleCreateProof(proof)
   }
 
-  private def handleCredForProofReq(req: CredForProofReq)(implicit we: WalletExt): Future[CredForProofReqCreated] = {
+  private def handleCredForProofReq(req: CredForProofReq)(implicit we: WalletExt, ec: ExecutionContext): Future[CredForProofReqCreated] = {
     AnoncredsWalletOpExecutor.handleCredForProofReq(req)
   }
 
-  private def handleCreateCred(cred: CreateCred)(implicit we: WalletExt): Future[CredCreated] = {
+  private def handleCreateCred(cred: CreateCred)(implicit we: WalletExt, ec: ExecutionContext): Future[CredCreated] = {
     AnoncredsWalletOpExecutor.handleCreateCred(cred)
   }
 
-  private def handleStoreCred(sc: StoreCred)(implicit we: WalletExt): Future[CredStored] = {
+  private def handleStoreCred(sc: StoreCred)(implicit we: WalletExt, ec: ExecutionContext): Future[CredStored] = {
     AnoncredsWalletOpExecutor.handleStoreCred(sc)
   }
 
-  private def handleCreateCredReq(req: CreateCredReq)(implicit we: WalletExt): Future[CredReqCreated] = {
+  private def handleCreateCredReq(req: CreateCredReq)(implicit we: WalletExt, ec: ExecutionContext): Future[CredReqCreated] = {
     AnoncredsWalletOpExecutor.handleCreateCredReq(req)
   }
 
-  private def handleCreateCredOffer(offer: CreateCredOffer)(implicit we: WalletExt): Future[CredOfferCreated] = {
+  private def handleCreateCredOffer(offer: CreateCredOffer)(implicit we: WalletExt, ec: ExecutionContext): Future[CredOfferCreated] = {
     AnoncredsWalletOpExecutor.handleCreateCredOffer(offer)
   }
 
-  private def handleCreateCredDef(ccd: CreateCredDef)(implicit we: WalletExt): Future[CredDefCreated] = {
+  private def handleCreateCredDef(ccd: CreateCredDef)(implicit we: WalletExt, ec: ExecutionContext): Future[CredDefCreated] = {
     AnoncredsWalletOpExecutor.handleCreateCredDef(ccd)
   }
 
-  private def handleCreateMasterSecret(secret: CreateMasterSecret)(implicit we: WalletExt): Future[MasterSecretCreated] = {
+  private def handleCreateMasterSecret(secret: CreateMasterSecret)(implicit we: WalletExt, ec: ExecutionContext): Future[MasterSecretCreated] = {
     AnoncredsWalletOpExecutor.handleCreateMasterSecret(secret)
   }
 
-  private def handleUnpackMsg(um: UnpackMsg)(implicit we: WalletExt): Future[UnpackedMsg] = {
+  private def handleUnpackMsg(um: UnpackMsg)(implicit we: WalletExt, ec: ExecutionContext): Future[UnpackedMsg] = {
     CryptoOpExecutor.handleUnpackMsg(um)
   }
 
-  private def handleSignMsg(smp: SignMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[SignedMsg] = {
+  private def handleSignMsg(smp: SignMsg)(implicit wmp: WalletMsgParam, we: WalletExt, ec: ExecutionContext): Future[SignedMsg] = {
     CryptoOpExecutor.handleSignMsg(smp)
   }
 
-  private def handlePackMsg(pm: PackMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[PackedMsg] = {
+  private def handlePackMsg(pm: PackMsg)(implicit wmp: WalletMsgParam, we: WalletExt, ec: ExecutionContext): Future[PackedMsg] = {
     CryptoOpExecutor.handlePackMsg(pm, wmp.poolManager)
   }
 
-  private def handleLegacyPackMsg(pm: LegacyPackMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[PackedMsg] = {
+  private def handleLegacyPackMsg(pm: LegacyPackMsg)(implicit wmp: WalletMsgParam, we: WalletExt, ec: ExecutionContext): Future[PackedMsg] = {
     CryptoOpExecutor.handleLegacyPackMsg(pm, wmp.poolManager)
   }
 
-  private def handleLegacyUnpackMsg(msg: LegacyUnpackMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[UnpackedMsg] = {
+  private def handleLegacyUnpackMsg(msg: LegacyUnpackMsg)(implicit wmp: WalletMsgParam, we: WalletExt, ec: ExecutionContext): Future[UnpackedMsg] = {
     CryptoOpExecutor.handleLegacyUnpackMsg(msg, wmp.poolManager)
   }
 
-  private def handleVerifySignature(vs: VerifySignature)(implicit wmp: WalletMsgParam, we: WalletExt): Future[VerifySigResult] = {
+  private def handleVerifySignature(vs: VerifySignature)(implicit wmp: WalletMsgParam, we: WalletExt, ec: ExecutionContext): Future[VerifySigResult] = {
     handleGetVerKey(vs.keyParam).flatMap { gvkr =>
       if (vs.verKeyUsed.forall( _ == gvkr.verKey))
         CryptoOpExecutor.verifySig(gvkr.verKey, vs.challenge, vs.signature)
@@ -110,25 +109,25 @@ object WalletMsgHandler {
     }
   }
 
-  private def handleStoreTheirKey(stk: StoreTheirKey)(implicit walletExt: WalletExt): Future[TheirKeyStored]= {
+  private def handleStoreTheirKey(stk: StoreTheirKey)(implicit walletExt: WalletExt, ec: ExecutionContext): Future[TheirKeyStored]= {
     DidOpExecutor.handleStoreTheirKey(stk)
   }
 
-  private def handleCreateDID(d: CreateDID)(implicit walletExt: WalletExt): Future[NewKeyCreated] = {
+  private def handleCreateDID(d: CreateDID)(implicit walletExt: WalletExt, ec: ExecutionContext): Future[NewKeyCreated] = {
     DidOpExecutor.handleCreateDID(d)
   }
 
-  private def handleCreateNewKey(cnk: CreateNewKey)(implicit walletExt: WalletExt): Future[NewKeyCreated] = {
+  private def handleCreateNewKey(cnk: CreateNewKey)(implicit walletExt: WalletExt, ec: ExecutionContext): Future[NewKeyCreated] = {
     DidOpExecutor.handleCreateNewKey(cnk)
   }
 
-  private def handleSignLedgerReq(slr: SignLedgerRequest)(implicit walletExt: WalletExt): Future[LedgerRequest] = {
+  private def handleSignLedgerReq(slr: SignLedgerRequest)(implicit walletExt: WalletExt, ec: ExecutionContext): Future[LedgerRequest] = {
     LedgerWalletOpExecutor.handleSignRequest(
       slr.submitterDetail.did,
       slr.request)
   }
 
-  private def handleMultiSignLedgerReq(mslr: MultiSignLedgerRequest)(implicit walletExt: WalletExt): Future[LedgerRequest] = {
+  private def handleMultiSignLedgerReq(mslr: MultiSignLedgerRequest)(implicit walletExt: WalletExt, ec: ExecutionContext): Future[LedgerRequest] = {
     LedgerWalletOpExecutor.handleMultiSignRequest(
       mslr.submitterDetail.did,
       mslr.request
@@ -141,7 +140,7 @@ object WalletMsgHandler {
    * @param wmp wallet msg param
    * @return
    */
-  def handleCreateWalletASync()(implicit wmp: WalletMsgParam): Future[WalletCreated.type] = {
+  def handleCreateWalletAsync()(implicit wmp: WalletMsgParam, ec: ExecutionContext): Future[WalletCreated.type] = {
     wmp.walletProvider.createAsync(
       wmp.walletParam.walletName, wmp.walletParam.encryptionKey, wmp.walletParam.walletConfig)
   }
@@ -159,7 +158,7 @@ object WalletMsgHandler {
       wmp.walletParam.walletName, wmp.walletParam.encryptionKey, wmp.walletParam.walletConfig)
   }
 
-  private def handleGetVerKeyOpt(gvko: GetVerKeyOpt)(implicit wmp: WalletMsgParam, walletExt: WalletExt):
+  private def handleGetVerKeyOpt(gvko: GetVerKeyOpt)(implicit wmp: WalletMsgParam, walletExt: WalletExt, ec: ExecutionContext):
   Future[GetVerKeyOptResp] = {
     handleGetVerKey(GetVerKey(gvko.did, gvko.getKeyFromPool))
       .map(gvk => GetVerKeyOptResp(Option(gvk.verKey)))
@@ -168,7 +167,7 @@ object WalletMsgHandler {
       }
   }
 
-  def handleGetVerKey(keyParam: KeyParam)(implicit wmp: WalletMsgParam, we: WalletExt): Future[GetVerKeyResp] = {
+  def handleGetVerKey(keyParam: KeyParam)(implicit wmp: WalletMsgParam, we: WalletExt, ec: ExecutionContext): Future[GetVerKeyResp] = {
     keyParam.verKeyParam.fold (
       vk => Future.successful(GetVerKeyResp(vk)),
       gvkByDid => {
@@ -177,7 +176,7 @@ object WalletMsgHandler {
     )
   }
 
-  def handleGetVerKey(gvk: GetVerKey)(implicit wmp: WalletMsgParam, we: WalletExt): Future[GetVerKeyResp] =
+  def handleGetVerKey(gvk: GetVerKey)(implicit wmp: WalletMsgParam, we: WalletExt, ec: ExecutionContext): Future[GetVerKeyResp] =
     DidOpExecutor.getVerKey(gvk.did, gvk.getKeyFromPool, wmp.poolManager)
 }
 

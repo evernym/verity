@@ -3,7 +3,7 @@ package com.evernym.verity
 import ch.qos.logback.classic.turbo.TurboFilter
 import ch.qos.logback.classic.{Level, Logger}
 import ch.qos.logback.core.spi.FilterReply
-import com.evernym.verity.config.CommonConfig.LOGGING_IGNORE_FILTER_NAMES
+import com.evernym.verity.config.ConfigConstants.LOGGING_IGNORE_FILTER_NAMES
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.typesafe.config.ConfigFactory
 import org.slf4j.Marker
@@ -21,7 +21,7 @@ class IgnoreLoggerFilter extends TurboFilter {
 
   lazy val configReadHelper = new ConfigReadHelper(ConfigFactory.load())
   lazy val defaultIgnoreLoggerNames: Set[String] =
-    configReadHelper.getConfigListOfStringOption(LOGGING_IGNORE_FILTER_NAMES).getOrElse(Seq.empty).toSet
+    configReadHelper.getStringListOption(LOGGING_IGNORE_FILTER_NAMES).getOrElse(Seq.empty).toSet
 
   private var loggerNameContainsSet: Set[String] = Set.empty[String]
 

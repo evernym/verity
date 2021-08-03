@@ -2,15 +2,23 @@ package com.evernym.verity.integration.base.sdk_provider.msg_listener
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.headers.HttpCredentials
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import akka.http.scaladsl.server.directives.RouteDirectives
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.typesafe.scalalogging.Logger
+import org.json.JSONObject
 
+import java.time.LocalDateTime
+import java.util.UUID
 import java.util.concurrent.LinkedBlockingDeque
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 
-trait MsgListenerBase[T] {
+trait MsgListenerBase[T]
+  extends HasOAuthSupport {
 
   def expectMsg(max: Duration): T = {
     val m = Option {
@@ -26,19 +34,104 @@ trait MsgListenerBase[T] {
   }
 
   def port: Int
-  def edgeRoute: Route
-  def endpoint = s"http://localhost:$port/$baseEndpointPath"
+  def msgRoute: Route
+  def checkAuthToken: Boolean
+  lazy val logger: Logger = getLoggerByName("MsgListener")
 
-  def logger: Logger = getLoggerByClass(this.getClass)
+  lazy val webhookEndpoint = s"http://localhost:$port/$webhookEndpointPath"
 
-  protected val baseEndpointPath: String = "edge"
-  protected val queue: LinkedBlockingDeque[T] = new LinkedBlockingDeque[T]()
-
+  protected lazy val webhookEndpointPath: String = "webhook"
+  protected lazy val queue: LinkedBlockingDeque[T] = new LinkedBlockingDeque[T]()
   protected def receiveMsg(msg: T): Unit = queue.add(msg)
 
-  implicit def actorSystem: ActorSystem
-
-  def startHttpServer(): Unit = {
+  protected def startHttpServer(): Unit = {
     Http().newServerAt("localhost", port).bind(edgeRoute)
   }
+
+  private def edgeRoute: Route =
+    (if (rejectMessages) RouteDirectives.reject else msgRoute) ~
+      (if (checkAuthToken) oAuthAccessTokenRoute else RouteDirectives.reject)
+
+  def resetPlainMsgsCounter: ReceivedMsgCounter = {
+    val curCount = _plainMsgsSinceLastReset
+    _plainMsgsSinceLastReset = 0
+    ReceivedMsgCounter(curCount, _authedMsgSinceLastReset, _failedAuthedMsgSinceLastReset)
+  }
+
+  def resetAuthedMsgsCounter: ReceivedMsgCounter = {
+    val curCount = _authedMsgSinceLastReset
+    _authedMsgSinceLastReset = 0
+    ReceivedMsgCounter(_plainMsgsSinceLastReset, curCount, _failedAuthedMsgSinceLastReset)
+  }
+
+  def resetFailedAuthedMsgsCounter: ReceivedMsgCounter = {
+    val curCount = _failedAuthedMsgSinceLastReset
+    _failedAuthedMsgSinceLastReset = 0
+    ReceivedMsgCounter(_plainMsgsSinceLastReset, _authedMsgSinceLastReset, curCount)
+  }
+
+  def setRejectMessages(value: Boolean): Unit = {
+    rejectMessages = value
+  }
+
+  private var rejectMessages = false
+
+  protected var _plainMsgsSinceLastReset: Int = 0
+
+  implicit def actorSystem: ActorSystem
+}
+
+trait HasOAuthSupport {
+  def port: Int
+  def tokenExpiresInDuration: Option[FiniteDuration]
+
+  lazy val oAuthAccessTokenEndpoint = s"http://localhost:$port/$oAuthAccessTokenEndpointPath"
+
+  private lazy val tokenExpiresInSeconds: Long = tokenExpiresInDuration.map(_.toSeconds).getOrElse(10l)
+  private lazy val oAuthAccessTokenEndpointPath: String = "access-token"
+
+  protected lazy val oAuthAccessTokenRoute: Route =
+    logRequestResult("access-token") {
+      pathPrefix(s"$oAuthAccessTokenEndpointPath") {
+        extractRequest { implicit req: HttpRequest =>
+          post {
+            complete {
+              refreshToken()
+              val jsonObject = new JSONObject()
+              jsonObject.put("access_token", token.get.value)
+              jsonObject.put("expires_in", tokenExpiresInSeconds)
+              HttpEntity(ContentTypes.`application/json`, jsonObject.toString())
+            }
+          }
+        }
+      }
+    }
+
+
+  protected def hasValidToken(cred: Option[HttpCredentials]): Boolean = {
+    val isAuthed = cred match {
+      case Some(c) => token.map(_.value).contains(c.token())
+      case None    => false
+    }
+    if (isAuthed) _authedMsgSinceLastReset = _authedMsgSinceLastReset + 1
+    else _failedAuthedMsgSinceLastReset = _failedAuthedMsgSinceLastReset + 1
+    isAuthed
+  }
+
+  private def refreshToken(): Unit = {
+    token = Option(Token(UUID.randomUUID().toString, LocalDateTime.now().plusSeconds(tokenExpiresInSeconds)))
+  }
+
+
+  private var token: Option[Token] = None
+  protected var _authedMsgSinceLastReset: Int = 0
+  protected var _failedAuthedMsgSinceLastReset: Int = 0
+
+}
+
+case class Token(value: String, expiresAt: LocalDateTime)
+
+case class ReceivedMsgCounter(plainMsgsBeforeLastReset: Int,
+                              authedMsgsBeforeLastReset: Int,
+                              failedAuthedMsgBeforeLastReset: Int) {
 }

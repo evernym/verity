@@ -1,7 +1,7 @@
 package com.evernym.verity.http.base.open
 
 import akka.http.scaladsl.model.StatusCodes._
-import com.evernym.verity.Status.UNAUTHORIZED
+import com.evernym.verity.util2.Status.UNAUTHORIZED
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgParseUtil.convertTo
@@ -23,7 +23,7 @@ trait WalletBackupAndRecoverySpec { this : EndpointHandlerBaseSpec =>
   // is already added before this test runs.
   def testWalletBackupAndRecovery(mockEdgeAgent: MockEdgeAgent, mockNewEdgeAgent: MockEdgeAgent): Unit = {
 
-    val walletBackupUtil = new WalletBackupSpecUtil(mockEdgeAgent)
+    val walletBackupUtil = new WalletBackupSpecUtil(mockEdgeAgent, futureWalletExecutionContext)
 
     implicit val msgPackagingContext: AgentMsgPackagingContext =
       agentmsg.AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = true)

@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols
 
 import com.evernym.verity.protocol.engine.{MsgFamily, MsgTypeStr, VerKey}
-import com.evernym.verity.Base64Encoded
+import com.evernym.verity.util2.Base64Encoded
 
 object CommonProtoTypes {
   case class Thread(thid: String, seqnum: Int)

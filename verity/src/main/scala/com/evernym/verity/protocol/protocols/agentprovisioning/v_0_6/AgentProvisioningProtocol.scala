@@ -1,8 +1,8 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_6
 
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status.{AGENT_ALREADY_CREATED, PROVISIONING_PROTOCOL_DEPRECATED}
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.{AGENT_ALREADY_CREATED, PROVISIONING_PROTOCOL_DEPRECATED}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, TheirKeyStored}

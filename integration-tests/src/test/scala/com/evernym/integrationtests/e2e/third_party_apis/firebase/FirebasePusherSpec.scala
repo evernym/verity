@@ -1,9 +1,10 @@
 package com.evernym.integrationtests.e2e.third_party_apis.firebase
 
 import akka.testkit.TestKit
+import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.config.AppConfigWrapper
-import com.evernym.verity.config.CommonConfig.{FCM_API_HOST, FCM_API_KEY, FCM_API_PATH}
+import com.evernym.verity.config.ConfigConstants.{FCM_API_HOST, FCM_API_KEY, FCM_API_PATH}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.push_notification.{FirebasePushServiceParam, FirebasePusher, PushNotifParam}
@@ -21,10 +22,14 @@ class FirebasePusherSpec extends TestKit(AkkaTestBasic.system()) with BasicSpec 
   val notifData = Map(BODY -> "notif-body", BADGE_COUNT -> 1)
   val regTokenId = "c9Opl8rgyRs:APA91bF73AeSM5_godAIs-s3CzucLDcIDrz8Idfb9X6CQlhMoBkeqBK9tB7SgY8jiFN6eQheDqdiwzl9kNSh36jQ4XzrnjvlfO-eGPE7nphYEimt-r9QdIThVpta3fi5x0_nZrRhLV_Z"
 
-  val serverKey: String = AppConfigWrapper.getConfigStringReq(FCM_API_KEY)
-  val serverHost: String = AppConfigWrapper.getConfigStringReq(FCM_API_HOST)
-  val serverPath: String = AppConfigWrapper.getConfigStringReq(FCM_API_PATH)
-  val pusher = new FirebasePusher(FirebasePushServiceParam(serverKey, serverHost, serverPath))
+  val serverKey: String = AppConfigWrapper.getStringReq(FCM_API_KEY)
+  val serverHost: String = AppConfigWrapper.getStringReq(FCM_API_HOST)
+  val serverPath: String = AppConfigWrapper.getStringReq(FCM_API_PATH)
+  val pusher =
+    new FirebasePusher(
+      FirebasePushServiceParam(serverKey, serverHost, serverPath),
+      TestExecutionContextProvider.ecp.futureExecutionContext
+    )
 
   "FCM pusher" - {
     /*Note: This test depends on real pusher object which has dependency on internet's availability

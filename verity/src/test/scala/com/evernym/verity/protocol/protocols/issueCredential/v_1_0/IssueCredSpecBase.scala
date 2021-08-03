@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
@@ -9,8 +10,9 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCre
 import com.evernym.verity.protocol.testkit.DSL.state
 import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
 import com.evernym.verity.testkit.BasicFixtureSpec
-import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success}
 
@@ -18,14 +20,18 @@ abstract class IssueCredSpecBase
   extends TestsProtocolsImpl(IssueCredentialProtoDef, Option(OneToOne))
     with BasicFixtureSpec {
 
-  lazy val config: AppConfig = new TestAppConfig()
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   def createTest1CredDef: String = "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1"
 
   val orgName = "Acme Corp"
   val logoUrl = "https://robohash.org/234"
   val agencyVerkey = "87shCEvKAWw6JncoirStGxkRptVriLeNXytw9iRxpzGY"
-  val agencyDidkey = "did:key:z6Mkma8jnVAkW4RZRHTWQRQj84JReTmi8DtjDzoryzPykD3v"
+  val agencyDidkey = "did:key:z2DXXwXqC5VKhhDVLCoZSX98Gr33w1TGfNnA3y192dsDjbv"
   val publicDid = "UmTXHz4Kf4p8XHh5MiA4PK"
 
   def assertStatus[T: ClassTag](from: TestEnvir): Unit = {
@@ -50,7 +56,6 @@ abstract class IssueCredSpecBase
 
   def assertProposalReceivedState(env: TestEnvir): Unit = {
     val proposalReceived = env expect state[State.ProposalReceived]
-    println(s"proposalReceived: $proposalReceived")
     assertCredProposedSegment(env, proposalReceived.credProposedRef)
   }
 
@@ -70,7 +75,6 @@ abstract class IssueCredSpecBase
 
   def assertOfferSentState(env: TestEnvir): Unit = {
     val offerSent = env expect state[State.OfferSent]
-    println(s"offerSent: $offerSent")
     assertCredOfferedSegment(env, offerSent.credOfferRef)
   }
 
@@ -89,7 +93,6 @@ abstract class IssueCredSpecBase
 
   def assertRequestSentState(env: TestEnvir): Unit = {
     val requestSent = env expect state[State.RequestSent]
-    println(s"requestSent: $requestSent")
     assertCredRequestedSegment(env, requestSent.credRequestRef)
   }
 
@@ -99,7 +102,6 @@ abstract class IssueCredSpecBase
 
   def assertRequestReceivedState(env: TestEnvir): Unit = {
     val requestReceived = env expect state[State.RequestReceived]
-    println(s"requestReceived: $requestReceived")
     assertCredRequestedSegment(env, requestReceived.credRequestRef)
   }
 
@@ -109,7 +111,6 @@ abstract class IssueCredSpecBase
 
   def assertCredSentState(env: TestEnvir): Unit = {
     val credSent = env expect state[State.CredSent]
-    println(s"credSent: $credSent")
     assertCredIssuedSegment(env, credSent.credIssuedRef)
   }
 
@@ -119,7 +120,6 @@ abstract class IssueCredSpecBase
 
   def assertCredReceivedState(env: TestEnvir): Unit = {
     val credReceived = env expect state[State.CredReceived]
-    println(s"credReceived: $credReceived")
     assertCredReceivedSegment(env, credReceived.credIssuedRef)
   }
 

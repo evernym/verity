@@ -39,13 +39,15 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
   override def jsonParam: AsJsonObject => String = { j => s"""JSON.parse(${rawJsonParam(j)})""" }
   override def mapParam: Map[_, _] => String = {m => jsonParam(MapAsJsonObject(m))}
 
+  val scopedModule = "@evernym/verity-sdk"
+
   override lazy val interpreter: InterpreterEnv = {
+    npmrcFile(interpreterWorkingDir)
     Process(
       Seq(
         "npm",
-        "--strict-ssl", "false",
         "install",
-        packageUrl("npm", sdkVersion, "tgz")
+        s"$scopedModule@$sdkVersion"
       ),
       interpreterWorkingDir.toFile,
     ).!
@@ -68,13 +70,13 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     val fParams = Seq("context", mkParams(funcParams)).mkString(",")
     executeOneLine(
       ctx,
-      """require('verity-sdk')""",
+      s"""require('$scopedModule')""",
       s"await new sdk.protocols.$versionConversion.$obj($params).$func($fParams)"
     )
   }
 
   override def available(): Unit = {
-    """const sdk = require('verity-sdk')""".execute()
+    s"""const sdk = require('$scopedModule')""".execute()
   }
 
   override def provision_0_7: ProvisionV0_7 = {
@@ -82,7 +84,7 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
       override def provision(ctx: Context): Context = {
         val newContext = executeOneLine(
           ctx,
-          """require('verity-sdk')""",
+          s"""require('$scopedModule')""",
           "console.log(JSON.stringify(await new sdk.protocols.v0_7.Provision().provision(context)))"
         )
 
@@ -100,7 +102,7 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
         val tokenObj = TokenAsJsonObject(token)
         val newContext = executeOneLine(
           ctx,
-          """require('verity-sdk')""",
+          s"""require('$scopedModule')""",
           s"""console.log(JSON.stringify(await new sdk.protocols.v0_7.Provision(null, ${rawJsonParam(tokenObj)}).provision(context)))"""
         )
 
@@ -330,6 +332,12 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 }
 
 object NodeSdkProvider {
+  def npmrcFile(cwd: Path): Unit = {
+    val fileContent = s"@evernym:registry=https://gitlab.com/api/v4/packages/npm/"
+
+    ProcessSdkProvider.writeConfigFile(cwd, ".npmrc", fileContent)
+  }
+
   def buildNodeScript(imports: String, context: String, cmd: String): String = {
     s"""
 'use strict'

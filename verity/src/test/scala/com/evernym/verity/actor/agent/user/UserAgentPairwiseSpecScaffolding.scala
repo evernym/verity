@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.user
 
-import akka.actor.PoisonPill
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
+import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
 import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SponsorRel}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
@@ -19,12 +19,11 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util._
 import com.evernym.verity.util.MsgIdProvider
-import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.base.Done
-import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent}
+import com.evernym.verity.util2.UrlParam
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
@@ -34,20 +33,24 @@ trait UserAgentPairwiseSpecScaffolding
     with PersistentActorSpec
     with AgentSpecHelper
     with AgentWalletSetupProvider
-    with Eventually {
+    with Eventually
+    with HasExecutionContextProvider
+    with HasWalletExecutionContextProvider {
 
   implicit def msgPackagingContext: AgentMsgPackagingContext
 
   val mockEntAgencyAdmin: MockEdgeAgent =
-    new MockEdgeAgent(UrlParam("localhost:9002"), platform.agentActorContext.appConfig)
+    new MockEdgeAgent(UrlParam("localhost:9002"), platform.agentActorContext.appConfig, futureExecutionContext, futureWalletExecutionContext)
 
-  lazy val mockRemoteEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockEntAgencyAdmin)
+  lazy val mockRemoteEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockEntAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
 
-  lazy val mockRemoteEdgeCloudAgent: MockCloudAgent = buildMockCloudAgent(mockEntAgencyAdmin)
+  lazy val mockRemoteEdgeCloudAgent: MockCloudAgent = buildMockCloudAgent(mockEntAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
 
-  lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
+  lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
 
-  val testPushComMethod: String = s"${MockPusher.comMethodPrefix}:12345"
+  lazy val mockPusher: MockPusher = new MockPusher(appConfig, futureExecutionContext)
+
+  val testPushComMethod: String = s"${mockPusher.comMethodPrefix}:12345"
 
   var pairwiseDID: DID = _
 

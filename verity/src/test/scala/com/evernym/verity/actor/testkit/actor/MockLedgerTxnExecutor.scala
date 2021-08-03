@@ -1,16 +1,14 @@
 package com.evernym.verity.actor.testkit.actor
 
 import akka.actor.ActorSystem
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{DATA_NOT_FOUND, StatusDetail, StatusDetailException}
+import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, StatusDetailException}
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.{DID, VerKey}
 import org.json.JSONObject
 
-import java.time.LocalDateTime
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.JavaConverters._
 import scala.util.{Left, Random}
 
@@ -18,8 +16,8 @@ import scala.util.{Left, Random}
 //it doesn't have any privilege checking etc.
 //it is more like data store only
 
-class MockLedgerSvc(val system: ActorSystem) extends LedgerSvc {
-  override val ledgerTxnExecutor: LedgerTxnExecutor = new MockLedgerTxnExecutor()
+class MockLedgerSvc(val system: ActorSystem, executionContext: ExecutionContext) extends LedgerSvc {
+  override val ledgerTxnExecutor: LedgerTxnExecutor = new MockLedgerTxnExecutor(executionContext)
 }
 
 object MockLedgerTxnExecutor {
@@ -34,7 +32,9 @@ object MockLedgerTxnExecutor {
   }
 }
 
-class MockLedgerTxnExecutor() extends LedgerTxnExecutor {
+class MockLedgerTxnExecutor(ec: ExecutionContext)
+  extends LedgerTxnExecutor {
+  lazy implicit val executionContext: ExecutionContext = ec
 
   case class NymDetail(verKey: VerKey)
 

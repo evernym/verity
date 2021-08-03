@@ -25,11 +25,8 @@ message ResourceUsageState {
 
 message ItemManagerState {
     option (scalapb.message).extends = "com.evernym.verity.actor.State";
-    string itemType = 1;
-    string ownerVerKey = 2;
-    int32 totalEverAllocatedContainers = 3;
-    string headContainerEntityId = 4;
-    string tailContainerEntityId = 5;
-    bool migrateItemsToNextLinkedContainer = 6;
-    bool migrateItemsToLatestVersionedContainers = 7;
+    int32 totalEverAllocatedContainers = 1;
+    string headContainerEntityId = 2;
+    string tailContainerEntityId = 3;
+    bool migrateItemsToNextLinkedContainer = 4;
 }

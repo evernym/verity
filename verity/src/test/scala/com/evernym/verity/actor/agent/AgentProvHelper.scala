@@ -3,7 +3,9 @@ package com.evernym.verity.actor.agent
 import java.util.UUID
 
 import akka.testkit.TestKitBase
-import com.evernym.verity.Base64Encoded
+import com.evernym.verity.util2.Base64Encoded
+import com.evernym.verity.util2.HasExecutionContextProvider
+import com.evernym.verity.util2.HasWalletExecutionContextProvider
 import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
@@ -26,7 +28,9 @@ trait AgentProvHelper
     with PersistentActorSpec
     with AgentSpecHelper
     with TestKitBase
-    with Eventually {
+    with Eventually
+    with HasExecutionContextProvider
+    with HasWalletExecutionContextProvider {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -41,7 +45,8 @@ trait AgentProvHelper
     }
   }
 
-  override lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
+  override lazy val mockEdgeAgent: MockEdgeAgent =
+    buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
 
   def getNonce: String = UUID.randomUUID().toString
 
@@ -49,7 +54,7 @@ trait AgentProvHelper
     mockAgencyAdmin.agencyPublicDid.foreach(ma.handleFetchAgencyKey)
   }
 
-  val sponsorWallet = new TestWallet(createWallet = true)
+  val sponsorWallet = new TestWallet(futureWalletExecutionContext, createWallet = true)
 
   def sponsorKeys(seed: String="000000000000000000000000Trustee1"): NewKeyCreated =
     sponsorWallet.executeSync[NewKeyCreated](CreateNewKey(seed=Some(seed)))
@@ -62,7 +67,7 @@ trait AgentProvHelper
   }
 
   def newEdgeAgent(admin: MockEdgeAgent = mockAgencyAdmin): MockEdgeAgent = {
-    buildMockEdgeAgent(admin)
+    buildMockEdgeAgent(admin, futureExecutionContext, futureWalletExecutionContext)
   }
 
   private def sendCreateAgent(sponsorRel: SponsorRel,

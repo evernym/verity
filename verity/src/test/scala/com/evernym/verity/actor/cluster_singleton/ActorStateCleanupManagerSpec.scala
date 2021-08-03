@@ -1,13 +1,15 @@
 package com.evernym.verity.actor.cluster_singleton
 
 import java.util.UUID
+
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.cluster.sharding.ShardRegion.EntityId
-import com.evernym.verity.actor.agent.maintenance.{GetManagerStatus, InitialActorState, ManagerStatus}
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.actor.agent.maintenance.{GetManagerStatus, InitialActorState, ManagerStatus, StartJob, StopJob}
 import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, FixActorState}
-import com.evernym.verity.actor.agent.msgrouter.legacy.LegacySetRoute
+import com.evernym.verity.actor.agent.msgrouter.legacy.{GetRouteBatch, GetRouteBatchResult, LegacySetRoute}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, RoutingAgentUtil}
-import com.evernym.verity.actor.base.CoreActorExtended
+import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, PersistentActorSpec}
@@ -31,9 +33,8 @@ class ActorStateCleanupManagerSpec
     super.beforeAll()
   }
 
-  //number of total route store actors
-  val shardSize = 100         //total possible actors
-  val totalRouteEntries = 30
+  val shardSize = 100           //total possible legacy routing actors
+  val totalRouteEntries = 250   //total routing entries distributed over 'shardSize'
 
   "Platform" - {
     "during launch" - {
@@ -47,7 +48,16 @@ class ActorStateCleanupManagerSpec
   "AgentRouteStore" - {
     "when sent several SetRoute commands" - {
       "should store the routes successfully" taggedAs UNSAFE_IgnoreLog in {
+        //stop the cleanup job until the test creates required data
+        platform.singletonParentProxy ! ForActorStateCleanupManager(StopJob)
+        expectMsgType[Done.type]
+
         addRandomRoutes()
+        checkRoutes()
+
+        //start the cleanup job so that it can start its processing
+        platform.singletonParentProxy ! ForActorStateCleanupManager(StartJob)
+        expectMsgType[Done.type]
       }
     }
   }
@@ -56,7 +66,7 @@ class ActorStateCleanupManagerSpec
 
     "when sent GetStatus" - {
       "should respond with correct status" in {
-        eventually(timeout(Span(20, Seconds)), interval(Span(200, Millis))) {
+        eventually(timeout(Span(30, Seconds)), interval(Span(100, Millis))) {
           platform.singletonParentProxy ! ForActorStateCleanupManager(GetManagerStatus())
           val status = expectMsgType[ManagerStatus]
           status.registeredRouteStoreActorCount shouldBe shardSize
@@ -67,13 +77,14 @@ class ActorStateCleanupManagerSpec
 
     "after some time" - {
       "should have processed all state cleanup" taggedAs (UNSAFE_IgnoreLog, UNSAFE_IgnoreAkkaEvents) in {
-        eventually(timeout(Span(35, Seconds)), interval(Span(200, Millis))) {
+        eventually(timeout(Span(50, Seconds)), interval(Span(200, Millis))) {
           platform.singletonParentProxy ! ForActorStateCleanupManager(GetManagerStatus())
           val status = expectMsgType[ManagerStatus]
           status.registeredRouteStoreActorCount shouldBe shardSize
           status.totalCandidateAgentActors shouldBe totalRouteEntries
           status.processedRouteStoreActorCount shouldBe shardSize
           status.totalProcessedAgentActors shouldBe totalRouteEntries
+          status.inProgressCleanupStatus.isEmpty shouldBe true
         }
       }
     }
@@ -101,16 +112,26 @@ class ActorStateCleanupManagerSpec
       sendMsgToAgentRouteStore(entityId, GetPersistentActorDetail)
       expectMsgType[PersistentActorDetail].totalPersistedEvents shouldBe routeDIDs.size
 
-      //stop the actor
+      //stop actor
       sendMsgToAgentRouteStore(entityId, PoisonPill)
     }
   }
 
-  def sendMsgToAgentRouteStore(entityId: String, msg: Any): Unit = {
-    routeStoreRegion ! ForIdentifier(entityId, msg)
+  def checkRoutes(): Unit = {
+    entityIdsToRoutes.foreach { case (entityId, routeDIDs) =>
+      routeDIDs.zipWithIndex.foreach { case (routeDID, index) =>
+        sendMsgToAgentRouteStore(entityId, GetRouteBatch(index, 1))
+        val result = expectMsgType[GetRouteBatchResult]
+        result.dids shouldBe Set(routeDID)
+      }
+    }
   }
 
-  lazy val routeStoreRegion: ActorRef = platform.legacyAgentRouteStoreRegion
+  def sendMsgToAgentRouteStore(entityId: String, msg: Any): Unit = {
+    legacyRouteStoreRegion ! ForIdentifier(entityId, msg)
+  }
+
+  lazy val legacyRouteStoreRegion: ActorRef = platform.legacyAgentRouteStoreRegion
 
   lazy val DUMMY_ACTOR_TYPE_ID: Int = 1
 
@@ -142,7 +163,7 @@ class ActorStateCleanupManagerSpec
          |        }
          |
          |        scheduled-job {
-         |          initial-delay-in-seconds = 10
+         |          initial-delay-in-seconds = 2
          |          interval-in-seconds = 2
          |        }
          |      }
@@ -151,7 +172,7 @@ class ActorStateCleanupManagerSpec
          |        batch-size = 1
          |        scheduled-job {
          |          initial-delay-in-seconds = 1
-         |          interval-in-seconds = 3
+         |          interval-in-seconds = 2
          |        }
          |      }
          |    }
@@ -166,6 +187,8 @@ class ActorStateCleanupManagerSpec
          """.stripMargin
     }
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 class DummyAgentActor extends CoreActorExtended {
@@ -173,7 +196,7 @@ class DummyAgentActor extends CoreActorExtended {
   //this is to create/test scenario wherein some agent actor doesn't recover successfully
   // (or in other words they never responds to the 'FixActorState' command)
   // then also the whole actor state cleanup process should still be working fine.
-  val notRespondEntityIds = List("2LsdxuRArjHNvKYngrunpn", "Hcn6Wipq2YVvnUE4rvApZx")
+  val notRespondEntityIds = List("WpGeaHXpyUFLMn3K7rLdD8", "N3gagwN9hYcrBDHQkHYfG4")
 
   override def receiveCmd: Receive = {
     case fas: FixActorState             =>

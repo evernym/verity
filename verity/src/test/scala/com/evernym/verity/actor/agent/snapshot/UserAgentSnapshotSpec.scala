@@ -2,6 +2,7 @@ package com.evernym.verity.actor.agent.snapshot
 
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.KeyCreated
 import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, SetupAgentEndpoint}
 import com.evernym.verity.actor.agent.relationship.SelfRelationship
@@ -60,7 +61,10 @@ class UserAgentSnapshotSpec
     }
   }
 
-  lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+
+  lazy val mockEdgeAgent: MockEdgeAgent =
+    buildMockEdgeAgent(mockAgencyAdmin, ecp.futureExecutionContext, ecp.walletFutureExecutionContext)
 
   lazy val userDID = mockEdgeAgent.myDIDDetail
 
@@ -97,4 +101,6 @@ class UserAgentSnapshotSpec
   override type StateType = UserAgentState
   override def regionActorName: String = USER_AGENT_REGION_ACTOR_NAME
   override def actorEntityId: String = userAgentEntityId
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

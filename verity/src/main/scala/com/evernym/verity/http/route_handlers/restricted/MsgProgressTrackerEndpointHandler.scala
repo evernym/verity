@@ -36,7 +36,7 @@ trait MsgProgressTrackerEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   protected def getAllIdsBeingTracked: Future[Any] = {
-    Future.successful(MsgProgressTrackerCache.allIdsBeingTracked)
+    Future.successful(MsgProgressTrackerCache(platform.actorSystem).allIdsBeingTracked)
   }
 
   protected def getRecordedState(trackingId: String, topReqSize: Option[Int]): Future[Any] = {

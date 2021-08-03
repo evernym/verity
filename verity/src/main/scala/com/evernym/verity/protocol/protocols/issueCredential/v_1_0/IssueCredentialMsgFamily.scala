@@ -28,7 +28,7 @@ object IssueCredMsgFamily
 /*
   Issuer has two decision points:
     To accept propose-credential (but only if Holder starts protocol or cycle of negotiation
-    Should issue credential (basally, accept request-credential)
+    Should issue credential (basically, accept request-credential)
 
   Holder has only one decision point:
     To accept offer-credential

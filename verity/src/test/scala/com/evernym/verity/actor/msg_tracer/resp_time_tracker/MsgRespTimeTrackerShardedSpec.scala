@@ -4,12 +4,13 @@ import java.util.UUID
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKitBase}
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.base.{AlreadyDone, Done}
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 import org.scalatest.concurrent.Eventually
-import com.evernym.verity.testkit.{MetricsReadHelper, BasicSpec, PlatformInitialized}
+import com.evernym.verity.testkit.{BasicSpec, PlatformInitialized}
 
 
 class MsgRespTimeTrackerShardedSpec
@@ -19,7 +20,6 @@ class MsgRespTimeTrackerShardedSpec
     with BasicSpec
     with ImplicitSender
     with MsgRespTimeTracker
-    with MetricsReadHelper
     with Eventually {
 
   implicit lazy val system: ActorSystem = AkkaTestBasic.system()
@@ -50,25 +50,7 @@ class MsgRespTimeTrackerShardedSpec
         expectMsg(Done)
       }
     }
-
-    //TODO: this test works individually, but when ran with all other test, it fails
-//    "when asked MetricsReporterApi" - {
-//      "should provide recorded metrics" in {
-//        eventually (timeout(Span(20, Seconds)), interval(Span(2, Seconds))) {
-//          val nodeMetrics = MetricsReporterApi.getNodeMetrics(MetricsFilterCriteria(includeReset=false, filtered=false))
-//
-//          //histogram metrics assertion
-//          nodeMetrics.metrics.exists(
-//            m => m.name == "histogram_processing_time_millis_bucket" &&
-//              m.tags.getOrElse(Map.empty).exists(r => r._1 == "msg_type" && r._2 == "connReq")) shouldBe true
-//
-//          //span metrics assertion
-//          nodeMetrics.metrics.exists(
-//            m => m.name == "span_processing_time_seconds_bucket" &&
-//              m.tags.getOrElse(Map.empty).exists(r => r._1 == "msg_type" && r._2 == "connReq")) shouldBe true
-//        }
-//      }
-//    }
-
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

@@ -2,11 +2,11 @@ package com.evernym.verity.apphealth
 
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus.{Down, Removed}
-import com.evernym.verity.Status._
-import com.evernym.verity.actor.appStateManager.{AppStateDetailed, CauseDetail, DrainingStarted, ErrorEvent, EventDetail, ListeningSuccessful, ManualUpdate, MildSystemError, RecoverIfNeeded, SeriousSystemError, SuccessEvent}
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.util2.Status._
+import com.evernym.verity.actor.appStateManager.{AppStateDetailed, AppStateUpdateAPI, CauseDetail, DrainingStarted, ErrorEvent, EventDetail, ListeningSuccessful, ManualUpdate, MildSystemError, RecoverIfNeeded, SeriousSystemError, SuccessEvent}
 import com.evernym.verity.actor.testkit.{ActorSpec, AppStateManagerTestKit}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
-import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
 import com.evernym.verity.actor.appStateManager.state.{DegradedState, DrainingState, InitializingState, ListeningState, ShutdownWithErrors, SickState}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.evernym.verity.testkit.{BasicFixtureSpec, CancelGloballyAfterFailure}
@@ -31,7 +31,7 @@ class AppStateManagerSpec
     "when initialized for first time " - {
       "should switch to 'InitializingState'" in { implicit asmTestKit =>
         withLatestAppState { implicit las =>
-          asmTestKit.currentAppState shouldBe InitializingState
+          asmTestKit.currentAppState shouldBe a [InitializingState]
           assertEvents(las.stateEvents, 1)
           assertCausesByState(las.causesByState, Map.empty)
           assertCausesByContext(las.causesByContext, Map.empty)
@@ -43,7 +43,7 @@ class AppStateManagerSpec
 
       "MildSystemError event is received" - {
         "should switch to 'DegradedState' state" in { implicit asmTestKit =>
-          publishEvent(ErrorEvent(MildSystemError, CONTEXT_GENERAL,
+          AppStateUpdateAPI(system).publishEvent(ErrorEvent(MildSystemError, CONTEXT_GENERAL,
             new RuntimeException("exception message"), msg = Option(CAUSE_MESSAGE_MILD_SYSTEM_ERROR)))
 
           eventually(timeout(Span(5, Seconds)), interval(Span(200, Millis))) {
@@ -64,7 +64,7 @@ class AppStateManagerSpec
         "should switch to 'ShuttingDownState' state" in { implicit asmTestKit =>
           //TODO: why this loop is required?
           (1 to 11).foreach { _ =>
-            publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_GENERAL, new RuntimeException("exception message"),
+            AppStateUpdateAPI(system).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_GENERAL, new RuntimeException("exception message"),
               msg = Option(CAUSE_MESSAGE_SERIOUS_SYSTEM_ERROR)))
           }
           eventually {
@@ -95,7 +95,7 @@ class AppStateManagerSpec
           switchToSickState()
 
           val causeDetail = CauseDetail(APP_STATUS_UPDATE_MANUAL.statusCode, "manual-update")
-          publishEvent(SuccessEvent(ManualUpdate(STATUS_LISTENING), CONTEXT_MANUAL_UPDATE, causeDetail))
+          AppStateUpdateAPI(system).publishEvent(SuccessEvent(ManualUpdate(STATUS_LISTENING), CONTEXT_MANUAL_UPDATE, causeDetail))
 
           eventually(timeout(Span(2, Seconds))) {
 
@@ -146,7 +146,7 @@ class AppStateManagerSpec
         "should switch to 'DegradedState' state" in { implicit asmTestKit =>
           switchToListeningState()
 
-          publishEvent(ErrorEvent(MildSystemError, CONTEXT_GENERAL,
+          AppStateUpdateAPI(system).publishEvent(ErrorEvent(MildSystemError, CONTEXT_GENERAL,
             new RuntimeException("exception message"), msg = Option(CAUSE_MESSAGE_MILD_SYSTEM_ERROR)))
 
           eventually {
@@ -193,7 +193,7 @@ class AppStateManagerSpec
     *************************************************************************************/
 
   def switchToListeningState()(implicit amt: AppStateManagerTestKit): Unit = {
-    publishEvent(SuccessEvent(ListeningSuccessful, CONTEXT_GENERAL, CAUSE_DETAIL_LISTENING_SUCCESSFULLY,
+    AppStateUpdateAPI(system).publishEvent(SuccessEvent(ListeningSuccessful, CONTEXT_GENERAL, CAUSE_DETAIL_LISTENING_SUCCESSFULLY,
         msg = Option(CAUSE_MESSAGE_LISTENING_SUCCESSFULLY)))
 
     eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
@@ -209,7 +209,7 @@ class AppStateManagerSpec
 
 
   def switchToSickState()(implicit amt: AppStateManagerTestKit): Unit = {
-    publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_GENERAL, new RuntimeException("runtime exception"),
+    AppStateUpdateAPI(system).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_GENERAL, new RuntimeException("runtime exception"),
         msg = Option(CAUSE_MESSAGE_SERIOUS_SYSTEM_ERROR)))
 
     eventually {
@@ -231,7 +231,7 @@ class AppStateManagerSpec
 
 
   def switchToDraining()(implicit amt: AppStateManagerTestKit): Unit = {
-    publishEvent(SuccessEvent(
+    AppStateUpdateAPI(system).publishEvent(SuccessEvent(
         DrainingStarted,
         CONTEXT_AGENT_SERVICE_DRAIN,
         causeDetail = CAUSE_DETAIL_DRAINING_STARTED,
@@ -285,7 +285,7 @@ class AppStateManagerSpec
   def prepareCauseMessage(cd: CauseDetail): String = "cause message " + cd.msg
 
   def sendRecoverByContext(context: String)(implicit amt: AppStateManagerTestKit): Unit = {
-    publishEvent(RecoverIfNeeded(context))
+    AppStateUpdateAPI(system).publishEvent(RecoverIfNeeded(context))
   }
 
   def assertEvents(previousEvents: List[EventDetail], newTotalEventSize: Int)
@@ -323,7 +323,7 @@ class AppStateManagerSpec
   }
 
   def withFixture(test: OneArgTest): Outcome = {
-    val fixture = new AppStateManagerTestKit(this, appConfig)
+    val fixture = new AppStateManagerTestKit(this, appConfig, ecp.futureExecutionContext)
     val r = super.withFixture(test.toNoArgTest(fixture))
     Try(fixture.stop())   //best effort to stop the app state manager actor
     Thread.sleep(100)  //just to make sure the app state manager actor gets stopped
@@ -339,4 +339,7 @@ class AppStateManagerSpec
         |}""".stripMargin
     )
   )
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

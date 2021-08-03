@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.container.actor
 
 import akka.actor.ActorRef
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.RelationshipLike
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
@@ -10,11 +9,10 @@ import com.evernym.verity.actor.agent.{SponsorRel, _}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByName
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.msg.{SetDataRetentionPolicy, SetDomainId, SetSponsorRel, SetStorageId}
 import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
@@ -22,12 +20,14 @@ import com.evernym.verity.protocol.protocols.HasWallet
 import com.evernym.verity.protocol.{Control, CtlEnvelope, PairwiseRelIdsChanged}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
-import com.evernym.verity.{ActorResponse, ServiceEndpoint}
+import com.evernym.verity.util2.ServiceEndpoint
 import com.typesafe.scalalogging.Logger
 
 import java.util.UUID
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
+import com.evernym.verity.actor.typed.base.UserGuardian.Commands.SendMsgToOutbox
+import com.evernym.verity.agentmsg.AgentMsgBuilder.createAgentMsg
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentStoreAccessAPI
@@ -38,9 +38,11 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessController
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessController
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
+import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
+import com.evernym.verity.util2.ActorResponse
 
 import scala.concurrent.duration._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 /**
  *
@@ -60,7 +62,8 @@ class ActorProtocolContainer[
   I]
 (
   val agentActorContext: AgentActorContext,
-  val definition: PD
+  val definition: PD,
+  val executionContext: ExecutionContext
 )
   extends ProtocolContainer[P,R,M,E,S,I]
     with HasLegacyProtocolContainerServices[M,E,I]
@@ -71,6 +74,8 @@ class ActorProtocolContainer[
     with HasWallet
     with ProtocolSnapshotter[S]
     with HasLogger {
+
+  implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   override final val receiveEvent: Receive = {
     case evt: Any => applyRecordedEvent(evt)
@@ -125,7 +130,8 @@ class ActorProtocolContainer[
               appConfig,
               entityType,
               fromPinstId,
-              self
+              self,
+              executionContext
             ),
             s"ExtractEventsActor-${UUID.randomUUID().toString}"
           )
@@ -147,16 +153,6 @@ class ActorProtocolContainer[
     case ProtocolCmd(stc: SetThreadContext, None)  => handleSetThreadContext(stc.tcd)
     case s: SponsorRel                             => handleSponsorRel(s)
     case pc: ProtocolCmd                           => handleProtocolCmd(pc)
-  }
-
-  /**
-   * This Receive is chained off asyncProtocolBehavior.
-   * stashes any message received while a asyncProtocolBehavior type process is in progress.
-   */
-  final def stashProtocolAsyncBehavior: Receive = {
-    case msg: Any => // we can't make a stronger assertion about type because erasure
-      logger.debug(s"$protocolIdForLog received msg: $msg while handling async behavior in protocol - (segmented state, url-shortener, ledger, wallet")
-      stash()
   }
 
   def toCopyEventsBehavior(changeRelEvt: Any): Unit = {
@@ -210,7 +206,7 @@ class ActorProtocolContainer[
   def handleSponsorRel(s: SponsorRel): Unit = {
     if (!s.equals(SponsorRel.empty)) submit(SetSponsorRel(s))
     val tags = ConfigUtil.getSponsorRelTag(appConfig, s) ++ Map("proto-ref" -> getProtoRef.toString)
-    MetricsWriter.gaugeApi.incrementWithTags(AS_NEW_PROTOCOL_COUNT, tags)
+    metricsWriter.gaugeIncrement(AS_NEW_PROTOCOL_COUNT, tags = tags)
   }
 
   /**
@@ -250,8 +246,9 @@ class ActorProtocolContainer[
   lazy val driver: Option[Driver] = {
     val parameter = ActorDriverGenParam(context.system, appConfig, agentActorContext.protocolRegistry,
       agentActorContext.generalCache, agentActorContext.agentMsgRouter, msgForwarder)
-    agentActorContext.protocolRegistry.generateDriver(definition, parameter)
+    agentActorContext.protocolRegistry.generateDriver(definition, parameter, futureExecutionContext)
   }
+
   val sendsMsgs = new MsgSender
 
   //TODO move agentActorContext.smsSvc to be handled here (uses a future)
@@ -261,7 +258,6 @@ class ActorProtocolContainer[
       //because the 'agent msg processor' actor contains the response context
       // this message needs to go back to the same 'agent msg processor' actor
       // from where it was came earlier to this actor
-      //TODO-amp: shall we find better solution
       msgForwarder.forwarder.foreach(_ ! pom)
     }
 
@@ -274,7 +270,9 @@ class ActorProtocolContainer[
       )(
         agentActorContext.appConfig,
         agentActorContext.smsSvc,
-        agentActorContext.msgSendingSvc)
+        agentActorContext.msgSendingSvc,
+        futureExecutionContext
+      )
     }
   }
 
@@ -330,7 +328,7 @@ class ActorProtocolContainer[
   override lazy val urlShortening =
     new UrlShorteningAccessController(
       grantedAccessRights,
-      new UrlShorteningAPI()
+      new UrlShorteningAPI(executionContext)
     )
 
   override lazy val segmentStore =
@@ -446,6 +444,28 @@ class ActorProtocolContainer[
       }
     }
   }
+
+  //TODO: below function is preparation for outbox integration (not yet integrated though)
+  def sendToOutboxRouter(pom: ProtocolOutgoingMsg): Unit = {
+    if (isVAS && ! pom.msg.isInstanceOf[AgentProvisioningMsgFamily.AgentCreated]) {
+      val agentMsg = createAgentMsg(pom.msg, definition, pom.threadContextDetail)
+      val retPolicy = ConfigUtil.getOutboxStateRetentionPolicyForInterDomain(
+        appConfig, domainId, definition.msgFamily.protoRef.toString)
+      //TODO: will below approach become choke point?
+      userGuardian ! SendMsgToOutbox(
+        pom.from,
+        pom.to,
+        agentMsg.jsonStr,
+        agentMsg.msgType.toString,
+        retPolicy)
+    }
+  }
+
+  lazy val userGuardian: ActorRef = Util.getActorRefFromSelection("/user/guardian", context.system)(appConfig)
+  lazy val isVAS: Boolean =
+    appConfig
+      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
+      .contains("VerityAgent")
 }
 
 trait ProtoMsg extends MsgBase

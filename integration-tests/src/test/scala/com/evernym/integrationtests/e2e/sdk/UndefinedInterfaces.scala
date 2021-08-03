@@ -202,16 +202,16 @@ object UndefinedInterfaces {
     override def outOfBandInvitationMsgPacked(context: Context, shortInvite: lang.Boolean): Array[Byte] = throw new NotImplementedError
     override def outOfBandInvitationMsgPacked(context: Context, shortInvite: lang.Boolean, goal: GoalCode): Array[Byte] = throw new NotImplementedError
 
-    override def smsConnectionInvitation(context: Context): Unit = throw new NotImplementedError
-    override def smsConnectionInvitationMsg(context: Context): JSONObject = throw new NotImplementedError
-    override def smsConnectionInvitationMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+    override def smsConnectionInvitation(context: Context, phoneNumber: String): Unit = throw new NotImplementedError
+    override def smsConnectionInvitationMsg(context: Context, phoneNumber: String): JSONObject = throw new NotImplementedError
+    override def smsConnectionInvitationMsgPacked(context: Context, phoneNumber: String): Array[Byte] = throw new NotImplementedError
 
-    override def smsOutOfBandInvitation(context: Context): Unit = throw new NotImplementedError
-    override def smsOutOfBandInvitation(context: Context, goal: GoalCode): Unit = throw new NotImplementedError
-    override def smsOutOfBandInvitationMsg(context: Context): JSONObject = throw new NotImplementedError
+    override def smsOutOfBandInvitation(context: Context, phoneNumber: String): Unit = throw new NotImplementedError
+    override def smsOutOfBandInvitation(context: Context, phoneNumber: String, goal: GoalCode): Unit = throw new NotImplementedError
+    override def smsOutOfBandInvitationMsg(context: Context, phoneNumber: String): JSONObject = throw new NotImplementedError
 
-    override def smsOutOfBandInvitationMsg(context: Context, goal: GoalCode): JSONObject = throw new NotImplementedError
-    override def smsOutOfBandInvitationMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
-    override def smsOutOfBandInvitationMsgPacked(context: Context, goal: GoalCode): Array[Byte] = throw new NotImplementedError
+    override def smsOutOfBandInvitationMsg(context: Context, phoneNumber: String, goal: GoalCode): JSONObject = throw new NotImplementedError
+    override def smsOutOfBandInvitationMsgPacked(context: Context, phoneNumber: String): Array[Byte] = throw new NotImplementedError
+    override def smsOutOfBandInvitationMsgPacked(context: Context, phoneNumber: String, goal: GoalCode): Array[Byte] = throw new NotImplementedError
   }
 }

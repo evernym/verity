@@ -6,9 +6,11 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.actor.resourceusagethrottling._
 import com.evernym.verity.http.route_handlers.restricted.{ResourceUsageCounterDetail, UpdateResourcesUsageCounter}
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper
-import com.evernym.verity.util.Util.logger
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 
 trait ResourceUsageCommon {
+
+  private val logger = getLoggerByName("ResourceUsageCommon")
 
   def system: ActorSystem
 
@@ -21,7 +23,7 @@ trait ResourceUsageCommon {
                                      userIdOpt: Option[UserId],
                                      sendBackAck: Boolean=false): Unit = {
     ResourceUsageTracker.addUserResourceUsage(
-      resourceType, resourceName, ipAddress, userIdOpt, sendBackAck)(resourceUsageTrackerRegion)
+      resourceType, resourceName, ipAddress, userIdOpt, sendBackAck)(resourceUsageTrackerRegion)(system)
   }
 
   protected def resetResourceUsageCounts(entityId: EntityId, resourceName: ResourceName): Unit = {

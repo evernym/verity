@@ -1,7 +1,8 @@
 package com.evernym.verity.protocol.testkit
 
-import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.Relationship
+import com.evernym.verity.metrics.{MetricsWriter, NoOpMetricsWriter}
 import com.evernym.verity.protocol.container.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
@@ -13,7 +14,7 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{Se
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 import scala.util.Try
 
@@ -39,7 +40,7 @@ case class ProtocolContainerElements[P,R,M,E,S,I](system: SimpleProtocolSystem,
   *
   * @tparam E Event type
   */
-class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[P,R,M,E,S,I])(implicit tag: ClassTag[M])
+class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[P,R,M,E,S,I], ec: ExecutionContext)(implicit tag: ClassTag[M])
   extends {
     val pinstId = pce.pinstId
     val definition = pce.definition
@@ -50,6 +51,9 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
     override val threadId = pce.threadId
   } with ProtocolContainer[P,R,M,E,S,I]
     with HasInbox[Any,Any] {
+
+
+  override def metricsWriter: MetricsWriter = NoOpMetricsWriter()
 
   override val _threadId: Option[ThreadId] = pce.threadId
   override val _storageId: Option[StorageId] = Some(pce.pinstId)
@@ -113,6 +117,8 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
     segmentCache -= segmentKey
     segmentKey
   }
+
+  override def executionContext: ExecutionContext = ec
 }
 
 trait Logs {

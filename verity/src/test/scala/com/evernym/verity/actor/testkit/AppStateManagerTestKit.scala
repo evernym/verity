@@ -1,9 +1,10 @@
 package com.evernym.verity.actor.testkit
 
 import java.util.UUID
+
 import akka.actor.ActorRef
 import akka.testkit.TestKitBase
-import com.evernym.verity.Status.APP_STATUS_UPDATE_MANUAL
+import com.evernym.verity.util2.Status.APP_STATUS_UPDATE_MANUAL
 import com.evernym.verity.actor.appStateManager.AppStateConstants.{CONTEXT_MANUAL_UPDATE, STATUS_LISTENING}
 import com.evernym.verity.actor.appStateManager.{AppStateDetailed, AppStateManager, CauseDetail, GetCurrentState, GetDetailedAppState, ListeningSuccessful, ManualUpdate, SuccessEvent}
 import com.evernym.verity.actor.appStateManager.state.{AppState, InitializingState, ListeningState}
@@ -14,6 +15,8 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
 
+import scala.concurrent.ExecutionContext
+
 /**
  * A special test kit to be able to test AppStateManager functionality.
  * Sometimes we need a clean app state manager state for each test (to make each test independent)
@@ -23,8 +26,9 @@ import org.scalatest.time.{Millis, Seconds, Span}
  *
  * @param testKit this is to be able to use 'expectMsgType' functionality provided by TestKit
  */
-class AppStateManagerTestKit(testKit: TestKitBase, appConfig: AppConfig)
+class AppStateManagerTestKit(testKit: TestKitBase, appConfig: AppConfig, ec: ExecutionContext)
   extends Eventually with Matchers {
+  implicit lazy val executionContext: ExecutionContext = ec
 
   implicit val self: ActorRef = testKit.testActor
 
@@ -32,7 +36,7 @@ class AppStateManagerTestKit(testKit: TestKitBase, appConfig: AppConfig)
 
   private val appManager: ActorRef = {
     val ar = testKit.system.actorOf(
-      AppStateManager.props(appConfig, MockNotifierService, MockShutdownService), actorName)
+      AppStateManager.props(appConfig, MockNotifierService, MockShutdownService, executionContext), actorName)
     ar ! Ping(sendAck = true)
     testKit.expectMsgType[Done.type]
     ar
@@ -65,7 +69,7 @@ class AppStateManagerTestKit(testKit: TestKitBase, appConfig: AppConfig)
   def changeAppState(newAppState: AppState): Unit = {
     val currentState = currentAppState
     (currentState, newAppState) match {
-      case (InitializingState, ListeningState) =>
+      case (_: InitializingState, ListeningState) =>
         sendToAppStateManager(SuccessEvent(ListeningSuccessful, "SERVICE_INIT",
           CauseDetail("agent-service-started", "agent-service-started-listening-successfully")))
 

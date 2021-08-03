@@ -11,11 +11,13 @@ import com.evernym.verity.actor.base.{Done, Stop}
 import com.evernym.verity.actor.cluster_singleton.ForActorStateCleanupManager
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.{ActorMessage, ActorStateCleaned, ActorStateStored, BatchSizeRecorded, Completed, ForIdentifier, StatusUpdated}
-import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.ConfigConstants._
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.util.Util.getActorRefFromSelection
+
+import scala.concurrent.ExecutionContext
 
 
 /**
@@ -23,7 +25,7 @@ import com.evernym.verity.util.Util.getActorRefFromSelection
  * @param appConfig application config
  * @param aac agent actor context
  */
-class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorContext)
+class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorContext, executionContext: ExecutionContext)
   extends BasePersistentActor
     with ActorStateCleanupBase {
 
@@ -88,8 +90,8 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
   }
 
   def handleActorNotResponding(did: DID): Unit = {
-    applyEvent(ActorStateStored(did, -1))
-    applyEvent(ActorStateCleaned(did, -1, -1))
+    writeAndApply(ActorStateStored(did, -1))
+    writeAndApply(ActorStateCleaned(did, -1, -1))
     val batchItemStatus = batchStatus.candidates.getOrElse(did, BatchItemStatus.empty)
     batchStatus = batchStatus.withItemStatusUpdated(did, batchItemStatus.copy(stateCleaningCompleted = true))
   }
@@ -100,17 +102,21 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
       writeAndApply(asc)
       val batchItemStatus = batchStatus.candidates.getOrElse(asc.actorId, BatchItemStatus.empty)
       batchStatus = batchStatus.withItemStatusUpdated(asc.actorId, batchItemStatus.copy(stateCleaningCompleted = true))
-      if (batchStatus.isCompleted) {
-        batchStatus = BatchStatus.empty
-        if (recordedBatchSize.last != recordedBatchSize.current) {
-          val event = BatchSizeRecorded(nextSeqNoForDeletion, nextSeqNoForDeletion)
-          applyEvent(event)
-          writeWithoutApply(event)
-        }
-        sendProcessPending()
-      }
+      processIfBatchCompleted()
     } else {
       logger.error(s"unexpected situation, received asc: $asc, without an initial state")
+    }
+  }
+
+  def processIfBatchCompleted(): Unit = {
+    if (batchStatus.isCompleted) {
+      batchStatus = BatchStatus.empty
+      if (recordedBatchSize.last != recordedBatchSize.current) {
+        val event = BatchSizeRecorded(nextSeqNoForDeletion, nextSeqNoForDeletion)
+        applyEvent(event)
+        writeWithoutApply(event)
+      }
+      sendProcessPending()
     }
   }
 
@@ -160,7 +166,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
         batchStatus.candidatesWithStatus(false).keySet.foreach { did =>
           sendFixActorStateCleanupCmd(did)
         }
-      }
+      } else processIfBatchCompleted()
     }
   }
 
@@ -182,7 +188,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
       case 0 => routeStoreStatusReq.totalProcessed
       case _ => (routeStoreStatusReq.totalProcessed/batchSizeToBeUsed)*batchSizeToBeUsed
     }
-    val cmd = GetRouteBatch(routeStoreStatusReq.totalCandidates, fromIndex, batchSizeToBeUsed)
+    val cmd = GetRouteBatch(fromIndex, batchSizeToBeUsed)
     legacyAgentRouteStoreRegion ! ForIdentifier(routeStoreStatusReq.agentRouteStoreEntityId, cmd)
   }
 
@@ -298,7 +304,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
   }
 
   lazy val nextSeqNoForDeletion: Int =
-    appConfig.getConfigIntOption(CommonConfig.AAS_CLEANUP_EXECUTOR_BATCH_SIZE)
+    appConfig.getIntOption(ConfigConstants.AAS_CLEANUP_EXECUTOR_BATCH_SIZE)
       .getOrElse(5)
 
   val legacyAgentRouteStoreRegion: ActorRef = ClusterSharding.get(context.system).shardRegion(LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
@@ -309,11 +315,15 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
 
   lazy val scheduledJobInterval: Int =
     appConfig
-      .getConfigIntOption(AAS_CLEANUP_EXECUTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
+      .getIntOption(AAS_CLEANUP_EXECUTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
       .getOrElse(300)
 
   scheduleJob("periodic_job", scheduledJobInterval, ProcessPending)
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 //status of a route store entity candidates
@@ -329,9 +339,13 @@ case class CleanupStatus(isRouteSet: Boolean,
                          pendingCount: Int,
                          successfullyMigratedCount: Int,
                          nonMigratedCount: Int) {
-  def totalProcessed: Int = successfullyMigratedCount + nonMigratedCount
+
+  def totalProcessed: Int = {
+    val result = successfullyMigratedCount + nonMigratedCount
+    if (result < 0) -1 else result
+  }
   def isAllProcessed: Boolean = (totalThreadContexts == totalProcessed) || pendingCount == 0
-  def actorStateCleaned: Boolean = isRouteSet && isAllProcessed
+  def actorStateCleaned: Boolean = totalThreadContexts == -1 || (isRouteSet && isAllProcessed)
 }
 
 //incoming message
@@ -340,8 +354,8 @@ case class GetExecutorStatus(includeDetails: Boolean = false) extends ActorMessa
 case class ProcessRouteStore(agentRouteStoreEntityId: EntityId, totalRoutes: Int) extends ActorMessage
 
 object ActorStateCleanupExecutor {
-  def props(appConfig: AppConfig, aac: AgentActorContext): Props =
-    Props(new ActorStateCleanupExecutor(appConfig, aac))
+  def props(appConfig: AppConfig, aac: AgentActorContext, executionContext: ExecutionContext): Props =
+    Props(new ActorStateCleanupExecutor(appConfig, aac, executionContext))
 }
 
 object BatchStatus {

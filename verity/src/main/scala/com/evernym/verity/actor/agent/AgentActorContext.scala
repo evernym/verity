@@ -1,59 +1,74 @@
 package com.evernym.verity.actor.agent
 
+import akka.actor.typed.Behavior
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.util.Timeout
-import com.evernym.verity.Exceptions.{HandledErrorException, SmsSendingFailedException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.Exceptions.{HandledErrorException, SmsSendingFailedException}
+import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.actor.ActorContext
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.cache.base.{Cache, FetcherParam}
 import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValueFetcher, EndpointCacheFetcher, KeyValueMapperFetcher, LedgerGetCredDefCacheFetcher, LedgerGetSchemaCacheFetcher, LedgerVerKeyCacheFetcher}
-import com.evernym.verity.config.CommonConfig.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
+import com.evernym.verity.config.ConfigConstants.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.http.common.{AkkaHttpMsgSendingSvc, MsgSendingSvc}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher, OAuthAccessTokenRefresherImplV1}
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.OAUTH2_VERSION_1
+import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.ProtocolRegistry
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsSent}
+import com.evernym.verity.transports.http.AkkaHttpMsgSendingSvc
+import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util.Util
 import com.evernym.verity.vault.service.ActorWalletService
 import com.evernym.verity.vault.wallet_api.{StandardWalletAPI, WalletAPI}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Left
 
-trait AgentActorContext extends ActorContext {
+trait AgentActorContext
+  extends ActorContext
+  with HasExecutionContextProvider
+  with HasWalletExecutionContextProvider {
 
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
   implicit def appConfig: AppConfig
   implicit def system: ActorSystem
 
-  type MsgSendingSvcType = MsgSendingSvc
-
   lazy val generalCacheFetchers: Map[FetcherParam, CacheValueFetcher] = List (
-    new KeyValueMapperFetcher(system, appConfig),
-    new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig),
-    new EndpointCacheFetcher(ledgerSvc, appConfig),
-    new LedgerVerKeyCacheFetcher(ledgerSvc, appConfig),
-    new LedgerGetSchemaCacheFetcher(ledgerSvc, appConfig),
-    new LedgerGetCredDefCacheFetcher(ledgerSvc, appConfig)
+    new KeyValueMapperFetcher(system, appConfig, futureExecutionContext),
+    new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig, futureExecutionContext),
+    new EndpointCacheFetcher(ledgerSvc, appConfig, futureExecutionContext),
+    new LedgerVerKeyCacheFetcher(ledgerSvc, appConfig, futureExecutionContext),
+    new LedgerGetSchemaCacheFetcher(ledgerSvc, appConfig, futureExecutionContext),
+    new LedgerGetCredDefCacheFetcher(ledgerSvc, appConfig, futureExecutionContext)
   ).map(f => f.fetcherParam -> f).toMap
 
-  lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers)
-  lazy val msgSendingSvc: MsgSendingSvcType = new AkkaHttpMsgSendingSvc(appConfig)
+  lazy val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()
+  lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers, metricsWriter, futureWalletExecutionContext)
+  lazy val msgSendingSvc: MsgSendingSvc = new AkkaHttpMsgSendingSvc(appConfig.config, metricsWriter, futureWalletExecutionContext)
   lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] = protocols.protocolRegistry
   lazy val smsSvc: SMSSender = createSmsSender()
-  lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter
-  lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(system, appConfig)
-  lazy val walletAPI: WalletAPI = new StandardWalletAPI(new ActorWalletService(system))
-  lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
+  lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter(futureExecutionContext)
+  lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(system, appConfig, futureExecutionContext)
+  lazy val walletAPI: WalletAPI = new StandardWalletAPI(new ActorWalletService(system, appConfig, futureWalletExecutionContext))
+  lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, futureExecutionContext)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
-  lazy val storageAPI: StorageAPI = StorageAPI.loadFromConfig(appConfig)
+  lazy val storageAPI: StorageAPI = StorageAPI.loadFromConfig(appConfig, futureExecutionContext)
+
+  //NOTE: this 'oAuthAccessTokenRefreshers' is only need here until we switch to the outbox solution
+  val oAuthAccessTokenRefreshers: AccessTokenRefreshers = new AccessTokenRefreshers {
+    override def refreshers: Map[Version, Behavior[OAuthAccessTokenRefresher.Cmd]] = Map(
+      OAUTH2_VERSION_1 -> OAuthAccessTokenRefresherImplV1(executionContext)
+    )
+  }
 
   def createActorSystem(): ActorSystem = {
     ActorSystem("verity", appConfig.getLoadedConfig)

@@ -1,9 +1,8 @@
 package com.evernym.verity.protocol.protocols.connecting.v_0_6
 
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.KEY_ALREADY_CREATED
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.KEY_ALREADY_CREATED
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.actor.agent.msgsender.AgentMsgSender
@@ -25,7 +24,7 @@ import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Left
 
 
@@ -37,6 +36,8 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
       with AgentMsgSender
       with MsgDeliveryResultHandler
       with PushNotifMsgBuilder {
+
+  implicit lazy val futureExecutionContext: ExecutionContext = ctx.executionContext
 
   lazy val myPairwiseDIDReq: DID = ctx.getState.myPairwiseDIDReq
   lazy val myPairwiseVerKeyReq: VerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq).verKey
@@ -182,7 +183,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
       keyCreatedRespMsg.foreach(m => ctx.signal(m))
     }
 
-    awaitResult(buildAgentMsg(agentMsgContext.msgPackFormatToBeUsed, param))
+    awaitResult(buildAgentMsg(agentMsgContext.msgPackFormatToBeUsed, param)(agentMsgTransformer, wap, ctx.metricsWriter))
   }
 
   private def validateCreateKeyMsg(createKeymsg: CreateKeyReqMsg): Unit = {

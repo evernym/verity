@@ -1,6 +1,7 @@
 package com.evernym.verity.testkit.agentmsg.indy_pack.v_0_6
 
 import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper._
@@ -18,19 +19,23 @@ import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, AgentMsgPackagingContext}
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util.{AcceptConnReq_MFV_0_6, AgentPackMsgUtil, ConnReq_MFV_0_6, Connect_MFV_0_6, CreateAgent_MFV_0_6, CreateConnection_MFV_0_6, CreateKey_MFV_0_6, GetMsgsByConns_MFV_0_6, IssuerSetupCreate_MFV_0_6, SendRemoteMsg_MFV_0_6, TestComMethod, UpdateComMethod_MFV_0_6, UpdateConnStatus_MFV_0_6}
-import com.evernym.verity.util.Util.logger
 import com.evernym.verity.util.MsgIdProvider._
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.mock.agent.MockAgent
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 import org.json.JSONObject
 
+import scala.concurrent.ExecutionContext
 import scala.util.Left
 
 
-trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper =>
+trait AgentMsgBuilder extends HasExecutionContextProvider { this: AgentMsgHelper with MockAgent with AgentMsgHelper =>
 
   object v_0_6_req {
+    implicit val executionContext: ExecutionContext = futureExecutionContext
+
+    private val logger = getLoggerByClass(getClass)
 
     implicit val msgPackFormat: MsgPackFormat = MPF_INDY_PACK
 

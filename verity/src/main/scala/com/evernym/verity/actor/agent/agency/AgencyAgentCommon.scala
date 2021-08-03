@@ -2,7 +2,6 @@ package com.evernym.verity.actor.agent.agency
 
 import akka.pattern.ask
 import akka.event.LoggingReceive
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
@@ -13,7 +12,7 @@ import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, GetVerKey, GetVerKeyResp, SetupNewAgentWallet}
 import com.evernym.verity.actor.{ConnectionStatusUpdated, ForIdentifier, ShardRegionFromActorContext}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.CommonConfig.PROVISIONING
+import com.evernym.verity.config.ConfigConstants.PROVISIONING
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME
 import com.evernym.verity.constants.InitParamConstants._
@@ -26,7 +25,7 @@ import com.evernym.verity.util.ParticipantUtil
 import com.evernym.verity.util.Util.getNewActorId
 import com.evernym.verity.vault.WalletAPIParam
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 
 /**
@@ -38,6 +37,7 @@ trait AgencyAgentCommon
     with ShardRegionFromActorContext
     with MsgNotifier
     with LEGACY_connectingSignalHandler {
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   val commonCmdReceiver: Receive = LoggingReceive.withLabel("commonCmdReceiver") {
     case GetSponsorRel                  => sender ! sponsorRel.getOrElse(SponsorRel.empty)
@@ -96,7 +96,7 @@ trait AgencyAgentCommon
           case MY_PUBLIC_DID => Parameter(MY_PUBLIC_DID, "")
           case MY_SELF_REL_DID => Parameter(MY_SELF_REL_DID, "")
           case DATA_RETENTION_POLICY => Parameter(DATA_RETENTION_POLICY,
-            ConfigUtil.getRetentionPolicy(appConfig, domainId, protoRef.msgFamilyName).configString)
+            ConfigUtil.getProtoStateRetentionPolicy(appConfig, domainId, protoRef.msgFamilyName).configString)
         }
 
     lazy val newActorId = getNewActorId
@@ -138,7 +138,7 @@ trait AgencyAgentCommon
   def identifySponsor(idSponsor: IdentifySponsor): Future[Option[ControlMsg]] = {
     val sponsorRequired = ConfigUtil.sponsorRequired(appConfig)
     val tokenWindow = Duration(appConfig.getLoadedConfig.getString(s"$PROVISIONING.token-window"))
-    val cacheUsedTokens = appConfig.getConfigBooleanOption(s"$PROVISIONING.cache-used-tokens").getOrElse(false)
+    val cacheUsedTokens = appConfig.getBooleanOption(s"$PROVISIONING.cache-used-tokens").getOrElse(false)
 
     logger.debug(s"identify sponsor: $sponsorRequired - token valid for $tokenWindow")
     val ctl: AgentProvisioningMsgFamily.Ctl = idSponsor.provisionDetails match {

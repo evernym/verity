@@ -1,13 +1,11 @@
 package com.evernym.verity.http.route_handlers
 
 import akka.pattern.ask
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.agent.{AgentActorContext, DidPair}
 import com.evernym.verity.actor.agent.agency.{AgencyAgentDetail, AgencyIdUtil, GetAgencyAgentDetail}
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
-import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
-import com.evernym.verity.actor.appStateManager.{AppStateEvent, AppStateRequest}
+import com.evernym.verity.actor.appStateManager.{AppStateEvent, AppStateRequest, AppStateUpdateAPI}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -15,7 +13,7 @@ import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * provides access to platform objects
@@ -25,13 +23,14 @@ trait PlatformServiceProvider
   extends AgencyIdUtil
     with MsgRespTimeTracker
     with HasActorResponseTimeout {
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   def appConfig: AppConfig
   def platform: Platform
   def agentActorContext: AgentActorContext = platform.agentActorContext
 
   def publishAppStateEvent (event: AppStateEvent): Unit = {
-    publishEvent(event)(agentActorContext.system)
+    AppStateUpdateAPI(agentActorContext.system).publishEvent(event)
   }
 
   def askAppStateManager(cmd: AppStateRequest): Future[Any] = {

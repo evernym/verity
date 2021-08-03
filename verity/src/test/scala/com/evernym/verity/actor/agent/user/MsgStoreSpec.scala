@@ -1,28 +1,38 @@
 package com.evernym.verity.actor.agent.user
 
 import java.time.ZonedDateTime
-
 import com.evernym.verity.actor.{Evt, MsgCreated, MsgDeliveryStatusUpdated, MsgDetailAdded, MsgPayloadStored}
 import com.evernym.verity.actor.agent.MsgAndDelivery
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.user.msgstore.{MsgStateAPIProvider, MsgStore}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.GetMsgsReqMsg
 import com.evernym.verity.metrics.CustomMetrics._
+import com.evernym.verity.metrics.{MetricsWriter, TestMetricsBackend}
 import com.evernym.verity.protocol.engine.MsgId
-import com.evernym.verity.testkit.{BasicSpec, ResetMetricsReporterBeforeEach}
+import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.MsgIdProvider
 import com.google.protobuf.ByteString
 import com.typesafe.config.{Config, ConfigFactory}
+import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
 
 class MsgStoreSpec
   extends BasicSpec
-    with ResetMetricsReporterBeforeEach
+    with BeforeAndAfterEach
     with Eventually {
+
+  private val testMetricsBackend = new TestMetricsBackend
+  val testMetricsWriter = new MetricsWriter(testMetricsBackend)
+
+  override protected def beforeEach(): Unit = {
+    testMetricsBackend.reset()
+    testMetricsBackend.allHistogramMetrics().size shouldBe 0
+    super.beforeEach()
+  }
 
   "MgsStore" - {
 
@@ -175,6 +185,7 @@ class MsgStoreSpec
 
   }
 
+
   def checkMessageCleanupMetrics(msgStore: MsgStore,
                                  expectedRetainedMsgsSum: Int,
                                  expectedRemovedMsgsSum: Int): Unit = {
@@ -182,16 +193,16 @@ class MsgStoreSpec
 
     eventually(timeout(Span(10, Seconds)), interval(Span(200, Millis))) {
 
-      val retainedMsgsSumMetrics = getFilteredMetrics(s"${AS_AKKA_ACTOR_AGENT_RETAINED_MSGS}_sum")
-      val removedMsgsSumMetrics = getFilteredMetrics(s"${AS_AKKA_ACTOR_AGENT_REMOVED_MSGS}_sum")
-      val totalActorWithRemovedMsgMetrics = getFilteredMetrics(s"${AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED}_sum")
+      val retainedMsgsSumMetrics = testMetricsBackend.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_RETAINED_MSGS}")
+      val removedMsgsSumMetrics = testMetricsBackend.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_REMOVED_MSGS}")
+      val totalActorWithRemovedMsgMetrics = testMetricsBackend.filterHistogramMetrics(s"${AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED}")
 
       if (expectedRemovedMsgsSum > 0) {
         retainedMsgsSumMetrics.size shouldBe 1
-        retainedMsgsSumMetrics.head.value shouldBe expectedRetainedMsgsSum
+        retainedMsgsSumMetrics.head._2.sum shouldBe expectedRetainedMsgsSum
 
         removedMsgsSumMetrics.size shouldBe 1
-        removedMsgsSumMetrics.head.value shouldBe expectedRemovedMsgsSum
+        removedMsgsSumMetrics.head._2.sum shouldBe expectedRemovedMsgsSum
 
         totalActorWithRemovedMsgMetrics.size shouldBe 1
       }
@@ -203,7 +214,7 @@ class MsgStoreSpec
                     noOfDeliveredNonAckMsgs: Int = 0,
                     noOfUnDeliveredMsgs: Int = 0,
                     message: ByteString = ByteString.EMPTY): MsgStore = {
-    val msgStore = new MsgStore(new TestAppConfig(Option(config)), new MockMsgStateAPIProvider, None)
+    val msgStore = new MsgStore(new TestAppConfig(Option(config)), new MockMsgStateAPIProvider, None, testMetricsWriter)
     addDeliveredAckMsgs(config, msgStore, noOfDeliveredAckMsgs)
     addDeliveredNonAckMsgs(config, msgStore, noOfDeliveredNonAckMsgs)
     addUndeliveredMsgs(config, msgStore, noOfUnDeliveredMsgs, message)

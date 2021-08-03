@@ -2,6 +2,7 @@ package com.evernym.integrationtests.e2e.apis.legacy.vcx
 
 import com.evernym.sdk.vcx.vcx.VcxApi
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Msg.Message
+import com.evernym.verity.util2.ExecutionContextProvider
 
 
 class VcxFlowSpec
@@ -111,4 +112,7 @@ class VcxFlowSpec
       }
     }
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

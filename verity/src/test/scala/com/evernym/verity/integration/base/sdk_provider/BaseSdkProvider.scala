@@ -4,7 +4,6 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model._
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.wallet._
@@ -24,39 +23,70 @@ import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 =>
 import com.evernym.verity.testkit.{BasicSpec, LegacyWalletAPI}
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
-import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.LedgerTxnExecutor
+import com.evernym.verity.metrics.NoOpMetricsWriter
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import org.json.JSONObject
 import org.scalatest.matchers.should.Matchers
-
 import java.nio.charset.StandardCharsets
 import java.util.UUID
+
 import scala.collection.JavaConverters._
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.{Duration, SECONDS}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration.{Duration, FiniteDuration, SECONDS}
 import scala.reflect.ClassTag
 import scala.util.Try
 
 
 trait SdkProvider { this: BasicSpec =>
 
-  def setupIssuerSdk(verityEnv: VerityEnv): IssuerSdk =
-    IssuerSdk(buildSdkParam(verityEnv))
-  def setupIssuerRestSdk(verityEnv: VerityEnv): IssuerRestSDK =
-    IssuerRestSDK(buildSdkParam(verityEnv))
-  def setupVerifierSdk(verityEnv: VerityEnv): VerifierSdk =
-    VerifierSdk(buildSdkParam(verityEnv))
-  def setupHolderSdk(verityEnv: VerityEnv, ledgerTxnExecutor: LedgerTxnExecutor): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), Option(ledgerTxnExecutor))
-  def setupHolderSdk(verityEnv: VerityEnv, ledgerTxnExecutor: Option[LedgerTxnExecutor]): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor)
+  def setupIssuerSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): IssuerSdk =
+    IssuerSdk(buildSdkParam(verityEnv), executionContext, walletExecutionContext, oauthParam)
+  def setupIssuerRestSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): IssuerRestSDK =
+    IssuerRestSDK(buildSdkParam(verityEnv), executionContext, walletExecutionContext, oauthParam)
+  def setupVerifierSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): VerifierSdk =
+    VerifierSdk(buildSdkParam(verityEnv), executionContext, walletExecutionContext, oauthParam)
+
+  def setupHolderSdk(
+                      verityEnv: VerityEnv,
+                      ledgerTxnExecutor: LedgerTxnExecutor,
+                      executionContext: ExecutionContext,
+                      walletExecutionContext: ExecutionContext
+                    ): HolderSdk =
+    HolderSdk(buildSdkParam(verityEnv), Option(ledgerTxnExecutor), executionContext, walletExecutionContext, None)
+
+  def setupHolderSdk(
+                      verityEnv: VerityEnv,
+                      ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                      executionContext: ExecutionContext,
+                      walletExecutionContext: ExecutionContext
+                    ): HolderSdk =
+    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, executionContext, walletExecutionContext, None)
+
+  def setupHolderSdk(
+                      verityEnv: VerityEnv,
+                      oauthParam: OAuthParam,
+                      executionContext: ExecutionContext,
+                      walletExecutionContext: ExecutionContext
+                    ): HolderSdk =
+    HolderSdk(buildSdkParam(verityEnv), None, executionContext, walletExecutionContext, Option(oauthParam))
+
+  def setupHolderSdk(
+                      verityEnv: VerityEnv,
+                      ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                      oauthParam: Option[OAuthParam],
+                      executionContext: ExecutionContext,
+                      walletExecutionContext: ExecutionContext
+                    ): HolderSdk =
+    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, executionContext, walletExecutionContext, oauthParam)
 
   private def buildSdkParam(verityEnv: VerityEnv): SdkParam = {
     SdkParam(VerityEnvUrlProvider(verityEnv.nodes))
@@ -66,7 +96,8 @@ trait SdkProvider { this: BasicSpec =>
     sdk.fetchAgencyKey()
     sdk.provisionVerityEdgeAgent()
     sdk.registerWebhook()
-    sdk.sendUpdateConfig(UpdateConfigReqMsg(Set(ConfigDetail("name", "issuer-name"), ConfigDetail("logoUrl", "issuer-logo-url"))))
+    sdk.sendUpdateConfig(UpdateConfigReqMsg(Set(ConfigDetail("name", "issuer-name"),
+      ConfigDetail("logoUrl", "issuer-logo-url"))))
   }
 
   def provisionCloudAgent(holderSDK: HolderSdk): Unit = {
@@ -111,8 +142,9 @@ trait SdkProvider { this: BasicSpec =>
  * a base sdk class for issuer/holder sdk
  * @param param sdk parameters
  */
-abstract class SdkBase(param: SdkParam) extends Matchers {
+abstract class SdkBase(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext) extends Matchers {
 
+  implicit val ec: ExecutionContext = executionContext
   type ConnId = String
 
   def fetchAgencyKey(): AgencyPublicDid = {
@@ -129,11 +161,20 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
     val jsonMsgBuilder = JsonMsgBuilder(createAgentMsg)
     val packedMsg = packFromLocalAgentKey(jsonMsgBuilder.jsonMsg, Set(KeyParam.fromVerKey(agencyVerKey)))
     val routedPackedMsg = prepareFwdMsg(agencyDID, agencyDID, packedMsg)
-    val unpackedMsg = parseAndUnpackResponse[AgentCreated](sendPOST(routedPackedMsg))
-    val verityAgent = unpackedMsg.msg
-    verityAgentDidPairOpt = Option(DidPair(verityAgent.selfDID, verityAgent.agentVerKey))
-    storeTheirKey(DidPair(verityAgent.selfDID, verityAgent.agentVerKey))
-    verityAgent
+    val receivedMsgParam = parseAndUnpackResponse[AgentCreated](sendPOST(routedPackedMsg))
+    val agentCreated = receivedMsgParam.msg
+    require(agentCreated.selfDID.trim.nonEmpty, "agent provisioning selfDID can't be empty")
+    require(agentCreated.agentVerKey.trim.nonEmpty, "agent provisioning verKey can't be empty")
+    verityAgentDidPairOpt = Option(DidPair(agentCreated.selfDID, agentCreated.agentVerKey))
+    storeTheirKey(DidPair(agentCreated.selfDID, agentCreated.agentVerKey))
+    agentCreated
+  }
+
+  def sendToRoute[T: ClassTag](msg: Any, fwdToDID: DID): ReceivedMsgParam[T] = {
+    val jsonMsgBuilder = JsonMsgBuilder(msg)
+    val packedMsg = packFromLocalAgentKey(jsonMsgBuilder.jsonMsg, Set(KeyParam.fromVerKey(agencyVerKey)))
+    val routedPackedMsg = prepareFwdMsg(agencyDID, fwdToDID, packedMsg)
+    parseAndUnpackResponse[T](sendPOST(routedPackedMsg))
   }
 
   protected def packForMyVerityAgent(msg: String): Array[Byte] = {
@@ -180,7 +221,7 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
   protected def checkResponse(resp: HttpResponse, expected: StatusCode): HttpResponse = {
     val json = parseHttpResponseAsString(resp)
     require(resp.status.intValue() == expected.intValue,
-      s"http response ${resp.status.intValue()} was not equal to expected ${expected.value}: $json")
+      s"http response '${resp.status}' was not equal to expected '${expected.value}': $json")
     resp
   }
 
@@ -216,6 +257,7 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
   }
 
   protected def parseAndUnpackResponse[T: ClassTag](resp: HttpResponse): ReceivedMsgParam[T] = {
+    checkOKResponse(resp)
     val packedMsg = parseHttpResponseAsString(resp)
     unpackMsg[T](packedMsg.getBytes)
   }
@@ -230,7 +272,7 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
   }
 
   protected def awaitFut[T](fut: Future[T]): T = {
-    Await.result(fut, Duration(20, SECONDS))
+    Await.result(fut, Duration(25, SECONDS))
   }
 
   def randomUUID(): String = UUID.randomUUID().toString
@@ -267,9 +309,11 @@ abstract class SdkBase(param: SdkParam) extends Matchers {
   def agencyVerKey: VerKey = agencyPublicDid.verKey
   def myLocalAgentVerKey: VerKey = localAgentDidPair.verKey
 
+  protected lazy val testAppConfig = new TestAppConfig()
+
   protected lazy val testWalletAPI: LegacyWalletAPI = {
     val walletProvider = LibIndyWalletProvider
-    val walletAPI = new LegacyWalletAPI(new TestAppConfig(), walletProvider, None)
+    val walletAPI = new LegacyWalletAPI(testAppConfig, walletProvider, None, NoOpMetricsWriter(), walletExecutionContext)
     walletAPI.executeSync[WalletCreated.type](CreateWallet())
     walletAPI
   }
@@ -524,3 +568,5 @@ object MsgFamilyHelper {
 }
 
 case class TheirServiceDetail(verKey: VerKey, routingKeys: Vector[VerKey], serviceEndpoint: ServiceEndpoint)
+
+case class OAuthParam(tokenExpiresDuration: FiniteDuration)

@@ -3,11 +3,9 @@ package com.evernym.verity.actor.agent.agency
 import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.Exceptions.{BadRequestErrorException, ForbiddenErrorException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, ForbiddenErrorException}
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.relationship.{AnywiseRelationship, DidDocBuilder, Relationship}
@@ -18,18 +16,19 @@ import com.evernym.verity.agentmsg.msgpacker.UnpackParam
 import com.evernym.verity.cache.{LEDGER_GET_ENDPOINT_CACHE_FETCHER, LEDGER_GET_VER_KEY_CACHE_FETCHER}
 import com.evernym.verity.cache.base.{GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{GetEndpointParam, GetVerKeyParam}
-import com.evernym.verity.config.CommonConfig
+import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.ledger.Submitter
+import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.PackedMsgWrapper
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault.KeyParam
-import com.evernym.verity.{Exceptions, UrlParam}
+import com.evernym.verity.util2.{Exceptions, UrlParam}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.io.Source
 import scala.util.Left
 
@@ -39,11 +38,17 @@ import scala.util.Left
  Agency services/features are exposed through this agent.
  There is one of these actors per actor system. Contrast AgencyAgentPairwise.
  */
-class AgencyAgent(val agentActorContext: AgentActorContext)
+class AgencyAgent(val agentActorContext: AgentActorContext,
+                  generalExecutionContext: ExecutionContext,
+                  walletExecutionContext: ExecutionContext)
   extends AgencyAgentCommon
     with AgencyAgentStateUpdateImpl
     with AgencyPackedMsgHandler
     with AgentSnapshotter[AgencyAgentState] {
+
+  private implicit val executionContext: ExecutionContext = generalExecutionContext
+  override def futureExecutionContext: ExecutionContext = generalExecutionContext
+  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
 
   type StateType = AgencyAgentState
   var state = new AgencyAgentState
@@ -75,7 +80,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
       .withAgencyDIDPair(DidPair(kg.forDID, kg.forDIDVerKey))
       .withThisAgentKeyId(kg.forDID)
     val myDidDoc =
-      DidDocBuilder()
+      DidDocBuilder(futureWalletExecutionContext)
         .withDid(kg.forDID)
         .withAuthKey(kg.forDID, kg.forDIDVerKey, Set(EDGE_AGENT_KEY))
         .didDoc
@@ -175,14 +180,14 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   def agencyLedgerDetail(): Ledgers = {
     // Architecture requested that this be future-proofed by assuming Agency will have more than one ledger.
     val genesis = try {
-      val genesisFileLocation = appConfig.getConfigStringReq(CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION)
+      val genesisFileLocation = appConfig.getStringReq(ConfigConstants.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION)
       val genesisFileSource = Source.fromFile(genesisFileLocation)
       val lines = genesisFileSource.getLines().toList
       genesisFileSource.close()
       lines
     } catch {
       case e: Exception =>
-        logger.error(s"Could not read config ${CommonConfig.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION}. Reason: $e")
+        logger.error(s"Could not read config ${ConfigConstants.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION}. Reason: $e")
         List()
     }
     val taaEnabledOnLedger: Boolean = try {
@@ -295,7 +300,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext)
   }
 
   override def preAgentStateFix(): Future[Any] = {
-    runWithInternalSpan("preAgentStateFix", "AgencyAgent") {
+    metricsWriter.runWithSpan("preAgentStateFix", "AgencyAgent", InternalSpan) {
       state.myDidAuthKey.map { ak =>
         self ? SetAgentActorDetail(DidPair(ak.keyId, ak.verKeyOpt.getOrElse("")), entityId)
       }.getOrElse {

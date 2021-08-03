@@ -1,12 +1,13 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import akka.actor.{ActorRef, Props}
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.msghandler.outgoing.{HasOutgoingMsgSender, JsonMsg, OutgoingMsgParam, ProcessSendMsgToMyDomain, ProcessSendMsgToTheirDomain}
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig.AKKA_SHARDING_REGION_NAME_USER_AGENT
+import com.evernym.verity.config.ConfigConstants.AKKA_SHARDING_REGION_NAME_USER_AGENT
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfully}
 import com.evernym.verity.testkit.BasicSpec
@@ -19,7 +20,7 @@ class OutgoingMsgSenderSpec
     with PersistentActorSpec
     with Eventually {
 
-  lazy val agentActor = system.actorOf(MockAgentActor.props(appConfig, self))
+  lazy val agentActor: ActorRef = system.actorOf(MockAgentActor.props(appConfig, self))
 
   "OutgoingMsgSender" - {
     "when asked to SendMsgToMyDomain" - {
@@ -106,6 +107,8 @@ class OutgoingMsgSenderSpec
       expectMsg(shallExists)
     }
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 class MockAgentActor(appConfig: AppConfig, caller: ActorRef)
@@ -139,7 +142,7 @@ class MockAgentActor(appConfig: AppConfig, caller: ActorRef)
 
   lazy val isVAS: Boolean =
     appConfig
-      .getConfigStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
+      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
       .contains("VerityAgent")
 }
 

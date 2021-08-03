@@ -1,7 +1,9 @@
 package com.evernym.verity.integration.with_basic_sdk.data_retention.expire_after_ternminal_state
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
-import com.evernym.verity.integration.base.VerityProviderBaseSpec
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.with_basic_sdk.data_retention.DataRetentionBaseSpec
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
@@ -11,9 +13,13 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.Request
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProofAttribute
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults.ProofValidated
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
+import com.evernym.verity.util.TestExecutionContextProvider
 import com.typesafe.config.ConfigFactory
+
+import scala.concurrent.ExecutionContext
 
 
 class PresentProofSpec
@@ -21,24 +27,28 @@ class PresentProofSpec
     with DataRetentionBaseSpec
     with SdkProvider {
 
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+
   lazy val issuerVerityEnv =
     VerityEnvBuilder
       .default()
       .withServiceParam(buildSvcParam)
       .withConfig(DATA_RETENTION_CONFIG)
-      .build()
+      .build(VAS)
 
   lazy val verifierVerityEnv =
     VerityEnvBuilder.
       default()
       .withServiceParam(buildSvcParam)
       .withConfig(DATA_RETENTION_CONFIG)
-      .build()
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
+      .build(VAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
-  lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor)
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
+
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
+  lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv, executionContext, ecp.walletFutureExecutionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
 
   val issuerHolderConn = "connId1"
   val verifierHolderConn = "connId2"
@@ -166,6 +176,7 @@ class PresentProofSpec
   "VerifierSDK" - {
     "should receive 'presentation-result' (present-proof 1.0) message on webhook" in {
       val receivedMsgParam = verifierSDK.expectMsgOnWebhook[PresentationResult]()
+      receivedMsgParam.msg.verification_result shouldBe ProofValidated
       val requestPresentation = receivedMsgParam.msg.requested_presentation
       requestPresentation.revealed_attrs.size shouldBe 2
       requestPresentation.unrevealed_attrs.size shouldBe 0
@@ -178,15 +189,17 @@ class PresentProofSpec
     """
       |verity {
       |  retention-policy {
-      |    default {
-      |      undefined-fallback {
-      |        expire-after-days = 3 day
-      |        expire-after-terminal-state = true
+      |    protocol-state {
+      |      default {
+      |        undefined-fallback {
+      |          expire-after-days = 3 day
+      |          expire-after-terminal-state = true
+      |        }
       |      }
       |    }
       |  }
       |  blob-store {
-      |   storage-service = "com.evernym.verity.integration.with_basic_sdk.data_retention.MockBlobStore"
+      |   storage-service = "com.evernym.verity.testkit.mock.blob_store.MockBlobStore"
       |
       |   # The bucket name will contain <env> depending on which environment is used -> "verity-<env>-blob-storage"
       |   bucket-name = "local-blob-store"
@@ -196,4 +209,10 @@ class PresentProofSpec
       |""".stripMargin
   }
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

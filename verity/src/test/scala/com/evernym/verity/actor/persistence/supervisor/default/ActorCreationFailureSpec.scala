@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.persistence.supervisor.default
 
 import akka.testkit.EventFilter
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.base.Ping
 import com.evernym.verity.actor.persistence.supervisor.MockActorCreationFailure
 import com.evernym.verity.actor.testkit.ActorSpec
@@ -15,7 +16,9 @@ class ActorCreationFailureSpec
   with BasicSpec
   with Eventually {
 
-  lazy val mockUnsupervised = system.actorOf(MockActorCreationFailure.props(appConfig))
+  lazy val mockUnsupervised = system.actorOf(
+    MockActorCreationFailure.props(appConfig, executionContextProvider.futureExecutionContext)
+  )
 
   override def expectDeadLetters: Boolean = true
 
@@ -35,6 +38,9 @@ class ActorCreationFailureSpec
       akka.test.filter-leeway = 15s   # to make the event filter run for little longer time
       """
   )}
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 

@@ -7,9 +7,8 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.`X-Real-Ip`
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
-import com.evernym.verity.UrlParam
+import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.agent.user.ComMethodDetail
@@ -17,13 +16,12 @@ import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil, TestAppC
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, SignMsg, SignedMsg}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
-import com.evernym.verity.agentmsg.msgpacker.AgentMsgParseUtil
 import com.evernym.verity.agentmsg.tokenizer.SendToken
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.metrics.AllNodeMetricsData
+import com.evernym.verity.metrics.{MetricDetail, PrometheusMetricsParser}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
@@ -33,15 +31,16 @@ import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
 import com.evernym.verity.testkit.util._
 import com.evernym.verity.testkit.{AgentWithMsgHelper, LedgerClient, agentmsg}
 import com.evernym.verity.util._
+import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
-
 import java.net.InetAddress
 import java.util.UUID
+
 import scala.concurrent.duration.{Duration, _}
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Left
 
 /**
@@ -50,7 +49,12 @@ import scala.util.Left
 trait AgentMsgSenderHttpWrapper
   extends CommonSpecUtil
     with LedgerClient
-    with Eventually {
+    with Eventually
+    with HasExecutionContextProvider
+    with HasWalletExecutionContextProvider {
+
+  implicit lazy val executionContext: ExecutionContext = futureExecutionContext
+  lazy val walletExecutionContext: ExecutionContext = futureWalletExecutionContext
 
   val logger: Logger = getLoggerByName(getClass.getName)
 
@@ -262,15 +266,15 @@ trait AgentMsgSenderHttpWrapper
                       withSeed: Option[String]=None,
                       config: Option[AppConfig]=None,
                       withRole: Option[String]=None): Unit = {
-    createLedgerUtil(config, fromDID, withSeed).bootstrapNewDID(ad.DID, ad.verKey, withRole.orNull)
+    createLedgerUtil(executionContext, walletExecutionContext, config, fromDID, withSeed).bootstrapNewDID(ad.DID, ad.verKey, withRole.orNull)
   }
 
   def updateAgencyEndpointInLedger(did: DID, withSeed: String, endpoint: String, config: Option[AppConfig]=None): Unit = {
-    createLedgerUtil(config, Option(did), Option(withSeed)).setEndpointUrl(did, endpoint)
+    createLedgerUtil(executionContext, walletExecutionContext, config, Option(did), Option(withSeed)).setEndpointUrl(did, endpoint)
   }
 
   def getAttribFromLedger(did: DID, withSeed: String, attribName: String, config: Option[AppConfig]=None): Unit = {
-    createLedgerUtil(config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
+    createLedgerUtil(executionContext, walletExecutionContext, config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
   }
 
   def buildClientNamePrependedMsg(msg: String): String = {
@@ -538,7 +542,7 @@ trait AgentMsgSenderHttpWrapper
       mockClientAgent.v_0_1_req.prepareGetTokenRoute(
         id,
         sponsorId,
-        ComMethodDetail(COM_METHOD_TYPE_PUSH, comMethod)),
+        ComMethodDetail(COM_METHOD_TYPE_PUSH, comMethod, hasAuthEnabled = false)),
       Option(mockClientAgent.v_0_1_resp.handleSendTokenResp))
 
     logApiFinish(s"get token finished: " + r)
@@ -726,9 +730,10 @@ trait AgentMsgSenderHttpWrapper
     require(metrics.contains(expectedMetricName), "expected metrics not found: " + expectedMetricName)
   }
 
-  def getAllNodeMetrics(): AllNodeMetricsData = {
-    val r = getMetrics(fetchFromAllNodes = true)
-    AgentMsgParseUtil.convertTo[AllNodeMetricsData](r)
+  def getAllNodeMetrics(metricsHost: String): List[MetricDetail] = {
+    val url = UrlParam(metricsHost)
+    val data = sendGetRequest(None)(url, "/metrics")
+    PrometheusMetricsParser.parseString(data.toString)
   }
 
   def getMetrics(fetchFromAllNodes: Boolean): String = {

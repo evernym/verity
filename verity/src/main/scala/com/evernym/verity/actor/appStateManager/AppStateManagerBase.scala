@@ -1,28 +1,30 @@
 package com.evernym.verity.actor.appStateManager
 
 import java.time.ZonedDateTime
-
 import akka.actor.Actor
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus.{Down, Removed}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Exceptions.{HandledErrorException, TransitionHandlerNotProvidedException}
+import com.evernym.verity.util2.HasExecutionContextProvider
+import com.evernym.verity.util2.Exceptions.{HandledErrorException, TransitionHandlerNotProvidedException}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager.state._
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig.{APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS, APP_STATE_MANAGER_STATE_DRAINING_DELAY_BETWEEN_STATUS_CHECKS_IN_SECONDS, APP_STATE_MANAGER_STATE_DRAINING_MAX_STATUS_CHECK_COUNT}
+import com.evernym.verity.config.ConfigConstants.{APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS, APP_STATE_MANAGER_STATE_DRAINING_DELAY_BETWEEN_STATUS_CHECKS_IN_SECONDS, APP_STATE_MANAGER_STATE_DRAINING_MAX_STATUS_CHECK_COUNT}
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.{AppVersion, ExceptionConverter, Exceptions}
+import com.evernym.verity.AppVersion
+import com.evernym.verity.util2.{ExceptionConverter, Exceptions}
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 
-trait AppStateManagerBase { this: Actor =>
+trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
+
+  private implicit val ex: ExecutionContext = futureExecutionContext
 
   val appConfig: AppConfig
   val appVersion: AppVersion
@@ -53,10 +55,10 @@ trait AppStateManagerBase { this: Actor =>
   }
 
   protected def getHeartbeat: StatusDetailResp = {
-    import com.evernym.verity.Status.{ACCEPTING_TRAFFIC, NOT_ACCEPTING_TRAFFIC}
+    import com.evernym.verity.util2.Status.{ACCEPTING_TRAFFIC, NOT_ACCEPTING_TRAFFIC}
     val currentState: AppState = getState
     currentState match {
-      case InitializingState
+      case _: InitializingState
            | DrainingState
            | ShutdownWithErrors
            | ShutdownState =>
@@ -85,8 +87,9 @@ trait AppStateManagerBase { this: Actor =>
   private def init(): Unit = {
     causesByState = Map.empty
     causesByContext = Map.empty
-    events = List(EventDetail(ZonedDateTime.now(), InitializingState, MSG_AGENT_SERVICE_INIT_STARTED))
-    currentState = InitializingState
+    val initState = new InitializingState
+    events = List(EventDetail(ZonedDateTime.now(), initState, MSG_AGENT_SERVICE_INIT_STARTED))
+    currentState = initState
     logTransitionedMsg(currentState, Option(MSG_AGENT_SERVICE_INIT_STARTED))
     notifierService.setStatus(STATUS_INITIALIZING)
   }
@@ -222,11 +225,11 @@ trait AppStateManagerBase { this: Actor =>
       // TODO: Start a CoordinatedShutdown (rely on the ClusterDaemon addTask here) OR do the following?
       val cluster = Cluster(context.system)
       val f: Future[Boolean] = Future {
-        val delayBeforeLeavingCluster = appConfig.getConfigIntOption(
+        val delayBeforeLeavingCluster = appConfig.getIntOption(
           APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS).getOrElse(10)
-        val delayBetweenStatusChecks = appConfig.getConfigIntOption(
+        val delayBetweenStatusChecks = appConfig.getIntOption(
           APP_STATE_MANAGER_STATE_DRAINING_DELAY_BETWEEN_STATUS_CHECKS_IN_SECONDS).getOrElse(1)
-        val maxStatusCheckCount = appConfig.getConfigIntOption(
+        val maxStatusCheckCount = appConfig.getIntOption(
           APP_STATE_MANAGER_STATE_DRAINING_MAX_STATUS_CHECK_COUNT).getOrElse(20)
         logger.info(
           s"""Will remain in draining state for at least $delayBeforeLeavingCluster seconds before starting the Coordinated Shutdown..."""

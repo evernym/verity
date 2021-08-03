@@ -6,8 +6,8 @@ import com.evernym.verity.protocol.engine.DID
 import com.evernym.verity.testkit.Matchers
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.util.{AgentCreated_MFV_0_6, ComMethodUpdated_MFV_0_6, ConnReqAccepted_MFV_0_6, KeyCreated_MFV_0_6, MsgsByConns_MFV_0_6, PublicIdentifierCreated_MFV_0_6}
-import com.evernym.verity.util.Util.logger
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent}
 
 /**
@@ -17,6 +17,9 @@ trait AgentMsgHandler {
   this: AgentMsgHelper with MockAgent with HasCloudAgent with Matchers =>
 
   object v_0_6_resp {
+
+    private val logger = getLoggerByClass(getClass)
+
     def handleAgentCreatedResp(rmw: PackedMsg, otherData: Map[String, Any]=Map.empty): AgentCreated_MFV_0_6 = {
       logger.debug("Unpacking agent created response message (MFV 0.6)")
       val acm = unpackAgentCreatedRespMsg(rmw, getDIDToUnsealAgentRespMsg)

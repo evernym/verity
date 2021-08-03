@@ -1,15 +1,20 @@
 package com.evernym.verity.integration.with_basic_sdk.data_retention.expire_after_days
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
-import com.evernym.verity.integration.base.VerityProviderBaseSpec
+import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.with_basic_sdk.data_retention.DataRetentionBaseSpec
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Ctl.SendMessage
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Msg.Message
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
+import com.evernym.verity.util.TestExecutionContextProvider
 import com.typesafe.config.ConfigFactory
+
+import scala.concurrent.ExecutionContext
 
 
 class BasicMessageSpec
@@ -17,17 +22,20 @@ class BasicMessageSpec
     with DataRetentionBaseSpec
     with SdkProvider {
 
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+
   lazy val issuerVerityEnv =
     VerityEnvBuilder
       .default()
       .withServiceParam(buildSvcParam)
       .withConfig(DATA_RETENTION_CONFIG)
-      .build()
+      .build(VAS)
 
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build()
+  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
@@ -91,15 +99,17 @@ class BasicMessageSpec
     """
       |verity {
       |  retention-policy {
-      |    default {
-      |     undefined-fallback {
-      |       expire-after-days = 4 day
-      |       expire-after-terminal-state = false
-      |     }
+      |    protocol-state {
+      |      default {
+      |       undefined-fallback {
+      |         expire-after-days = 4 day
+      |         expire-after-terminal-state = false
+      |       }
+      |      }
       |    }
       |  }
       |  blob-store {
-      |   storage-service = "com.evernym.verity.integration.with_basic_sdk.data_retention.MockBlobStore"
+      |   storage-service = "com.evernym.verity.testkit.mock.blob_store.MockBlobStore"
       |
       |   # The bucket name will contain <env> depending on which environment is used -> "verity-<env>-blob-storage"
       |   bucket-name = "local-blob-store"
@@ -108,4 +118,11 @@ class BasicMessageSpec
       |}
       |""".stripMargin
   }
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

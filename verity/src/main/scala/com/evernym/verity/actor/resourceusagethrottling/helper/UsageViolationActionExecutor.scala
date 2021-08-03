@@ -1,13 +1,13 @@
 package com.evernym.verity.actor.resourceusagethrottling.helper
 
 import akka.actor.{ActorRef, ActorSystem}
-import com.evernym.verity.Exceptions.{InvalidValueException, MissingReqFieldException}
+import com.evernym.verity.util2.Exceptions.{InvalidValueException, MissingReqFieldException}
 import com.evernym.verity.actor.cluster_singleton._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{BlockCaller, BlockResourceForCaller}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{WarnCaller, WarnResourceForCaller}
 import com.evernym.verity.actor.resourceusagethrottling.{ENTITY_ID_GLOBAL, EntityId}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants.SINGLETON_PARENT_PROXY
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.actor.resourceusagethrottling.helper.LogLevelValidator._

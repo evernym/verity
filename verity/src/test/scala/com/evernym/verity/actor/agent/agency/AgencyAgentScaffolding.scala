@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.agent.agency
 
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
@@ -11,7 +11,7 @@ import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
-import com.evernym.verity.{ActorErrorResp, UrlParam}
+import com.evernym.verity.util2.{ActorErrorResp, HasWalletExecutionContextProvider, UrlParam}
 import org.scalatest.concurrent.Eventually
 
 
@@ -20,13 +20,14 @@ trait AgencyAgentScaffolding
     with PersistentActorSpec
     with AgentSpecHelper
     with MockPushNotifListener
-    with Eventually {
+    with Eventually
+    with HasWalletExecutionContextProvider {
 
   override lazy val mockAgencyAdmin: MockEdgeAgent =
-    new MockEdgeAgent(UrlParam("localhost:9001"), platform.agentActorContext.appConfig)
+    new MockEdgeAgent(UrlParam("localhost:9001"), platform.agentActorContext.appConfig, futureExecutionContext, futureWalletExecutionContext)
 
-  override lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
-  lazy val mockEdgeAgent1: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
+  override lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
+  lazy val mockEdgeAgent1: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
 
   protected def agencySetupSpecs(): Unit = {
     "when agency admin is interacting" - {
@@ -84,7 +85,8 @@ trait AgencyAgentScaffolding
       }
       "when sent get-token msg" - {
         "should respond with token" in {
-          val msg = mockEdgeAgent.v_0_1_req.prepareGetToken("id", "sponsorId", ComMethodDetail(1, validTestPushNotifToken))
+          val msg = mockEdgeAgent.v_0_1_req.prepareGetToken("id", "sponsorId",
+            ComMethodDetail(1, validTestPushNotifToken, hasAuthEnabled = false))
           aa ! ProcessPackedMsg(msg, reqMsgContext)
           val packedMsg = expectMsgType[PackedMsg]
           val token = mockEdgeAgent.v_0_1_resp.handleSendToken(packedMsg, mockAgencyAdmin.agencyPublicDid.get.DID)

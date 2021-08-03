@@ -3,8 +3,8 @@ package com.evernym.verity.protocol.protocols.connecting.common
 import akka.actor.Actor.Receive
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueException}
-import com.evernym.verity.Status.{getStatusMsgFromCode, _}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidValueException}
+import com.evernym.verity.util2.Status.{getStatusMsgFromCode, _}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
@@ -18,8 +18,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.cache.base.Cache
-import com.evernym.verity.http.common.MsgSendingSvc
-import com.evernym.verity.libindy.wallet.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
+import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
@@ -28,16 +27,17 @@ import com.evernym.verity.protocol.protocols.connecting.v_0_5.{ConnectingMsgFami
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFamily => ConnectingMsgFamily_0_6}
 import com.evernym.verity.protocol.{Control, HasMsgType}
 import com.evernym.verity.push_notification.{PushNotifData, PushNotifMsgBuilder}
+import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.verity.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlParam}
+import com.evernym.verity.util2.{Exceptions, HasExecutionContextProvider, MsgPayloadStoredEventBuilder, Status, UrlParam}
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.Left
 
@@ -63,7 +63,10 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     with ConnReqMsgHandler[S]
     with ConnReqRedirectMsgHandler[S]
     with DEPRECATED_HasWallet
+    with HasExecutionContextProvider
     with HasLogger { this: Protocol[P,R,ProtoMsg,Any,S,I] =>
+
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   val logger: Logger = ctx.logger
 
@@ -223,7 +226,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     try {
       val agentMsgs: List[Any] = buildConnReqAnswerMsgForRemoteCloudAgent(uid)
       val packedMsg = buildReqMsgForTheirRoutingService(msgPackFormat, agentMsgs, msgPackFormat == MPF_MSG_PACK, answeredMsg.`type`)
-      sendToTheirAgencyEndpoint(buildSendMsgParam(uid, answeredMsg.getType, packedMsg.msg))
+      sendToTheirAgencyEndpoint(buildSendMsgParam(uid, answeredMsg.getType, packedMsg.msg), ctx.metricsWriter)
     } catch {
       case e: Exception =>
         logger.error("sending invite answered msg to remote agency failed", Exceptions.getErrorMsg(e))
@@ -266,7 +269,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
       case Some(t) => isExpired(msg.creationDateTime, t)
       case None =>
         val configName = expiryTimeInSecondConfigNameForMsgType(msg.getType)
-        appConfig.getConfigIntOption(configName).exists(s => isExpired(msg.creationDateTime, s))
+        appConfig.getIntOption(configName).exists(s => isExpired(msg.creationDateTime, s))
     }
     if (expired) {
       throw new BadRequestErrorException(MSG_VALIDATION_ERROR_EXPIRED.statusCode)
@@ -373,7 +376,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   def getEncryptForDID: DID
 
   def buildAgentPackedMsg(msgPackFormat: MsgPackFormat, param: PackMsgParam): PackedMsg = {
-    val fut = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, param)
+    val fut = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, param)(agentMsgTransformer, wap, ctx.metricsWriter)
     awaitResult(fut)
   }
 
@@ -417,7 +420,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           encryptionParamBuilder.withRecipDID(ctx.getState.theirAgentKeyDIDReq)
             .withSenderVerKey(ctx.getState.thisAgentVerKeyReq).encryptParam,
           agentMsgs, wrapInBundledMsgs)
-        val packedMsgFut = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, packMsgParam)(agentMsgTransformer, wap)
+        val packedMsgFut = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, packMsgParam)(agentMsgTransformer, wap, ctx.metricsWriter)
         val packedMsg = awaitResult(packedMsgFut)
         buildRoutedPackedMsgForTheirRoutingService(msgPackFormat, packedMsg.msg, msgType)
       case x => throw new RuntimeException("unsupported routing detail" + x)
@@ -431,7 +434,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           v1.agencyDID, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL).verKey)))
         val fwdRouteForAgentPairwiseActor = FwdRouteMsg(v1.agentKeyDID, Left(theirAgencySealParam))
         AgentMsgPackagingUtil.buildRoutedAgentMsg(msgPackFormat, PackedMsg(packedMsg),
-          List(fwdRouteForAgentPairwiseActor))(agentMsgTransformer, wap)
+          List(fwdRouteForAgentPairwiseActor))(agentMsgTransformer, wap, ctx.metricsWriter, futureExecutionContext)
       case (None, Some(v2: RoutingDetail)) =>
         val routingKeys = if (v2.routingKeys.nonEmpty) Vector(v2.verKey) ++ v2.routingKeys else v2.routingKeys
         AgentMsgPackagingUtil.packMsgForRoutingKeys(
@@ -439,7 +442,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           packedMsg,
           routingKeys,
           msgType
-        )(agentMsgTransformer, wap)
+        )(agentMsgTransformer, wap, ctx.metricsWriter, futureExecutionContext)
       case x => throw new RuntimeException("unsupported routing detail" + x)
     }
     awaitResult(result)

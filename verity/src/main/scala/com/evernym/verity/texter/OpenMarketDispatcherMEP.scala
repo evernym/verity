@@ -1,15 +1,16 @@
 package com.evernym.verity.texter
 
 import java.net.HttpURLConnection._
-
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.Exceptions.HandledErrorException
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.util2.Exceptions.HandledErrorException
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.util.Util._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.http.common.ConfigSvc
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider
+
 import javax.ws.rs.client.{Client, ClientBuilder, Entity}
 import javax.ws.rs.core.MediaType
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature
@@ -24,13 +25,15 @@ case class InvokeService(endUser: EndUser, variables: Variables)
 
 trait OpenMarketMEPAPI extends SMSServiceProvider with ConfigSvc {
 
+  private val logger = getLoggerByName("OpenMarketMEPAPI")
+
   lazy val providerId = SMS_PROVIDER_ID_OPEN_MARKET
 
-  lazy val userName: String = appConfig.getConfigStringReq(OPEN_MARKET_USER_NAME)
-  lazy val password: String = appConfig.getConfigStringReq(OPEN_MARKET_PASSWORD)
-  lazy val webApiHost: String = appConfig.getConfigStringReq(OPEN_MARKET_ENDPOINT_HOST)
-  lazy val webApiUrlPrefix: String = appConfig.getConfigStringReq(OPEN_MARKET_ENDPOINT_PATH_PREFIX)
-  lazy val serviceId: String = appConfig.getConfigStringReq(OPEN_MARKET_SERVICE_ID)
+  lazy val userName: String = appConfig.getStringReq(OPEN_MARKET_USER_NAME)
+  lazy val password: String = appConfig.getStringReq(OPEN_MARKET_PASSWORD)
+  lazy val webApiHost: String = appConfig.getStringReq(OPEN_MARKET_ENDPOINT_HOST)
+  lazy val webApiUrlPrefix: String = appConfig.getStringReq(OPEN_MARKET_ENDPOINT_PATH_PREFIX)
+  lazy val serviceId: String = appConfig.getStringReq(OPEN_MARKET_SERVICE_ID)
   lazy val webApiUrl: String = "https://" + webApiHost
   lazy val baseResourcePrefix: String = s"$webApiUrlPrefix"
   lazy val sendMsgResource: String = s"$webApiUrl/$baseResourcePrefix/$serviceId"

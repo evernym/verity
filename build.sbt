@@ -42,7 +42,7 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libIndyVer = "1.95.0~1577"
+val libIndyVer = "1.95.0~1624"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libindy-async", libIndyVer, "libindy.so"),
   NonMatchingDistLib("libnullpay-async", libIndyVer, "libnullpay.so"),
@@ -63,7 +63,7 @@ val akkaVer         = "2.6.14"
 val akkaHttpVer     = "10.2.4"
 val akkaMgtVer      = "1.1.0"
 val alpAkkaVer      = "3.0.1"
-val kamonVer        = "2.2.0"
+val kamonVer        = "2.2.1"
 val kanelaAgentVer  = "1.0.10"
 val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
                                   // around base64 decoding etc, should look into it.
@@ -72,7 +72,7 @@ val sdnotifyVer     = "1.3"
 //test dependency versions
 val scalatestVer    = "3.2.9"
 val mockitoVer      = "1.16.37"
-val veritySdkVer    = "0.4.5-77b158ab"
+val veritySdkVer    = "0.4.9-1024e509"
 val vcxWrapperVer   = "0.10.1.1131"
 
 // compiler plugin versions
@@ -94,7 +94,7 @@ ThisBuild / patch := patchNum(
   git.gitHeadCommit.value,
   git.gitUncommittedChanges.value
 )
-version := s"${major.value}.${minor.value}.${patch.value}"
+ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}"
 maintainer := "Evernym Inc <dev@evernym.com>"
 
 ThisBuild / sharedLibraries := sharedLibDeps
@@ -167,8 +167,8 @@ lazy val integrationTests = (project in file("integration-tests"))
 
 lazy val settings = Seq(
   organization := "com.evernym",
-  version := s"${major.value}.${minor.value}.${patch.value}",
-  scalaVersion := "2.12.13",
+  scalaVersion := "2.12.14",
+
   scalacOptions := Seq(
     "-feature",
     "-unchecked",
@@ -188,7 +188,7 @@ lazy val settings = Seq(
   resolvers += Resolver.mavenLocal,
   resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public",
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
-  resolvers += "evernym-dev" at "https://evernym.mycloudrepo.io/public/repositories/evernym-dev/",
+  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",
 
   Test / parallelExecution := false,
   Test / logBuffered := false,
@@ -249,6 +249,7 @@ lazy val packageSettings = Seq (
       s"/usr/share/${name.value}/${packageName.value}",
       includeFiles = confFiles, replaceFilesIfExists = true)
   },
+  Compile / resourceGenerators += SourceGenerator.writeVerityVersionConf(version).taskValue,
   Debian / packageArchitecture := "amd64",
   // libindy provides libindy.so
   Debian / debianPackageDependencies ++= Seq(
@@ -273,6 +274,10 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-persistence" % akkaVer,
     akkaGrp %% "akka-cluster-sharding" % akkaVer,
     akkaGrp %% "akka-http" % akkaHttpVer,
+
+    akkaGrp %% "akka-actor-typed" % akkaVer,
+    akkaGrp %% "akka-persistence-typed" % akkaVer,
+    akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
 
     //akka persistence dependencies
     akkaGrp %% "akka-persistence-dynamodb" % "1.1.1",
@@ -343,10 +348,6 @@ lazy val commonLibraryDependencies = {
     "org.scalatest" %% "scalatest-freespec" % scalatestVer,
     "org.scalatest" %% "scalatest-shouldmatchers" % scalatestVer,
     "org.mockito" %% "mockito-scala-scalatest" % mockitoVer,
-
-    akkaGrp %% "akka-actor-typed" % akkaVer,
-    akkaGrp %% "akka-persistence-typed" % akkaVer,
-    akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
 
     akkaGrp %% "akka-testkit" % akkaVer,
     akkaGrp %% "akka-persistence-testkit" % akkaVer,

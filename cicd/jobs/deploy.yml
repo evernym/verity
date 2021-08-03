@@ -12,7 +12,7 @@
     - curl
       --insecure
       --request POST
-      --form token=$CI_JOB_TOKEN
+      --form token=$TRIGGER_API_TOKEN
       --form ref=$TRIGGERAPI_REF_VERITY_RELEASE
       --form "variables[VERITY_PACKAGE_VERSION]=$VERITY_VERSION"
       --form "variables[TARGET_ENV]=$TARGET_ENVIRONMENT"
@@ -34,7 +34,7 @@ deploy-manually-team1:
   when: manual
   only:
     refs:
-      - master@dev/verity/verity
+      - main@evernym/verity/verity
 
 .deploy-manually-team2:
   extends: .deploy-common
@@ -52,7 +52,7 @@ deploy-dev-rc: # default branch for automatic deployment verity master to dev-rc
     MERGE_FORK_BRANCH: $TARGET_ENVIRONMENT
   only:
     refs:
-      - master@dev/verity/verity
+      - main@evernym/verity/verity
 
 deploy-manually-dev-rc: # special branch for manual deployment verity master with control-repo changes to dev-rc: MERGE_FORK_PROJECT_ID and MERGE_FORK_BRANCH must be provided in job UI
   extends:
@@ -65,4 +65,4 @@ deploy-manually-dev-rc: # special branch for manual deployment verity master wit
   when: manual
   only:
     refs:
-      - master@dev/verity/verity
+      - main@evernym/verity/verity

@@ -7,18 +7,17 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Sink, Source}
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgcodec.DecodingException
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.http.common.ConfigSvc
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.Exceptions
+import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 case class FirebasePushNotifErrorResult(error: String)
@@ -50,7 +49,11 @@ case class FirebasePushNotifSuccessResponse(
   extends FirebasePushNotifCommonResponse
 
 
-class FirebasePusher(serviceParam: FirebasePushServiceParam) extends PushServiceProvider with ConfigSvc {
+class FirebasePusher(serviceParam: FirebasePushServiceParam, executionContext: ExecutionContext)
+  extends PushServiceProvider
+    with ConfigSvc {
+
+  implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   lazy val logger: Logger = getLoggerByName("FirebasePusher")
   lazy val appConfig: AppConfig = AppConfigWrapper

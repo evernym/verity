@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.msgoutbox;
+
+message ComMethod {
+    int32 typ = 1;
+    string value = 2;
+    RecipPackaging recipPackaging = 3;
+    RoutePackaging routePackaging = 4;
+    Authentication authentication = 5;
+}
+
+message Authentication {
+    string type = 1;
+    string version = 2;
+    map<string, string> data = 3;
+}
+
+message RecipPackaging {
+    string pkgType = 1;
+    repeated string recipientKeys = 2;
+}
+
+message RoutePackaging {
+    string pkgType = 1;
+    repeated string recipientKeys = 2;
+    repeated string routingKeys = 3;
+}

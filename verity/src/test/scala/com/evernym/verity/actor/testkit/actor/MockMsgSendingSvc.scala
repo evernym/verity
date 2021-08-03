@@ -1,14 +1,15 @@
 package com.evernym.verity.actor.testkit.actor
 
-import akka.http.scaladsl.model.{HttpMethod, HttpMethods}
-import com.evernym.verity.Exceptions.HandledErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+import akka.http.scaladsl.model.{HttpHeader, HttpMethod, HttpMethods}
+import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.http.common.MsgSendingSvc
-import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.util.TestExecutionContextProvider
+import com.evernym.verity.transports.MsgSendingSvc
+import com.evernym.verity.util2.UrlParam
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import scala.collection.immutable
 import scala.util.{Success, Try}
 
 
@@ -28,6 +29,8 @@ trait MockMsgSendingSvc extends MsgSendingSvc {
 
 object MockMsgSendingSvc extends MockMsgSendingSvc {
 
+  lazy implicit val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
+
   var totalBinaryMsgsSent: Int = 0
   var totalRestAgentMsgsSent: Int = 0
 
@@ -38,7 +41,9 @@ object MockMsgSendingSvc extends MockMsgSendingSvc {
 
   case class MockUrlMapperMessage(url: String, hashedUrl: String)
 
-  def sendPlainTextMsg(payload: String, method: HttpMethod = HttpMethods.POST)
+  def sendPlainTextMsg(payload: String,
+                       method: HttpMethod = HttpMethods.POST,
+                       headers: immutable.Seq[HttpHeader] = immutable.Seq.empty)
                       (implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
     Try(DefaultMsgCodec.fromJson[MockUrlMapperMessage](payload)) match {
       case Success(m) => mappedUrls = mappedUrls + (m.hashedUrl -> m.url)
@@ -47,13 +52,15 @@ object MockMsgSendingSvc extends MockMsgSendingSvc {
     Future(Right(payload))
   }
 
-  def sendJsonMsg(payload: String)(implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
+  def sendJsonMsg(payload: String,
+                  headers: immutable.Seq[HttpHeader] = immutable.Seq.empty)(implicit up: UrlParam): Future[Either[HandledErrorException, String]] = {
     totalRestAgentMsgsSent = totalRestAgentMsgsSent + 1
     lastRestMsgSent = Option(payload)
     Future(Right(payload))
   }
 
-  def sendBinaryMsg(payload: Array[Byte])(implicit up: UrlParam): Future[Either[HandledErrorException, PackedMsg]] = {
+  def sendBinaryMsg(payload: Array[Byte],
+                    headers: immutable.Seq[HttpHeader] = immutable.Seq.empty)(implicit up: UrlParam): Future[Either[HandledErrorException, PackedMsg]] = {
     totalBinaryMsgsSent = totalBinaryMsgsSent + 1
     lastBinaryMsgSent = Option(payload)
     Future(Right(PackedMsg(payload)))

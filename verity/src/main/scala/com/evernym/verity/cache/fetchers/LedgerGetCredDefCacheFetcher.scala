@@ -2,16 +2,20 @@ package com.evernym.verity.cache.fetchers
 
 import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.ledger.LedgerSvc
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.StatusDetailException
+import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.cache.LEDGER_GET_CRED_DEF_FETCHER
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class LedgerGetCredDefCacheFetcher(val ledgerSvc: LedgerSvc, val appConfig: AppConfig)
+class LedgerGetCredDefCacheFetcher(val ledgerSvc: LedgerSvc,
+                                   val appConfig: AppConfig,
+                                   executionContext: ExecutionContext)
   extends AsyncCacheValueFetcher {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
+  private implicit val executionContextImplc: ExecutionContext = executionContext
 
   lazy val fetcherParam: FetcherParam = LEDGER_GET_CRED_DEF_FETCHER
   lazy val cacheConfigPath: Option[String] = Option(LEDGER_GET_CRED_DEF_CACHE)

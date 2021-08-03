@@ -1,9 +1,9 @@
 package com.evernym.verity.protocol.protocols.connecting.common
 
 import akka.actor.Actor.Receive
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.ServiceEndpoint
-import com.evernym.verity.Status.{CONN_STATUS_NOT_CONNECTED, MSG_STATUS_ACCEPTED}
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.ServiceEndpoint
+import com.evernym.verity.util2.Status.{CONN_STATUS_NOT_CONNECTED, MSG_STATUS_ACCEPTED}
 import com.evernym.verity.actor.agent.ConnectionStatus
 import com.evernym.verity.actor.{ConnectionCompleted, ConnectionStatusUpdated}
 import com.evernym.verity.protocol.engine.{DID, VerKey}

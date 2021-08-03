@@ -1,5 +1,6 @@
 import sbt._
-import sbt.Keys.sourceManaged
+import sbt.Keys.{resourceManaged, sourceManaged}
+
 import scala.language.postfixOps
 import java.io.File
 
@@ -22,4 +23,15 @@ object SourceGenerator {
       Seq(file)
     }
   }
+
+  def writeVerityVersionConf(version: SettingKey[String]): Def.Initialize[Task[Seq[File]]] = {
+    Def.task {
+      val file = resourceManaged.value / "verity-version.conf"
+      println(s"Generated version conf file: ${file.getAbsoluteFile}")
+      val contents = s"verity.version=${version.value}"
+      IO.write(file, contents)
+      Seq(file)
+    }
+  }
+
 }

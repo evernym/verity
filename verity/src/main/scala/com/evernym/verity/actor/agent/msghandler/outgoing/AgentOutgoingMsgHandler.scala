@@ -1,17 +1,16 @@
 package com.evernym.verity.actor.agent.msghandler.outgoing
 
 import akka.actor.ActorRef
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
+import com.evernym.verity.util2.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.agent.{AgentIdentity, HasAgentActivity}
-import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, SendPushNotif, SendUnStoredMsgToMyDomain, SendMsgToMyDomain, SendMsgToTheirDomain}
+import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, SendMsgToMyDomain, SendMsgToTheirDomain, SendPushNotif, SendUnStoredMsgToMyDomain}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.vault.KeyParam
 import com.evernym.verity.push_notification.PushNotifResponse
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 trait AgentOutgoingMsgHandler
@@ -19,6 +18,8 @@ trait AgentOutgoingMsgHandler
     with AgentIdentity
     with HasOutgoingMsgSender
     with HasAgentActivity { this: AgentMsgHandler with AgentPersistentActor =>
+
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   lazy val defaultSelfRecipKeys = Set(KeyParam.fromDID(domainId))
 

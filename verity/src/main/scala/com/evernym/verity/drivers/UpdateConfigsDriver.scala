@@ -14,9 +14,7 @@ class UpdateConfigsDriver(cp: ActorDriverGenParam) extends ActorDriver(cp) {
 
     case sig@SignalEnvelope(_: GetConfigs, _, _, _, _)  => processSignalMsg(sig)
 
-    case sig@SignalEnvelope(uc: UpdateConfig, _, _, _, _) =>
-      val ucn = UpdateConfigs(uc.configs.map(cd => ConfigDetail(cd.name, cd.value)))
-      processSignalMsg(sig.copy(signalMsg = ucn))
+    case sig@SignalEnvelope(_: UpdateConfig, _, _, _, _) => processSignalMsg(sig)
 
     //these signals will be sent to edge agent
     case sig@SignalEnvelope(_: ConfigResult, _, _, _, _) => sendSignalMsg(sig)

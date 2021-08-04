@@ -138,10 +138,16 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     ctx.signal(Signal.SendSMSInvite(invitationMsg.`@id`, inviteURL, st.label, m.phoneNumber))
   }
 
-  def genOutOfBandInvitation(label: String, goalCode: Option[String], goal: Option[String],
-                             requestAttach: Vector[String], did: DidStr,
-                             verKey: VerKeyStr, agencyVerKey: String, profileUrl: Option[String],
-                             publicDid: Option[DidStr]): OutOfBandInvitation = {
+  def genOutOfBandInvitation(label: String,
+                             goalCode: Option[String],
+                             goal: Option[String],
+                             requestAttach: Vector[String],
+                             did: DidStr,
+                             verKey: VerKeyStr,
+                             agencyVerKey: String,
+                             profileUrl: Option[String],
+                             publicDid: Option[DidStr],
+                             serviceDidKeyFormat: Boolean): OutOfBandInvitation = {
     val routingKeys = Vector(verKey, agencyVerKey)
     val handshakeProtocols = Vector((if(QUALIFIER_FORMAT_HTTP) "https://didcomm.org" else "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec").concat("/connections/1.0"))
     val service = if (serviceDidKeyFormat) {

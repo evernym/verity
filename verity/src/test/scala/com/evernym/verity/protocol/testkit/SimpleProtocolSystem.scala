@@ -373,7 +373,7 @@ trait SimpleLaunchesProtocol extends LaunchesProtocol with HasExecutionContextPr
 
       val driverParam = SimpleControllerProviderInputType(system, rel.myDid_!, threadId)
 
-      val driver = protocolRegistry.find_!(protoDef.msgFamily.protoRef).driverGen map { _.apply(driverParam) }
+      val driver = protocolRegistry.find_!(protoDef.msgFamily.protoRef).driverGen map { _.apply(driverParam, futureExecutionContext) }
 
       val pce = ProtocolContainerElements( system, rel.myDid_!, pinstId, Option(threadId), protoDef,
         initProvider, None, driver, journalContext, walletAccessProvider, ledgerAccessProvider, urlShorteningAccessProvider)

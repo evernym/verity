@@ -85,7 +85,7 @@ class AgencyAgentPairwiseSnapshotSpec
 
   override def checkSnapshotState(snap: AgencyAgentPairwiseState,
                          protoInstancesSize: Int): Unit = {
-    snap.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair)
+    snap.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair.toAgentDidPair)
     snap.agentWalletId shouldBe Option(agencyAgentEntityId)
     snap.thisAgentKeyId should not be mockAgencyAdmin.agencyPublicDid.map(_.DID)
     snap.agencyDIDPair.map(_.DID) should not be snap.thisAgentKeyId

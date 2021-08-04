@@ -113,7 +113,7 @@ object CryptoOpExecutor extends OpExecutorBase {
     }
   }
 
-  def verifySig(verKey: VerKey, challenge: Array[Byte], signature: Array[Byte])
+  def verifySig(verKey: VerKeyStr, challenge: Array[Byte], signature: Array[Byte])
                (implicit ec: ExecutionContext): Future[VerifySigResult] = {
     val detail = s"challenge: '$challenge', signature: '$signature'"
     Crypto.cryptoVerify(verKey, challenge, signature)

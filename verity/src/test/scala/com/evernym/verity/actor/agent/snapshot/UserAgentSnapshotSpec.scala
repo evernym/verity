@@ -82,7 +82,7 @@ class UserAgentSnapshotSpec
   override def checkSnapshotState(state: UserAgentState,
                                   protoInstancesSize: Int): Unit = {
     state.publicIdentity.isDefined shouldBe false
-    state.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair)
+    state.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair.toAgentDidPair)
     state.agentWalletId shouldBe Option(userAgentEntityId)
     state.thisAgentKeyId.isDefined shouldBe true
     state.thisAgentKeyId.contains(userDID.did) shouldBe false

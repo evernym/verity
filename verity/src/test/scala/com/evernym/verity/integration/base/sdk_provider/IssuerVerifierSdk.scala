@@ -240,7 +240,7 @@ case class IssuerRestSDK(param: SdkParam, executionContext: ExecutionContext, wa
       MFV_0_6,
       updateComMethodJson,
       UUID.randomUUID().toString,
-      verityAgentDidPair.DID, myDIDApiKey
+      verityAgentDidPair.did, myDIDApiKey
     )
     val cmu = expectMsgOnWebhook[ComMethodUpdated]().msg
     cmu.id.nonEmpty shouldBe true

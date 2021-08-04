@@ -14,7 +14,7 @@ import com.evernym.verity.transformations.transformers.v1._
 
 class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
 
-  lazy val transformer = createPersistenceTransformerV1("enc key")
+  lazy val transformer = createPersistenceTransformerV1("enc key", appConfig)
 
   "AgencyAgentState" - {
 

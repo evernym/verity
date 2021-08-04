@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.walletBackup
 
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.{CanGenerateDid, CommonSpecUtil, TestAppConfig}
+import com.evernym.verity.actor.testkit.{CanGenerateDid, CommonSpecUtil}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
@@ -323,12 +323,15 @@ class WalletBackupSpec()
 
   def backupSignaledFromExporter(exporter: TestEnvir): WalletBackupBytes =
     Base64Util.getBase64Decoded((exporter expect signal[Restored]).wallet)
+
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }
 
 abstract class TestsWalletBackup extends TestsProtocolsImpl(WalletBackupProtoDef, Option(Bucket_2_Legacy)) {
 
   import com.evernym.verity.protocol.protocols.walletBackup.BackupSpecVars._
 
+  def appConfig: AppConfig
   def futureExecutionContext: ExecutionContext
 
   override val containerNames: Set[ContainerName] = Set(EXPORTER, PERSISTER, RECOVERER)
@@ -347,8 +350,8 @@ abstract class TestsWalletBackup extends TestsProtocolsImpl(WalletBackupProtoDef
 
     //FIXME JL to RM: we need to move this to the new testing approach (containers created indirectly)
     val containers = Map(
-      RECOVERER -> newContainer(s, futureExecutionContext, partiId = RECOVERY_VK),
-      PERSISTER -> newContainer(s, futureExecutionContext, partiId = p.participantId, pinstId = p.pinstId, recorder = Some(p.eventRecorder))
+      RECOVERER -> newContainer(s, futureExecutionContext, appConfig, partiId = RECOVERY_VK),
+      PERSISTER -> newContainer(s, futureExecutionContext, appConfig, partiId = p.participantId, pinstId = p.pinstId, recorder = Some(p.eventRecorder))
     )
 
     Scenario(RECOVERER, PERSISTER)

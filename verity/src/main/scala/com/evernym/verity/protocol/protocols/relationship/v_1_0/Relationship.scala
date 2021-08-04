@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.protocols.relationship.v_1_0
 
 import akka.http.scaladsl.model.Uri
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.AppConfigWrapper
+import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
@@ -39,8 +39,10 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     case (st: State.KeyCreationInProgress   , m: Ctl.KeyCreated             ) => handleKeyCreated(st, m)
     case (st: State.Created                 , m: Ctl.ConnectionInvitation   ) => connectionInvitation(st, m)
     case (st: State.Created                 , m: Ctl.SMSConnectionInvitation) => connectionInvitation(st, m)
-    case (st: State.Created                 , m: Ctl.OutOfBandInvitation    ) => outOfBandInvitation(st, m)
-    case (st: State.Created                 , m: Ctl.SMSOutOfBandInvitation ) => outOfBandInvitation(st, m)
+    case (st: State.Created                 , m: Ctl.OutOfBandInvitation    ) =>
+      outOfBandInvitation(st, m, ctx.serviceKeyDidFormat)
+    case (st: State.Created                 , m: Ctl.SMSOutOfBandInvitation ) =>
+      outOfBandInvitation(st, m, ctx.serviceKeyDidFormat)
     case (_: State.Created        , m: Ctl.SMSSent                ) =>
       ctx.signal(Signal.SMSInvitationSent(m.invitationId))
     case (_: State.Created        , _: Ctl.SMSSendingFailed       ) =>
@@ -96,7 +98,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     )
   }
 
-  def outOfBandInvitation(st: State.Created, m: Ctl.OutOfBandInvitation): Unit = {
+  def outOfBandInvitation(st: State.Created, m: Ctl.OutOfBandInvitation, serviceDidKeyFormat: Boolean): Unit = {
     val invitationMsg = genOutOfBandInvitation(
       st.label,
       m.goalCode,
@@ -106,7 +108,8 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
       st.verKey,
       st.agencyVerKey,
       blankOption(st.profileUrl),
-      blankOption(st.publicDid)
+      blankOption(st.publicDid),
+      serviceDidKeyFormat
     )
 
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
@@ -116,7 +119,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
       ctx.signal(Signal.Invitation(inviteURL, None, invitationMsg.`@id`))
   }
 
-  def outOfBandInvitation(st: State.Created, m: Ctl.SMSOutOfBandInvitation): Unit = {
+  def outOfBandInvitation(st: State.Created, m: Ctl.SMSOutOfBandInvitation, serviceDidKeyFormat: Boolean): Unit = {
     val invitationMsg = genOutOfBandInvitation(
       st.label,
       m.goalCode,
@@ -126,7 +129,8 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
       st.verKey,
       st.agencyVerKey,
       blankOption(st.profileUrl),
-      blankOption(st.publicDid)
+      blankOption(st.publicDid),
+      serviceDidKeyFormat
     )
 
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
@@ -136,10 +140,11 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
   def genOutOfBandInvitation(label: String, goalCode: Option[String], goal: Option[String],
                              requestAttach: Vector[String], did: DID,
                              verKey: VerKey, agencyVerKey: String, profileUrl: Option[String],
-                             publicDid: Option[DID]): OutOfBandInvitation = {
+                             publicDid: Option[DID],
+                             serviceDidKeyFormat: Boolean): OutOfBandInvitation = {
     val routingKeys = Vector(verKey, agencyVerKey)
     val handshakeProtocols = Vector((if(QUALIFIER_FORMAT_HTTP) "https://didcomm.org" else "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec").concat("/connections/1.0"))
-    val service = if (AppConfigWrapper.getBooleanReq(SERVICE_KEY_DID_FORMAT)) {
+    val service = if (serviceDidKeyFormat) {
       for (service <- DIDDoc(did, verKey, ctx.serviceEndpoint, routingKeys).toDIDDocFormatted.service) yield ServiceFormatter(service).toDidKeyFormat()
     } else {
       DIDDoc(did, verKey, ctx.serviceEndpoint, routingKeys).toDIDDocFormatted.service

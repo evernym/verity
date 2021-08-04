@@ -42,11 +42,21 @@ case class AgentDIDDetail(name: String, DIDSeed: String, did: DID, verKey: VerKe
 }
 
 
-class TestAppConfig(newConfig: Option[Config] = None, clearValidators: Boolean = false) extends AppConfig {
+class TestAppConfig(newConfig: Option[Config] = None, clearValidators: Boolean = false, baseAsFallback: Boolean = true) extends AppConfig {
   if(clearValidators) {
     validatorCreators = List.empty
   }
-  setConfig(newConfig.getOrElse(getLoadedConfig))
+  val baseConfig = getLoadedConfig
+  if (baseAsFallback) {
+    setConfig(newConfig.map(cfg => cfg.withFallback(baseConfig)).getOrElse(baseConfig))
+  } else {
+    setConfig(newConfig.getOrElse(baseConfig))
+  }
+
+  def withFallback(fallback: Config): TestAppConfig = {
+    setConfig(config.withFallback(fallback))
+    this
+  }
 }
 object TestAppConfig {
   def apply(newConfig: Option[Config] = None, clearValidators: Boolean = false) =
@@ -108,7 +118,7 @@ trait HasBasicActorSystem extends OverrideConfig with MockAppConfig {
     MetricsWriterExtension(as).updateMetricsBackend(metricsBackend)
     as
   }
-  implicit override lazy val appConfig: AppConfig = new TestAppConfig(Option(conf))
+  implicit override lazy val appConfig: AppConfig = new TestAppConfig(Option(conf), baseAsFallback = false)
 }
 
 /**

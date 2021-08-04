@@ -148,7 +148,7 @@ trait BaseMsgOutboxSpec extends HasExecutionContextProvider with HasWalletExecut
 
   val messageMetaRegion: ActorRef[ShardingEnvelope[MessageMeta.Cmd]] =
     sharding.init(Entity(MessageMeta.TypeKey) { entityContext =>
-      MessageMeta(entityContext, testMsgStore)
+      MessageMeta(entityContext, testMsgStore, appConfig)
     })
 }
 

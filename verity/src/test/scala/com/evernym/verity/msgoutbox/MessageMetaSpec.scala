@@ -262,7 +262,7 @@ class MessageMetaSpec
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
       Outbox(
         entityContext,
-        appConfig.config.withFallback(SNAPSHOT_CONFIG),
+        appConfig.withFallback(SNAPSHOT_CONFIG),
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,

@@ -1,6 +1,5 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.evernym.verity.util2.Exceptions
 

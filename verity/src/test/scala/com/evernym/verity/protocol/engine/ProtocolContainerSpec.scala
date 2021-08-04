@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.metrics.{MetricsWriter, NoOpMetricsWriter}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
@@ -66,6 +67,8 @@ class ProtocolContainerSpec extends BasicSpec {
           override def runAsyncOp(op: => Any): Unit = ???
 
           lazy val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
+
+          override def serviceKeyDidFormat: Boolean = TestExecutionContextProvider.testAppConfig.getBooleanReq(SERVICE_KEY_DID_FORMAT)
         }
 
         val container = new TestProtocolContainer[TicTacToe, TicTacToeRole, Any, Any, State, String](TicTacToeProtoDef)

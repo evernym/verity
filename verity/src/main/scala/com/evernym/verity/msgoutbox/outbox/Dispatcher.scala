@@ -3,6 +3,7 @@ package com.evernym.verity.msgoutbox.outbox
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.ActorRef
 import akka.actor.typed.scaladsl.ActorContext
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.msgoutbox.{Authentication, ComMethod, ComMethodId, MsgId, VerKey, WalletId}
 import com.evernym.verity.msgoutbox.outbox.States.MsgDeliveryAttempt
@@ -26,7 +27,7 @@ import scala.concurrent.ExecutionContext
 
 class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
                  accessTokenRefreshers: AccessTokenRefreshers,
-                 config: Config,
+                 appConfig: AppConfig,
                  msgStore: ActorRef[MsgStore.Cmd],
                  msgPackagers: MsgPackagers,
                  msgTransports: MsgTransports,
@@ -66,7 +67,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
                                            senderVerKey: VerKey): DispatcherType = {
     new PlainWebhookDispatcher(
       outboxActorContext,
-      config,
+      appConfig,
       comMethodId,
       comMethod,
       MsgStoreParam(msgStore),
@@ -91,7 +92,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
       case None =>
         outboxActorContext.spawn(
           OAuthAccessTokenHolder(
-            config,
+            appConfig.config,
             auth.data,
             accessTokenRefreshers.refreshers(auth.version)
           ),
@@ -109,7 +110,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
     new OAuthWebhookDispatcher(
       outboxActorContext,
       oAuthAccessTokenHolder,
-      config,
+      appConfig,
       comMethodId,
       comMethod,
       MsgStoreParam(msgStore),

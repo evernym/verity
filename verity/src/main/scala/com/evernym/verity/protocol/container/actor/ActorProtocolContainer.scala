@@ -88,6 +88,8 @@ class ActorProtocolContainer[
   )(context.system)
 
   override val appConfig: AppConfig = agentActorContext.appConfig
+
+  override def serviceKeyDidFormat: Boolean = appConfig.getBooleanReq(SERVICE_KEY_DID_FORMAT)
   lazy val pinstId: PinstId = entityId
   var senderActorRef: Option[ActorRef] = None
   var agentWalletId: Option[String] = None

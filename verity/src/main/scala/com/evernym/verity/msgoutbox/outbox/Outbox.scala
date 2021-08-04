@@ -34,6 +34,8 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 import java.time.ZonedDateTime
 
+import com.evernym.verity.config.AppConfig
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -90,7 +92,7 @@ object Outbox {
   val TypeKey: EntityTypeKey[Cmd] = EntityTypeKey("Outbox")
 
   def apply(entityContext: EntityContext[Cmd],
-            config: Config,
+            appConfig: AppConfig,
             accessTokenRefreshers: AccessTokenRefreshers,
             relResolver: Behavior[RelationshipResolver.Cmd],
             msgStore: ActorRef[MsgStore.Cmd],
@@ -100,15 +102,15 @@ object Outbox {
     Behaviors.setup { actorContext =>
 
       Behaviors.withTimers { timer =>
-        timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery, scheduledJobInterval(config))
+        timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery, scheduledJobInterval(appConfig.config))
         Behaviors.withStash(100) { buffer =>                     //TODO: finalize this
-          actorContext.setReceiveTimeout(receiveTimeout(config), Commands.TimedOut)
+          actorContext.setReceiveTimeout(receiveTimeout(appConfig.config), Commands.TimedOut)
           val relResolverReplyAdapter = actorContext.messageAdapter(reply => RelResolverReplyAdapter(reply))
           val messageMetaReplyAdapter = actorContext.messageAdapter(reply => MessageMetaReplyAdapter(reply))
           val dispatcher = new Dispatcher(
             actorContext,
             accessTokenRefreshers,
-            config,
+            appConfig,
             msgStore,
             msgPackagers,
             msgTransports,
@@ -118,7 +120,7 @@ object Outbox {
           val setup = SetupOutbox(actorContext,
             entityContext,
             MetricsWriterExtension(actorContext.system).get(),
-            config,
+            appConfig.config,
             buffer,
             dispatcher,
             relResolver,
@@ -133,9 +135,9 @@ object Outbox {
               commandHandler(setup),
               eventHandler(dispatcher))
             .receiveSignal(signalHandler(setup))
-            .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper))
-            .snapshotAdapter(PersistentStateAdapter(entityContext.entityId, StateObjectMapper))
-            .withRetention(retentionCriteria(config))
+            .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper, appConfig))
+            .snapshotAdapter(PersistentStateAdapter(entityContext.entityId, StateObjectMapper, appConfig))
+            .withRetention(retentionCriteria(appConfig.config))
         }
       }
     }

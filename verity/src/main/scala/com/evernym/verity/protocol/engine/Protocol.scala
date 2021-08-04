@@ -8,7 +8,6 @@ import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 
-import scala.concurrent.ExecutionContext
 import scala.language.implicitConversions
 import scala.util.matching.Regex
 

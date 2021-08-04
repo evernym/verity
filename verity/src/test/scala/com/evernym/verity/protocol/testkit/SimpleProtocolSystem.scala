@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship, RelationshipName, SelfRelationship}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
@@ -177,6 +178,7 @@ class Domain(override val domainId: DomainId,
              override val protocolRegistry: ProtocolRegistry[SimpleControllerProviderInputType],
              val system: SimpleProtocolSystem,
              val executionContext: ExecutionContext,
+             val appConfig: AppConfig,
              val defaultInitParams: Map[String, String] = Map.empty
             ) extends JournalLogging with JournalProtocolSupport with HasRelationships with SimpleLaunchesProtocol  {
 
@@ -185,7 +187,7 @@ class Domain(override val domainId: DomainId,
   type Container = InMemoryProtocolContainer[_,_,_,_,_,_]
 
   def containerProvider[P,R,M,E,S,I](pce: ProtocolContainerElements[P,R,M,E,S,I])(implicit ct: ClassTag[M]): Container = {
-    new InMemoryProtocolContainer(pce, executionContext)
+    new InMemoryProtocolContainer(pce, executionContext, appConfig)
   }
 
   var usedWalletAccess: Option[WalletAccess] = None

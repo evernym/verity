@@ -1,7 +1,9 @@
 package com.evernym.verity.transformations.transformers
 
-import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, DEPRECATED_StateCodeMapper, ObjectCodeMapperBase}
+import com.evernym.verity.actor.persistence.object_code_mapper.{DEPRECATED_StateCodeMapper, DefaultObjectCodeMapper, ObjectCodeMapperBase}
 import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg}
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 
 package object legacy {
 
@@ -26,9 +28,11 @@ package object legacy {
    * @return
    */
   def createLegacyEventTransformer(persistenceEncryptionKey: String,
+                                   appConfig: AppConfig,
                                    objectCodeMapper: ObjectCodeMapperBase = DefaultObjectCodeMapper): Any <=> DeprecatedEventMsg = {
 
-    val legacyEncryptor = new LegacyAESEncryptionTransformer(persistenceEncryptionKey)
+    val salt = appConfig.getStringReq(SALT_EVENT_ENCRYPTION)
+    val legacyEncryptor = new LegacyAESEncryptionTransformer(persistenceEncryptionKey, salt)
     val legacyPersistenceTransformer = new LegacyEventPersistenceTransformer(LEGACY_PERSISTENCE_TRANSFORMATION_ID)
 
     new LegacyProtoBufTransformer(objectCodeMapper) andThen
@@ -43,9 +47,11 @@ package object legacy {
    * @return
    */
   def createLegacyStateTransformer(persistenceEncryptionKey: String,
+                                   appConfig: AppConfig,
                                    objectCodeMapper: ObjectCodeMapperBase = DEPRECATED_StateCodeMapper): Any <=> DeprecatedStateMsg = {
 
-    val legacyEncryptor = new LegacyAESEncryptionTransformer(persistenceEncryptionKey)
+    val salt = appConfig.getStringReq(SALT_EVENT_ENCRYPTION)
+    val legacyEncryptor = new LegacyAESEncryptionTransformer(persistenceEncryptionKey, salt)
     val legacyPersistenceTransformer = new LegacyStatePersistenceTransformer(LEGACY_PERSISTENCE_TRANSFORMATION_ID)
 
       new LegacyProtoBufTransformer(objectCodeMapper) andThen

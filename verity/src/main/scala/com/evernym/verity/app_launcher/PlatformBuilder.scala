@@ -10,12 +10,12 @@ import scala.concurrent.ExecutionContext
 
 
 object PlatformBuilder {
-  def build(executionContextProvider: ExecutionContextProvider, agentActorContext: Option[AgentActorContext]=None): Platform = {
-    new Platform(agentActorContext.getOrElse(new DefaultAgentActorContext(executionContextProvider)), PlatformServices, executionContextProvider)
+  def build(executionContextProvider: ExecutionContextProvider, appConfig: AppConfig, agentActorContext: Option[AgentActorContext]=None): Platform = {
+    new Platform(agentActorContext.getOrElse(new DefaultAgentActorContext(executionContextProvider, appConfig)), PlatformServices, executionContextProvider)
   }
 }
 
-class DefaultAgentActorContext(val executionContextProvider: ExecutionContextProvider, val appConfig: AppConfig = AppConfigWrapper) extends AgentActorContext {
+class DefaultAgentActorContext(val executionContextProvider: ExecutionContextProvider, val appConfig: AppConfig) extends AgentActorContext {
   override implicit lazy val system: ActorSystem = createActorSystem()
 
   /**

@@ -14,12 +14,12 @@ import com.evernym.verity.actor.typed.base.PersistentEventAdapter
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Commands.MsgStoreReplyAdapter
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
-import com.evernym.verity.config.ConfigUtil
+import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.msgoutbox.outbox.Outbox
 import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.{RetentionPolicy, Status}
-
 import java.time.ZonedDateTime
+
 import scala.concurrent.duration._
 
 
@@ -110,7 +110,8 @@ object MessageMeta {
   val TypeKey: EntityTypeKey[Cmd] = EntityTypeKey("MessageMeta")
 
   def apply(entityContext: EntityContext[Cmd],
-            msgStore: ActorRef[MsgStore.Cmd]): Behavior[Cmd] = {
+            msgStore: ActorRef[MsgStore.Cmd],
+            apConfig: AppConfig): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
       val msgStoreReplyAdapter = actorContext.messageAdapter(reply => MsgStoreReplyAdapter(reply))
 
@@ -122,7 +123,7 @@ object MessageMeta {
           commandHandler(entityContext.entityId, msgStore)(actorContext, msgStoreReplyAdapter),
           eventHandler)
         .receiveSignal(signalHandler(entityContext.entityId, msgStore)(actorContext, msgStoreReplyAdapter))
-        .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper))
+        .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper, apConfig))
     }
   }
 

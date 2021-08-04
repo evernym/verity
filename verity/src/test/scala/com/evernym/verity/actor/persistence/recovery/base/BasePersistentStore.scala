@@ -178,11 +178,11 @@ trait BasePersistentStore
       DefaultPersistenceEncryption.getEventEncryptionKey(entityId, appConfig))
     (pp.transformerId, objectType) match {
       case (LEGACY_PERSISTENCE_TRANSFORMATION_ID, "event")  =>
-        legacy.createLegacyEventTransformer(encKey, objectCodeMapper)
+        legacy.createLegacyEventTransformer(encKey, appConfig, objectCodeMapper)
       case (LEGACY_PERSISTENCE_TRANSFORMATION_ID, "state")  =>
-        legacy.createLegacyStateTransformer(encKey, objectCodeMapper)
+        legacy.createLegacyStateTransformer(encKey, appConfig, objectCodeMapper)
       case (PERSISTENCE_TRANSFORMATION_ID_V1, _)            =>
-        v1.createPersistenceTransformerV1(encKey, objectCodeMapper)
+        v1.createPersistenceTransformerV1(encKey, appConfig, objectCodeMapper)
       case other                                            =>
         throw new RuntimeException("transformer not supported for: " + other)
     }
@@ -207,7 +207,7 @@ trait BasePersistentStore
     }
   }
 
-  def getTransformer(encrKey: String): Any <=> PersistentMsg = createPersistenceTransformerV1(encrKey)
+  def getTransformer(encrKey: String): Any <=> PersistentMsg = createPersistenceTransformerV1(encrKey, appConfig)
 }
 
 /**

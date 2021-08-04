@@ -1,5 +1,7 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.metrics.MetricsWriter
@@ -40,10 +42,10 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
     container.handleMsg(msg)
   }
 
-  def handleMsg(myDID: DID, theirDID: DID, threadId: ThreadId, protoRef: ProtoRef, msg: Any, ec: ExecutionContext): PinstId = {
+  def handleMsg(myDID: DID, theirDID: DID, threadId: ThreadId, protoRef: ProtoRef, msg: Any, ec: ExecutionContext, ac: AppConfig): PinstId = {
     val safeThreadId = cryptoFunctions.computeSafeThreadId(myDID, threadId)
     val pinstId = calcPinstId(safeThreadId, protoRef, msg)
-    val container = getOrCreateContainer(myDID, theirDID, pinstId, protoRef, ec)
+    val container = getOrCreateContainer(myDID, theirDID, pinstId, protoRef, ec, ac)
     container.handleMsg(msg)
     pinstId
   }
@@ -66,7 +68,8 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
                                            recordsEvents: RecordsEvents,
                                            msgSender: SendsMsgs,
                                            _driver: Driver,
-                                           ec: ExecutionContext
+                                           ec: ExecutionContext,
+                                           ac: AppConfig
                                           ) extends ProtocolContainer[P,R,M,E,S,I] {
 
     override def executionContext: ExecutionContext = ec
@@ -113,16 +116,17 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
 
     override def runAsyncOp(op: => Any): Unit = ???
 
+    override def serviceKeyDidFormat: Boolean = ac.getBooleanReq(SERVICE_KEY_DID_FORMAT)
   }
 
   //TODO merge with next
-  private def getOrCreateContainer(myDID: DID, theirDID: DID, pinstId: PinstId, protoRef: ProtoRef, ec: ExecutionContext): Container = {
-    containers.getOrElse(pinstId, createContainer(myDID, theirDID, pinstId, extension_!(protoRef), ec))
+  private def getOrCreateContainer(myDID: DID, theirDID: DID, pinstId: PinstId, protoRef: ProtoRef, ec: ExecutionContext, ac: AppConfig): Container = {
+    containers.getOrElse(pinstId, createContainer(myDID, theirDID, pinstId, extension_!(protoRef), ec, ac))
   }
 
 
-  private def createContainer[P,R,M,E,S,I](myDID: DID, theirDID: DID, pinstId: PinstId, reg: Registration, ec: ExecutionContext): Container = {
-    val container = new BaseProtocolContainer(myDID, theirDID, pinstId, reg._1, reg._5, reg._2(), reg._3, reg._4(), ec)
+  private def createContainer[P,R,M,E,S,I](myDID: DID, theirDID: DID, pinstId: PinstId, reg: Registration, ec: ExecutionContext, ac: AppConfig): Container = {
+    val container = new BaseProtocolContainer(myDID, theirDID, pinstId, reg._1, reg._5, reg._2(), reg._3, reg._4(), ec, ac)
     containers = containers + (pinstId -> container)
     container.recoverOrInit()
     container

@@ -8,14 +8,15 @@ import com.evernym.verity.transformations.transformers.<=>
  *
  * @param secret a secret used to generate symmetric encryption key
  */
-class AESEncryptionTransformerV1(secret: String)
+class AESEncryptionTransformerV1(secret: String, salt: String)
   extends (Array[Byte] <=> Array[Byte]) {
+  val pde: PersistentDataEncryptor = new PersistentDataEncryptor(salt)
 
   override val execute: Array[Byte] => Array[Byte] = { msg =>
-    PersistentDataEncryptor.encrypt(msg, secret)
+    pde.encrypt(msg, secret)
   }
 
   override val undo: Array[Byte] => Array[Byte] = { msg =>
-    PersistentDataEncryptor.decrypt(msg, secret)
+    pde.decrypt(msg, secret)
   }
 }

@@ -137,7 +137,7 @@ class OutboxRetentionPolicySpec
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
       Outbox(
         entityContext,
-        appConfig.config.withFallback(OVERRIDE_CONFIG),
+        appConfig.withFallback(OVERRIDE_CONFIG),
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,

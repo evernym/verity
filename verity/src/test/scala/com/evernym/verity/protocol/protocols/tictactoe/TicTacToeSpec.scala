@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.tictactoe
 
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
 import com.evernym.verity.protocol.engine.{DebugProtocols, SignalEnvelope}
@@ -17,7 +18,7 @@ import scala.language.postfixOps
 
 
 class TicTacToeSpec
-  extends ProtocolTestKit(TicTacToeProtoDef, Implicits.global)
+  extends ProtocolTestKit(TicTacToeProtoDef, Implicits.global, new TestAppConfig())
     with BasicSpec
     with SpecHelper
     with DebugProtocols {

@@ -179,6 +179,7 @@ class BasicMessageSpec
   }
 
   override val containerNames: Set[ContainerName] = Set(TestingVars.PARTICIPATOR, TestingVars.PARTICIPATOR)
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }
 
 object TestingVars {

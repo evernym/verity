@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
@@ -43,6 +44,7 @@ class ProtocolContextSpec extends TestsProtocolsImpl(TestProtoDef2) with BasicFi
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }
 
 case class TestSignalMsg()

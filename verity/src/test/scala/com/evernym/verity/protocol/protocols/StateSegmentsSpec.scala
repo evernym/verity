@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols
 
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
@@ -55,6 +56,7 @@ class StateSegmentsSpec extends TestsProtocolsImpl(PhoneBookProtoDef, Option(Buc
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }
 
 object TestObjects {

@@ -173,4 +173,5 @@ class CoinFlipSpec extends TestsProtocolsImpl(CoinFlipDefinition) with BasicFixt
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }

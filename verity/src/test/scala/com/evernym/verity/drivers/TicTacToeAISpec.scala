@@ -19,7 +19,7 @@ import scala.util.Random
 // NOTE: Tests are attempted many times due to the random nature of TicTacToeAI.
 // Covering all possible scenarios is impractical, though TODO: we probably want to add deterministic tests as well.
 
-class TicTacToeAISpec extends ProtocolTestKit(TicTacToeProtoDef, Implicits.global) with BasicSpec {
+class TicTacToeAISpec extends ProtocolTestKit(TicTacToeProtoDef, Implicits.global, new TestAppConfig()) with BasicSpec {
 
   lazy val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
 

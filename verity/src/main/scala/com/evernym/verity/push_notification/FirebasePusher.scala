@@ -49,14 +49,14 @@ case class FirebasePushNotifSuccessResponse(
   extends FirebasePushNotifCommonResponse
 
 
-class FirebasePusher(serviceParam: FirebasePushServiceParam, executionContext: ExecutionContext)
+class FirebasePusher(serviceParam: FirebasePushServiceParam, executionContext: ExecutionContext, ac: AppConfig)
   extends PushServiceProvider
     with ConfigSvc {
 
   implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   lazy val logger: Logger = getLoggerByName("FirebasePusher")
-  lazy val appConfig: AppConfig = AppConfigWrapper
+  lazy val appConfig: AppConfig = ac
 
   override lazy val comMethodPrefix= "FCM"
 

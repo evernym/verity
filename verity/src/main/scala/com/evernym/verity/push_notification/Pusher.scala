@@ -122,7 +122,7 @@ object PusherUtil  {
       val key = appConfig.getStringReq(FCM_API_KEY)
       val host = appConfig.getStringReq(FCM_API_HOST)
       val path = appConfig.getStringReq(FCM_API_PATH)
-      Option(new FirebasePusher(FirebasePushServiceParam(key, host, path), executionContext))
+      Option(new FirebasePusher(FirebasePushServiceParam(key, host, path), executionContext, appConfig))
     } else None
   }
 
@@ -173,7 +173,7 @@ object PusherUtil  {
       .flatMap(_.pushService)
       .map { x =>
         x.service match {
-          case "fcm"  => new FirebasePusher(FirebasePushServiceParam(x.key, x.host, x.path), executionContext)
+          case "fcm"  => new FirebasePusher(FirebasePushServiceParam(x.key, x.host, x.path), executionContext, config)
           case "mock" => new MockPusher(config, executionContext)
           case t      => throw new InvalidComMethodException(Some(s"Unexpected push service type '$t', this type is not supported"))
         }

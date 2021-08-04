@@ -1,42 +1,46 @@
 package com.evernym.verity.actor.resourceusagethrottling.helper
 
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.BasicSpec
 
 
 class ResourceUsageRuleHelperSpec extends BasicSpec {
+  lazy val appConfig: AppConfig = new TestAppConfig()
+  lazy val resourceUsageRuleHelper: ResourceUsageRuleHelper = new ResourceUsageRuleHelper(appConfig.config)
 
   "ResourceUsageRuleHelper" - {
 
     "when initialized" - {
       "api usage rules should be loaded" in {
-        ResourceUsageRuleHelper.loadResourceUsageRules()
-        ResourceUsageRuleHelper.resourceUsageRules shouldBe getExpectedResourceUsageRule
+        resourceUsageRuleHelper.loadResourceUsageRules(appConfig.config)
+        resourceUsageRuleHelper.resourceUsageRules shouldBe getExpectedResourceUsageRule
       }
     }
 
     "when called get default usage rule name for a token" - {
       "should respond with default usage rule name based on the token type" in {
-        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("global") shouldBe "global"
-        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("191.0.0.4") shouldBe "ip-address"
-        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("owner-JQAq9L8yF9HUh2qWcigvcs") shouldBe "user-id-owner"
-        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("owner-AV2qY9vwvYjthGPeFvipanFdkHGt5CmoCNNAFvAfNuQg") shouldBe "user-id-owner"
-        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("counterparty-VLDLAz68D7DVTi6kzrKnaB") shouldBe "user-id-counterparty"
-        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("counterparty-GScBzgJ2e81HH9apA1SdCi3gk6MgTXLpUnQAMYMtB2qY") shouldBe "user-id-counterparty"
-        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("randomToken") shouldBe "default"
-        ResourceUsageRuleHelper.getDefaultRuleNameByEntityId("128.0.0.1") shouldBe "ip-address"
+        resourceUsageRuleHelper.getDefaultRuleNameByEntityId("global") shouldBe "global"
+        resourceUsageRuleHelper.getDefaultRuleNameByEntityId("191.0.0.4") shouldBe "ip-address"
+        resourceUsageRuleHelper.getDefaultRuleNameByEntityId("owner-JQAq9L8yF9HUh2qWcigvcs") shouldBe "user-id-owner"
+        resourceUsageRuleHelper.getDefaultRuleNameByEntityId("owner-AV2qY9vwvYjthGPeFvipanFdkHGt5CmoCNNAFvAfNuQg") shouldBe "user-id-owner"
+        resourceUsageRuleHelper.getDefaultRuleNameByEntityId("counterparty-VLDLAz68D7DVTi6kzrKnaB") shouldBe "user-id-counterparty"
+        resourceUsageRuleHelper.getDefaultRuleNameByEntityId("counterparty-GScBzgJ2e81HH9apA1SdCi3gk6MgTXLpUnQAMYMtB2qY") shouldBe "user-id-counterparty"
+        resourceUsageRuleHelper.getDefaultRuleNameByEntityId("randomToken") shouldBe "default"
+        resourceUsageRuleHelper.getDefaultRuleNameByEntityId("128.0.0.1") shouldBe "ip-address"
       }
     }
 
     "when called get usage rule name for a token" - {
       "should respond with applicable usage rule name" in {
-        ResourceUsageRuleHelper.getRuleNameByEntityId("global") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("191.0.0.4") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("owner-JQAq9L8yF9HUh2qWcigvcs") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("owner-AV2qY9vwvYjthGPeFvipanFdkHGt5CmoCNNAFvAfNuQg") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("counterparty-VLDLAz68D7DVTi6kzrKnaB") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("counterparty-GScBzgJ2e81HH9apA1SdCi3gk6MgTXLpUnQAMYMtB2qY") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("randomToken") shouldBe "default"
-        ResourceUsageRuleHelper.getRuleNameByEntityId("128.0.0.1") shouldBe "custom"
+        resourceUsageRuleHelper.getRuleNameByEntityId("global") shouldBe "default"
+        resourceUsageRuleHelper.getRuleNameByEntityId("191.0.0.4") shouldBe "default"
+        resourceUsageRuleHelper.getRuleNameByEntityId("owner-JQAq9L8yF9HUh2qWcigvcs") shouldBe "default"
+        resourceUsageRuleHelper.getRuleNameByEntityId("owner-AV2qY9vwvYjthGPeFvipanFdkHGt5CmoCNNAFvAfNuQg") shouldBe "default"
+        resourceUsageRuleHelper.getRuleNameByEntityId("counterparty-VLDLAz68D7DVTi6kzrKnaB") shouldBe "default"
+        resourceUsageRuleHelper.getRuleNameByEntityId("counterparty-GScBzgJ2e81HH9apA1SdCi3gk6MgTXLpUnQAMYMtB2qY") shouldBe "default"
+        resourceUsageRuleHelper.getRuleNameByEntityId("randomToken") shouldBe "default"
+        resourceUsageRuleHelper.getRuleNameByEntityId("128.0.0.1") shouldBe "custom"
       }
     }
   }

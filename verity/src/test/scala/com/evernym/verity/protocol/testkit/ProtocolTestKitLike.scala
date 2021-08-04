@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.actor.agent.relationship.PairwiseRelationship
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.ProtocolRegistry.{DriverGen, Entry}
 import com.evernym.verity.protocol.engine._
@@ -37,9 +38,11 @@ object DSL {
 
 class ProtocolTestKit[P,R,M,E,S,I](val protoDef: ProtocolDefinition[P,R,M,E,S,I],
                                    executionContext: ExecutionContext,
+                                   ac: AppConfig,
                                    val segmentStoreStrategy: Option[SegmentStoreStrategy]=None)(implicit val mtag: ClassTag[M])
   extends ProtocolTestKitLike[P,R,M,E,S,I] {
   override def futureExecutionContext: ExecutionContext = executionContext
+  override def appConfig: AppConfig = ac
 }
 
 trait ProtocolTestKitLike[P,R,M,E,S,I] extends HasExecutionContextProvider {
@@ -51,6 +54,7 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] extends HasExecutionContextProvider {
   def defaultInteractionType: InteractionType = TwoParty
 
   def defaultInitParams: Map[String, String] = Map.empty
+  def appConfig: AppConfig
 
   val defaultPinstIdResolver: PinstIdResolver = PinstIdResolution.V0_2
 
@@ -68,7 +72,7 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] extends HasExecutionContextProvider {
            )(implicit system: TestSystem): TestEnvir = {
     val dg = odg orElse defaultControllerProvider
     val protoReg = ProtocolRegistry[SimpleControllerProviderInputType](Entry(protoDef, defaultPinstIdResolver, dg))
-    new TestEnvir(system, new Domain(name, protoReg, system, futureExecutionContext, defaultInitParams), it)
+    new TestEnvir(system, new Domain(name, protoReg, system, futureExecutionContext, appConfig, defaultInitParams), it)
   }
 
   def interaction(envirs: TestEnvir *): PlayDSL = {

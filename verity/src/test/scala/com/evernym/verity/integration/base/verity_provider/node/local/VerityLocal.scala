@@ -91,7 +91,7 @@ object LocalVerity {
 
   class Starter(appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider) {
     class MockDefaultAgentActorContext(override val appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider)
-      extends DefaultAgentActorContext(executionContextProvider) {
+      extends DefaultAgentActorContext(executionContextProvider, appConfig) {
 
       implicit val executor: ExecutionContextExecutor = system.dispatcher
       override lazy val poolConnManager: LedgerPoolConnManager = {
@@ -104,6 +104,7 @@ object LocalVerity {
 
     val platform: Platform = PlatformBuilder.build(
       executionContextProvider,
+      appConfig,
       Option(new MockDefaultAgentActorContext(appConfig, serviceParam, executionContextProvider))
     )
   }

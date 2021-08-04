@@ -142,4 +142,5 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }

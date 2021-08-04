@@ -6,7 +6,6 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
 import com.evernym.verity.protocol.engine.{DebugProtocols, VerKey}
-import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily._
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{SimpleProtocolSystem, TestsProtocolsImpl}
@@ -332,7 +331,7 @@ abstract class TestsWalletBackup extends TestsProtocolsImpl(WalletBackupProtoDef
 
   import com.evernym.verity.protocol.protocols.walletBackup.BackupSpecVars._
 
-  def appConfig: HasAppConfig
+  def appConfig: AppConfig
   def futureExecutionContext: ExecutionContext
 
   override val containerNames: Set[ContainerName] = Set(EXPORTER, PERSISTER, RECOVERER)

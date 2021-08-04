@@ -43,7 +43,7 @@ class RestIssuerSdkSpec
     issuerRestSDK.resetPlainMsgsCounter.plainMsgsBeforeLastReset shouldBe 0
     issuerRestSDK.fetchAgencyKey()
     issuerRestSDK.provisionVerityEdgeAgent()    //this sends a packed message (not REST api call)
-    issuerRestSDK.registerWebhook()             //this sends a packed message (not REST api call)
+    issuerRestSDK.registerWebhook()
   }
 
   var lastReceivedThread: Option[MsgThread] = None

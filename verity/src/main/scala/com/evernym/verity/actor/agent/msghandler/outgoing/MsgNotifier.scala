@@ -323,7 +323,6 @@ trait MsgNotifierForStoredMsgs
       cms.map(_.value).foreach { sponseeDetails =>
         getSponsorEndpoint(comMethods.sponsorId).foreach( url => {
           logger.debug(s"received sponsor's registered http endpoint: $url and sponsee's communication details $cms")
-
           val mds = msgStore.getMsgDetails(notifMsgDtl.uid)
           val name = mds.getOrElse(NAME_KEY, "")
           // metadata is deprecated, we should keep type in legacy state for backward compatibility.

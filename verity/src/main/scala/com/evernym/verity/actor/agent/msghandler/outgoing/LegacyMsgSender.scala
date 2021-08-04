@@ -10,6 +10,7 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.LegacyMsgSender.Comman
 import com.evernym.verity.actor.agent.msghandler.outgoing.LegacyMsgSender.Replies.SendMsgResp
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.user.GetTokenForUrl
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.GetToken
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Replies.{AuthToken, GetTokenFailed}
@@ -17,6 +18,7 @@ import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.util2.Status.{UNAUTHORIZED, UNHANDLED}
 import com.evernym.verity.util2.UrlParam
+import com.typesafe.scalalogging.Logger
 
 import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
@@ -84,6 +86,7 @@ object LegacyMsgSender {
                                       cmd: SendCmdBase)
                                      (implicit actorContext: ActorContext[Cmd],
                                       executionContext: ExecutionContext): Behavior[Cmd] = {
+    logger.info(s"[${setup.selfRelId}][OAuth] about to send get access token request to self relationship (for webhook url: ${cmd.toUrl})")
     val oAuthAccessTokenHolderReplyAdapter = actorContext.messageAdapter(reply => OAuthAccessTokenHolderReplyAdapter(reply))
     setup.agentMsgRouter.forward(InternalMsgRouteParam(setup.selfRelId,
       GetTokenForUrl(cmd.toUrl, GetToken(cmd.withRefreshedToken, oAuthAccessTokenHolderReplyAdapter))),
@@ -98,6 +101,7 @@ object LegacyMsgSender {
     Behaviors.receiveMessage {
 
     case OAuthAccessTokenHolderReplyAdapter(reply: AuthToken) =>
+      logger.info(s"[${setup.selfRelId}][OAuth] access token received from self relationship (for webhook url: ${cmd.toUrl})")
       val headers = immutable.Seq(RawHeader("Authorization", s"Bearer ${reply.value}"))
       actorContext.self ! cmd
       sendingMsg(setup, headers)
@@ -108,8 +112,10 @@ object LegacyMsgSender {
       Behaviors.stopped
   }
 
-  private def sendingMsg(setup: Setup, headers: immutable.Seq[HttpHeader])
-                         (implicit actorContext: ActorContext[Cmd], executionContext: ExecutionContext): Behavior[Cmd] = Behaviors.receiveMessage {
+  private def sendingMsg(setup: Setup,
+                         headers: immutable.Seq[HttpHeader])
+                        (implicit actorContext: ActorContext[Cmd],
+                         executionContext: ExecutionContext): Behavior[Cmd] = Behaviors.receiveMessage {
     case sb @ SendBinaryMsg(msg, toUrl, _, withRefreshedToken, replyTo) =>
       val sendFut = setup.msgSendingSvc.sendBinaryMsg(msg, headers)(UrlParam(toUrl))
       handleSendResp(setup, sendFut, withRefreshedToken, sb.copy(withRefreshedToken=true), replyTo)
@@ -136,6 +142,8 @@ object LegacyMsgSender {
     }
     initialized(setup)
   }
+
+  private val logger: Logger = getLoggerByClass(getClass)
 }
 
 case class Setup(selfRelId: String,

@@ -101,7 +101,8 @@ class AkkaHttpMsgSendingSvc(config: Config, metricsWriter: MetricsWriter, execut
                                              (implicit up: UrlParam):
   Future[Either[HandledErrorException, T]] = {
     val id = UUID.randomUUID().toString
-    logger.info(s"[$id] [outgoing request] [${req.method.value}] to uri ${up.host}:${up.port}/${up.path}")
+    val headerNames = req.headers.map(_.name()).mkString(", ")
+    logger.info(s"[$id] [outgoing request] [${req.method.value}] to uri ${up.host}:${up.port}/${up.path} (with headers: $headerNames)")
     sendRequest(req).flatMap { response =>
       logger.info(s"[$id] [incoming response] [${response.status}]")
       respHandler(response)

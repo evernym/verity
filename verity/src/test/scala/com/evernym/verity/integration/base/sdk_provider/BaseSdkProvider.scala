@@ -31,7 +31,6 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.LedgerTxnExecutor
 import com.evernym.verity.metrics.NoOpMetricsWriter
-import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import org.json.JSONObject
@@ -471,10 +470,10 @@ case class JsonMsgBuilder(private val givenMsg: Any,
                           private val forRelId: Option[DID],
                           private val applyToJsonMsg: String => String = { msg => msg}) {
 
-  lazy val thread: MsgThread = threadOpt.getOrElse(MsgThread(Option(UUID.randomUUID().toString)))
-  def threadId: ThreadId = thread.thid.getOrElse(throw new RuntimeException("thread id not available"))
-  lazy val msgFamily: MsgFamily = getMsgFamily(givenMsg)
-  lazy val jsonMsg: String = {
+  lazy val thread = threadOpt.getOrElse(MsgThread(Option(UUID.randomUUID().toString)))
+  lazy val threadId = thread.thid.getOrElse(throw new RuntimeException("thread id not available"))
+  lazy val msgFamily = getMsgFamily(givenMsg)
+  lazy val jsonMsg = {
     val basicMsg = createJsonString(givenMsg, msgFamily)
     val threadedMsg = withThreadIdAdded(basicMsg, thread)
     val relationshipMsg = forRelId match {

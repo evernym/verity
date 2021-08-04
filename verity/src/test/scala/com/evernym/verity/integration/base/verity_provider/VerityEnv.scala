@@ -4,9 +4,6 @@ import akka.cluster.MemberStatus
 import akka.cluster.MemberStatus.{Down, Removed, Up}
 import akka.testkit.TestKit
 import com.evernym.verity.integration.base.PortProvider
-import com.evernym.verity.util2.HasExecutionContextProvider
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
 import com.evernym.verity.testkit.mock.blob_store.MockBlobStore
@@ -123,13 +120,14 @@ case class VerityEnvUrlProvider(private val _nodes: Seq[VerityNode]) {
 
 object PortProfile {
   def random(): PortProfile = {
-    val arteryPort    = PortProvider.generateUnusedPort(2000)
-    val akkaMgmtPort  = PortProvider.generateUnusedPort(8000)
-    val httpPort      = PortProvider.generateUnusedPort(9000)
-    PortProfile(httpPort, arteryPort, akkaMgmtPort)
+    val arteryPort      = PortProvider.generateUnusedPort(2000)
+    val akkaMgmtPort    = PortProvider.generateUnusedPort(8000)
+    val httpPort        = PortProvider.generateUnusedPort(9000)
+    val prometheusPort  = PortProvider.generateUnusedPort(9000)
+    PortProfile(httpPort, arteryPort, akkaMgmtPort, prometheusPort)
   }
 }
 
-case class PortProfile(http: Int, artery: Int, akkaManagement: Int) {
-  def ports: Seq[Int] = Seq(http, artery, akkaManagement)
+case class PortProfile(http: Int, artery: Int, akkaManagement: Int, prometheusPort: Int) {
+  def ports: Seq[Int] = Seq(http, artery, akkaManagement, prometheusPort)
 }

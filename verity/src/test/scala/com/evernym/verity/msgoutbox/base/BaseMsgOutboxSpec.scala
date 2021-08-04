@@ -264,7 +264,7 @@ object MockOAuthAccessTokenRefresher {
           val shallTimeout = params("shallTimeout") == "Y"
           val shallFail = params("shallFail") == "Y"
           if (shallFail) {
-            replyTo ! OAuthAccessTokenRefresher.Replies.GetTokenFailed("mock error")
+            replyTo ! OAuthAccessTokenRefresher.Replies.GetTokenFailed("purposefully failing")
           } else if (! shallTimeout) {
             replyTo ! GetTokenSuccess(UUID.randomUUID().toString, expiresInSeconds, Option(new JSONObject("{}")))
           }

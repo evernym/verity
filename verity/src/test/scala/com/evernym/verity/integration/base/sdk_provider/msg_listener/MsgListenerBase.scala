@@ -87,7 +87,7 @@ trait HasOAuthSupport {
 
   lazy val oAuthAccessTokenEndpoint = s"http://localhost:$port/$oAuthAccessTokenEndpointPath"
 
-  private lazy val tokenExpiresInSeconds: Long = tokenExpiresInDuration.map(_.toSeconds).getOrElse(10l)
+  private lazy val tokenExpiresInSeconds: Long = tokenExpiresInDuration.map(_.toSeconds).getOrElse(10L)
   private lazy val oAuthAccessTokenEndpointPath: String = "access-token"
 
   protected lazy val oAuthAccessTokenRoute: Route =

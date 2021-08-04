@@ -19,8 +19,6 @@ import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{Write, StatusRep
 import com.typesafe.config.{Config, ConfigFactory}
 import java.util.UUID
 
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.util.TestExecutionContextProvider
 
 import scala.concurrent.ExecutionContext
@@ -43,7 +41,7 @@ class RestIssuerSdkSpec
     super.beforeAll()
     issuerRestSDK.fetchAgencyKey()
     issuerRestSDK.provisionVerityEdgeAgent()    //this sends a packed message (not REST api call)
-    issuerRestSDK.registerWebhook()             //this sends a packed message (not REST api call)
+    issuerRestSDK.registerWebhook()
   }
 
   var lastReceivedThread: Option[MsgThread] = None

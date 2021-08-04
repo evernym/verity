@@ -49,7 +49,7 @@ trait ProtocolContextApi[P,R,M,E,S,I]
 
   def executionContext: ExecutionContext
 
-  def appConfig: AppConfig
+  def serviceKeyDidFormat: Boolean
 
   //TODO how a message is sent should probably be abstracted; would like to fold this into the general send method above
   //TODO we shouldn't be exposing general sms capabilities to protocol authors

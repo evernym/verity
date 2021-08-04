@@ -2,18 +2,19 @@ package com.evernym.verity.actor.persistence.transformer_registry
 
 import com.evernym.verity.actor.PersistentMsg
 import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, ObjectCodeMapperBase}
-import com.evernym.verity.protocol.protocols.HasAppConfig
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.transformations.transformers._
 import com.evernym.verity.transformations.transformers.legacy._
 import com.evernym.verity.transformations.transformers.v1._
 
-trait HasTransformationRegistry extends LegacyTransformationRegistry with HasAppConfig {
+trait HasTransformationRegistry extends LegacyTransformationRegistry {
 
   /**
    * symmetric encryption key to be used to encrypt/decrypt event/state
    * @return
    */
   def persistenceEncryptionKey: String
+  def appConfig: AppConfig
 
   /**
    * implementations can override this for schema evolution

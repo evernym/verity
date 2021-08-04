@@ -41,7 +41,7 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     with IssueCredentialLegacy {
   import IssueCredential._
 
-  override def appConfig: AppConfig = ctx.appConfig
+  override def serviceDidKeyFormat: Boolean = ctx.serviceKeyDidFormat
 
   override def handleControl: Control ?=> Any =
     handleMainControl orElse
@@ -219,10 +219,11 @@ object IssueCredential {
 
 trait IssueCredentialHelpers
   extends Protocol[IssueCredential, Role, ProtoMsg, Event, S, String]
-    with ProtocolHelpers[IssueCredential, Role, ProtoMsg, Event, S, String]
-    with HasAppConfig {
+    with ProtocolHelpers[IssueCredential, Role, ProtoMsg, Event, S, String] {
 
   import IssueCredential._
+
+  def serviceDidKeyFormat: Boolean
 
   override type Context = ProtocolContextApi[IssueCredential, Role, ProtoMsg, Event, S, String]
 
@@ -701,7 +702,7 @@ trait IssueCredentialHelpers
           offerAttachment,
           goalCode = Some("issue-vc"),
           goal = Some("To issue a credential"),
-          appConfig.getBooleanReq(SERVICE_KEY_DID_FORMAT)
+          serviceDidKeyFormat
         )
 
         handler(Success(

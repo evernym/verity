@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.metrics.MetricsWriter
@@ -115,7 +116,7 @@ class ProtocolEngineLite(val sendsMsgs: SendsMsgs, val cryptoFunctions: CryptoFu
 
     override def runAsyncOp(op: => Any): Unit = ???
 
-    override def appConfig: AppConfig = ac
+    override def serviceKeyDidFormat: Boolean = ac.getBooleanReq(SERVICE_KEY_DID_FORMAT)
   }
 
   //TODO merge with next

@@ -82,7 +82,8 @@ object PrometheusMetricsParser {
   val DEFAULT_TARGET = "unknown"
 }
 
-trait ITargetBuilder extends HasAppConfig {
+trait ITargetBuilder {
+  def appConfig: AppConfig
 
   def getConfiguredTagsByTargetType(typ: String): Option[Set[String]] = appConfig.getStringSetOption(typ)
   lazy val targetConnector: String = appConfig.getStringOption(METRICS_TARGET_CONNECTOR).getOrElse("-")

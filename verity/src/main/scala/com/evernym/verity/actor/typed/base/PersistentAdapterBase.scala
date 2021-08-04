@@ -2,16 +2,16 @@ package com.evernym.verity.actor.typed.base
 
 import com.evernym.verity.actor.PersistentMsg
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.protocol.protocols.HasAppConfig
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.transformations.transformers.{<=>, IdentityTransformer}
 import com.evernym.verity.transformations.transformers.v1.{PERSISTENCE_TRANSFORMATION_ID_V1, createPersistenceTransformerV1}
 
-trait PersistentAdapterBase extends HasAppConfig {
+trait PersistentAdapterBase {
   def encryptionKey: String
   def objectCodeMapper: ObjectCodeMapperBase
 
   protected lazy val persistenceTransformer: Any <=> PersistentMsg = persistenceTransformerV1
-
+  def appConfig: AppConfig
   /**
    * lookup/searches an appropriate transformer based on given input
    *

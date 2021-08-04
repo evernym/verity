@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.walletBackup
 
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.{CanGenerateDid, CommonSpecUtil, TestAppConfig}
+import com.evernym.verity.actor.testkit.{CanGenerateDid, CommonSpecUtil}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
@@ -328,10 +328,11 @@ class WalletBackupSpec()
   override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }
 
-abstract class TestsWalletBackup extends TestsProtocolsImpl(WalletBackupProtoDef, Option(Bucket_2_Legacy)) with HasAppConfig {
+abstract class TestsWalletBackup extends TestsProtocolsImpl(WalletBackupProtoDef, Option(Bucket_2_Legacy)) {
 
   import com.evernym.verity.protocol.protocols.walletBackup.BackupSpecVars._
 
+  def appConfig: HasAppConfig
   def futureExecutionContext: ExecutionContext
 
   override val containerNames: Set[ContainerName] = Set(EXPORTER, PERSISTER, RECOVERER)

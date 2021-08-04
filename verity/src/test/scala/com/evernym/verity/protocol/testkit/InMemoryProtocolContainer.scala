@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.testkit
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.Relationship
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.metrics.{MetricsWriter, NoOpMetricsWriter}
 import com.evernym.verity.protocol.container.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine._
@@ -121,7 +122,7 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
 
   override def executionContext: ExecutionContext = ec
 
-  override def appConfig: AppConfig = ac
+  override def serviceKeyDidFormat: Boolean = ac.getBooleanReq(SERVICE_KEY_DID_FORMAT)
 }
 
 trait Logs {

@@ -329,7 +329,7 @@ class PresentProof(implicit val ctx: PresentProofContext)
   }
 
   def sendInvite(presentationRequest: Msg.RequestPresentation, stateData: StateData): Unit = {
-    buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData, ctx.appConfig) {
+    buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData) {
       case Success(invite) =>
         ctx.urlShortening.shorten(invite.inviteURL) {
           case Success(us: UrlShortened) =>
@@ -520,7 +520,7 @@ object PresentProof {
     ctx.signal(Sig.buildProblemReport(errorMsg, segmentedStoreFailed))
   }
 
-  def buildOobInvite(protoRef: ProtoRef, request: Msg.RequestPresentation, stateData: StateData, appConfig: AppConfig)
+  def buildOobInvite(protoRef: ProtoRef, request: Msg.RequestPresentation, stateData: StateData)
                     (handler: Try[ShortenInvite] => Unit)
                     (implicit ctx: PresentProofContext): Unit = {
     InviteUtil.withServiced(stateData.agencyVerkey, ctx) {
@@ -542,7 +542,7 @@ object PresentProof {
           attachement,
           goalCode = Some("request-proof"),
           goal = Some("To request a proof"),
-          serviceKeyDidFormat = ctx.appConfig.getBooleanReq(SERVICE_KEY_DID_FORMAT)
+          ctx.serviceKeyDidFormat
         )
 
         handler(Success(

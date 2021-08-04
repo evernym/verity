@@ -10,7 +10,6 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
-import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.protocol.testkit.InteractionType.{OneParty, TwoParty}
 import com.evernym.verity.util.{MsgIdProvider, MsgUtil}
 import org.scalatest.matchers.should.Matchers

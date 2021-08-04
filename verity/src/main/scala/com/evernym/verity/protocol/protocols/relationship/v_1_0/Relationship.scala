@@ -40,9 +40,9 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     case (st: State.Created                 , m: Ctl.ConnectionInvitation   ) => connectionInvitation(st, m)
     case (st: State.Created                 , m: Ctl.SMSConnectionInvitation) => connectionInvitation(st, m)
     case (st: State.Created                 , m: Ctl.OutOfBandInvitation    ) =>
-      outOfBandInvitation(st, m, ctx.appConfig.getBooleanReq(SERVICE_KEY_DID_FORMAT))
+      outOfBandInvitation(st, m, ctx.serviceKeyDidFormat)
     case (st: State.Created                 , m: Ctl.SMSOutOfBandInvitation ) =>
-      outOfBandInvitation(st, m, ctx.appConfig.getBooleanReq(SERVICE_KEY_DID_FORMAT))
+      outOfBandInvitation(st, m, ctx.serviceKeyDidFormat)
     case (_: State.Created        , m: Ctl.SMSSent                ) =>
       ctx.signal(Signal.SMSInvitationSent(m.invitationId))
     case (_: State.Created        , _: Ctl.SMSSendingFailed       ) =>

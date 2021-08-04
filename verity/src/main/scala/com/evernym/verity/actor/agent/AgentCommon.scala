@@ -3,7 +3,6 @@ package com.evernym.verity.actor.agent
 import java.time.ZonedDateTime
 import akka.pattern.ask
 import com.evernym.verity.util2.Exceptions.InternalServerErrorException
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.{ActorMessage, AuthKeyAdded, FirstProtoMsgSent, ProtoMsgReceivedOrderIncremented, ProtoMsgSenderOrderIncremented, ProtocolIdDetailSet, ThreadContextStored}
 import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
@@ -16,6 +15,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByClass
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasAgentWallet
+import com.evernym.verity.util2.{Exceptions, HasWalletExecutionContextProvider}
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{HasMsgProgressTracker, TrackingIdParam}
@@ -34,7 +34,7 @@ import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.google.protobuf.ByteString
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * common interface for any type of agent actor (agencyAgent, agencyPairwiseAgent, userAgent, userPairwiseAgent)
@@ -45,7 +45,10 @@ trait AgentCommon
     with HasAgentWallet
     with HasSetRoute
     with HasMsgProgressTracker
-    with ResourceUsageCommon { this: AgentPersistentActor =>
+    with ResourceUsageCommon
+    with HasWalletExecutionContextProvider { this: AgentPersistentActor =>
+
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   def metricsWriter : MetricsWriter
 
@@ -143,12 +146,12 @@ trait AgentCommon
   def trackingIdParam: TrackingIdParam = TrackingIdParam(domainId, state.myDid, state.theirDid)
 
   lazy val cacheFetchers: Map[FetcherParam, CacheValueFetcher] = Map (
-    AGENT_ACTOR_CONFIG_CACHE_FETCHER -> new AgentConfigCacheFetcher(agentActorContext.agentMsgRouter, agentActorContext.appConfig)
+    AGENT_ACTOR_CONFIG_CACHE_FETCHER -> new AgentConfigCacheFetcher(agentActorContext.agentMsgRouter, agentActorContext.appConfig, futureExecutionContext)
   )
   /**
    * per agent actor cache
    */
-  lazy val agentCache = new Cache("AC", cacheFetchers, metricsWriter)
+  lazy val agentCache = new Cache("AC", cacheFetchers, metricsWriter, futureExecutionContext)
 
   /**
    * general/global (per actor system) cache
@@ -328,7 +331,7 @@ trait AgentCommon
   def updatedDidDocs(explicitlyAddedAuthKeys: Set[AuthKey],
                      didDocs: Seq[DidDoc]): Future[Seq[DidDoc]] =
     Future.traverse(didDocs) { dd =>
-      DidDocBuilder(dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
+      DidDocBuilder(futureWalletExecutionContext, dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
     }
 
   lazy val isVAS: Boolean =

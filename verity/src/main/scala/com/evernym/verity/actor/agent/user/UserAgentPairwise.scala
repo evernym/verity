@@ -4,7 +4,6 @@ import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
@@ -70,14 +69,17 @@ import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSIn
 import com.evernym.verity.util2.{Exceptions, Status}
 import org.json.JSONObject
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Left, Success, Try}
 
 /**
  Represents the part of a user agent that's dedicated to a single pairwise
  relationship.
  */
-class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsActorRef: ActorRef)
+class UserAgentPairwise(val agentActorContext: AgentActorContext,
+                        val metricsActorRef: ActorRef,
+                        executionContext: ExecutionContext,
+                        walletExecutionContext: ExecutionContext)
   extends UserAgentCommon
     with UserAgentPairwiseStateUpdateImpl
     with AgentMsgSender
@@ -87,6 +89,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     with MsgNotifierForUserAgentPairwise
     with FailedMsgRetrier
     with AgentSnapshotter[UserAgentPairwiseState] {
+
+  implicit lazy val futureExecutionContext: ExecutionContext = executionContext
+
+  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
 
   type StateType = UserAgentPairwiseState
   var state = new UserAgentPairwiseState
@@ -166,7 +172,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     //includes details of 'their' edge pairwise DID and 'their' cloud agent DID
     case tads: TheirAgentDetailSet =>
       val theirDidDoc =
-        DidDocBuilder()
+        DidDocBuilder(futureWalletExecutionContext)
           .withDid(tads.DID)
           .withAuthKey(tads.DID, "")
           .withAuthKey(tads.agentKeyDID, "", Set(CLOUD_AGENT_KEY))
@@ -274,7 +280,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
     val isThisAnEdgeAgent = ad.forDID == ad.agentKeyDID
     val agentKeyTags: Set[Tags] = if (isThisAnEdgeAgent) Set(EDGE_AGENT_KEY) else Set(CLOUD_AGENT_KEY)
     val myDidDoc =
-      DidDocBuilder()
+      DidDocBuilder(futureWalletExecutionContext)
         .withDid(ad.forDID)
         .withAuthKey(ad.forDID, ad.forDIDVerKey, Set(EDGE_AGENT_KEY))
         .withAuthKey(ad.agentKeyDID, ad.agentKeyDIDVerKey, agentKeyTags)
@@ -837,7 +843,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
   }
 
   def handleSendingSMSInvite(ssi: SendSMSInvite): Future[Option[ControlMsg]] = {
-    context.actorOf(DefaultURLShortener.props(appConfig)) ? UrlInfo(ssi.inviteURL) flatMap {
+    context.actorOf(DefaultURLShortener.props(appConfig, futureExecutionContext)) ? UrlInfo(ssi.inviteURL) flatMap {
       case UrlShorteningFailed(_, msg) =>
         Future.successful(
           Option(ControlMsg(SMSSendingFailed(ssi.invitationId, msg)))
@@ -858,7 +864,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext, val metricsAct
         )(
           agentActorContext.appConfig,
           agentActorContext.smsSvc,
-          agentActorContext.msgSendingSvc
+          agentActorContext.msgSendingSvc,
+          futureExecutionContext
         ) map { result =>
           logger.info(s"Sent SMS invite to number: ${ssi.phoneNo} with content '$content'. Result: $result")
           Option(ControlMsg(SMSSent(ssi.invitationId, ssi.inviteURL, shortUrl)))

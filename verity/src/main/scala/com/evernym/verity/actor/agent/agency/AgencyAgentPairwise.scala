@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent.agency
 
 import akka.event.LoggingReceive
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
@@ -25,17 +24,24 @@ import com.evernym.verity.protocol.engine.{ParticipantId, _}
 import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
 import com.evernym.verity.util.ParticipantUtil
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  The subset or shard of an agency's agent that is dedicated to
  managing one pairwise relationship between the agency and a user.
  */
-class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
+class AgencyAgentPairwise(val agentActorContext: AgentActorContext,
+                          generalExecutionContext: ExecutionContext,
+                          walletExecutionContext: ExecutionContext)
   extends AgencyAgentCommon
     with AgencyAgentPairwiseStateUpdateImpl
     with PairwiseConnState
     with AgentSnapshotter[AgencyAgentPairwiseState] {
+
+  private implicit val executionContext: ExecutionContext = generalExecutionContext
+  override def futureExecutionContext: ExecutionContext = generalExecutionContext
+  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
+
 
   type StateType = AgencyAgentPairwiseState
   var state = new AgencyAgentPairwiseState
@@ -69,12 +75,12 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
                               theirPairwiseDID: DidStr, theirPairwiseDIDVerKey: VerKeyStr): Unit = {
     state = state.withThisAgentKeyId(myPairwiseDID)
     val myDidDoc =
-      DidDocBuilder()
+      DidDocBuilder(futureWalletExecutionContext)
       .withDid(myPairwiseDID)
       .withAuthKey(myPairwiseDID, myPairwiseDIDVerKey, Set(EDGE_AGENT_KEY))
       .didDoc
     val theirDidDoc =
-      DidDocBuilder()
+      DidDocBuilder(futureWalletExecutionContext)
         .withDid(theirPairwiseDID)
         .withAuthKey(theirPairwiseDID, theirPairwiseDIDVerKey)
         .didDoc

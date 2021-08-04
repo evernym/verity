@@ -3,16 +3,17 @@ package com.evernym.verity.agentmsg.msgpacker
 import com.evernym.verity.actor.agent.{MsgPackFormat, TypeFormat}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.msgfamily._
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 
-class AgentMsgTransformer(val walletAPI: WalletAPI) {
+class AgentMsgTransformer(val walletAPI: WalletAPI, val ac: AppConfig, val executionContext: ExecutionContext){
 
   def packAsync(msgPackFormat: MsgPackFormat,
                 msg: String,
@@ -23,9 +24,8 @@ class AgentMsgTransformer(val walletAPI: WalletAPI) {
 
   def unpackAsync(msg: Array[Byte], fromKeyParam: KeyParam, unpackParam: UnpackParam = UnpackParam())
                  (implicit wap: WalletAPIParam): Future[AgentMsgWrapper] = {
-    AgentMsgTransformerApi.unpackAsync(msg, Option(fromKeyParam), unpackParam)(wap, walletAPI)
+    AgentMsgTransformerApi.unpackAsync(msg, Option(fromKeyParam), unpackParam)(wap, walletAPI, executionContext)
   }
-
 }
 
 /**
@@ -113,5 +113,5 @@ trait MsgTransformer {
           (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[PackedMsg]
 
   def unpackAsync(msg: Array[Byte], fromVerKeyParam: Option[KeyParam], unpackParam: UnpackParam)
-                 (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentBundledMsg]
+                 (implicit wap: WalletAPIParam, walletAPI: WalletAPI, ec: ExecutionContext): Future[AgentBundledMsg]
 }

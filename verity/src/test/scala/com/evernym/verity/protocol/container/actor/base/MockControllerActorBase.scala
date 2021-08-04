@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.container.actor.base
 
 import akka.actor.ActorRef
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier}
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessSignalMsg
@@ -21,9 +20,9 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{PublicIdentifier, PublicIdentifierCreated}
 import com.evernym.verity.util.MsgIdProvider
 import com.typesafe.scalalogging.Logger
-
 import java.util.UUID
-import scala.concurrent.Future
+
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * base class for a controller (client side) actor, responsible for:
@@ -35,11 +34,13 @@ import scala.concurrent.Future
  * a) this mock controller actor is reachable by agent msg router to be able to send
  *    'protocol' messages to their ActorProtocolContainer
  */
-abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorContext: AgentActorContext)
+abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorContext: AgentActorContext, ec: ExecutionContext)
   extends CoreActor
     with ActorLaunchesProtocol
     with HasActorResponseTimeout
     with HasLogger {
+
+  implicit val executionContext: ExecutionContext = ec
 
   override def receiveCmd: Receive = {
 

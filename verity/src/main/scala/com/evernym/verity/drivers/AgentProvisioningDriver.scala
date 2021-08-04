@@ -1,7 +1,6 @@
 package com.evernym.verity.drivers
 
 import akka.pattern.ask
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.agent.{SetupAgentEndpoint, SetupCreateKeyEndpoint}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -17,11 +16,13 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.util.ParticipantUtil
 import com.evernym.verity.util.Util._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
-class AgentProvisioningDriver(cp: ActorDriverGenParam)
-  extends ActorDriver(cp) {
+class AgentProvisioningDriver(cp: ActorDriverGenParam, ec: ExecutionContext)
+  extends ActorDriver(cp, ec) {
+
+  private implicit def executionContext: ExecutionContext = ec
 
   override def signal[A]: SignalHandler[A] = {
     case SignalEnvelope(apc: AskAgencyPairwiseCreator, protoRef, pinstId, _, _)    =>

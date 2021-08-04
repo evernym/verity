@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.pattern.ask
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
@@ -37,7 +37,7 @@ import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.util2.Exceptions.HandledErrorException
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 trait MsgNotifier {
@@ -48,7 +48,7 @@ trait MsgNotifier {
    * this actor will be created for each actor (UserAgent or UserAgentPairwise) of the logical agent
    */
   private lazy val pusher: ActorRef = {
-    context.actorOf(Pusher.props(appConfig), s"pusher-$persistenceId")
+    context.actorOf(Pusher.props(appConfig, futureExecutionContext), s"pusher-$persistenceId")
   }
 
   def sendPushNotif(pcms: Set[ComMethodDetail], pnData: PushNotifData, sponsorId: Option[String]): Future[Any] = {
@@ -64,9 +64,12 @@ trait MsgNotifier {
 trait MsgNotifierForStoredMsgs
   extends MsgNotifier
     with PushNotifMsgBuilder
+    with HasExecutionContextProvider
     with HasActorResponseTimeout {
 
   this: AgentPersistentActor with MsgAndDeliveryHandler with HasMsgProgressTracker with HasLogger =>
+
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   def agentMsgRouter: AgentMsgRouter
   def msgSendingSvc: MsgSendingSvc
@@ -321,7 +324,6 @@ trait MsgNotifierForStoredMsgs
       cms.map(_.value).foreach { sponseeDetails =>
         getSponsorEndpoint(comMethods.sponsorId).foreach( url => {
           logger.debug(s"received sponsor's registered http endpoint: $url and sponsee's communication details $cms")
-
           val mds = msgStore.getMsgDetails(notifMsgDtl.uid)
           val name = mds.getOrElse(NAME_KEY, "")
           // metadata is deprecated, we should keep type in legacy state for backward compatibility.
@@ -410,7 +412,7 @@ trait MsgNotifierForStoredMsgs
   }
 
   private def newLegacyMsgSender: akka.actor.typed.ActorRef[LegacyMsgSender.Cmd] =
-    context.spawnAnonymous(LegacyMsgSender(selfRelDID, agentMsgRouter, msgSendingSvc))
+    context.spawnAnonymous(LegacyMsgSender(selfRelDID, agentMsgRouter, msgSendingSvc, executionContext))
 
   private def updatePushNotificationDeliveryStatus(umds: UpdateMsgDeliveryStatus): Unit =
     self ! umds

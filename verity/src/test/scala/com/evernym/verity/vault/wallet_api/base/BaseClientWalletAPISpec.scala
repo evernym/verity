@@ -9,6 +9,7 @@ import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.WalletAPIParam
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory}
 
 import java.util.concurrent.atomic.AtomicInteger
@@ -20,17 +21,16 @@ trait ClientWalletAPISpecBase
     with UserWalletSetupHelper
     with HasThreadStarvationDetector
     with HasTestWalletAPI
-    with BasicSpec {
+    with BasicSpec
+    with HasExecutionContextProvider {
 
   //execution context to be used to create futures in the test code
   // this execution context will also be checked for thread starvation
   // if corresponding code is enabled in 'HasThreadStarvationDetector'
   // keep overriding in implementing class as needed
-  implicit val testCodeExecutionContext: ExecutionContext = {
-    ExecutionContextProvider.futureExecutionContext
+  implicit val testCodeExecutionContext: ExecutionContext = futureExecutionContext
     //comment above and uncomment/modify below to use custom thread pool
     //ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
-  }
 
   ////NOTE: enable below function call to check for thread starvation for 'testCodeExecutionContext'
   //checkThreadStarvationFor(testCodeExecutionContext)

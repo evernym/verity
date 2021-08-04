@@ -10,7 +10,7 @@ import java.nio.file.Path
 
 object VerityLocalConfig {
 
-  val defaultPorts: PortProfile = PortProfile(9002, 2552, 8552)
+  val defaultPorts: PortProfile = PortProfile(9002, 2552, 8552, 9095)
 
   private def messageSerialization: Config = {
     ConfigFactory.parseString(
@@ -131,6 +131,14 @@ object VerityLocalConfig {
     )
   }
 
+  private def prometheusServer(port: Int): Config = {
+    ConfigFactory.parseString(
+      s"""
+         |kamon.prometheus.embedded-server.port = $port
+         |""".stripMargin
+    )
+  }
+
   private def turnOffWarnings(): Config = {
     ConfigFactory.parseString(
       s"""
@@ -162,7 +170,8 @@ object VerityLocalConfig {
       messageSerialization,
       configureLibIndy(taaEnabled, taaAutoAccept),
       akkaConfig(),
-      identityUrlShortener()
+      identityUrlShortener(),
+      prometheusServer(port.prometheusPort)
     )
 
     parts.fold(ConfigFactory.empty())(_.withFallback(_).resolve())

@@ -1,5 +1,6 @@
 package com.evernym.verity.integration.with_basic_sdk.data_retention.expire_after_ternminal_state
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
@@ -10,13 +11,19 @@ import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestio
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Msg.{Answer, Question}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.AnswerGiven
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
+import com.evernym.verity.util.TestExecutionContextProvider
 import com.typesafe.config.ConfigFactory
+
+import scala.concurrent.ExecutionContext
 
 
 class QuestionAnswerSpec
   extends VerityProviderBaseSpec
     with DataRetentionBaseSpec
     with SdkProvider {
+
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   lazy val issuerVerityEnv =
     VerityEnvBuilder
@@ -27,8 +34,8 @@ class QuestionAnswerSpec
 
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
@@ -149,4 +156,11 @@ class QuestionAnswerSpec
       |}
       |""".stripMargin
   }
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

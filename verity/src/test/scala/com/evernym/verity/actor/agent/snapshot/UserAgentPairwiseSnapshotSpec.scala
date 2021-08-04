@@ -2,6 +2,7 @@ package com.evernym.verity.actor.agent.snapshot
 
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.{ForIdentifier, KeyCreated}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}
@@ -15,6 +16,8 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.typesafe.config.{Config, ConfigFactory}
+
+import scala.concurrent.ExecutionContext
 
 class UserAgentPairwiseSnapshotSpec
   extends BasicSpec
@@ -110,4 +113,17 @@ class UserAgentPairwiseSnapshotSpec
 
   override implicit val msgPackagingContext: AgentMsgPackagingContext =
     AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = false)
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

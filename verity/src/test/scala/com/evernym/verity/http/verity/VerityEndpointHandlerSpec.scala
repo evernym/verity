@@ -1,5 +1,6 @@
 package com.evernym.verity.http.verity
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
@@ -7,6 +8,8 @@ import com.evernym.verity.http.base.EndpointHandlerBaseSpec
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
+
+import scala.concurrent.ExecutionContext
 
 
 class VerityEndpointHandlerSpec
@@ -47,5 +50,17 @@ class VerityEndpointHandlerSpec
 
   override implicit val msgPackagingContext: AgentMsgPackagingContext =
     AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
 
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

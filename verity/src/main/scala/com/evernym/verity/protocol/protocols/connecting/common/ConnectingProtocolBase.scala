@@ -35,11 +35,11 @@ import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.verity.util2.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlParam}
+import com.evernym.verity.util2.{Exceptions, HasExecutionContextProvider, MsgPayloadStoredEventBuilder, Status, UrlParam}
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.Left
 
@@ -65,7 +65,10 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     with ConnReqMsgHandler[S]
     with ConnReqRedirectMsgHandler[S]
     with DEPRECATED_HasWallet
+    with HasExecutionContextProvider
     with HasLogger { this: Protocol[P,R,ProtoMsg,Any,S,I] =>
+
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   val logger: Logger = ctx.logger
 
@@ -433,7 +436,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           v1.agencyDID, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL).verKey)))
         val fwdRouteForAgentPairwiseActor = FwdRouteMsg(v1.agentKeyDID, Left(theirAgencySealParam))
         AgentMsgPackagingUtil.buildRoutedAgentMsg(msgPackFormat, PackedMsg(packedMsg),
-          List(fwdRouteForAgentPairwiseActor))(agentMsgTransformer, wap, ctx.metricsWriter)
+          List(fwdRouteForAgentPairwiseActor))(agentMsgTransformer, wap, ctx.metricsWriter, futureExecutionContext)
       case (None, Some(v2: RoutingDetail)) =>
         val routingKeys = if (v2.routingKeys.nonEmpty) Vector(v2.verKey) ++ v2.routingKeys else v2.routingKeys
         AgentMsgPackagingUtil.packMsgForRoutingKeys(
@@ -441,7 +444,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           packedMsg,
           routingKeys,
           msgType
-        )(agentMsgTransformer, wap, ctx.metricsWriter)
+        )(agentMsgTransformer, wap, ctx.metricsWriter, futureExecutionContext)
       case x => throw new RuntimeException("unsupported routing detail" + x)
     }
     awaitResult(result)

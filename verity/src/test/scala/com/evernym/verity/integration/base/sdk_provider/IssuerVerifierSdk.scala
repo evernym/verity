@@ -11,12 +11,13 @@ import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_TYPE_UPDATE_COM_METHOD}
 import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, ComMethodAuthentication, ComMethodPackaging, UpdateComMethodReqMsg, UpdateConfigReqMsg}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.did.{DidPair, VerKeyStr}
 import com.evernym.verity.integration.base.PortProvider
 import com.evernym.verity.integration.base.sdk_provider.msg_listener.{JsonMsgListener, MsgListenerBase, PackedMsgListener, ReceivedMsgCounter}
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
-import com.evernym.verity.protocol.engine.MsgFamily
+import com.evernym.verity.protocol.engine.{MsgFamily, MsgFamilyName, MsgFamilyVersion, ThreadId}
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateEdgeAgent}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete, ConnRequestReceived, ConnResponseSent}
@@ -28,10 +29,11 @@ import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
 
 import java.util.UUID
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.reflect.ClassTag
 
-abstract class VeritySdkBase(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends SdkBase(param) {
+abstract class VeritySdkBase(param: SdkParam, ec: ExecutionContext, wec: ExecutionContext, oauthParam: Option[OAuthParam]=None) extends SdkBase(param, ec, wec) {
 
   def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created]
@@ -93,16 +95,6 @@ abstract class VeritySdkBase(param: SdkParam, oauthParam: Option[OAuthParam]=Non
     expectMsgOnWebhook[ConfigResult]().msg
   }
 
-  protected def registerWebhookBase(packaging: Option[ComMethodPackaging],
-                                    authentication: Option[ComMethodAuthentication]): ComMethodUpdated = {
-    val updateComMethod = UpdateComMethodReqMsg(
-      ComMethod("1", COM_METHOD_TYPE_HTTP_ENDPOINT, msgListener.webhookEndpoint, packaging, authentication))
-    val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
-    val updateComMethodJson = JsonMsgUtil.createJsonString(typeStr, updateComMethod)
-    val routedPackedMsg = packForMyVerityAgent(updateComMethodJson)
-    parseAndUnpackResponse[ComMethodUpdated](checkOKResponse(sendPOST(routedPackedMsg))).msg
-  }
-
   protected def addForRel(connId: String, jsonMsgParam: JsonMsgBuilder): JsonMsgBuilder = {
     val relationship = myPairwiseRelationships(connId)
     jsonMsgParam.forRelDID(relationship.verityAgentDIDPair.get.did)
@@ -113,10 +105,10 @@ abstract class VeritySdkBase(param: SdkParam, oauthParam: Option[OAuthParam]=Non
       "OAuth2",
       "v1",
       Map(
-        "url" -> msgListener.oAuthAccessTokenEndpoint,
+        "url"           -> msgListener.oAuthAccessTokenEndpoint,
         "grant_type"    -> "client_credentials",
         "client_id"     -> "client_id",           //dummy data
-        "client_secret" -> "client_secret"    //dummy data
+        "client_secret" -> "client_secret"        //dummy data
       )
     )
   }
@@ -134,11 +126,22 @@ abstract class VeritySdkBase(param: SdkParam, oauthParam: Option[OAuthParam]=Non
  *
  * @param param sdk parameters
  */
-abstract class IssuerVerifierSdk(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends VeritySdkBase(param, oauthParam) {
+abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+  extends VeritySdkBase(param, executionContext, walletExecutionContext, oauthParam) {
+
+  def appConfig: AppConfig = testAppConfig
 
   def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
     val packaging = Option(ComMethodPackaging(MPF_INDY_PACK.toString, Option(Set(myLocalAgentVerKey))))
-    registerWebhookBase(packaging, authentication orElse defaultAuthentication)
+    val authToBeUsed = authentication orElse defaultAuthentication
+    val updateComMethod = UpdateComMethodReqMsg(
+      ComMethod("1", COM_METHOD_TYPE_HTTP_ENDPOINT, msgListener.webhookEndpoint, packaging, authToBeUsed))
+    val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
+    val updateComMethodJson = JsonMsgUtil.createJsonString(typeStr, updateComMethod)
+    val routedPackedMsg = packForMyVerityAgent(updateComMethodJson)
+    val cmu = parseAndUnpackResponse[ComMethodUpdated](checkOKResponse(sendPOST(routedPackedMsg))).msg
+    cmu.id.nonEmpty shouldBe true
+    cmu
   }
 
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created] = {
@@ -204,16 +207,44 @@ abstract class IssuerVerifierSdk(param: SdkParam, oauthParam: Option[OAuthParam]
 
 }
 
-case class IssuerSdk(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends IssuerVerifierSdk(param, oauthParam)
+case class IssuerSdk(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+  extends IssuerVerifierSdk(param, executionContext, walletExecutionContext, oauthParam)
 
-case class VerifierSdk(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends IssuerVerifierSdk(param, oauthParam)
+case class VerifierSdk(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+  extends IssuerVerifierSdk(param, executionContext, walletExecutionContext, oauthParam)
 
-case class IssuerRestSDK(param: SdkParam, oauthParam: Option[OAuthParam]=None) extends VeritySdkBase(param, oauthParam) {
+case class IssuerRestSDK(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+  extends VeritySdkBase(param, executionContext, walletExecutionContext, oauthParam) {
+
+  def appConfig: AppConfig = testAppConfig
   import scala.collection.immutable
 
   def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
     val packaging = Option(ComMethodPackaging(MPF_PLAIN.toString, None))
-    registerWebhookBase(packaging, authentication orElse defaultAuthentication)
+    val authToBeUsed = authentication orElse defaultAuthentication
+    val updateComMethodJson = {
+      val updateComMethod = UpdateComMethodReqMsg(
+        ComMethod(
+          "1",
+          COM_METHOD_TYPE_HTTP_ENDPOINT,
+          msgListener.webhookEndpoint,
+          packaging,
+          authToBeUsed
+        )
+      )
+      val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
+      JsonMsgUtil.createJsonString(typeStr, updateComMethod)
+    }
+    sendPostReqBase(
+      MSG_FAMILY_CONFIGS,
+      MFV_0_6,
+      updateComMethodJson,
+      UUID.randomUUID().toString,
+      verityAgentDidPair.DID, myDIDApiKey
+    )
+    val cmu = expectMsgOnWebhook[ComMethodUpdated]().msg
+    cmu.id.nonEmpty shouldBe true
+    cmu
   }
 
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created] = {
@@ -250,9 +281,24 @@ case class IssuerRestSDK(param: SdkParam, oauthParam: Option[OAuthParam]=None) e
   private def sendPostReqBase(jsonMsgBuilder: JsonMsgBuilder,
                               route: String,
                               routeApiKey: String): HttpResponse = {
-    val url = s"${param.verityRestApiUrl}/$route/${jsonMsgBuilder.msgFamily.name}/" +
-      s"${jsonMsgBuilder.msgFamily.version}/${jsonMsgBuilder.threadId}"
-    sendPostJsonReqToUrl(jsonMsgBuilder.jsonMsg, url, routeApiKey)
+    sendPostReqBase(
+      jsonMsgBuilder.msgFamily.name,
+      jsonMsgBuilder.msgFamily.version,
+      jsonMsgBuilder.jsonMsg,
+      jsonMsgBuilder.threadId,
+      route,
+      routeApiKey
+    )
+  }
+
+  private def sendPostReqBase(msgFamilyName: MsgFamilyName,
+                              msgFamilyVersion: MsgFamilyVersion,
+                              jsonMsg: String,
+                              threadId: ThreadId,
+                              route: String,
+                              routeApiKey: String): HttpResponse = {
+    val url = s"${param.verityRestApiUrl}/$route/$msgFamilyName/$msgFamilyVersion/$threadId"
+    sendPostJsonReqToUrl(jsonMsg, url, routeApiKey)
   }
 
   def sendGetStatusReqForConn[T: ClassTag](connId: String,

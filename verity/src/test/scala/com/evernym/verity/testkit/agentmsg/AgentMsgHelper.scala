@@ -38,6 +38,7 @@ import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 import scala.util.Left
 
@@ -64,7 +65,9 @@ trait AgentMsgHelper
     with AwaitResult {
   this: MockAgent with HasCloudAgent with Matchers =>
 
-  implicit lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(testWalletAPI)
+  override def futureExecutionContext: ExecutionContext
+  implicit val executionContext: ExecutionContext = futureExecutionContext
+  implicit lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(testWalletAPI, testAppConfig, futureExecutionContext)
 
   def getDIDDetail(ddOpt: Option[DidPair]): DidPair =
     ddOpt.getOrElse(throw new RuntimeException("no DIDDetail found"))

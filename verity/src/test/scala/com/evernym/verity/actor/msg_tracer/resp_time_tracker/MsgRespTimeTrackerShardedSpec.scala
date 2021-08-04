@@ -4,6 +4,7 @@ import java.util.UUID
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKitBase}
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.base.{AlreadyDone, Done}
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
@@ -50,4 +51,6 @@ class MsgRespTimeTrackerShardedSpec
       }
     }
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

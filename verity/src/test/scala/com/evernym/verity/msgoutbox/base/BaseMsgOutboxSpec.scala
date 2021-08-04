@@ -6,8 +6,7 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.pattern.StatusReply
-import com.evernym.verity.util2.{PolicyElements, RetentionPolicy, Status}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider, PolicyElements, RetentionPolicy, Status}
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies.{AddMsgReply, MsgAdded}
@@ -43,11 +42,13 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.json.JSONObject
 
 import java.util.UUID
-import scala.concurrent.Await
+
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
 
-trait BaseMsgOutboxSpec { this: BehaviourSpecBase =>
+trait BaseMsgOutboxSpec extends HasExecutionContextProvider with HasWalletExecutionContextProvider { this: BehaviourSpecBase =>
+  implicit val executionContext: ExecutionContext = futureExecutionContext
 
   lazy val BUCKET_NAME = "bucket-name"
 
@@ -64,18 +65,18 @@ trait BaseMsgOutboxSpec { this: BehaviourSpecBase =>
   )
 
   lazy val appConfig = new TestAppConfig(Option(APP_CONFIG), clearValidators = true)
-  lazy val storageAPI: MockBlobStore = StorageAPI.loadFromConfig(appConfig)(system.classicSystem).asInstanceOf[MockBlobStore]
+  lazy val storageAPI: MockBlobStore = StorageAPI.loadFromConfig(appConfig, executionContext)(system.classicSystem).asInstanceOf[MockBlobStore]
   lazy val sharding: ClusterSharding = ClusterSharding(system)
   lazy val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()
 
-  lazy val testWallet = new TestWallet(createWallet = true)
+  lazy val testWallet = new TestWallet(futureWalletExecutionContext, createWallet = true)
   lazy val myKey1: NewKeyCreated = testWallet.executeSync[NewKeyCreated](CreateNewKey())
   lazy val recipKey1: NewKeyCreated = testWallet.executeSync[NewKeyCreated](CreateNewKey())
   lazy val routingKey1: NewKeyCreated = testWallet.executeSync[NewKeyCreated](CreateNewKey())
 
-  val testWalletOpExecutor: Behavior[WalletOpExecutor.Cmd] = TestWalletOpExecutor(testWallet.testWalletAPI)
+  val testWalletOpExecutor: Behavior[WalletOpExecutor.Cmd] = TestWalletOpExecutor(testWallet.testWalletAPI, executionContext)
   val testDIDCommV1Packager: Behavior[DIDCommV1Packager.Cmd] =
-    DIDCommV1Packager(new AgentMsgTransformer(testWallet.testWalletAPI), testWalletOpExecutor, metricsWriter)
+    DIDCommV1Packager(new AgentMsgTransformer(testWallet.testWalletAPI, appConfig, executionContext), testWalletOpExecutor, metricsWriter, executionContext)
 
   val testMsgTransports: MsgTransports = new MsgTransports {
     override val httpTransporter: Behavior[HttpTransporter.Cmd] = TestHttpTransport.apply()
@@ -120,7 +121,7 @@ trait BaseMsgOutboxSpec { this: BehaviourSpecBase =>
     ))
   )
 
-  val testMsgStore: ActorRef[MsgStore.Cmd] = spawn(MsgStore(BUCKET_NAME, storageAPI))
+  val testMsgStore: ActorRef[MsgStore.Cmd] = spawn(MsgStore(BUCKET_NAME, storageAPI, executionContext))
 
   def storeAndAddToMsgMetadataActor(msgType: String,
                                     outboxIds: Set[OutboxId]): MsgId = {
@@ -148,21 +149,24 @@ trait BaseMsgOutboxSpec { this: BehaviourSpecBase =>
 
   val messageMetaRegion: ActorRef[ShardingEnvelope[MessageMeta.Cmd]] =
     sharding.init(Entity(MessageMeta.TypeKey) { entityContext =>
-      MessageMeta(entityContext, testMsgStore)
+      MessageMeta(entityContext, testMsgStore, appConfig)
     })
 }
 
 
 object TestWalletOpExecutor {
 
-  def apply(walletAPI: WalletAPI): Behavior[WalletOpExecutor.Cmd] = {
+  def apply(walletAPI: WalletAPI, executionContext: ExecutionContext): Behavior[WalletOpExecutor.Cmd] = {
     Behaviors.setup { actorContext =>
-      initialized(walletAPI)(actorContext)
+      initialized(walletAPI)(actorContext, executionContext)
     }
   }
 
   private def initialized(walletApi: WalletAPI)
-                         (implicit actorContext: ActorContext[WalletOpExecutor.Cmd]):
+                         (
+                           implicit actorContext: ActorContext[WalletOpExecutor.Cmd],
+                           executionContext: ExecutionContext
+                         ):
   Behavior[WalletOpExecutor.Cmd] = Behaviors.receiveMessage[WalletOpExecutor.Cmd] {
 
     case WalletOpExecutor.Commands.PackMsg(payload, recipKeys, senderVerKey, walletId, replyTo) =>
@@ -261,7 +265,7 @@ object MockOAuthAccessTokenRefresher {
           val shallTimeout = params("shallTimeout") == "Y"
           val shallFail = params("shallFail") == "Y"
           if (shallFail) {
-            replyTo ! OAuthAccessTokenRefresher.Replies.GetTokenFailed("mock error")
+            replyTo ! OAuthAccessTokenRefresher.Replies.GetTokenFailed("purposefully failing")
           } else if (! shallTimeout) {
             replyTo ! GetTokenSuccess(UUID.randomUUID().toString, expiresInSeconds, Option(new JSONObject("{}")))
           }

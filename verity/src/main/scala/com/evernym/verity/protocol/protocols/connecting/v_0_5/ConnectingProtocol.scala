@@ -17,15 +17,21 @@ import com.evernym.verity.push_notification.PushNotifMsgBuilder
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 
+import scala.concurrent.ExecutionContext
+
 
 //noinspection ScalaDeprecation
-class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String])
+class ConnectingProtocol(
+                          val ctx: ProtocolContextApi[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String]
+                        )
     extends Protocol[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String](ConnectingProtoDef)
       with ConnectingProtocolBase[ConnectingProtocol,Role,ConnectingState,String]
       with HasAppConfig
       with AgentMsgSender
       with MsgDeliveryResultHandler
       with PushNotifMsgBuilder {
+
+  override def futureExecutionContext: ExecutionContext = ctx.executionContext
 
   lazy val myPairwiseDIDReq : DidStr = ctx.getState.parameters.paramValueRequired(MY_PAIRWISE_DID)
   lazy val myPairwiseVerKeyReq : VerKeyStr = ctx.getState.parameters.paramValueRequired(MY_PAIRWISE_DID_VER_KEY)

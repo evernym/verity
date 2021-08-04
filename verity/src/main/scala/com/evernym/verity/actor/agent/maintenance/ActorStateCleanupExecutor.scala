@@ -17,13 +17,15 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.util.Util.getActorRefFromSelection
 
+import scala.concurrent.ExecutionContext
+
 
 /**
  * updates legacy agent routes of one 'agent route store' actor
  * @param appConfig application config
  * @param aac agent actor context
  */
-class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorContext)
+class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorContext, executionContext: ExecutionContext)
   extends BasePersistentActor
     with ActorStateCleanupBase {
 
@@ -318,6 +320,10 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
 
   scheduleJob("periodic_job", scheduledJobInterval, ProcessPending)
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 //status of a route store entity candidates
@@ -348,8 +354,8 @@ case class GetExecutorStatus(includeDetails: Boolean = false) extends ActorMessa
 case class ProcessRouteStore(agentRouteStoreEntityId: EntityId, totalRoutes: Int) extends ActorMessage
 
 object ActorStateCleanupExecutor {
-  def props(appConfig: AppConfig, aac: AgentActorContext): Props =
-    Props(new ActorStateCleanupExecutor(appConfig, aac))
+  def props(appConfig: AppConfig, aac: AgentActorContext, executionContext: ExecutionContext): Props =
+    Props(new ActorStateCleanupExecutor(appConfig, aac, executionContext))
 }
 
 object BatchStatus {

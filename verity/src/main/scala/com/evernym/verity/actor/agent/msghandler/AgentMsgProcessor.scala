@@ -54,7 +54,7 @@ import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Left, Success}
 
@@ -73,7 +73,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
                         val walletAPI: WalletAPI,
                         val agentMsgRouter: AgentMsgRouter,
                         val registeredProtocols: ProtocolRegistry[ActorDriverGenParam],
-                        param: StateParam)
+                        param: StateParam,
+                        executionContext: ExecutionContext)
   extends CoreActorExtended
     with DoNotRecordLifeCycleMetrics
     with ProtocolEngineExceptionHandler
@@ -85,6 +86,10 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     with HasMsgProgressTracker
     with HasAppConfig
     with HasLogger {
+
+  implicit val ec: ExecutionContext = executionContext
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   val logger: Logger = LoggingUtil.getLoggerByName("AgentMsgProcessor")
 
@@ -891,7 +896,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   override def trackingIdParam: TrackingIdParam = param.trackingIdParam
 
   lazy val thisAgentKeyParam: KeyParam = KeyParam(Left(param.thisAgentAuthKey.verKey))
-  lazy val msgExtractor: MsgExtractor = new MsgExtractor(thisAgentKeyParam, walletAPI)(WalletAPIParam(param.agentWalletId))
+  lazy val msgExtractor: MsgExtractor = new MsgExtractor(thisAgentKeyParam, walletAPI, futureExecutionContext)(WalletAPIParam(param.agentWalletId), appConfig)
 
   //NOTE: 2 minutes seems to be sufficient (or may be more) for any
   // one message processing (incoming + outgoing) cycle

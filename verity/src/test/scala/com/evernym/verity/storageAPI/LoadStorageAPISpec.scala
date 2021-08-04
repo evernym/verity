@@ -1,10 +1,13 @@
 package com.evernym.verity.storageAPI
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.storage_services.leveldb.LeveldbAPI
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigValueFactory}
+
+import scala.concurrent.ExecutionContext
 
 
 class LoadStorageAPISpec extends ActorSpec with BasicSpec {
@@ -18,19 +21,20 @@ class LoadStorageAPISpec extends ActorSpec with BasicSpec {
     .withValue("verity.blob-store.storage-service", ConfigValueFactory.fromAnyRef("com.evernym.verity.storage_services.leveldb.LeveldbAPI"))
     .withValue("verity.blob-store.local-store-path", ConfigValueFactory.fromAnyRef("/tmp/verity/leveldb"))
 
-
   "StorageAPI ClassLoader" - {
 
     "when loading a storage API " - {
       "should succeed in loading" in {
-        StorageAPI.loadFromConfig(new TestAppConfig(Some(storageApiConfig()))).asInstanceOf[LeveldbAPI]
+        StorageAPI.loadFromConfig(new TestAppConfig(Some(storageApiConfig())), ecp.futureExecutionContext).asInstanceOf[LeveldbAPI]
       }
 
       "should fail loading unknown API" in {
         intercept[ClassNotFoundException] {
-          StorageAPI.loadFromConfig(new TestAppConfig(Some(unknownStorageApiConfig())))
+          StorageAPI.loadFromConfig(new TestAppConfig(Some(unknownStorageApiConfig())), ecp.futureExecutionContext)
         }
       }
     }
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

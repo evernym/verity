@@ -2,7 +2,7 @@ package com.evernym.verity.libindy.ledger
 
 import akka.actor.ActorSystem
 import com.evernym.verity.util2.Exceptions.{InvalidValueException, MissingReqFieldException, NoResponseFromLedgerPoolServiceException}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status.{TIMEOUT, UNHANDLED, _}
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, MildSystemError, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.actor.wallet.SignLedgerRequest
@@ -29,7 +29,7 @@ import org.hyperledger.indy.sdk.ledger.Ledger._
 import org.hyperledger.indy.sdk.pool.{LedgerNotFoundException, Pool}
 
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
-import scala.concurrent.{Future, Promise, TimeoutException}
+import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
 import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
 
@@ -74,7 +74,8 @@ object SubmitToLedger extends SubmitToLedger {
   def submitRequest(pool: Pool, request: String): Future[RawLedgerResponse] = toFuture(Ledger.submitRequest(pool, request))
 }
 
-trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
+trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextProvider {
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   implicit def actorSystem: ActorSystem
   def appConfig: AppConfig
@@ -247,7 +248,10 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
       } else {
         prepareRequest(submitterDetail, request)
           .flatMap(submitRequest(_, pool.get))
-          .map(parseResponse)
+          .map { resp =>
+            AppStateUpdateAPI(actorSystem).publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
+            parseResponse(resp)
+          }
           .recoverWith(retryRecovery(submitterDetail, LedgerRequest(request.req, request.needsSigning)))
           .recover(handleError)
       }
@@ -269,7 +273,6 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
   private def submitWriteRequest(submitterDetail: Submitter,
                                  reqDetail: LedgerRequest):Future[TxnResp] ={
     completeRequest(submitterDetail, reqDetail).map { resp =>
-      AppStateUpdateAPI(actorSystem).publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
       buildTxnRespForWriteOp(resp)
     }.recover {
       case e: StatusDetailException => throw e
@@ -282,7 +285,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     toFuture(buildGetAttribRequest(submitter.did, did, attrName, null, null)) flatMap { req =>
       submitGetRequest(submitter, req, needsSigning=true).map{ r =>
         val txnResp = buildTxnRespForReadOp(r)
-        val data = getOptFieldFromResult(r, DATA).map(_.toString)
+        getOptFieldFromResult(r, DATA).map(_.toString)
         GetAttribResp(txnResp)
       }
     }

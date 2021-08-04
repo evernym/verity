@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.persistence.recovery.latest.verity2.cas
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.agent.agency._
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.ANYWISE_RELATIONSHIP
@@ -10,6 +11,8 @@ import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.typesafe.config.{Config, ConfigFactory}
+
+import scala.concurrent.ExecutionContext
 
 
 //this tests agency agent actor's recovery
@@ -142,4 +145,7 @@ class AgencyAgentRecoverySpec
          }
       """)
   )
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

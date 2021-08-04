@@ -2,6 +2,8 @@ package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
 import com.evernym.verity.actor.wallet.CredForProofReqCreated
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.did.didcomm.v1.conventions.CredValueEncoderV1_0
@@ -540,6 +542,7 @@ object PresentProof {
           attachement,
           goalCode = Some("request-proof"),
           goal = Some("To request a proof"),
+          ctx.serviceKeyDidFormat
         )
 
         handler(Success(

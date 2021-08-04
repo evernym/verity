@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.agency.agent_provisioning
 import akka.actor.PoisonPill
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.util2.Status._
-import com.evernym.verity.util2.Version
+import com.evernym.verity.util2.{ExecutionContextProvider, Version}
 import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
@@ -13,6 +13,8 @@ import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, PinstIdResolution}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5.AgentProvisioningProtoDef
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.did.DidStr
+
+import scala.concurrent.ExecutionContext
 
 class AgencyAgentPairwiseSpec_V_0_5 extends AgencyAgentPairwiseSpecBase {
 
@@ -137,5 +139,18 @@ class AgencyAgentPairwiseSpec_V_0_5 extends AgencyAgentPairwiseSpecBase {
       }
     }
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 

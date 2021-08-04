@@ -2,7 +2,6 @@ package com.evernym.verity.actor.agent.agency
 
 import akka.pattern.ask
 import akka.event.LoggingReceive
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
@@ -27,7 +26,7 @@ import com.evernym.verity.util.ParticipantUtil
 import com.evernym.verity.util.Util.getNewActorId
 import com.evernym.verity.vault.WalletAPIParam
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 
 /**
@@ -39,6 +38,7 @@ trait AgencyAgentCommon
     with ShardRegionFromActorContext
     with MsgNotifier
     with LEGACY_connectingSignalHandler {
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   val commonCmdReceiver: Receive = LoggingReceive.withLabel("commonCmdReceiver") {
     case GetSponsorRel                  => sender ! sponsorRel.getOrElse(SponsorRel.empty)

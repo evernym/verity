@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent.user
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util2.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.agentRegion
@@ -8,6 +9,8 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.TestConfigDetail
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.did.DidPair
+
+import scala.concurrent.ExecutionContext
 
 class UserAgentSpec_V_0_5 extends UserAgentSpecScaffolding {
   import mockEdgeAgent.v_0_5_req._
@@ -99,5 +102,16 @@ class UserAgentSpec_V_0_5 extends UserAgentSpecScaffolding {
       updateComMethodSpecs()
     }
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

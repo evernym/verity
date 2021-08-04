@@ -46,14 +46,16 @@ object InviteUtil {
                                 service: Vector[ServiceFormatted],
                                 attachment: AttachmentDescriptor,
                                 goalCode: Option[String],
-                                goal: Option[String]): OutOfBandInvitation = {
+                                goal: Option[String],
+                                serviceKeyDidFormat: Boolean
+                               ): OutOfBandInvitation = {
     val id = buildThreadedInviteId(protoRef, relationshipId, threadId)
     OutOfBandInvitation(
       agentName.getOrElse(""),
       goalCode,
       goal,
       Vector(attachment),
-      if (AppConfigWrapper.getBooleanReq(SERVICE_KEY_DID_FORMAT)) for (s <- service) yield ServiceFormatter(s).toDidKeyFormat() else service,
+      if (serviceKeyDidFormat) for (s <- service) yield ServiceFormatter(s).toDidKeyFormat() else service,
       logoUrl,
       publicDid.map("did:sov:"+_),
       id

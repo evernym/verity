@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent.user
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.constants.Constants.{COM_METHOD_TYPE_HTTP_ENDPOINT, COM_METHOD_TYPE_PUSH, DEFAULT_INVITE_SENDER_LOGO_URL, DEFAULT_INVITE_SENDER_NAME}
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
@@ -17,6 +18,8 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 import org.scalatest.time.{Seconds, Span}
 
+import scala.concurrent.ExecutionContext
+
 class ConsumerAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
 
   implicit val msgPackagingContext: AgentMsgPackagingContext =
@@ -33,10 +36,22 @@ class ConsumerAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
     CREATE_MSG_TYPE_CRED_OFFER, expectAlertingPushNotif = true)
   sendRemoteMsg(connId2New, "cred-req", "credReq")
   restartSpecs()
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 class EnterpriseAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
-
   implicit val msgPackagingContext: AgentMsgPackagingContext =
     AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
 
@@ -47,6 +62,19 @@ class EnterpriseAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 
   sendGetMsgsByConns_MFV_0_5("get msg from connections", 1)
   sendRemoteMsg(connId1New, "cred-offer", "credOffer")
   restartSpecs()
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 class VerityAgentPairwiseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
@@ -56,6 +84,19 @@ class VerityAgentPairwiseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
 
   val connId = "connId"
   createConnectionSpec(connId)
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 

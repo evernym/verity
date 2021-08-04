@@ -1,15 +1,18 @@
 package com.evernym.verity.metrics
 
 import akka.testkit.TestKit
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.{AgentProvHelper, HasAgentActivity, SponsorRel}
 import com.evernym.verity.actor.metrics._
-import com.evernym.verity.actor.testkit.PersistentActorSpec
+import com.evernym.verity.actor.testkit.{PersistentActorSpec, TestAppConfig}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.metrics.MetricHelpers._
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.util.TimeUtil
+import com.evernym.verity.util.{TestExecutionContextProvider, TimeUtil}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.BeforeAndAfterEach
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
@@ -283,6 +286,14 @@ class ActivityTrackerSpec
       }"""
     }
   }
+  /**
+   * custom thread pool executor
+   */
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 case class MetricWithTags(name: String, totalValue: Double, tags: Map[Map[String, String], Double]) {

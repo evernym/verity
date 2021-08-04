@@ -10,8 +10,14 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.Seg
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
-
 import java.util.UUID
+
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.util.TestExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
 abstract class PresentProofSpecBase
@@ -23,6 +29,13 @@ abstract class PresentProofSpecBase
   val agencyVerkey = "87shCEvKAWw6JncoirStGxkRptVriLeNXytw9iRxpzGY"
   val agencyDidkey = "did:key:z2DXXwXqC5VKhhDVLCoZSX98Gr33w1TGfNnA3y192dsDjbv"
   val publicDid = "UmTXHz4Kf4p8XHh5MiA4PK"
+
+
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   def createTest1CredDef: String = "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1"
 

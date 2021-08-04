@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import akka.actor.ActorRef
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.ThreadContextDetail
 import com.evernym.verity.actor.agent.maintenance.InitialActorState
@@ -15,6 +14,7 @@ import com.evernym.verity.protocol.engine.{PinstId, PinstIdResolution, ProtoRef}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageDefinition
 import com.evernym.verity.util2.Exceptions
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 
 
@@ -23,6 +23,8 @@ import scala.concurrent.duration.{Duration, MILLISECONDS}
  */
 trait AgentStateCleanupHelper {
   this: AgentMsgHandler with AgentPersistentActor =>
+
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   def cleanupCmdHandler: Receive = {
     case FixThreadMigrationState                  => fixThreadMigrationState()

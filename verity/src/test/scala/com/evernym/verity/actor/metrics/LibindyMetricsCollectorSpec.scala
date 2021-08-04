@@ -2,13 +2,13 @@ package com.evernym.verity.actor.metrics
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestKitBase}
-import com.evernym.verity.util2.ReqId
+import com.evernym.verity.util2.{ExecutionContextProvider, ReqId}
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
-
 import java.util.UUID
+
 import scala.concurrent.duration.DurationInt
 
 class LibindyMetricsCollectorSpec
@@ -39,4 +39,6 @@ class LibindyMetricsCollectorSpec
       }
     }
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

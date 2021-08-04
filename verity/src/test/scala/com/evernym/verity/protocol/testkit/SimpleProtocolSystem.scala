@@ -1,8 +1,10 @@
 package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship, RelationshipName, SelfRelationship}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
@@ -13,6 +15,7 @@ import com.evernym.verity.util.MsgUtil
 import com.typesafe.scalalogging.Logger
 
 import scala.annotation.tailrec
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
 
@@ -175,13 +178,17 @@ trait HasDidRouter {
 class Domain(override val domainId: DomainId,
              override val protocolRegistry: ProtocolRegistry[SimpleControllerProviderInputType],
              val system: SimpleProtocolSystem,
+             val executionContext: ExecutionContext,
+             val appConfig: AppConfig,
              val defaultInitParams: Map[String, String] = Map.empty
             ) extends JournalLogging with JournalProtocolSupport with HasRelationships with SimpleLaunchesProtocol  {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   type Container = InMemoryProtocolContainer[_,_,_,_,_,_]
 
   def containerProvider[P,R,M,E,S,I](pce: ProtocolContainerElements[P,R,M,E,S,I])(implicit ct: ClassTag[M]): Container = {
-    new InMemoryProtocolContainer(pce)
+    new InMemoryProtocolContainer(pce, executionContext, appConfig)
   }
 
   var usedWalletAccess: Option[WalletAccess] = None
@@ -319,7 +326,7 @@ trait HasRelationships {
 }
 
 
-trait SimpleLaunchesProtocol extends LaunchesProtocol {
+trait SimpleLaunchesProtocol extends LaunchesProtocol with HasExecutionContextProvider {
 
   self: JournalLogging =>
 

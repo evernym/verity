@@ -6,11 +6,12 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.util.Base58Util
 
+import scala.concurrent.ExecutionContext
 import scala.util.Success
 
 package object actor {
   trait HasProps {
-    def props(implicit conf: AppConfig): Props
+    def props(implicit conf: AppConfig, executionContext: ExecutionContext): Props
   }
 
   trait DidPairBase {

@@ -1,7 +1,8 @@
 package com.evernym.verity.util
 
-import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.agentmsg.AgentMsgWrapperBuilder
 import com.evernym.verity.testkit.util.AssertionUtil.expectMsgType
 import com.evernym.verity.testkit.BasicSpec
@@ -9,6 +10,9 @@ import com.evernym.verity.testkit.BasicSpec
 
 
 class AgentMsgWrapperBuilderSpec extends BasicSpec with CommonSpecUtil {
+
+  val testAppConfig: AppConfig = new TestAppConfig()
+  override def appConfig: AppConfig = testAppConfig
 
   "AgentMsgWrapperBuilder" - {
 

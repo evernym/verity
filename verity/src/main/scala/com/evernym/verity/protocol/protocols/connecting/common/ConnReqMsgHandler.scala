@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.protocols.connecting.common
 
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.{ALREADY_EXISTS, DATA_NOT_FOUND, MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_PENDING, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_PLAIN
 import com.evernym.verity.actor.wallet.PackedMsg
@@ -24,12 +23,14 @@ import com.evernym.verity.util.Util._
 import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Left
 
 
 trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
   this: ConnectingProtocolBase[_,_,S,_] with Protocol[_,_,ProtoMsg,Any,S,_] =>
+
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   protected def handleConnReqMsgBase(connReqMsg: ConnReqMsg,
                                      sourceId: Option[String]=None)(implicit amc: AgentMsgContext): PackedMsg = {

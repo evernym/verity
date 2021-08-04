@@ -6,8 +6,10 @@ import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
-
 import java.util.UUID
+
+import com.evernym.verity.util2.ExecutionContextProvider
+
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -51,4 +53,7 @@ class WalletActorPassivationSpec
      |""".stripMargin
     }
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

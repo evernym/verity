@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.state
 import akka.actor.Actor.Receive
 import com.evernym.verity.util2.Exceptions.InvalidValueException
 import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship._
@@ -21,14 +21,17 @@ import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Left
 
 /**
  * base class for handling a pairwise connection related functions
  * for example: updating connection status, their did doc etc
  */
-trait PairwiseConnStateBase {
+trait PairwiseConnStateBase
+  extends HasExecutionContextProvider
+    with HasWalletExecutionContextProvider {
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   type StateType <: AgentStatePairwiseInterface
   def state: StateType
@@ -59,7 +62,7 @@ trait PairwiseConnStateBase {
                                     relScopeDIDVerKey: VerKeyStr,
                                     lrd: LegacyRoutingDetail): Unit = {
     val theirDidDoc =
-      DidDocBuilder()
+      DidDocBuilder(futureWalletExecutionContext)
         .withDid(relScopeDID)
         .withAuthKey(relScopeDID, relScopeDIDVerKey, Set(EDGE_AGENT_KEY))
         .withAuthKeyAndEndpointDetail(lrd.agentKeyDID, lrd.agentVerKey, Set(AGENT_KEY_TAG), Left(lrd))
@@ -77,7 +80,7 @@ trait PairwiseConnStateBase {
                               relScopeDIDVerKey: VerKeyStr,
                               rd: RoutingDetail): Unit = {
     val theirDidDoc =
-      DidDocBuilder()
+      DidDocBuilder(futureWalletExecutionContext)
         .withDid(relScopeDID)
         .withAuthKeyAndEndpointDetail(relScopeDID, relScopeDIDVerKey, Set(AGENT_KEY_TAG), Right(rd))
         .didDoc
@@ -214,7 +217,7 @@ trait PairwiseConnStateBase {
           msgPackFormat,
           PackedMsg(packedMsg, Option(PayloadMetadata(msgType, msgPackFormat))),
           List(fwdRouteForAgentPairwiseActor)
-        )(agentMsgTransformer, wap, mw)
+        )(agentMsgTransformer, wap, mw, futureExecutionContext)
       case Some(Right(rd: RoutingDetail)) =>
         val routingKeys = AgentMsgPackagingUtil.buildRoutingKeys(rd.verKey, rd.routingKeys)
         AgentMsgPackagingUtil.packMsgForRoutingKeys(
@@ -222,7 +225,7 @@ trait PairwiseConnStateBase {
           packedMsg,
           routingKeys,
           msgType
-        )(agentMsgTransformer, wap, mw)
+        )(agentMsgTransformer, wap, mw, futureExecutionContext)
       case x => throw new RuntimeException("unsupported routing detail (for packed msg): " + x)
     }
   }

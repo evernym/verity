@@ -1,6 +1,8 @@
 package com.evernym.verity.protocol.protocols.connections.v_1_0
 
-import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.ProtocolRegistry._
@@ -11,10 +13,16 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.UpdateThei
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{InteractionController, MockableWalletAccess, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.util.TestExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 
 
 class ConnectionsSpec extends TestsProtocolsImpl(ConnectionsDef)
   with BasicFixtureSpec with CommonSpecUtil {
+
+  lazy val testAppConfig: AppConfig = new TestAppConfig()
+  override def appConfig: AppConfig = testAppConfig
 
   override val defaultInitParams = Map(
     DATA_RETENTION_POLICY -> "30 day"
@@ -95,29 +103,31 @@ class ConnectionsSpec extends TestsProtocolsImpl(ConnectionsDef)
   var invitee: TestEnvir = _
   var inviter: TestEnvir = _
 
-  lazy val inviteeControllerProvider = { i: SimpleControllerProviderInputType =>
-    new InteractionController(i) {
-      override def signal[A]: SignalHandler[A] = {
-        case SignalEnvelope(stdd: Signal.SetupTheirDidDoc, _, _, _, _) =>
-          Option(TheirDidDocUpdated(inviteeDIDDoc.id, inviteeDIDDoc.verkey, inviteeDIDDoc.routingKeys))
-        case SignalEnvelope(_: UpdateTheirDid, _, _, _, _) =>
-          Option(TheirDidUpdated())
-        case se: SignalEnvelope[A] =>
-          super.signal(se)
+  lazy val inviteeControllerProvider: DriverGen[SimpleControllerProviderInputType] =
+    Some({ (i: SimpleControllerProviderInputType, ec: ExecutionContext) =>
+      new InteractionController(i) {
+        override def signal[A]: SignalHandler[A] = {
+          case SignalEnvelope(stdd: Signal.SetupTheirDidDoc, _, _, _, _) =>
+            Option(TheirDidDocUpdated(inviteeDIDDoc.id, inviteeDIDDoc.verkey, inviteeDIDDoc.routingKeys))
+          case SignalEnvelope(_: UpdateTheirDid, _, _, _, _) =>
+            Option(TheirDidUpdated())
+          case se: SignalEnvelope[A] =>
+            super.signal(se)
+        }
       }
-    }
-  }
+    })
 
-  lazy val inviterControllerProvider = { i: SimpleControllerProviderInputType =>
-    new InteractionController(i) {
-      override def signal[A]: SignalHandler[A] = {
-        case SignalEnvelope(udd: Signal.SetupTheirDidDoc, _, _, _, _) =>
-          Option(TheirDidDocUpdated(inviterDIDDoc.id, inviterDIDDoc.verkey, inviterDIDDoc.routingKeys))
-        case se: SignalEnvelope[A] =>
-          super.signal(se)
+  lazy val inviterControllerProvider: DriverGen[SimpleControllerProviderInputType] =
+    Some({ (i: SimpleControllerProviderInputType, ec: ExecutionContext) =>
+      new InteractionController(i) {
+        override def signal[A]: SignalHandler[A] = {
+          case SignalEnvelope(udd: Signal.SetupTheirDidDoc, _, _, _, _) =>
+            Option(TheirDidDocUpdated(inviterDIDDoc.id, inviterDIDDoc.verkey, inviterDIDDoc.routingKeys))
+          case se: SignalEnvelope[A] =>
+            super.signal(se)
+        }
       }
-    }
-  }
+    })
 
   lazy val inviterDIDDoc: DIDDoc = {
     val dd = generateNewDid(Option("11111111111111111111111111111111"))
@@ -128,4 +138,10 @@ class ConnectionsSpec extends TestsProtocolsImpl(ConnectionsDef)
     val dd = generateNewDid(Option("22222222222222222222222222222222"))
     DIDDoc(dd.did, dd.verKey, "http://localhost:9002/agency/msg", Vector.empty)
   }
+
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

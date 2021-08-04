@@ -4,6 +4,8 @@ import com.evernym.verity.actor.wallet.{CredCreated, CredOfferCreated, CredReqCr
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.ledger.GetCredDefResp
 import com.evernym.verity.protocol.Control
@@ -15,7 +17,7 @@ import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentId
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols.ProtocolHelpers
+import com.evernym.verity.protocol.protocols.{HasAppConfig, ProtocolHelpers}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.ProblemReportCodes._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Role.{Holder, Issuer}
@@ -39,6 +41,8 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     with IssueCredentialHelpers
     with IssueCredentialLegacy {
   import IssueCredential._
+
+  override def serviceDidKeyFormat: Boolean = ctx.serviceKeyDidFormat
 
   override def handleControl: Control ?=> Any =
     handleMainControl orElse
@@ -219,6 +223,8 @@ trait IssueCredentialHelpers
     with ProtocolHelpers[IssueCredential, Role, ProtoMsg, Event, S, String] {
 
   import IssueCredential._
+
+  def serviceDidKeyFormat: Boolean
 
   override type Context = ProtocolContextApi[IssueCredential, Role, ProtoMsg, Event, S, String]
 
@@ -697,6 +703,7 @@ trait IssueCredentialHelpers
           offerAttachment,
           goalCode = Some("issue-vc"),
           goal = Some("To issue a credential"),
+          serviceDidKeyFormat
         )
 
         handler(Success(

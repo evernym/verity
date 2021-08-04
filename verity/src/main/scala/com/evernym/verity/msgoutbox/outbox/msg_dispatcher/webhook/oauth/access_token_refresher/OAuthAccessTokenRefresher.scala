@@ -4,6 +4,8 @@ import akka.actor.typed.{ActorRef, Behavior}
 import com.evernym.verity.actor.ActorMessage
 import org.json.JSONObject
 
+import scala.concurrent.ExecutionContext
+
 //interface for different version of oauth access token refresher
 object OAuthAccessTokenRefresher {
   trait Cmd extends ActorMessage
@@ -23,9 +25,9 @@ object OAuthAccessTokenRefresher {
     case class GetTokenFailed(errorMsg: String) extends Reply
   }
 
-  def getRefresher(version: String):  Behavior[OAuthAccessTokenRefresher.Cmd] = {
+  def getRefresher(version: String, executionContext: ExecutionContext):  Behavior[OAuthAccessTokenRefresher.Cmd] = {
     version match {
-      case OAUTH2_VERSION_1   => OAuthAccessTokenRefresherImplV1()
+      case OAUTH2_VERSION_1   => OAuthAccessTokenRefresherImplV1(executionContext)
       case other  => throw new RuntimeException("oauth token refresher not found for version: " + other)
     }
   }

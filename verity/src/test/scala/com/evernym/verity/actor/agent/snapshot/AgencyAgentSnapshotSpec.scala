@@ -2,6 +2,7 @@ package com.evernym.verity.actor.agent.snapshot
 
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.KeyCreated
 import com.evernym.verity.actor.agent.agency.{AgencyAgentScaffolding, AgencyAgentState}
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
@@ -11,6 +12,8 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_REGION_ACTOR_NAME
 import com.evernym.verity.did.DidStr
 import com.typesafe.config.{Config, ConfigFactory}
+
+import scala.concurrent.ExecutionContext
 
 
 class AgencyAgentSnapshotSpec
@@ -87,4 +90,17 @@ class AgencyAgentSnapshotSpec
   override type StateType = AgencyAgentState
   override def regionActorName: String = AGENCY_AGENT_REGION_ACTOR_NAME
   override def actorEntityId: String = agencyAgentEntityId
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

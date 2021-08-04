@@ -1,6 +1,8 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0.expire_after_days
 
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.did.didcomm.v1.decorators.PleaseAck
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl._
@@ -605,5 +607,7 @@ class IssueCredentialSpec
       issuer expect state[State.ProblemReported]
     }
   }
+
+  override def appConfig: AppConfig = new TestAppConfig()
 
 }

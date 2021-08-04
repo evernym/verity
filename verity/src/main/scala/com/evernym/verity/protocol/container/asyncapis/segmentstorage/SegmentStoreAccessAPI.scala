@@ -7,6 +7,7 @@ import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
 import com.evernym.verity.actor.{ForIdentifier, StorageInfo, StorageReferenceStored}
 import com.evernym.verity.actor.segmentedstates.{DeleteSegmentedState, GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
+import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.encryptor.PersistentDataEncryptor
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
@@ -58,10 +59,10 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
     DefaultPersistenceEncryption.getEventEncryptionKey(id, appConfig)
 
   private def encryptBlob(blob: Array[Byte], id: String): Array[Byte] =
-    PersistentDataEncryptor.encrypt(blob, blobEncryptionSeed(id))
+    new PersistentDataEncryptor(appConfig.getStringReq(SALT_EVENT_ENCRYPTION)).encrypt(blob, blobEncryptionSeed(id))
 
   private def decryptBlob(encryptedBlob: Array[Byte], id: String): Array[Byte] =
-    PersistentDataEncryptor.decrypt(encryptedBlob, blobEncryptionSeed(id))
+    new PersistentDataEncryptor(appConfig.getStringReq(SALT_EVENT_ENCRYPTION)).decrypt(encryptedBlob, blobEncryptionSeed(id))
 
   private def blobStoreBucket: String = appConfig
     .config

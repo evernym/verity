@@ -8,8 +8,10 @@ import com.evernym.verity.integration.base.verity_provider.node.local.{ServicePa
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.{BeforeAndAfterAll, Suite}
-
 import java.nio.file.{Files, Path}
+
+import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider}
+
 import scala.language.postfixOps
 import scala.util.Random
 
@@ -26,7 +28,8 @@ import scala.util.Random
 trait VerityProviderBaseSpec
   extends BasicSpec
     with CancelGloballyAfterFailure
-    with BeforeAndAfterAll {
+    with BeforeAndAfterAll
+    with HasExecutionContextProvider {
     this: Suite =>
 
   object VerityEnvBuilder {
@@ -76,12 +79,13 @@ trait VerityProviderBaseSpec
           portProfile,
           otherNodesArteryPorts,
           multiNodeServiceParam,
-          multiNodeClusterConfig
+          multiNodeClusterConfig,
+          executionContextProvider
         )
       }
 
       if (verityNodes.isEmpty) throw new RuntimeException("at least one node needed for a verity environment")
-      val verityEnv = VerityEnv(appSeed, verityNodes)
+      val verityEnv = VerityEnv(appSeed, verityNodes, futureExecutionContext)
       allVerityEnvs = allVerityEnvs :+ verityEnv
       verityEnv
     }
@@ -91,7 +95,7 @@ trait VerityProviderBaseSpec
   // implementing class can override it or send specific one for specific verity instance as well
   // but for external storage type of services (like ledger) we should make sure
   // it is the same instance across the all verity environments
-  lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new MockLedgerTxnExecutor())
+  lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new MockLedgerTxnExecutor(futureExecutionContext))
 
   private def randomTmpDirPath(): Path = {
     val tmpDir = TempDir.findSuiteTempDir(this.suiteName)
@@ -165,6 +169,7 @@ trait VerityProviderBaseSpec
       |}
       |""".stripMargin
   )
+  def executionContextProvider: ExecutionContextProvider
 }
 
 trait AppType

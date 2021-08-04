@@ -1,15 +1,19 @@
 
 package com.evernym.verity.actor.agent
 
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, SetRoute}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.did.DidStr
 
-import scala.concurrent.Future
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 
-trait HasSetRoute { this: AgentPersistentActor =>
+trait HasSetRoute
+  extends HasExecutionContextProvider
+  { this: AgentPersistentActor =>
+
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   /**
    * there are different types of actors (agency agent, agency pairwise, user agent and user agent pairwise)

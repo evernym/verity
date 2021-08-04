@@ -23,20 +23,22 @@ import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.util2.Status.UNAUTHORIZED
-import com.evernym.verity.util2.UrlParam
+import com.evernym.verity.util2.{ExecutionContextProvider, UrlParam}
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
-
 import java.util.UUID
+
+import com.evernym.verity.util.TestExecutionContextProvider
+
 import scala.collection.immutable
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 class LegacyMsgSenderSpec
   extends ActorSpec
     with BasicSpec
     with Eventually {
-
+  override def executionContextProvider: ExecutionContextProvider = ecp
   "LegacyMsgSender" - {
 
     "when asked to send binary message without oauth (success scenario)" - {
@@ -294,16 +296,21 @@ class LegacyMsgSenderSpec
     }
   }
 
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+
   def createLegacyMsgSender(): ActorRef[LegacyMsgSender.Cmd] = {
-    system.spawn(LegacyMsgSender("selfRelDID", mockAgentMsgRouter, MockMsgSendingSvc), UUID.randomUUID().toString)
+    system.spawn(LegacyMsgSender("selfRelDID", mockAgentMsgRouter, MockMsgSendingSvc, ecp.futureExecutionContext), UUID.randomUUID().toString)
   }
 
-  val mockAgentMsgRouter = new MockAgentMsgRouter(appConfig, system)
+  val mockAgentMsgRouter = new MockAgentMsgRouter(appConfig, system, ecp.futureExecutionContext)
 }
 
-class MockAgentMsgRouter(appConfig: AppConfig,
-                         system: ActorSystem)
-  extends AgentMsgRouter()(appConfig, system) {
+class MockAgentMsgRouter(
+                          appConfig: AppConfig,
+                          system: ActorSystem,
+                          executionContext: ExecutionContext
+                        )
+  extends AgentMsgRouter(executionContext)(appConfig, system) {
 
   val userActor: actor.ActorRef = system.actorOf(MockSelfRelActor.props(appConfig))
 
@@ -349,7 +356,7 @@ object MockOAuthAccessTokenRefresher {
 
 
 object MockMsgSendingSvc extends MsgSendingSvc {
-  import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+  lazy implicit val ec = TestExecutionContextProvider.ecp.futureExecutionContext
 
   def sendPlainTextMsg(payload: String,
                        method: HttpMethod = HttpMethods.POST,

@@ -14,7 +14,8 @@ object VerityLocalConfig {
 
   private def messageSerialization: Config = {
     ConfigFactory.parseString(
-      """akka.actor.serialize-messages = on
+      //TODO: once we fix root cause behind serialization issue, then we should turn this on again.
+      """akka.actor.serialize-messages = off
         |akka.actor.allow-java-serialization = off
         |""".stripMargin
     )

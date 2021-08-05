@@ -2,7 +2,6 @@ package com.evernym.verity.integration.with_basic_sdk.data_retention.expire_afte
 
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
-import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}

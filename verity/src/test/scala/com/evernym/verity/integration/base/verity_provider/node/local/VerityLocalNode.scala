@@ -48,23 +48,23 @@ case class VerityLocalNode(tmpDirPath: Path,
 
   //is this really ungraceful shutdown?
   private def stopUngracefully(): Unit = {
+    def stopHttpServer(): Unit = {
+      val httpStopFut = httpServer.stop()
+      Await.result(httpStopFut, 30.seconds)
+    }
+
+    def stopActorSystem(): Unit = {
+      val platformStopFut = platform.actorSystem.terminate()
+      Await.result(platformStopFut, 30.seconds)
+    }
+
     isAvailable = false
     stopHttpServer()
     stopActorSystem()
   }
 
-  private def stopHttpServer(): Unit = {
-    val httpStopFut = httpServer.stop()
-    Await.result(httpStopFut, 30.seconds)
-  }
-
-  private def stopActorSystem(): Unit = {
-    val platformStopFut = platform.actorSystem.terminate()
-    Await.result(platformStopFut, 30.seconds)
-  }
-
   private def stopGracefully(): Unit = {
-    //TODO: to find out why this one fails intermittently
+    //TODO: before starting using this method, need to find out why this one fails intermittently
     isAvailable = false
     val cluster = Cluster(platform.actorSystem)
     platform.nodeSingleton.tell(DrainNode, ActorRef.noSender)

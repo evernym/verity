@@ -9,7 +9,6 @@ import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Ctl.SendMessage
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Msg.Message
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.util.TestExecutionContextProvider
 
 import scala.concurrent.ExecutionContext

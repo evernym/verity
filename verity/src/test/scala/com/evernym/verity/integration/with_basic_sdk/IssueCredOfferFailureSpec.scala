@@ -9,7 +9,6 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.OfferCred
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.util.TestExecutionContextProvider
 import org.json.JSONObject
 

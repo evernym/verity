@@ -2,7 +2,6 @@ package com.evernym.verity.integration.with_basic_sdk.out_of_band.with_attachmen
 
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
-import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
@@ -10,7 +9,7 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, O
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.{AcceptRequest, Invitation, Sent}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.{HandshakeReuse, HandshakeReuseAccepted, OutOfBandInvitation}
-import com.evernym.verity.protocol.protocols.outofband.v_1_0.Signal.ConnectionReused
+import com.evernym.verity.protocol.protocols.outofband.v_1_0.Signal.{ConnectionReused, MoveProtocol}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
@@ -89,6 +88,7 @@ class ReuseConnectionSpec
         holderSDK.sendProtoMsgToTheirAgent(issuerHolderConn, handshakeReuse, msgThread)
         holderSDK.expectMsgFromConn[HandshakeReuseAccepted](issuerHolderConn)
         val receivedMsg = issuerSDK.expectMsgOnWebhook[ConnectionReused]()
+        issuerSDK.expectMsgOnWebhook[MoveProtocol]()
         receivedMsg.threadOpt.map(_.pthid).isDefined shouldBe true
         java.lang.Thread.sleep(2000)  //time to let "move protocol" finish on verity side
       }

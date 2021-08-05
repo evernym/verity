@@ -111,7 +111,7 @@ publish-helm:
     - .publish-common
     - .publish-common-helm
   dependencies:
-    - package
+    - package-helm
   only:
     refs:
       - main@evernym/verity/verity
@@ -121,7 +121,7 @@ publish-helm-manual:
     - .publish-common
     - .publish-common-helm
   dependencies:
-    - package-manual
+    - package-helm-manual
   only:
     refs:
       - master

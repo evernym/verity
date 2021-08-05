@@ -6,7 +6,6 @@ import akka.http.scaladsl.model.headers.HttpCredentials
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.server.directives.RouteDirectives
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
@@ -35,7 +34,8 @@ trait MsgListenerBase[T]
 
   def port: Int
   def msgRoute: Route
-  def checkAuthToken: Boolean
+
+  protected var checkAuthToken: Boolean = false
   lazy val logger: Logger = getLoggerByName("MsgListener")
 
   lazy val webhookEndpoint = s"http://localhost:$port/$webhookEndpointPath"
@@ -48,9 +48,11 @@ trait MsgListenerBase[T]
     Http().newServerAt("localhost", port).bind(edgeRoute)
   }
 
-  private def edgeRoute: Route =
-    (if (rejectMessages) RouteDirectives.reject else msgRoute) ~
-      (if (checkAuthToken) oAuthAccessTokenRoute else RouteDirectives.reject)
+  private def edgeRoute: Route = msgRoute ~ oAuthAccessTokenRoute
+
+  def setCheckAuth(value: Boolean): Unit = {
+    checkAuthToken = value
+  }
 
   def resetPlainMsgsCounter: ReceivedMsgCounter = {
     val curCount = _plainMsgsSinceLastReset
@@ -69,12 +71,6 @@ trait MsgListenerBase[T]
     _failedAuthedMsgSinceLastReset = 0
     ReceivedMsgCounter(_plainMsgsSinceLastReset, _authedMsgSinceLastReset, curCount)
   }
-
-  def setRejectMessages(value: Boolean): Unit = {
-    rejectMessages = value
-  }
-
-  private var rejectMessages = false
 
   protected var _plainMsgsSinceLastReset: Int = 0
 

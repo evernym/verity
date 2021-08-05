@@ -83,7 +83,7 @@ class UserAgentRecoverySpec
           ))),
           Some(Endpoints(Seq(
             //TODO: shouldn't the auth key be the "cloud agent key id" instead of the "edge key id"?
-            EndpointADT(HttpEndpoint("1", "http://abc.xyz.com", Seq(mySelfRelDIDPair.did)))
+            EndpointADT(HttpEndpoint("1", "http://abc.xyz.com", Seq(mySelfRelDIDPair.did), Option(PackagingContext("plain"))))
           )))
         )),
         Seq.empty

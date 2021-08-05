@@ -7,7 +7,6 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.actor.agent.{Thread => MsgThread}
-import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util.TestExecutionContextProvider

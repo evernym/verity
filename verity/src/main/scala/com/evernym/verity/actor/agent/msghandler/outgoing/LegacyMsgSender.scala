@@ -72,6 +72,7 @@ object LegacyMsgSender {
                          (implicit actorContext: ActorContext[Cmd],
                           executionContext: ExecutionContext): Behavior[Cmd] = Behaviors.receiveMessage {
     case scb: SendCmdBase =>
+      logger.info(s"[${setup.selfRelId}] message received to be sent to webhook url: ${scb.toUrl} (withAuthHeader: ${scb.withAuthHeader})")
       if (scb.withAuthHeader) {
         gettingOAuthAccessToken(setup, scb)
       } else {
@@ -108,7 +109,7 @@ object LegacyMsgSender {
 
     case OAuthAccessTokenHolderReplyAdapter(reply: GetTokenFailed) =>
       cmd.replyTo ! SendMsgResp(Left(HandledErrorException(UNHANDLED.statusCode,
-        Option("error while auth token generation:" + reply.errorMsg))))
+        Option(s"[${setup.selfRelId}][OAuth] error while getting access token:" + reply.errorMsg))))
       Behaviors.stopped
   }
 

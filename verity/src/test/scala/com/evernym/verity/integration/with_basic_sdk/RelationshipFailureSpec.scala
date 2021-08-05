@@ -16,7 +16,6 @@ import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{CurrentPublicIde
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{SMSConnectionInvitation, SMSOutOfBandInvitation}
 import java.nio.charset.Charset
 
-import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util.TestExecutionContextProvider
 

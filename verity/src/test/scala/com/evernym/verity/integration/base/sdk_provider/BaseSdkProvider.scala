@@ -30,14 +30,16 @@ import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.LedgerTxnExecutor
+import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.NoOpMetricsWriter
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
+import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.matchers.should.Matchers
+
 import java.nio.charset.StandardCharsets
 import java.util.UUID
-
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.{Duration, FiniteDuration, SECONDS}
@@ -405,8 +407,19 @@ object ReceivedMsgParam {
       Option(DefaultMsgCodec.fromJson[agent.Thread](message.getJSONObject("~thread").toString))
     }.getOrElse(None)
     val expMsg = DefaultMsgCodec.fromJson[T](message.toString)
+    checkInvalidFieldValues(msg, expMsg)
     ReceivedMsgParam(expMsg, msg, None, threadOpt)
   }
+
+  private def checkInvalidFieldValues(msgString: String, msg: Any): Unit = {
+    //this condition would be true if the received message is different than expected message type
+    // in which case the deserialized message fields will have null values
+    if (msg.asInstanceOf[Product].productIterator.contains(null)) {
+      logger.warn(s"expected message '${msg.getClass.getSimpleName}', but found: " + msgString)
+    }
+  }
+
+  val logger: Logger = getLoggerByName(getClass.getName)
 }
 
 /**

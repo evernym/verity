@@ -6,7 +6,6 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.http.base.AgentReqBuilder
 import com.evernym.verity.integration.base.verity_provider.PortProfile
-import com.evernym.verity.integration.base.verity_provider.node.local.VerityLocalConfig.defaultPorts
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.typesafe.config.Config
@@ -18,6 +17,8 @@ class VerityLocalSpec extends BasicSpec with AgentReqBuilder with CommonSpecUtil
   override def appConfig: AppConfig = testAppConfig
 
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+
+  val defaultPorts: PortProfile = PortProfile(9002, 2552, 8552, 9095)
 
   override def deleteFiles: Boolean = false
 

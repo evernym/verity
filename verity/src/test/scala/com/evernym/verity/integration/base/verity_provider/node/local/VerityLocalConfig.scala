@@ -10,8 +10,6 @@ import java.nio.file.Path
 
 object VerityLocalConfig {
 
-  val defaultPorts: PortProfile = PortProfile(9002, 2552, 8552, 9095)
-
   private def messageSerialization: Config = {
     ConfigFactory.parseString(
       //TODO: once we fix root cause behind serialization issue, then we should turn this on again.

@@ -123,7 +123,7 @@ object PortProfile {
     val arteryPort      = PortProvider.generateUnusedPort(2000)
     val akkaMgmtPort    = PortProvider.generateUnusedPort(8000)
     val httpPort        = PortProvider.generateUnusedPort(9000)
-    val prometheusPort  = PortProvider.generateUnusedPort(9000)
+    val prometheusPort  = PortProvider.generateUnusedPort(6000)
     PortProfile(httpPort, arteryPort, akkaMgmtPort, prometheusPort)
   }
 }

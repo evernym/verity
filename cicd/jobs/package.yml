@@ -6,6 +6,7 @@
       - verity/target/docker
       - verity/target/scala-2.12/verity-assembly-*.jar
       - verity/target/*.deb
+      - verity/target/helm
     when: always
   cache:
     paths:
@@ -16,6 +17,7 @@
     - sbt assembly
     - sbt verity/k8sDockerPackage
     - sbt debian:packageBin
+    - helm package -d verity/target/helm verity/src/helm
   tags:
     - docker-machine
     - large

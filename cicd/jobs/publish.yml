@@ -104,7 +104,7 @@ publish-docker-manual:
 
 .publish-common-helm:
   script:
-    - 'curl --request POST --user gitlab-ci-token:$CI_JOB_TOKEN --form "chart=@verity/target/helm/*.tgz" "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/api/stable/charts"'
+    - 'curl --request POST --user gitlab-ci-token:$CI_JOB_TOKEN --form "chart=@$(find verity/target/helm -type f -name '*.tgz')" "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/api/stable/charts"'
 
 publish-helm:
   extends:

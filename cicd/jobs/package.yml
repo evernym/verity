@@ -17,7 +17,6 @@
     - sbt assembly
     - sbt verity/k8sDockerPackage
     - sbt debian:packageBin
-    - helm package -d verity/target/helm verity/src/helm
   tags:
     - docker-machine
     - large
@@ -31,6 +30,38 @@ package:
 
 package-manual:
   extends: .package-common
+  only:
+    refs:
+      - master
+      - main
+      - tags
+      - merge_requests
+  when: manual
+
+.package-common-helm:
+  image:
+    name: alpine/helm:latest
+    entrypoint: ["/bin/sh", "-c"]
+  tags:
+    - docker-machine
+    - micro
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+    paths:
+      - verity/target/helm
+    when: always
+  script:
+    - helm package -d verity/target/helm verity/src/helm
+
+package-helm:
+  extends: .package-common-helm
+  only:
+    refs:
+      - master@dev/verity/verity
+      - main@evernym/verity/verity
+
+package-helm-manual:
+  extends: .package-common-helm
   only:
     refs:
       - master

@@ -3,7 +3,8 @@ package com.evernym.verity.actor.agent.user.msgstore
 import com.evernym.verity.util2.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT}
 import com.evernym.verity.actor.MsgDeliveryStatusUpdated
 import com.evernym.verity.actor.agent.{Msg, MsgDeliveryDetail}
-import com.evernym.verity.protocol.engine.{DID, MsgId}
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.protocol.engine.MsgId
 
 
 /**
@@ -139,6 +140,6 @@ class FailedMsgTracker(maxRetryAttempts: Int, retryEligibilityCriteriaProvider: 
  * @param exceptMsgTypes if provided, then only those failed messages are chosen who's type is NOT one of the provided one
  * @param deliveryTargets if provided, then only those failed messages are chosen who's target was one of the provided one
  */
-case class RetryEligibilityCriteria(senderDID: Option[DID]=None,
+case class RetryEligibilityCriteria(senderDID: Option[DidStr]=None,
                                     exceptMsgTypes: Set[String]=Set.empty,
                                     deliveryTargets: Set[String]=Set.empty)

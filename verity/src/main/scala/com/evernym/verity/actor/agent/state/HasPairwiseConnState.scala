@@ -17,6 +17,7 @@ import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, EDGE_AGENT_KEY}
 import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail, TheirRoutingParam}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 
@@ -36,7 +37,7 @@ trait PairwiseConnStateBase
   def state: StateType
 
   implicit def didDocBuilderParam: DidDocBuilderParam
-  def ownerDIDReq: DID
+  def ownerDIDReq: DidStr
 
   def relationshipState: Relationship = state.relationshipReq
 
@@ -57,8 +58,8 @@ trait PairwiseConnStateBase
    * @param relScopeDID
    * @param lrd
    */
-  def updateLegacyRelationshipState(relScopeDID: DID,
-                                    relScopeDIDVerKey: VerKey,
+  def updateLegacyRelationshipState(relScopeDID: DidStr,
+                                    relScopeDIDVerKey: VerKeyStr,
                                     lrd: LegacyRoutingDetail): Unit = {
     val theirDidDoc =
       DidDocBuilder(futureWalletExecutionContext)
@@ -75,8 +76,8 @@ trait PairwiseConnStateBase
    * @param relScopeDID
    * @param rd
    */
-  def updateRelationshipState(relScopeDID: DID,
-                              relScopeDIDVerKey: VerKey,
+  def updateRelationshipState(relScopeDID: DidStr,
+                              relScopeDIDVerKey: VerKeyStr,
                               rd: RoutingDetail): Unit = {
     val theirDidDoc =
       DidDocBuilder(futureWalletExecutionContext)
@@ -119,10 +120,10 @@ trait PairwiseConnStateBase
   def agentMsgTransformer: AgentMsgTransformer
   def encParamBuilder: EncryptionParamBuilder = EncryptionParamBuilder()
 
-  def isTheirAgentVerKey(key: VerKey): Boolean =
+  def isTheirAgentVerKey(key: VerKeyStr): Boolean =
     state.theirAgentAuthKey.exists(_.verKeyOpt.contains(key))
 
-  def isMyPairwiseVerKey(verKey: VerKey): Boolean =
+  def isMyPairwiseVerKey(verKey: VerKeyStr): Boolean =
     state.myDidAuthKey.exists(_.verKeyOpt.contains(verKey))
 
   /**
@@ -170,7 +171,7 @@ trait PairwiseConnStateBase
     case x                                    => throw new RuntimeException("unsupported condition while preparing routing param: " + x)
   }
 
-  def encParamBasedOnMsgSender(senderVerKeyOpt: Option[VerKey]): EncryptParam = {
+  def encParamBasedOnMsgSender(senderVerKeyOpt: Option[VerKeyStr]): EncryptParam = {
     val encBuilderWithRecip = senderVerKeyOpt match {
       case Some(verKey) if isMyPairwiseVerKey(verKey) => encParamBuilder.withRecipDID(ownerDIDReq)
       case Some(verKey) if isTheirAgentVerKey(verKey) => encParamBuilder.withRecipVerKey(state.theirAgentVerKeyReq)

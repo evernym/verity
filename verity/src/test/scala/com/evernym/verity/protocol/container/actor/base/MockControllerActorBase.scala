@@ -12,6 +12,7 @@ import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, ActorProtocol, InitProtocolReq, MsgEnvelope}
 import com.evernym.verity.protocol.{Control, engine}
@@ -132,7 +133,7 @@ abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorConte
   lazy val selfParticipantId: String = s"$domainId/$domainId"
   lazy val senderParticipantId: String =
     controllerDataOpt.flatMap(_.theirDIDOpt)
-    .getOrElse(CommonSpecUtil.generateNewDid().DID)
+    .getOrElse(CommonSpecUtil.generateNewDid().did)
 
   lazy val relationshipId: Option[RelationshipId] = Option(controllerData.myDID)
 
@@ -199,8 +200,8 @@ abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorConte
   override def stateDetailsFor(protoRef: ProtoRef): Future[PartialFunction[String, engine.Parameter]] = Future {
     case SELF_ID                  => Parameter(SELF_ID, domainId)
     case OTHER_ID                 => Parameter(OTHER_ID, controllerData.theirDID)
-    case MY_PAIRWISE_DID          => Parameter(MY_PAIRWISE_DID, CommonSpecUtil.generateNewDid().DID)
-    case THEIR_PAIRWISE_DID       => Parameter(THEIR_PAIRWISE_DID, CommonSpecUtil.generateNewDid().DID)
+    case MY_PAIRWISE_DID          => Parameter(MY_PAIRWISE_DID, CommonSpecUtil.generateNewDid().did)
+    case THEIR_PAIRWISE_DID       => Parameter(THEIR_PAIRWISE_DID, CommonSpecUtil.generateNewDid().did)
     case DATA_RETENTION_POLICY    => Parameter(DATA_RETENTION_POLICY, "360d")
 
     case NAME                     => Parameter(NAME, "name")
@@ -219,7 +220,7 @@ abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorConte
 }
 
 object ControllerData {
-  def apply(myDID: DID, theirDIDOpt: Option[DID]): ControllerData =
+  def apply(myDID: DidStr, theirDIDOpt: Option[DidStr]): ControllerData =
     ControllerData (UUID.randomUUID().toString, myDID, theirDIDOpt)
 }
 /**
@@ -228,8 +229,8 @@ object ControllerData {
  * @param myDID my DID
  * @param theirDIDOpt optional, present/provided if you want to test their side of the protocol to
  */
-case class ControllerData(walletId: String, myDID: DID, theirDIDOpt: Option[DID]) {
-  def theirDID: DID = theirDIDOpt.getOrElse(throw new RuntimeException("their DID not supplied"))
+case class ControllerData(walletId: String, myDID: DidStr, theirDIDOpt: Option[DidStr]) {
+  def theirDID: DidStr = theirDIDOpt.getOrElse(throw new RuntimeException("their DID not supplied"))
 }
 case class SetupController(data: ControllerData) extends ActorMessage
 

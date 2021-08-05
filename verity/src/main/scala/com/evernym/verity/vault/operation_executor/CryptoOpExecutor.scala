@@ -7,7 +7,7 @@ import com.evernym.verity.util.Util.jsonArray
 import scala.concurrent.ExecutionContext
 import com.evernym.verity.util2.Status.{INVALID_VALUE, SIGNATURE_VERIF_FAILED, UNHANDLED}
 import com.evernym.verity.actor.wallet.{LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, SignedMsg, UnpackMsg, UnpackedMsg, VerifySigResult}
-import com.evernym.verity.protocol.engine.VerKey
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.service.WalletMsgHandler.handleGetVerKey
 import com.evernym.verity.vault.WalletExt
@@ -113,7 +113,7 @@ object CryptoOpExecutor extends OpExecutorBase {
     }
   }
 
-  def verifySig(verKey: VerKey, challenge: Array[Byte], signature: Array[Byte])
+  def verifySig(verKey: VerKeyStr, challenge: Array[Byte], signature: Array[Byte])
                (implicit ec: ExecutionContext): Future[VerifySigResult] = {
     val detail = s"challenge: '$challenge', signature: '$signature'"
     Crypto.cryptoVerify(verKey, challenge, signature)
@@ -139,4 +139,4 @@ object CryptoOpExecutor extends OpExecutorBase {
   }
 }
 
-case class VerifySigByVerKey(verKey: VerKey, challenge: Array[Byte], signature: Array[Byte])
+case class VerifySigByVerKey(verKey: VerKeyStr, challenge: Array[Byte], signature: Array[Byte])

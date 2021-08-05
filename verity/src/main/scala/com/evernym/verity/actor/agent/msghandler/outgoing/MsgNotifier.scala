@@ -22,6 +22,7 @@ import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.MsgFamily.{VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP}
@@ -74,13 +75,13 @@ trait MsgNotifierForStoredMsgs
   def msgSendingSvc: MsgSendingSvc
   def defaultSelfRecipKeys: Set[KeyParam]
 
-  def selfRelDID : DID
+  def selfRelDID : DidStr
 
   /**
    * agent key DID belonging to the agent created for the domain DID (self Rel DID)
    * @return
    */
-  def ownerAgentKeyDIDReq: DID
+  def ownerAgentKeyDIDReq: DidStr
 
   // used for packing the message.
   def msgExtractor: MsgExtractor
@@ -88,7 +89,7 @@ trait MsgNotifierForStoredMsgs
   type PushDetails=Map[AttrName, AttrValue]
 
   sealed trait MsgNotifierMessages
-  case class NoPushMethodWarning(agentDID: DID) extends MsgNotifierMessages
+  case class NoPushMethodWarning(agentDID: DidStr) extends MsgNotifierMessages
 
   private val generalNewMsgBodyTemplateOpt: Option[String] =
     appConfig.getStringOption(PUSH_NOTIF_GENERAL_NEW_MSG_BODY_TEMPLATE)
@@ -445,36 +446,36 @@ trait MsgNotifierForUserAgentPairwise extends MsgNotifierForUserAgentCommon {
 
   this: UserAgentPairwise with PushNotifMsgBuilder =>
 
-  override def selfRelDID: DID = state.mySelfRelDID.getOrElse(
+  override def selfRelDID: DidStr = state.mySelfRelDID.getOrElse(
     throw new RuntimeException("owner's edge agent DID not yet set"))
 
   /**
    * this should be main agent actor's (UserAgent) agent DID
    * @return
    */
-  override def ownerAgentKeyDIDReq: DID = state.ownerAgentDidPair.map(_.DID).getOrElse(
+  override def ownerAgentKeyDIDReq: DidStr = state.ownerAgentDidPair.map(_.DID).getOrElse(
     throw new RuntimeException("owner's cloud agent DID not yet set"))
 
-  override def msgRecipientDID: DID = state.myDid_!
+  override def msgRecipientDID: DidStr = state.myDid_!
 }
 
 trait MsgNotifierForUserAgent extends MsgNotifierForUserAgentCommon {
 
   this: UserAgent with PushNotifMsgBuilder =>
 
-  override def selfRelDID: DID = state.myDid_!
+  override def selfRelDID: DidStr = state.myDid_!
 
   /**
    * this should be main agent actor's (UserAgent) agent DID
    * @return
    */
-  override def ownerAgentKeyDIDReq: DID = state.thisAgentKeyDIDReq
+  override def ownerAgentKeyDIDReq: DidStr = state.thisAgentKeyDIDReq
 
-  override def msgRecipientDID: DID = state.myDid_!
+  override def msgRecipientDID: DidStr = state.myDid_!
 }
 
 case class FwdMetaData(msgType: Option[String], msgSenderName: Option[String])
-case class FwdMsg(msgId: String, msgType: String, sponseeDetails: String, relationshipDid: DID, metaData: FwdMetaData)
+case class FwdMsg(msgId: String, msgType: String, sponseeDetails: String, relationshipDid: DidStr, metaData: FwdMetaData)
 
 object NotifyMsgDetail {
   def withTrackingId(msgType: String, payloadWrapper: Option[PayloadWrapper]): NotifyMsgDetail =

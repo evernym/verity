@@ -69,18 +69,18 @@ class UserAgentRecoverySpec
     uas.sponsorRel shouldBe None
     uas.configs shouldBe Map.empty
     uas.msgAndDelivery shouldBe None
-    uas.thisAgentKeyId shouldBe Option(mySelfRelAgentDIDPair.DID)
-    uas.agencyDIDPair shouldBe Option(myAgencyAgentDIDPair)
+    uas.thisAgentKeyId shouldBe Option(mySelfRelAgentDIDPair.did)
+    uas.agencyDIDPair shouldBe Option(myAgencyAgentDIDPair.toAgentDidPair)
     uas.agentWalletId shouldBe Some(mySelfRelAgentEntityId)
     uas.relationship shouldBe Some(
       Relationship(
         SELF_RELATIONSHIP,
         "self",
         Some(DidDoc(
-          mySelfRelDIDPair.DID,
+          mySelfRelDIDPair.did,
           Some(AuthorizedKeys(Seq(
-            AuthorizedKey(mySelfRelDIDPair.DID, mySelfRelDIDPair.verKey, Set(EDGE_AGENT_KEY)),
-            AuthorizedKey(mySelfRelAgentDIDPair.DID, mySelfRelAgentDIDPair.verKey, Set(CLOUD_AGENT_KEY))
+            AuthorizedKey(mySelfRelDIDPair.did, mySelfRelDIDPair.verKey, Set(EDGE_AGENT_KEY)),
+            AuthorizedKey(mySelfRelAgentDIDPair.did, mySelfRelAgentDIDPair.verKey, Set(CLOUD_AGENT_KEY))
           ))),
           Some(Endpoints(Seq(
             EndpointADT(PushEndpoint("push-token", "firebase-push-token"))
@@ -90,7 +90,7 @@ class UserAgentRecoverySpec
       )
     )
     //pairwise connection related info
-    uas.relationshipAgents shouldBe Map(myPairwiseRelDIDPair.DID -> AgentDetail(myPairwiseRelDIDPair.DID, myPairwiseRelAgentDIDPair.DID))
+    uas.relationshipAgents shouldBe Map(myPairwiseRelDIDPair.did -> AgentDetail(myPairwiseRelDIDPair.did, myPairwiseRelAgentDIDPair.did))
   }
 
   //NOTE: adding snapshotting to be able to get saved snapshot and assert the state

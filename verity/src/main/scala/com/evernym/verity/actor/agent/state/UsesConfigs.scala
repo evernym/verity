@@ -9,7 +9,7 @@ import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.cache.AGENT_ACTOR_CONFIG_CACHE_FETCHER
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.GetConfigCacheParam
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.protocols.HasAppConfig
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -21,7 +21,7 @@ import scala.concurrent.{ExecutionContext, Future}
 trait UsesConfigs extends HasAppConfig with HasExecutionContextProvider {
   private implicit def executionContext: ExecutionContext = futureExecutionContext
 
-  def ownerAgentKeyDIDReq: DID
+  def ownerAgentKeyDIDReq: DidStr
   def agentConfigs: Map[String, AgentConfig]
   def agentCache: Cache
 

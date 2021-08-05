@@ -1,11 +1,12 @@
 package com.evernym.verity.actor.agent.user
 
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.{Evt, MsgAnswered}
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
-import com.evernym.verity.protocol.engine.{DID, MsgId}
+import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.StorePayloadParam
 import com.evernym.verity.protocol.protocols.connecting.common.{AddMsg, UpdateDeliveryStatus, UpdateMsg}
 
@@ -43,7 +44,7 @@ trait LEGACY_connectingSignalHandler { this: UserAgentCommon =>
 
   def LEGACY_storeMsg(msgId: MsgId,
                       msgName: String,
-                      senderDID: DID,
+                      senderDID: DidStr,
                       statusCode: String,
                       sendMsg: Boolean,
                       threadOpt: Option[Thread],

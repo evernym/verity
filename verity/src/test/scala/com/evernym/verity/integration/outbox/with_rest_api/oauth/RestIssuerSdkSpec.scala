@@ -1,7 +1,7 @@
 package com.evernym.verity.integration.outbox.with_rest_api.oauth
 
 import akka.http.scaladsl.model.StatusCodes.Accepted
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.integration.base.sdk_provider.{OAuthParam, SdkProvider}
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}

@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
 import akka.http.scaladsl.model.Uri
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>

@@ -23,7 +23,7 @@ trait ProvisionRelationshipSpec { this : EdgeEndpointBaseSpec =>
           mockEdgeAgent.v_0_5_resp.handleKeyCreatedResp(PackedMsg(responseAs[Array[Byte]]),
             mockEdgeAgent.buildConnIdMap(connId))
           val remoteDetail = RemoteAgentAndAgencyIdentity(
-            mockEdgeAgent.pairwiseConnDetail(connId).myCloudAgentPairwiseDidPair.DID,
+            mockEdgeAgent.pairwiseConnDetail(connId).myCloudAgentPairwiseDidPair.did,
             mockEdgeAgent.pairwiseConnDetail(connId).myCloudAgentPairwiseDidPair.verKey,
             mockEdgeAgent.senderAgencyDetail.DID,
             mockEdgeAgent.senderAgencyDetail.verKey

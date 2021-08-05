@@ -6,7 +6,7 @@ import com.evernym.verity.cache.AGENCY_IDENTITY_CACHE_FETCHER
 import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -45,4 +45,4 @@ class AgencyIdentityCacheFetcher(val agentMsgRouter: AgentMsgRouter, val appConf
   }
 }
 
-case class GetAgencyIdentityCacheParam(localAgencyDID: DID, gad: GetAgencyIdentity)
+case class GetAgencyIdentityCacheParam(localAgencyDID: DidStr, gad: GetAgencyIdentity)

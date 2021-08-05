@@ -4,7 +4,7 @@ import com.evernym.verity.util2.{Base64Encoded, ExecutionContextProvider}
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOneDomain
-import com.evernym.verity.protocol.engine.VerKey
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{NoSponsor, _}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.State.{AgentCreated => AgentCreatedState, _}
 import com.evernym.verity.protocol.testkit.DSL.signal
@@ -209,7 +209,7 @@ class AgentProvisioningSpec
   def assertCreateAgent(s: Scenario): Unit = {
   }
 
-  def createEdgeAgent(s: Scenario, details: Option[ProvisionToken]=token(), requesterVk: VerKey=VK): Unit = {
+  def createEdgeAgent(s: Scenario, details: Option[ProvisionToken]=token(), requesterVk: VerKeyStr=VK): Unit = {
     s.requester ~ ProvisionEdgeAgent(requesterVk, details)
     s.requester.state shouldBe a[RequestedToProvision]
     s.requester.role shouldBe Requester
@@ -281,6 +281,6 @@ object TestingVars {
             sponsorId: String=SDK_OWNER,
             nonce: String=NONCE,
             timestamp: Long=now,
-            sponsorVerKey: VerKey=VK): Option[ProvisionToken] =
+            sponsorVerKey: VerKeyStr=VK): Option[ProvisionToken] =
     Some(ProvisionToken(id, sponsorId, nonce, longToDateString(timestamp + diffTime), SIG, sponsorVerKey))
 }

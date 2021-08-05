@@ -56,8 +56,12 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
   private def processValidatedConnReqMsg(connReqMsg: ConnReqMsg,
                                          sourceId: Option[String]=None): Unit = {
     val msgCreated = buildMsgCreatedEvt(
-      connReqMsg.id, CREATE_MSG_TYPE_CONN_REQ, ctx.getState.myPairwiseDIDReq,
-      connReqMsg.sendMsg, connReqMsg.threadOpt)
+      connReqMsg.id,
+      CREATE_MSG_TYPE_CONN_REQ,
+      ctx.getState.myPairwiseDIDReq,
+      connReqMsg.sendMsg,
+      connReqMsg.threadOpt
+    )
     ctx.apply(msgCreated)
     writeConnReqMsgDetail(msgCreated.uid, connReqMsg, sourceId)
     connReqMsg.keyDlgProof.foreach(kdp => ctx.apply(AgentKeyDlgProofSet(kdp.agentDID, kdp.agentDelegatedKey, kdp.signature)))

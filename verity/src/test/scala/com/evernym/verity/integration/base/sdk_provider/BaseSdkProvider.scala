@@ -4,10 +4,9 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model._
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.wallet._
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.actor.{AgencyPublicDid, agent}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
@@ -28,6 +27,7 @@ import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.LedgerTxnExecutor
 import com.evernym.verity.metrics.NoOpMetricsWriter
@@ -151,7 +151,7 @@ abstract class SdkBase(param: SdkParam, executionContext: ExecutionContext, wall
     val apd = parseHttpResponseAs[AgencyPublicDid](resp)
     require(apd.DID.nonEmpty, "agency DID should not be empty")
     require(apd.verKey.nonEmpty, "agency verKey should not be empty")
-    storeTheirKey(apd.didPair)
+    storeTheirKey(DidPair(apd.didPair.did, apd.didPair.verKey))
     agencyPublicDidOpt = Option(apd)
     apd
   }
@@ -169,7 +169,7 @@ abstract class SdkBase(param: SdkParam, executionContext: ExecutionContext, wall
     agentCreated
   }
 
-  def sendToRoute[T: ClassTag](msg: Any, fwdToDID: DID): ReceivedMsgParam[T] = {
+  def sendToRoute[T: ClassTag](msg: Any, fwdToDID: DidStr): ReceivedMsgParam[T] = {
     val jsonMsgBuilder = JsonMsgBuilder(msg)
     val packedMsg = packFromLocalAgentKey(jsonMsgBuilder.jsonMsg, Set(KeyParam.fromVerKey(agencyVerKey)))
     val routedPackedMsg = prepareFwdMsg(agencyDID, fwdToDID, packedMsg)
@@ -178,7 +178,7 @@ abstract class SdkBase(param: SdkParam, executionContext: ExecutionContext, wall
 
   protected def packForMyVerityAgent(msg: String): Array[Byte] = {
     val packedMsgForVerityAgent = packFromLocalAgentKey(msg, Set(KeyParam.fromVerKey(verityAgentDidPair.verKey)))
-    prepareFwdMsg(agencyDID, verityAgentDidPair.DID, packedMsgForVerityAgent)
+    prepareFwdMsg(agencyDID, verityAgentDidPair.did, packedMsgForVerityAgent)
   }
 
   protected def packFromLocalAgentKey(msg: String, recipVerKeyParams: Set[KeyParam]): Array[Byte] = {
@@ -192,7 +192,7 @@ abstract class SdkBase(param: SdkParam, executionContext: ExecutionContext, wall
    * @param msg the message to be sent
    * @return
    */
-  protected def prepareFwdMsg(recipDID: DID, fwdToDID: DID, msg: Array[Byte]): Array[Byte] = {
+  protected def prepareFwdMsg(recipDID: DidStr, fwdToDID: DidStr, msg: Array[Byte]): Array[Byte] = {
     val fwdJson = AgentMsgPackagingUtil.buildFwdJsonMsg(MPF_INDY_PACK, fwdToDID, msg)
     val senderKey = if (recipDID == agencyDID) None else Option(KeyParam.fromVerKey(myLocalAgentVerKey))
     packMsg(fwdJson, Set(KeyParam.fromDID(recipDID)), senderKey)
@@ -295,7 +295,7 @@ abstract class SdkBase(param: SdkParam, executionContext: ExecutionContext, wall
   }
 
   def storeTheirKey(didPair: DidPair): Unit = {
-    testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(didPair.DID, didPair.verKey))
+    testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(didPair.did, didPair.verKey))
   }
 
   def agencyPublicDid: AgencyPublicDid = agencyPublicDidOpt.getOrElse(
@@ -304,9 +304,9 @@ abstract class SdkBase(param: SdkParam, executionContext: ExecutionContext, wall
   def verityAgentDidPair: DidPair = verityAgentDidPairOpt.getOrElse(
     throw new RuntimeException("verity agent not yet created")
   )
-  def agencyDID: DID = agencyPublicDid.DID
-  def agencyVerKey: VerKey = agencyPublicDid.verKey
-  def myLocalAgentVerKey: VerKey = localAgentDidPair.verKey
+  def agencyDID: DidStr = agencyPublicDid.DID
+  def agencyVerKey: VerKeyStr = agencyPublicDid.verKey
+  def myLocalAgentVerKey: VerKeyStr = localAgentDidPair.verKey
 
   protected lazy val testAppConfig = new TestAppConfig()
 
@@ -340,16 +340,16 @@ case class PairwiseRel(myLocalAgentDIDPair: Option[DidPair] = None,
                        theirDIDDoc: Option[DIDDoc] = None) {
 
   def myLocalAgentDIDPairReq: DidPair = myLocalAgentDIDPair.getOrElse(throw new RuntimeException("my pairwise key not exists"))
-  def myPairwiseDID: DID = myLocalAgentDIDPairReq.DID
-  def myPairwiseVerKey: VerKey = myLocalAgentDIDPairReq.verKey
+  def myPairwiseDID: DidStr = myLocalAgentDIDPairReq.did
+  def myPairwiseVerKey: VerKeyStr = myLocalAgentDIDPairReq.verKey
 
   def myVerityAgentDIDPairReq: DidPair = verityAgentDIDPair.getOrElse(throw new RuntimeException("verity agent key not exists"))
-  def myVerityAgentDID: DID = myVerityAgentDIDPairReq.DID
-  def myVerityAgentVerKey: VerKey = myVerityAgentDIDPairReq.verKey
+  def myVerityAgentDID: DidStr = myVerityAgentDIDPairReq.did
+  def myVerityAgentVerKey: VerKeyStr = myVerityAgentDIDPairReq.verKey
 
   def theirDIDDocReq: DIDDoc = theirDIDDoc.getOrElse(throw new RuntimeException("their DIDDoc not exists"))
-  def theirAgentVerKey: VerKey = theirDIDDocReq.verkey
-  def theirRoutingKeys: Vector[VerKey] = theirDIDDocReq.routingKeys
+  def theirAgentVerKey: VerKeyStr = theirDIDDocReq.verkey
+  def theirRoutingKeys: Vector[VerKeyStr] = theirDIDDocReq.routingKeys
   def theirServiceEndpoint: ServiceEndpoint = theirDIDDocReq.endpoint
 
   def withProvisionalTheirDidDoc(invitation: Invitation): PairwiseRel = {
@@ -402,7 +402,7 @@ object ReceivedMsgParam {
   def apply[T: ClassTag](msg: String): ReceivedMsgParam[T] = {
     val message = new JSONObject(msg)
     val threadOpt = Try {
-      Option(DefaultMsgCodec.fromJson[agent.Thread](message.getJSONObject("~thread").toString))
+      Option(DefaultMsgCodec.fromJson[MsgThread](message.getJSONObject("~thread").toString))
     }.getOrElse(None)
     val expMsg = DefaultMsgCodec.fromJson[T](message.toString)
     ReceivedMsgParam(expMsg, msg, None, threadOpt)
@@ -420,7 +420,7 @@ object ReceivedMsgParam {
 case class ReceivedMsgParam[T: ClassTag](msg: T,
                                          jsonMsgStr: String,
                                          msgIdOpt: Option[MsgId] = None,
-                                         threadOpt: Option[agent.Thread]=None) {
+                                         threadOpt: Option[MsgThread]=None) {
   def msgId: MsgId = msgIdOpt.getOrElse(throw new RuntimeException("msgId not available in received message"))
   def threadIdOpt: Option[ThreadId] = threadOpt.flatMap(_.thid)
 }
@@ -467,7 +467,7 @@ object JsonMsgBuilder {
 
 case class JsonMsgBuilder(private val givenMsg: Any,
                           private val threadOpt: Option[MsgThread],
-                          private val forRelId: Option[DID],
+                          private val forRelId: Option[DidStr],
                           private val applyToJsonMsg: String => String = { msg => msg}) {
 
   lazy val thread = threadOpt.getOrElse(MsgThread(Option(UUID.randomUUID().toString)))
@@ -483,7 +483,7 @@ case class JsonMsgBuilder(private val givenMsg: Any,
     applyToJsonMsg(relationshipMsg)
   }
 
-  def forRelDID(did: DID): JsonMsgBuilder = copy(forRelId = Option(did))
+  def forRelDID(did: DidStr): JsonMsgBuilder = copy(forRelId = Option(did))
 
   private def createJsonString(msg: Any, msgFamily: MsgFamily): String = {
     val msgType = msgFamily.msgType(msg.getClass)
@@ -501,7 +501,7 @@ case class JsonMsgBuilder(private val givenMsg: Any,
     coreJson.put("~thread", threadJSON).toString
   }
 
-  private def addForRel(did: DID, jsonMsg: String): String = {
+  private def addForRel(did: DidStr, jsonMsg: String): String = {
     val jsonObject = new JSONObject(jsonMsg)
     jsonObject.put("~for_relationship", did).toString()
   }
@@ -566,6 +566,6 @@ object MsgFamilyHelper {
   }
 }
 
-case class TheirServiceDetail(verKey: VerKey, routingKeys: Vector[VerKey], serviceEndpoint: ServiceEndpoint)
+case class TheirServiceDetail(verKey: VerKeyStr, routingKeys: Vector[VerKeyStr], serviceEndpoint: ServiceEndpoint)
 
 case class OAuthParam(tokenExpiresDuration: FiniteDuration)

@@ -10,7 +10,7 @@ import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.actor.{AgencyPublicDid, KeyCreated, agentRegion}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.ExecutionContext
@@ -35,7 +35,7 @@ class AgencyAgentPairwiseSnapshotSpec
   import mockEdgeAgent.v_0_5_req._
   import mockEdgeAgent.v_0_5_resp._
 
-  var pairwiseDID: DID = _
+  var pairwiseDID: DidStr = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -79,13 +79,13 @@ class AgencyAgentPairwiseSnapshotSpec
     setPairwiseEntityId(pairwiseDID)
   }
 
-  def checkKeyCreatedEvent(keyCreated: KeyCreated, expectedForDID: DID): Unit = {
+  def checkKeyCreatedEvent(keyCreated: KeyCreated, expectedForDID: DidStr): Unit = {
     keyCreated.forDID shouldBe expectedForDID
   }
 
   override def checkSnapshotState(snap: AgencyAgentPairwiseState,
                          protoInstancesSize: Int): Unit = {
-    snap.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair)
+    snap.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair.toAgentDidPair)
     snap.agentWalletId shouldBe Option(agencyAgentEntityId)
     snap.thisAgentKeyId should not be mockAgencyAdmin.agencyPublicDid.map(_.DID)
     snap.agencyDIDPair.map(_.DID) should not be snap.thisAgentKeyId

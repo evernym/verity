@@ -23,6 +23,7 @@ import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.actor.typed.base.{PersistentEventAdapter, PersistentStateAdapter}
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics.{AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT}
 import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
@@ -47,7 +48,7 @@ object Outbox {
   //commands
   trait Cmd extends ActorMessage
   object Commands {
-    case class UpdateOutboxParam(walletId: String, senderVerKey: VerKey, comMethods: Map[ComMethodId, ComMethod]) extends Cmd
+    case class UpdateOutboxParam(walletId: String, senderVerKey: VerKeyStr, comMethods: Map[ComMethodId, ComMethod]) extends Cmd
     case class GetOutboxParam(replyTo: ActorRef[StatusReply[RelationshipResolver.Replies.OutboxParam]]) extends Cmd
     case class GetDeliveryStatus(replyTo: ActorRef[StatusReply[Replies.DeliveryStatus]]) extends Cmd
     case class AddMsg(msgId: MsgId, expiryDuration: FiniteDuration, replyTo: ActorRef[StatusReply[Replies.MsgAddedReply]]) extends Cmd

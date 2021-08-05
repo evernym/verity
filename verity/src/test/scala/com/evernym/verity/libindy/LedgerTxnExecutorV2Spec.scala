@@ -2,13 +2,12 @@ package com.evernym.verity.libindy
 
 import com.evernym.verity.util2.Exceptions.{InvalidValueException, MissingReqFieldException}
 import com.evernym.verity.util2.Status.{StatusDetail, StatusDetailException, TAA_NOT_SET_ON_THE_LEDGER}
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.ledger._
 import com.evernym.verity.libindy.ledger.{IndyLedgerPoolConnManager, LedgerTxnExecutorV2, SubmitToLedger}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.{DidStr, DidPair}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
@@ -43,7 +42,7 @@ class LedgerTxnExecutorV2Spec
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   lazy implicit val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y"
+  lazy val submitterDID: DidStr = "Th7MpTaRZVRYnPiabds81Y"
   lazy val wap: WalletAPIParam = WalletAPIParam(submitterDID)
   lazy val submitter: Submitter = Submitter(submitterDID, Some(wap))
 
@@ -205,7 +204,7 @@ class LedgerTxnExecutorV2Spec
           invalidResponses.foreach { ivr =>
             doReturn(Future(ivr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.ready(ledgerTxnExecutor.getNym(submitter, targetDidPair.DID), maxWaitTime).value.get
+            val response = Await.ready(ledgerTxnExecutor.getNym(submitter, targetDidPair.did), maxWaitTime).value.get
             response match {
               case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
               case x => x should not be x
@@ -216,7 +215,7 @@ class LedgerTxnExecutorV2Spec
 
       "and if underlying wallet api throw an exception" - {
         "should return error response" taggedAs (UNSAFE_IgnoreLog) in {
-          val response = Await.ready(ledgerTxnExecutor.getNym(submitter, targetDidPair.DID), maxWaitTime).value.get
+          val response = Await.ready(ledgerTxnExecutor.getNym(submitter, targetDidPair.did), maxWaitTime).value.get
           response match {
             case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
             case x => x should not be x

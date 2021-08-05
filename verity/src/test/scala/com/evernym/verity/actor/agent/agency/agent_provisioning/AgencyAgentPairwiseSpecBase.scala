@@ -5,7 +5,7 @@ import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.ForIdentifier
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
 import com.evernym.verity.vault.WalletAPIParam
@@ -26,14 +26,14 @@ trait AgencyAgentPairwiseSpecBase
 
   lazy val agencyWalletParam: WalletAPIParam = WalletAPIParam(agencyAgentEntityId)
 
-  var agencyAgentPairwiseDID:DID = _
+  var agencyAgentPairwiseDID:DidStr = _
 
   override lazy val mockAgencyAdmin: MockEdgeAgent =
     new MockEdgeAgent(UrlParam("localhost:9001"), platform.agentActorContext.appConfig, futureExecutionContext, futureWalletExecutionContext)
 
   override lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
 
-  def setPairwiseEntityId(agentPairwiseDID: DID): Unit = {
+  def setPairwiseEntityId(agentPairwiseDID: DidStr): Unit = {
     agencyAgentPairwiseDID = agentPairwiseDID
     routeRegion ! ForIdentifier(agentPairwiseDID, GetStoredRoute)
     val addressDetail = expectMsgType[Option[ActorAddressDetail]]

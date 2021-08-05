@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.user
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
-import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, DidPair, SetupAgentEndpoint}
+import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, SetupAgentEndpoint}
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
@@ -14,6 +14,7 @@ import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.TestComMethod
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.did.DidPair
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import com.evernym.verity.util2.UrlParam
 import org.scalatest.concurrent.Eventually
@@ -53,7 +54,7 @@ trait UserAgentSpecScaffolding
     "when sent InitReq command" - {
       "should create/initialize agent actor" in {
         val agentPairwiseKey = prepareNewAgentWalletData(userDIDPair, userAgentEntityId)
-        ua ! SetupAgentEndpoint(userDIDPair, agentPairwiseKey.didPair)
+        ua ! SetupAgentEndpoint(userDIDPair.toAgentDidPair, agentPairwiseKey.didPair.toAgentDidPair)
         expectMsg(Done)
         mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.didPair)
       }

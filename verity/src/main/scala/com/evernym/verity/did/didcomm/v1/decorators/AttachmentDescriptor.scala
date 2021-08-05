@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.didcomm.decorators
+package com.evernym.verity.did.didcomm.v1.decorators
 
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.engine.MsgFamily

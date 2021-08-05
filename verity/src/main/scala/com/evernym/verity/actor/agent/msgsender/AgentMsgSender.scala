@@ -14,6 +14,7 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.cache.AGENCY_IDENTITY_CACHE_FETCHER
 import com.evernym.verity.cache.base.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.GetAgencyIdentityCacheParam
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.metrics.{InternalSpan, MetricsWriter}
 import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util2.UrlParam
@@ -47,13 +48,13 @@ trait AgentMsgSender
     }
   }
 
-  private def theirAgencyEndpointFut(localAgencyDID:DID, theirAgencyDID: DID,
+  private def theirAgencyEndpointFut(localAgencyDID:DidStr, theirAgencyDID: DidStr,
                                      mw: MetricsWriter): Future[CacheQueryResponse] = {
     val gad = GetAgencyIdentity(theirAgencyDID, getVerKey = false)
     getAgencyIdentityFut(localAgencyDID, gad, mw)
   }
 
-  private def handleRemoteAgencyEndpointNotFound(theirAgencyDID: DID): Exception = {
+  private def handleRemoteAgencyEndpointNotFound(theirAgencyDID: DidStr): Exception = {
     val errorMsg =
       "error while getting endpoint from ledger (" +
         "possible-causes: ledger pool not reachable/up/responding etc, " +
@@ -107,7 +108,7 @@ trait AgentMsgSender
 case class SendMsgParam(uid: MsgId,
                         msgType: String,
                         msg: Array[Byte],
-                        localAgencyDID: DID,
+                        localAgencyDID: DidStr,
                         theirRoutingParam: TheirRoutingParam,
                         isItARetryAttempt: Boolean)
 

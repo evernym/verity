@@ -33,10 +33,10 @@ class ResourceUsageViolationSpec
   val user3IpAddress = "127.3.0.3"
   val user4IpAddress = "127.4.0.4"
 
-  val user1DID = OWNER_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
-  val user2DID = OWNER_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
-  val user3DID = COUNTERPARTY_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
-  val user4DID = COUNTERPARTY_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
+  val user1DID = OWNER_ID_PREFIX + CommonSpecUtil.generateNewDid().did
+  val user2DID = OWNER_ID_PREFIX + CommonSpecUtil.generateNewDid().did
+  val user3DID = COUNTERPARTY_ID_PREFIX + CommonSpecUtil.generateNewDid().did
+  val user4DID = COUNTERPARTY_ID_PREFIX + CommonSpecUtil.generateNewDid().did
 
   val createMsgConnReq: String = MSG_FAMILY_CONNECTING + "/" + MSG_TYPE_CREATE_MSG + "_" + CREATE_MSG_TYPE_CONN_REQ
 

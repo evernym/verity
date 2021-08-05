@@ -21,6 +21,7 @@ import com.evernym.verity.actor.agent.user.msgstore.{FailedMsgTracker, RetryElig
 import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, _}
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
+import com.evernym.verity.did.didcomm.v1.{Thread, ThreadBase}
 import com.evernym.verity.msgoutbox.{DestId, RoutePackaging}
 import com.evernym.verity.msgoutbox.rel_resolver.GetOutboxParam
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.OutboxParamResp
@@ -42,7 +43,7 @@ import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
 import com.evernym.verity.protocol.container.actor.{FromProtocol, UpdateMsgDeliveryStatus}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{DID, Parameter, VerKey, _}
+import com.evernym.verity.protocol.engine.{Parameter, _}
 import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common._
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{ConnectingMsgFamily => ConnectingMsgFamily_0_5}
@@ -60,6 +61,7 @@ import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.config.ConfigUtil
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.msgoutbox
 import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
 import com.evernym.verity.metrics.InternalSpan
@@ -268,7 +270,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
       throw new BadRequestErrorException(CONNECTION_DOES_NOT_EXIST.statusCode, Option("connection not yet established/completed"))
   }
 
-  def checkMsgSenderIfConnectionIsNotYetEstablished(msgSenderVerKey: VerKey): Unit = {
+  def checkMsgSenderIfConnectionIsNotYetEstablished(msgSenderVerKey: VerKeyStr): Unit = {
     if (state.theirDidDoc.isEmpty)
       AgentMsgProcessor.checkIfMsgSentByAuthedMsgSenders(allAuthedKeys, msgSenderVerKey)
   }
@@ -303,7 +305,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     }
   }
 
-  def authedMsgSenderVerKeys: Set[VerKey] = state.allAuthedVerKeys
+  def authedMsgSenderVerKeys: Set[VerKeyStr] = state.allAuthedVerKeys
 
   def retryEligibilityCriteriaProvider(): RetryEligibilityCriteria = {
     (state.myDid, state.theirDidDoc.isDefined) match {
@@ -365,7 +367,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     }
   }
 
-  def getSenderDIDBySenderVerKey(verKey: VerKey): DID = {
+  def getSenderDIDBySenderVerKey(verKey: VerKeyStr): DidStr = {
     //TODO: Not sure if this is a good way to determine actual sender, need to come back to this
     if (isTheirAgentVerKey(verKey)) {
       state.theirDid_!
@@ -378,7 +380,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     encParamBasedOnMsgSender(reqMsgContext.latestMsgSenderVerKey)
   }
 
-  override def postUpdateConfig(updateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {
+  override def postUpdateConfig(updateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKeyStr]): Unit = {
     val configName = expiryTimeInSecondConfigNameForMsgType(CREATE_MSG_TYPE_CONN_REQ)
 
     updateConf.configs.filter(_.name == configName).foreach { c =>
@@ -459,8 +461,16 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
       val senderDID = getSenderDIDBySenderVerKey(reqMsgContext.latestMsgSenderVerKeyReq)
 
       val payloadParam = StorePayloadParam(papsrm.sendRemoteMsg.`@msg`, None)
-      val msgStoredEvents = buildMsgStoredEventsV1(papsrm.sendRemoteMsg.id, papsrm.sendRemoteMsg.mtype,
-        state.myDid_!, senderDID, papsrm.sendRemoteMsg.sendMsg, papsrm.sendRemoteMsg.threadOpt, None, Option(payloadParam))
+      val msgStoredEvents = buildMsgStoredEventsV1(
+        papsrm.sendRemoteMsg.id,
+        papsrm.sendRemoteMsg.mtype,
+        state.myDid_!,
+        senderDID,
+        papsrm.sendRemoteMsg.sendMsg,
+        papsrm.sendRemoteMsg.threadOpt,
+        None,
+        Option(payloadParam)
+      )
 
       val msgDetailEvents = buildSendRemoteMsgDetailEvents(msgStoredEvents.msgCreatedEvent.uid, papsrm.sendRemoteMsg)
 
@@ -540,7 +550,15 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
       val replyToMsgId = msgStore.getReplyToMsgId(uid)
       val mds = getMsgDetails(uid)
       val payloadWrapper = getMsgPayloadReq(uid)
-      buildLegacySendRemoteMsg_MFV_0_5(uid, msg.getType, payloadWrapper.msg, replyToMsgId, mds, msg.thread, fc)
+      buildLegacySendRemoteMsg_MFV_0_5(
+        uid,
+        msg.getType,
+        payloadWrapper.msg,
+        replyToMsgId,
+        mds,
+        ThreadBase.convertOpt(msg.thread),
+        fc
+      )
     }
   }
 
@@ -558,10 +576,22 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     val logoUrl = msgDetail.get(LOGO_URL_KEY) orElse configsWrapper.configs.find(_.name == LOGO_URL_KEY).map(_.value)
 
     List(
-      CreateMsgReqMsg_MFV_0_5(TypeDetail(MSG_TYPE_CREATE_MSG, MTV_1_0), msgType,
-        uid = Option(msgId), replyToMsgId = replyToMsgId, threadOpt, sendMsg=true),
-      GeneralCreateMsgDetail_MFV_0_5(TypeDetail(MSG_TYPE_MSG_DETAIL, MTV_1_0),
-        payload, title, detail, name, logoUrl)
+      CreateMsgReqMsg_MFV_0_5(
+        TypeDetail(MSG_TYPE_CREATE_MSG, MTV_1_0),
+        msgType,
+        uid = Option(msgId),
+        replyToMsgId = replyToMsgId,
+        threadOpt,
+        sendMsg=true
+      ),
+      GeneralCreateMsgDetail_MFV_0_5(
+        TypeDetail(MSG_TYPE_MSG_DETAIL, MTV_1_0),
+        payload,
+        title,
+        detail,
+        name,
+        logoUrl
+      )
     )
   }
 
@@ -573,8 +603,17 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
       val title = mds.get(TITLE)
       val detail = mds.get(DETAIL)
       val payloadMsg = getMsgPayloadReq(uid).msg
-      val nativeMsg = SendRemoteMsgReq_MFV_0_6(MSG_TYPE_DETAIL_SEND_REMOTE_MSG, uid,
-        msg.getType, new JSONObject(new String(payloadMsg)), sendMsg=msg.sendMsg, msg.thread, title, detail, replyToMsgId)
+      val nativeMsg = SendRemoteMsgReq_MFV_0_6(
+        MSG_TYPE_DETAIL_SEND_REMOTE_MSG,
+        uid,
+        msg.getType,
+        new JSONObject(new String(payloadMsg)),
+        sendMsg=msg.sendMsg,
+        ThreadBase.convertOpt(msg.thread),
+        title,
+        detail,
+        replyToMsgId
+      )
       List(nativeMsg)
     }
   }
@@ -740,7 +779,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     self ! uds
   }
 
-  override def senderParticipantId(senderVerKey: Option[VerKey]): ParticipantId = {
+  override def senderParticipantId(senderVerKey: Option[VerKeyStr]): ParticipantId = {
     val edgeVerKey = state.myDidAuthKey.flatMap(_.verKeyOpt)
     val otherEntityEdgeVerKey = state.theirDidAuthKey.flatMap(_.verKeyOpt)
 
@@ -925,13 +964,13 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
 
   def agentConfigs: Map[String, AgentConfig] = state.agentConfigs
 
-  def agencyDIDOpt: Option[DID] = state.agencyDIDPair.map(_.DID)
+  def agencyDIDOpt: Option[DidStr] = state.agencyDIDPair.map(_.DID)
 
-  def ownerDID: Option[DID] = state.mySelfRelDID
+  def ownerDID: Option[DidStr] = state.mySelfRelDID
   def ownerAgentKeyDIDPair: Option[DidPair] = state.ownerAgentDidPair
 
-  def mySelfRelDIDReq: DID = domainId
-  def myPairwiseVerKey: VerKey = state.myDidAuthKeyReq.verKey
+  def mySelfRelDIDReq: DidStr = domainId
+  def myPairwiseVerKey: VerKeyStr = state.myDidAuthKeyReq.verKey
 
   lazy val scheduledJobInterval: Int = appConfig.getIntOption(
     USER_AGENT_PAIRWISE_ACTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(300)

@@ -1,7 +1,7 @@
 package com.evernym.verity.integration.with_basic_sdk.out_of_band.without_attachment
 
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider

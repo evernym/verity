@@ -26,7 +26,7 @@ import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.MetricsWriterExtension
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.util.LogUtil.logDuration
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util.{Base58Util, ReqMsgContext, RestMsgContext}
@@ -196,7 +196,7 @@ class AgentMsgRouter(executionContext: ExecutionContext)(implicit val appConfig:
 }
 
 object AgentMsgRouter {
-  def getDIDForRoute(route: RouteId): Try[DID] = {
+  def getDIDForRoute(route: RouteId): Try[DidStr] = {
     // We support DID based routing but to support community routing we are allowing a temporary
     // hack to support verkey based routing.
     // Assumption:
@@ -240,5 +240,5 @@ case class RestMsgRouteParam(toRoute: RouteId, msg: String, restMsgContext: Rest
 
 case class AskResp(actualFut: Future[Any], reason: Option[String]=None)
 
-case class SetRoute(routeDID: DID, actorAddressDetail: ActorAddressDetail) extends ActorMessage
-case class GetRoute(routeDID: DID) extends ActorMessage
+case class SetRoute(routeDID: DidStr, actorAddressDetail: ActorAddressDetail) extends ActorMessage
+case class GetRoute(routeDID: DidStr) extends ActorMessage

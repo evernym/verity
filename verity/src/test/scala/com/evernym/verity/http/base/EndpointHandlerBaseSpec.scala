@@ -12,7 +12,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.http.base.open._
 import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, AppStatusHealthCheckSpec, RestrictedRestApiSpec}
 import com.evernym.verity.http.route_handlers.EndpointHandlerBase
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
@@ -71,7 +71,7 @@ trait EdgeEndpointBaseSpec
     edgeAgent.inviteUrl.split(":", 2).last.split("/", 2).last
   }
 
-  def addAgencyEndpointToLedger(agencyDID: DID, endpoint: String): Unit = {
+  def addAgencyEndpointToLedger(agencyDID: DidStr, endpoint: String): Unit = {
     platform.agentActorContext.ledgerSvc.addAttrib(null, agencyDID,
       URL, endpoint)
   }
@@ -138,8 +138,8 @@ trait EndpointHandlerBaseSpec
 
 }
 
-case class RemoteAgentAndAgencyIdentity(agentDID: DID, agentVerKey: VerKey,
-                                        agencyDID: DID, agencyVerKey: VerKey)
+case class RemoteAgentAndAgencyIdentity(agentDID: DidStr, agentVerKey: VerKeyStr,
+                                        agencyDID: DidStr, agencyVerKey: VerKeyStr)
 
 
 trait ApiClientSpecCommon {

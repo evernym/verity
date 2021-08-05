@@ -6,7 +6,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{TransactionAuthorAgreement, TxnResp}
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.hyperledger.indy.sdk.pool.Pool
@@ -29,7 +29,7 @@ class LedgerTxnExecutorV2(val actorSystem: ActorSystem,
     // will result in an InvalidValueException being thrown.
     val result = extractReqValue(resp, RESULT).asInstanceOf[Map[String, Any]]
     val from = extractReqValue(result, IDENTIFIER).toString
-    val dest = extractOptValue(result, DEST).asInstanceOf[Option[DID]]
+    val dest = extractOptValue(result, DEST).asInstanceOf[Option[DidStr]]
     val data = extractOptValue(result, DATA, nullAllowed = true).map{
       case m: Map[_,_] => m.asInstanceOf[Map[String, Any]] // We can match on type because its been erased
       case s: String => DefaultMsgCodec.fromJson[Map[String,String]](s)
@@ -47,7 +47,7 @@ class LedgerTxnExecutorV2(val actorSystem: ActorSystem,
       val result = extractReqValue(resp, RESULT).asInstanceOf[Map[String, Any]]
       val txn = extractReqValue(result, TXN).asInstanceOf[Map[String, Any]]
       val data = extractReqValue(txn, DATA).asInstanceOf[Map[String, Any]]
-      val dest = extractOptValue(data, DEST).asInstanceOf[Option[DID]]
+      val dest = extractOptValue(data, DEST).asInstanceOf[Option[DidStr]]
 
       val metaData = extractReqValue(txn, METADATA).asInstanceOf[Map[String, Any]]
       val reqId = extractReqValue(metaData, REQ_ID).toString.toLong

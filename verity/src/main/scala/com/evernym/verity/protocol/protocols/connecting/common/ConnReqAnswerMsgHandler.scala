@@ -10,6 +10,7 @@ import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.CREATE_MSG_TYPE_CONN_REQ
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, PackMsgParam}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.container.actor.ProtoMsg
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
@@ -66,8 +67,15 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
       Option(connReqAnswerMsg.replyToMsgId).flatMap { replyToMsgId =>
         val reqMsg = ctx.getState.connectingMsgState.getMsgOpt(replyToMsgId)
         if (reqMsg.isEmpty) {
-          Option (buildMsgCreatedEvt (connReqAnswerMsg.replyToMsgId, CREATE_MSG_TYPE_CONN_REQ,
-            connReqAnswerMsg.senderDetail.DID, sendMsg=false, connReqAnswerMsg.threadOpt))
+          Option (
+            buildMsgCreatedEvt(
+              connReqAnswerMsg.replyToMsgId,
+              CREATE_MSG_TYPE_CONN_REQ,
+              connReqAnswerMsg.senderDetail.DID,
+              sendMsg=false,
+              connReqAnswerMsg.threadOpt
+            )
+          )
         } else None
       }
     }
@@ -188,7 +196,7 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
     }
   }
 
-  private def checkSenderKeyNotAlreadyUsed(senderDID: DID): Unit = {
+  private def checkSenderKeyNotAlreadyUsed(senderDID: DidStr): Unit = {
     ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[GetVerKeyOptResp](GetVerKeyOpt(senderDID))).verKey foreach { _ =>
       throw new BadRequestErrorException(PAIRWISE_KEYS_ALREADY_IN_WALLET.statusCode, Option("pairwise keys already " +
         s"in wallet for did: $senderDID"))
@@ -201,7 +209,7 @@ trait ConnReqAnswerMsgHandler[S <: ConnectingStateBase[S]] {
     }
   }
 
-  def checkIfSentByEdgeAndAgentKeyDlgProofNotEmpty(senderVerKey: Option[VerKey], keyDlgProof: Option[AgentKeyDlgProof])
+  def checkIfSentByEdgeAndAgentKeyDlgProofNotEmpty(senderVerKey: Option[VerKeyStr], keyDlgProof: Option[AgentKeyDlgProof])
   : Unit = {
     if (senderVerKey.isDefined && isUserPairwiseVerKey(senderVerKey.getOrElse("")) && keyDlgProof.isEmpty ) {
       throw new BadRequestErrorException(MISSING_REQ_FIELD.statusCode, Option("missing required attribute: 'keyDlgProof'"))

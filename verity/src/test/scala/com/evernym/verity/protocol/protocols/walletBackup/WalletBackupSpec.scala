@@ -4,8 +4,9 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.{CanGenerateDid, CommonSpecUtil}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
-import com.evernym.verity.protocol.engine.{DebugProtocols, VerKey}
+import com.evernym.verity.protocol.engine.DebugProtocols
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily._
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{SimpleProtocolSystem, TestsProtocolsImpl}
@@ -365,7 +366,7 @@ object BackupSpecVars extends CanGenerateDid {
   val EXPORTER = "exporter"
   val PERSISTER = "persister"
   val RECOVERER = "recoverer"
-  val RECOVERY_VK: VerKey = generateNewDid().verKey
+  val RECOVERY_VK: VerKeyStr = generateNewDid().verKey
   val DD_ADDRESS = "456"
   val CLOUD_ADDRESS = "789"
   val BACKUP_INIT_PARAMS: BackupInitParams = BackupInitParams(RECOVERY_VK, DD_ADDRESS, CLOUD_ADDRESS.getBytes())

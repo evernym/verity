@@ -1,7 +1,6 @@
 package com.evernym.verity.integration.legacy
 
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding
 import com.evernym.verity.actor.base.Done
@@ -11,9 +10,10 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
-import com.evernym.verity.protocol.engine.{DID, MsgType, VerKey}
+import com.evernym.verity.protocol.engine.MsgType
 import com.evernym.verity.protocol.protocols.deaddrop.DeadDropSpecUtil
 import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
@@ -235,7 +235,7 @@ class WalletBackupActorSpec
   override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
-case class CloudAgentDetail(did: DID, verKey: VerKey) {
+case class CloudAgentDetail(did: DidStr, verKey: VerKeyStr) {
   def didPair: DidPair = DidPair(did, verKey)
 }
 
@@ -246,7 +246,7 @@ class WalletBackupSpecUtil(mockEdgeAgent: MockEdgeAgent, walletExecutionContext:
 
   lazy val passphrase = UUID.randomUUID().toString.replace("-", "")
 
-  lazy val cloudAgentAddress = s"""{"did":"${mockEdgeAgent.cloudAgentDetailReq.DID}", "verKey": "${mockEdgeAgent.cloudAgentDetailReq.verKey}"}"""
+  lazy val cloudAgentAddress = s"""{"did":"${mockEdgeAgent.cloudAgentDetailReq.did}", "verKey": "${mockEdgeAgent.cloudAgentDetailReq.verKey}"}"""
 
   lazy val deadDropData = prepareDeadDropData(mockEdgeAgent.testWalletAPI, Option(passphrase))(mockEdgeAgent.wap)
 

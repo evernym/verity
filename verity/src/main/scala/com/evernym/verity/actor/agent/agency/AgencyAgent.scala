@@ -20,6 +20,7 @@ import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.ledger.Submitter
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.engine._
@@ -170,7 +171,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
     maFut map {
       case _: MappingAdded =>
         setAgencyRouteInfo(sndr, fck.createdKey)
-        self ! SetAgentActorDetail(fck.createdKey.didPair, entityId)
+        self ! SetAgentActorDetail(fck.createdKey.didPair.toAgentDidPair, entityId)
       case e =>
         sndr ! e
     }
@@ -209,19 +210,19 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
   }
 
   //dhh Same note about caching as above.
-  def getCachedEndpointFromLedger(did: DID, req: Boolean = false): Future[Option[Either[StatusDetail, String]]] = {
+  def getCachedEndpointFromLedger(did: DidStr, req: Boolean = false): Future[Option[Either[StatusDetail, String]]] = {
     val gep = GetEndpointParam(did, ledgerReqSubmitter)
     val gcop = GetCachedObjectParam(KeyDetail(gep, required = req), LEDGER_GET_ENDPOINT_CACHE_FETCHER)
     getCachedStringValue(did, gcop)
   }
 
-  def getCachedVerKeyFromLedger(did: DID, req: Boolean = false): Future[Option[Either[StatusDetail, String]]] = {
+  def getCachedVerKeyFromLedger(did: DidStr, req: Boolean = false): Future[Option[Either[StatusDetail, String]]] = {
     val gvkp = GetVerKeyParam(did, ledgerReqSubmitter)
     val gcop = GetCachedObjectParam(KeyDetail(gvkp, required = req), LEDGER_GET_VER_KEY_CACHE_FETCHER)
     getCachedStringValue(did, gcop)
   }
 
-  def getCachedStringValue(forDid: DID, gcop: GetCachedObjectParam): Future[Option[Either[StatusDetail, String]]] = {
+  def getCachedStringValue(forDid: DidStr, gcop: GetCachedObjectParam): Future[Option[Either[StatusDetail, String]]] = {
     generalCache.getByParamAsync(gcop).map { cqr =>
       cqr.get[String](forDid).map(v => Right(v))
     }.recover {
@@ -312,13 +313,13 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
   override def isReadyToHandleIncomingMsg: Boolean = state.isEndpointSet
 
   lazy val ledgerReqSubmitter: Submitter = Submitter(agencyDIDReq, Some(wap))
-  lazy val authedMsgSenderVerKeys: Set[VerKey] = Set.empty
+  lazy val authedMsgSenderVerKeys: Set[VerKeyStr] = Set.empty
 
-  def ownerDID: Option[DID] = state.myDid
+  def ownerDID: Option[DidStr] = state.myDid
   def ownerAgentKeyDIDPair: Option[DidPair] = state.thisAgentAuthKeyDidPair
 
   //TODO: need to come back to this as in this context doesn't have any relationship information
-  override def senderParticipantId(senderVerKey: Option[VerKey]): ParticipantId = UNKNOWN_SENDER_PARTICIPANT_ID
+  override def senderParticipantId(senderVerKey: Option[VerKeyStr]): ParticipantId = UNKNOWN_SENDER_PARTICIPANT_ID
 
   /**
     * there are different types of actors (agency agent, agency pairwise, user agent and user agent pairwise)
@@ -331,18 +332,18 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
 }
 
 //response
-case class AgencyInfo(verKey: Option[Either[StatusDetail, VerKey]], endpoint: Option[Either[StatusDetail, String]]) extends ActorMessage {
+case class AgencyInfo(verKey: Option[Either[StatusDetail, VerKeyStr]], endpoint: Option[Either[StatusDetail, String]]) extends ActorMessage {
 
   def rightOption(v: Either[StatusDetail, String]): Option[String] = v.fold(_ => None, r => Option(r))
   def leftOption(v: Either[StatusDetail, String]): Option[StatusDetail] = v.fold(sd => Option(sd), _ => None)
 
   def endpointOpt: Option[String] = endpoint.flatMap(rightOption)
-  def verKeyOpt: Option[VerKey] = verKey.flatMap(rightOption)
+  def verKeyOpt: Option[VerKeyStr] = verKey.flatMap(rightOption)
 
   def endpointErrorOpt: Option[StatusDetail] = endpoint.flatMap(leftOption)
   def verKeyErrorOpt: Option[StatusDetail] = verKey.flatMap(leftOption)
 
-  def verKeyReq: VerKey = verKeyOpt.getOrElse(
+  def verKeyReq: VerKeyStr = verKeyOpt.getOrElse(
     throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode, Option("agent not yet created")))
 
   def isErrorInFetchingVerKey: Boolean = verKey.exists(_.isLeft)
@@ -351,7 +352,7 @@ case class AgencyInfo(verKey: Option[Either[StatusDetail, VerKey]], endpoint: Op
 }
 
 case object GetAgencyAgentDetail extends ActorMessage
-case class AgencyAgentDetail(did: DID, verKey: VerKey, walletId: String) extends ActorMessage {
+case class AgencyAgentDetail(did: DidStr, verKey: VerKeyStr, walletId: String) extends ActorMessage {
   def didPair: DidPair = DidPair(did, verKey)
 }
 
@@ -364,7 +365,7 @@ case class GetLocalAgencyIdentity(withDetail: Boolean = false) extends ActorMess
  * @param getVerKey determines if ver key needs to be received
  * @param getEndpoint determines if endpoint needs to be received
  */
-case class GetAgencyIdentity(did: DID, getVerKey: Boolean = true, getEndpoint: Boolean = true) extends ActorMessage
+case class GetAgencyIdentity(did: DidStr, getVerKey: Boolean = true, getEndpoint: Boolean = true) extends ActorMessage
 
 case class CreateKey(seed: Option[String] = None) extends ActorMessage {
   override def toString: String = {

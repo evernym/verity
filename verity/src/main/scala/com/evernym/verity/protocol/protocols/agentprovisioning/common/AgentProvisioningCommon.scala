@@ -1,8 +1,8 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.common
 
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.wallet.AgentWalletSetupCompleted
+import com.evernym.verity.did.DidPair
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.ProtocolContextApi
 

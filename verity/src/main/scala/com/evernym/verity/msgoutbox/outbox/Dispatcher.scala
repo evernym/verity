@@ -5,7 +5,8 @@ import akka.actor.typed.ActorRef
 import akka.actor.typed.scaladsl.ActorContext
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
-import com.evernym.verity.msgoutbox.{Authentication, ComMethod, ComMethodId, MsgId, VerKey, WalletId}
+import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.msgoutbox.{Authentication, ComMethod, ComMethodId, MsgId, WalletId}
 import com.evernym.verity.msgoutbox.outbox.States.MsgDeliveryAttempt
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.AUTH_TYPE_OAUTH2
@@ -44,7 +45,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
   //NOTE: this is the initial logic
   // and it may/will have to change as we integrate/support more scenarios/dispatchers
   def updateDispatcher(walletId: WalletId,
-                       senderVerKey: VerKey,
+                       senderVerKey: VerKeyStr,
                        comMethods: Map[ComMethodId, ComMethod]): Unit = {
     dispatcherType =
       comMethods
@@ -64,7 +65,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
   private def createPlainWebhookDispatcher(comMethodId: ComMethodId,
                                            comMethod: ComMethod,
                                            walletId: WalletId,
-                                           senderVerKey: VerKey): DispatcherType = {
+                                           senderVerKey: VerKeyStr): DispatcherType = {
     new PlainWebhookDispatcher(
       outboxActorContext,
       appConfig,
@@ -84,7 +85,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
   private def createOAuthWebhookDispatcher(comMethodId: ComMethodId,
                                            comMethod: ComMethod,
                                            walletId: WalletId,
-                                           senderVerKey: VerKey,
+                                           senderVerKey: VerKeyStr,
                                            auth: Authentication): DispatcherType = {
     val uniqueOAuthAccessTokenHolderId = "oauth-access-token-holder-" + comMethodId
 

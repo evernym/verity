@@ -9,7 +9,7 @@ import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, PersistentActorSpec, TestAppConfig}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.protocols.walletBackup.legacy.BackupStored
 import com.evernym.verity.testkit.BasicSpec
 import com.google.protobuf.ByteString
@@ -69,9 +69,9 @@ class FailsOnLargeEventTestJournal extends TestJournal {
 
 }
 
-case class AddData(did: DID, data: String) extends ActorMessage
+case class AddData(did: DidStr, data: String) extends ActorMessage
 
-case class GetData(did: DID) extends ActorMessage
+case class GetData(did: DidStr) extends ActorMessage
 
 case class BadPersistenceData(data: Array[Byte]) extends ActorMessage
 

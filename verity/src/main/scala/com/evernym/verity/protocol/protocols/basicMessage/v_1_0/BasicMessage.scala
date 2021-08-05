@@ -7,7 +7,7 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.Participator
-import com.evernym.verity.protocol.didcomm.decorators.{Base64, AttachmentDescriptor => Attachment}
+import com.evernym.verity.did.didcomm.v1.decorators.{Base64, AttachmentDescriptor => Attachment}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.legacy.BasicMessageLegacy
 

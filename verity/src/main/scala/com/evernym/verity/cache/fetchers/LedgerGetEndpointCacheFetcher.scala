@@ -7,7 +7,7 @@ import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.ledger.{AttribResult, LedgerSvc, Submitter}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,6 +42,6 @@ class EndpointCacheFetcher (val ledgerSvc: LedgerSvc, val appConfig: AppConfig, 
 
 }
 
-case class GetEndpointParam(did: DID, submitterDetail: Submitter) {
+case class GetEndpointParam(did: DidStr, submitterDetail: Submitter) {
   override def toString: String = s"DID: $did, SubmitterDetail: $Submitter"
 }

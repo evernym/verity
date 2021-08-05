@@ -6,7 +6,7 @@ import com.evernym.verity.util2.Status.{ALREADY_EXISTS, INVALID_VALUE, UNHANDLED
 import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, GetVerKeyResp, NewKeyCreated, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.WalletExt
 import org.hyperledger.indy.sdk.InvalidStructureException
@@ -18,7 +18,7 @@ import scala.concurrent.Future
 
 object DidOpExecutor extends OpExecutorBase {
 
-  def getVerKey(did: DID,
+  def getVerKey(did: DidStr,
                 getKeyFromPool: Boolean,
                 ledgerPoolManager: Option[LedgerPoolConnManager])
                (implicit we: WalletExt, ec: ExecutionContext): Future[GetVerKeyResp] = {

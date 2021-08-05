@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.actor.agent.relationship.PairwiseRelationship
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.ProtocolRegistry.{DriverGen, Entry}
 import com.evernym.verity.protocol.engine._
@@ -81,8 +82,8 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] extends HasExecutionContextProvider {
     )
   }
 
-  type TestEnvirToDid = (TestEnvir, DID)
-  type TestEnvirToOptDid = (TestEnvir, Option[DID])
+  type TestEnvirToDid = (TestEnvir, DidStr)
+  type TestEnvirToOptDid = (TestEnvir, Option[DidStr])
 
   def playExt(pairs: TestEnvirToDid *): PlayDSL = {
     new PlayDSL (
@@ -189,7 +190,7 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] extends HasExecutionContextProvider {
 
   }
 
-  case class Interaction(myDID: DID, theirDID: DID, threadId: Option[ThreadId]=None)
+  case class Interaction(myDID: DidStr, theirDID: DidStr, threadId: Option[ThreadId]=None)
 
   /**
     * simple test environment for one side of a protocol interaction
@@ -198,9 +199,9 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] extends HasExecutionContextProvider {
 
     te =>
 
-    private var _did: Option[DID] = None
+    private var _did: Option[DidStr] = None
 
-    def did: Option[DID] = _did orElse {
+    def did: Option[DidStr] = _did orElse {
       it match {
         case OneParty => Option(domain.domainId)
         case TwoParty => None
@@ -209,9 +210,9 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] extends HasExecutionContextProvider {
       currentInteraction map { _.myDID }
     }
 
-    def did_! : DID = did getOrElse { throw new RuntimeException("DID not set") }
+    def did_! : DidStr = did getOrElse { throw new RuntimeException("DID not set") }
 
-    def setDID(did: DID): Unit = {
+    def setDID(did: DidStr): Unit = {
       _did = Option(did)
     }
 
@@ -317,7 +318,7 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] extends HasExecutionContextProvider {
     /**
       * Allows to provide specific pairwise DIDs.
       */
-    def connect(them: TestEnvir, myDid: DID, theirDid: DID): Unit = {
+    def connect(them: TestEnvir, myDid: DidStr, theirDid: DidStr): Unit = {
       connectDomains (
         (this -> Some(myDid)),
         (them -> Some(theirDid))

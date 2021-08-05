@@ -5,15 +5,14 @@ import java.util.UUID
 import akka.actor.PoisonPill
 import akka.testkit.ImplicitSender
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.did.{DidPair, VerKeyStr}
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.buildAttachment
-import com.evernym.verity.protocol.engine.VerKey
+import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredential
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.Request
@@ -124,9 +123,9 @@ class WalletActorSpec
 
     "when sent SignLedgerRequest command" - {
       "should respond with LedgerRequest" in {
-        val req = buildGetNymRequest(issuerDidPair.DID, issuerDidPair.DID).get
+        val req = buildGetNymRequest(issuerDidPair.did, issuerDidPair.did).get
         issuerWalletActor ! SignLedgerRequest(LedgerRequest(req),
-          Submitter(issuerDidPair.DID, Some(WalletAPIParam(issuerWalletActor.id))))
+          Submitter(issuerDidPair.did, Some(WalletAPIParam(issuerWalletActor.id))))
         expectMsgType[LedgerRequest]
       }
     }
@@ -144,26 +143,26 @@ class WalletActorSpec
 
     "when sent StoreTheirKey command" - {
       "should respond with TheirKeyStored" in {
-        issuerWalletActor ! StoreTheirKey(holderDidPair.DID, holderDidPair.verKey)
+        issuerWalletActor ! StoreTheirKey(holderDidPair.did, holderDidPair.verKey)
         expectMsgType[TheirKeyStored]
-        holderWalletActor ! StoreTheirKey(issuerDidPair.DID, issuerDidPair.verKey)
+        holderWalletActor ! StoreTheirKey(issuerDidPair.did, issuerDidPair.verKey)
         expectMsgType[TheirKeyStored]
-        verifierWalletActor ! StoreTheirKey(holderDidPair.DID, holderDidPair.verKey)
+        verifierWalletActor ! StoreTheirKey(holderDidPair.did, holderDidPair.verKey)
         expectMsgType[TheirKeyStored]
       }
     }
 
     "when sent GetVerKey command" - {
       "should respond with VerKey" in {
-        issuerWalletActor ! GetVerKey(holderDidPair.DID)
+        issuerWalletActor ! GetVerKey(holderDidPair.did)
         val vk1 = expectMsgType[GetVerKeyResp]
         vk1 shouldBe GetVerKeyResp(holderDidPair.verKey)
 
-        holderWalletActor ! GetVerKey(issuerDidPair.DID)
+        holderWalletActor ! GetVerKey(issuerDidPair.did)
         val vk2 = expectMsgType[GetVerKeyResp]
         vk2 shouldBe GetVerKeyResp(issuerDidPair.verKey)
 
-        verifierWalletActor ! GetVerKey(holderDidPair.DID)
+        verifierWalletActor ! GetVerKey(holderDidPair.did)
         val vk3 = expectMsgType[GetVerKeyResp]
         vk3 shouldBe GetVerKeyResp(holderDidPair.verKey)
       }
@@ -171,11 +170,11 @@ class WalletActorSpec
 
     "when sent GetVerKeyOpt command" - {
       "should respond with optional VerKey" in {
-        issuerWalletActor ! GetVerKeyOpt(holderDidPair.DID)
+        issuerWalletActor ! GetVerKeyOpt(holderDidPair.did)
         expectMsgType[GetVerKeyOptResp]
-        holderWalletActor ! GetVerKeyOpt(issuerDidPair.DID)
+        holderWalletActor ! GetVerKeyOpt(issuerDidPair.did)
         expectMsgType[GetVerKeyOptResp]
-        verifierWalletActor ! GetVerKeyOpt(holderDidPair.DID)
+        verifierWalletActor ! GetVerKeyOpt(holderDidPair.did)
         expectMsgType[GetVerKeyOptResp]
       }
     }
@@ -359,7 +358,7 @@ class WalletActorSpec
         val gvkr1 = expectMsgType[GetVerKeyResp]
         gvkr1.verKey shouldBe wsc.agentKey.verKey
 
-        newWalletActor ! GetVerKey(wsc.ownerDidPair.DID)
+        newWalletActor ! GetVerKey(wsc.ownerDidPair.did)
         val gvkr2 = expectMsgType[GetVerKeyResp]
         gvkr2.verKey shouldBe domainDidPair.verKey
       }
@@ -368,7 +367,7 @@ class WalletActorSpec
     "when sent SetupNewWallet command for edge agent setup" - {
       "should create wallet and keys" in {
 
-        val requesterVk: VerKey = CommonSpecUtil.generateNewDid(Option(newKeySeed)).verKey
+        val requesterVk: VerKeyStr = CommonSpecUtil.generateNewDid(Option(newKeySeed)).verKey
 
         val newWalletActor = agentRegion(UUID.randomUUID().toString, walletRegionActor)
 
@@ -379,7 +378,7 @@ class WalletActorSpec
         val gvkr1 = expectMsgType[GetVerKeyResp]
         gvkr1.verKey shouldBe wsc.agentKey.verKey
 
-        newWalletActor ! GetVerKey(wsc.ownerDidPair.DID)
+        newWalletActor ! GetVerKey(wsc.ownerDidPair.did)
         val gvkr2 = expectMsgType[GetVerKeyResp]
         gvkr2.verKey shouldBe wsc.ownerDidPair.verKey
 
@@ -449,11 +448,11 @@ class WalletActorSpec
 
   def prepareBasicCredReqSetup(): CredReqData = {
     logger.info("new key created")
-    val schema = Anoncreds.issuerCreateSchema(issuerDidPair.DID, "test-schema", "1.0",
+    val schema = Anoncreds.issuerCreateSchema(issuerDidPair.did, "test-schema", "1.0",
       seqToJson(Array("name", "age"))).get()
     logger.info("schema created")
 
-    issuerWalletActor ! CreateCredDef(issuerDID = issuerDidPair.DID,
+    issuerWalletActor ! CreateCredDef(issuerDID = issuerDidPair.did,
       schemaJson = schema.getSchemaJson,
       tag = "tag",
       sigType = Some("CL"),
@@ -469,7 +468,7 @@ class WalletActorSpec
     val masterSecretId = expectMsgType[MasterSecretCreated].ms
     logger.info("master secret created")
 
-    holderWalletActor ! CreateCredReq(createdCredDef.credDefId, proverDID = holderDidPair.DID,
+    holderWalletActor ! CreateCredReq(createdCredDef.credDefId, proverDID = holderDidPair.did,
       createdCredDef.credDefJson, credOfferJson, masterSecretId)
     val credReq = expectMsgType[CredReqCreated]
     logger.info("cred req created: " + credReq)

@@ -68,22 +68,22 @@ class UserAgentRecoverySpec
     uas.relationshipAgents shouldBe Map.empty
     uas.configs shouldBe Map.empty
     uas.msgAndDelivery shouldBe None
-    uas.thisAgentKeyId shouldBe Option(mySelfRelAgentDIDPair.DID)
-    uas.agencyDIDPair shouldBe Option(myAgencyAgentDIDPair)
+    uas.thisAgentKeyId shouldBe Option(mySelfRelAgentDIDPair.did)
+    uas.agencyDIDPair shouldBe Option(myAgencyAgentDIDPair.toAgentDidPair)
     uas.agentWalletId shouldBe Some(mySelfRelAgentEntityId)
     uas.relationship shouldBe Some(
       Relationship(
         SELF_RELATIONSHIP,
         "self",
         Some(DidDoc(
-          mySelfRelDIDPair.DID,
+          mySelfRelDIDPair.did,
           Some(AuthorizedKeys(Seq(
-            AuthorizedKey(mySelfRelAgentDIDPair.DID, mySelfRelAgentDIDPair.verKey, Set(CLOUD_AGENT_KEY)),
-            AuthorizedKey(mySelfRelDIDPair.DID, mySelfRelDIDPair.verKey, Set(EDGE_AGENT_KEY, RECIP_KEY))
+            AuthorizedKey(mySelfRelAgentDIDPair.did, mySelfRelAgentDIDPair.verKey, Set(CLOUD_AGENT_KEY)),
+            AuthorizedKey(mySelfRelDIDPair.did, mySelfRelDIDPair.verKey, Set(EDGE_AGENT_KEY, RECIP_KEY))
           ))),
           Some(Endpoints(Seq(
             //TODO: shouldn't the auth key be the "cloud agent key id" instead of the "edge key id"?
-            EndpointADT(HttpEndpoint("1", "http://abc.xyz.com", Seq(mySelfRelDIDPair.DID)))
+            EndpointADT(HttpEndpoint("1", "http://abc.xyz.com", Seq(mySelfRelDIDPair.did)))
           )))
         )),
         Seq.empty

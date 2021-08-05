@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.did.DidPair
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.DebugProtocols

@@ -9,12 +9,13 @@ import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffec
 import com.evernym.verity.msgoutbox.message_meta.Events.LegacyMsgData
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies.Msg
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.States.{Initialized, Processed}
-import com.evernym.verity.msgoutbox.{DID, MsgId, OutboxId, RecipPackaging}
+import com.evernym.verity.msgoutbox.{MsgId, OutboxId, RecipPackaging}
 import com.evernym.verity.actor.typed.base.PersistentEventAdapter
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Commands.MsgStoreReplyAdapter
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.msgoutbox.outbox.Outbox
 import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.{RetentionPolicy, Status}
@@ -101,7 +102,7 @@ object MessageMeta {
   case object LegacyData {
     def apply(lmd: LegacyMsgData): LegacyData = LegacyData(lmd.senderDID, lmd.refMsgId)
   }
-  case class LegacyData(senderDID: DID, refMsgId: Option[MsgId])
+  case class LegacyData(senderDID: DidStr, refMsgId: Option[MsgId])
   case class OutboxDeliveryStatus(status: String = Status.MSG_DELIVERY_STATUS_PENDING.statusCode,
                                   msgActivities: Seq[MsgActivity] = List.empty)
   case class MsgActivity(detail: String, timestamp: Option[ZonedDateTime]=None)

@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine.asyncapi.ledger
 
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 
 trait LedgerAsyncOps {
@@ -15,12 +15,12 @@ trait LedgerAsyncOps {
 
   def runGetCredDefs(credDefIds: Set[String]): Unit
 
-  def runWriteSchema(submitterDID: DID, schemaJson: String): Unit
+  def runWriteSchema(submitterDID: DidStr, schemaJson: String): Unit
 
-  def runPrepareSchemaForEndorsement(submitterDID: DID, schemaJson: String, endorserDID: DID): Unit
+  def runPrepareSchemaForEndorsement(submitterDID: DidStr, schemaJson: String, endorserDID: DidStr): Unit
 
-  def runWriteCredDef(submitterDID: DID, credDefJson: String): Unit
+  def runWriteCredDef(submitterDID: DidStr, credDefJson: String): Unit
 
-  def runPrepareCredDefForEndorsement(submitterDID: DID, credDefJson: String, endorserDID: DID): Unit
+  def runPrepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr): Unit
 
 }

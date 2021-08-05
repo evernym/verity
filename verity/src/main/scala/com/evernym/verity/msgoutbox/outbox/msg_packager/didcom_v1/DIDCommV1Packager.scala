@@ -6,8 +6,9 @@ import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.DIDCommV1Packager.Commands.{PackMsg, TimedOut, WalletOpExecutorReplyAdapter}
 import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.WalletOpExecutor.Replies.PackagedPayload
-import com.evernym.verity.msgoutbox.{RecipPackaging, RoutePackaging, VerKey, WalletId}
+import com.evernym.verity.msgoutbox.{RecipPackaging, RoutePackaging, WalletId}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer}
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.vault.WalletAPIParam
 
@@ -24,7 +25,7 @@ object DIDCommV1Packager {
                        recipPackaging: RecipPackaging,
                        routePackaging: Option[RoutePackaging],
                        walletId: WalletId,
-                       senderVerKey: VerKey,
+                       senderVerKey: VerKeyStr,
                        replyTo: ActorRef[Reply]) extends Cmd
     case class WalletOpExecutorReplyAdapter(reply: WalletOpExecutor.Reply) extends Cmd
     case object TimedOut extends Cmd

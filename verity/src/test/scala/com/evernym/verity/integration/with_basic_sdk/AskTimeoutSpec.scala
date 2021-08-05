@@ -25,7 +25,7 @@ class AskTimeoutSpec
       "should receive appropriate error" in {
         issuerSDK.fetchAgencyKey()
         val msg = CreateEdgeAgent(issuerSDK.localAgentDidPair.verKey, None)
-        val randomDID = CommonSpecUtil.generateNewDid().DID
+        val randomDID = CommonSpecUtil.generateNewDid().did
         val ex = intercept[IllegalArgumentException] {
           issuerSDK.sendToRoute[AgentCreated](msg, randomDID)
         }

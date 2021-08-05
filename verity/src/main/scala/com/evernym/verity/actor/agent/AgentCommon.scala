@@ -25,6 +25,7 @@ import com.evernym.verity.cache.{AGENCY_IDENTITY_CACHE_FETCHER, AGENT_ACTOR_CONF
 import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
 import com.evernym.verity.config.ConfigConstants.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VERITY_ENDORSER_DEFAULT_DID}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
 import com.evernym.verity.metrics.{InternalSpan, MetricsUnit, MetricsWriter}
 import com.evernym.verity.protocol.container.actor.ProtocolIdDetail
@@ -133,10 +134,10 @@ trait AgentCommon
   def agentWalletId: Option[String] = state.agentWalletId
   def agentMsgTransformer: AgentMsgTransformer = agentActorContext.agentMsgTransformer
 
-  def agencyDIDReq: DID = state.agencyDIDReq
+  def agencyDIDReq: DidStr = state.agencyDIDReq
 
-  def ownerDID: Option[DID]
-  def ownerDIDReq: DID = ownerDID.getOrElse(throw new RuntimeException("owner DID not found"))
+  def ownerDID: Option[DidStr]
+  def ownerDIDReq: DidStr = ownerDID.getOrElse(throw new RuntimeException("owner DID not found"))
   def domainId: DomainId = ownerDIDReq    //TODO: can be related with 'ownerDIDReq'
 
   def ownerAgentKeyDIDPair: Option[DidPair]
@@ -197,7 +198,7 @@ trait AgentCommon
     }
   }
 
-  def agencyDidPairFutByCache(agencyDID: DID): Future[DidPair] = {
+  def agencyDidPairFutByCache(agencyDID: DidStr): Future[DidPair] = {
     val gadp = GetAgencyIdentityCacheParam(agencyDID, GetAgencyIdentity(agencyDID, getEndpoint = false))
     val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER)
     generalCache.getByParamAsync(gadfcParam)
@@ -341,7 +342,7 @@ trait AgentCommon
 
 case class UpdateState(agencyDidPair: DidPair, relationship: Relationship, persistAuthKeys: Set[AuthKey]) extends ActorMessage
 
-case class AuthKey(keyId: KeyId, verKey: VerKey) {
+case class AuthKey(keyId: KeyId, verKey: VerKeyStr) {
   require(verKey.nonEmpty)
 }
 
@@ -375,27 +376,27 @@ trait SponsorRelCompanion {
  */
 case class SetupCreateKeyEndpoint(newAgentKeyDIDPair: DidPair,
                                   forDIDPair: DidPair,
-                                  mySelfRelDID: DID,    //domain id
+                                  mySelfRelDID: DidStr, //domain id
                                   ownerAgentKeyDIDPair: Option[DidPair] = None,
                                   ownerAgentActorEntityId: Option[EntityId]=None,
                                   pid: Option[ProtocolIdDetail]=None,
-				                          publicIdentity: Option[DidPair]=None) extends ActorMessage {
+                                  publicIdentity: Option[DidPair]=None) extends ActorMessage {
 
   def ownerAgentKeyDIDPairReq: DidPair = ownerAgentKeyDIDPair.getOrElse(
     throw new RuntimeException("ownerAgentKeyDIDPair not supplied")
   )
-  def ownerAgentKeyDIDReq: DID = ownerAgentKeyDIDPairReq.DID
-  def ownerAgentKeyDIDVerKeyReq: VerKey = ownerAgentKeyDIDPairReq.verKey
+  def ownerAgentKeyDIDReq: DidStr = ownerAgentKeyDIDPairReq.DID
+  def ownerAgentKeyDIDVerKeyReq: VerKeyStr = ownerAgentKeyDIDPairReq.verKey
 }
 
 trait SetupEndpoint extends ActorMessage {
   def ownerDIDPair: DidPair
   def agentKeyDIDPair: DidPair
 
-  def ownerDID: DID = ownerDIDPair.DID
-  def ownerDIDVerKey: VerKey = ownerDIDPair.verKey
-  def agentKeyDID: DID = agentKeyDIDPair.DID
-  def agentKeyDIDVerKey: VerKey = agentKeyDIDPair.verKey
+  def ownerDID: DidStr = ownerDIDPair.DID
+  def ownerDIDVerKey: VerKeyStr = ownerDIDPair.verKey
+  def agentKeyDID: DidStr = agentKeyDIDPair.DID
+  def agentKeyDIDVerKey: VerKeyStr = agentKeyDIDPair.verKey
 }
 
 case class SetupAgentEndpoint(ownerDIDPair: DidPair,
@@ -404,7 +405,7 @@ case class SetupAgentEndpoint(ownerDIDPair: DidPair,
 case class SetupAgentEndpoint_V_0_7 (threadId: ThreadId,
                                      ownerDIDPair: DidPair,
                                      agentKeyDIDPair: DidPair,
-                                     requesterVerKey: VerKey,
+                                     requesterVerKey: VerKeyStr,
                                      sponsorRel: Option[SponsorRel]=None) extends SetupEndpoint
 
 import com.evernym.verity.util.TimeZoneUtil._

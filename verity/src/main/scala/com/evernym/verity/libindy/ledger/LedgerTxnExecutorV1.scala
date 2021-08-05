@@ -5,7 +5,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{TransactionAuthorAgreement, TxnResp}
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.hyperledger.indy.sdk.pool.Pool
 
@@ -33,7 +33,7 @@ class LedgerTxnExecutorV1(val actorSystem: ActorSystem,
       case s: String => DefaultMsgCodec.fromJson[Map[String,String]](s)
     }
     val from = extractReqValue(result, IDENTIFIER).toString
-    val dest = extractOptValue(result, DEST).asInstanceOf[Option[DID]]
+    val dest = extractOptValue(result, DEST).asInstanceOf[Option[DidStr]]
     val txnType = extractReqValue(result, TYPE).toString
     val txnTime = extractReqValue(result, TXN_TIME).toString.toLong
     val reqId = extractReqValue(result, REQ_ID).toString.toLong

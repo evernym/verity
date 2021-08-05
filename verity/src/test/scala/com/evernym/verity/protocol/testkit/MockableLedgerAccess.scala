@@ -6,6 +6,7 @@ import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.testkit.TestWallet
 import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
@@ -65,7 +66,7 @@ class MockableLedgerAccess(walletExecutionContext: ExecutionContext,
     }
   }
 
-  override def writeCredDef(submitterDID: DID, credDefJson: String)
+  override def writeCredDef(submitterDID: DidStr, credDefJson: String)
                            (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
     handler {
       if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
@@ -82,7 +83,7 @@ class MockableLedgerAccess(walletExecutionContext: ExecutionContext,
     }
   }
 
-  override def writeSchema(submitterDID: DID, schemaJson: String)
+  override def writeSchema(submitterDID: DidStr, schemaJson: String)
                           (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
     handler {
       if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
@@ -92,7 +93,7 @@ class MockableLedgerAccess(walletExecutionContext: ExecutionContext,
     }
   }
 
-  override def prepareSchemaForEndorsement(submitterDID: DID, schemaJson: String, endorserDID: DID)
+  override def prepareSchemaForEndorsement(submitterDID: DidStr, schemaJson: String, endorserDID: DidStr)
                                           (handler: Try[LedgerRequest] => Unit): Unit = {
     handler {
       val json = new JSONObject(schemaJson)
@@ -101,7 +102,7 @@ class MockableLedgerAccess(walletExecutionContext: ExecutionContext,
     }
   }
 
-  override def prepareCredDefForEndorsement(submitterDID: DID, credDefJson: String, endorserDID: DID)
+  override def prepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr)
                                            (handler: Try[LedgerRequest] => Unit): Unit = {
     handler {
       val json = new JSONObject(credDefJson)

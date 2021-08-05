@@ -19,11 +19,12 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
 import com.evernym.verity.agentmsg.tokenizer.SendToken
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.{MetricDetail, PrometheusMetricsParser}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{DID, MsgId}
+import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.RequesterKeys
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
@@ -262,18 +263,18 @@ trait AgentMsgSenderHttpWrapper
   }
 
   def bootstrapAgency(ad: AgencyPublicDid,
-                      fromDID: Option[DID]=None,
+                      fromDID: Option[DidStr]=None,
                       withSeed: Option[String]=None,
                       config: Option[AppConfig]=None,
                       withRole: Option[String]=None): Unit = {
     createLedgerUtil(executionContext, walletExecutionContext, config, fromDID, withSeed).bootstrapNewDID(ad.DID, ad.verKey, withRole.orNull)
   }
 
-  def updateAgencyEndpointInLedger(did: DID, withSeed: String, endpoint: String, config: Option[AppConfig]=None): Unit = {
+  def updateAgencyEndpointInLedger(did: DidStr, withSeed: String, endpoint: String, config: Option[AppConfig]=None): Unit = {
     createLedgerUtil(executionContext, walletExecutionContext, config, Option(did), Option(withSeed)).setEndpointUrl(did, endpoint)
   }
 
-  def getAttribFromLedger(did: DID, withSeed: String, attribName: String, config: Option[AppConfig]=None): Unit = {
+  def getAttribFromLedger(did: DidStr, withSeed: String, attribName: String, config: Option[AppConfig]=None): Unit = {
     createLedgerUtil(executionContext, walletExecutionContext, config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
   }
 
@@ -446,7 +447,7 @@ trait AgentMsgSenderHttpWrapper
     logApiStart(s"connection request (MFV 0.6) started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.prepareCreateInviteForAgency(
-        mockClientAgent.agencyPairwiseAgentDetailReq.DID, None), None)
+        mockClientAgent.agencyPairwiseAgentDetailReq.did, None), None)
     logApiFinish(s"connection request (MFV 0.6) finished: " + r)
     r
   }
@@ -461,7 +462,7 @@ trait AgentMsgSenderHttpWrapper
     logApiStart(s"send post request with packed message started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.prepareCreateAgentMsgForAgency(
-        mockClientAgent.agencyPairwiseAgentDetailReq.DID, fromDID, fromDIDVerKey),
+        mockClientAgent.agencyPairwiseAgentDetailReq.did, fromDID, fromDIDVerKey),
       Option(mockClientAgent.v_0_6_resp.handleAgentCreatedResp))
     logApiStart(s"send post request with packed message finished...")
     logApiFinish(s"agent creation finished: " + r)
@@ -477,7 +478,7 @@ trait AgentMsgSenderHttpWrapper
     logApiStart(s"send post request with packed message started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.prepareCreateAgentMsgForAgency(
-        mockClientAgent.agencyPairwiseAgentDetailReq.DID, fromDID, fromDIDVerKey),
+        mockClientAgent.agencyPairwiseAgentDetailReq.did, fromDID, fromDIDVerKey),
       Option(mockClientAgent.v_0_6_resp.handleAgentCreatedResp))
     logApiStart(s"send post request with packed message finished...")
     logApiFinish(s"agent creation finished: " + r)
@@ -497,7 +498,7 @@ trait AgentMsgSenderHttpWrapper
     logApiStart(s"send post request with packed message started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_7_req.prepareCreateAgentMsgForAgency(
-        mockClientAgent.agencyPairwiseAgentDetailReq.DID, RequesterKeys(fromDID, fromDIDVerKey), None),
+        mockClientAgent.agencyPairwiseAgentDetailReq.did, RequesterKeys(fromDID, fromDIDVerKey), None),
       Option(mockClientAgent.v_0_7_resp.handleCreateAgentProblemReport))
     logApiStart(s"send post request with packed message finished...")
     logApiFinish(s"agent creation failed: " + r)
@@ -528,7 +529,7 @@ trait AgentMsgSenderHttpWrapper
     logApiStart(s"send post request with packed message started...")
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_7_req.prepareCreateAgentMsgForAgency(
-        mockClientAgent.agencyPairwiseAgentDetailReq.DID, RequesterKeys(fromDID, fromDIDVerKey), token),
+        mockClientAgent.agencyPairwiseAgentDetailReq.did, RequesterKeys(fromDID, fromDIDVerKey), token),
       Option(mockClientAgent.v_0_7_resp.handleAgentCreatedResp))
     logApiStart(s"send post request with packed message finished...")
     logApiFinish(s"agent creation finished: " + r)
@@ -616,7 +617,7 @@ trait AgentMsgSenderHttpWrapper
   def createPairwiseKey_MFV_0_6(connId: String): Any = {
     logApiStart(s"create key (MFV 0.6) started...")
     val r = sendPostRequestWithPackedMsg(
-      mockClientAgent.v_0_6_req.preparePairwiseCreateKeyForAgency(mockClientAgent.cloudAgentDetailReq.DID, connId),
+      mockClientAgent.v_0_6_req.preparePairwiseCreateKeyForAgency(mockClientAgent.cloudAgentDetailReq.did, connId),
       Option(mockClientAgent.v_0_6_resp.handlePairwiseKeyCreatedResp), buildConnIdMap(connId))
     logApiFinish(s"create key (MFV 0.6) finished: " + r)
     r
@@ -636,7 +637,7 @@ trait AgentMsgSenderHttpWrapper
     val pairwiseKeyDetail = mockClientAgent.pairwiseConnDetail(connId)
     val r = sendPostRequestWithPackedMsg(
       mockClientAgent.v_0_6_req.prepareCreateInviteForAgency(
-        pairwiseKeyDetail.myCloudAgentPairwiseDidPair.DID, Some(connId), ph = ph,
+        pairwiseKeyDetail.myCloudAgentPairwiseDidPair.did, Some(connId), ph = ph,
         includeKeyDlgProof = true, includeSendMsg=true, includePublicDID=includePublicDID),
       Option(mockClientAgent.v_0_6_resp.handleInviteCreatedResp), buildConnIdMap(connId))
     logApiFinish(s"connection request (MFV 0.6) finished: " + r)
@@ -770,7 +771,7 @@ trait AgentMsgSenderHttpWrapper
     r
   }
 
-  def getMsgsFromConns_MPV_0_5(pairwiseDIDs: Option[List[DID]] = None,
+  def getMsgsFromConns_MPV_0_5(pairwiseDIDs: Option[List[DidStr]] = None,
                                excludePayload: Option[String] = None,
                                uids: Option[List[String]] = None,
                                statusCodes: Option[List[String]] = None)
@@ -789,7 +790,7 @@ trait AgentMsgSenderHttpWrapper
     r
   }
 
-  def getMsgsFromConns_MPV_0_6(pairwiseDIDs: Option[List[DID]] = None,
+  def getMsgsFromConns_MPV_0_6(pairwiseDIDs: Option[List[DidStr]] = None,
                                excludePayload: Option[String] = None,
                                uids: Option[List[String]] = None,
                                statusCodes: Option[List[String]] = None)

@@ -40,7 +40,7 @@ package-manual:
 .package-common-helm:
   image:
     name: alpine/helm:latest
-    entrypoint: ["/bin/sh", "-c"]
+    entrypoint: [""]
   tags:
     - docker-machine
     - micro

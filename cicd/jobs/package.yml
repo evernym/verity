@@ -38,6 +38,7 @@ package-manual:
   when: manual
 
 .package-common-helm:
+  stage: package
   image:
     name: alpine/helm:latest
     entrypoint: [""]

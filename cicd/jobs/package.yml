@@ -59,6 +59,8 @@ package-helm:
     refs:
       - master@dev/verity/verity
       - main@evernym/verity/verity
+    changes:
+      - verity/src/helm/**/*
 
 package-helm-manual:
   extends: .package-common-helm

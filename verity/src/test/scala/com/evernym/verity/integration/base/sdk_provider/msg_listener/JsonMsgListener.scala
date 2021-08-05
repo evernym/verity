@@ -9,7 +9,6 @@ import akka.http.scaladsl.server.Route
 import scala.concurrent.duration._
 
 class JsonMsgListener(val port: Int,
-                      val checkAuthToken: Boolean = false,
                       val tokenExpiresInDuration: Option[FiniteDuration] = None)
                      (implicit val actorSystem: ActorSystem)
   extends MsgListenerBase[String] {

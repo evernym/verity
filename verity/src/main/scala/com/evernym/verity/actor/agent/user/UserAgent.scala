@@ -487,15 +487,26 @@ class UserAgent(val agentActorContext: AgentActorContext,
       .map(_.verKey).toSet
     val existingEndpointOpt = state.myDidDoc_!.endpoints_!.findById(comMethod.id)
     val isComMethodExists = existingEndpointOpt.exists { eep =>
-      eep.`type` == comMethod.`type` && eep.value == comMethod.value && {
-        (eep.packagingContext, comMethod.packaging) match {
-          case (Some(epc), Some(newp)) =>
-            epc.packFormat.isEqual(newp.pkgType) &&
-              newp.recipientKeys.exists(_.exists(verKeys.contains))
-          case (None, None) => true
-          case _            => false
-        }
+      val isPkgContextSame = (eep.packagingContext, comMethod.packaging) match {
+        case (Some(epc), Some(newp)) =>
+          epc.packFormat.isEqual(newp.pkgType) &&
+            newp.recipientKeys.exists(_.exists(verKeys.contains))
+        case (None, None) => true
+        case _            => false
       }
+      val isAuthSame = (eep.authentication, comMethod.authentication) match {
+        case (Some(ea), Some(newa)) =>
+          ea.`type` == newa.`type` &&
+            ea.version == newa.version &&
+            ea.data == newa.data
+        case (None, None) => true
+        case _            => false
+      }
+
+      eep.`type` == comMethod.`type` &&
+        eep.value == comMethod.value &&
+        isPkgContextSame &&
+        isAuthSame
     }
     if (! isComMethodExists) {
       logger.debug(s"comMethods: ${state.myDidDoc_!.endpoints}")
@@ -554,7 +565,8 @@ class UserAgent(val agentActorContext: AgentActorContext,
     addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
     val comMethod = validatedComMethod(ucm)
     processValidatedUpdateComMethodMsg(comMethod)
-    outboxActorRefs.foreach { case (destId, sender) => sendOutboxParam(destId, sender)}
+    //TODO: below line to be uncommented during outbox integration
+    //outboxActorRefs.foreach { case (destId, sender) => sendOutboxParam(destId, sender)}
     buildAndSendComMethodUpdatedRespMsg(comMethod)
   }
 

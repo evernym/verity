@@ -24,6 +24,7 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
+
 class RestIssuerSdkSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
@@ -43,6 +44,7 @@ class RestIssuerSdkSpec
     issuerRestSDK.resetPlainMsgsCounter.plainMsgsBeforeLastReset shouldBe 0
     issuerRestSDK.fetchAgencyKey()
     issuerRestSDK.provisionVerityEdgeAgent()    //this sends a packed message (not REST api call)
+    issuerRestSDK.registerWebhookWithoutOAuth()
     issuerRestSDK.registerWebhook()
   }
 
@@ -180,7 +182,7 @@ class RestIssuerSdkSpec
       "should be successful" in {
         val restOkResp = issuerRestSDK.sendGetStatusReqForConn[QAStatusReport](firstConn, QuestionAnswerMsgFamily, lastReceivedThread)
         restOkResp.status shouldBe "OK"
-        issuerRestSDK.resetPlainMsgsCounter.plainMsgsBeforeLastReset shouldBe 0
+        issuerRestSDK.resetPlainMsgsCounter.plainMsgsBeforeLastReset shouldBe 1
       }
     }
   }

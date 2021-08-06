@@ -37,7 +37,7 @@ class PackedMsgListener(val port: Int,
       case MediaTypes.`application/octet-stream` | HttpCustomTypes.MEDIA_TYPE_SSI_AGENT_WIRE =>
         entity(as[Array[Byte]]) { data =>
           complete {
-            receiveMsg(data)
+            addToQueue(data)
             OK
           }
         }

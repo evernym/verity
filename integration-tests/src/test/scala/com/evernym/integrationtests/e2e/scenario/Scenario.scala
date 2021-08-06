@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import com.evernym.integrationtests.e2e.TestConstants
 import com.evernym.integrationtests.e2e.client.AdminClient
 import com.evernym.integrationtests.e2e.env.AppInstance.AppInstance
-import com.evernym.integrationtests.e2e.env.{AppInstance, IntegrationTestEnv, SdkConfig, VerityInstance}
+import com.evernym.integrationtests.e2e.env.{IntegrationTestEnv, SdkConfig, VerityInstance}
 import com.evernym.integrationtests.e2e.scenario.InteractionMode.{Automated, InteractionMode, Manual, Simulated}
 import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla

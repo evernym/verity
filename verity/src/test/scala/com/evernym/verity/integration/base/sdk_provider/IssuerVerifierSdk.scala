@@ -115,7 +115,6 @@ abstract class VeritySdkBase(param: SdkParam, ec: ExecutionContext, wec: Executi
 
   def msgListener: MsgListenerBase[_]
   def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T]
-
   def resetPlainMsgsCounter: ReceivedMsgCounter = msgListener.resetPlainMsgsCounter
   def resetAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetAuthedMsgsCounter
   def resetFailedAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetFailedAuthedMsgsCounter
@@ -205,7 +204,15 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
    */
   def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T] = {
     val msg = msgListener.expectMsg(timeout)
-    unpackMsg(msg)
+    try {
+      unpackMsg(msg)
+    } catch {
+      case _: UnexpectedMsgException =>
+        //TODO: This is temporary workaround to fix the intermittent failure around message ordering
+        // should analyze it and see if there is any better way to fix it
+        msgListener.addToQueue(msg)
+        expectMsgOnWebhook(timeout)
+    }
   }
 
   val msgListener: MsgListenerBase[Array[Byte]] = {
@@ -393,7 +400,15 @@ case class IssuerRestSDK(param: SdkParam, executionContext: ExecutionContext, wa
    */
   def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T] = {
     val msg = msgListener.expectMsg(timeout)
-    ReceivedMsgParam(msg)
+    try {
+      ReceivedMsgParam(msg)
+    } catch {
+      case _: UnexpectedMsgException =>
+        //TODO: This is temporary workaround to fix the intermittent failure around message ordering
+        // should analyze it and see if there is any better way to fix it
+        msgListener.addToQueue(msg)
+        expectMsgOnWebhook(timeout)
+    }
   }
 
   val msgListener: MsgListenerBase[String] = {

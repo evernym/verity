@@ -42,7 +42,8 @@ trait MsgListenerBase[T]
 
   protected lazy val webhookEndpointPath: String = "webhook"
   protected lazy val queue: LinkedBlockingDeque[T] = new LinkedBlockingDeque[T]()
-  protected def receiveMsg(msg: T): Unit = queue.add(msg)
+
+  def addToQueue(msg: T): Unit = queue.add(msg)
 
   protected def startHttpServer(): Unit = {
     Http().newServerAt("localhost", port).bind(edgeRoute)

@@ -37,7 +37,7 @@ class JsonMsgListener(val port: Int,
       case MediaTypes.`application/json` =>
         entity(as[String]) { data =>
           complete {
-            receiveMsg(data)
+            addToQueue(data)
             OK
           }
         }

@@ -88,7 +88,7 @@ case class VerityEnv(seed: String,
   }
 
   def checkBlobObjectCount(keyStartsWith: String, expectedCount: Int, bucketName: String = "local-blob-store"): Unit = {
-    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+    eventually(timeout(Span(15, Seconds)), interval(Span(100, Millis))) {
       mockBlobStore.getBlobObjectCount(keyStartsWith, bucketName) shouldBe expectedCount
     }
   }

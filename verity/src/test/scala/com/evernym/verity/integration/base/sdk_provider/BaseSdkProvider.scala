@@ -7,7 +7,7 @@ import akka.http.scaladsl.model._
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
-import com.evernym.verity.actor.{AgencyPublicDid, agent}
+import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
@@ -415,7 +415,7 @@ object ReceivedMsgParam {
     //this condition would be true if the received message is different than expected message type
     // in which case the deserialized message fields will have null values
     if (msg.asInstanceOf[Product].productIterator.contains(null)) {
-      logger.warn(s"expected message '${msg.getClass.getSimpleName}', but found: " + msgString)
+      throw new UnexpectedMsgException(s"expected message '${msg.getClass.getSimpleName}', but found: " + msgString)
     }
   }
 
@@ -582,3 +582,5 @@ object MsgFamilyHelper {
 case class TheirServiceDetail(verKey: VerKeyStr, routingKeys: Vector[VerKeyStr], serviceEndpoint: ServiceEndpoint)
 
 case class OAuthParam(tokenExpiresDuration: FiniteDuration)
+
+class UnexpectedMsgException(msg: String) extends RuntimeException(msg)

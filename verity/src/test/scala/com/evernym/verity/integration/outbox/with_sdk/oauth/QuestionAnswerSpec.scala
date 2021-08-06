@@ -38,6 +38,7 @@ class QuestionAnswerSpec
     issuerSDK.resetPlainMsgsCounter.plainMsgsBeforeLastReset shouldBe 0
     issuerSDK.fetchAgencyKey()
     issuerSDK.provisionVerityEdgeAgent()
+    issuerSDK.registerWebhookWithoutOAuth()
     issuerSDK.registerWebhook()
     issuerSDK.sendUpdateConfig(UpdateConfigReqMsg(Set(ConfigDetail("name", "issuer-name"), ConfigDetail("logoUrl", "issuer-logo-url"))))
     val receivedMsg = issuerSDK.sendCreateRelationship(firstConn)

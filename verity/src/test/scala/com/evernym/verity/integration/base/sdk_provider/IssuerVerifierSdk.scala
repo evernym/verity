@@ -115,7 +115,6 @@ abstract class VeritySdkBase(param: SdkParam, ec: ExecutionContext, wec: Executi
 
   def msgListener: MsgListenerBase[_]
   def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T]
-
   def resetPlainMsgsCounter: ReceivedMsgCounter = msgListener.resetPlainMsgsCounter
   def resetAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetAuthedMsgsCounter
   def resetFailedAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetFailedAuthedMsgsCounter
@@ -131,11 +130,19 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
 
   def appConfig: AppConfig = testAppConfig
 
+  def registerWebhookWithoutOAuth(): ComMethodUpdated = {
+    registerWebhookBase(None)
+  }
+
   def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
+    registerWebhookBase(authentication orElse defaultAuthentication)
+  }
+
+  private def registerWebhookBase(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
+    msgListener.setCheckAuth(authentication.isDefined)
     val packaging = Option(ComMethodPackaging(MPF_INDY_PACK.toString, Option(Set(myLocalAgentVerKey))))
-    val authToBeUsed = authentication orElse defaultAuthentication
     val updateComMethod = UpdateComMethodReqMsg(
-      ComMethod("1", COM_METHOD_TYPE_HTTP_ENDPOINT, msgListener.webhookEndpoint, packaging, authToBeUsed))
+      ComMethod("1", COM_METHOD_TYPE_HTTP_ENDPOINT, msgListener.webhookEndpoint, packaging, authentication))
     val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
     val updateComMethodJson = JsonMsgUtil.createJsonString(typeStr, updateComMethod)
     val routedPackedMsg = packForMyVerityAgent(updateComMethodJson)
@@ -197,12 +204,22 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
    */
   def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T] = {
     val msg = msgListener.expectMsg(timeout)
-    unpackMsg(msg)
+    try {
+      unpackMsg(msg)
+    } catch {
+      case _: UnexpectedMsgException =>
+        //TODO: This is temporary workaround to fix the intermittent failure around message ordering
+        // should analyze it and see if there is any better way to fix it
+        msgListener.addToQueue(msg)
+        expectMsgOnWebhook(timeout)
+    }
   }
 
   val msgListener: MsgListenerBase[Array[Byte]] = {
     val port = PortProvider.generateUnusedPort(7000)
-    new PackedMsgListener(port, oauthParam.isDefined, oauthParam.map(_.tokenExpiresDuration))(system)
+    val ml = new PackedMsgListener(port, oauthParam.map(_.tokenExpiresDuration))(system)
+    ml.setCheckAuth(oauthParam.isDefined)
+    ml
   }
 
 }
@@ -219,9 +236,17 @@ case class IssuerRestSDK(param: SdkParam, executionContext: ExecutionContext, wa
   def appConfig: AppConfig = testAppConfig
   import scala.collection.immutable
 
+  def registerWebhookWithoutOAuth(): ComMethodUpdated = {
+    registerWebhookBase(None)
+  }
+
   def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
+    registerWebhookBase(authentication orElse defaultAuthentication)
+  }
+
+  private def registerWebhookBase(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
+    msgListener.setCheckAuth(authentication.isDefined)
     val packaging = Option(ComMethodPackaging(MPF_PLAIN.toString, None))
-    val authToBeUsed = authentication orElse defaultAuthentication
     val updateComMethodJson = {
       val updateComMethod = UpdateComMethodReqMsg(
         ComMethod(
@@ -229,7 +254,7 @@ case class IssuerRestSDK(param: SdkParam, executionContext: ExecutionContext, wa
           COM_METHOD_TYPE_HTTP_ENDPOINT,
           msgListener.webhookEndpoint,
           packaging,
-          authToBeUsed
+          authentication
         )
       )
       val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
@@ -375,12 +400,22 @@ case class IssuerRestSDK(param: SdkParam, executionContext: ExecutionContext, wa
    */
   def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T] = {
     val msg = msgListener.expectMsg(timeout)
-    ReceivedMsgParam(msg)
+    try {
+      ReceivedMsgParam(msg)
+    } catch {
+      case _: UnexpectedMsgException =>
+        //TODO: This is temporary workaround to fix the intermittent failure around message ordering
+        // should analyze it and see if there is any better way to fix it
+        msgListener.addToQueue(msg)
+        expectMsgOnWebhook(timeout)
+    }
   }
 
   val msgListener: MsgListenerBase[String] = {
     val port = PortProvider.generateUnusedPort(7000)
-    new JsonMsgListener(port, oauthParam.isDefined, oauthParam.map(_.tokenExpiresDuration))(system)
+    val ml = new JsonMsgListener(port, oauthParam.map(_.tokenExpiresDuration))(system)
+    ml.setCheckAuth(oauthParam.isDefined)
+    ml
   }
 }
 

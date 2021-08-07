@@ -3,7 +3,7 @@ package com.evernym.integrationtests.e2e.sdk.process
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject, TokenAsJsonObject, sdkErrExitCode}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
@@ -226,7 +226,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     }
   }
 
-  override def committedAnswer_1_0(forRelationship: DID, questionText: String, questionDescription: String, validResponses: Seq[String], requireSig: Boolean): CommittedAnswerV1_0 = new UndefinedCommittedAnswer_1_0 {
+  override def committedAnswer_1_0(forRelationship: DidStr, questionText: String, questionDescription: String, validResponses: Seq[String], requireSig: Boolean): CommittedAnswerV1_0 = new UndefinedCommittedAnswer_1_0 {
     override def ask(ctx: Context): Unit = {
       val vR = s"new string[] {${mkParams(validResponses)}}"
 
@@ -238,7 +238,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     }
   }
 
-  override def committedAnswer_1_0(forRelationship: DID, threadId: String, answerStr: String): CommittedAnswerV1_0 = {
+  override def committedAnswer_1_0(forRelationship: DidStr, threadId: String, answerStr: String): CommittedAnswerV1_0 = {
     new UndefinedCommittedAnswer_1_0 {
       override def answer(ctx: Context): Unit =
         executeCmdWithUsing(
@@ -263,7 +263,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     }
   }
 
-  override def committedAnswer_1_0(forRelationship: DID, threadId: String): CommittedAnswerV1_0 = new UndefinedCommittedAnswer_1_0 {
+  override def committedAnswer_1_0(forRelationship: DidStr, threadId: String): CommittedAnswerV1_0 = new UndefinedCommittedAnswer_1_0 {
     override def status(ctx: Context): Unit = {
       executeCmdWithUsing(
         ctx,
@@ -345,7 +345,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def issueCredentialComplete_1_0(): Unit = throw new NotImplementedError
 
-  override def presentProof_1_0(forRelationship: DID,
+  override def presentProof_1_0(forRelationship: DidStr,
                                 name: String,
                                 proofAttrs: Array[Attribute],
                                 proofPredicate: Array[Predicate],
@@ -442,7 +442,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                                 proofPredicates: Array[ProposedPredicate]
                                ): PresentProofV1_0 = throw new NotImplementedError
 
-  override def presentProof_1_0(forRelationship: DID,
+  override def presentProof_1_0(forRelationship: DidStr,
                                 threadId: String): PresentProofV1_0 = new UndefinedPresentProof_1_0 {
     override def status(ctx: Context): Unit = {
       executeCmd(ctx, "PresentProof", this.version, "status", Seq(forRelationship, threadId))
@@ -453,7 +453,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     }
   }
 
-  override def basicMessage_1_0(forRelationship: DID, content: String, sentTime: String, localization: String): BasicMessageV1_0 = {
+  override def basicMessage_1_0(forRelationship: DidStr, content: String, sentTime: String, localization: String): BasicMessageV1_0 = {
     new UndefinedBasicMessage_1_0 {
       override def message(ctx: Context): Unit =
         executeCmd(

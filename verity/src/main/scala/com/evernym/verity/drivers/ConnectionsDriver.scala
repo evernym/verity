@@ -5,12 +5,14 @@ import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.SignalEnvelope
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{SetupTheirDidDoc, UpdateTheirDid}
 
+import scala.concurrent.ExecutionContext
+
 /**
  * this is used for connections 1.0 protocol
  * @param cp: an ActorDriverConstructionParameter
  */
-class ConnectionsDriver(cp: ActorDriverGenParam)
-  extends ActorDriver(cp) {
+class ConnectionsDriver(cp: ActorDriverGenParam, ec: ExecutionContext)
+  extends ActorDriver(cp, ec) {
 
   override def signal[A]: SignalHandler[A] = {
 

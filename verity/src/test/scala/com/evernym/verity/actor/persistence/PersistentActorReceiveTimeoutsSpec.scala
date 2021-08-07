@@ -5,6 +5,7 @@ import java.util.concurrent.TimeoutException
 import akka.actor.{ActorRef, ActorSystem, Props, Terminated}
 import akka.util.Timeout
 import akka.pattern.ask
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, TestAppConfig}
@@ -12,6 +13,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.util.TestExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import com.typesafe.scalalogging.Logger
 
@@ -28,6 +30,9 @@ class PersistentActorReceiveTimeoutsSpec extends BasicSpec {
   implicit val executionContext: ExecutionContext = ExecutionContext.Implicits.global
 
   implicit val system: ActorSystem = AkkaTestBasic.system()
+
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  lazy val futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   timeoutsSpec()
 
@@ -226,7 +231,7 @@ class PersistentActorReceiveTimeoutsSpec extends BasicSpec {
                            msg: ActorMessage,
                            conf: Config): Unit = {
     val appConfig = new TestAppConfig(Option(conf))
-    val watcher = system.actorOf(Props(new WatcherActor(appConfig, expectedTimeout)), name = watcherEntityId)
+    val watcher = system.actorOf(Props(new WatcherActor(appConfig, expectedTimeout, futureExecutionContext)), name = watcherEntityId)
     val response: Future[Any] = watcher ? msg
 
     try {
@@ -268,7 +273,7 @@ object MockActor {
 import MockActor._
 
 
-class MockBaseActor(val appConfig: AppConfig) extends BasePersistentActor {
+class MockBaseActor(val appConfig: AppConfig, executionContext: ExecutionContext) extends BasePersistentActor {
 
   override def receiveCmd: Receive = {
     case ReceiveTimeoutQuestion() =>
@@ -284,9 +289,14 @@ class MockBaseActor(val appConfig: AppConfig) extends BasePersistentActor {
   override def persistenceEncryptionKey: String = "klsd89894kdsjisdji4"
 
   override val defaultReceiveTimeoutInSeconds: Int = DEFAULT_RECEIVE_TIMEOUT
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
-class MockSingletonChildActor(val appConfig: AppConfig) extends SingletonChildrenPersistentActor {
+class MockSingletonChildActor(val appConfig: AppConfig, executionContext: ExecutionContext) extends SingletonChildrenPersistentActor {
 
   override def receiveCmd: Receive = {
     case ReceiveTimeoutQuestion() =>
@@ -302,9 +312,14 @@ class MockSingletonChildActor(val appConfig: AppConfig) extends SingletonChildre
   override def persistenceEncryptionKey: String = "klsd89894kdsjisdji4"
 
   override val defaultReceiveTimeoutInSeconds: Int = DEFAULT_RECEIVE_TIMEOUT
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
-class WatcherActor(appConfig: AppConfig, expectedTimeout: Duration)
+class WatcherActor(appConfig: AppConfig, expectedTimeout: Duration, executionContext: ExecutionContext)
   extends CoreActorExtended {
 
   val logger: Logger = getLoggerByClass(classOf[WatcherActor])
@@ -315,14 +330,14 @@ class WatcherActor(appConfig: AppConfig, expectedTimeout: Duration)
   override def receiveCmd: Receive = {
     case WatchBaseActor(name) =>
       senderActorRef = sender()
-      val child: ActorRef = context.actorOf(Props(new MockBaseActor(appConfig)), name = name)
+      val child: ActorRef = context.actorOf(Props(new MockBaseActor(appConfig, executionContext)), name = name)
       context.watch(child)
       child ! ReceiveTimeoutQuestion()
       childStartedTime = System.currentTimeMillis()
 
     case WatchSingletonChildActor(name) =>
       senderActorRef = sender()
-      val child: ActorRef = context.actorOf(Props(new MockSingletonChildActor(appConfig)), name = name)
+      val child: ActorRef = context.actorOf(Props(new MockSingletonChildActor(appConfig, executionContext)), name = name)
       context.watch(child)
       child ! ReceiveTimeoutQuestion()
       childStartedTime = System.currentTimeMillis()

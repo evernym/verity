@@ -3,14 +3,14 @@ package com.evernym.verity.actor.agent.user
 import akka.event.LoggingReceive
 import akka.pattern.ask
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, MSG_STATUS_RECEIVED}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgentCommon, NotifyMsgDetail, OutgoingMsgParam}
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
-import com.evernym.verity.actor.agent.{AgencyIdentitySet, AgentActorDetailSet, ConfigValue, MsgAndDelivery, PayloadWrapper, SetAgencyIdentity, SetAgentActorDetail, SponsorRel, Thread}
+import com.evernym.verity.actor.agent.{AgencyIdentitySet, AgentActorDetailSet, ConfigValue, MsgAndDelivery, PayloadWrapper, SetAgencyIdentity, SetAgentActorDetail, SponsorRel}
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
@@ -25,6 +25,7 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common.{NotifyUserViaPushNotif, SendMsgToRegisteredEndpoint}
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Config
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{Sig => UpdateConfigsSig}
 import com.evernym.verity.push_notification.PusherUtil
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.{ParticipantUtil, ReqMsgContext, TimeZoneUtil}
@@ -37,10 +38,11 @@ import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.R
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsReqMsg, UpdateMsgStatusReqMsg}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.SendConfig
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * common logic between 'UserAgent' and 'UserAgentPairwise' actor
@@ -55,6 +57,7 @@ trait UserAgentCommon
     with LEGACY_connectingSignalHandler {
 
   this: AgentPersistentActor with MsgNotifierForUserAgentCommon =>
+  implicit def executionContext: ExecutionContext = futureExecutionContext
 
   type StateType <: AgentStateInterface with UserAgentCommonState
 
@@ -152,7 +155,7 @@ trait UserAgentCommon
     sender ! AgencyIdentitySet(saw.didPair)
   }
 
-  def postUpdateConfig(updateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKey]): Unit = {}
+  def postUpdateConfig(updateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKeyStr]): Unit = {}
 
   def notifyUser(nu: NotifyUserViaPushNotif): Unit = sendPushNotif(nu.pushNotifData, None)
 
@@ -160,7 +163,8 @@ trait UserAgentCommon
     cds.find(_.name == PUSH_COM_METHOD).foreach { pcmConfig =>
       PusherUtil.checkIfValidPushComMethod(
         ComMethodDetail(COM_METHOD_TYPE_PUSH, pcmConfig.value, hasAuthEnabled = false),
-        appConfig
+        appConfig,
+        futureExecutionContext
       )
     }
   }
@@ -227,12 +231,23 @@ trait UserAgentCommon
       .map(_ => None)
   }
 
-  override def storeOutgoingMsg(omp: OutgoingMsgParam, msgId:MsgId, msgName: MsgName,
-                                senderDID: DID, threadOpt: Option[Thread]): Unit = {
+  override def storeOutgoingMsg(omp: OutgoingMsgParam,
+                                msgId:MsgId,
+                                msgName: MsgName,
+                                senderDID: DidStr,
+                                threadOpt: Option[Thread]): Unit = {
     logger.debug("storing outgoing msg")
     val payloadParam = StorePayloadParam(omp.msgToBeProcessed, omp.metadata)
-    storeMsg(msgId, msgName, senderDID, MSG_STATUS_RECEIVED.statusCode,
-      sendMsg = true, threadOpt, None, Option(payloadParam))
+    storeMsg(
+      msgId,
+      msgName,
+      senderDID,
+      MSG_STATUS_RECEIVED.statusCode,
+      sendMsg = true,
+      threadOpt,
+      None,
+      Option(payloadParam)
+    )
     logger.debug("packed msg stored")
   }
 
@@ -268,8 +283,13 @@ trait UserAgentCommon
     handleCoreSignalMsgs orElse handleLegacySignalMsgs
 
   def handleCoreSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = {
-    case SignalMsgParam(uc: UpdateConfigs, _)    => handleUpdateConfig(uc)
-    case SignalMsgParam(gc: GetConfigs, _)       =>
+    case SignalMsgParam(uc: UpdateConfigsSig.UpdateConfig, _)   =>
+      handleUpdateConfig(
+        UpdateConfigs(
+          uc.configs.map(c => ConfigDetail(c.name, c.value))
+        )
+      )
+    case SignalMsgParam(gc: UpdateConfigsSig.GetConfigs, _)     =>
       val cds = getFilteredConfigs(gc.names).map(cd => Config(cd.name, cd.value))
       Future.successful(Option(ControlMsg(SendConfig(cds))))
   }

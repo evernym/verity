@@ -5,18 +5,23 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{TransactionAuthorAgreement, TxnResp}
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.hyperledger.indy.sdk.pool.Pool
+
+import scala.concurrent.ExecutionContext
 
 
 class LedgerTxnExecutorV1(val actorSystem: ActorSystem,
                           val appConfig: AppConfig,
                           val walletAPI: Option[WalletAPI],
                           val pool: Option[Pool],
-                          val currentTAA: Option[TransactionAuthorAgreement]
+                          val currentTAA: Option[TransactionAuthorAgreement],
+                          executionContext: ExecutionContext
                          )
   extends LedgerTxnExecutorBase {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   override def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp = {
     // When something is not found on the ledger, data, txnTime, and seqNo will be null. When any of these three
@@ -28,7 +33,7 @@ class LedgerTxnExecutorV1(val actorSystem: ActorSystem,
       case s: String => DefaultMsgCodec.fromJson[Map[String,String]](s)
     }
     val from = extractReqValue(result, IDENTIFIER).toString
-    val dest = extractOptValue(result, DEST).asInstanceOf[Option[DID]]
+    val dest = extractOptValue(result, DEST).asInstanceOf[Option[DidStr]]
     val txnType = extractReqValue(result, TYPE).toString
     val txnTime = extractReqValue(result, TXN_TIME).toString.toLong
     val reqId = extractReqValue(result, REQ_ID).toString.toLong

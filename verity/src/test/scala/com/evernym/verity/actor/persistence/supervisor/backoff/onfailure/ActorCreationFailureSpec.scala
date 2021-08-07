@@ -2,6 +2,7 @@ package com.evernym.verity.actor.persistence.supervisor.backoff.onfailure
 
 import akka.pattern.BackoffSupervisor.GetCurrentChild
 import akka.testkit.EventFilter
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.base.Ping
 import com.evernym.verity.actor.persistence.supervisor.{IgnoreSupervisorLogErrors, MockActorCreationFailure}
 import com.evernym.verity.actor.testkit.ActorSpec
@@ -19,7 +20,7 @@ class ActorCreationFailureSpec
 
   override def expectDeadLetters = true
 
-  lazy val mockSupervised = system.actorOf(MockActorCreationFailure.backOffOnFailureProps(appConfig))
+  lazy val mockSupervised = system.actorOf(MockActorCreationFailure.backOffOnFailureProps(appConfig, ecp.futureExecutionContext))
 
   val timeoutVal: PatienceConfiguration.Timeout = timeout(Span(10, Seconds))
   val intervalVal: PatienceConfiguration.Interval = interval(Span(100, Milliseconds))
@@ -52,4 +53,7 @@ class ActorCreationFailureSpec
       akka.test.filter-leeway = 25s   # to make the event filter run for 25 seconds
     """
   )}
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

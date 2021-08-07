@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.persistence.supervisor.backoff.onstop
 
 import akka.testkit.EventFilter
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.supervisor.{MockActorMsgHandlerFailure, ThrowException}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
@@ -13,7 +14,7 @@ class ActorMsgHandlerFailureSpec
   with BasicSpec
   with Eventually {
 
-  lazy val mockSupervised = system.actorOf(MockActorMsgHandlerFailure.backOffOnStopProps(appConfig))
+  lazy val mockSupervised = system.actorOf(MockActorMsgHandlerFailure.backOffOnStopProps(appConfig, ecp.futureExecutionContext))
 
   "OnStop BackoffSupervised actor" - {
     "when throws an unhandled exception during msg handling" - {
@@ -45,4 +46,7 @@ class ActorMsgHandlerFailureSpec
       akka.test.filter-leeway = 5s   # to make the event filter run for sufficient time
       """
   )}
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

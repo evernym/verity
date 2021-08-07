@@ -2,14 +2,14 @@ package com.evernym.verity.actor.testkit.actor
 
 import akka.http.scaladsl.model.{HttpHeader, HttpMethod, HttpMethods}
 import com.evernym.verity.util2.Exceptions.HandledErrorException
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util2.UrlParam
 
+import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.immutable
-import scala.concurrent.Future
 import scala.util.{Success, Try}
 
 
@@ -28,6 +28,8 @@ trait MockMsgSendingSvc extends MsgSendingSvc {
 }
 
 object MockMsgSendingSvc extends MockMsgSendingSvc {
+
+  lazy implicit val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
 
   var totalBinaryMsgsSent: Int = 0
   var totalRestAgentMsgsSent: Int = 0

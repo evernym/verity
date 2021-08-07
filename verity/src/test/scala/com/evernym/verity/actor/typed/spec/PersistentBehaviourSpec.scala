@@ -17,8 +17,10 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessageCompanion
-
 import java.util.UUID
+
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.config.AppConfig
 
 
 class PersistentBehaviourSpec
@@ -110,8 +112,9 @@ class PersistentBehaviourSpec
   }
 
   lazy val sharding: ClusterSharding = ClusterSharding(system)
+  lazy val appConfig: AppConfig = new TestAppConfig()
   lazy val accountRegion: ActorRef[ShardingEnvelope[Cmd]] = sharding.init(Entity(Account.TypeKey) { entityContext =>
-    Account(entityContext)
+    Account(entityContext, appConfig)
   })
 
 }
@@ -137,11 +140,11 @@ object Account {
 
   val TypeKey: EntityTypeKey[Cmd] = EntityTypeKey("Account")
 
-  def apply(entityContext: EntityContext[Cmd]): Behavior[Cmd] = {
+  def apply(entityContext: EntityContext[Cmd], appConfig: AppConfig): Behavior[Cmd] = {
     val persistenceId = PersistenceId(TypeKey.name, entityContext.entityId)
     EventSourcedBehavior
       .withEnforcedReplies(persistenceId, States.Empty, commandHandler, eventHandler)
-      .eventAdapter(new PersistentEventAdapter(entityContext.entityId, TestObjectCodeMapper))
+      .eventAdapter(PersistentEventAdapter(entityContext.entityId, TestObjectCodeMapper, appConfig))
       .receiveSignal(signalHandler(persistenceId))
   }
 

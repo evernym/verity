@@ -1,11 +1,10 @@
 package com.evernym.verity.actor.persistence.recovery.base
 
 import java.util.UUID
-
 import com.evernym.verity.actor.AuthKeyAdded
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.actor.testkit.CommonSpecUtil._
+import com.evernym.verity.did.DidPair
 
 trait AgentIdentifiers {
 
@@ -45,7 +44,7 @@ trait AgentIdentifiers {
 
   def getAuthKeyAddedEvents(dps: List[DidPair]): List[AuthKeyAdded] = {
     dps.map { dp =>
-      AuthKeyAdded(dp.DID, dp.verKey)
+      AuthKeyAdded(dp.did, dp.verKey)
     }
   }
 }

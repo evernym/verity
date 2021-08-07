@@ -3,7 +3,6 @@ package com.evernym.verity.testkit
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import akka.actor.ActorRef
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.LedgerPoolConnManager
@@ -12,20 +11,23 @@ import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.vault.WalletUtil.generateWalletParamSync
 import com.evernym.verity.vault._
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 class LegacyWalletAPI(appConfig: AppConfig,
                       walletProvider: WalletProvider,
                       ledgerPoolManager: Option[LedgerPoolConnManager],
-                      val metricsWriter: MetricsWriter)
+                      val metricsWriter: MetricsWriter,
+                      ec: ExecutionContext)
   extends WalletAPI
     with AwaitResult {
 
+  implicit lazy val executionContext: ExecutionContext = ec
   val logger: Logger = getLoggerByClass(getClass)
   var walletParams: Map[String, WalletParam] = Map.empty
   var wallets: Map[String, WalletExt] = Map.empty

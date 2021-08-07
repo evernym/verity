@@ -2,6 +2,7 @@ package com.evernym.verity.actor.persistence.supervisor.backoff.onfailure
 
 import akka.pattern.BackoffSupervisor.{CurrentChild, GetCurrentChild, GetRestartCount, RestartCount}
 import akka.testkit.EventFilter
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.supervisor.{MockActorMsgHandlerFailure, ThrowException}
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.ActorSpec
@@ -16,7 +17,7 @@ class ActorMsgHandlerFailureSpec
   with BasicSpec
   with Eventually {
 
-  lazy val mockSupervised = system.actorOf(MockActorMsgHandlerFailure.backOffOnFailureProps(appConfig))
+  lazy val mockSupervised = system.actorOf(MockActorMsgHandlerFailure.backOffOnFailureProps(appConfig, ecp.futureExecutionContext))
 
   val timeoutVal: PatienceConfiguration.Timeout = timeout(Span(10, Seconds))
   val intervalVal: PatienceConfiguration.Interval = interval(Span(100, Milliseconds))
@@ -59,4 +60,7 @@ class ActorMsgHandlerFailureSpec
       akka.test.filter-leeway = 25s   # to make the event filter run for 25 seconds
       """
   )}
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

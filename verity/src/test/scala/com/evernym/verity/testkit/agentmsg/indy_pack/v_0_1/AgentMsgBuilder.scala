@@ -7,6 +7,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_DETAIL_GET_T
 import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam}
 import com.evernym.verity.agentmsg.tokenizer.GetToken
 import com.evernym.verity.protocol.engine.Constants.MFV_1_0
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.util.AgentPackMsgUtil.{preparePackedRequestForAgent, preparePackedRequestForRoutes}
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, TestComMethod}
@@ -14,9 +15,12 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.mock.agent.MockAgent
 
-trait AgentMsgBuilder { this: AgentMsgHelper with MockAgent with AgentMsgHelper =>
+import scala.concurrent.ExecutionContext
+
+trait AgentMsgBuilder extends HasExecutionContextProvider { this: AgentMsgHelper with MockAgent with AgentMsgHelper =>
 
   object v_0_1_req {
+    implicit val executionContext: ExecutionContext = futureExecutionContext
 
     private val logger = getLoggerByClass(getClass)
 

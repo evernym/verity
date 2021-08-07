@@ -5,7 +5,7 @@ import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.actor.resourceusagethrottling._
 import com.evernym.verity.http.route_handlers.restricted.{ResourceUsageCounterDetail, UpdateResourcesUsageCounter}
-import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper
+import com.evernym.verity.actor.resourceusagethrottling.helper.{ResourceUsageRuleHelper, ResourceUsageRuleHelperExtension}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 
 trait ResourceUsageCommon {
@@ -13,6 +13,7 @@ trait ResourceUsageCommon {
   private val logger = getLoggerByName("ResourceUsageCommon")
 
   def system: ActorSystem
+  val resourceUsageRuleHelper: ResourceUsageRuleHelper = ResourceUsageRuleHelperExtension(system).get()
 
   protected lazy val resourceUsageTrackerRegion: ActorRef =
     ClusterSharding(system).shardRegion(RESOURCE_USAGE_TRACKER_REGION_ACTOR_NAME)
@@ -23,15 +24,16 @@ trait ResourceUsageCommon {
                                      userIdOpt: Option[UserId],
                                      sendBackAck: Boolean=false): Unit = {
     ResourceUsageTracker.addUserResourceUsage(
-      resourceType, resourceName, ipAddress, userIdOpt, sendBackAck)(resourceUsageTrackerRegion)(system)
+      resourceType, resourceName, ipAddress, userIdOpt, sendBackAck, resourceUsageRuleHelper.resourceUsageRules
+    )(resourceUsageTrackerRegion)(system)
   }
 
   protected def resetResourceUsageCounts(entityId: EntityId, resourceName: ResourceName): Unit = {
     // Set resource usage counts to 0 for each resource (entityId, resourceName)
     // Get bucket IDs for all buckets associated with resourceName
     val buckets: Set[Int] = Set(
-      ResourceUsageRuleHelper.getResourceUsageRule(entityId, RESOURCE_TYPE_ENDPOINT, resourceName),
-      ResourceUsageRuleHelper.getResourceUsageRule(entityId, RESOURCE_TYPE_MESSAGE, resourceName)
+      resourceUsageRuleHelper.getResourceUsageRule(entityId, RESOURCE_TYPE_ENDPOINT, resourceName),
+      resourceUsageRuleHelper.getResourceUsageRule(entityId, RESOURCE_TYPE_MESSAGE, resourceName)
     ).flatten.flatMap { rule => rule.bucketRules.keys }
 
     logger.debug(s"Reset $resourceName resource usage counts for buckets: ${buckets mkString ", "}")

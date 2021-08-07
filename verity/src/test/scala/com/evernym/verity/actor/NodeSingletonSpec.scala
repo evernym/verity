@@ -1,6 +1,7 @@
 package com.evernym.verity.actor
 
 import akka.actor.ActorRef
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.node_singleton.DrainInitiated
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
@@ -38,5 +39,8 @@ class NodeSingletonSpec
       }
     }
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 
 }

@@ -9,25 +9,32 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.integration.base.{VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.{IssuerSdk, SdkProvider}
-import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.integration.base.verity_provider.VerityEnv
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{CurrentPublicIdentifier, PublicIdentifier, PublicIdentifierCreated, Create => CreatePublicIdentifier}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{SMSConnectionInvitation, SMSOutOfBandInvitation}
-
 import java.nio.charset.Charset
+
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.util.TestExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 
 
 class RelationshipFailureSpec
   extends VerityProviderBaseSpec
     with SdkProvider  {
 
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+
   lazy val issuerVerityApp: VerityEnv = VerityEnvBuilder.default().build(VAS)
-  lazy val issuerSDK: IssuerSdk = setupIssuerSdk(issuerVerityApp)
+  lazy val issuerSDK: IssuerSdk = setupIssuerSdk(issuerVerityApp, executionContext, ecp.walletFutureExecutionContext)
   val connId = "connId1"
 
   var thread: Option[MsgThread] = None
-  var pairwiseDID: DID = ""
+  var pairwiseDID: DidStr = ""
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -275,4 +282,11 @@ class RelationshipFailureSpec
       }
     }
   }
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

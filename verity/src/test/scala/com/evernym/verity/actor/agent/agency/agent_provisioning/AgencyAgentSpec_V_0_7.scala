@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent.agency.agent_provisioning
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.{AgentProvHelper, SponsorRel}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
@@ -8,6 +9,7 @@ import com.evernym.verity.util.TimeUtil
 import com.evernym.verity.testkit.HasTestWalletAPI
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 
 trait AgentProvBaseSpec_V_0_7
@@ -73,6 +75,10 @@ class AgencyAgentCreateNewAgentFailure extends AgentProvBaseSpec_V_0_7 {
 
   }
   createAgentFailures()
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 class AgencyAgentCreateNewCloudAgent extends AgentProvBaseSpec_V_0_7 {
@@ -112,6 +118,11 @@ class AgencyAgentCreateNewCloudAgent extends AgentProvBaseSpec_V_0_7 {
       restartPersistentActor(aa)
     }
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 class AgencyAgentCreateNewEdgeAgent extends AgentProvBaseSpec_V_0_7 {
@@ -150,12 +161,18 @@ class AgencyAgentCreateNewEdgeAgent extends AgentProvBaseSpec_V_0_7 {
   }
 
   createEdgeAgentTest()
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 class AgencyAgentCreateNewAgentTokenDoubleUseFailure extends AgentProvBaseSpec_V_0_7 {
   import mockEdgeAgent.v_0_7_resp._
 
-  lazy val mockEdgeAgent1: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
+  lazy val mockEdgeAgent1: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
 
   lazy val nonce: String = getNonce
   lazy val commonTime: IsoDateTime = TimeUtil.nowDateString
@@ -193,4 +210,13 @@ class AgencyAgentCreateNewAgentTokenDoubleUseFailure extends AgentProvBaseSpec_V
 
   createFirstAgent()
   createSecondAgent()
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

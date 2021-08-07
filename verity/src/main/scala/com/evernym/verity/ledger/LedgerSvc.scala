@@ -4,16 +4,15 @@ import java.time.ZonedDateTime
 import akka.actor.ActorSystem
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.{DidStr, DidPair}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.vault.WalletAPIParam
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-case class TxnResp(from: DID,
-                   dest: Option[DID],
+case class TxnResp(from: DidStr,
+                   dest: Option[DidStr],
                    data: Option[Map[String, Any]],
                    txnType: String,
                    txnTime: Option[Long],
@@ -45,17 +44,17 @@ case class CredDefV1(id: String,
                      value: Map[String, Any])
 
 trait Submitter {
-  def did: DID
+  def did: DidStr
   def wap: Option[WalletAPIParam]
   def wapReq: WalletAPIParam = wap.getOrElse(throw new Exception("Signed Requests require Wallet Info"))
 }
 object Submitter {
-  def apply(did: DID, wap: Option[WalletAPIParam]): Submitter = WriteSubmitter(did, wap)
+  def apply(did: DidStr, wap: Option[WalletAPIParam]): Submitter = WriteSubmitter(did, wap)
   def apply(): Submitter = ReadSubmitter()
 }
-case class WriteSubmitter(did: DID, wap: Option[WalletAPIParam]) extends Submitter
+case class WriteSubmitter(did: DidStr, wap: Option[WalletAPIParam]) extends Submitter
 case class ReadSubmitter() extends Submitter {
-  override def did: DID = null
+  override def did: DidStr = null
   override def wap: Option[WalletAPIParam] = None
 }
 
@@ -168,7 +167,7 @@ trait LedgerSvc {
     _getSchema(schemaId)
   }
 
-  final def writeSchema(submitterDID: DID,
+  final def writeSchema(submitterDID: DidStr,
                         schemaJson: String,
                         walletAccess: WalletAccess): Future[TxnResp] = {
     ledgerTxnExecutor.writeSchema(submitterDID, schemaJson, walletAccess) recover {
@@ -177,14 +176,14 @@ trait LedgerSvc {
     }
   }
 
-  final def prepareSchemaForEndorsement(submitterDID: DID,
+  final def prepareSchemaForEndorsement(submitterDID: DidStr,
                                         schemaJson: String,
-                                        endorserDID: DID,
+                                        endorserDID: DidStr,
                                         walletAccess: WalletAccess): Future[LedgerRequest] = {
     ledgerTxnExecutor.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)
   }
 
-  final def writeCredDef(submitterDID: DID,
+  final def writeCredDef(submitterDID: DidStr,
                          credDefJson: String,
                          walletAccess: WalletAccess): Future[TxnResp] = {
     ledgerTxnExecutor.writeCredDef(submitterDID, credDefJson, walletAccess) recover {
@@ -193,9 +192,9 @@ trait LedgerSvc {
     }
   }
 
-  final def prepareCredDefForEndorsement(submitterDID: DID,
+  final def prepareCredDefForEndorsement(submitterDID: DidStr,
                                          credDefJson: String,
-                                         endorserDID: DID,
+                                         endorserDID: DidStr,
                                          walletAccess: WalletAccess): Future[LedgerRequest] = {
     try {
       ledgerTxnExecutor.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID, walletAccess)
@@ -216,7 +215,7 @@ trait LedgerSvc {
   final def addNym(submitterDetail: Submitter, targetDid: DidPair): Future[TxnResp] = {
     ledgerTxnExecutor.addNym(submitterDetail, targetDid) recover {
       case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
-        s"error while trying to add nym with DID ${targetDid.DID}: " + e.getMessage))
+        s"error while trying to add nym with DID ${targetDid.did}: " + e.getMessage))
     }
   }
 

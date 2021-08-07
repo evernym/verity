@@ -17,10 +17,10 @@ trait AgencyAgentEventSetter extends AgentIdentifiers with BasePersistentStore {
   def setupBasicAgencyAgent(): Unit = {
     //TODO: if we move below line 'setting of key value mapper' to any other
     // position in this method, ideally it should work but for some reason it doesn't, should find out why?
-    storeAgencyDIDKeyValueMapping(myAgencyAgentDIDPair.DID)
+    storeAgencyDIDKeyValueMapping(myAgencyAgentDIDPair.did)
     setupBasicAgencyAgentWalletData()
     addEventsToPersistentStorage(myAgencyAgentPersistenceId, basicAgencyAgentEvents)
-    storeAgentRoute(myAgencyAgentDIDPair.DID, ACTOR_TYPE_AGENCY_AGENT_ACTOR, myAgencyAgentEntityId)
+    storeAgentRoute(myAgencyAgentDIDPair.did, ACTOR_TYPE_AGENCY_AGENT_ACTOR, myAgencyAgentEntityId)
   }
 
   private def setupBasicAgencyAgentWalletData(): Unit = {
@@ -29,7 +29,7 @@ trait AgencyAgentEventSetter extends AgentIdentifiers with BasePersistentStore {
   }
 
   protected lazy val basicAgencyAgentEvents = scala.collection.immutable.Seq(
-    KeyCreated(myAgencyAgentDIDPair.DID, myAgencyAgentDIDPair.verKey),
+    KeyCreated(myAgencyAgentDIDPair.did, myAgencyAgentDIDPair.verKey),
     EndpointSet()
   )
 }
@@ -41,17 +41,17 @@ trait UserAgentEventSetter extends AgentIdentifiers with BasePersistentStore { t
   def setupBasicUserAgent(): Unit = {
     setupBasicUserAgentWalletData()
     addEventsToPersistentStorage(mySelfRelAgentPersistenceId, basicUserAgentEvents)
-    storeAgentRoute(mySelfRelDIDPair.DID, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentEntityId)
-    storeAgentRoute(mySelfRelAgentDIDPair.DID, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentEntityId)
+    storeAgentRoute(mySelfRelDIDPair.did, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentEntityId)
+    storeAgentRoute(mySelfRelAgentDIDPair.did, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentEntityId)
   }
 
   protected lazy val basicUserAgentEvents = scala.collection.immutable.Seq(
-    OwnerDIDSet(mySelfRelDIDPair.DID, mySelfRelDIDPair.verKey),
-    AgentKeyCreated(mySelfRelAgentDIDPair.DID, mySelfRelAgentDIDPair.verKey),
+    OwnerDIDSet(mySelfRelDIDPair.did, mySelfRelDIDPair.verKey),
+    AgentKeyCreated(mySelfRelAgentDIDPair.did, mySelfRelAgentDIDPair.verKey),
     ComMethodUpdated("push-token", 1, "firebase-push-token"),
 
     //pairwise connection event for each new connection
-    AgentDetailSet(myPairwiseRelDIDPair.DID, myPairwiseRelAgentDIDPair.DID, myPairwiseRelDIDPair.verKey, myPairwiseRelAgentDIDPair.verKey)
+    AgentDetailSet(myPairwiseRelDIDPair.did, myPairwiseRelAgentDIDPair.did, myPairwiseRelDIDPair.verKey, myPairwiseRelAgentDIDPair.verKey)
   )
 
   private def setupBasicUserAgentWalletData(): Unit = {
@@ -77,8 +77,8 @@ trait UserAgentPairwiseEventSetter extends AgentIdentifiers with BasePersistentS
 
   private def storeUserAgentPairwiseEvents(): Unit = {
     addEventsToPersistentStorage(myPairwiseRelAgentPersistenceId, basicUserAgentPairwiseEvents)
-    storeAgentRoute(myPairwiseRelDIDPair.DID, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
-    storeAgentRoute(myPairwiseRelAgentDIDPair.DID, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
+    storeAgentRoute(myPairwiseRelDIDPair.did, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
+    storeAgentRoute(myPairwiseRelAgentDIDPair.did, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
   }
 
   val responseMsgId = UUID.randomUUID().toString
@@ -86,19 +86,19 @@ trait UserAgentPairwiseEventSetter extends AgentIdentifiers with BasePersistentS
 
   protected lazy val basicUserAgentPairwiseEvents = scala.collection.immutable.Seq(
     ProtocolIdDetailSet("connecting","0.6","connecting-pinst-id"),
-    OwnerSetForAgent(mySelfRelDIDPair.DID, mySelfRelAgentDIDPair.DID, mySelfRelAgentDIDPair.verKey),
-    AgentDetailSet(myPairwiseRelDIDPair.DID, myPairwiseRelAgentDIDPair.DID, myPairwiseRelDIDPair.verKey, myPairwiseRelAgentDIDPair.verKey),
+    OwnerSetForAgent(mySelfRelDIDPair.did, mySelfRelAgentDIDPair.did, mySelfRelAgentDIDPair.verKey),
+    AgentDetailSet(myPairwiseRelDIDPair.did, myPairwiseRelAgentDIDPair.did, myPairwiseRelDIDPair.verKey, myPairwiseRelAgentDIDPair.verKey),
     // for aries connection on CAS, there shouldn't be any connection related events in this actor
 
-    //TODO: 'senderDID' in these events looks wrong (it should be from theirPairwiseRelDIDPair.DID)
+    //TODO: 'senderDID' in these events looks wrong (it should be from theirPairwiseRelDIDPair.did)
     // FYI: this issue is in the main code, not in these events setup done in the test
-    MsgCreated(responseMsgId,"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/response",myPairwiseRelDIDPair.DID,
+    MsgCreated(responseMsgId,"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/response",myPairwiseRelDIDPair.did,
       "MS-103",1615697700836l,1615697700836l,"",None,true),
     MsgPayloadStored(responseMsgId,ByteString.copyFromUtf8("response"),None),
     MsgStatusUpdated(responseMsgId,"MS-106",1615697702731l),
 
     MsgCreated(oobAcceptedMsgId,"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/handshake-reuse-accepted",
-      myPairwiseRelDIDPair.DID,"MS-103",1615697720549l,1615697720549l,"",None,true),
+      myPairwiseRelDIDPair.did,"MS-103",1615697720549l,1615697720549l,"",None,true),
     MsgPayloadStored(oobAcceptedMsgId,ByteString.copyFromUtf8("handshake-reuse-accepted"),None),
   )
 

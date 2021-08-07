@@ -4,7 +4,7 @@ import com.evernym.verity.actor.wallet.CredForProofReqCreated
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.buildAttachment
+import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine.Protocol
 import com.evernym.verity.protocol.protocols.ProtocolHelpers

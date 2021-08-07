@@ -2,6 +2,7 @@ package com.evernym.verity.actor.testkit.actor
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.Done
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
@@ -16,8 +17,7 @@ import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
 import com.evernym.verity.texter.SMSSender
 
-import scala.concurrent.Future
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import com.evernym.verity.transports.MsgSendingSvc
 
 /**
@@ -27,20 +27,23 @@ import com.evernym.verity.transports.MsgSendingSvc
  */
 class MockAgentActorContext(val system: ActorSystem,
                             val appConfig: AppConfig,
+                            val ecp: ExecutionContextProvider,
                             mockAgentMsgRouterProvider: () => Option[MockAgentMsgRouter] = { () => None })
   extends AgentActorContext {
 
-  override lazy val smsSvc: SMSSender = new MockSMSSender(appConfig)
-  override lazy val ledgerSvc: LedgerSvc = new MockLedgerSvc(system)
+  implicit lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+  override lazy val smsSvc: SMSSender = new MockSMSSender(appConfig, executionContext)
+  override lazy val ledgerSvc: LedgerSvc = new MockLedgerSvc(system, ecp.futureExecutionContext)
 
   override lazy val msgSendingSvc: MsgSendingSvc = MockMsgSendingSvc
-  override lazy val poolConnManager: LedgerPoolConnManager = new InMemLedgerPoolConnManager()(system.dispatcher)
+  override lazy val poolConnManager: LedgerPoolConnManager = new InMemLedgerPoolConnManager(ecp.futureExecutionContext)(system.dispatcher)
   override lazy val agentMsgRouter: AgentMsgRouter = mockAgentMsgRouterProvider().getOrElse(
-    new MockAgentMsgRouter(Map.empty)(appConfig, system)
+    new MockAgentMsgRouter(executionContext, Map.empty)(appConfig, system)
   )
-  override lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI)
 
-  override lazy val storageAPI: StorageAPI = new StorageAPI(appConfig) {
+  override lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, executionContext)
+
+  override lazy val storageAPI: StorageAPI = new StorageAPI(appConfig, ecp.futureExecutionContext) {
     var storageMock: Map[String, Array[Byte]] = Map()
 
     override def put(bucketName: String, id: String, data: Array[Byte]): Future[StorageInfo] = {
@@ -60,6 +63,16 @@ class MockAgentActorContext(val system: ActorSystem,
   override lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] =
     ProtocolRegistry(protocol.protocols.protocolRegistry.entries :+
       ProtocolRegistry.Entry(TicTacToeProtoDef, PinstIdResolution.V0_2): _*)
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 case class MockAgentActorContextParam(actorTypeToRegions: Map[Int, ActorRef]=Map.empty)

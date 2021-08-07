@@ -1,9 +1,12 @@
 package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.actor.agent.relationship.PairwiseRelationship
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.ProtocolRegistry.{DriverGen, Entry}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
@@ -12,6 +15,7 @@ import com.evernym.verity.protocol.testkit.InteractionType.{OneParty, TwoParty}
 import com.evernym.verity.util.{MsgIdProvider, MsgUtil}
 import org.scalatest.matchers.should.Matchers
 
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
@@ -34,10 +38,15 @@ object DSL {
 }
 
 class ProtocolTestKit[P,R,M,E,S,I](val protoDef: ProtocolDefinition[P,R,M,E,S,I],
+                                   executionContext: ExecutionContext,
+                                   ac: AppConfig,
                                    val segmentStoreStrategy: Option[SegmentStoreStrategy]=None)(implicit val mtag: ClassTag[M])
-  extends ProtocolTestKitLike[P,R,M,E,S,I]
+  extends ProtocolTestKitLike[P,R,M,E,S,I] {
+  override def futureExecutionContext: ExecutionContext = executionContext
+  override def appConfig: AppConfig = ac
+}
 
-trait ProtocolTestKitLike[P,R,M,E,S,I] {
+trait ProtocolTestKitLike[P,R,M,E,S,I] extends HasExecutionContextProvider {
 
   tk =>
 
@@ -46,6 +55,7 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
   def defaultInteractionType: InteractionType = TwoParty
 
   def defaultInitParams: Map[String, String] = Map.empty
+  def appConfig: AppConfig
 
   val defaultPinstIdResolver: PinstIdResolver = PinstIdResolution.V0_2
 
@@ -54,7 +64,8 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
   def segmentStoreStrategy: Option[SegmentStoreStrategy]
   type Container = InMemoryProtocolContainer[P,R,M,E,S,I]
 
-  val defaultControllerProvider: DriverGen[SimpleControllerProviderInputType] = Some(new InteractionController(_))
+  val defaultControllerProvider: DriverGen[SimpleControllerProviderInputType] =
+    Some((a: SimpleControllerProviderInputType, b: ExecutionContext) => new InteractionController(a))
 
   def setup(name: String,
             odg: DriverGen[SimpleControllerProviderInputType]=None,
@@ -62,7 +73,7 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
            )(implicit system: TestSystem): TestEnvir = {
     val dg = odg orElse defaultControllerProvider
     val protoReg = ProtocolRegistry[SimpleControllerProviderInputType](Entry(protoDef, defaultPinstIdResolver, dg))
-    new TestEnvir(system, new Domain(name, protoReg, system, defaultInitParams), it)
+    new TestEnvir(system, new Domain(name, protoReg, system, futureExecutionContext, appConfig, defaultInitParams), it)
   }
 
   def interaction(envirs: TestEnvir *): PlayDSL = {
@@ -71,8 +82,8 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
     )
   }
 
-  type TestEnvirToDid = (TestEnvir, DID)
-  type TestEnvirToOptDid = (TestEnvir, Option[DID])
+  type TestEnvirToDid = (TestEnvir, DidStr)
+  type TestEnvirToOptDid = (TestEnvir, Option[DidStr])
 
   def playExt(pairs: TestEnvirToDid *): PlayDSL = {
     new PlayDSL (
@@ -179,7 +190,7 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
 
   }
 
-  case class Interaction(myDID: DID, theirDID: DID, threadId: Option[ThreadId]=None)
+  case class Interaction(myDID: DidStr, theirDID: DidStr, threadId: Option[ThreadId]=None)
 
   /**
     * simple test environment for one side of a protocol interaction
@@ -188,9 +199,9 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
 
     te =>
 
-    private var _did: Option[DID] = None
+    private var _did: Option[DidStr] = None
 
-    def did: Option[DID] = _did orElse {
+    def did: Option[DidStr] = _did orElse {
       it match {
         case OneParty => Option(domain.domainId)
         case TwoParty => None
@@ -199,9 +210,9 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
       currentInteraction map { _.myDID }
     }
 
-    def did_! : DID = did getOrElse { throw new RuntimeException("DID not set") }
+    def did_! : DidStr = did getOrElse { throw new RuntimeException("DID not set") }
 
-    def setDID(did: DID): Unit = {
+    def setDID(did: DidStr): Unit = {
       _did = Option(did)
     }
 
@@ -307,7 +318,7 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] {
     /**
       * Allows to provide specific pairwise DIDs.
       */
-    def connect(them: TestEnvir, myDid: DID, theirDid: DID): Unit = {
+    def connect(them: TestEnvir, myDid: DidStr, theirDid: DidStr): Unit = {
       connectDomains (
         (this -> Some(myDid)),
         (them -> Some(theirDid))

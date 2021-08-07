@@ -1,7 +1,7 @@
 package com.evernym.integrationtests.e2e.sdk
 
 import com.evernym.integrationtests.e2e.env.SdkConfig
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.sdk.protocols.basicmessage.BasicMessage
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
@@ -61,23 +61,23 @@ class JavaSdkProvider(val sdkConfig: SdkConfig, val testDir: Option[Path] = None
                                 revocationDetails: Option[RevocationRegistryConfig]): WriteCredentialDefinitionV0_6 =
     WriteCredentialDefinition.v0_6(name, schemaId, tag.orNull, revocationDetails.orNull)
 
-  override def basicMessage_1_0(forRelationship: DID,
+  override def basicMessage_1_0(forRelationship: DidStr,
                                 content: String,
                                 sentTime: String,
                                 localization: String): BasicMessageV1_0 =
     BasicMessage.v1_0(forRelationship, content, sentTime, localization)
 
-  override def committedAnswer_1_0(forRelationship: DID,
+  override def committedAnswer_1_0(forRelationship: DidStr,
                                    questionText: String,
                                    questionDescription: String,
                                    validResponses: Seq[String],
                                    requireSig: Boolean): CommittedAnswerV1_0 =
     CommittedAnswer.v1_0(forRelationship, questionText, questionDescription, validResponses.toArray, requireSig)
 
-  override def committedAnswer_1_0(forRelationship: DID, threadId: String, answer: String): CommittedAnswerV1_0 =
+  override def committedAnswer_1_0(forRelationship: DidStr, threadId: String, answer: String): CommittedAnswerV1_0 =
     CommittedAnswer.v1_0(forRelationship, threadId, answer)
 
-  override def committedAnswer_1_0(forRelationship: DID, threadId: String): CommittedAnswerV1_0 =
+  override def committedAnswer_1_0(forRelationship: DidStr, threadId: String): CommittedAnswerV1_0 =
     CommittedAnswer.v1_0(forRelationship, threadId)
 
   override def connecting_1_0(sourceId: String, label: String, base64InviteURL: String): ConnectionsV1_0 = ???
@@ -114,7 +114,7 @@ class JavaSdkProvider(val sdkConfig: SdkConfig, val testDir: Option[Path] = None
                                   byInvitation: Boolean = false): PresentProofV1_0 =
     PresentProof.v1_0(forRelationship, name, proofAttrs, proofPredicate, byInvitation)
 
-  override def presentProof_1_0(forRelationship: DID, threadId: String): PresentProofV1_0 =
+  override def presentProof_1_0(forRelationship: DidStr, threadId: String): PresentProofV1_0 =
     PresentProof.v1_0(forRelationship, threadId)
 
   override def presentProof_1_0(forRelationship: String, proofAttrs: Array[ProposedAttribute], proofPredicates: Array[ProposedPredicate]): PresentProofV1_0 =

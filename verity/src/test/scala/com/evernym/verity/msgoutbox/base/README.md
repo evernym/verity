@@ -1,14 +1,56 @@
-# TODOs
+# TODO (to be discussed/finalized/decided/implemented etc)
 * Event/State object mapper decision
+  
+  Idea solution would be to get rid of this mapping if possible.
+  It would be good to keep this mapping in an actor specific object (instead of keeping it in global object)
+  If we can get compile time error because of mapping issue, that would be desired result.
+  
 * Supplying config to behaviours
+  As far as config goes, the long term thinking is that config is pretty much immutable.
+  As far as any hot-reloadable config is concerned, we are thinking that it should not
+  be achieved by using config, rather we'll come up with some other solution for that need
+  (at least for these new typed actors).
+  
+  We want each new typed actor to do this:
+    * during start, reads the required config, if there is no equivalent config in its state, then persist an event which has that new config.
+    * use the config stored inside the state for any logic purposes.
+  
 * Message payload "storage info" question (only retention policy required for further msg store operations)
+  For now, we don't want to worry about backward compatibility.
+  If at all we decide to change storage api (from s3 to anything else), then we'll have to do it via
+  proper migration plan.
+  So no need to store any storage api related information as such.
+  
 * Default packaging provided to Outbox (during GetOutboxParam)
-* Legacy data and msg recip overriding
-* Confirm the delete payload logic (when to trigger etc)
-* Outbox entity-id format confirmation (relId-recipId-destId) 
-* Any new metrics
-* StatusReply wrapper vs without it
+  It is fine for relationship actors to provide the packaging detail to outbox.
+  
+* Legacy data and msg recip overriding (in MessageMeta actor)
+  As far as this doesn't leak into different/unrelated logic, it is fine to have
+  legacy data support in outbox.
+  Recip packaging still needs to be finalized if we need it or not.
+  
+* Confirm the message payload deletion logic (when to trigger etc)
+  If the message payload is delivered (not talking about push notification delivery),
+  then the message payload should be deleted from storage api
+  If the message is not yet delivered or failed, but the retention policy is not yet expired,
+  then it should keep that message in outbox.
 
+* Outbox entity-id format confirmation (relId-recipId-destId)
+  Currently the outbox entity-id is used for business logic perspective, we need to change that.
+  Not completely sure about the outbox entity id (if want to be informative vs opaque)
+  But, as far as outbox functionality is concerned, it should store the relId, recipId and destId
+  into its own state and use them for any logic purposes (and should not rely on the entity id)
+
+  This will force the OutboxRouter to send few more details in AddMsg:
+    AddMsg(relId, recipId, destId, msgId)
+  
+* Any new metrics
+  pending, delivered, failed (already done)
+  average message payload size (to be added)
+  
+* StatusReply wrapper vs without it
+  Its fine to use it if it is a good/recommended pattern.
+  So, we'll have to change all actors to use it to be more consistent.
 
 # Scope
 * Current scope would be to have Outbox for 'webhooks' with 'OAuth' capability and integrate that change **only for VAS**

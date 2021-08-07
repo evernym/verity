@@ -2,6 +2,7 @@ package com.evernym.verity.actor.persistence.transformer_registry
 
 import com.evernym.verity.actor.PersistentMsg
 import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, ObjectCodeMapperBase}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.transformations.transformers._
 import com.evernym.verity.transformations.transformers.legacy._
 import com.evernym.verity.transformations.transformers.v1._
@@ -13,6 +14,7 @@ trait HasTransformationRegistry extends LegacyTransformationRegistry {
    * @return
    */
   def persistenceEncryptionKey: String
+  def appConfig: AppConfig
 
   /**
    * implementations can override this for schema evolution
@@ -25,7 +27,7 @@ trait HasTransformationRegistry extends LegacyTransformationRegistry {
    * new persistence transformer, optimized compared to legacy event/state transformers
    */
   lazy val persistenceTransformerV1: Any <=> PersistentMsg =
-    createPersistenceTransformerV1(persistenceEncryptionKey, persistentObjectMapper, schemaEvolTransformation)
+    createPersistenceTransformerV1(persistenceEncryptionKey, appConfig, persistentObjectMapper, schemaEvolTransformation)
 
   /**
    * transformer registry, map between a transformer id (Int) and corresponding composite transformer

@@ -2,7 +2,7 @@ package com.evernym.verity.testkit.agentmsg.message_pack.v_0_5
 
 import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.testkit.Matchers
 import com.evernym.verity.testkit.agentmsg.{AgentMsgHelper, CreateInviteResp_MFV_0_5, GeneralMsgCreatedResp_MFV_0_5, InviteAcceptedResp_MFV_0_5}
 import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent}
@@ -26,21 +26,21 @@ trait AgentMsgHandler {
       connectedMsg
     }
 
-    private def unpackConnectedRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackConnectedRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : Connected_MFV_0_5 = {
       val cm = convertTo[Connected_MFV_0_5](unpackRespMsgs_MPV_0_5(pmw, unsealFromDID).head)
       logApiCallProgressMsg("connected: " + cm)
       cm
     }
 
-    private def unpackSignedUpRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackSignedUpRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : SignedUp_MFV_0_5 = {
       val sm = convertTo[SignedUp_MFV_0_5](unpackRespMsgs_MPV_0_5(pmw, unsealFromDID).head)
       logApiCallProgressMsg("signed-up: " + sm)
       sm
     }
 
-    private def unpackAgentCreatedRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackAgentCreatedRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : AgentCreated_MFV_0_5 = {
       val acm = convertTo[AgentCreated_MFV_0_5](unpackRespMsgs_MPV_0_5(pmw, unsealFromDID).head)
       logApiCallProgressMsg("agent-created: " + acm)
@@ -117,7 +117,7 @@ trait AgentMsgHandler {
     def handleInviteAnsweredResp(connId: String, rmw: PackedMsg):
     MsgCreated_MFV_0_5 = {
       val pcd = pairwiseConnDetail(connId)
-      val um = unpackRespMsgs_MPV_0_5(rmw, pcd.myPairwiseDidPair.DID)
+      val um = unpackRespMsgs_MPV_0_5(rmw, pcd.myPairwiseDidPair.did)
       parseMsgCreatedRespMsg(um.head)
     }
 
@@ -148,14 +148,14 @@ trait AgentMsgHandler {
       unpackAgentMsg[MsgStatusUpdatedByConns_MFV_0_5](rmw.msg)
     }
 
-    private def unpackConfigsUpdatedRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackConfigsUpdatedRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : ConfigsUpdated_MFV_0_5 = {
       val cum = convertTo[ConfigsUpdated_MFV_0_5](unpackRespMsgs_MPV_0_5(pmw, unsealFromDID).head)
       logApiCallProgressMsg("configsUpdatedMsg: " + cum)
       cum
     }
 
-    private def unpackComMethodUpdatedRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackComMethodUpdatedRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : ComMethodUpdated_MFV_0_5 = {
       val cum = convertTo[ComMethodUpdated_MFV_0_5](unpackRespMsgs_MPV_0_5(pmw, unsealFromDID).head)
       logApiCallProgressMsg("comMethodUpdatedMsg: " + cum)
@@ -163,21 +163,21 @@ trait AgentMsgHandler {
     }
 
 
-    private def unpackConfigsRemovedRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackConfigsRemovedRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : ConfigsRemoved_MFV_0_5 = {
       val crm = convertTo[ConfigsRemoved_MFV_0_5](unpackRespMsgs_MPV_0_5(pmw, unsealFromDID).head)
       logApiCallProgressMsg("configsRemovedMsg: " + crm)
       crm
     }
 
-    private def unpackGetConfigRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackGetConfigRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : ConfigsMsg_MFV_0_5 = {
       val gc = convertTo[ConfigsMsg_MFV_0_5](unpackRespMsgs_MPV_0_5(pmw, unsealFromDID).head)
       logApiCallProgressMsg("configsMsg: " + gc)
       gc
     }
 
-    private def unpackKeyCreatedRespMsg(pmw: PackedMsg, unsealFromDID: DID): KeyCreated_MFV_0_5 = {
+    private def unpackKeyCreatedRespMsg(pmw: PackedMsg, unsealFromDID: DidStr): KeyCreated_MFV_0_5 = {
       val kc = convertTo[KeyCreated_MFV_0_5](unpackRespMsgs_MPV_0_5(pmw, unsealFromDID).head)
       logApiCallProgressMsg("keyCreated: " + kc)
       kc
@@ -260,7 +260,7 @@ trait AgentMsgHandler {
      * @param unsealFromDID
      * @return
      */
-    protected def unsealResp_MPV_0_5(rmw: Array[Byte], unsealFromDID: DID)
+    protected def unsealResp_MPV_0_5(rmw: Array[Byte], unsealFromDID: DidStr)
     : AgentMsgWrapper = {
       val fromKeyParam = KeyParam.fromDID(unsealFromDID)
       convertToSyncReq(agentMsgTransformer.unpackAsync(rmw, fromKeyParam))

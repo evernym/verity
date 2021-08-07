@@ -14,10 +14,10 @@ trait AgencyAgentEventSetter extends AgentIdentifiers with BasePersistentStore {
   def setupBasicAgencyAgent(): Unit = {
     //TODO: if we move below line 'setting of key value mapper' to any other
     // position in this method, ideally it should work but for some reason it doesn't, should find out why?
-    storeAgencyDIDKeyValueMapping(myAgencyAgentDIDPair.DID)
+    storeAgencyDIDKeyValueMapping(myAgencyAgentDIDPair.did)
     setupBasicAgencyAgentWalletData()
     addEventsToPersistentStorage(myAgencyAgentPersistenceId, basicAgencyAgentEvents)
-    storeAgentRoute(myAgencyAgentDIDPair.DID, ACTOR_TYPE_AGENCY_AGENT_ACTOR, myAgencyAgentEntityId)
+    storeAgentRoute(myAgencyAgentDIDPair.did, ACTOR_TYPE_AGENCY_AGENT_ACTOR, myAgencyAgentEntityId)
   }
 
   private def setupBasicAgencyAgentWalletData(): Unit = {
@@ -26,7 +26,7 @@ trait AgencyAgentEventSetter extends AgentIdentifiers with BasePersistentStore {
   }
 
   protected lazy val basicAgencyAgentEvents = scala.collection.immutable.Seq(
-    KeyCreated(myAgencyAgentDIDPair.DID, myAgencyAgentDIDPair.verKey),
+    KeyCreated(myAgencyAgentDIDPair.did, myAgencyAgentDIDPair.verKey),
     EndpointSet()
   )
 }
@@ -38,13 +38,13 @@ trait UserAgentEventSetter extends AgentIdentifiers with BasePersistentStore { t
   def setupBasicUserAgent(): Unit = {
     setupBasicUserAgentWalletData()
     addEventsToPersistentStorage(mySelfRelAgentPersistenceId, basicUserAgentEvents)
-    storeAgentRoute(mySelfRelDIDPair.DID, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentEntityId)
-    storeAgentRoute(mySelfRelAgentDIDPair.DID, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentEntityId)
+    storeAgentRoute(mySelfRelDIDPair.did, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentEntityId)
+    storeAgentRoute(mySelfRelAgentDIDPair.did, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentEntityId)
   }
 
   protected lazy val basicUserAgentEvents = scala.collection.immutable.Seq(
-    OwnerDIDSet(mySelfRelDIDPair.DID, mySelfRelDIDPair.verKey),
-    AgentKeyCreated(mySelfRelAgentDIDPair.DID, mySelfRelAgentDIDPair.verKey),
+    OwnerDIDSet(mySelfRelDIDPair.did, mySelfRelDIDPair.verKey),
+    AgentKeyCreated(mySelfRelAgentDIDPair.did, mySelfRelAgentDIDPair.verKey),
     ComMethodUpdated("1", 2, "http://abc.xyz.com"),
     ComMethodUpdated("2", 2, "http://abc.xyz.com", Option(ComMethodPackaging("plain", Seq(mySelfRelDIDPair.verKey))))
   )
@@ -75,20 +75,20 @@ trait UserAgentPairwiseEventSetter extends AgentIdentifiers with BasePersistentS
 
   private def storeUserAgentPairwiseEvents(): Unit = {
     addEventsToPersistentStorage(myPairwiseRelAgentPersistenceId, basicUserAgentPairwiseEvents)
-    storeAgentRoute(myPairwiseRelDIDPair.DID, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
-    storeAgentRoute(myPairwiseRelAgentDIDPair.DID, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
+    storeAgentRoute(myPairwiseRelDIDPair.did, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
+    storeAgentRoute(myPairwiseRelAgentDIDPair.did, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
   }
 
   protected lazy val basicUserAgentPairwiseEvents = scala.collection.immutable.Seq(
-    OwnerSetForAgent(mySelfRelDIDPair.DID, mySelfRelAgentDIDPair.DID, mySelfRelAgentDIDPair.verKey),
-    AgentDetailSet(myPairwiseRelDIDPair.DID, myPairwiseRelAgentDIDPair.DID, myPairwiseRelDIDPair.verKey, myPairwiseRelAgentDIDPair.verKey),
+    OwnerSetForAgent(mySelfRelDIDPair.did, mySelfRelAgentDIDPair.did, mySelfRelAgentDIDPair.verKey),
+    AgentDetailSet(myPairwiseRelDIDPair.did, myPairwiseRelAgentDIDPair.did, myPairwiseRelDIDPair.verKey, myPairwiseRelAgentDIDPair.verKey),
     ConnectionStatusUpdated(
       reqReceived = true,
       answerStatusCode = "MS-104",
       Option(TheirDidDocDetail(
-        theirPairwiseRelDIDPair.DID,
-        theirAgencyAgentDIDPair.DID,
-        theirPairwiseRelAgentDIDPair.DID,
+        theirPairwiseRelDIDPair.did,
+        theirAgencyAgentDIDPair.did,
+        theirPairwiseRelAgentDIDPair.did,
         theirPairwiseRelAgentDIDPair.verKey,
         "dummy-signature",
         pairwiseDIDVerKey = theirPairwiseRelDIDPair.verKey

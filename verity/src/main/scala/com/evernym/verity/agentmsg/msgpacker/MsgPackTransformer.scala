@@ -3,14 +3,13 @@ package com.evernym.verity.agentmsg.msgpacker
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.wallet.{LegacyPackMsg, LegacyUnpackMsg, PackedMsg, UnpackedMsg}
 import com.evernym.verity.util.MessagePackUtil
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * this transformer uses 'MessagePack' (https://msgpack.org/index.html) for 'pack' and 'unpack' functions
@@ -33,7 +32,7 @@ class MsgPackTransformer
   override def unpackAsync(msg: Array[Byte],
                            fromVerKeyParam: Option[KeyParam],
                            unpackParam: UnpackParam)
-                          (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentBundledMsg] = {
+                          (implicit wap: WalletAPIParam, walletAPI: WalletAPI, ec: ExecutionContext): Future[AgentBundledMsg] = {
 
     walletAPI.executeAsync[UnpackedMsg](LegacyUnpackMsg(msg, fromVerKeyParam, unpackParam.isAnonCryptedMsg)).map { um =>
       prepareAgentBundledMsg(um, unpackParam)

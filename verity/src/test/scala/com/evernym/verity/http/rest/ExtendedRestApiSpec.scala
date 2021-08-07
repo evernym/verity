@@ -3,8 +3,11 @@ package com.evernym.verity.http.rest
 import java.util.UUID
 
 import akka.util.ByteString
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.http.rest.base.RestApiBaseSpec
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Msg.Message
+
+import scala.concurrent.ExecutionContext
 
 /**
  * Purpose of this spec is to be able to establish connection between two users (mostly an enterprise and a consumer)
@@ -102,4 +105,16 @@ class ExtendedRestApiSpec
     }
   }
   
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

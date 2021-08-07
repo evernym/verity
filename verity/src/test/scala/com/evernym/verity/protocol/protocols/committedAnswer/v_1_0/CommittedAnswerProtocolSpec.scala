@@ -1,6 +1,8 @@
 package com.evernym.verity.protocol.protocols.committedAnswer.v_1_0
 
 import java.util.UUID
+
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.TypeFormat
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.agentmsg.buildAgentMsg
@@ -15,10 +17,11 @@ import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.Signal.{Answe
 import com.evernym.verity.protocol.testkit.DSL._
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
-import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 import com.evernym.verity.util.TimeUtil._
 import org.scalatest.Assertion
 
+import scala.concurrent.ExecutionContext
 import scala.language.{implicitConversions, reflectiveCalls}
 
 
@@ -27,8 +30,6 @@ class CommittedAnswerProtocolSpec
   with BasicFixtureSpec {
 
   import TestingVars._
-
-  lazy val config: AppConfig = new TestAppConfig
 
   private implicit def EnhancedScenario(s: Scenario) = new {
     val questioner: TestEnvir = s(QUESTIONER)
@@ -429,9 +430,17 @@ class CommittedAnswerProtocolSpec
   }
 
   override val containerNames: Set[ContainerName] = Set(TestingVars.QUESTIONER, TestingVars.RESPONDER)
+
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
+
 }
 
-object TestingVars extends CommonSpecUtil {
+object TestingVars {
   val QUESTIONER = "questioner"
   val RESPONDER = "responder"
   val QUESTION_TEXT = "ask a question"

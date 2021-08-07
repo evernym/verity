@@ -1,7 +1,7 @@
 package com.evernym.verity.integration.outbox.with_rest_api.oauth
 
 import akka.http.scaladsl.model.StatusCodes.Accepted
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.integration.base.sdk_provider.{OAuthParam, SdkProvider}
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
@@ -16,26 +16,36 @@ import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResul
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{Config => AgentConfig}
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{Write, StatusReport => WSStatusReport}
 import com.typesafe.config.{Config, ConfigFactory}
-
 import java.util.UUID
+
+import com.evernym.verity.util.TestExecutionContextProvider
+import com.evernym.verity.util2.ExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+
 
 class RestIssuerSdkSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+  lazy val walletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+
   lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, Option(OAuthParam(5.seconds)))
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
+  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, executionContext, walletExecutionContext, Option(OAuthParam(5.seconds)))
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, walletExecutionContext)
 
   override def beforeAll(): Unit = {
     super.beforeAll()
     issuerRestSDK.resetPlainMsgsCounter.plainMsgsBeforeLastReset shouldBe 0
     issuerRestSDK.fetchAgencyKey()
     issuerRestSDK.provisionVerityEdgeAgent()    //this sends a packed message (not REST api call)
-    issuerRestSDK.registerWebhook()             //this sends a packed message (not REST api call)
+    issuerRestSDK.registerWebhookWithoutOAuth()
+    issuerRestSDK.registerWebhook()
   }
 
   var lastReceivedThread: Option[MsgThread] = None
@@ -172,7 +182,7 @@ class RestIssuerSdkSpec
       "should be successful" in {
         val restOkResp = issuerRestSDK.sendGetStatusReqForConn[QAStatusReport](firstConn, QuestionAnswerMsgFamily, lastReceivedThread)
         restOkResp.status shouldBe "OK"
-        issuerRestSDK.resetPlainMsgsCounter.plainMsgsBeforeLastReset shouldBe 0
+        issuerRestSDK.resetPlainMsgsCounter.plainMsgsBeforeLastReset shouldBe 1
       }
     }
   }
@@ -183,4 +193,11 @@ class RestIssuerSdkSpec
          verity.rest-api.enabled = true
         """.stripMargin
     )
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

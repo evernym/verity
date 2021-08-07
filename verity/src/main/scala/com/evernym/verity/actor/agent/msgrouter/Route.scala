@@ -10,13 +10,17 @@ import com.evernym.verity.actor.{ActorMessage, ForIdentifier, RouteSet}
 import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.ActorNameConstants._
 
+import scala.concurrent.ExecutionContext
+
 /**
  * stores only one route mapping per actor
  *
  * @param appConfig application config
  */
-class Route(implicit val appConfig: AppConfig)
+class Route(executionContext: ExecutionContext)(implicit val appConfig: AppConfig)
   extends BasePersistentActor {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case _: StoreRoute | _: StoreFromLegacy
@@ -56,7 +60,7 @@ class Route(implicit val appConfig: AppConfig)
 }
 
 object Route {
-  def props(implicit appConfig: AppConfig): Props = Props(new Route)
+  def props(executionContext: ExecutionContext)(implicit appConfig: AppConfig): Props = Props(new Route(executionContext))
 }
 
 

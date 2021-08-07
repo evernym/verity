@@ -6,15 +6,19 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.wallet.WalletCommand
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants.WALLET_REGION_ACTOR_NAME
 import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
 
 import java.util.concurrent.TimeUnit
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 
-class ActorWalletService(system: ActorSystem) extends WalletService {
+class ActorWalletService(system: ActorSystem, appConfigParam: AppConfig, walletExecutionContext: ExecutionContext)
+  extends WalletService {
+
+  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
   lazy val walletActorRegion: ActorRef = ClusterSharding(system).shardRegion(WALLET_REGION_ACTOR_NAME)
 
   override val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()

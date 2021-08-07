@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import akka.actor.{ActorRef, Props}
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.msghandler.outgoing.{HasOutgoingMsgSender, JsonMsg, OutgoingMsgParam, ProcessSendMsgToMyDomain, ProcessSendMsgToTheirDomain}
 import com.evernym.verity.actor.base.CoreActorExtended
@@ -106,6 +107,8 @@ class OutgoingMsgSenderSpec
       expectMsg(shallExists)
     }
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 class MockAgentActor(appConfig: AppConfig, caller: ActorRef)

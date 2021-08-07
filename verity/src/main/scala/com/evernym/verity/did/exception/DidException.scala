@@ -1,4 +1,4 @@
-package com.evernym.verity.DID.DidException
+package com.evernym.verity.did.exception
 
 trait DidException
 

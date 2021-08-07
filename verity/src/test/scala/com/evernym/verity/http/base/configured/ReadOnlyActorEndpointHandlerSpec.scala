@@ -1,6 +1,7 @@
 package com.evernym.verity.http.base.configured
 
 import akka.http.scaladsl.model.StatusCodes.OK
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.maintenance.SummaryData
 import com.evernym.verity.actor.persistence.recovery.base.BaseRecoverySpecLike
@@ -10,6 +11,8 @@ import com.evernym.verity.constants.ActorNameConstants.USER_AGENT_REGION_ACTOR_N
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.typesafe.config.{Config, ConfigFactory}
+
+import scala.concurrent.ExecutionContext
 
 class ReadOnlyActorEndpointHandlerSpec
   extends BasicSpecWithIndyCleanup
@@ -88,4 +91,17 @@ class ReadOnlyActorEndpointHandlerSpec
   }
 
   override lazy val agentActorContext: AgentActorContext = platform.agentActorContext
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

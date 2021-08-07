@@ -12,10 +12,10 @@ import com.evernym.verity.protocol.protocols.walletBackup.legacy.BackupStored
 import com.google.protobuf.ByteString
 import scalapb.GeneratedMessage
 
+import scala.concurrent.ExecutionContext
+
 
 object SegmentedStateStore extends HasProps {
-  def props(implicit config: AppConfig): Props = Props(new SegmentedStateStore(config))
-
 
   def buildTypeName(protoRef: ProtoRef): String = {
     s"${protoRef.msgFamilyName}-${protoRef.msgFamilyVersion}-segment"
@@ -28,6 +28,8 @@ object SegmentedStateStore extends HasProps {
   def buildEvent(eventCode: Int, data: Array[Byte]): Any = {
     DefaultObjectCodeMapper.objectFromCode(eventCode, data)
   }
+
+  override def props(implicit conf: AppConfig, executionContext: ExecutionContext): Props =  Props(new SegmentedStateStore(conf, executionContext))
 }
 
 /*
@@ -36,9 +38,11 @@ actor itself. But in deaddrop protocol, we didn't want all the state in a single
 actor; it's too big. So we created SegmentedState such that each user has their
 own subset of the data that can be persisted and managed differently.
  */
-class SegmentedStateStore(val appConfig: AppConfig)
+class SegmentedStateStore(val appConfig: AppConfig, executionContext: ExecutionContext)
   extends BasePersistentActor
     with DefaultPersistenceEncryption {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   var state: Map[SegmentKey, Any] = Map.empty
 

@@ -14,10 +14,10 @@ trait AgencyAgentEventSetter extends AgentIdentifiers with BasePersistentStore {
   def setupBasicAgencyAgent(): Unit = {
     //TODO: if we move below line 'setting of key value mapper' to any other
     // position in this method, ideally it should work but for some reason it doesn't, should find out why?
-    storeAgencyDIDKeyValueMapping(myAgencyAgentDIDPair.DID)
+    storeAgencyDIDKeyValueMapping(myAgencyAgentDIDPair.did)
     setupBasicAgencyAgentWalletData()
     addEventsToPersistentStorage(myAgencyAgentPersistenceId, basicAgencyAgentEvents)
-    storeAgentRoute(myAgencyAgentDIDPair.DID, ACTOR_TYPE_AGENCY_AGENT_ACTOR, myAgencyAgentEntityId)
+    storeAgentRoute(myAgencyAgentDIDPair.did, ACTOR_TYPE_AGENCY_AGENT_ACTOR, myAgencyAgentEntityId)
   }
 
   private def setupBasicAgencyAgentWalletData(): Unit = {
@@ -26,7 +26,7 @@ trait AgencyAgentEventSetter extends AgentIdentifiers with BasePersistentStore {
   }
 
   protected lazy val basicAgencyAgentEvents = scala.collection.immutable.Seq(
-    KeyCreated(myAgencyAgentDIDPair.DID),
+    KeyCreated(myAgencyAgentDIDPair.did),
     EndpointSet()
   )
 }
@@ -38,20 +38,20 @@ trait UserAgentEventSetter extends AgentIdentifiers with BasePersistentStore { t
   def setupBasicUserAgent(): Unit = {
     setupBasicUserAgentWalletData()
     addEventsToPersistentStorage(mySelfRelAgentPersistenceId, basicUserAgentEvents)
-    storeAgentRoute(mySelfRelDIDPair.DID, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentEntityId)
-    storeAgentRoute(mySelfRelAgentDIDPair.DID, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentEntityId)
+    storeAgentRoute(mySelfRelDIDPair.did, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentEntityId)
+    storeAgentRoute(mySelfRelAgentDIDPair.did, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentEntityId)
   }
 
   protected lazy val basicUserAgentEvents = scala.collection.immutable.Seq(
-    OwnerDIDSet(mySelfRelDIDPair.DID),
-    AgentKeyCreated(mySelfRelAgentDIDPair.DID),
+    OwnerDIDSet(mySelfRelDIDPair.did),
+    AgentKeyCreated(mySelfRelAgentDIDPair.did),
     ComMethodUpdated("push-token", 1, "firebase-push-token"),
     ComMethodUpdated("webhook", 2, "http://abc.xyz.com"),
     ConfigUpdated("name","name1", 1615697665879l),
     ConfigUpdated("logoUrl","/logo_url.ico",1615697665880l),
 
     //pairwise connection event for each new connection
-    AgentDetailSet(myPairwiseRelDIDPair.DID, myPairwiseRelAgentDIDPair.DID, myPairwiseRelDIDPair.verKey, myPairwiseRelAgentDIDPair.verKey)
+    AgentDetailSet(myPairwiseRelDIDPair.did, myPairwiseRelAgentDIDPair.did, myPairwiseRelDIDPair.verKey, myPairwiseRelAgentDIDPair.verKey)
   )
 
   private def setupBasicUserAgentWalletData(): Unit = {
@@ -83,20 +83,20 @@ trait UserAgentPairwiseEventSetter extends AgentIdentifiers with BasePersistentS
 
   private def storeUserAgentPairwiseEvents(): Unit = {
     addEventsToPersistentStorage(myPairwiseRelAgentPersistenceId, basicUserAgentPairwiseEvents)
-    storeAgentRoute(myPairwiseRelDIDPair.DID, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
-    storeAgentRoute(myPairwiseRelAgentDIDPair.DID, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
+    storeAgentRoute(myPairwiseRelDIDPair.did, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
+    storeAgentRoute(myPairwiseRelAgentDIDPair.did, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
   }
 
   protected lazy val basicUserAgentPairwiseEvents = scala.collection.immutable.Seq(
-    OwnerSetForAgent(mySelfRelDIDPair.DID, mySelfRelAgentDIDPair.DID),
-    AgentDetailSet(myPairwiseRelDIDPair.DID, myPairwiseRelAgentDIDPair.DID),
-    AgentKeyDlgProofSet(myPairwiseRelAgentDIDPair.DID, myPairwiseRelAgentDIDPair.verKey,"dummy-signature"),
-    MsgCreated("001","connReq",myPairwiseRelDIDPair.DID,"MS-101",1548446192302L,1548446192302L,"",None),
-    MsgCreated("002","connReqAnswer",theirPairwiseRelDIDPair.DID,"MS-104",1548446192302L,1548446192302L,"",None),
+    OwnerSetForAgent(mySelfRelDIDPair.did, mySelfRelAgentDIDPair.did),
+    AgentDetailSet(myPairwiseRelDIDPair.did, myPairwiseRelAgentDIDPair.did),
+    AgentKeyDlgProofSet(myPairwiseRelAgentDIDPair.did, myPairwiseRelAgentDIDPair.verKey,"dummy-signature"),
+    MsgCreated("001","connReq",myPairwiseRelDIDPair.did,"MS-101",1548446192302L,1548446192302L,"",None),
+    MsgCreated("002","connReqAnswer",theirPairwiseRelDIDPair.did,"MS-104",1548446192302L,1548446192302L,"",None),
     MsgAnswered("001","MS-104","002",1548446192302L),
-    TheirAgentDetailSet(theirPairwiseRelDIDPair.DID, theirPairwiseRelAgentDIDPair.DID),
-    TheirAgentKeyDlgProofSet(theirPairwiseRelAgentDIDPair.DID, theirPairwiseRelAgentDIDPair.verKey,"dummy-signature"),
-    TheirAgencyIdentitySet(theirAgencyAgentDIDPair.DID, theirAgencyAgentDIDPair.verKey,"0.0.0.1:9000/agency/msg")
+    TheirAgentDetailSet(theirPairwiseRelDIDPair.did, theirPairwiseRelAgentDIDPair.did),
+    TheirAgentKeyDlgProofSet(theirPairwiseRelAgentDIDPair.did, theirPairwiseRelAgentDIDPair.verKey,"dummy-signature"),
+    TheirAgencyIdentitySet(theirAgencyAgentDIDPair.did, theirAgencyAgentDIDPair.verKey,"0.0.0.1:9000/agency/msg")
   )
 
 }

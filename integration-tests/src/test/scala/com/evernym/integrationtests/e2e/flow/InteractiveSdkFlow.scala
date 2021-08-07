@@ -15,7 +15,7 @@ import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.protocol.engine.Constants.`@TYPE`
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.RestrictionBuilder
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
@@ -189,7 +189,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
     val receiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
     s"[$issuerName] write issuer DID to ledger" taggedAs UNSAFE_IgnoreLog in {
-      val (issuerDID, issuerVerkey): (DID, VerKey) = currentIssuerId(issuerSdk, receiverSdk)
+      val (issuerDID, issuerVerkey): (DidStr, VerKeyStr) = currentIssuerId(issuerSdk, receiverSdk)
       issuerSdk.publicDID = Some(issuerDID)
 
       ledgerUtil.bootstrapNewDID(issuerDID, issuerVerkey, "ENDORSER")
@@ -289,7 +289,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
         issuerSdk.updateData(s"$schemaName-$schemaVersion-id",schemaId)
       }
       s"[$issuerName] check schema is on ledger" in {
-        val (issuerDID, _): (DID, VerKey) = currentIssuerId(issuerSdk, msgReceiverSdk)
+        val (issuerDID, _): (DidStr, VerKeyStr) = currentIssuerId(issuerSdk, msgReceiverSdk)
         ledgerUtil.checkSchemaOnLedger(issuerDID, schemaName, schemaVersion)
       }
     }
@@ -345,7 +345,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
       s"[$issuerName] use write-schema protocol before issuer DID is on ledger" in {
         val receiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
-        val (issuerDID, issuerVerkey): (DID, VerKey) = currentIssuerId(issuerSdk, receiverSdk)
+        val (issuerDID, issuerVerkey): (DidStr, VerKeyStr) = currentIssuerId(issuerSdk, receiverSdk)
         val endorserDidOnLedger = Try {
           ledgerUtil.checkDidOnLedger(issuerDID, issuerVerkey, "ENDORSER")
           true
@@ -1038,7 +1038,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       }
 
       s"[$verifierName] start present-proof using byInvitation" in {
-        val (issuerDID, _): (DID, VerKey) = currentIssuerId(verifierSdk, verifierMsgReceiver)
+        val (issuerDID, _): (DidStr, VerKeyStr) = currentIssuerId(verifierSdk, verifierMsgReceiver)
 
         val restriction = RestrictionBuilder
           .blank()
@@ -1181,7 +1181,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$verifierName] request a proof presentation" in {
         val forRel = verifierSdk.relationship_!(relationshipId).owningDID
 
-        val (issuerDID, _): (DID, VerKey) = currentIssuerId(verifierSdk, verifierMsgReceiver)
+        val (issuerDID, _): (DidStr, VerKeyStr) = currentIssuerId(verifierSdk, verifierMsgReceiver)
 
         val restriction = RestrictionBuilder
           .blank()
@@ -1276,7 +1276,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$verifierName] fails to request a proof presentation" in {
         val forRel = verifierSdk.relationship_!(relationshipId).owningDID
 
-        val (issuerDID, _): (DID, VerKey) = currentIssuerId(verifierSdk, verifierMsgReceiver)
+        val (issuerDID, _): (DidStr, VerKeyStr) = currentIssuerId(verifierSdk, verifierMsgReceiver)
 
         val restriction = RestrictionBuilder
           .blank()
@@ -1327,7 +1327,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$verifierName] request a proof presentation" in {
         val forRel = verifierSdk.relationship_!(relationshipId).owningDID
 
-        val (issuerDID, _): (DID, VerKey) = currentIssuerId(verifierSdk, verifierMsgReceiver)
+        val (issuerDID, _): (DidStr, VerKeyStr) = currentIssuerId(verifierSdk, verifierMsgReceiver)
 
         val restriction = RestrictionBuilder
           .blank()
@@ -1689,7 +1689,7 @@ object InteractiveSdkFlow {
   }
 
   def currentIssuerId(issuerSdk: VeritySdkProvider,
-                      msgReceiverSdk: VeritySdkProvider with MsgReceiver)(implicit scenario: Scenario): (DID, VerKey) = {
+                      msgReceiverSdk: VeritySdkProvider with MsgReceiver)(implicit scenario: Scenario): (DidStr, VerKeyStr) = {
     var did = ""
     var verkey = ""
     issuerSdk.issuerSetup_0_6.currentPublicIdentifier(issuerSdk.context)

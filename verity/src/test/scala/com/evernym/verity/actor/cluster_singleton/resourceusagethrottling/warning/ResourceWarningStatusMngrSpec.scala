@@ -5,17 +5,17 @@ import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.{CallerResourceUnwarned, CallerResourceWarned, CallerUnwarned, CallerWarned}
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.util2.ActorErrorResp
+import com.evernym.verity.util2.{ActorErrorResp, ExecutionContextProvider}
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status.BAD_REQUEST
-
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 
 class ResourceWarningStatusMngrSpec
   extends PersistentActorSpec
     with BasicSpec {
-
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
   import com.evernym.verity.util.TimeZoneUtil.{getCurrentUTCZonedDateTime => curDate}
 
   implicit class RichWarningDetail(warningDetail: WarningDetail) {

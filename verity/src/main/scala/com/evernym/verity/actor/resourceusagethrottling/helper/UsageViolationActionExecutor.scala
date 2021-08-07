@@ -23,6 +23,8 @@ class UsageViolationActionExecutor(val as: ActorSystem, appConfig: AppConfig)
   //keep adding different supported action here
   override lazy val singletonParentProxyActor: Option[ActorRef] = Option(getActorRefFromSelection(SINGLETON_PARENT_PROXY, as)(appConfig))
   override lazy val instructions: Set[Instruction] = buildInstructions()
+
+  override def actorSystem: ActorSystem = as
 }
 
 
@@ -245,6 +247,9 @@ class BlockUserInstruction(val spar: ActorRef) extends Instruction {
 trait UsageViolationActionExecutorBase {
   def singletonParentProxyActor: Option[ActorRef]
   def instructions: Set[Instruction]
+  def actorSystem: ActorSystem
+
+  val resourceUsageRuleHelper: ResourceUsageRuleHelper = ResourceUsageRuleHelperExtension(actorSystem).get()
 
   def buildInstructions(): Set[Instruction] = {
     val singletonDependentInstructions = singletonParentProxyActor match {
@@ -261,7 +266,7 @@ trait UsageViolationActionExecutorBase {
 
   private def filterTasksToBeExecuted(actionId: String, violatedRule: ViolatedRule)
                              (implicit sender: ActorRef): Map[Instruction, InstructionDetail] = {
-    ResourceUsageRuleHelper.resourceUsageRules.actionRules.get(actionId) match {
+    resourceUsageRuleHelper.resourceUsageRules.actionRules.get(actionId) match {
       case Some (ar) =>
         ar.instructions.flatMap { case (instructionName, instructionDetail) =>
           instructions.find(_.name == instructionName).map { i: Instruction =>
@@ -288,7 +293,20 @@ trait UsageViolationActionExecutorBase {
   type TasksExecuted = Int
 }
 
-class UsageViolationActionExecutorValidator extends UsageViolationActionExecutorBase {
-  override lazy val singletonParentProxyActor: Option[ActorRef] = Some(ActorRef.noSender)
-  override lazy val instructions: Set[Instruction] = buildInstructions()
+class UsageViolationActionExecutorValidator {
+  lazy val singletonParentProxyActor: Option[ActorRef] = Some(ActorRef.noSender)
+  lazy val instructions: Set[Instruction] = buildInstructions()
+
+  def buildInstructions(): Set[Instruction] = {
+    val singletonDependentInstructions = singletonParentProxyActor match {
+      case Some(spp) => Set (
+        new WarnResourceInstruction(spp),
+        new WarnUserInstruction(spp),
+        new BlockResourceInstruction(spp),
+        new BlockUserInstruction(spp)
+      )
+      case None => Set.empty
+    }
+    Set(LogMsgInstruction) ++ singletonDependentInstructions
+  }
 }

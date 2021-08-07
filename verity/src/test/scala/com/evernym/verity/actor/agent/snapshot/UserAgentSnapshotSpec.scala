@@ -2,6 +2,7 @@ package com.evernym.verity.actor.agent.snapshot
 
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.KeyCreated
 import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, SetupAgentEndpoint}
 import com.evernym.verity.actor.agent.relationship.SelfRelationship
@@ -11,7 +12,7 @@ import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.constants.ActorNameConstants.USER_AGENT_REGION_ACTOR_NAME
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import com.typesafe.config.{Config, ConfigFactory}
@@ -60,25 +61,28 @@ class UserAgentSnapshotSpec
     }
   }
 
-  lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+
+  lazy val mockEdgeAgent: MockEdgeAgent =
+    buildMockEdgeAgent(mockAgencyAdmin, ecp.futureExecutionContext, ecp.walletFutureExecutionContext)
 
   lazy val userDID = mockEdgeAgent.myDIDDetail
 
   def initUserAgent(): Unit = {
     val agentPairwiseKey = prepareNewAgentWalletData(userDID.didPair, userAgentEntityId)
-    ua ! SetupAgentEndpoint(userDID.didPair, agentPairwiseKey.didPair)
+    ua ! SetupAgentEndpoint(userDID.didPair.toAgentDidPair, agentPairwiseKey.didPair.toAgentDidPair)
     expectMsg(Done)
     mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.didPair)
   }
 
-  def checkKeyCreatedEvent(keyCreated: KeyCreated, expectedForDID: DID): Unit = {
+  def checkKeyCreatedEvent(keyCreated: KeyCreated, expectedForDID: DidStr): Unit = {
     keyCreated.forDID shouldBe expectedForDID
   }
 
   override def checkSnapshotState(state: UserAgentState,
                                   protoInstancesSize: Int): Unit = {
     state.publicIdentity.isDefined shouldBe false
-    state.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair)
+    state.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair.toAgentDidPair)
     state.agentWalletId shouldBe Option(userAgentEntityId)
     state.thisAgentKeyId.isDefined shouldBe true
     state.thisAgentKeyId.contains(userDID.did) shouldBe false
@@ -97,4 +101,6 @@ class UserAgentSnapshotSpec
   override type StateType = UserAgentState
   override def regionActorName: String = USER_AGENT_REGION_ACTOR_NAME
   override def actorEntityId: String = userAgentEntityId
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

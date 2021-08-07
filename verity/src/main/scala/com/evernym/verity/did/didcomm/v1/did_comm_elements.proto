@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
+
+package com.evernym.verity.did.didcomm.v1;
+
+message Thread {
+    option (scalapb.message).extends = "ThreadBase";
+    google.protobuf.StringValue thid = 1;
+    google.protobuf.StringValue pthid = 2;
+    google.protobuf.Int32Value sender_order = 3 [(scalapb.field).scala_name = "sender_order"];
+    map<string, int32> received_orders = 4 [(scalapb.field).scala_name = "received_orders"];
+}

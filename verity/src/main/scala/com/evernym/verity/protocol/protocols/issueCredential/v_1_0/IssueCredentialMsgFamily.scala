@@ -1,8 +1,8 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, PleaseAck}
-import com.evernym.verity.protocol.didcomm.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
+import com.evernym.verity.did.didcomm.v1.decorators.{AttachmentDescriptor, PleaseAck}
+import com.evernym.verity.did.didcomm.v1.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.InviteShortened
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Init

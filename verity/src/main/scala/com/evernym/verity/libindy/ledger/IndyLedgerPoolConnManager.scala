@@ -1,10 +1,10 @@
 package com.evernym.verity.libindy.ledger
 
 import akka.actor.ActorSystem
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
-import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, MildSystemError, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.ConfigConstants.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT
 import com.evernym.verity.config.ConfigUtil.{findTAAConfig, nowTimeOfAcceptance}
@@ -17,6 +17,7 @@ import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util.{HashUtil, Util}
 import com.evernym.verity.util2.Exceptions
+import com.evernym.verity.util2.Exceptions.NoResponseFromLedgerPoolServiceException
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.pool.Pool
@@ -26,14 +27,16 @@ import java.util.concurrent.TimeUnit
 import scala.collection.mutable
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 
 class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
                                 appConfig: AppConfig,
+                                executionContext: ExecutionContext,
                                 poolConfigName: Option[String] = None,
                                 genesisFile: Option[String] = None)
   extends ConfigurableLedgerPoolConnManager(appConfig) {
+  implicit def futureExecutionContext: ExecutionContext = executionContext
 
   val openTimeout: Duration = Duration.apply(
     appConfig.getIntOption(ConfigConstants.LIB_INDY_LEDGER_POOL_CONFIG_CONN_MANAGER_OPEN_TIMEOUT).getOrElse(60),
@@ -53,7 +56,15 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
 
   def poolConn: Option[Pool] = heldPoolConn
 
-  def poolConn_! : Pool = poolConn.getOrElse(throw new RuntimeException("pool not opened"))
+  def poolConn_! : Pool = poolConn match {
+    case Some(pc) =>
+      AppStateUpdateAPI(actorSystem).publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
+      pc
+    case None     =>
+      val ex = new RuntimeException("pool not opened")
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, ex))
+      throw ex
+  }
 
   def isConnected: Boolean = poolConn.isDefined
   def isNotConnected: Boolean = poolConn.isEmpty
@@ -138,7 +149,7 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
 
   def enableTAA(p: Pool): Future[Pool] = {
     if (ConfigUtil.isTAAConfigEnabled(appConfig)) {
-      createTxnExecutor(None, Some(p), None).getTAA(
+      createTxnExecutor(None, Some(p), None, futureExecutionContext).getTAA(
         Submitter("9mDREAANbTWQqbmrdZYjQz", None) // Using a hard coded random DID. This is not ideal.
       ).map {
         _.taa
@@ -184,15 +195,16 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
   }
 
   override def txnExecutor(walletAPI: Option[WalletAPI]): LedgerTxnExecutor = {
-    createTxnExecutor(walletAPI, poolConn, currentTAA)
+    createTxnExecutor(walletAPI, poolConn, currentTAA, futureExecutionContext)
   }
 
   private def createTxnExecutor(walletAPI: Option[WalletAPI],
                                 pool: Option[Pool],
-                                taa: Option[TransactionAuthorAgreement]): LedgerTxnExecutor = {
+                                taa: Option[TransactionAuthorAgreement],
+                                executionContext: ExecutionContext): LedgerTxnExecutor = {
     Util.getLedgerTxnProtocolVersion(appConfig) match {
-      case LEDGER_TXN_PROTOCOL_V1 => new LedgerTxnExecutorV1(actorSystem, appConfig, walletAPI, pool, taa)
-      case LEDGER_TXN_PROTOCOL_V2 => new LedgerTxnExecutorV2(actorSystem, appConfig, walletAPI, pool, taa)
+      case LEDGER_TXN_PROTOCOL_V1 => new LedgerTxnExecutorV1(actorSystem, appConfig, walletAPI, pool, taa, executionContext)
+      case LEDGER_TXN_PROTOCOL_V2 => new LedgerTxnExecutorV2(actorSystem, appConfig, walletAPI, pool, taa, executionContext)
       case x => throw new RuntimeException(s"ledger txn protocol version $x not yet supported")
     }
   }

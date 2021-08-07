@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.didcomm.conventions
+package com.evernym.verity.did.didcomm.v1.conventions
 
 import com.evernym.verity.testkit.BasicSpec
 

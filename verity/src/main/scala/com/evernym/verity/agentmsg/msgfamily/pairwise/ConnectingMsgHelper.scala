@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.protocol.engine._

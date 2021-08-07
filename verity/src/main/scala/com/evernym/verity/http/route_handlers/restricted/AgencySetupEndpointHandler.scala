@@ -14,7 +14,7 @@ import com.evernym.verity.cache.KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER
 import com.evernym.verity.cache.base.{GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.util.Util.getNewActorId
 
 import scala.concurrent.Future
@@ -25,7 +25,7 @@ import scala.util.Left
  */
 trait AgencySetupEndpointHandler { this: HttpRouteWithPlatform =>
 
-  protected def getActorIdByDID(toDID: DID): Future[Either[StatusDetail, ActorAddressDetail]] = {
+  protected def getActorIdByDID(toDID: DidStr): Future[Either[StatusDetail, ActorAddressDetail]] = {
     val respFut = platform.agentActorContext.agentMsgRouter.execute(GetRoute(toDID))
     respFut map {
       case Some(aa: ActorAddressDetail) => Right(aa)
@@ -34,7 +34,7 @@ trait AgencySetupEndpointHandler { this: HttpRouteWithPlatform =>
     }
   }
 
-  protected def getOrCreateActorIdFut(did: DID): Future[Either[StatusDetail, String]] = getActorIdByDID(did) map {
+  protected def getOrCreateActorIdFut(did: DidStr): Future[Either[StatusDetail, String]] = getActorIdByDID(did) map {
     case Right(aa: ActorAddressDetail) => Right(aa.address)
     case Left(AGENT_NOT_YET_CREATED) => Right(getNewActorId)
     case e => Left(getUnhandledError(e))

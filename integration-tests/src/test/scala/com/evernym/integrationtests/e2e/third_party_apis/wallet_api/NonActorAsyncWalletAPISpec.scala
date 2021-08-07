@@ -1,7 +1,10 @@
 package com.evernym.integrationtests.e2e.third_party_apis.wallet_api
 
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vault.wallet_api.base.NonActorClientWalletAPISpec
+
+import scala.concurrent.ExecutionContext
 
 /**
  * this is an integration test and it depends on mysql based wallet storage
@@ -25,4 +28,8 @@ class NonActorAsyncWalletAPISpec
       }
     }
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

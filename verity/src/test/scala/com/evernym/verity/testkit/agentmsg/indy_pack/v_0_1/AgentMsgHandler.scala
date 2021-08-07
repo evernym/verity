@@ -1,7 +1,7 @@
 package com.evernym.verity.testkit.agentmsg.indy_pack.v_0_1
 
 import com.evernym.verity.agentmsg.tokenizer.SendToken
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent}
@@ -19,11 +19,11 @@ trait AgentMsgHandler { this: AgentMsgHelper with MockAgent with HasCloudAgent =
       acm
     }
 
-    def handleSendToken(rmw: PackedMsg, unsealFromDID: DID): SendToken = {
+    def handleSendToken(rmw: PackedMsg, unsealFromDID: DidStr): SendToken = {
       unpackSendToken(rmw, unsealFromDID)
     }
 
-    def unpackSendToken(pmw: PackedMsg, unsealFromDID: DID)
+    def unpackSendToken(pmw: PackedMsg, unsealFromDID: DidStr)
     : SendToken = {
       val cm = unpackResp_MPV_1_0(pmw, unsealFromDID).head.convertTo[SendToken]
       logApiCallProgressMsg("send-token: " + cm)

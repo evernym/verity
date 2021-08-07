@@ -1,32 +1,27 @@
 package com.evernym.verity.actor.resourceusagethrottling.helper
 
+import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
 import com.evernym.verity.actor.resourceusagethrottling._
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.isIpAddressInTokenSet
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.{getResourceTypeName, isUserId}
-import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.validator.ResourceUsageRuleConfigValidator
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util._
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 
-object ResourceUsageRuleHelper {
+class ResourceUsageRuleHelper(val config: Config) {
 
-  loadResourceUsageRules()
+  loadResourceUsageRules(config)
 
   var resourceUsageRules: ResourceUsageRuleConfig = _
 
-  def loadResourceUsageRules(): Unit = {
-    resourceUsageRules = new ResourceUsageRuleConfigValidator(AppConfigWrapper.getLoadedConfig).buildResourceUsageRules()
+  def loadResourceUsageRules(config: Config): Unit = {
+    resourceUsageRules = new ResourceUsageRuleConfigValidator(config).buildResourceUsageRules()
   }
 
   val OWNER_ID_PATTERN: String = OWNER_ID_PREFIX + "*"
   val COUNTERPARTY_ID_PATTERN: String = COUNTERPARTY_ID_PREFIX + "*"
-
-  def isIpAddressInTokenSet(ipAddress: IpAddress, tokens: Set[EntityIdToken]): Boolean = {
-    tokens
-      .filter(SubnetUtilsExt.isIpAddressOrCidrNotation)
-      .exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(ipAddress))
-  }
 
   private def isUserIdInTokenSet(userId: UserId, tokens: Set[EntityIdToken]): Boolean = {
     tokens
@@ -148,4 +143,25 @@ case class ResourceUsageRuleConfig(
       tokens.contains(token)
   }
 
+}
+
+class ResourceUsageRuleHelperExtensionImpl(config: Config) extends Extension {
+  val resourceUsageRuleHelper: ResourceUsageRuleHelper = new ResourceUsageRuleHelper(config)
+
+  def get(): ResourceUsageRuleHelper = resourceUsageRuleHelper
+}
+
+object ResourceUsageRuleHelperExtension extends ExtensionId[ResourceUsageRuleHelperExtensionImpl] with ExtensionIdProvider {
+  override def createExtension(system: ExtendedActorSystem): ResourceUsageRuleHelperExtensionImpl =
+    new ResourceUsageRuleHelperExtensionImpl(system.settings.config)
+
+  override def lookup: ExtensionId[_ <: Extension] = ResourceUsageRuleHelperExtension
+}
+
+object ResourceUsageRuleHelper {
+  def isIpAddressInTokenSet(ipAddress: IpAddress, tokens: Set[EntityIdToken]): Boolean = {
+    tokens
+      .filter(SubnetUtilsExt.isIpAddressOrCidrNotation)
+      .exists(SubnetUtilsExt.getSubnetUtilsExt(_).getSubnetInfo.isInRange(ipAddress))
+  }
 }

@@ -3,7 +3,6 @@ package com.evernym.verity.actor.node_singleton
 import akka.actor.typed.eventstream.EventStream.Subscribe
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.HasSingletonParentProxy
 import com.evernym.verity.actor.appStateManager.StartDraining
@@ -19,12 +18,16 @@ import com.evernym.verity.metrics.MetricsWriterExtension
 import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.typesafe.config.ConfigFactory
 
+import scala.concurrent.ExecutionContext
 
-class NodeSingleton(val appConfig: AppConfig)
+
+class NodeSingleton(val appConfig: AppConfig, executionContext: ExecutionContext)
   extends CoreActorExtended
     with HasActorResponseTimeout
     with HasSingletonParentProxy
     with HasAppConfig {
+
+  private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   private val logger = getLoggerByClass(getClass)
 
@@ -88,7 +91,7 @@ class NodeSingleton(val appConfig: AppConfig)
       logger.info(s"draining in progress !!")
 
     case p: PersistentActorQueryParam =>
-      val ar = getRequiredActor(ReadOnlyPersistentActor.prop(appConfig, p.actorParam), p.actorParam.id)
+      val ar = getRequiredActor(ReadOnlyPersistentActor.prop(appConfig, p.actorParam, executionContext), p.actorParam.id)
       val sndr = sender()
       val fut = ar ? p.cmd
       fut.map(r => sndr ! r)
@@ -124,7 +127,7 @@ case class PersistentActorQueryParam(actorParam: ActorParam, cmd: Any)
   extends ActorMessage
 
 object NodeSingleton {
-  def props(appConfig: AppConfig): Props = Props(new NodeSingleton(appConfig))
+  def props(appConfig: AppConfig, executionContext: ExecutionContext): Props = Props(new NodeSingleton(appConfig, executionContext))
 }
 
 case class SingletonProxyEvent(cmd: ActorMessage) extends ActorMessage

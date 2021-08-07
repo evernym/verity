@@ -1,12 +1,13 @@
 package com.evernym.verity.config
 
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.ConfigConstants.AGENT_AUTHENTICATION_ENABLED
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.ConfigValueFactory
 
 class AgentAuthKeyUtilSpec extends BasicSpec with ConfigUtilBaseSpec {
 
-  lazy val appConfig: AppConfig = AppConfigWrapper
+  lazy val appConfig: AppConfig = new TestAppConfig()
 
   "Agent auth key util" - {
 

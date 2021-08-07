@@ -3,12 +3,14 @@ package com.evernym.verity.actor.typed.base
 import akka.persistence.typed.SnapshotAdapter
 import com.evernym.verity.actor.PersistentMsg
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
+import com.evernym.verity.config.AppConfig
 
 
 //does state transformation (serialization, encryption etc) during persistence
 // and un-transformation during recovery
 case class PersistentStateAdapter[S](encryptionKey: String,
-                                     objectCodeMapper: ObjectCodeMapperBase)
+                                     objectCodeMapper: ObjectCodeMapperBase,
+                                     config: AppConfig)
   extends SnapshotAdapter[S]
     with PersistentAdapterBase {
 
@@ -24,4 +26,6 @@ case class PersistentStateAdapter[S](encryptionKey: String,
           .asInstanceOf[S]
     }
   }
+
+  override def appConfig: AppConfig = config
 }

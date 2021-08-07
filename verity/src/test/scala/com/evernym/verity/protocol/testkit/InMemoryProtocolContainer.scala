@@ -2,6 +2,8 @@ package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.Relationship
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.metrics.{MetricsWriter, NoOpMetricsWriter}
 import com.evernym.verity.protocol.container.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine._
@@ -14,7 +16,7 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{Se
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 import scala.util.Try
 
@@ -40,7 +42,7 @@ case class ProtocolContainerElements[P,R,M,E,S,I](system: SimpleProtocolSystem,
   *
   * @tparam E Event type
   */
-class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[P,R,M,E,S,I])(implicit tag: ClassTag[M])
+class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[P,R,M,E,S,I], ec: ExecutionContext, ac: AppConfig)(implicit tag: ClassTag[M])
   extends {
     val pinstId = pce.pinstId
     val definition = pce.definition
@@ -117,6 +119,10 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
     segmentCache -= segmentKey
     segmentKey
   }
+
+  override def executionContext: ExecutionContext = ec
+
+  override def serviceKeyDidFormat: Boolean = ac.getBooleanReq(SERVICE_KEY_DID_FORMAT)
 }
 
 trait Logs {

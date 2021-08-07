@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.walletBackup
 
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status.BAD_REQUEST
 import com.evernym.verity.protocol.engine._
@@ -16,7 +17,7 @@ import com.google.protobuf.ByteString
 import scala.language.implicitConversions
 import scala.util.{Failure, Success}
 
-case class BackupInitParams(recoveryVk: VerKey, ddAddress: String, cloudAddress: Array[Byte])
+case class BackupInitParams(recoveryVk: VerKeyStr, ddAddress: String, cloudAddress: Array[Byte])
 
 /**
   * Roles used in Wallet Protocol
@@ -147,7 +148,7 @@ class WalletBackup(val ctx: ProtocolContextApi[WalletBackup, Role, BackupMsg, Ba
   //TODO: Hash of wallet could be calculated and stored with wallet to ensure data integrity.
   // Exporter could verify this with their own hash generation
   // This hash would be stored in the event StorageReferenceStored
-  def backup(vk: VerKey, wallet: Any): Unit = {
+  def backup(vk: VerKeyStr, wallet: Any): Unit = {
   //TODO: - RTM -> Once protocol version upgrades are vetted, remove this conditional and make base64 encoded string a later version
     val w: WalletBackupBytes = wallet match {
       case w: WalletBackupBytes => ctx.logger.debug("byte array received - newer expectation is base64 encoded str"); w
@@ -169,7 +170,7 @@ class WalletBackup(val ctx: ProtocolContextApi[WalletBackup, Role, BackupMsg, Ba
     }
   }
 
-  def recoverBackup(blobAddress: VerKey, r: Role): Unit = {
+  def recoverBackup(blobAddress: VerKeyStr, r: Role): Unit = {
     def restored(b: WalletBackupBytes): Restored = Restored(getBase64Encoded(b))
 
     ctx.withSegment[BackupStored](blobAddress) {

@@ -11,15 +11,16 @@ import com.evernym.verity.actor.{ActorMessage, Completed, ExecutorDeleted, ForId
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.ActorNameConstants._
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 
 /**
  * route store manager, orchestrates each route store processing
  * @param appConfig application configuration object
  */
-class ActorStateCleanupManager(val appConfig: AppConfig)
+class ActorStateCleanupManager(val appConfig: AppConfig, executionContext: ExecutionContext)
   extends SingletonChildrenPersistentActor
     with ActorStateCleanupBase {
 
@@ -255,7 +256,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
   var executorDestroyed: Set[EntityId] = Set.empty
   var completed: Map[EntityId, RoutesCount] = Map.empty
   var inProgress: Map[EntityId, RoutesCount] = Map.empty
-  var cleanupStatus: Map[EntityId, Map[DID, CleanupStatus]] = Map.empty
+  var cleanupStatus: Map[EntityId, Map[DidStr, CleanupStatus]] = Map.empty
   var registered: Map[EntityId, RoutesCount] = Map.empty
   var resetStatus: ResetStatus = ResetStatus.empty
 
@@ -288,6 +289,11 @@ class ActorStateCleanupManager(val appConfig: AppConfig)
       .getOrElse(5)
 
   scheduleJob("periodic_job", scheduledJobInterval, ProcessPending)
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 /**
@@ -301,7 +307,7 @@ case class ManagerStatus(registeredRouteStoreActorCount: Int,
                          totalCandidateAgentActors: Int,
                          processedRouteStoreActorCount: Int,
                          totalProcessedAgentActors: Int,
-                         inProgressCleanupStatus: Map[EntityId, Map[DID, CleanupStatus]],
+                         inProgressCleanupStatus: Map[EntityId, Map[DidStr, CleanupStatus]],
                          resetStatus: Option[ResetStatus] = None,
                          registeredRouteStores: Option[Map[EntityId, Int]] = None) extends ActorMessage
 
@@ -325,5 +331,6 @@ case object AlreadyRegistered extends ActorMessage
 
 object ActorStateCleanupManager {
   val name: String = ACTOR_STATE_CLEANUP_MANAGER
-  def props(appConfig: AppConfig): Props = Props(new ActorStateCleanupManager(appConfig))
+  def props(appConfig: AppConfig, executionContext: ExecutionContext): Props =
+    Props(new ActorStateCleanupManager(appConfig, executionContext))
 }

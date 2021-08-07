@@ -3,6 +3,7 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.{PoisonPill, ReceiveTimeout}
 import akka.cluster.sharding.ClusterSharding
 import akka.testkit.EventFilter
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
@@ -25,11 +26,26 @@ import com.evernym.verity.util.Util
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 import org.scalatest.time.{Seconds, Span}
 
+import scala.concurrent.ExecutionContext
+
 class ConsumerUserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpec_V_0_5 {
   implicit val msgPackagingContext: AgentMsgPackagingContext =
     AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = false)
   establishConnByAnsweringInvite()
   sendReceiveMsgSpecs()
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 class EnterpriseUserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpec_V_0_5 {
@@ -37,6 +53,18 @@ class EnterpriseUserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpec_V_0_5 
     AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = false)
   establishConnBySendAndReceivingInviteResp()
   sendReceiveMsgSpecs()
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
@@ -294,7 +322,7 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
   private def updateMsgStatusByConns(statusCode: String, uidsByConnIds: Map[String, List[String]]): Unit = {
     val msgUidsByConns = uidsByConnIds.map { case (k, v) =>
       val connDetail = mockEdgeAgent.pairwiseConnDetail(k)
-      PairwiseMsgUids(connDetail.myPairwiseDidPair.DID, v)
+      PairwiseMsgUids(connDetail.myPairwiseDidPair.did, v)
     }.toList
 
     val msg = prepareUpdateMsgStatusByConns(msgUidsByConns, statusCode)

@@ -1,8 +1,10 @@
 package com.evernym.verity.storageAPI
 
 import java.util.UUID
+
 import akka.Done
 import akka.actor.ActorSystem
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.config.AppConfig
@@ -13,7 +15,7 @@ import com.typesafe.config.{Config, ConfigValueFactory}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.BeforeAndAfterAll
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -32,8 +34,9 @@ class LeveldbAPISpec extends BasicAsyncSpec with BeforeAndAfterAll{
   val appConfig: AppConfig = new TestAppConfig(Some(blobConfig()))
   lazy implicit val system: ActorSystem = ActorSystemVanilla("leveldb-test-system", appConfig.config)
   val BUCKET: String = "leveldb-bucket"
+  lazy val futureExecutionContext: ExecutionContext = new ExecutionContextProvider(appConfig).futureExecutionContext
 
-  val leveldbAPI: LeveldbAPI = StorageAPI.loadFromConfig(appConfig).asInstanceOf[LeveldbAPI]
+  val leveldbAPI: LeveldbAPI = StorageAPI.loadFromConfig(appConfig, futureExecutionContext).asInstanceOf[LeveldbAPI]
 
   lazy val ID1: String = UUID.randomUUID.toString
   lazy val ID2: String = UUID.randomUUID.toString

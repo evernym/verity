@@ -1,17 +1,18 @@
 package com.evernym.verity.cache.fetchers
 
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.cache.LEDGER_GET_VER_KEY_CACHE_FETCHER
 import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.ledger.{LedgerSvc, Submitter}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class LedgerVerKeyCacheFetcher(val ledgerSvc: LedgerSvc, val appConfig: AppConfig) extends AsyncCacheValueFetcher {
+class LedgerVerKeyCacheFetcher(val ledgerSvc: LedgerSvc, val appConfig: AppConfig, executionContext: ExecutionContext)
+  extends AsyncCacheValueFetcher {
+  override implicit def futureExecutionContext: ExecutionContext = executionContext
 
   lazy val fetcherParam: FetcherParam = LEDGER_GET_VER_KEY_CACHE_FETCHER
   lazy val cacheConfigPath: Option[String] = Option(ROUTING_DETAIL_CACHE)
@@ -38,6 +39,6 @@ class LedgerVerKeyCacheFetcher(val ledgerSvc: LedgerSvc, val appConfig: AppConfi
 
 }
 
-case class GetVerKeyParam(did: DID, submitterDetail: Submitter) {
+case class GetVerKeyParam(did: DidStr, submitterDetail: Submitter) {
   override def toString: String = s"DID: $did, SubmitterDetail: $Submitter"
 }

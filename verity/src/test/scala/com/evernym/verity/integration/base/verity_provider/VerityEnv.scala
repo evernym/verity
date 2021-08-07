@@ -11,13 +11,16 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
 case class VerityEnv(seed: String,
-                     nodes: Seq[VerityNode])
+                     nodes: Seq[VerityNode],
+                     executionContext: ExecutionContext)
   extends Eventually
     with Matchers {
+  implicit lazy val ec: ExecutionContext = executionContext
 
   var isVerityBootstrapped: Boolean = false
 
@@ -85,7 +88,7 @@ case class VerityEnv(seed: String,
   }
 
   def checkBlobObjectCount(keyStartsWith: String, expectedCount: Int, bucketName: String = "local-blob-store"): Unit = {
-    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+    eventually(timeout(Span(15, Seconds)), interval(Span(100, Millis))) {
       mockBlobStore.getBlobObjectCount(keyStartsWith, bucketName) shouldBe expectedCount
     }
   }
@@ -117,13 +120,14 @@ case class VerityEnvUrlProvider(private val _nodes: Seq[VerityNode]) {
 
 object PortProfile {
   def random(): PortProfile = {
-    val arteryPort    = PortProvider.generateUnusedPort(2000)
-    val akkaMgmtPort  = PortProvider.generateUnusedPort(8000)
-    val httpPort      = PortProvider.generateUnusedPort(9000)
-    PortProfile(httpPort, arteryPort, akkaMgmtPort)
+    val arteryPort      = PortProvider.generateUnusedPort(2000)
+    val akkaMgmtPort    = PortProvider.generateUnusedPort(8000)
+    val httpPort        = PortProvider.generateUnusedPort(9000)
+    val prometheusPort  = PortProvider.generateUnusedPort(6000)
+    PortProfile(httpPort, arteryPort, akkaMgmtPort, prometheusPort)
   }
 }
 
-case class PortProfile(http: Int, artery: Int, akkaManagement: Int) {
-  def ports: Seq[Int] = Seq(http, artery, akkaManagement)
+case class PortProfile(http: Int, artery: Int, akkaManagement: Int, prometheusPort: Int) {
+  def ports: Seq[Int] = Seq(http, artery, akkaManagement, prometheusPort)
 }

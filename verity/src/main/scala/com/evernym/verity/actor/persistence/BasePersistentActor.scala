@@ -7,8 +7,8 @@ import akka.event.LoggingReceive
 import akka.persistence._
 import akka.util.Timeout
 import com.evernym.agency.common.actor.{TransformedEvent, TransformedMultiEvents}
+import com.evernym.verity.util2.{Exceptions, HasExecutionContextProvider}
 import com.evernym.verity.util2.Exceptions._
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, RecoverIfNeeded, SeriousSystemError}
@@ -29,7 +29,7 @@ import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 /**
@@ -44,7 +44,10 @@ trait BasePersistentActor
     with DeleteMsgHandler
     with HasTransformationRegistry
     with PersistentEntityIdentifier
-    with Stash {
+    with Stash
+    with HasExecutionContextProvider {
+
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   var totalPersistedEvents: Int = 0
   var totalRecoveredEvents: Int = 0

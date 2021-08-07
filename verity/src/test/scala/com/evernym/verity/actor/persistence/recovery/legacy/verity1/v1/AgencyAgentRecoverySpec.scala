@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.persistence.recovery.legacy.verity1.v1
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.agent.agency._
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.ANYWISE_RELATIONSHIP
@@ -12,6 +13,8 @@ import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, Persisten
 import com.evernym.verity.actor.testkit.checks.IgnoreAkkaEvents
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.typesafe.config.{Config, ConfigFactory}
+
+import scala.concurrent.ExecutionContext
 
 //this tests legacy agency agent actor's recovery
 class AgencyAgentRecoverySpec
@@ -34,21 +37,23 @@ class AgencyAgentRecoverySpec
         val adBeforeRestart = expectMsgType[AgencyAgentDetail]
         aaRegion ! GetLocalAgencyIdentity()
         val apdBeforeRestart = expectMsgType[AgencyPublicDid]
-        aaRegion ! GetAgencyIdentity(myAgencyAgentDIDPair.DID)
+        aaRegion ! GetAgencyIdentity(myAgencyAgentDIDPair.did)
         val aiBeforeRestart = expectMsgType[AgencyInfo]
 
         adBeforeRestart.didPair.validate()
-        adBeforeRestart.did shouldBe myAgencyAgentDIDPair.DID
+        adBeforeRestart.did shouldBe myAgencyAgentDIDPair.did
         adBeforeRestart.verKey shouldBe myAgencyAgentDIDPair.verKey
         adBeforeRestart.walletId shouldBe myAgencyAgentEntityId
-        apdBeforeRestart.DID shouldBe myAgencyAgentDIDPair.DID
+        apdBeforeRestart.DID shouldBe myAgencyAgentDIDPair.did
         apdBeforeRestart.verKey shouldBe myAgencyAgentDIDPair.verKey
         aiBeforeRestart.verKeyReq shouldBe myAgencyAgentDIDPair.verKey
 
         val walletServiceCountBeforeRestart = getStableWalletAPISucceedCountMetric
 
         val aaEventsBeforeRestart = getEvents(myAgencyAgentPersistenceId)
-        aaEventsBeforeRestart shouldBe aaEventsBeforeStart ++ getAuthKeyAddedEvents(myAgencyAgentDIDPair)
+        aaEventsBeforeRestart shouldBe aaEventsBeforeStart ++ getAuthKeyAddedEvents(
+          myAgencyAgentDIDPair
+        )
 
         restartActor(aaRegion)
 
@@ -61,14 +66,14 @@ class AgencyAgentRecoverySpec
         val adPostRestart = expectMsgType[AgencyAgentDetail]
         aaRegion ! GetLocalAgencyIdentity()
         val apdPostRestart = expectMsgType[AgencyPublicDid]
-        aaRegion ! GetAgencyIdentity(myAgencyAgentDIDPair.DID)
+        aaRegion ! GetAgencyIdentity(myAgencyAgentDIDPair.did)
         val aiPostRestart = expectMsgType[AgencyInfo]
 
         adPostRestart.didPair.validate()
-        adPostRestart.did shouldBe myAgencyAgentDIDPair.DID
+        adPostRestart.did shouldBe myAgencyAgentDIDPair.did
         adPostRestart.verKey shouldBe myAgencyAgentDIDPair.verKey
         adPostRestart.walletId shouldBe myAgencyAgentEntityId
-        apdPostRestart.DID shouldBe myAgencyAgentDIDPair.DID
+        apdPostRestart.DID shouldBe myAgencyAgentDIDPair.did
         apdPostRestart.verKey shouldBe myAgencyAgentDIDPair.verKey
         aiPostRestart.verKeyReq shouldBe myAgencyAgentDIDPair.verKey
 
@@ -103,24 +108,24 @@ class AgencyAgentRecoverySpec
       "should respond with proper agency DID" in {
         platform.singletonParentProxy ! ForKeyValueMapper(GetValue(AGENCY_DID_KEY))
         val agencyDID = expectMsgType[Option[String]]
-        agencyDID.contains(myAgencyAgentDIDPair.DID) shouldBe true
+        agencyDID.contains(myAgencyAgentDIDPair.did) shouldBe true
       }
     }
   }
 
   def assertAgencyAgentState(aas: AgencyAgentState): Unit = {
     aas.isEndpointSet shouldBe true
-    aas.thisAgentKeyId shouldBe Some(myAgencyAgentDIDPair.DID)
-    aas.agencyDIDPair shouldBe Some(myAgencyAgentDIDPair)
+    aas.thisAgentKeyId shouldBe Some(myAgencyAgentDIDPair.did)
+    aas.agencyDIDPair shouldBe Some(myAgencyAgentDIDPair.toAgentDidPair)
     aas.agentWalletId shouldBe Some(myAgencyAgentEntityId)
     aas.relationship shouldBe Some(
       Relationship(
         ANYWISE_RELATIONSHIP,
         "anywise",
         Some(DidDoc(
-          myAgencyAgentDIDPair.DID,
+          myAgencyAgentDIDPair.did,
           Some(AuthorizedKeys(Seq(
-            AuthorizedKey(myAgencyAgentDIDPair.DID, myAgencyAgentDIDPair.verKey, Set(EDGE_AGENT_KEY))
+            AuthorizedKey(myAgencyAgentDIDPair.did, myAgencyAgentDIDPair.verKey, Set(EDGE_AGENT_KEY))
           ))),
           Some(Endpoints(Seq.empty))
         )),
@@ -141,4 +146,7 @@ class AgencyAgentRecoverySpec
          }
       """)
   )
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

@@ -14,8 +14,10 @@ import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.util.StrUtil
 import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually
-
 import java.util.UUID
+
+import com.evernym.verity.util2.ExecutionContextProvider
+
 import scala.concurrent.duration.DurationInt
 
 
@@ -36,6 +38,7 @@ class LimitsFlowSpec
   def specifySdkType(env: IntegrationTestEnv): IntegrationTestEnv = env
 
   def appEnv: IntegrationTestEnv = specifySdkType(testEnv)
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appEnv.config)
 
   val cas1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_CAS_1).appInstance
   val verity1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_VERITY_1).appInstance
@@ -55,7 +58,7 @@ class LimitsFlowSpec
   ) { implicit scenario =>
 
 
-    val apps = ScenarioAppEnvironment(scenario, appEnv)
+    val apps = ScenarioAppEnvironment(scenario, appEnv, ecp)
 
     val sdkUnderTest = apps(verity1)
       .sdk
@@ -65,6 +68,8 @@ class LimitsFlowSpec
     s"Basic SDK Interaction Test for $sdkUnderTest" - {
       lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
         appEnv.config,
+        ecp.futureExecutionContext,
+        ecp.walletFutureExecutionContext,
         Option(appEnv.ledgerConfig.submitterDID),
         Option(appEnv.ledgerConfig.submitterSeed),
         appEnv.ledgerConfig.submitterRole,

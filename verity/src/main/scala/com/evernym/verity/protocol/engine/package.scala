@@ -9,9 +9,6 @@ package object engine {
   type ParameterName = String
   type ParameterValue = String
 
-  type DID = String
-  type DIDKeyStr = String
-  type VerKey = String
   type Ledgers = List[Map[String, Any]]
 
   type MsgFamilyName = String

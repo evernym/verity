@@ -4,6 +4,10 @@ import com.evernym.verity.integration.base.{VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.util.TestExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 
 
 class BasicMultiNodeClusterSpec
@@ -11,8 +15,11 @@ class BasicMultiNodeClusterSpec
     with SdkProvider
     with Eventually {
 
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+
   lazy val verityEnv = VerityEnvBuilder.default(nodeCount = 3).build(VAS)
-  lazy val issuerSDK = setupIssuerSdk(verityEnv)
+  lazy val issuerSDK = setupIssuerSdk(verityEnv, executionContext, ecp.walletFutureExecutionContext)
 
   "VerityAdmin" - {
 
@@ -92,6 +99,12 @@ class BasicMultiNodeClusterSpec
     }
   }
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 

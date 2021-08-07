@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.persistence.supervisor.backoff.onstop
 
 import akka.testkit.EventFilter
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.supervisor.{GenerateRecoveryFailure, MockActorRecoveryFailure}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
@@ -13,7 +14,7 @@ class ActorRecoveryFailureSpec
     with BasicSpec
     with Eventually {
 
-  lazy val mockSupervised = system.actorOf(MockActorRecoveryFailure.backOffOnStopProps(appConfig))
+  lazy val mockSupervised = system.actorOf(MockActorRecoveryFailure.backOffOnStopProps(appConfig, ecp.futureExecutionContext))
 
 
   "OnStop BackoffSupervised actor" - {
@@ -45,4 +46,7 @@ class ActorRecoveryFailureSpec
       akka.mock.actor.exceptionSleepTimeInMillis = 1000
       """
   )}
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

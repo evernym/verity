@@ -5,7 +5,10 @@ import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.integration.base.sdk_provider.{OAuthParam, SdkProvider}
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
+import com.evernym.verity.util.TestExecutionContextProvider
+import com.evernym.verity.util2.ExecutionContextProvider
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
@@ -13,11 +16,15 @@ class ComMethodAuthenticationSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+  lazy val walletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+
   lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, Option(OAuthParam(5.seconds)))
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, OAuthParam(5.seconds))
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, walletExecutionContext, Option(OAuthParam(5.seconds)))
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, OAuthParam(5.seconds), executionContext, walletExecutionContext)
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
@@ -185,4 +192,10 @@ class ComMethodAuthenticationSpec
     }
   }
 
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

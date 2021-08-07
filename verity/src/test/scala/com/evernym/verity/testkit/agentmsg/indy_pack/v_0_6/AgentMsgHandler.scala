@@ -2,7 +2,7 @@ package com.evernym.verity.testkit.agentmsg.indy_pack.v_0_6
 
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnReqRedirectResp_MFV_0_6, ConnReqRespMsg_MFV_0_6, RemoteMsgSent_MFV_0_6}
 import com.evernym.verity.agentmsg.msgpacker.{ParseParam, UnpackParam}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.testkit.Matchers
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.util.{AgentCreated_MFV_0_6, ComMethodUpdated_MFV_0_6, ConnReqAccepted_MFV_0_6, KeyCreated_MFV_0_6, MsgsByConns_MFV_0_6, PublicIdentifierCreated_MFV_0_6}
@@ -28,7 +28,7 @@ trait AgentMsgHandler {
       acm
     }
 
-    private def unpackAgentCreatedRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackAgentCreatedRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : AgentCreated_MFV_0_6 = {
       val cm = unpackResp_MPV_1_0(pmw, unsealFromDID).head.convertTo[AgentCreated_MFV_0_6]
       logApiCallProgressMsg("agent-created: " + cm)
@@ -69,7 +69,7 @@ trait AgentMsgHandler {
       unpackConReqAnswerRespMsg(rmw, getDIDToUnsealAgentRespMsg)
     }
 
-    private def unpackConReqRedirectedRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackConReqRedirectedRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : ConnReqRedirectResp_MFV_0_6 = {
       val cm = unpackResp_MPV_1_0(pmw, unsealFromDID).head.convertTo[ConnReqRedirectResp_MFV_0_6]
       logApiCallProgressMsg("redirected: " + cm)
@@ -80,7 +80,7 @@ trait AgentMsgHandler {
       unpackConReqRedirectedRespMsg(rmw, getDIDToUnsealAgentRespMsg)
     }
 
-    private def unpackRemoteMsgSentRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackRemoteMsgSentRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : RemoteMsgSent_MFV_0_6 = {
       val cm = unpackResp_MPV_1_0(pmw, unsealFromDID).head.convertTo[RemoteMsgSent_MFV_0_6]
       logApiCallProgressMsg("remote msg sent: " + cm)
@@ -103,28 +103,28 @@ trait AgentMsgHandler {
       unpackAgentMsg[MsgsByConns_MFV_0_6](rmw.msg, up=UnpackParam(parseParam=parseParam))
     }
 
-    private def unpackComMethodUpdatedRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackComMethodUpdatedRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : ComMethodUpdated_MFV_0_6 = {
       val cm = unpackResp_MPV_1_0(pmw, unsealFromDID).head.convertTo[ComMethodUpdated_MFV_0_6]
       logApiCallProgressMsg("connected: " + cm)
       cm
     }
 
-    private def unpackKeyCreatedRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackKeyCreatedRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : KeyCreated_MFV_0_6 = {
       val cm = unpackResp_MPV_1_0(pmw, unsealFromDID).head.convertTo[KeyCreated_MFV_0_6]
       logApiCallProgressMsg("connected: " + cm)
       cm
     }
 
-    private def unpackConReqAnswerRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackConReqAnswerRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : ConnReqAccepted_MFV_0_6 = {
       val cm = unpackResp_MPV_1_0(pmw, unsealFromDID).head.convertTo[ConnReqAccepted_MFV_0_6]
       logApiCallProgressMsg("connected: " + cm)
       cm
     }
 
-    private def unpackPublicIdentifierCreatedRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackPublicIdentifierCreatedRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : PublicIdentifierCreated_MFV_0_6 = {
       val pic = unpackResp_MPV_1_0(pmw, unsealFromDID).head.convertTo[PublicIdentifierCreated_MFV_0_6]
       logApiCallProgressMsg("public identifier created: " + pic)

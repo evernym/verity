@@ -1,10 +1,10 @@
 package com.evernym.verity.actor.agent.relationship
 
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import scalapb.lenses.{Lens, Mutation, Updatable}
 
 trait DidDocLike { this: Updatable[DidDoc] =>
-  def did: DID
+  def did: DidStr
 
   def authorizedKeys: Option[AuthorizedKeys]
   def `authorizedKeys_!`: AuthorizedKeys = authorizedKeys
@@ -26,7 +26,7 @@ trait DidDocLike { this: Updatable[DidDoc] =>
     }
   }
 
-  def existsAuthedVerKey(verKey: VerKey): Boolean = authorizedKeys.exists(_.safeVerKeys.contains(verKey))
+  def existsAuthedVerKey(verKey: VerKeyStr): Boolean = authorizedKeys.exists(_.safeVerKeys.contains(verKey))
 
   /**
    * adds/replaces (old tags will be replaced with provided ones) given key in 'authorizedKeys'
@@ -87,7 +87,7 @@ trait DidDocLike { this: Updatable[DidDoc] =>
    * @param tags
    * @return
    */
-  def updatedWithNewAuthKey(keyId: KeyId, verKey: VerKey, tags: Set[Tags]): DidDoc = {
+  def updatedWithNewAuthKey(keyId: KeyId, verKey: VerKeyStr, tags: Set[Tags]): DidDoc = {
     updatedWithNewAuthKey(AuthorizedKey(keyId, verKey, tags))
   }
 
@@ -99,7 +99,7 @@ trait DidDocLike { this: Updatable[DidDoc] =>
    * @param tags
    * @return
    */
-  def updatedWithMergedAuthKey(keyId: KeyId, verKey: VerKey, tags: Set[Tags]): DidDoc = {
+  def updatedWithMergedAuthKey(keyId: KeyId, verKey: VerKeyStr, tags: Set[Tags]): DidDoc = {
     updatedWithMergedAuthKey(AuthorizedKey(keyId, verKey, tags))
   }
 

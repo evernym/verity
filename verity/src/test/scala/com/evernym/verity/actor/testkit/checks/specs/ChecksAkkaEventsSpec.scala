@@ -4,6 +4,7 @@ import akka.actor.SupervisorStrategy.Resume
 import akka.actor.{Actor, OneForOneStrategy, Props}
 import akka.event.Logging.Warning
 import ch.qos.logback.classic.Level
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.{AkkaEventChecker, CheckerRegistry, FailedCheckException, UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.testkit._
@@ -74,6 +75,8 @@ class ChecksAkkaEventsSpec extends ActorSpec with BasicSpec with Eventually {
 
   }
 
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 class SpanishParent extends Actor {

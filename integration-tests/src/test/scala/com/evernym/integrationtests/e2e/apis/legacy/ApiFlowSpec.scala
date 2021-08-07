@@ -2,7 +2,9 @@ package com.evernym.integrationtests.e2e.apis.legacy
 
 import com.evernym.integrationtests.e2e.scenario.Scenario._
 import com.evernym.integrationtests.e2e.scenario.Scenario
+import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.scalalogging.Logger
 
 class ApiFlowSpec
@@ -52,4 +54,6 @@ class ApiFlowSpec
     val clientEnv3: ClientEnvironment = clientEnv1.copy(scenario = scenario2)
     generalEndToEndFlowScenario_MFV_0_6(clientEnv3)(agencyAdminEnv)
   }
+
+  override def executionContextProvider: ExecutionContextProvider = TestExecutionContextProvider.ecp
 }

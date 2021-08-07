@@ -1,6 +1,8 @@
 package com.evernym.verity.protocol.testkit
 
 import java.util.UUID
+
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
@@ -9,6 +11,7 @@ import org.scalatest.FixtureTestSuite
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
 
@@ -58,12 +61,14 @@ trait TestsProtocols[P,R,M,E,S,I] extends Eventually {
   }
 
   def newContainer(system: SimpleProtocolSystem,
+                   executionContext: ExecutionContext,
+                   appConfig: AppConfig,
                    partiId: ParticipantId=UUID.randomUUID.toString,
                    pinstId: PinstId=UUID.randomUUID.toString,
                    recorder: Option[RecordsEvents]=None,
                    driver: Option[Driver]=None): Container = {
     val pce = ProtocolContainerElements(system, partiId, pinstId, None, protoDef, new TestSystemInitProvider, recorder, driver)
-    new Container(pce)
+    new Container(pce, executionContext, appConfig)
   }
 
   trait ProtocolScenario

@@ -5,11 +5,10 @@ import akka.cluster.Cluster
 import akka.cluster.ClusterEvent._
 import akka.pattern.ask
 import akka.util.Timeout
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.maintenance.ActorStateCleanupManager
-import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.{ErrorEvent, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.ResourceBlockingStatusMngr
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.ResourceWarningStatusMngr
@@ -26,18 +25,21 @@ import com.evernym.verity.util.Util._
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success}
 
 
 object SingletonParent {
-  def props(name: String)(implicit agentActorContext: AgentActorContext): Props = Props(new SingletonParent(name))
+  def props(name: String, ec: ExecutionContext)(implicit agentActorContext: AgentActorContext): Props =
+    Props(new SingletonParent(name, ec))
 }
 
-class SingletonParent(val name: String)(implicit val agentActorContext: AgentActorContext)
+class SingletonParent(val name: String, executionContext: ExecutionContext)(implicit val agentActorContext: AgentActorContext)
   extends CoreActorExtended
-    with ShardRegionFromActorContext {
+    with ShardRegionFromActorContext{
+
+  implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   override final def receiveCmd: Receive = {
     case forCmd: ForWatcherManagerChild => forwardToChild(WATCHER_MANAGER, forCmd)
@@ -72,12 +74,12 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
 
   private def allSingletonPropsMap: Map[String, Props] =
     Map(
-      KeyValueMapper.name -> KeyValueMapper.props,
-      WatcherManager.name -> WatcherManager.props(appConfig),
-      ResourceBlockingStatusMngr.name -> ResourceBlockingStatusMngr.props(agentActorContext),
-      ResourceWarningStatusMngr.name -> ResourceWarningStatusMngr.props(agentActorContext),
-      ActorStateCleanupManager.name -> ActorStateCleanupManager.props(appConfig),
-      AgentRoutesMigrator.name -> AgentRoutesMigrator.props(appConfig)
+      KeyValueMapper.name -> KeyValueMapper.props(futureExecutionContext),
+      WatcherManager.name -> WatcherManager.props(appConfig, futureExecutionContext),
+      ResourceBlockingStatusMngr.name -> ResourceBlockingStatusMngr.props(agentActorContext, futureExecutionContext),
+      ResourceWarningStatusMngr.name -> ResourceWarningStatusMngr.props(agentActorContext, futureExecutionContext),
+      ActorStateCleanupManager.name -> ActorStateCleanupManager.props(appConfig, futureExecutionContext),
+      AgentRoutesMigrator.name -> AgentRoutesMigrator.props(appConfig, futureExecutionContext)
     )
 
   implicit def appConfig: AppConfig = agentActorContext.appConfig

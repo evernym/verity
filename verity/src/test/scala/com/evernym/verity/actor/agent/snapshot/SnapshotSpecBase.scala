@@ -69,7 +69,7 @@ trait SnapshotSpecBase
   def regionActorName: String
   def actorEntityId: String
 
-  lazy val transformer = createPersistenceTransformerV1(encrKey)
+  lazy val transformer = createPersistenceTransformerV1(encrKey, appConfig)
   def persId: String = stdPersistenceId(regionActorName, actorEntityId)
   def encrKey: String = {
     val secret = Util.saltedHashedName(actorEntityId + "actor-wallet", appConfig)

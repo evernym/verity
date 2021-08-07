@@ -16,6 +16,6 @@ trait MsgTracingRegionActors { this: Platform =>
   //message progress tracking region actor (this is not a feature code, only related to troubleshooting)
   val msgProgressTrackerRegion: ActorRef = createNonPersistentRegion(
     MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME,
-    MsgProgressTracker.props(agentActorContext.appConfig))
+    MsgProgressTracker.props(agentActorContext.appConfig, this.executionContextProvider.futureExecutionContext))
 
 }

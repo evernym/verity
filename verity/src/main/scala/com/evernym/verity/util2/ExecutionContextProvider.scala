@@ -1,32 +1,52 @@
 package com.evernym.verity.util2
+import java.util.concurrent.{ExecutorService, Executors}
 
-import com.evernym.verity.config.AppConfigWrapper
+import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.config.ConfigConstants.{VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE, VERITY_WALLET_FUTURE_THREAD_POOL_SIZE}
-import java.util.concurrent.Executors
+import kamon.instrumentation.executor.ExecutorInstrumentation
+
 import scala.concurrent.ExecutionContext
-import scala.concurrent.ExecutionContext.Implicits
 
-object ExecutionContextProvider {
+trait HasWalletExecutionContextProvider {
+  /**
+   * custom thread pool executor
+   */
+  def futureWalletExecutionContext: ExecutionContext
+}
 
-  lazy val defaultFutureThreadPoolSize: Option[Int] =
-    AppConfigWrapper.getIntOption(VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE)
+trait HasExecutionContextProvider {
+  /**
+   * custom thread pool executor
+   */
+  def futureExecutionContext: ExecutionContext
+}
 
-  lazy val walletFutureThreadPoolSize: Option[Int] =
-    AppConfigWrapper.getIntOption(VERITY_WALLET_FUTURE_THREAD_POOL_SIZE)
+class ExecutionContextProvider(val appConfig: AppConfig) {
+  private lazy val defaultFutureThreadPoolSize: Option[Int] =
+    appConfig.getIntOption(VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE)
+  private lazy val walletFutureThreadPoolSize: Option[Int] =
+    appConfig.getIntOption(VERITY_WALLET_FUTURE_THREAD_POOL_SIZE)
 
   /**
    * custom thread pool executor
    */
-  implicit val futureExecutionContext: ExecutionContext =
-    defaultFutureThreadPoolSize match {
-      case Some(size) => ExecutionContext.fromExecutor(Executors.newFixedThreadPool(size))
-      case _ => Implicits.global
+  lazy val futureExecutionContext: ExecutionContext =
+    {
+      ExecutorInstrumentation.instrumentExecutionContext(
+        defaultFutureThreadPoolSize match {
+          case Some(size) => ExecutionContext.fromExecutor(Executors.newFixedThreadPool(size))
+          case _          => ExecutionContext.fromExecutor(null)
+        },
+        "future-thread-executor")
     }
 
-  implicit val walletFutureExecutionContext: ExecutionContext =
-    walletFutureThreadPoolSize match {
-      case Some(size) => ExecutionContext.fromExecutor(Executors.newFixedThreadPool(size))
-      case _ => futureExecutionContext
+  lazy val walletFutureExecutionContext: ExecutionContext =
+    {
+      ExecutorInstrumentation.instrumentExecutionContext(
+        walletFutureThreadPoolSize match {
+          case Some(size) => ExecutionContext.fromExecutor(Executors.newFixedThreadPool(size))
+          case _          => futureExecutionContext
+        },
+        "wallet-thread-executor")
     }
-
 }

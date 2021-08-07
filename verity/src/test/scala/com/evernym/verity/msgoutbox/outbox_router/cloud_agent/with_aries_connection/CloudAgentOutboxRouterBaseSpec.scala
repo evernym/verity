@@ -1,6 +1,6 @@
 package com.evernym.verity.msgoutbox.outbox_router.cloud_agent.with_aries_connection
 
-import com.evernym.verity.msgoutbox.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.msgoutbox.outbox_router.{AgentContext, OutboxRouterSpecBase, PairwiseRelContext, SelfRelContext}
 import com.evernym.verity.protocol.engine.ParticipantId
 import com.evernym.verity.util.ParticipantUtil
@@ -27,7 +27,7 @@ case object VerityCloudAgent // mimicing CAS/EAS scenario
     val selfParticipantId = myPairwiseDID
     val myDomainParticipantId = ParticipantUtil.participantId(thisAgentKeyId, Option(selfRelDID))
 
-    def theirPairwiseDID: DID = ???
+    def theirPairwiseDID: DidStr = ???
     def otherParticipantId: ParticipantId = ???
   }
 }

@@ -101,3 +101,31 @@ publish-docker-manual:
       - tags
       - merge_requests
   when: manual
+
+.publish-common-helm:
+  script:
+    - curl --request POST --user gitlab-ci-token:$CI_JOB_TOKEN --form "chart=@$(find verity/target/helm -type f -name '*.tgz')" "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/api/stable/charts"
+
+publish-helm:
+  extends:
+    - .publish-common
+    - .publish-common-helm
+  dependencies:
+    - package-helm
+  only:
+    refs:
+      - main@evernym/verity/verity
+
+publish-helm-manual:
+  extends:
+    - .publish-common
+    - .publish-common-helm
+  dependencies:
+    - package-helm-manual
+  only:
+    refs:
+      - master
+      - main
+      - tags
+      - merge_requests
+  when: manual

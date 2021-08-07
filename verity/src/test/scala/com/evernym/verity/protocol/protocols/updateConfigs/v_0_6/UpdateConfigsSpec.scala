@@ -1,17 +1,19 @@
 package com.evernym.verity.protocol.protocols.updateConfigs.v_0_6
 
-import com.evernym.verity.actor.agent.user.GetConfigs
-import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.SignalEnvelope
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.{SendConfig, Update}
-import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.{ConfigResult, UpdateConfig}
+import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.{ConfigResult, GetConfigs, UpdateConfig}
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{InteractionController, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.util.TestExecutionContextProvider
+import com.evernym.verity.util2.ExecutionContextProvider
 import org.scalatest.BeforeAndAfterAll
+
+import scala.concurrent.ExecutionContext
 
 
 class UpdateConfigsSpec
@@ -26,8 +28,6 @@ class UpdateConfigsSpec
   override protected def afterAll(): Unit = {
     super.afterAll()
   }
-
-  lazy val config: AppConfig = new TestAppConfig
 
   "UpdateConfigs Protocol Definition" - {
     "has one role" in { f =>
@@ -84,4 +84,11 @@ class UpdateConfigsSpec
 
     }
   }
+
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }

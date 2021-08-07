@@ -2,7 +2,6 @@ package com.evernym.verity.msgoutbox.outbox.msg_store
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.msgoutbox.MsgId
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore.Commands.{DeletePayload, GetPayload, StorePayload}
@@ -11,6 +10,7 @@ import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
 import com.evernym.verity.util2.RetentionPolicy
 import org.slf4j.event.Level
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
@@ -41,10 +41,10 @@ object MsgStore {
     case class PayloadRetrieved(payload: Option[Array[Byte]]) extends Reply
   }
 
-  def apply(bucketName: String, storageAPI: StorageAPI): Behavior[Cmd] = {
+  def apply(bucketName: String, storageAPI: StorageAPI, executionContext: ExecutionContext): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
       Behaviors
-        .supervise(initialized(bucketName, storageAPI)(actorContext)) //TODO: finalize this
+        .supervise(initialized(bucketName, storageAPI, executionContext)(actorContext)) //TODO: finalize this
         .onFailure[RuntimeException]( //TODO: finalize this
           SupervisorStrategy
             .restart
@@ -56,7 +56,8 @@ object MsgStore {
   }
 
   private def initialized(bucketName: String,
-                          storageAPI: StorageAPI)
+                          storageAPI: StorageAPI,
+                          executionContext: ExecutionContext)
                          (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
 
     case StorePayload(msgId, payload, policy, replyTo) =>
@@ -64,7 +65,7 @@ object MsgStore {
         Option(policy.elements.expiryDaysStr), msgId)
       storageAPI.put(bucketName, msgLifecycleAddress, payload).foreach { _ =>
         replyTo ! PayloadStored
-      }
+      }(executionContext)
       Behaviors.same
 
     case GetPayload(msgId, policy, replyTo) =>
@@ -72,7 +73,7 @@ object MsgStore {
         Option(policy.elements.expiryDaysStr), msgId)
       storageAPI.get(bucketName, msgLifecycleAddress).foreach { p =>
         replyTo ! PayloadRetrieved(p)
-      }
+      }(executionContext)
       Behaviors.same
 
     case DeletePayload(msgId, policy, replyTo) =>
@@ -80,7 +81,7 @@ object MsgStore {
         Option(policy.elements.expiryDaysStr), msgId)
       storageAPI.delete(bucketName, msgLifecycleAddress).foreach { _ =>
         replyTo ! PayloadDeleted
-      }
+      }(executionContext)
       Behaviors.same
   }
 }

@@ -6,6 +6,7 @@ import com.evernym.verity.actor.{ActorMessage, State}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.YES
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 /**
@@ -24,10 +25,12 @@ import scala.concurrent.duration._
  * @param actorParam actor param
  */
 
-class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam)
+class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam, executionContext: ExecutionContext)
   extends BasePersistentActor
     with SnapshotterExt[State]
     with DefaultPersistenceEncryption {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   override def receiveCmd: Receive = {
     case SendSummary =>
@@ -130,8 +133,8 @@ case class AggregatedData(data: Map[String, Int]) extends PersistentDataResp {
 case class SummaryData(recoveredSnapshot: Boolean, recoveredEvents: Int) extends ActorMessage
 
 object ReadOnlyPersistentActor {
-  def prop(appConfig: AppConfig, actorParam: ActorParam): Props =
-    Props(new ReadOnlyPersistentActor(appConfig, actorParam))
+  def prop(appConfig: AppConfig, actorParam: ActorParam, executionContext: ExecutionContext): Props =
+    Props(new ReadOnlyPersistentActor(appConfig, actorParam, executionContext))
 }
 
 case class ActorParam(actorTypeName: String,

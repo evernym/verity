@@ -13,20 +13,24 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.{Driver, PinstId, ProtoRef, ProtocolRegistry, SignalEnvelope}
 import com.evernym.verity.protocol.protocols.HasAppConfig
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.cache.base.Cache
+
+import scala.concurrent.ExecutionContext
 
 /**
   * A base Driver for Drivers in an Akka actor system
   * @param cp: an ActorDriverConstructionParameter
   */
-abstract class ActorDriver(cp: ActorDriverGenParam)
+abstract class ActorDriver(cp: ActorDriverGenParam, ec: ExecutionContext)
   extends Driver
     with ShardRegionNames
     with HasAppConfig
     with HasActorResponseTimeout
     with AgencyIdUtil {
 
+  private implicit def executionContext: ExecutionContext = ec
+
+  override def futureExecutionContext: ExecutionContext = ec
   val system: ActorSystem = cp.system
   val appConfig: AppConfig = cp.config
 

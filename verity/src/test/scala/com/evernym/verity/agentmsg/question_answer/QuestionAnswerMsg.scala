@@ -1,6 +1,6 @@
 package com.evernym.verity.agentmsg.question_answer
 
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{SigBlock, Timing}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Msg.Question
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswerProtocol.Nonce

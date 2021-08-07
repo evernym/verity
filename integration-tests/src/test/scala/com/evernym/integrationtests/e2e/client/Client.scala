@@ -10,10 +10,10 @@ trait ApiClientCommon { this: AgentMsgSenderHttpWrapper =>
   val DIDInfo: AgentDIDDetail = generateNewAgentDIDDetail()
 
   def getMyCloudAgentPairwiseDID(connId: String): String =
-    mockClientAgent.pairwiseConnDetail(connId).myCloudAgentPairwiseDidPair.DID
+    mockClientAgent.pairwiseConnDetail(connId).myCloudAgentPairwiseDidPair.did
 
   def getMsgSenderDID(connId: String): String =
-    mockClientAgent.pairwiseConnDetail(connId).myPairwiseDidPair.DID
+    mockClientAgent.pairwiseConnDetail(connId).myPairwiseDidPair.did
 
   def getPairwiseConnDetail(connId: String): MockPairwiseConnDetail = mockClientAgent.pairwiseConnDetail(connId)
 }

@@ -6,6 +6,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_t
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.{GetTokenFailed, GetTokenSuccess}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{OAuthAccessTokenRefresher, OAuthAccessTokenRefresherImplV1}
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.util.TestExecutionContextProvider
 import org.scalatest.concurrent.Eventually
 
 
@@ -88,6 +89,6 @@ class OAuthAccessTokenRefresherImplV1Spec
   }
 
   def createOAuthAccessTokenRefresherV1(): ActorRef[OAuthAccessTokenRefresher.Cmd] = {
-    spawn(OAuthAccessTokenRefresherImplV1())
+    spawn(OAuthAccessTokenRefresherImplV1(TestExecutionContextProvider.ecp.futureExecutionContext))
   }
 }

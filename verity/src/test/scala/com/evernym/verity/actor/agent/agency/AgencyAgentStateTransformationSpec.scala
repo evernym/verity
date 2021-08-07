@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent.agency
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.actor.agent.TypeFormat.{LEGACY_TYPE_FORMAT, STANDARD_TYPE_FORMAT}
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
@@ -13,7 +14,7 @@ import com.evernym.verity.transformations.transformers.v1._
 
 class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
 
-  lazy val transformer = createPersistenceTransformerV1("enc key")
+  lazy val transformer = createPersistenceTransformerV1("enc key", appConfig)
 
   "AgencyAgentState" - {
 
@@ -105,5 +106,6 @@ class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
       .withProtoInstances(protoInstances)
       .withRelationship(relationship)
   }
-
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

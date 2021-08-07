@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.persistence.recovery.latest.verity2.vas
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.ConnectionStatus
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, CLOUD_AGENT_KEY, EDGE_AGENT_KEY, OWNER_AGENT_KEY}
@@ -9,6 +10,8 @@ import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.util2.Status
 import com.typesafe.config.{Config, ConfigFactory}
+
+import scala.concurrent.ExecutionContext
 
 class UserAgentPairwiseRecoverySpec
   extends BaseRecoveryActorSpec
@@ -65,12 +68,12 @@ class UserAgentPairwiseRecoverySpec
   }
 
   def assertUserAgentPairwiseState(uas: UserAgentPairwiseState): Unit = {
-    uas.mySelfRelDID shouldBe Option(mySelfRelDIDPair.DID)
-    uas.ownerAgentDidPair shouldBe Some(mySelfRelAgentDIDPair)
+    uas.mySelfRelDID shouldBe Option(mySelfRelDIDPair.did)
+    uas.ownerAgentDidPair shouldBe Some(mySelfRelAgentDIDPair.toAgentDidPair)
     uas.connectionStatus shouldBe Some(ConnectionStatus(reqReceived = true, answerStatusCode = Status.MSG_STATUS_ACCEPTED.statusCode))
     uas.configs shouldBe Map.empty
-    uas.thisAgentKeyId shouldBe Some(myPairwiseRelAgentDIDPair.DID)
-    uas.agencyDIDPair shouldBe Some(myAgencyAgentDIDPair)
+    uas.thisAgentKeyId shouldBe Some(myPairwiseRelAgentDIDPair.did)
+    uas.agencyDIDPair shouldBe Some(myAgencyAgentDIDPair.toAgentDidPair)
     uas.agentWalletId shouldBe Some(mySelfRelAgentEntityId)
     uas.msgAndDelivery.isDefined shouldBe true //TODO: test actual 'msgAndDelivery' object
     uas.relationship shouldBe Some(
@@ -78,25 +81,25 @@ class UserAgentPairwiseRecoverySpec
         PAIRWISE_RELATIONSHIP,
         "pairwise",
         Some(DidDoc(
-          myPairwiseRelDIDPair.DID,
+          myPairwiseRelDIDPair.did,
           Some(AuthorizedKeys(Seq(
-            AuthorizedKey(myPairwiseRelDIDPair.DID, myPairwiseRelDIDPair.verKey, Set(EDGE_AGENT_KEY)),
-            AuthorizedKey(myPairwiseRelAgentDIDPair.DID, myPairwiseRelAgentDIDPair.verKey, Set(CLOUD_AGENT_KEY)),
-            AuthorizedKey(mySelfRelAgentDIDPair.DID, mySelfRelAgentDIDPair.verKey, Set(OWNER_AGENT_KEY))
+            AuthorizedKey(myPairwiseRelDIDPair.did, myPairwiseRelDIDPair.verKey, Set(EDGE_AGENT_KEY)),
+            AuthorizedKey(myPairwiseRelAgentDIDPair.did, myPairwiseRelAgentDIDPair.verKey, Set(CLOUD_AGENT_KEY)),
+            AuthorizedKey(mySelfRelAgentDIDPair.did, mySelfRelAgentDIDPair.verKey, Set(OWNER_AGENT_KEY))
           ))),
           Some(Endpoints(Vector.empty))
         )),
         Seq(
           DidDoc(
-            theirPairwiseRelDIDPair.DID,
+            theirPairwiseRelDIDPair.did,
             Some(AuthorizedKeys(Seq(
-              AuthorizedKey(theirPairwiseRelDIDPair.DID, theirPairwiseRelDIDPair.verKey, Set(AGENT_KEY_TAG)),
+              AuthorizedKey(theirPairwiseRelDIDPair.did, theirPairwiseRelDIDPair.verKey, Set(AGENT_KEY_TAG)),
             ))),
             Some(Endpoints(Seq(
               EndpointADT(RoutingServiceEndpoint(
                 "http://localhost:9001/agency/msg",
-                Seq(theirPairwiseRelAgentDIDPair.DID, theirAgencyAgentDIDPair.DID),
-                Seq(theirPairwiseRelDIDPair.DID)
+                Seq(theirPairwiseRelAgentDIDPair.did, theirAgencyAgentDIDPair.did),
+                Seq(theirPairwiseRelDIDPair.did)
               ))
             )))
           )
@@ -117,4 +120,7 @@ class UserAgentPairwiseRecoverySpec
          }
       """)
   )
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

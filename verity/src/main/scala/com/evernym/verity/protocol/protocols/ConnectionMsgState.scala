@@ -1,15 +1,16 @@
 package com.evernym.verity.protocol.protocols
 
 import java.time.ZoneId
-
 import akka.actor.Actor.Receive
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status._
-import com.evernym.verity.actor.agent._
+import com.evernym.verity.did.didcomm.v1.Thread
+import com.evernym.verity.actor.agent.{Msg, MsgDeliveryDetail, PayloadMetadata, PayloadWrapper}
 import com.evernym.verity.actor.agent.user.MsgHelper
 import com.evernym.verity.actor.agent.{AttrName, AttrValue}
 import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated, MsgDeliveryStatusUpdated, MsgDetailAdded, MsgExpirationTimeUpdated, MsgPayloadStored, MsgStatusUpdated}
-import com.evernym.verity.protocol.engine.{DID, MsgId, MsgName, RefMsgId}
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.protocol.engine.{MsgId, MsgName, RefMsgId}
 import com.evernym.verity.util.TimeZoneUtil._
 
 
@@ -103,15 +104,24 @@ class ConnectionMsgState {
   def msgEventReceiver: Receive = {
     case mc: MsgCreated =>
       val receivedOrders = mc.thread.map(th => th.receivedOrders.map(ro => ro.from -> ro.order).toMap).getOrElse(Map.empty)
-      val msgThread = mc.thread.map(th => Thread(
-        Evt.getOptionFromValue(th.id),
-        Evt.getOptionFromValue(th.parentId),
-        Option(th.senderOrder),
-        receivedOrders))
-      val msg = Msg(mc.typ, mc.senderDID, mc.statusCode,
+      val msgThread = mc.thread.map(th =>
+        com.evernym.verity.actor.agent.Thread(
+          Evt.getOptionFromValue(th.id),
+          Evt.getOptionFromValue(th.parentId),
+          Option(th.senderOrder),
+          receivedOrders
+        )
+      )
+      val msg = Msg(
+        mc.typ,
+        mc.senderDID,
+        mc.statusCode,
         mc.creationTimeInMillis,
         mc.lastUpdatedTimeInMillis,
-        Evt.getOptionFromValue(mc.refMsgId), msgThread, mc.sendMsg)
+        Evt.getOptionFromValue(mc.refMsgId),
+        msgThread,
+        mc.sendMsg
+      )
       msgs += mc.uid -> msg
       updateMsgIndexes(mc.uid, msg)
 
@@ -161,14 +171,21 @@ class ConnectionMsgState {
 
   def buildMsgCreatedEvt(msgId: MsgId,
                          mType: String,
-                         senderDID: DID,
+                         senderDID: DidStr,
                          sendMsg: Boolean,
                          msgStatus: String,
                          threadOpt: Option[Thread],
                          LEGACY_refMsgId: Option[MsgId]=None): MsgCreated = {
     checkIfMsgAlreadyNotExists(msgId)
-    MsgHelper.buildMsgCreatedEvt(msgId, mType, senderDID, sendMsg,
-      msgStatus, threadOpt, LEGACY_refMsgId)
+    MsgHelper.buildMsgCreatedEvt(
+      msgId,
+      mType,
+      senderDID,
+      sendMsg,
+      msgStatus,
+      threadOpt,
+      LEGACY_refMsgId
+    )
   }
 
   def updateMsgIndexes(msgId: MsgId, msg: Msg): Unit = {

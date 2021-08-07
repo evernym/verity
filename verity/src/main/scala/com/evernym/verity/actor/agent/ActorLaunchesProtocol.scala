@@ -1,18 +1,22 @@
 package com.evernym.verity.actor.agent
 
 import akka.actor.{Actor, ActorRef, ActorSystem}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, _}
 import com.evernym.verity.protocol.engine._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
-trait ActorLaunchesProtocol extends LaunchesProtocol {
+trait ActorLaunchesProtocol
+  extends LaunchesProtocol
+  with HasExecutionContextProvider {
 
   this: Actor with HasActorResponseTimeout with HasLogger =>
+
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   def entityId: String
   def agentWalletIdReq: String

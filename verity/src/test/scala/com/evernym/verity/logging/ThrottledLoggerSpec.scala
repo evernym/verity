@@ -1,6 +1,7 @@
 package com.evernym.verity.logging
 
-import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.BasicSpec
 import org.slf4j.event.Level
 
@@ -8,6 +9,9 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 
 class ThrottledLoggerSpec extends BasicSpec with CommonSpecUtil {
+
+  lazy val testAppConfig: AppConfig = new TestAppConfig()
+  override def appConfig: AppConfig = testAppConfig
 
   class ThrottledLoggerWithMocks extends ThrottledLoggerBase[Int](5.minutes, 4) {
     var currentTimestamp: Long = 0

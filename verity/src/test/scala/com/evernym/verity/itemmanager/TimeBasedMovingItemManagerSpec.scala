@@ -2,13 +2,16 @@ package com.evernym.verity.itemmanager
 
 import akka.actor.ActorRef
 import akka.cluster.sharding.ShardRegion.EntityId
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.base.EntityIdentifier
 import com.evernym.verity.actor.cluster_singleton.watcher.ActorWatcher.itemManagerEntityIdPrefix
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.ItemConfigManager.versionedItemManagerEntityId
 import com.evernym.verity.actor.itemmanager._
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
+import com.evernym.verity.config.AppConfig
 import com.typesafe.config.Config
 import org.scalatest.time.{Millis, Seconds, Span}
 
@@ -289,4 +292,7 @@ class TimeBasedMovingItemManagerSpec
     val (prefix, suffix) = senderEntityId.splitAt(senderEntityId.lastIndexOf("-")+1)
     (prefix == "watcher-v2-" && suffix.toLong > 1) shouldBe true
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

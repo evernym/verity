@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.persistence.supervisor.backoff.onstop
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.supervisor.MockActorRecoverySuccess
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.ActorSpec
@@ -17,7 +18,7 @@ class ActorRecoverySuccessSpec
     with Eventually
     with ShardUtil {
 
-  lazy val mockSupervised = createPersistentRegion("MockActor", MockActorRecoverySuccess.props(appConfig))
+  lazy val mockSupervised = createPersistentRegion("MockActor", MockActorRecoverySuccess.props(appConfig, ecp.futureExecutionContext))
 
   "OnStop BackoffSupervised actor" - {
     "when asked for actor detail" - {
@@ -45,5 +46,8 @@ class ActorRecoverySuccessSpec
       }
       """
   )}
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 

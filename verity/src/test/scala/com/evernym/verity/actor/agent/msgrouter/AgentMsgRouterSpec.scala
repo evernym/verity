@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent.msgrouter
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.RouteSet
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.testkit.BasicAsyncSpec
@@ -66,6 +67,8 @@ class AgentMsgRouterSpec extends PersistentActorSpec with AgentMsgRouteSpecValue
   }
 
   def agentMsgRouter: AgentMsgRouter = platform.agentActorContext.agentMsgRouter
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 

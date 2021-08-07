@@ -5,7 +5,6 @@ import java.time.temporal.ChronoUnit
 import akka.actor.{ActorRef, ActorSystem}
 import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}
 import com.evernym.verity.cache.ROUTING_DETAIL_CACHE_FETCHER
@@ -14,10 +13,12 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
-class RoutingDetailCacheFetcher (val as: ActorSystem, val appConfig: AppConfig) extends AsyncCacheValueFetcher {
+class RoutingDetailCacheFetcher (val as: ActorSystem, val appConfig: AppConfig, executionContext: ExecutionContext)
+  extends AsyncCacheValueFetcher {
+  override implicit def futureExecutionContext: ExecutionContext = executionContext
 
   lazy val fetcherParam: FetcherParam = ROUTING_DETAIL_CACHE_FETCHER
   lazy val cacheConfigPath: Option[String] = Option(LEDGER_GET_VER_KEY_CACHE)

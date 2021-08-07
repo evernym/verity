@@ -2,7 +2,6 @@ package com.evernym.verity.actor.agent.agency
 
 import akka.pattern.ask
 import akka.event.LoggingReceive
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.agent.msghandler.AgentMsgHandler
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.MsgNotifier
@@ -18,6 +17,7 @@ import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.legacy.services.{CreateAgentEndpointDetail, CreateKeyEndpointDetail}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
@@ -26,7 +26,7 @@ import com.evernym.verity.util.ParticipantUtil
 import com.evernym.verity.util.Util.getNewActorId
 import com.evernym.verity.vault.WalletAPIParam
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 
 /**
@@ -38,6 +38,7 @@ trait AgencyAgentCommon
     with ShardRegionFromActorContext
     with MsgNotifier
     with LEGACY_connectingSignalHandler {
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   val commonCmdReceiver: Receive = LoggingReceive.withLabel("commonCmdReceiver") {
     case GetSponsorRel                  => sender ! sponsorRel.getOrElse(SponsorRel.empty)
@@ -59,7 +60,7 @@ trait AgencyAgentCommon
     sender ! AgentActorDetailSet(saw.didPair, saw.actorEntityId)
   }
 
-  override def agencyDidPairFutByCache(agencyDID: DID): Future[DidPair] = {
+  override def agencyDidPairFutByCache(agencyDID: DidStr): Future[DidPair] = {
     state.agencyDIDPair match {
       case Some(adp) if adp.DID.nonEmpty && adp.verKey.nonEmpty => Future(adp)
       case _ if state.agentWalletId.isDefined =>
@@ -70,7 +71,7 @@ trait AgencyAgentCommon
     }
   }
 
-  def stateDetailsWithAgencyVerKey(agencyVerKey: VerKey, protoRef: ProtoRef): PartialFunction[String, Parameter] = {
+  def stateDetailsWithAgencyVerKey(agencyVerKey: VerKeyStr, protoRef: ProtoRef): PartialFunction[String, Parameter] = {
         def mapper(newActorId: String,
                    keyEndpointJson: String,
                    agentEndpointJson: String
@@ -102,9 +103,11 @@ trait AgencyAgentCommon
     lazy val newActorId = getNewActorId
 
     lazy val keyEndpointJson = DefaultMsgCodec.toJson(
-      CreateKeyEndpointDetail(AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME,
+      CreateKeyEndpointDetail(
+        AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME,
         ownerDIDReq,
-        ownerAgentKeyDIDPair)
+        ownerAgentKeyDIDPair.map(d => com.evernym.verity.did.DidPair(d.DID, d.verKey))
+      )
     )
 
     lazy val agentEndpointJson = DefaultMsgCodec.toJson(
@@ -159,7 +162,17 @@ trait AgencyAgentCommon
 
     val (setupNewWalletCmd, requesterVerKey) = requester match {
       case NeedsCloudAgent(requesterKeys, _) =>
-        (SetupNewAgentWallet(Option(DidPair(requesterKeys.fromDID, requesterKeys.fromVerKey))), requesterKeys.fromVerKey)
+        (
+          SetupNewAgentWallet(
+            Option(
+              com.evernym.verity.did.DidPair(
+                requesterKeys.fromDID,
+                requesterKeys.fromVerKey
+              )
+            )
+          ),
+          requesterKeys.fromVerKey
+        )
       case NeedsEdgeAgent(requesterVk, _) =>
         //NOTE: earlier, at this point a "new key" used to get created in agency agent's wallet
         // and then that key used to stored in the newly to be provisioned user agent's wallet
@@ -173,8 +186,8 @@ trait AgencyAgentCommon
     prepareNewAgentWalletData(setupNewWalletCmd, newActorId).flatMap { wsc =>
       val setupEndpoint = SetupAgentEndpoint_V_0_7(
         threadId,
-        wsc.ownerDidPair ,
-        wsc.agentKey.didPair,
+        wsc.ownerDidPair.toAgentDidPair ,
+        wsc.agentKey.didPair.toAgentDidPair,
         requesterVerKey,
         requester.sponsorRel
       )
@@ -197,4 +210,4 @@ trait AgencyAgentCommon
   override def sponsorRel: Option[SponsorRel] = Option(SponsorRel.empty)
 }
 
-case class ProvisioningParam(domainDID: DID, domainVerKey: VerKey, requestVerKey: VerKey)
+case class ProvisioningParam(domainDID: DidStr, domainVerKey: VerKeyStr, requestVerKey: VerKeyStr)

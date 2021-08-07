@@ -2,6 +2,7 @@ package com.evernym.verity.actor.persistence.supervisor.backoff.onfailure
 
 import akka.pattern.BackoffSupervisor.{CurrentChild, GetCurrentChild, GetRestartCount, RestartCount}
 import akka.testkit.EventFilter
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.supervisor.{GeneratePersistenceFailure, MockActorPersistenceFailure}
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.{ActorSpec, AkkaTestBasic}
@@ -19,7 +20,7 @@ class ActorPersistenceFailureSpec
   with OptionValues {
 
   lazy val mockSupervised = system.actorOf(
-    MockActorPersistenceFailure.backOffOnFailureProps(appConfig),
+    MockActorPersistenceFailure.backOffOnFailureProps(appConfig, ecp.futureExecutionContext),
     "mockactor"
   )
 
@@ -71,4 +72,7 @@ class ActorPersistenceFailureSpec
       AkkaTestBasic.customJournal("com.evernym.verity.actor.persistence.supervisor.GeneratePersistenceFailureJournal")
     )
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

@@ -4,13 +4,19 @@ import java.time.ZonedDateTime
 import akka.actor.Actor
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus.{Down, Removed}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Exceptions.{HandledErrorException, TransitionHandlerNotProvidedException}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager.state._
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.ConfigConstants.{APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS, APP_STATE_MANAGER_STATE_DRAINING_DELAY_BETWEEN_STATUS_CHECKS_IN_SECONDS, APP_STATE_MANAGER_STATE_DRAINING_MAX_STATUS_CHECK_COUNT}
+import com.evernym.verity.config.ConfigConstants.{
+  APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS,
+  APP_STATE_MANAGER_STATE_DRAINING_DELAY_BETWEEN_STATUS_CHECKS_IN_SECONDS,
+  APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_COUNT,
+  APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_DURATION,
+  APP_STATE_MANAGER_STATE_DRAINING_MAX_STATUS_CHECK_COUNT
+}
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.logging.LoggingUtil
@@ -18,11 +24,13 @@ import com.evernym.verity.AppVersion
 import com.evernym.verity.util2.{ExceptionConverter, Exceptions}
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 
-trait AppStateManagerBase { this: Actor =>
+trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
+
+  private implicit val ex: ExecutionContext = futureExecutionContext
 
   val appConfig: AppConfig
   val appVersion: AppVersion
@@ -85,7 +93,9 @@ trait AppStateManagerBase { this: Actor =>
   private def init(): Unit = {
     causesByState = Map.empty
     causesByContext = Map.empty
-    val initState = new InitializingState
+    lazy val maxRetryCount = appConfig.getIntOption(APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_COUNT).getOrElse(10)
+    lazy val maxRetryDuration = appConfig.getIntOption(APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_DURATION).getOrElse(240)
+    val initState = new InitializingState(maxRetryCount, maxRetryDuration)
     events = List(EventDetail(ZonedDateTime.now(), initState, MSG_AGENT_SERVICE_INIT_STARTED))
     currentState = initState
     logTransitionedMsg(currentState, Option(MSG_AGENT_SERVICE_INIT_STARTED))

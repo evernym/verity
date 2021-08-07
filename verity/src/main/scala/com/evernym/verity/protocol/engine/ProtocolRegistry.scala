@@ -6,6 +6,7 @@ import com.evernym.verity.protocol.engine.ProtocolRegistry.Entry
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.util.?=>
 
+import scala.concurrent.ExecutionContext
 import scala.language.implicitConversions
 
 /**
@@ -30,8 +31,8 @@ case class ProtocolRegistry[-A](entries: Entry[A]*) {
   // "Driver" here is the same thing as the concept of a "controller" from
   // https://github.com/hyperledger/aries-rfcs/tree/master/concepts/0003-protocols#controllers?
   // TODO: update to use community terminology.
-  def generateDriver(definition: ProtocolDefinition[_,_,_,_,_,_], parameter: A): Option[Driver] = {
-    find_!(definition.msgFamily.protoRef).driverGen map { _(parameter) }
+  def generateDriver(definition: ProtocolDefinition[_,_,_,_,_,_], parameter: A, executionContext: ExecutionContext): Option[Driver] = {
+    find_!(definition.msgFamily.protoRef).driverGen map { _(parameter, executionContext) }
   }
 
   def getNativeClassType(amt: MsgType): Class[_] = {
@@ -120,7 +121,7 @@ case class ProtocolRegistry[-A](entries: Entry[A]*) {
 
 object ProtocolRegistry {
 
-  type DriverGen[-A] = Option[A => Driver]
+  type DriverGen[-A] = Option[(A, ExecutionContext) => Driver]
 
   /**
     *
@@ -134,13 +135,13 @@ object ProtocolRegistry {
 
   implicit def Func2OptFunc[A](func: Function[A,Driver]): Option[Function[A,Driver]] = Option(func)
   implicit def DefResol2Entry[A](t: (ProtoDef, PinstIdResolver)): Entry[A] = Entry(t._1, t._2, None)
-  implicit def DefResolDriver2Entry[A](t: (ProtoDef, PinstIdResolver, Function[A,Driver])): Entry[A] = {
+  implicit def DefResolDriver2Entry[A](t: (ProtoDef, PinstIdResolver, (A, ExecutionContext) => Driver)): Entry[A] = {
     Entry(t._1, t._2, Option(t._3))
   }
   implicit def DefResolStoreStrategy2Entry[A](t: (ProtoDef, PinstIdResolver, SegmentStoreStrategy)): Entry[A] = {
     Entry(t._1, t._2, None)
   }
-  implicit def FullTuple2Entry[A](t: (ProtoDef, PinstIdResolver, Function[A,Driver], SegmentStoreStrategy)): Entry[A] = {
+  implicit def FullTuple2Entry[A](t: (ProtoDef, PinstIdResolver, (A, ExecutionContext) => Driver, SegmentStoreStrategy)): Entry[A] = {
     Entry(t._1, t._2, Option(t._3))
   }
 

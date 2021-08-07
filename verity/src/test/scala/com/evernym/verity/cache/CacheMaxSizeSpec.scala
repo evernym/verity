@@ -5,11 +5,12 @@ import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, FetcherParam, G
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetcher}
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
 
@@ -19,6 +20,8 @@ class CacheMaxSizeSpec
     with Eventually {
 
   lazy val cache: Cache = buildCache()
+  lazy val ecp = new ExecutionContextProvider(appConfig)
+  implicit lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   "Cache" - {
     "when kept adding objects more than max size" - {
@@ -38,19 +41,19 @@ class CacheMaxSizeSpec
   }
 
   lazy val mockFetcher: FetcherParam = FetcherParam(-1, "mock-cache")
-  lazy val mockMaxSizeFetcher = new MockMaxSizeCacheFetcher(appConfig)
+  lazy val mockMaxSizeFetcher = new MockMaxSizeCacheFetcher(appConfig, executionContext)
   lazy val fetchers: Map[FetcherParam, AsyncCacheValueFetcher] = Map(mockFetcher -> mockMaxSizeFetcher)
 
   def buildCache(name: String = "MockCache", fetchers: Map[FetcherParam, CacheValueFetcher] = fetchers): Cache = {
-    new Cache(name, fetchers, metricsWriter)
+    new Cache(name, fetchers, metricsWriter, executionContext)
   }
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
-class MockMaxSizeCacheFetcher(val appConfig: AppConfig)
+class MockMaxSizeCacheFetcher(val appConfig: AppConfig, ec: ExecutionContext)
   extends AsyncCacheValueFetcher {
-
-  import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
-
+  implicit val executionContext: ExecutionContext = ec
   lazy val fetcherParam: FetcherParam = FetcherParam(-1, "mock-cache")
   lazy val cacheConfigPath: Option[String] = None
 
@@ -73,6 +76,11 @@ class MockMaxSizeCacheFetcher(val appConfig: AppConfig)
       case Left(d)     => throw buildUnexpectedResponse(d)
     }
   }
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 /**

@@ -1,18 +1,21 @@
 package com.evernym.verity.actor.resourceusagethrottling
 
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.testkit.BasicSpec
 
 class AllResourceViolationRulePathSpec extends BasicSpec {
 
   val entityIdForDefaultUsageRule = "127.4.0.4"
+  val resourceUsageRuleHelper = new ResourceUsageRuleHelper(new TestAppConfig().config)
 
   "AllResourceViolationRulePath" - {
 
     "violation rule path for 'endpoint.all' resource usage rule" - {
       "should contain single 'endpoint' key" in {
         ResourceUsageTracker.violationRulePath(
-          entityIdForDefaultUsageRule,
+          resourceUsageRuleHelper.getRuleNameByEntityId(entityIdForDefaultUsageRule),
           RESOURCE_TYPE_ENDPOINT,
           "endpoint.all",
           None
@@ -23,7 +26,7 @@ class AllResourceViolationRulePathSpec extends BasicSpec {
     "violation rule path for any other endpoint resource usage rule" - {
       "should contain single 'endpoint' key" in {
         ResourceUsageTracker.violationRulePath(
-          entityIdForDefaultUsageRule,
+          resourceUsageRuleHelper.getRuleNameByEntityId(entityIdForDefaultUsageRule),
           RESOURCE_TYPE_ENDPOINT,
           "POST_agency_msg",
           None
@@ -34,7 +37,7 @@ class AllResourceViolationRulePathSpec extends BasicSpec {
     "violation rule path for 'message.all' resource usage rule" - {
       "should contain single 'message' key" in {
         ResourceUsageTracker.violationRulePath(
-          entityIdForDefaultUsageRule,
+          resourceUsageRuleHelper.getRuleNameByEntityId(entityIdForDefaultUsageRule),
           RESOURCE_TYPE_MESSAGE,
           "message.all",
           None
@@ -45,7 +48,7 @@ class AllResourceViolationRulePathSpec extends BasicSpec {
     "violation rule path for any other message resource usage rule" - {
       "should contain single 'message' key" in {
         ResourceUsageTracker.violationRulePath(
-          entityIdForDefaultUsageRule,
+          resourceUsageRuleHelper.getRuleNameByEntityId(entityIdForDefaultUsageRule),
           RESOURCE_TYPE_MESSAGE,
           "connecting/CREATE_MSG_connReq",
           None

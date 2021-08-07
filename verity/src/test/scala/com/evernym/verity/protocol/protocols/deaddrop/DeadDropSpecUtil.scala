@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.protocols.deaddrop
 
 import java.util.UUID
 
+import com.evernym.verity.util2.HasWalletExecutionContextProvider
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, SignMsg, SignedMsg}
 import com.evernym.verity.config.AppConfig
@@ -9,7 +10,7 @@ import com.evernym.verity.testkit.{LegacyWalletAPI, TestWallet}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import org.apache.commons.codec.digest.DigestUtils
 
-trait DeadDropSpecUtil extends CommonSpecUtil {
+trait DeadDropSpecUtil extends CommonSpecUtil with HasWalletExecutionContextProvider {
 
   def appConfig: AppConfig
 
@@ -29,7 +30,7 @@ trait DeadDropSpecUtil extends CommonSpecUtil {
   }
 
   def generatePayload(): DeadDropData = {
-    val testWallet = new TestWallet(createWallet = true)
+    val testWallet = new TestWallet(futureWalletExecutionContext, createWallet = true)
     prepareDeadDropData(testWallet.testWalletAPI)(testWallet.wap)
   }
 

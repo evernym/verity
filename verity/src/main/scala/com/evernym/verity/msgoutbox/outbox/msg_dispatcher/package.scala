@@ -1,10 +1,11 @@
 package com.evernym.verity.msgoutbox.outbox
 
 import akka.actor.typed.{ActorRef, Behavior}
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter
-import com.evernym.verity.msgoutbox.{ComMethodId, MsgId, RecipPackaging, RoutePackaging, VerKey, WalletId}
+import com.evernym.verity.msgoutbox.{ComMethodId, MsgId, RecipPackaging, RoutePackaging, WalletId}
 
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Random
@@ -35,7 +36,7 @@ package object msg_dispatcher {
   case class MsgStoreParam(msgStore: ActorRef[MsgStore.Cmd])
 
   case class MsgPackagingParam(walletId: WalletId,
-                               senderVerKey: VerKey,
+                               senderVerKey: VerKeyStr,
                                recipPackaging: Option[RecipPackaging],
                                routePackaging: Option[RoutePackaging],
                                msgPackagers: MsgPackagers)

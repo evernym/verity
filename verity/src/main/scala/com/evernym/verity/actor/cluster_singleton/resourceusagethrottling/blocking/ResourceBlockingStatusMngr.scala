@@ -18,12 +18,16 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.Util.{getActorRefFromSelection, strToBoolean}
 
+import scala.concurrent.ExecutionContext
 import java.time.ZonedDateTime
 
-class ResourceBlockingStatusMngr(val aac: AgentActorContext)
+
+class ResourceBlockingStatusMngr(val aac: AgentActorContext, executionContext: ExecutionContext)
   extends SingletonChildrenPersistentActor
     with ResourceBlockingStatusMngrCommon
     with ResourceUsageCommon{
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case bu: BlockCaller                => handleBlockCaller(bu)
@@ -265,6 +269,6 @@ case class UsageBlockingStatusChunk(usageBlockingStatus: Map[EntityId, EntityBlo
 
 object ResourceBlockingStatusMngr {
   val name: String = RESOURCE_BLOCKING_STATUS_MNGR
-  def props(agentActorContext: AgentActorContext): Props =
-    Props(new ResourceBlockingStatusMngr(agentActorContext))
+  def props(agentActorContext: AgentActorContext, executionContext: ExecutionContext): Props =
+    Props(new ResourceBlockingStatusMngr(agentActorContext, executionContext))
 }

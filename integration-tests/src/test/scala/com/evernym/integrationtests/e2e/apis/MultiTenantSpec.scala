@@ -13,6 +13,7 @@ import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.util.StrUtil
+import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider, HasWalletExecutionContextProvider}
 import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually
 
@@ -26,7 +27,7 @@ class MultiTenantSpec
     with AdminFlow
     with MetricsFlow
     with CancelGloballyAfterFailure
-    with Eventually {
+    with Eventually{
 
   override val logger: Logger = getLoggerByClass(getClass)
 
@@ -34,6 +35,7 @@ class MultiTenantSpec
 
   def specifySdkType(env: IntegrationTestEnv): IntegrationTestEnv = env
   def appEnv: IntegrationTestEnv = specifySdkType(testEnv)
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appEnv.config)
 
   val cas1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_CAS_1).appInstance
   val verity1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_VERITY_1).appInstance
@@ -46,7 +48,7 @@ class MultiTenantSpec
     projectDir,
     defaultTimeout = testEnv.timeout) ){implicit scenario =>
 
-    val apps = ScenarioAppEnvironment(scenario, appEnv)
+    val apps = ScenarioAppEnvironment(scenario, appEnv, ecp)
 
     val sdkUnderTest = apps(verity1)
       .sdks
@@ -57,6 +59,8 @@ class MultiTenantSpec
     s"Multi Tenant Interaction Test for $sdkUnderTest" - {
       lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
         appEnv.config,
+        ecp.futureExecutionContext,
+        ecp.walletFutureExecutionContext,
         Option(appEnv.ledgerConfig.submitterDID),
         Option(appEnv.ledgerConfig.submitterSeed),
         appEnv.ledgerConfig.submitterRole,

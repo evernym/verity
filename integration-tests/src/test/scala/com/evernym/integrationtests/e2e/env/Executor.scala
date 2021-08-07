@@ -1,10 +1,13 @@
 package com.evernym.integrationtests.e2e.env
 
+import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.testkit.agentmsg.{AgentMsgPackagingContext, AgentMsgSenderHttpWrapper, GeneralMsgCreatedResp_MFV_0_5}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent}
-import com.evernym.verity.util2.UrlParam
+import com.evernym.verity.util2.{ExecutionContextProvider, UrlParam}
+
+import scala.concurrent.ExecutionContext
 
 class AgencyAgentSetupHelper {
 
@@ -14,7 +17,16 @@ class AgencyAgentSetupHelper {
   def setupAgencyAgent(up: UrlParam): Unit = {
     val agencyAgent: AgentMsgSenderHttpWrapper = new AgentMsgSenderHttpWrapper {
       def urlParam: UrlParam = up
-      override val mockClientAgent = new MockCloudAgent(urlParam, appConfig)
+      override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+      override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+      private val ecp = TestExecutionContextProvider.ecp
+      override val mockClientAgent =
+        new MockCloudAgent(
+          ecp.futureExecutionContext,
+          ecp.walletFutureExecutionContext,
+          urlParam,
+          appConfig
+        )
     }
     agencyAgent.setupAgency()
   }
@@ -26,7 +38,16 @@ class AgencyAgentSetupHelper {
   def bootstrapAgencyAgentToLedger(up: UrlParam): Unit = {
     val agencyAgent: AgentMsgSenderHttpWrapper = new AgentMsgSenderHttpWrapper {
       def urlParam: UrlParam = up
-      override val mockClientAgent = new MockCloudAgent(urlParam, appConfig)
+      override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+      override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+      private val ecp = TestExecutionContextProvider.ecp
+      override val mockClientAgent =
+        new MockCloudAgent(
+          ecp.futureExecutionContext,
+          ecp.walletFutureExecutionContext,
+          urlParam,
+          appConfig
+        )
     }
     agencyAgent.bootstrapAgencyAgentToLedger()
   }
@@ -36,22 +57,58 @@ object Executor {
 
   class MockEnterpriseEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:6801"))
     extends AgentMsgSenderHttpWrapper {
-    override val mockClientAgent = new MockEdgeAgent(urlParam, appConfig)
+    private val ecp = TestExecutionContextProvider.ecp
+    override val mockClientAgent =
+      new MockEdgeAgent(
+        urlParam,
+        appConfig,
+        ecp.futureExecutionContext,
+        ecp.walletFutureExecutionContext
+      )
+    override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+    override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
   }
 
   class MockConsumerEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:6701"))
     extends AgentMsgSenderHttpWrapper {
-    override val mockClientAgent = new MockEdgeAgent(urlParam, appConfig)
+    private val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+    override val mockClientAgent =
+      new MockEdgeAgent(
+        urlParam,
+        appConfig,
+        ecp.futureExecutionContext,
+        ecp.walletFutureExecutionContext
+      )
+    override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+    override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
   }
 
   class MockVerityEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:6901"))
     extends AgentMsgSenderHttpWrapper {
-    override val mockClientAgent = new MockEdgeAgent(urlParam, appConfig)
+    private val ecp = TestExecutionContextProvider.ecp
+    override val mockClientAgent =
+      new MockEdgeAgent(
+        urlParam,
+        appConfig,
+        ecp.futureExecutionContext,
+        ecp.walletFutureExecutionContext
+      )
+    override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+    override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
   }
 
   class MockThirdPartyEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:9004"))
     extends AgentMsgSenderHttpWrapper {
-    override val mockClientAgent = new MockEdgeAgent(urlParam, appConfig)
+    private val ecp = TestExecutionContextProvider.ecp
+    override val mockClientAgent =
+      new MockEdgeAgent(
+        urlParam,
+        appConfig,
+        ecp.futureExecutionContext,
+        ecp.walletFutureExecutionContext
+      )
+    override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+    override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
   }
 
   def prepareVerity1Apps(): EdgeApps = {

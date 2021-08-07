@@ -94,4 +94,4 @@ trait AppConfig extends ConfigReaderHelper {
 
 }
 
-object AppConfigWrapper extends AppConfig
+class AppConfigWrapper extends AppConfig

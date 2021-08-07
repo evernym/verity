@@ -4,9 +4,10 @@ import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.{Msg, PayloadMetadata}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.UpdateMsgStatusReqMsg
-import com.evernym.verity.protocol.engine.{DID, MsgId}
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.protocol.engine.MsgId
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.agent.user.MsgHelper._
+import com.evernym.verity.did.DidStr
 
 //this is to store legacy connection related messages
 trait ConnectionMsgAndDeliveryState {
@@ -49,7 +50,7 @@ trait ConnectionMsgAndDeliveryState {
 
 case class DeliveryStatus(to: String, statusCode: String, statusDetail: Option[String], lastUpdatedDateTime: String)
 
-case class MsgDetail(uid: MsgId, `type`: String, senderDID: DID, statusCode: String,
+case class MsgDetail(uid: MsgId, `type`: String, senderDID: DidStr, statusCode: String,
                      refMsgId: Option[String], thread: Option[Thread],
                      payload: Option[Array[Byte]], deliveryDetails: Set[DeliveryStatus]) {
 

@@ -1,6 +1,6 @@
 package com.evernym.verity.integration.outbox.with_sdk.oauth
 
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.sdk_provider.{OAuthParam, SdkProvider}
@@ -9,7 +9,10 @@ import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestio
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Msg.{Answer, Question}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.AnswerGiven
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
+import com.evernym.verity.util.TestExecutionContextProvider
+import com.evernym.verity.util2.ExecutionContextProvider
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
@@ -17,11 +20,15 @@ class QuestionAnswerSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+  lazy val walletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+
   lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, Option(OAuthParam(5.seconds)))
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, walletExecutionContext, Option(OAuthParam(5.seconds)))
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, walletExecutionContext)
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
@@ -31,6 +38,7 @@ class QuestionAnswerSpec
     issuerSDK.resetPlainMsgsCounter.plainMsgsBeforeLastReset shouldBe 0
     issuerSDK.fetchAgencyKey()
     issuerSDK.provisionVerityEdgeAgent()
+    issuerSDK.registerWebhookWithoutOAuth()
     issuerSDK.registerWebhook()
     issuerSDK.sendUpdateConfig(UpdateConfigReqMsg(Set(ConfigDetail("name", "issuer-name"), ConfigDetail("logoUrl", "issuer-logo-url"))))
     val receivedMsg = issuerSDK.sendCreateRelationship(firstConn)
@@ -126,4 +134,11 @@ class QuestionAnswerSpec
       issuerSDK.resetPlainMsgsCounter.plainMsgsBeforeLastReset shouldBe 0
     }
   }
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

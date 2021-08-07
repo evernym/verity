@@ -12,8 +12,11 @@ import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.{Answer
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0._
 import com.evernym.verity.protocol.testkit.DSL._
 import com.evernym.verity.protocol.testkit.MockableWalletAccess
-
 import java.util.UUID
+
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.util.TestExecutionContextProvider
+
 import scala.language.{implicitConversions, reflectiveCalls}
 
 
@@ -492,4 +495,5 @@ class QuestionAnswerSpec
   }
 
   override val containerNames: Set[ContainerName] = Set(QuestionAnswerVars.QUESTIONER, QuestionAnswerVars.RESPONDER)
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }

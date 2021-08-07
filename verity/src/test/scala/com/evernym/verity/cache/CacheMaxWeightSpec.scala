@@ -1,20 +1,21 @@
 package com.evernym.verity.cache
 
-import com.evernym.verity.actor.testkit.ActorSpec
+import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
 import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail, KeyMapping}
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetcher}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.BasicAsyncSpec
+import com.evernym.verity.util2.ExecutionContextProvider
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 class CacheMaxWeightSpec
   extends ActorSpec
     with BasicAsyncSpec
-    with Eventually {
+    with Eventually{
 
   lazy val cache: Cache = buildCache()
 
@@ -84,18 +85,21 @@ class CacheMaxWeightSpec
   }
 
   lazy val mockFetcher: FetcherParam = FetcherParam(-1, "mock-cache")
-  lazy val mockMaxWeightObjectFetcher = new MockMaxWeightCacheFetcher(appConfig)
+  lazy val ecp = new ExecutionContextProvider(appConfig)
+  override lazy implicit val executionContext: ExecutionContext = ecp.futureExecutionContext
+  lazy val mockMaxWeightObjectFetcher = new MockMaxWeightCacheFetcher(executionContext, appConfig)
   lazy val fetchers: Map[FetcherParam, AsyncCacheValueFetcher] = Map(mockFetcher -> mockMaxWeightObjectFetcher)
 
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
   def buildCache(name: String = "MockCache", fetchers: Map[FetcherParam, CacheValueFetcher] = fetchers): Cache = {
-    new Cache(name, fetchers, metricsWriter)
+    new Cache(name, fetchers, metricsWriter, executionContext)
   }
 }
 
-class MockMaxWeightCacheFetcher(val appConfig: AppConfig)
+class MockMaxWeightCacheFetcher(ec: ExecutionContext, val _appConfig: AppConfig)
   extends AsyncCacheValueFetcher {
-
-  import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+  implicit val executionContext: ExecutionContext = ec
 
   lazy val fetcherParam: FetcherParam = FetcherParam(-1, "mock-cache")
   lazy val cacheConfigPath: Option[String] = None
@@ -120,6 +124,13 @@ class MockMaxWeightCacheFetcher(val appConfig: AppConfig)
       case Left(d)     => throw buildUnexpectedResponse(d)
     }
   }
+
+  override def appConfig: AppConfig = _appConfig
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 /**

@@ -12,7 +12,9 @@ trait ProtocolTypes[P,R,M,E,S,I] {
 /**
   * Protocol Containers hold one and only one protocol instance
   */
-trait ProtocolContainer[P,R,M,E,S,I] extends ProtocolTypes[P,R,M,E,S,I] with ProtocolContext[P,R,M,E,S,I] {
+trait ProtocolContainer[P,R,M,E,S,I]
+  extends ProtocolTypes[P,R,M,E,S,I]
+    with ProtocolContext[P,R,M,E,S,I] {
 
   def pinstId: PinstId
 

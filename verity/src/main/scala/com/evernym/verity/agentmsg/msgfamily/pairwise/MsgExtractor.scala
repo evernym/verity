@@ -5,21 +5,23 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg._
 import com.evernym.verity.agentmsg.msgcodec.MsgPlusMeta
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper, UnpackParam}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID => _, _}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{EncryptParam, KeyParam, WalletAPIParam}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 object MsgExtractor {
   type JsonStr = String
   type NativeMsg = Any
 }
 
-class MsgExtractor(val keyParam: KeyParam, walletAPI: WalletAPI)(implicit wap: WalletAPIParam) {
+class MsgExtractor(val keyParam: KeyParam, walletAPI: WalletAPI, executionContext: ExecutionContext)
+                  (implicit wap: WalletAPIParam, appConfig: AppConfig) {
   import MsgExtractor._
 
-  val amt = new AgentMsgTransformer(walletAPI)
+  val amt = new AgentMsgTransformer(walletAPI, appConfig, executionContext)
 
   def unpackAsync(pm: PackedMsg, unpackParam: UnpackParam = UnpackParam()): Future[AgentMsgWrapper] = {
     amt.unpackAsync(pm.msg, keyParam, unpackParam)

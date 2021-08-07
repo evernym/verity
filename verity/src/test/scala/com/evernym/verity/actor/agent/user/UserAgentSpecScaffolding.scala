@@ -2,7 +2,8 @@ package com.evernym.verity.actor.agent.user
 
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util2.Status._
-import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, DidPair, SetupAgentEndpoint}
+import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
+import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, SetupAgentEndpoint}
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
@@ -13,6 +14,7 @@ import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.TestComMethod
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.did.DidPair
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import com.evernym.verity.util2.UrlParam
 import org.scalatest.concurrent.Eventually
@@ -23,14 +25,17 @@ trait UserAgentSpecScaffolding
     with PersistentActorSpec
     with AgentSpecHelper
     with AgentWalletSetupProvider
-    with Eventually {
+    with Eventually
+    with HasExecutionContextProvider
+    with HasWalletExecutionContextProvider{
 
   implicit def msgPackagingContext: AgentMsgPackagingContext
 
   override lazy val mockAgencyAdmin: MockEdgeAgent =
-    new MockEdgeAgent(UrlParam("localhost:9001"), platform.agentActorContext.appConfig)
+    new MockEdgeAgent(UrlParam("localhost:9001"), platform.agentActorContext.appConfig, futureExecutionContext, futureWalletExecutionContext)
 
-  override lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
+  override lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
+  lazy val mockPusher: MockPusher = new MockPusher(appConfig, futureExecutionContext)
 
   import mockEdgeAgent._
   import mockEdgeAgent.v_0_5_req._
@@ -49,7 +54,7 @@ trait UserAgentSpecScaffolding
     "when sent InitReq command" - {
       "should create/initialize agent actor" in {
         val agentPairwiseKey = prepareNewAgentWalletData(userDIDPair, userAgentEntityId)
-        ua ! SetupAgentEndpoint(userDIDPair, agentPairwiseKey.didPair)
+        ua ! SetupAgentEndpoint(userDIDPair.toAgentDidPair, agentPairwiseKey.didPair.toAgentDidPair)
         expectMsg(Done)
         mockEdgeAgent.handleAgentCreatedRespForAgent(agentPairwiseKey.didPair)
       }
@@ -73,7 +78,7 @@ trait UserAgentSpecScaffolding
   def updateComMethodSpecs(): Unit = {
     "when sent UPDATE_COM_METHOD msg with unsupported version" - {
       "should respond with unsupported version error msg" in {
-        val pcm = TestComMethod ("1", COM_METHOD_TYPE_PUSH, Option(s"${MockPusher.comMethodPrefix}:112233"))
+        val pcm = TestComMethod ("1", COM_METHOD_TYPE_PUSH, Option(s"${mockPusher.comMethodPrefix}:112233"))
         val msg = prepareUpdateComMethodMsgForAgentBase(unsupportedVersion, pcm)
         ua ! wrapAsPackedMsgParam(msg)
         expectError(UNSUPPORTED_MSG_TYPE.statusCode)    //TODO: message version not supported is not checked
@@ -82,7 +87,7 @@ trait UserAgentSpecScaffolding
 
     "when sent UPDATE_COM_METHOD msg" - {
       "should respond with COM_METHOD_UPDATED msg" in {
-        val pcm = TestComMethod ("1", COM_METHOD_TYPE_PUSH, Option(s"${MockPusher.comMethodPrefix}:112233"))
+        val pcm = TestComMethod ("1", COM_METHOD_TYPE_PUSH, Option(s"${mockPusher.comMethodPrefix}:112233"))
         val msg = prepareUpdateComMethodMsgForAgent(pcm)
         ua ! wrapAsPackedMsgParam(msg)
         val pm = expectMsgType[PackedMsg]
@@ -93,7 +98,7 @@ trait UserAgentSpecScaffolding
     //TODO duplicate of above, but for 0_6... need to reuse
     "when sent UPDATE_COM_METHOD 0.6 msg" - {
       "should respond with COM_METHOD_UPDATED 0.6 msg" in {
-        val pcm = TestComMethod ("1", COM_METHOD_TYPE_PUSH, Option(s"${MockPusher.comMethodPrefix}:112233"))
+        val pcm = TestComMethod ("1", COM_METHOD_TYPE_PUSH, Option(s"${mockPusher.comMethodPrefix}:112233"))
         val msg = mockEdgeAgent.v_0_6_req.prepareUpdateComMethodMsgForAgent(pcm)
         ua ! wrapAsPackedMsgParam(msg)
         val pm = expectMsgType[PackedMsg]
@@ -103,7 +108,7 @@ trait UserAgentSpecScaffolding
 
     "when sent UPDATE_COM_METHOD 1.0 msg" - {
       "should respond with COM_METHOD_UPDATED 1.0 msg" in {
-        val pcm = TestComMethod ("1", COM_METHOD_TYPE_PUSH, Option(s"${MockPusher.comMethodPrefix}:112233"))
+        val pcm = TestComMethod ("1", COM_METHOD_TYPE_PUSH, Option(s"${mockPusher.comMethodPrefix}:112233"))
         val msg = mockEdgeAgent.v_1_0_req.prepareUpdateComMethodMsgForAgent(pcm)
         ua ! wrapAsPackedMsgParam(msg)
         val pm = expectMsgType[PackedMsg]

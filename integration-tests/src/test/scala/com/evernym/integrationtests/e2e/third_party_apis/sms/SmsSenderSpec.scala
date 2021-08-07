@@ -7,14 +7,16 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.texter._
 import com.typesafe.scalalogging.Logger
-
 import java.util.concurrent.TimeUnit
+
+import com.evernym.verity.actor.testkit.TestAppConfig
+
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
 class SmsSenderSpec extends TestKit(ActorSystem("test")) with BasicSpec with ImplicitSender {
   val logger: Logger = getLoggerByClass(getClass)
 
-  val appConfig: AppConfig = AppConfigWrapper
+  val appConfig: AppConfig = new TestAppConfig()
 
   val smsSender: ActorRef = system.actorOf(Props(new DefaultSMSSender(appConfig)))
   val duration: FiniteDuration = Duration.create(15, TimeUnit.SECONDS)

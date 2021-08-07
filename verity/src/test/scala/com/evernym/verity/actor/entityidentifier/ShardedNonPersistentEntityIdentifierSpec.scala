@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.entityidentifier
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.{ForIdentifier, ShardUtil}
 import com.evernym.verity.actor.base.{ActorDetail, GetActorDetail}
 import com.evernym.verity.actor.entityidentifier.base.{EntityIdentifierBaseSpec, MockNonPersistentActor}
@@ -23,5 +24,7 @@ class ShardedNonPersistentEntityIdentifierSpec
       }
     }
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 

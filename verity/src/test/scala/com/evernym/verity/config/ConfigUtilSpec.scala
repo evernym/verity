@@ -227,8 +227,8 @@ class ConfigUtilSpec extends BasicSpec {
         | }
         |""".stripMargin)
 
-    val testConfig = new TestAppConfig(Some(dataRetentionConfig), clearValidators=true)
-    val testMissingFallbackConfig = new TestAppConfig(Some(missingFallbackConfig), clearValidators=true)
+    val testConfig = new TestAppConfig(Some(dataRetentionConfig), clearValidators=true, baseAsFallback = false)
+    val testMissingFallbackConfig = new TestAppConfig(Some(missingFallbackConfig), clearValidators=true, baseAsFallback = false)
 
     "should fail with greater than max value" in {
       intercept[ConfigException.BadValue] {

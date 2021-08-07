@@ -5,7 +5,8 @@ import java.util.UUID
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.config.ConfigConstants.SALT_WALLET_ENCRYPTION
 import com.evernym.verity.config.{AppConfig, ConfigConstants}
-import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
+
+import scala.concurrent.ExecutionContext
 import com.evernym.verity.util.Util
 import com.evernym.verity.vault.service.WalletParam
 import org.apache.commons.codec.digest.DigestUtils
@@ -30,7 +31,8 @@ object WalletUtil {
   //TODO: there are some code duplicate in below methods, see if we can fix it
   def generateWalletParamAsync(walletId: String,
                           appConfig: AppConfig,
-                          walletProvider: WalletProvider): Future[WalletParam] = {
+                          walletProvider: WalletProvider)
+                              (implicit ec: ExecutionContext): Future[WalletParam] = {
     //TODO: should try to avoid this wallet config creating again and again
     val walletConfig = buildWalletConfig(appConfig)
     generateWalletParamAsync(walletId, appConfig, walletProvider, walletConfig)
@@ -39,7 +41,8 @@ object WalletUtil {
   private def generateWalletParamAsync(walletId: String,
                           appConfig: AppConfig,
                           walletProvider: WalletProvider,
-                          walletConfig: WalletConfig): Future[WalletParam] = {
+                          walletConfig: WalletConfig)
+                                      (implicit ec: ExecutionContext): Future[WalletParam] = {
     val walletName = getWalletName(walletId, appConfig)
     walletProvider.generateKeyAsync(Option(getWalletKeySeed(walletId, appConfig))).map { key =>
       WalletParam(walletId, walletName, key, walletConfig)

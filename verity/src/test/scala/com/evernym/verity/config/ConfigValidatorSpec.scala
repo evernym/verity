@@ -11,6 +11,9 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 class ConfigValidatorSpec extends BasicSpec with CommonSpecUtil {
 
+  lazy val testAppConfig: AppConfig = new TestAppConfig()
+  override def appConfig: AppConfig = testAppConfig
+
   class TestReqConfigValidator (val config: Config) extends RequiredConfigValidatorBase {
     override val configsToBeValidated: Set[ConfDetail] = new RequiredConfigValidator(config).configsToBeValidated ++ Set (
       ConfDetail(HTTP_SSL_PORT)

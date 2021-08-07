@@ -2,12 +2,12 @@ package com.evernym.verity.vault.operation_executor
 
 import java.util.concurrent.CompletableFuture
 import com.evernym.verity.ledger.LedgerPoolConnManager
-import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.actor.wallet.GetVerKeyResp
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam, WalletExt}
 import org.hyperledger.indy.sdk.IndyException
 
+import scala.concurrent.ExecutionContext
 import scala.language.implicitConversions
 import scala.compat.java8.FutureConverters
 import scala.concurrent.{ExecutionException, Future}
@@ -15,7 +15,7 @@ import scala.concurrent.{ExecutionException, Future}
 trait OpExecutorBase extends FutureConverter {
 
   def verKeyFuture(keys: Set[KeyParam], ledgerPoolManager: Option[LedgerPoolConnManager])
-                          (implicit we: WalletExt): Future[Set[GetVerKeyResp]] = {
+                          (implicit we: WalletExt, ec: ExecutionContext): Future[Set[GetVerKeyResp]] = {
     Future.sequence {
       keys.map { rk =>
         rk.verKeyParam match {

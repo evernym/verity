@@ -1,5 +1,6 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -10,12 +11,20 @@ import com.evernym.verity.protocol.engine.{PinstIdResolution, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_V_0_6}
 import com.evernym.verity.testkit.{AwaitResult, BasicSpec}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.config.AppConfig
+
+import scala.concurrent.ExecutionContext
 
 
 class MsgExtractorSpec
   extends BasicSpec
     with AgentMsgSpecBase
     with AwaitResult {
+
+  override def appConfig: AppConfig = testAppConfig
+
+  lazy val ecp = new ExecutionContextProvider(appConfig)
+  implicit lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   //TODO GENERAL CONVERSION from PackedMsg to native (case class) and visa versa
 
@@ -37,10 +46,10 @@ class MsgExtractorSpec
     CreateConnectionReqMsg_MFV_0_6(MSG_TYPE_DETAIL_CREATE_CONNECTION, sourceId = "test-id-1")
 
   lazy val aliceCloudMsgExtractor: MsgExtractor = {
-    new MsgExtractor(aliceCloudAgentKeyParam, testWalletAPI)(aliceCloudAgentWap)
+    new MsgExtractor(aliceCloudAgentKeyParam, testWalletAPI, executionContext)(aliceCloudAgentWap, testAppConfig)
   }
   lazy val aliceMsgExtractor: MsgExtractor = {
-    new MsgExtractor(aliceKeyParam, testWalletAPI)(aliceWap)
+    new MsgExtractor(aliceKeyParam, testWalletAPI, executionContext)(aliceWap, testAppConfig)
   }
 
   def packedMsg: PackedMsg = convertToSyncReq(aliceMsgExtractor.packAsync(
@@ -128,5 +137,14 @@ class MsgExtractorSpec
     }
   }
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 

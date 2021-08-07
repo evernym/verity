@@ -9,7 +9,7 @@ import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.connecting.common.AgentKeyDlgProof
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
@@ -99,19 +99,19 @@ object Util {
     }
   }
 
-  def checkIfDIDIsValid(did: DID): Unit = {
+  def checkIfDIDIsValid(did: DidStr): Unit = {
     checkIfDIDLengthIsValid(did)
     checkIfDIDIsBase58(did)
   }
 
-  def checkIfDIDLengthIsValid(did: DID): Unit = {
+  def checkIfDIDLengthIsValid(did: DidStr): Unit = {
     val isInvalidLength = ! VALID_IDENTIFIER_LENGTH_RANGE.contains(did.length)
     if (isInvalidLength) throw new InvalidValueException(
       Option(s"actual length of DID ($did) is: ${did.length}, " +
       s"expected length is: $VALID_IDENTIFIER_LENGTH_RANGE"))
   }
 
-  def checkIfDIDIsBase58(did: DID): Unit = {
+  def checkIfDIDIsBase58(did: DidStr): Unit = {
     val decodedDid = Base58Util.decode(did)
     decodedDid match {
       case Success(_) =>
@@ -209,7 +209,7 @@ object Util {
     )
   }
 
-  def checkIfDIDBelongsToVerKey(did: DID, verKey: VerKey): Unit = {
+  def checkIfDIDBelongsToVerKey(did: DidStr, verKey: VerKeyStr): Unit = {
     val verifKey = Base58Util.decode(verKey).get
     val didFromVerKey = Base58Util.encode(verifKey.take(16))
     if (did != didFromVerKey) {
@@ -311,7 +311,7 @@ object Util {
 
   //TODO: this method is used by protocols and specs
   //when we change protocols to start using async api, we should change this too
-  def getAgentKeyDlgProof(signerDIDVerKey: VerKey, pairwiseDID: DID, pairwiseVerKey: VerKey)
+  def getAgentKeyDlgProof(signerDIDVerKey: VerKeyStr, pairwiseDID: DidStr, pairwiseVerKey: VerKeyStr)
                            (implicit walletAPI: WalletAPI, wap: WalletAPIParam): AgentKeyDlgProof = {
     val keyDlgProof = AgentKeyDlgProof(pairwiseDID, pairwiseVerKey, "")
     val signedMsg = DEPRECATED_convertToSyncReq(walletAPI.executeAsync[SignedMsg](SignMsg(KeyParam(Left(signerDIDVerKey)), keyDlgProof.buildChallenge.getBytes)))

@@ -14,13 +14,13 @@ import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.outbox.Outbox
 import com.evernym.verity.storage_services.BucketLifeCycleUtil
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.util2.Status
+import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
-
 import java.util.UUID
-import scala.concurrent.Await
+
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
 
@@ -262,12 +262,17 @@ class MessageMetaSpec
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
       Outbox(
         entityContext,
-        appConfig.config.withFallback(SNAPSHOT_CONFIG),
+        appConfig.withFallback(SNAPSHOT_CONFIG),
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,
         testMsgPackagers,
-        testMsgTransports
+        testMsgTransports,
+        executionContext
       )
     })
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

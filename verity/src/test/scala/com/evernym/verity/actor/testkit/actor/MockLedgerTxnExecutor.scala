@@ -1,16 +1,13 @@
 package com.evernym.verity.actor.testkit.actor
 
 import akka.actor.ActorSystem
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, StatusDetail, StatusDetailException}
-import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, StatusDetailException}
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import org.json.JSONObject
 
-import java.time.LocalDateTime
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.JavaConverters._
 import scala.util.{Left, Random}
 
@@ -18,13 +15,13 @@ import scala.util.{Left, Random}
 //it doesn't have any privilege checking etc.
 //it is more like data store only
 
-class MockLedgerSvc(val system: ActorSystem) extends LedgerSvc {
-  override val ledgerTxnExecutor: LedgerTxnExecutor = new MockLedgerTxnExecutor()
+class MockLedgerSvc(val system: ActorSystem, executionContext: ExecutionContext) extends LedgerSvc {
+  override val ledgerTxnExecutor: LedgerTxnExecutor = new MockLedgerTxnExecutor(executionContext)
 }
 
 object MockLedgerTxnExecutor {
-  def buildTxnResp(from: DID,
-                   dest: Option[DID],
+  def buildTxnResp(from: DidStr,
+                   dest: Option[DidStr],
                    data: Option[Map[String, Any]],
                    txnType: String,
                    txnTime: Option[Long]=None,
@@ -34,9 +31,11 @@ object MockLedgerTxnExecutor {
   }
 }
 
-class MockLedgerTxnExecutor() extends LedgerTxnExecutor {
+class MockLedgerTxnExecutor(ec: ExecutionContext)
+  extends LedgerTxnExecutor {
+  lazy implicit val executionContext: ExecutionContext = ec
 
-  case class NymDetail(verKey: VerKey)
+  case class NymDetail(verKey: VerKeyStr)
 
   var taa: Option[LedgerTAA] = None
   var nyms: Map[DID, NymDetail] = Map.empty
@@ -178,9 +177,9 @@ class MockLedgerTxnExecutor() extends LedgerTxnExecutor {
   }
 
   def addNym(submitter: Submitter, targetDid: DidPair): Future[TxnResp] = {
-    nyms += targetDid.DID -> NymDetail(targetDid.verKey)
+    nyms += targetDid.did -> NymDetail(targetDid.verKey)
     Future(
-      MockLedgerTxnExecutor.buildTxnResp(targetDid.DID, Some(targetDid.DID), None, "1")
+      MockLedgerTxnExecutor.buildTxnResp(targetDid.did, Some(targetDid.did), None, "1")
     )
   }
 

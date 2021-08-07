@@ -7,6 +7,8 @@ import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.BasicSpec
 
+import scala.concurrent.ExecutionContext
+
 trait EntityIdentifierBaseSpec
   extends ActorSpec
     with BasicSpec {
@@ -34,13 +36,19 @@ object MockNonPersistentActor {
   def props: Props = Props(new MockNonPersistentActor)
 }
 
-class MockPersistentActor(val appConfig: AppConfig)
+class MockPersistentActor(val appConfig: AppConfig, executionContext: ExecutionContext)
   extends BasePersistentActor {
   override def receiveEvent: Receive = PartialFunction.empty
   override def receiveCmd: Receive = PartialFunction.empty
   override def persistenceEncryptionKey: String = "mock"
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 object MockPersistentActor {
-  def props(appConfig: AppConfig): Props = Props(new MockPersistentActor(appConfig))
+  def props(appConfig: AppConfig, executionContext: ExecutionContext): Props =
+    Props(new MockPersistentActor(appConfig, executionContext))
 }

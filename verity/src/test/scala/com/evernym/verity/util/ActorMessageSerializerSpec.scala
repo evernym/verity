@@ -1,6 +1,7 @@
 package com.evernym.verity.util
 
 import akka.serialization._
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper}
 import com.evernym.verity.actor.testkit.ActorSpec
@@ -8,6 +9,8 @@ import com.evernym.verity.actor.{ActorMessage, ForIdentifier, ShardUtil}
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TestMessages.{TestMessage1, TestMessage2}
 import com.twitter.chill.akka.AkkaSerializer
+
+import scala.concurrent.ExecutionContext
 
 
 class ActorMessageSerializerSpec extends ActorSpec with BasicSpec {
@@ -71,6 +74,9 @@ class ActorMessageSerializerSpec extends ActorSpec with BasicSpec {
 
   val node1Serializer: Serialization = SerializationExtension(system)
   val node2Serializer: Serialization = SerializationExtension(system)
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 object TestMessages {

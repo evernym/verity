@@ -1,38 +1,41 @@
 package com.evernym.verity.integration.legacy
 
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding
 import com.evernym.verity.actor.base.Done
-import com.evernym.verity.actor.testkit.AkkaTestBasic
+import com.evernym.verity.actor.testkit.{AkkaTestBasic, TestAppConfig}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
-import com.evernym.verity.protocol.engine.{DID, MsgType, VerKey}
+import com.evernym.verity.protocol.engine.MsgType
 import com.evernym.verity.protocol.protocols.deaddrop.DeadDropSpecUtil
 import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.agent.{MockEdgeAgent, MockEnvUtil}
 import com.evernym.verity.testkit.util.Msgs_MFV_0_5
-import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 import com.typesafe.config.Config
-
 import java.util.UUID
+
+import com.evernym.verity.util2.ExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 
 class WalletBackupActorSpec
   extends UserAgentSpecScaffolding {
 
-  lazy val mockNewEdgeAgent: MockEdgeAgent = MockEnvUtil.buildMockEdgeAgent(mockAgencyAdmin)
+  lazy val mockNewEdgeAgent: MockEdgeAgent = MockEnvUtil.buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
 
   implicit val msgPackagingContext: AgentMsgPackagingContext =
     AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
 
-  val walletBackupUtil = new WalletBackupSpecUtil(mockEdgeAgent)
+  val walletBackupUtil = new WalletBackupSpecUtil(mockEdgeAgent, futureWalletExecutionContext)
 
   override def overrideConfig: Option[Config] = Option {
     AkkaTestBasic.customJournal("com.evernym.verity.actor.FailsOnLargeEventTestJournal")
@@ -218,20 +221,32 @@ class WalletBackupActorSpec
     mockEdgeAgent.v_0_5_resp.handleGetMsgsResp(pm)
   }
 
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
-case class CloudAgentDetail(did: DID, verKey: VerKey) {
+case class CloudAgentDetail(did: DidStr, verKey: VerKeyStr) {
   def didPair: DidPair = DidPair(did, verKey)
 }
 
 
-class WalletBackupSpecUtil(mockEdgeAgent: MockEdgeAgent) extends DeadDropSpecUtil {
+class WalletBackupSpecUtil(mockEdgeAgent: MockEdgeAgent, walletExecutionContext: ExecutionContext) extends DeadDropSpecUtil {
 
   override def appConfig: AppConfig = mockEdgeAgent.appConfig
 
   lazy val passphrase = UUID.randomUUID().toString.replace("-", "")
 
-  lazy val cloudAgentAddress = s"""{"did":"${mockEdgeAgent.cloudAgentDetailReq.DID}", "verKey": "${mockEdgeAgent.cloudAgentDetailReq.verKey}"}"""
+  lazy val cloudAgentAddress = s"""{"did":"${mockEdgeAgent.cloudAgentDetailReq.did}", "verKey": "${mockEdgeAgent.cloudAgentDetailReq.verKey}"}"""
 
   lazy val deadDropData = prepareDeadDropData(mockEdgeAgent.testWalletAPI, Option(passphrase))(mockEdgeAgent.wap)
 
@@ -241,5 +256,9 @@ class WalletBackupSpecUtil(mockEdgeAgent: MockEdgeAgent) extends DeadDropSpecUti
 
   def setRecoveredCloudAddress(cad: CloudAgentDetail) = recoveredCloudAddress = cad
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
 }
 

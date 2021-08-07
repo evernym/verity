@@ -2,7 +2,7 @@ package com.evernym.verity.cache.fetchers
 
 import akka.util.Timeout
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, StatusDetail, getUnhandledError}
 import com.evernym.verity.cache.base.{DEFAULT_MAX_CACHE_SIZE, FetcherParam, KeyDetail, KeyMapping}
 import com.evernym.verity.cache.providers.MaxWeightParam
@@ -14,9 +14,9 @@ import com.evernym.verity.util.ObjectSizeUtil
 import com.evernym.verity.util.Util.buildTimeout
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-trait CacheValueFetcher {
+trait CacheValueFetcher extends HasExecutionContextProvider {
 
   def appConfig: AppConfig
 
@@ -91,6 +91,7 @@ trait SyncCacheValueFetcher extends CacheValueFetcher {
 }
 
 trait AsyncCacheValueFetcher extends CacheValueFetcher {
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   implicit val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_RESPONSE_TIMEOUT_IN_SECONDS)
 

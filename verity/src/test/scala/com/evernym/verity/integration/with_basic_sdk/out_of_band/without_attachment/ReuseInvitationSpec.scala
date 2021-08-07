@@ -1,12 +1,16 @@
 package com.evernym.verity.integration.with_basic_sdk.out_of_band.without_attachment
 
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.OfferCred
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
+import com.evernym.verity.util.TestExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 
 
 //Holder1 connects with Issuer via an OOB invitation and responds (optionally responding with attachment).
@@ -16,12 +20,14 @@ class ReuseInvitationSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
   lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
-  lazy val holderSDK1 = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
-  lazy val holderSDK2 = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
+  lazy val holderSDK1 = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
+  lazy val holderSDK2 = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
 
   val oobIssuerHolderConn1 = "connId1"
   val oobIssuerHolderConn2 = "connId2"
@@ -87,4 +93,10 @@ class ReuseInvitationSpec
     }
   }
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

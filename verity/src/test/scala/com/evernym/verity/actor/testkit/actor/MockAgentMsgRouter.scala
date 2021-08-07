@@ -4,9 +4,11 @@ import akka.actor.{ActorRef, ActorSystem}
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.config.AppConfig
 
-class MockAgentMsgRouter(val actorTypeToRegionsMapping: Map[Int, ActorRef]=Map.empty)
+import scala.concurrent.ExecutionContext
+
+class MockAgentMsgRouter(val ec: ExecutionContext, actorTypeToRegionsMapping: Map[Int, ActorRef]=Map.empty)
                         (implicit val ac: AppConfig, val s: ActorSystem)
-  extends AgentMsgRouter() {
+  extends AgentMsgRouter(ec) {
 
   require(actorTypeToRegionsMapping != null, "actorTypeToRegionsMapping can't be null")
 

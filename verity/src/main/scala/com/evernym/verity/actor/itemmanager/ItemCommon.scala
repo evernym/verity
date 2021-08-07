@@ -4,11 +4,12 @@ import java.time.ZonedDateTime
 import akka.actor.{ActorLogging, Props}
 import akka.event.Logging._
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.appStateManager.ErrorEvent
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemManagerEntityId}
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.ITEM_CONTAINER_MAPPER_CLASS
+
+import scala.concurrent.ExecutionContext
 
 
 trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
@@ -59,10 +60,6 @@ trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
     throw new RuntimeException(message)
   }
 
-  def notifyAppStateManager(eventParam: ErrorEvent): Unit = {
-    publishAppStateEvent(eventParam)
-  }
-
   def unhandledMsg(receivedMsg: Any, responseToBeSent: Any): Unit = {
     logMsg(s"received '$receivedMsg' for non-configured/stale $entityType, won't be handled", DebugLevel)
     //this is to make sure it doesn't create loop if the incoming message was sent by self (due to scheduled job etc)
@@ -87,17 +84,27 @@ trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
 }
 
 object ItemManager {
-  def props(implicit conf: AppConfig): Props = Props(new ItemManager)
+  def props(executionContext: ExecutionContext)(implicit conf: AppConfig): Props = Props(new ItemManager(executionContext))
 }
 
-class ItemManager(implicit val appConfig: AppConfig) extends ItemManagerBase
+class ItemManager(executionContext: ExecutionContext)(implicit val appConfig: AppConfig) extends ItemManagerBase {
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+}
 
 
 object ItemContainer {
-  def props(implicit conf: AppConfig): Props = Props(new ItemContainer)
+  def props(executionContext: ExecutionContext)(implicit conf: AppConfig): Props = Props(new ItemContainer(executionContext))
 }
 
-class ItemContainer(implicit val appConfig: AppConfig) extends ItemContainerBase
+class ItemContainer(executionContext: ExecutionContext)(implicit val appConfig: AppConfig) extends ItemContainerBase {
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+}
 
 trait ItemCmdWrapperBase extends ActorMessage {
   def msg: Any

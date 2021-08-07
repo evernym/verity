@@ -11,7 +11,6 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.util2.Exceptions.HandledErrorException
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.{BAD_REQUEST, StatusDetail, UNAUTHORIZED, UNHANDLED}
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.http.common.HttpCustomTypes
@@ -25,12 +24,13 @@ import com.typesafe.scalalogging.Logger
 
 import java.util.UUID
 import scala.collection.immutable
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Left, Success, Try}
 
 
-class AkkaHttpMsgSendingSvc(config: Config, metricsWriter: MetricsWriter)(implicit system: ActorSystem)
+class AkkaHttpMsgSendingSvc(config: Config, metricsWriter: MetricsWriter, executionContext: ExecutionContext)(implicit system: ActorSystem)
   extends MsgSendingSvc {
+  private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   //TODO: we should change the below 'None' case behavior to either
   // 'sendByRequestLevelFlowAPI' or 'sendByRequestLevelFutureAPI'
@@ -101,7 +101,8 @@ class AkkaHttpMsgSendingSvc(config: Config, metricsWriter: MetricsWriter)(implic
                                              (implicit up: UrlParam):
   Future[Either[HandledErrorException, T]] = {
     val id = UUID.randomUUID().toString
-    logger.info(s"[$id] [outgoing request] [${req.method.value}] to uri ${up.host}:${up.port}/${up.path}")
+    val headerNames = req.headers.map(_.name()).mkString(", ")
+    logger.info(s"[$id] [outgoing request] [${req.method.value}] to uri ${up.host}:${up.port}/${up.path} (with headers: $headerNames)")
     sendRequest(req).flatMap { response =>
       logger.info(s"[$id] [incoming response] [${response.status}]")
       respHandler(response)

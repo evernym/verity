@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.persistence.supervisor.default
 
 import akka.testkit.EventFilter
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.supervisor.{GenerateRecoveryFailure, MockActorRecoveryFailure}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
@@ -15,7 +16,7 @@ class ActorRecoveryFailureSpec
   with BasicSpec
   with Eventually {
 
-  lazy val mockUnsupervised = system.actorOf(MockActorRecoveryFailure.props(appConfig))
+  lazy val mockUnsupervised = system.actorOf(MockActorRecoveryFailure.props(appConfig, ecp.futureExecutionContext))
 
   "Unsupervised actor" - {
     "when throws an unhandled exception during actor recovery" - {
@@ -37,6 +38,9 @@ class ActorRecoveryFailureSpec
       akka.mock.actor.exceptionSleepTimeInMillis = 1000
       """
   )}
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 

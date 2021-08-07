@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.persistence.supervisor.backoff.onstop
 
 import akka.testkit.EventFilter
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.supervisor.{GeneratePersistenceFailure, MockActorPersistenceFailure}
 import com.evernym.verity.actor.testkit.{ActorSpec, AkkaTestBasic}
 import com.evernym.verity.testkit.BasicSpec
@@ -13,7 +14,7 @@ class ActorPersistenceFailureSpec
     with BasicSpec
     with Eventually {
 
-  lazy val mockUnsupervised = system.actorOf(MockActorPersistenceFailure.backOffOnStopProps(appConfig))
+  lazy val mockUnsupervised = system.actorOf(MockActorPersistenceFailure.backOffOnStopProps(appConfig, ecp.futureExecutionContext))
 
   override def expectDeadLetters: Boolean = true
 
@@ -52,5 +53,8 @@ class ActorPersistenceFailureSpec
       AkkaTestBasic.customJournal("com.evernym.verity.actor.persistence.supervisor.GeneratePersistenceFailureJournal")
     )
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 

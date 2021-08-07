@@ -3,6 +3,7 @@ package com.evernym.verity.actor.persistence.eventDeletion
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.persistence.{DeleteMessagesFailure, DeleteMessagesSuccess}
 import akka.testkit.EventFilter
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.{ActorMessage, ItemUpdated, TestJournal}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, GetPersistentActorDetail, PersistentActorDetail}
@@ -12,14 +13,14 @@ import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TimeZoneUtil.{getCurrentUTCZonedDateTime, getMillisFromZonedDateTime}
 import com.typesafe.config.{Config, ConfigFactory}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 //tests how deletion of events (messages) handled in batches
 class DeleteMsgHandlerSpec
   extends BasicSpec
     with ActorSpec {
 
-  lazy val mockActor: ActorRef = system.actorOf(MockPersistentActor.props(appConfig))
+  lazy val mockActor: ActorRef = system.actorOf(MockPersistentActor.props(appConfig, executionContextProvider.futureExecutionContext))
 
   "PersistentActor" - {
 
@@ -67,9 +68,12 @@ class DeleteMsgHandlerSpec
   def configForDeleteEventFailure: Config =  {
     AkkaTestBasic.customJournal("com.evernym.verity.actor.persistence.eventDeletion.FailsOnDeleteEventsTestJournal")
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
-class MockPersistentActor(val appConfig: AppConfig)
+class MockPersistentActor(val appConfig: AppConfig, executionContext: ExecutionContext)
   extends BasePersistentActor
     with DefaultPersistenceEncryption
     with ActorLogging {
@@ -120,14 +124,19 @@ class MockPersistentActor(val appConfig: AppConfig)
 
   override protected def initialBatchSize = 700
   override protected def batchIntervalInSeconds = 1
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 case class PersistEvents(totalEvents: Int) extends ActorMessage
 case object StartMsgDeletion extends ActorMessage
 
 object MockPersistentActor {
-  def props(appConfig: AppConfig): Props =
-    Props(new MockPersistentActor(appConfig))
+  def props(appConfig: AppConfig, executionContext: ExecutionContext): Props =
+    Props(new MockPersistentActor(appConfig, executionContext))
 }
 
 class FailsOnDeleteEventsTestJournal extends TestJournal {

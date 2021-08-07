@@ -6,6 +6,7 @@ import com.evernym.verity.protocol.engine.SignalEnvelope
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeMsgFamily._
 import com.evernym.verity.protocol.protocols.tictactoe._
 
+import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 object TicTacToeAI {
@@ -21,7 +22,7 @@ object TicTacToeAI {
   }
 }
 
-class TicTacToeAI(cp: ActorDriverGenParam) extends ActorDriver(cp) {
+class TicTacToeAI(cp: ActorDriverGenParam, ec: ExecutionContext) extends ActorDriver(cp, ec) {
   var board: Board = new Board()
 
   /**

@@ -12,12 +12,15 @@ import com.evernym.verity.util2.UrlParam
 import com.typesafe.scalalogging.Logger
 
 import scala.collection.immutable.Queue
+import scala.concurrent.ExecutionContext
 
 
 class HttpListener(val appConfig: AppConfig,
                    val listeningPort: Int,
                    endpoint: UrlParam,
-                   override implicit val system: ActorSystem) extends HttpServerUtil {
+                   override implicit val system: ActorSystem,
+                   executionContext: ExecutionContext)
+  extends HttpServerUtil {
   import akka.http.scaladsl.model.StatusCodes._
 
   val logger: Logger = getLoggerByClass(classOf[HttpListener])
@@ -80,7 +83,11 @@ class HttpListener(val appConfig: AppConfig,
   val bindFuture = Http().newServerAt("localhost", listeningPort).bind(corsHandler(route))
 
   def stopHttpListener(): Unit = {
-    import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
-    bindFuture.flatMap(_.unbind())
+    bindFuture.flatMap(_.unbind())(executionContext)
   }
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }

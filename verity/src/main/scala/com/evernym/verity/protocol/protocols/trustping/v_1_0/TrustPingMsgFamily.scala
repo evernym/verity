@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.trustping.v_1_0
 
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming}
@@ -97,6 +98,6 @@ sealed trait Signal
 
 object Sig {
   case class ReceivedPing(ping: Msg.Ping) extends Signal
-  case class SentResponse(responseSent: Boolean, relationship: DID) extends Signal
+  case class SentResponse(responseSent: Boolean, relationship: DidStr) extends Signal
   case class ReceivedResponse(resp: Msg.Response) extends Signal
 }

@@ -126,7 +126,7 @@ object ConnectingProtoDef
   }
 
   override def create(context: ProtocolContextApi[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String]):
-      Protocol[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String] =
+  Protocol[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String] =
     new ConnectingProtocol(context)
 
   override def initialState: ConnectingState = ConnectingState()

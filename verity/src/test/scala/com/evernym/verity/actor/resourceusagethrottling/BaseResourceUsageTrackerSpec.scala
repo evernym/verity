@@ -7,9 +7,10 @@ import com.evernym.verity.actor.resourceusagethrottling.tracking.{GetAllResource
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
-
 import java.time.{DateTimeException, ZonedDateTime}
 import java.time.temporal.ChronoUnit
+
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleConfig
 
 trait BaseResourceUsageTrackerSpec
   extends PersistentActorSpec
@@ -45,6 +46,7 @@ trait BaseResourceUsageTrackerSpec
                                  resourceName: ResourceName,
                                  ipAddress: IpAddress,
                                  userIdOpt: Option[UserId],
+                                 resourceUsageRules: ResourceUsageRuleConfig,
                                  restartActorBefore: Boolean=false): Unit = {
     if (restartActorBefore) {
       (Option(ipAddress) ++ userIdOpt).foreach { entityId =>
@@ -53,7 +55,7 @@ trait BaseResourceUsageTrackerSpec
     }
 
     ResourceUsageTracker.addUserResourceUsage(resourceType, resourceName,
-      ipAddress, userIdOpt, sendBackAck = false)(resourceUsageTracker)
+      ipAddress, userIdOpt, sendBackAck = false, resourceUsageRules)(resourceUsageTracker)
   }
 
   def checkUsage(entityId: EntityId,

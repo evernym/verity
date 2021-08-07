@@ -8,6 +8,8 @@ import com.evernym.verity.actor.{ActorMessage, HasProps}
 import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.urlmapper.UrlAdded
 
+import scala.concurrent.ExecutionContext
+
 
 /**
  * This actor gets created for each "hashed url", and it stores corresponding "long url".
@@ -18,7 +20,7 @@ import com.evernym.verity.urlmapper.UrlAdded
  * for a given "hashed url" (during accept invite process)
  *
  */
-class UrlStore(val appConfig: AppConfig) extends BasePersistentActor {
+class UrlStore(val appConfig: AppConfig, executionContext: ExecutionContext) extends BasePersistentActor {
 
   var url: Option[String] = None
 
@@ -42,10 +44,14 @@ class UrlStore(val appConfig: AppConfig) extends BasePersistentActor {
     case GetActualUrl => sender ! url
   }
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 object UrlStore extends HasProps {
-  def props(implicit appConfig: AppConfig): Props = Props(new UrlStore(appConfig))
+  def props(implicit appConfig: AppConfig, executionContext: ExecutionContext): Props = Props(new UrlStore(appConfig, executionContext))
 }
 
 //cmds

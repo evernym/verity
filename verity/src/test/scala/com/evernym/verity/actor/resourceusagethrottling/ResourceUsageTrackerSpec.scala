@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.resourceusagethrottling
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.resourceusagethrottling.tracking._
 
 class ResourceUsageTrackerSpec
@@ -202,5 +203,8 @@ class ResourceUsageTrackerSpec
       }
     }
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 
 }

@@ -1,7 +1,6 @@
 package com.evernym.verity.libindy.wallet
 
 import com.evernym.verity.actor.wallet.WalletCreated
-import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
 import com.evernym.verity.vault.operation_executor.FutureConverter
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.util.?=>
@@ -10,6 +9,7 @@ import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.wallet._
 import org.hyperledger.indy.sdk.{IOException, InvalidStateException}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 
@@ -41,7 +41,7 @@ object LibIndyWalletProvider
     } catch handleWalletEx(id) andThen { throw _ }
   }
 
-  def createAsync(id: String, encryptionKey: String, walletConfig: WalletConfig): Future[WalletCreated.type] = {
+  def createAsync(id: String, encryptionKey: String, walletConfig: WalletConfig)(implicit ec: ExecutionContext): Future[WalletCreated.type] = {
     Wallet.createWallet(
       walletConfig.buildConfig(id),
       walletConfig.buildCredentials(encryptionKey))
@@ -51,7 +51,7 @@ object LibIndyWalletProvider
       }
   }
 
-  def openAsync(id: String, encryptionKey: String, walletConfig: WalletConfig): Future[LibIndyWalletExt] = {
+  def openAsync(id: String, encryptionKey: String, walletConfig: WalletConfig)(implicit ec: ExecutionContext): Future[LibIndyWalletExt] = {
     Wallet.openWallet(walletConfig.buildConfig(id),
         walletConfig.buildCredentials(encryptionKey))
     .map { wallet =>

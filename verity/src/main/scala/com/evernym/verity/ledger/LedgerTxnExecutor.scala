@@ -1,13 +1,12 @@
 package com.evernym.verity.ledger
 
-import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.{DidStr, DidPair}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 
 import scala.concurrent.Future
 
 case class LedgerExecutorException(message: String,
-                              cause: Throwable = None.orNull) extends Exception(message, cause)
+                                   cause: Throwable = None.orNull) extends Exception(message, cause)
 
 trait LedgerTxnExecutor {
 
@@ -15,7 +14,7 @@ trait LedgerTxnExecutor {
 
   def addNym(submitter: Submitter, targetDid: DidPair): Future[TxnResp]
 
-  def addAttrib(submitter: Submitter, did: DID, attrName: String, attrValue: String): Future[TxnResp]
+  def addAttrib(submitter: Submitter, did: DidStr, attrName: String, attrValue: String): Future[TxnResp]
 
   def getTAA(submitter: Submitter): Future[GetTAAResp]
 
@@ -23,27 +22,27 @@ trait LedgerTxnExecutor {
 
   def getSchema(submitter: Submitter, schemaId: String): Future[GetSchemaResp]
 
-  def writeSchema(submitterDID: DID,
+  def writeSchema(submitterDID: DidStr,
                   schemaJson: String,
                   walletAccess: WalletAccess): Future[TxnResp]
 
-  def prepareSchemaForEndorsement(submitterDID: DID,
+  def prepareSchemaForEndorsement(submitterDID: DidStr,
                                   schemaJson: String,
-                                  endorserDID: DID,
+                                  endorserDID: DidStr,
                                   walletAccess: WalletAccess): Future[LedgerRequest]
 
-  def writeCredDef(submitterDID: DID,
+  def writeCredDef(submitterDID: DidStr,
                    credDefJson: String,
                    walletAccess: WalletAccess): Future[TxnResp]
 
-  def prepareCredDefForEndorsement(submitterDID: DID,
+  def prepareCredDefForEndorsement(submitterDID: DidStr,
                                    credDefJson: String,
-                                   endorserDID: DID,
+                                   endorserDID: DidStr,
                                    walletAccess: WalletAccess): Future[LedgerRequest]
 
   def getCredDef(submitter: Submitter, credDefId: String): Future[GetCredDefResp]
 
-  def getAttrib(submitter: Submitter, did: DID, attrName: String): Future[GetAttribResp]
+  def getAttrib(submitter: Submitter, did: DidStr, attrName: String): Future[GetAttribResp]
 
   def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp
 

@@ -5,6 +5,8 @@ import com.evernym.verity.protocol.engine.PinstIdResolution.V0_2
 import com.evernym.verity.protocol.engine.ProtocolRegistry.Entry
 import com.evernym.verity.testkit.BasicSpec
 
+import scala.concurrent.ExecutionContext
+
 
 class LaunchesProtocolSpec extends BasicSpec {
 

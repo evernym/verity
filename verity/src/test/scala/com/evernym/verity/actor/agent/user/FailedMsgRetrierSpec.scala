@@ -2,6 +2,7 @@ package com.evernym.verity.actor.agent.user
 
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.testkit.EventFilter
+import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, ItemUpdated, ShardUtil}
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
@@ -18,7 +19,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 class FailedMsgRetrierSpec
@@ -28,7 +29,8 @@ class FailedMsgRetrierSpec
     with Eventually
     with BeforeAndAfterAll {
 
-  lazy val mockAgentRegion: ActorRef = createPersistentRegion(MockAgentActor.name, MockAgentActor.props(appConfig))
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  lazy val mockAgentRegion: ActorRef = createPersistentRegion(MockAgentActor.name, MockAgentActor.props(appConfig, ecp.futureExecutionContext))
 
   override def beforeAll(): Unit = {
     val _ = platform.singletonParentProxy
@@ -119,9 +121,11 @@ class FailedMsgRetrierSpec
       """
     )
   }
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
-class MockAgentActor(val appConfig: AppConfig)
+class MockAgentActor(val appConfig: AppConfig, executionContext: ExecutionContext)
   extends BasePersistentActor
     with DefaultPersistenceEncryption
     with FailedMsgRetrier
@@ -155,11 +159,15 @@ class MockAgentActor(val appConfig: AppConfig)
     Future.successful(Done)
   }
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 object MockAgentActor {
   def name = "mock-agent-actor"
-  def props(appConfig: AppConfig): Props = Props(new MockAgentActor(appConfig))
+  def props(appConfig: AppConfig, executionContext: ExecutionContext): Props = Props(new MockAgentActor(appConfig, executionContext))
 }
 
 case object GetPending extends ActorMessage

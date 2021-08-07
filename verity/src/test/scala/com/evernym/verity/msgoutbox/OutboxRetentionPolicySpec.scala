@@ -15,12 +15,12 @@ import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.storage_services.BucketLifeCycleUtil
 import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.util2.{PolicyElements, RetentionPolicy, Status}
+import com.evernym.verity.util2.{ExecutionContextProvider, PolicyElements, RetentionPolicy, Status}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
 
@@ -137,12 +137,17 @@ class OutboxRetentionPolicySpec
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
       Outbox(
         entityContext,
-        appConfig.config.withFallback(OVERRIDE_CONFIG),
+        appConfig.withFallback(OVERRIDE_CONFIG),
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,
         testMsgPackagers,
-        testMsgTransports
+        testMsgTransports,
+        executionContext
       )
     })
+
+  lazy val ecp = new ExecutionContextProvider(appConfig)
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

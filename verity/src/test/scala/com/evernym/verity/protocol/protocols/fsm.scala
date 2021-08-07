@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.protocols
 
 import akka.actor.{ActorRef, Props}
 import akka.util.ByteString
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.ActorMessage
@@ -193,4 +194,7 @@ class FSMDocSpec extends ActorSpec with BasicSpec {
       expectNoMessage
     }
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

@@ -4,18 +4,18 @@ import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
-class InMemLedgerPoolConnManager(txnExecutor: Option[LedgerTxnExecutor] = None)
+class InMemLedgerPoolConnManager(val executionContext: ExecutionContext, txnExecutor: Option[LedgerTxnExecutor] = None)
                                 (implicit executor: ExecutionContextExecutor)
   extends LedgerPoolConnManager {
 
-  def this()(implicit executor: ExecutionContextExecutor) {
-    this(Some(new MockLedgerTxnExecutor()))
+  def this(executionContext: ExecutionContext)(implicit executor: ExecutionContextExecutor) {
+    this(executionContext, Some(new MockLedgerTxnExecutor(executionContext)))
   }
 
   val ledgerTxnExecutor: LedgerTxnExecutor = {
-    txnExecutor.getOrElse(new MockLedgerTxnExecutor())
+    txnExecutor.getOrElse(new MockLedgerTxnExecutor(executionContext))
   }
 
   override def open(): Unit = ()

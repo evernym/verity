@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.persistence.recovery.latest.verity1
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.SELF_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY}
 import com.evernym.verity.actor.agent.relationship._
@@ -7,6 +8,8 @@ import com.evernym.verity.actor.agent.user.UserAgentState
 import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.typesafe.config.{Config, ConfigFactory}
+
+import scala.concurrent.ExecutionContext
 
 class UserAgentRecoverySpec
   extends BaseRecoveryActorSpec
@@ -65,22 +68,22 @@ class UserAgentRecoverySpec
     uas.relationshipAgents shouldBe Map.empty
     uas.configs shouldBe Map.empty
     uas.msgAndDelivery shouldBe None
-    uas.thisAgentKeyId shouldBe Option(mySelfRelAgentDIDPair.DID)
-    uas.agencyDIDPair shouldBe Option(myAgencyAgentDIDPair)
+    uas.thisAgentKeyId shouldBe Option(mySelfRelAgentDIDPair.did)
+    uas.agencyDIDPair shouldBe Option(myAgencyAgentDIDPair.toAgentDidPair)
     uas.agentWalletId shouldBe Some(mySelfRelAgentEntityId)
     uas.relationship shouldBe Some(
       Relationship(
         SELF_RELATIONSHIP,
         "self",
         Some(DidDoc(
-          mySelfRelDIDPair.DID,
+          mySelfRelDIDPair.did,
           Some(AuthorizedKeys(Seq(
-            AuthorizedKey(mySelfRelAgentDIDPair.DID, mySelfRelAgentDIDPair.verKey, Set(CLOUD_AGENT_KEY)),
-            AuthorizedKey(mySelfRelDIDPair.DID, mySelfRelDIDPair.verKey, Set(EDGE_AGENT_KEY, RECIP_KEY))
+            AuthorizedKey(mySelfRelAgentDIDPair.did, mySelfRelAgentDIDPair.verKey, Set(CLOUD_AGENT_KEY)),
+            AuthorizedKey(mySelfRelDIDPair.did, mySelfRelDIDPair.verKey, Set(EDGE_AGENT_KEY, RECIP_KEY))
           ))),
           Some(Endpoints(Seq(
             //TODO: shouldn't the auth key be the "cloud agent key id" instead of the "edge key id"?
-            EndpointADT(HttpEndpoint("1", "http://abc.xyz.com", Seq(mySelfRelDIDPair.DID)))
+            EndpointADT(HttpEndpoint("1", "http://abc.xyz.com", Seq(mySelfRelDIDPair.did), Option(PackagingContext("plain"))))
           )))
         )),
         Seq.empty
@@ -100,4 +103,11 @@ class UserAgentRecoverySpec
          }
       """)
   )
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

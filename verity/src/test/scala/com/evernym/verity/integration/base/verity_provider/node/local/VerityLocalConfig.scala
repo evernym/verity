@@ -10,11 +10,10 @@ import java.nio.file.Path
 
 object VerityLocalConfig {
 
-  val defaultPorts: PortProfile = PortProfile(9002, 2552, 8552)
-
   private def messageSerialization: Config = {
     ConfigFactory.parseString(
-      """akka.actor.serialize-messages = on
+      //TODO: once we fix root cause behind serialization issue, then we should turn this on again.
+      """akka.actor.serialize-messages = off
         |akka.actor.allow-java-serialization = off
         |""".stripMargin
     )
@@ -131,6 +130,14 @@ object VerityLocalConfig {
     )
   }
 
+  private def prometheusServer(port: Int): Config = {
+    ConfigFactory.parseString(
+      s"""
+         |kamon.prometheus.embedded-server.port = $port
+         |""".stripMargin
+    )
+  }
+
   private def turnOffWarnings(): Config = {
     ConfigFactory.parseString(
       s"""
@@ -162,7 +169,8 @@ object VerityLocalConfig {
       messageSerialization,
       configureLibIndy(taaEnabled, taaAutoAccept),
       akkaConfig(),
-      identityUrlShortener()
+      identityUrlShortener(),
+      prometheusServer(port.prometheusPort)
     )
 
     parts.fold(ConfigFactory.empty())(_.withFallback(_).resolve())

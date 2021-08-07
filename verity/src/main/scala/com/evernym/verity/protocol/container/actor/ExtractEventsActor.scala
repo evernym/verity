@@ -6,7 +6,7 @@ import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersist
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.PinstId
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 case class ExtractedEvent(event: Any)
 case class ExtractionComplete()
@@ -14,9 +14,12 @@ case class ExtractionComplete()
 class ExtractEventsActor(override val appConfig: AppConfig,
                          val actorTypeName: String,
                          val pinstId: PinstId,
-                         val dest: ActorRef)
+                         val dest: ActorRef,
+                         executionContext: ExecutionContext)
   extends BasePersistentActor
   with DefaultPersistenceEncryption {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   override lazy val entityType: String = actorTypeName
   override lazy val entityId: String = pinstId
@@ -52,7 +55,8 @@ object ExtractEventsActor {
   def prop(appConfig: AppConfig,
            actorTypeName: String,
            pinstId: PinstId,
-           dest: ActorRef
+           dest: ActorRef,
+           executionContext: ExecutionContext
           ): Props =
-    Props(new ExtractEventsActor(appConfig, actorTypeName, pinstId, dest))
+    Props(new ExtractEventsActor(appConfig, actorTypeName, pinstId, dest, executionContext))
 }

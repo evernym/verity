@@ -10,6 +10,8 @@ import com.evernym.verity.constants.Constants.{TYPE, URL}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.Util.getJsonStringFromMap
 
+import scala.concurrent.ExecutionContext
+
 
 trait UrlShorteningResponse extends ActorMessage
 case class UrlShortened(shortUrl: String) extends UrlShorteningResponse
@@ -26,7 +28,7 @@ trait URLShortenerAPI {
   def shortenURL(urlInfo: UrlInfo)(implicit actorSystem: ActorSystem): Either[HandledErrorException, String]
 }
 
-class DefaultURLShortener(val config: AppConfig) extends Actor with ActorLogging {
+class DefaultURLShortener(val config: AppConfig, executionContext: ExecutionContext) extends Actor with ActorLogging {
   implicit val system: ActorSystem = context.system
   private val logger = getLoggerByClass(getClass)
 
@@ -51,21 +53,21 @@ class DefaultURLShortener(val config: AppConfig) extends Actor with ActorLogging
   }
 
   def shortenerSvc(): Option[URLShortenerAPI] = {
-    DefaultURLShortener.loadFromConfig(config)
+    DefaultURLShortener.loadFromConfig(config, executionContext)
   }
 }
 
 object DefaultURLShortener {
 
-  def loadFromConfig(appConfig: AppConfig): Option[URLShortenerAPI] = {
+  def loadFromConfig(appConfig: AppConfig, executionContext: ExecutionContext): Option[URLShortenerAPI] = {
     appConfig.getStringOption(URL_SHORTENER_SVC_SELECTED).map { clazz =>
       Class
         .forName(clazz)
-        .getConstructor(classOf[AppConfig])
-        .newInstance(appConfig)
+        .getConstructor(classOf[AppConfig], classOf[ExecutionContext])
+        .newInstance(appConfig, executionContext)
         .asInstanceOf[URLShortenerAPI]
     }
   }
 
-  def props(config: AppConfig): Props = Props(new DefaultURLShortener(config))
+  def props(config: AppConfig, executionContext: ExecutionContext): Props = Props(new DefaultURLShortener(config, executionContext))
 }

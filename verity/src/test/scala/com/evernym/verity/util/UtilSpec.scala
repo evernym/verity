@@ -2,12 +2,15 @@ package com.evernym.verity.util
 
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidValueException}
 import com.evernym.verity.util2.Status.INVALID_VALUE
-import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.Util._
 
 
 class UtilSpec extends BasicSpec with CommonSpecUtil {
+  val testAppConfig: AppConfig = new TestAppConfig()
+  override def appConfig: AppConfig = testAppConfig
 
   "Util" - {
     "when asked to replace tokens in a msg without any token and empty map" - {

@@ -11,18 +11,23 @@ import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6._
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{StatusReport => WriteSchemaStatusReport, Write => WriteSchema}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.{Write => WriteCredDef}
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.util.TestExecutionContextProvider
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 class WriteCredDefFailureSpec
   extends VerityProviderBaseSpec
     with SdkProvider  {
 
-  override lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new DummyLedgerTxnExecutor())
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new DummyLedgerTxnExecutor(executionContext))
 
   lazy val issuerVerityApp = VerityEnvBuilder.default().build(VAS)
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityApp)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext, ecp.walletFutureExecutionContext)
   var schemaId: String = ""
 
   override def beforeAll(): Unit = {
@@ -52,7 +57,7 @@ class WriteCredDefFailureSpec
     }
   }
 
-  class DummyLedgerTxnExecutor() extends MockLedgerTxnExecutor {
+  class DummyLedgerTxnExecutor(ec: ExecutionContext) extends MockLedgerTxnExecutor(ec) {
 
     // mimicking the scenario where 'writeCredDef' fails to
     // check how it is handled by protocol
@@ -62,4 +67,11 @@ class WriteCredDefFailureSpec
       Future.failed(LedgerSvcException("invalid TAA"))
     }
   }
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

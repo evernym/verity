@@ -12,13 +12,17 @@ import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.IgnoreAkkaEvents
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory}
 import scalapb.GeneratedMessageCompanion
+
+import scala.concurrent.ExecutionContext
 
 
 class PersistentActorSpec
   extends ActorSpec
     with BasicSpec {
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
 
   val MOCK_ACTOR_TYPE_NAME = "MockPersistentActor"
   val MOCK_ACTOR_1 = 4
@@ -57,7 +61,7 @@ class PersistentActorSpec
   val mockActorRegion: ActorRef =
     ClusterSharding(system).start(
       typeName          = MOCK_ACTOR_TYPE_NAME,
-      entityProps       = Props(new MockPersistentActor(appConfig)),
+      entityProps       = Props(new MockPersistentActor(appConfig, ecp.futureExecutionContext)),
       settings          = ClusterShardingSettings(system),
       extractEntityId   = ShardUtil.forIdentifierEntityIdExtractor,
       extractShardId    = ShardUtil.forIdentifierShardIdExtractor(ShardIdExtractor(appConfig, MOCK_ACTOR_TYPE_NAME))
@@ -105,9 +109,10 @@ class PersistentActorSpec
     ConfigFactory.parseFile(new File("verity/src/main/resources/dynamodb.conf"))
       .resolve()
 
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
-class MockPersistentActor(val appConfig: AppConfig)
+class MockPersistentActor(val appConfig: AppConfig, executionContext: ExecutionContext)
   extends BasePersistentActor
     with DefaultPersistenceEncryption
     with SnapshotterExt[MockState]
@@ -139,6 +144,11 @@ class MockPersistentActor(val appConfig: AppConfig)
   var stateData: String = ""
 
   self ! Reset
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 case object Reset extends ActorMessage

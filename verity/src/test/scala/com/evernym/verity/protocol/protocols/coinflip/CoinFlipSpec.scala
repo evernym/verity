@@ -1,10 +1,16 @@
 package com.evernym.verity.protocol.protocols.coinflip
 
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.SignalEnvelope
 import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
 import com.evernym.verity.protocol.testkit.{ContainerNotFoundException, InteractionController, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.util.TestExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 
 class CoinFlipSpec extends TestsProtocolsImpl(CoinFlipDefinition) with BasicFixtureSpec {
 
@@ -131,13 +137,14 @@ class CoinFlipSpec extends TestsProtocolsImpl(CoinFlipDefinition) with BasicFixt
     "interactive" - {
       "a 'Start' msg should start and complete the protocol successfully" in { f =>
 
-        val controllerProvider: DriverGen[SimpleControllerProviderInputType] = Option{ i: SimpleControllerProviderInputType =>
-          new InteractionController(i) {
-            override def signal[A]: SignalHandler[A] = {
-              case SignalEnvelope(dp: ShouldContinue, _, _, _, _) => Some(Continue(dp.send))
+        val controllerProvider: DriverGen[SimpleControllerProviderInputType] =
+          Option{ (i: SimpleControllerProviderInputType, e: ExecutionContext) =>
+            new InteractionController(i) {
+              override def signal[A]: SignalHandler[A] = {
+                case SignalEnvelope(dp: ShouldContinue, _, _, _, _) => Some(Continue(dp.send))
+              }
             }
           }
-        }
 
         f.setup("alice", controllerProvider)
         f.setup("bob", controllerProvider)
@@ -160,4 +167,11 @@ class CoinFlipSpec extends TestsProtocolsImpl(CoinFlipDefinition) with BasicFixt
       }
     }
   }
+
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }

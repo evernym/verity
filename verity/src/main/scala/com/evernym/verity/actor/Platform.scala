@@ -36,7 +36,7 @@ import com.evernym.verity.libindy.Libraries
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class Platform(val aac: AgentActorContext, services: PlatformServices)
+class Platform(val aac: AgentActorContext, services: PlatformServices, val executionContextProvider: ExecutionContextProvider)
   extends MsgTracingRegionActors
     with LegacyRegionActors
     with MaintenanceRegionActors
@@ -65,9 +65,14 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
 
   //initialize app state manager
   val appStateManager: ActorRef = agentActorContext.system.actorOf(
-    AppStateManager.props(appConfig, services.sysServiceNotifier, services.sysShutdownService), name = "app-state-manager")
+    AppStateManager.props(
+      appConfig,
+      services.sysServiceNotifier,
+      services.sysShutdownService,
+      executionContextProvider.futureExecutionContext
+    ), name = "app-state-manager")
 
-  val nodeSingleton: ActorRef = agentActorContext.system.actorOf(NodeSingleton.props(appConfig), name = "node-singleton")
+  val nodeSingleton: ActorRef = agentActorContext.system.actorOf(NodeSingleton.props(appConfig, executionContextProvider.futureExecutionContext), name = "node-singleton")
 
   def buildProp(prop: Props, dispatcherNameOpt: Option[String]=None): Props = {
     dispatcherNameOpt.map { dn =>
@@ -82,22 +87,64 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
   //agency agent actor
   val agencyAgentRegion: ActorRef = createPersistentRegion(
     AGENCY_AGENT_REGION_ACTOR_NAME,
-    buildProp(Props(new AgencyAgent(agentActorContext)), Option(AGENCY_AGENT_ACTOR_DISPATCHER_NAME)))
+    buildProp(
+      Props(
+        new AgencyAgent(
+          agentActorContext,
+          executionContextProvider.futureExecutionContext,
+          executionContextProvider.walletFutureExecutionContext
+        )
+      ),
+      Option(AGENCY_AGENT_ACTOR_DISPATCHER_NAME)
+    )
+  )
 
   //agency agent actor for pairwise connection
   val agencyAgentPairwiseRegion: ActorRef = createPersistentRegion(
     AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME,
-    buildProp(Props(new AgencyAgentPairwise(agentActorContext)), Option(AGENCY_AGENT_PAIRWISE_ACTOR_DISPATCHER_NAME)))
+    buildProp(
+      Props(
+        new AgencyAgentPairwise(
+          agentActorContext,
+          executionContextProvider.futureExecutionContext,
+          executionContextProvider.walletFutureExecutionContext
+        )
+      ),
+      Option(AGENCY_AGENT_PAIRWISE_ACTOR_DISPATCHER_NAME)
+    )
+  )
 
   //agent actor
   val userAgentRegion: ActorRef = createPersistentRegion(
     USER_AGENT_REGION_ACTOR_NAME,
-    buildProp(Props(new UserAgent(agentActorContext, collectionsMetricsCollector)), Option(USER_AGENT_ACTOR_DISPATCHER_NAME)))
+    buildProp(
+      Props(
+        new UserAgent(
+          agentActorContext,
+          collectionsMetricsCollector,
+          executionContextProvider.futureExecutionContext,
+          executionContextProvider.walletFutureExecutionContext
+        )
+      ),
+      Option(USER_AGENT_ACTOR_DISPATCHER_NAME)
+    )
+  )
 
   //agent actor for pairwise connection
   val userAgentPairwiseRegion: ActorRef = createPersistentRegion(
     USER_AGENT_PAIRWISE_REGION_ACTOR_NAME,
-    buildProp(Props(new UserAgentPairwise(agentActorContext, collectionsMetricsCollector)), Option(USER_AGENT_PAIRWISE_ACTOR_DISPATCHER_NAME)))
+    buildProp(
+      Props(
+        new UserAgentPairwise(
+          agentActorContext,
+          collectionsMetricsCollector,
+          executionContextProvider.futureExecutionContext,
+          executionContextProvider.walletFutureExecutionContext
+        )
+      ),
+      Option(USER_AGENT_PAIRWISE_ACTOR_DISPATCHER_NAME)
+    )
+  )
 
   object agencyAgent extends ShardActorObject {
     def !(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Unit = {
@@ -121,7 +168,13 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
   val activityTrackerRegion: ActorRef = createPersistentRegion(
     ACTIVITY_TRACKER_REGION_ACTOR_NAME,
     buildProp(
-      Props(new ActivityTracker(agentActorContext.appConfig, agentActorContext.agentMsgRouter)),
+      Props(
+        new ActivityTracker(
+          agentActorContext.appConfig,
+          agentActorContext.agentMsgRouter,
+          executionContextProvider.futureExecutionContext
+        )
+      ),
       Option(ACTIVITY_TRACKER_ACTOR_DISPATCHER_NAME)
   ))
 
@@ -129,7 +182,13 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
   val walletActorRegion: ActorRef = createNonPersistentRegion(
     WALLET_REGION_ACTOR_NAME,
     buildProp(
-      Props(new WalletActor(agentActorContext.appConfig, agentActorContext.poolConnManager)),
+      Props(
+        new WalletActor(
+          agentActorContext.appConfig,
+          agentActorContext.poolConnManager,
+          executionContextProvider.futureExecutionContext
+        )
+      ),
       Option(WALLET_ACTOR_ACTOR_DISPATCHER_NAME)
     ),
     passivateIdleEntityAfter = Option(
@@ -140,7 +199,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
   //token manager
   val tokenToActorItemMapperRegion: ActorRef = createPersistentRegion(
     TOKEN_TO_ACTOR_ITEM_MAPPER_REGION_ACTOR_NAME,
-    TokenToActorItemMapper.props(agentActorContext.appConfig),
+    TokenToActorItemMapper.props(executionContextProvider.futureExecutionContext)(agentActorContext.appConfig),
     forTokenShardIdExtractor,
     forTokenEntityIdExtractor
   )
@@ -157,7 +216,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
   //url store
   val urlStoreRegion: ActorRef = createPersistentRegion(
     URL_STORE_REGION_ACTOR_NAME,
-    UrlStore.props(agentActorContext.appConfig),
+    UrlStore.props(agentActorContext.appConfig, executionContextProvider.futureExecutionContext),
     forUrlMapperShardIdExtractor,
     forUrlMapperEntityIdExtractor
   )
@@ -176,18 +235,24 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
     val actionExecutor = new UsageViolationActionExecutor(actorSystem, appConfig)
     createPersistentRegion(
       RESOURCE_USAGE_TRACKER_REGION_ACTOR_NAME,
-      ResourceUsageTracker.props(agentActorContext.appConfig, actionExecutor))
+      ResourceUsageTracker.props(agentActorContext.appConfig, actionExecutor, executionContextProvider.futureExecutionContext))
   }
 
   //other region actors
 
   val routeRegion: ActorRef =
-    createPersistentRegion(ROUTE_REGION_ACTOR_NAME, Route.props)
+    createPersistentRegion(ROUTE_REGION_ACTOR_NAME, Route.props(executionContextProvider.futureExecutionContext))
 
   val itemManagerRegion: ActorRef =
-    createPersistentRegion(ITEM_MANAGER_REGION_ACTOR_NAME, ItemManager.props)
+    createPersistentRegion(
+      ITEM_MANAGER_REGION_ACTOR_NAME,
+      ItemManager.props(executionContextProvider.futureExecutionContext)
+    )
   val itemContainerRegion: ActorRef =
-    createPersistentRegion(ITEM_CONTAINER_REGION_ACTOR_NAME, ItemContainer.props)
+    createPersistentRegion(
+      ITEM_CONTAINER_REGION_ACTOR_NAME,
+      ItemContainer.props(executionContextProvider.futureExecutionContext)
+    )
 
   // protocol region actors
   val protocolRegions: Map[String, ActorRef] = agentActorContext.protocolRegistry
@@ -196,7 +261,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
       val ap = ActorProtocol(e.protoDef)
       val region = createProtoActorRegion(
         ap.typeName,
-        ap.props(agentActorContext))
+        ap.props(agentActorContext, executionContextProvider.futureExecutionContext))
       ap.typeName -> region
     }.toMap
 
@@ -208,15 +273,20 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
       val typeName = SegmentedStateStore.buildTypeName(e.protoDef.msgFamily.protoRef)
       val region = createPersistentRegion(
         typeName,
-        SegmentedStateStore.props(agentActorContext.appConfig))
+        SegmentedStateStore.props(agentActorContext.appConfig, executionContextProvider.futureExecutionContext))
       typeName -> region
     }.toMap
 
-  createCusterSingletonManagerActor(SingletonParent.props(CLUSTER_SINGLETON_PARENT))
+  createCusterSingletonManagerActor(
+    SingletonParent.props(
+      CLUSTER_SINGLETON_PARENT,
+      executionContextProvider.futureExecutionContext
+    )
+  )
 
   //Agent to collect metrics from Libindy
   val libIndyMetricsCollector: ActorRef =
-    agentActorContext.system.actorOf(Props(new LibindyMetricsCollector()), name = LIBINDY_METRICS_TRACKER)
+    agentActorContext.system.actorOf(Props(new LibindyMetricsCollector(executionContextProvider.futureExecutionContext)), name = LIBINDY_METRICS_TRACKER)
 
   //Agent to collect collections metrics for collections
   lazy val collectionsMetricsCollector: ActorRef =
@@ -226,7 +296,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices)
     createClusterSingletonProxyActor(s"/user/$CLUSTER_SINGLETON_MANAGER")
 
   import akka.actor.typed.scaladsl.adapter._
-  actorSystem.spawn(UserGuardian(agentActorContext), "guardian")
+  actorSystem.spawn(UserGuardian(agentActorContext, executionContextProvider.futureExecutionContext), "guardian")
 
   def createCusterSingletonManagerActor(singletonProps: Props): ActorRef = {
     agentActorContext.system.actorOf(

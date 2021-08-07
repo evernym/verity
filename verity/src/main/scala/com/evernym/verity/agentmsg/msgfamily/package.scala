@@ -4,8 +4,9 @@ import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_MSGS_SENT, MSG_TYPE_MSG_CREATED, MSG_TYPE_MSG_DETAIL}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{MsgCreatedRespMsg_MFV_0_5, MsgsSentRespMsg_MFV_0_5}
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.engine.{MsgBase, MsgId, VerKey}
+import com.evernym.verity.protocol.engine.{MsgBase, MsgId}
 
 package object msgfamily {
 
@@ -34,7 +35,7 @@ package object msgfamily {
     }
   }
 
-  case class AgentMsgContext(msgPackFormat: MsgPackFormat, familyVersion: String, senderVerKey: Option[VerKey]) {
+  case class AgentMsgContext(msgPackFormat: MsgPackFormat, familyVersion: String, senderVerKey: Option[VerKeyStr]) {
 
     /**
      * for rest api (MPF_PLAIN), when messages are exchanged between agencies

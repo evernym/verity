@@ -3,17 +3,17 @@ package com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth
 import akka.actor.typed.ActorRef
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.adapter._
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.msgoutbox.outbox.States.MsgDeliveryAttempt
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher._
 import com.evernym.verity.msgoutbox.outbox.{Outbox, msg_packager}
 import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, MsgId}
-import com.typesafe.config.Config
 
 
 //responsible to create sender with appropriate input for each new message dispatch
 class OAuthWebhookDispatcher(parentActorContext: ActorContext[Outbox.Cmd],
                              oAuthAccessTokenHolder: ActorRef[OAuthAccessTokenHolder.Cmd],
-                             config: Config,
+                             appConfig: AppConfig,
                              comMethodId: ComMethodId,
                              comMethod: ComMethod,
                              msgStoreParam: MsgStoreParam,
@@ -23,13 +23,13 @@ class OAuthWebhookDispatcher(parentActorContext: ActorContext[Outbox.Cmd],
   override def dispatch(msgId: MsgId,
                         deliveryAttempts: Map[String, MsgDeliveryAttempt]): Unit = {
     val currFailedAttempt = deliveryAttempts.get(comMethodId).map(_.failedCount).getOrElse(0)
-    val retryParam = Option(Outbox.prepareRetryParam(comMethod.typ, currFailedAttempt, config))
+    val retryParam = Option(Outbox.prepareRetryParam(comMethod.typ, currFailedAttempt, appConfig.config))
     val dispatchParam = DispatchParam(msgId, comMethodId, retryParam, parentActorContext.self)
     val uniqueSenderId = prepareUniqueSenderId(msgId)
     val existingSender = parentActorContext.child(uniqueSenderId)
     existingSender match {
       case None =>
-        val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam)
+        val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, appConfig)
         parentActorContext.spawn(
           OAuthWebhookSender(
             oAuthAccessTokenHolder,

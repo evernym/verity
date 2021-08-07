@@ -9,9 +9,10 @@ import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.integrationtests.e2e.sdk.process.SdkProviderException
 import com.evernym.verity.constants.Constants._
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{DID, MsgFamily, ProtoRef}
+import com.evernym.verity.protocol.engine.{MsgFamily, ProtoRef}
 import com.evernym.verity.sdk.exceptions.WalletException
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
@@ -225,7 +226,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
     }
   }
 
-  override def basicMessage_1_0(forRelationship: DID,
+  override def basicMessage_1_0(forRelationship: DidStr,
                                 content: String,
                                 sentTime: String,
                                 localization: String): BasicMessageV1_0 = {
@@ -245,7 +246,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
     }
   }
 
-  override def committedAnswer_1_0(forRelationship: DID,
+  override def committedAnswer_1_0(forRelationship: DidStr,
                                    questionText: String,
                                    questionDescription: String,
                                    validResponses: Seq[String],
@@ -273,7 +274,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
     }
   }
 
-  override def committedAnswer_1_0(forRelationship: DID, threadId: String, answer: String): CommittedAnswerV1_0 = {
+  override def committedAnswer_1_0(forRelationship: DidStr, threadId: String, answer: String): CommittedAnswerV1_0 = {
     val answerJson = new JSONObject
     answerJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.msgQualifierFromQualifierStr(CommittedAnswerV1_0.QUALIFIER), CommittedAnswerV1_0.FAMILY, CommittedAnswerV1_0.VERSION, "answer-question"))
     answerJson.put("@id", UUID.randomUUID.toString)
@@ -288,7 +289,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
     }
   }
 
-  override def committedAnswer_1_0(forRelationship: DID, threadId: String): CommittedAnswerV1_0 = {
+  override def committedAnswer_1_0(forRelationship: DidStr, threadId: String): CommittedAnswerV1_0 = {
     new UndefinedCommittedAnswer_1_0 {
       override def status(ctx: Context): Unit = {
         sendHttpGetReq(context, ProtoRef("committedanswer", "1.0"), Option(threadId), Map("~for_relationship" -> forRelationship, "familyQualifier" -> CommittedAnswerV1_0.QUALIFIER))
@@ -495,7 +496,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
     }
   }
 
-  override def presentProof_1_0(forRelationship: DID, threadId: String): PresentProofV1_0 = {
+  override def presentProof_1_0(forRelationship: DidStr, threadId: String): PresentProofV1_0 = {
     new UndefinedPresentProof_1_0 {
       override def status(ctx: Context): Unit = {
         sendHttpGetReq(context, ProtoRef("present-proof", "1.0"), Option(threadId),

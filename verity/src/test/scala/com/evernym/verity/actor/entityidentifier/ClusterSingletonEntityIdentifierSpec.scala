@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.entityidentifier
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.base.{ActorDetail, GetActorDetail}
 import com.evernym.verity.actor.cluster_singleton.watcher.ForEntityItemWatcher
 import com.evernym.verity.actor.cluster_singleton.{ForKeyValueMapper, ForWatcherManager}
@@ -52,6 +53,8 @@ class ClusterSingletonEntityIdentifierSpec
       }
     }
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 case class ForBaseWatcherManager(override val cmd: Any) extends ForWatcherManager {

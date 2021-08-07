@@ -117,8 +117,8 @@ trait ConnectionSpec { this: VerityEndpointHandlerSpec =>
             mockEnv.cloudAgent.agencyEndpoint.toString)
           val le = mockEnv.edgeAgent.addNewLocalPairwiseKey(connIda1)
           val rec = mockEnv.cloudAgent.addNewLocalPairwiseKey(connIda1)
-          le.setMyCloudAgentPairwiseDidPair(rec.myPairwiseDidPair.DID, rec.myPairwiseDidPair.verKey)
-          rec.setTheirPairwiseDidPair(le.myPairwiseDidPair.DID, le.myPairwiseDidPair.verKey)
+          le.setMyCloudAgentPairwiseDidPair(rec.myPairwiseDidPair.did, rec.myPairwiseDidPair.verKey)
+          rec.setTheirPairwiseDidPair(le.myPairwiseDidPair.did, le.myPairwiseDidPair.verKey)
         }
       }
     }

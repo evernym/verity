@@ -6,8 +6,10 @@ import com.evernym.verity.protocol.container.actor.{ActorDriver, ActorDriverGenP
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily.{ProvideRecoveryDetails, Restored}
 
-class WalletBackupDriver(cp: ActorDriverGenParam)
-  extends ActorDriver(cp) {
+import scala.concurrent.ExecutionContext
+
+class WalletBackupDriver(cp: ActorDriverGenParam, ec: ExecutionContext)
+  extends ActorDriver(cp, ec) {
 
   override def signal[A]: SignalHandler[A] = {
 

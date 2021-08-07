@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.container.asyncapis.wallet
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.ConfigConstants.SALT_WALLET_NAME
 import com.evernym.verity.vault.operation_executor.{AnoncredsWalletOpExecutor, FutureConverter}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.AnonCredAsyncOps
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.{HashUtil, Util}
@@ -32,7 +32,7 @@ trait AnonCredRequestsAPI
     }
   }
 
-  def runCreateSchema(issuerDID: DID, name:String, version: String, data: String): Unit = {
+  def runCreateSchema(issuerDID: DidStr, name:String, version: String, data: String): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec =>
         issuerCreateSchema(issuerDID, name, version, data).map { result =>
@@ -42,7 +42,7 @@ trait AnonCredRequestsAPI
     )
   }
 
-  def runCreateCredDef(issuerDID: DID,
+  def runCreateCredDef(issuerDID: DidStr,
                        schemaJson: String,
                        tag: String,
                        sigType: Option[String]=None,
@@ -53,7 +53,7 @@ trait AnonCredRequestsAPI
     walletApi.tell(CreateCredOffer(credDefId))
   }
 
-  def runCreateCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String): Unit =
+  def runCreateCredReq(credDefId: String, proverDID: DidStr, credDefJson: String, credOfferJson: String): Unit =
     walletApi.tell(CreateCredReq(credDefId, proverDID,
         credDefJson, credOfferJson, masterSecretId))
 

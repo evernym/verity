@@ -1,14 +1,17 @@
 package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}
+import com.evernym.verity.util.TestExecutionContextProvider
 import org.json.JSONObject
 import org.scalatest.BeforeAndAfterAll
 
+import scala.concurrent.ExecutionContext
 import scala.language.{implicitConversions, reflectiveCalls}
 
 
@@ -132,4 +135,15 @@ class WriteSchemaSpec
 
   override val containerNames: Set[ContainerName] = Set("writer")
 
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }

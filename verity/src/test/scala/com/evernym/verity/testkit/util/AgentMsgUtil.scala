@@ -1,7 +1,8 @@
 package com.evernym.verity.testkit.util
 
 import java.util.UUID
-import com.evernym.verity.actor.agent.{DidPair, MsgPackFormat, Thread}
+import com.evernym.verity.actor.agent.MsgPackFormat
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
@@ -13,23 +14,23 @@ import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof
 import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.metrics.NoOpMetricsWriter
 
-
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
 case class TypedMsg(`@type`: TypeDetail)
 
-case class Connect_MFV_0_5(`@type`: TypeDetail, fromDID: DID, fromDIDVerKey: VerKey)
+case class Connect_MFV_0_5(`@type`: TypeDetail, fromDID: DidStr, fromDIDVerKey: VerKeyStr)
 
-case class Connect_MFV_0_6(`@type`: String, fromDID: DID, fromDIDVerKey: VerKey)
+case class Connect_MFV_0_6(`@type`: String, fromDID: DidStr, fromDIDVerKey: VerKeyStr)
 
 case class SignUp_MFV_0_5(`@type`: TypeDetail)
 
 case class CreateAgent_MFV_0_5(`@type`: TypeDetail)
 
-case class CreateAgent_MFV_0_6(`@type`: String, fromDID: DID, fromDIDVerKey: VerKey)
+case class CreateAgent_MFV_0_6(`@type`: String, fromDID: DidStr, fromDIDVerKey: VerKeyStr)
 
 case class CreateAgent_MFV_0_7(`@type`: String,
                                requesterKeys: RequesterKeys,
@@ -38,14 +39,14 @@ case class CreateAgent_MFV_0_7(`@type`: String,
                                  Thread(Option(UUID.randomUUID().toString))))
 
 case class CreateEdgeAgent_MFV_0_7(`@type`: String,
-                                   requesterVk: VerKey,
+                                   requesterVk: VerKeyStr,
                                    provisionToken: Option[ProvisionToken],
                                    `~thread`: Option[Thread] = Option(
                                      Thread(Option(UUID.randomUUID().toString))))
 
-case class CreateKey_MFV_0_5(`@type`: TypeDetail, forDID: DID, forDIDVerKey: VerKey)
+case class CreateKey_MFV_0_5(`@type`: TypeDetail, forDID: DidStr, forDIDVerKey: VerKeyStr)
 
-case class CreateKey_MFV_0_6(`@type`: String, forDID: DID, forDIDVerKey: VerKey)
+case class CreateKey_MFV_0_6(`@type`: String, forDID: DidStr, forDIDVerKey: VerKeyStr)
 
 case class CreateConnection_MFV_0_6(`@type`: String, sourceId: String, phoneNo: Option[String]=None)
 
@@ -129,32 +130,32 @@ case class UpdateComMethod_MFV_0_6(`@type`: String, comMethod: TestComMethod)
 case class IssuerSetupCreate_MFV_0_6(`@type`: String)
 
 //response msgs
-case class Connected_MFV_0_5(withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey)
+case class Connected_MFV_0_5(withPairwiseDID: DidStr, withPairwiseDIDVerKey: VerKeyStr)
 
 case class SignedUp_MFV_0_5()
 
-case class AgentCreated_MFV_0_5(withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey) {
+case class AgentCreated_MFV_0_5(withPairwiseDID: DidStr, withPairwiseDIDVerKey: VerKeyStr) {
   def didPair = DidPair(withPairwiseDID, withPairwiseDIDVerKey)
 }
 
-case class AgentCreated_MFV_0_6(withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey) {
+case class AgentCreated_MFV_0_6(withPairwiseDID: DidStr, withPairwiseDIDVerKey: VerKeyStr) {
   def didPair = DidPair(withPairwiseDID, withPairwiseDIDVerKey)
 }
 
-case class AgentCreated_MFV_0_7(selfDID: DID, agentVerKey: VerKey)
+case class AgentCreated_MFV_0_7(selfDID: DidStr, agentVerKey: VerKeyStr)
 
 
 case class CreateAgentProblemReport_MFV_0_7(msg: String)
 
-case class KeyCreated_MFV_0_5(withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey)
+case class KeyCreated_MFV_0_5(withPairwiseDID: DidStr, withPairwiseDIDVerKey: VerKeyStr)
 
-case class KeyCreated_MFV_0_6(withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey)
+case class KeyCreated_MFV_0_6(withPairwiseDID: DidStr, withPairwiseDIDVerKey: VerKeyStr)
 
 case class MsgCreated_MFV_0_5(uid: MsgId)
 
 case class MsgStatusUpdated_MFV_0_5(uids: List[MsgId], statusCode: String)
 
-case class PairwiseError(pairwiseDID: DID, statusCode: String, statusMsg: String)
+case class PairwiseError(pairwiseDID: DidStr, statusCode: String, statusMsg: String)
 
 case class MsgStatusUpdatedByConns_MFV_0_5(updatedUidsByConns: List[PairwiseMsgUids],
                                            failed: Option[List[PairwiseError]]=None)
@@ -166,7 +167,7 @@ case class MsgsSent_MFV_0_5(uids: List[String])
 
 case class Msgs_MFV_0_5(msgs: List[MsgDetail])
 
-case class MsgsByConns(pairwiseDID: DID, msgs: List[MsgDetail])
+case class MsgsByConns(pairwiseDID: DidStr, msgs: List[MsgDetail])
 
 case class MsgsByConns_MFV_0_5(msgsByConns: List[MsgsByConns])
 
@@ -186,7 +187,7 @@ case class ConfigsMsg_MFV_0_5(configs: Set[TestConfigDetail])
 
 case class ConnReqAccepted_MFV_0_6(`@id`: String)
 
-case class PublicIdentifier(did: DID, verKey: VerKey)
+case class PublicIdentifier(did: DidStr, verKey: VerKeyStr)
 
 case class PublicIdentifierCreated_MFV_0_6(`@id`: String, identifier: PublicIdentifier)
 
@@ -211,9 +212,22 @@ object AgentPackMsgUtil {
                                     packMsgParam: PackMsgParam,
                                     fwdRoutes: List[FwdRouteMsg])
                                    (implicit msgPackFormat: MsgPackFormat,
-                                    agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): PackedMsg = {
-    awaitResult(AgentMsgPackagingUtil.buildRoutedAgentMsgFromPackMsgParam(msgPackFormat, packMsgParam, fwdRoutes, fwdMsgTypeVersion)(
-      agentMsgTransformer, wap, NoOpMetricsWriter()))
+                                    agentMsgTransformer: AgentMsgTransformer,
+                                    wap: WalletAPIParam,
+                                    executionContext: ExecutionContext): PackedMsg = {
+    awaitResult(
+      AgentMsgPackagingUtil.buildRoutedAgentMsgFromPackMsgParam(
+        msgPackFormat,
+        packMsgParam,
+        fwdRoutes,
+        fwdMsgTypeVersion
+      )(
+        agentMsgTransformer,
+        wap,
+        NoOpMetricsWriter(),
+        executionContext
+      )
+    )
   }
 
   def awaitResult(fut: Future[PackedMsg]): PackedMsg = {

@@ -2,16 +2,17 @@ package com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.DIDCommV1Packager.Commands.{PackMsg, TimedOut, WalletOpExecutorReplyAdapter}
 import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.WalletOpExecutor.Replies.PackagedPayload
-import com.evernym.verity.msgoutbox.{RecipPackaging, RoutePackaging, VerKey, WalletId}
+import com.evernym.verity.msgoutbox.{RecipPackaging, RoutePackaging, WalletId}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer}
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.vault.WalletAPIParam
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 object DIDCommV1Packager {
@@ -24,7 +25,7 @@ object DIDCommV1Packager {
                        recipPackaging: RecipPackaging,
                        routePackaging: Option[RoutePackaging],
                        walletId: WalletId,
-                       senderVerKey: VerKey,
+                       senderVerKey: VerKeyStr,
                        replyTo: ActorRef[Reply]) extends Cmd
     case class WalletOpExecutorReplyAdapter(reply: WalletOpExecutor.Reply) extends Cmd
     case object TimedOut extends Cmd
@@ -38,16 +39,18 @@ object DIDCommV1Packager {
 
   def apply(agentMsgTransformer: AgentMsgTransformer,
             walletOpExecutor: Behavior[WalletOpExecutor.Cmd],
-            metricsWriter: MetricsWriter): Behavior[Cmd] = {
+            metricsWriter: MetricsWriter,
+            executionContext: ExecutionContext): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
       actorContext.setReceiveTimeout(10.seconds, Commands.TimedOut) //TODO: finalize this
       val walletOpExecutorReplyAdapter = actorContext.messageAdapter(reply => WalletOpExecutorReplyAdapter(reply))
-      initialized(agentMsgTransformer, walletOpExecutor)(actorContext, walletOpExecutorReplyAdapter, metricsWriter)
+      initialized(agentMsgTransformer, walletOpExecutor, executionContext)(actorContext, walletOpExecutorReplyAdapter, metricsWriter)
     }
   }
 
   def initialized(agentMsgTransformer: AgentMsgTransformer,
-                  walletOpExecutor: Behavior[WalletOpExecutor.Cmd])
+                  walletOpExecutor: Behavior[WalletOpExecutor.Cmd],
+                  executionContext: ExecutionContext)
                  (implicit actorContext: ActorContext[Cmd],
                   walletOpExecutorReplyAdapter: ActorRef[WalletOpExecutor.Reply],
                   metricsWriter: MetricsWriter): Behavior[Cmd] = Behaviors.receiveMessage {
@@ -56,7 +59,7 @@ object DIDCommV1Packager {
       val walletOpExecutorRef = actorContext.spawnAnonymous(walletOpExecutor)
       walletOpExecutorRef ! WalletOpExecutor.Commands.PackMsg(
         msgPayload, recipPackaging.recipientKeys.toSet, senderVerKey, walletId, walletOpExecutorReplyAdapter)
-      handleRecipPackedMsg(msgType, walletId, routePackaging, agentMsgTransformer, replyTo, metricsWriter)
+      handleRecipPackedMsg(msgType, walletId, routePackaging, agentMsgTransformer, replyTo, metricsWriter, executionContext)
 
     case cmd => baseBehavior(cmd)
   }
@@ -66,7 +69,8 @@ object DIDCommV1Packager {
                            routePackaging: Option[RoutePackaging],
                            agentMsgTransformer: AgentMsgTransformer,
                            replyTo: ActorRef[Reply],
-                           metricsWriter: MetricsWriter): Behavior[Cmd] = Behaviors.receiveMessage {
+                           metricsWriter: MetricsWriter,
+                           executionContext: ExecutionContext): Behavior[Cmd] = Behaviors.receiveMessage {
     case WalletOpExecutorReplyAdapter(reply: PackagedPayload) =>
       routePackaging match {
         case None =>
@@ -82,10 +86,10 @@ object DIDCommV1Packager {
             reply.payload,
             routingKeys,
             msgType
-          )(agentMsgTransformer, WalletAPIParam(walletId), metricsWriter)
+          )(agentMsgTransformer, WalletAPIParam(walletId), metricsWriter, executionContext)
           future.map { pm =>
             replyTo ! Replies.PackedMsg(pm.msg)
-          }
+          }(executionContext)
           Behaviors.stopped
       }
 

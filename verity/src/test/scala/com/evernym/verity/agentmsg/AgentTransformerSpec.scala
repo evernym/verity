@@ -5,17 +5,24 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.MsgFamilyVersion
 import com.evernym.verity.testkit.{AwaitResult, BasicSpecWithIndyCleanup, HasTestWalletAPI}
 import com.evernym.verity.vault._
 import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.util2.HasExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 
 trait AgentMsgSpecBase
   extends BasicSpecWithIndyCleanup
     with HasTestWalletAPI
-    with CommonSpecUtil {
+    with CommonSpecUtil
+    with HasExecutionContextProvider {
 
-  lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(testWalletAPI)
+  private implicit lazy val executionContext: ExecutionContext = futureExecutionContext
+
+  lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(testWalletAPI, testAppConfig, executionContext)
 
   def typ: String
 
@@ -66,6 +73,8 @@ trait AgentTransformerSpec
   extends BasicSpecWithIndyCleanup
     with AgentMsgSpecBase
     with AwaitResult {
+
+  override def appConfig: AppConfig = testAppConfig
 
   def msgPackFormat: MsgPackFormat
   def msgFamilyVersion: MsgFamilyVersion

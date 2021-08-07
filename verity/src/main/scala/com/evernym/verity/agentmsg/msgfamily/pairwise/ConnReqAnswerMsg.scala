@@ -7,7 +7,7 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{MsgBase, ThreadId}
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, SenderAgencyDetail, SenderDetail}
 import org.json.JSONObject
 

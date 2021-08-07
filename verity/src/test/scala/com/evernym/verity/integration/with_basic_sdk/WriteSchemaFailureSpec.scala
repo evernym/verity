@@ -1,5 +1,6 @@
 package com.evernym.verity.integration.with_basic_sdk
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
@@ -10,18 +11,22 @@ import com.evernym.verity.ledger.{LedgerSvcException, TxnResp}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, CurrentPublicIdentifier, ProblemReport, PublicIdentifier, PublicIdentifierCreated}
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Write
+import com.evernym.verity.util.TestExecutionContextProvider
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 class WriteSchemaFailureSpec
   extends VerityProviderBaseSpec
     with SdkProvider  {
 
-  override lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new DummyLedgerTxnExecutor())
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+
+  override lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new DummyLedgerTxnExecutor(executionContext))
 
   lazy val issuerVerityApp = VerityEnvBuilder.default().build(VAS)
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityApp)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext, ecp.walletFutureExecutionContext)
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -47,7 +52,7 @@ class WriteSchemaFailureSpec
     }
   }
 
-  class DummyLedgerTxnExecutor() extends MockLedgerTxnExecutor {
+  class DummyLedgerTxnExecutor(ec: ExecutionContext) extends MockLedgerTxnExecutor(ec) {
 
     // mimicking the scenario where 'writeSchema' fails to
     // check how it is handled by protocol
@@ -57,4 +62,11 @@ class WriteSchemaFailureSpec
       Future.failed(LedgerSvcException("invalid TAA"))
     }
   }
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

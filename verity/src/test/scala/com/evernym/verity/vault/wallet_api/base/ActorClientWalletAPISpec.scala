@@ -5,14 +5,21 @@ import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.base.{CoreActor, Done}
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.util.TestExecutionContextProvider
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Minutes, Span}
+
+import scala.concurrent.ExecutionContext
 
 trait ActorClientWalletAPISpecBase
   extends ClientWalletAPISpecBase
     with Eventually {
 
-  lazy val walletSetupManager: ActorRef = system.actorOf(Props(new WalletSetupManager(walletAPI)))
+  lazy val walletSetupManager: ActorRef =
+    system.actorOf(Props(new WalletSetupManager(walletAPI, TestExecutionContextProvider.ecp.futureExecutionContext)))
 
   override def startUserWalletSetupWithAsyncAPI(): Unit = {
     walletSetupManager ! StartAgentCreation(totalUsers)
@@ -34,7 +41,7 @@ trait ActorClientWalletAPISpecBase
 //this is little bit like a region actor which receives a request
 // and it creates actual mock agent actors
 // and sends a command to those actors which starts wallet activity
-class WalletSetupManager(walletAPI: WalletAPI)
+class WalletSetupManager(walletAPI: WalletAPI, ec: ExecutionContext)
   extends CoreActor {
 
   var successResponse = 0
@@ -43,7 +50,7 @@ class WalletSetupManager(walletAPI: WalletAPI)
   override def receiveCmd: Receive = {
     case sws: StartAgentCreation =>
       (1 to sws.totalUser).foreach { id =>
-        val ar = context.actorOf(Props(new MockAgentActor(walletAPI)), id.toString)
+        val ar = context.actorOf(Props(new MockAgentActor(walletAPI, ec)), id.toString)
         ar ! StartWalletSetup()
       }
       sender ! Done
@@ -64,11 +71,10 @@ case class Status(successResp: Int, failedResp: Int) extends ActorMessage {
 
 //this is mocking agent actor which when receive 'StartWalletSetup' command
 //it start exercises wallet sync apis
-class MockAgentActor(walletAPI: WalletAPI)
+class MockAgentActor(walletAPI: WalletAPI, ec: ExecutionContext)
   extends CoreActor
     with UserWalletSetupHelper {
-
-  import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+  lazy implicit val executionContext: ExecutionContext = ec
 
   override def receiveCmd: Receive = {
     case _: StartWalletSetup => setupUser()

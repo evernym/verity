@@ -1,44 +1,48 @@
 package com.evernym.verity.libindy
 
 import com.evernym.verity.util2.Exceptions.{InvalidValueException, MissingReqFieldException}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Status.{StatusDetail, StatusDetailException, TAA_NOT_SET_ON_THE_LEDGER}
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.ledger._
 import com.evernym.verity.libindy.ledger.{IndyLedgerPoolConnManager, LedgerTxnExecutorV2, SubmitToLedger}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.{DidStr, DidPair}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import org.hyperledger.indy.sdk.pool.Pool
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.scalatest.MockitoSugar
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 
-class LedgerTxnExecutorV2Spec extends ActorSpec
-  with BasicSpecWithIndyCleanup with MockitoSugar {
+class LedgerTxnExecutorV2Spec
+  extends ActorSpec
+    with BasicSpecWithIndyCleanup
+    with MockitoSugar {
 
   val maxWaitTime: Duration = 5000.millis
   lazy val mockWalletAPI: WalletAPI = mock[WalletAPI]
   lazy val mockLedgerSubmitAPI: SubmitToLedger = mock[SubmitToLedger]
   lazy val poolConnManager: IndyLedgerPoolConnManager =
-    new IndyLedgerPoolConnManager(system, appConfig) {
+    new IndyLedgerPoolConnManager(system, appConfig, executionContext) {
       override def poolConn: Some[Pool] = Some(null)
     }
   lazy val ledgerTxnExecutor: LedgerTxnExecutorV2 =
-    new LedgerTxnExecutorV2(system, appConfig, Some(mockWalletAPI), poolConnManager.poolConn, None) {
+    new LedgerTxnExecutorV2(system, appConfig, Some(mockWalletAPI), poolConnManager.poolConn, None, executionContext) {
       override def ledgerSubmitAPI:SubmitToLedger = mockLedgerSubmitAPI
     }
 
-  lazy val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y"
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  lazy implicit val executionContext: ExecutionContext = ecp.futureExecutionContext
+
+  lazy val submitterDID: DidStr = "Th7MpTaRZVRYnPiabds81Y"
   lazy val wap: WalletAPIParam = WalletAPIParam(submitterDID)
   lazy val submitter: Submitter = Submitter(submitterDID, Some(wap))
 
@@ -200,7 +204,7 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
           invalidResponses.foreach { ivr =>
             doReturn(Future(ivr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.ready(ledgerTxnExecutor.getNym(submitter, targetDidPair.DID), maxWaitTime).value.get
+            val response = Await.ready(ledgerTxnExecutor.getNym(submitter, targetDidPair.did), maxWaitTime).value.get
             response match {
               case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
               case x => x should not be x
@@ -211,7 +215,7 @@ class LedgerTxnExecutorV2Spec extends ActorSpec
 
       "and if underlying wallet api throw an exception" - {
         "should return error response" taggedAs (UNSAFE_IgnoreLog) in {
-          val response = Await.ready(ledgerTxnExecutor.getNym(submitter, targetDidPair.DID), maxWaitTime).value.get
+          val response = Await.ready(ledgerTxnExecutor.getNym(submitter, targetDidPair.did), maxWaitTime).value.get
           response match {
             case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
             case x => x should not be x
@@ -443,4 +447,5 @@ pool(local):wallet1:did(Th7...81Y):indy> ledger custom {"reqId":1587652803733668
     }
   }
 
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

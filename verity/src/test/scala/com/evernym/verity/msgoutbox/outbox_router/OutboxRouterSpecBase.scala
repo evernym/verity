@@ -5,6 +5,7 @@ import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.pattern.StatusReply
 import com.evernym.verity.actor.agent.relationship.KeyId
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpecBase
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.msgoutbox.base.BaseMsgOutboxSpec
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Commands
@@ -13,7 +14,7 @@ import com.evernym.verity.msgoutbox.outbox.Outbox
 import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.GetDeliveryStatus
 import com.evernym.verity.msgoutbox.outbox.Outbox.Replies
 import com.evernym.verity.msgoutbox.router.OutboxRouter
-import com.evernym.verity.msgoutbox.{DID, OutboxId, ParticipantId, RecipId, RelId}
+import com.evernym.verity.msgoutbox.{OutboxId, ParticipantId, RecipId, RelId}
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.ParticipantUtil
 import com.evernym.verity.util2.Status
@@ -120,7 +121,7 @@ trait AgentContext {    //represents either VerityEdgeAgent or VerityCloudAgent
 }
 
 trait SelfRelContext {
-  def myDID: DID
+  def myDID: DidStr
   def thisAgentKeyId: KeyId
 
   def selfParticipantId: ParticipantId      //represents thisAgentKeyId participant-id
@@ -130,13 +131,13 @@ trait SelfRelContext {
 }
 
 trait PairwiseRelContext {
-  def selfRelDID: DID
+  def selfRelDID: DidStr
   def thisAgentKeyId: KeyId
 
-  def myPairwiseDID: DID
+  def myPairwiseDID: DidStr
   def selfParticipantId: ParticipantId      //represents myPairwiseDID participant-id
   def myDomainParticipantId: ParticipantId  //represents selfRelDID participant-id
 
-  def theirPairwiseDID: DID
+  def theirPairwiseDID: DidStr
   def otherParticipantId: ParticipantId     //represents theirPairwiseDID participant-id
 }

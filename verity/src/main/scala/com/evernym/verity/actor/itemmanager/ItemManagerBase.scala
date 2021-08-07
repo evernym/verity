@@ -6,14 +6,13 @@ import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
 import com.evernym.verity.constants.ActorNameConstants._
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SnapshotConfig, SnapshotterExt}
 import com.evernym.verity.config.AppConfig
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 trait ItemManagerBase
@@ -21,6 +20,8 @@ trait ItemManagerBase
     with SnapshotterExt[ItemManagerState]
     with ItemCommandHandlerBase
     with DefaultPersistenceEncryption {
+
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   implicit def appConfig: AppConfig
 

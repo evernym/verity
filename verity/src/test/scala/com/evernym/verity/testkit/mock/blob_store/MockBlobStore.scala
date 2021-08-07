@@ -2,15 +2,17 @@ package com.evernym.verity.testkit.mock.blob_store
 
 import akka.Done
 import akka.actor.ActorSystem
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
-class MockBlobStore(config: AppConfig)(implicit val as: ActorSystem) extends StorageAPI(config) {
+class MockBlobStore(config: AppConfig, ec: ExecutionContext)(implicit val as: ActorSystem)
+  extends StorageAPI(config, ec) {
+
+  lazy implicit val executionContext: ExecutionContext = ec
 
   type BucketName = String
   type DBKey = String

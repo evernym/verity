@@ -2,6 +2,7 @@ package com.evernym.verity.actor.persistence.supervisor.backoff.onfailure
 
 import akka.pattern.BackoffSupervisor.{CurrentChild, GetCurrentChild}
 import akka.testkit.EventFilter
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.supervisor.{GenerateRecoveryFailure, IgnoreSupervisorLogErrors, MockActorRecoveryFailure}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
@@ -18,7 +19,7 @@ class ActorRecoveryFailureSpec
 
   override def expectDeadLetters: Boolean = true
 
-  lazy val mockSupervised = system.actorOf(MockActorRecoveryFailure.backOffOnFailureProps(appConfig))
+  lazy val mockSupervised = system.actorOf(MockActorRecoveryFailure.backOffOnFailureProps(appConfig, ecp.futureExecutionContext))
 
   "OnFailure BackoffSupervised actor" - {
     "when throws an unhandled exception during recovery" - {
@@ -51,6 +52,9 @@ class ActorRecoveryFailureSpec
       akka.test.filter-leeway = 25s   # to make the event filter run for 25 seconds
       """
   )}
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 

@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.didcomm.messages
+package com.evernym.verity.did.didcomm.v1.messages
 
 import com.evernym.verity.util.OptionUtil
 

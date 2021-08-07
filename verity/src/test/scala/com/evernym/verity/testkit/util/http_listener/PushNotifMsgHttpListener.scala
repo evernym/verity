@@ -5,14 +5,16 @@ import akka.http.scaladsl.model.{HttpRequest, MediaTypes}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractRequest, handleExceptions, logRequestResult, pathPrefix, post, reject}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.http.common.CustomExceptionHandler._
+import com.evernym.verity.util2.HasExecutionContextProvider
 
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 trait PushNotifMsgHttpListener
-  extends BaseHttpListener[String] {
+  extends BaseHttpListener[String]
+    with HasExecutionContextProvider {
 
   import akka.http.scaladsl.model.StatusCodes._
+  implicit lazy val executionContext: ExecutionContext = futureExecutionContext
 
   lazy val listeningUrl: String = s"MCM:${listeningEndpoint.url}"
 

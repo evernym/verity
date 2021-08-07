@@ -1,7 +1,7 @@
 {
   "components": {
     "verity-pool": {
-      "image": "gitlab.corp.evernym.com:4567/dev/containers/indy-pool:1.12.4_1.0.9",
+      "image": "registry.gitlab.com/evernym/containers/indy-pool:1.12.4_1.0.9",
       "mounts": [
         ":/devlab"
       ],
@@ -18,7 +18,7 @@
       "status_script": "/devlab/scripts/verity_pool_health.py"
     },
     "verity-dynamodb": {
-      "image": "gitlab.corp.evernym.com:4567/dev/containers/verity-dynamodb:5ac4add3",
+      "image": "registry.gitlab.com/evernym/containers/verity-dynamodb:5ac4add3",
       "mounts": [
         ":/devlab"
       ],
@@ -28,7 +28,7 @@
       "status_script": "/devlab/scripts/verity_dynamodb_health.sh"
     },
     "verity-mysql": {
-      "image": "gitlab.corp.evernym.com:4567/dev/containers/verity-mysql-wallet:288429c3",
+      "image": "registry.gitlab.com/evernym/containers/verity-mysql-wallet:288429c3",
       "enabled": true,
       "ports": ["3306:3306"],
       "run_opts": [
@@ -57,7 +57,7 @@
       ]
     },
     "verity-yourls": {
-      "image": "gitlab.corp.evernym.com:4567/dev/containers/yourls-mysql:2283cd0c",
+      "image": "registry.gitlab.com/evernym/containers/yourls-mysql:f2d0fff1",
       "mounts": [
         ":/devlab"
       ],

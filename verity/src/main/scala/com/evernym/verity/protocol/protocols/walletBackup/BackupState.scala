@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.walletBackup
 
-import com.evernym.verity.protocol.engine.VerKey
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.protocols.walletBackup.legacy.LegacyState
 
 trait BackupState
@@ -13,8 +13,8 @@ object State extends LegacyState {
   case class Initialized() extends BackupState
 
   // Persister
-  case class RecoveryModeRequested(vk: VerKey) extends BackupState
-  case class ReadyToPersistBackupRef(vk: VerKey, blobAddress: String) extends BackupState
+  case class RecoveryModeRequested(vk: VerKeyStr) extends BackupState
+  case class ReadyToPersistBackupRef(vk: VerKeyStr, blobAddress: String) extends BackupState
 
   // Exporter
   case class BackupInitRequested() extends BackupState

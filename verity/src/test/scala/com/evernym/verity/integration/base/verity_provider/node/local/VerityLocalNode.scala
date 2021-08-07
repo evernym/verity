@@ -11,8 +11,10 @@ import com.evernym.verity.integration.base.verity_provider.PortProfile
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
 import com.typesafe.config.Config
-
 import java.nio.file.Path
+
+import com.evernym.verity.util2.ExecutionContextProvider
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -22,7 +24,8 @@ case class VerityLocalNode(tmpDirPath: Path,
                            portProfile: PortProfile,
                            otherNodeArteryPorts: Seq[Int],
                            serviceParam: Option[ServiceParam],
-                           overriddenConfig: Option[Config]) extends VerityNode {
+                           overriddenConfig: Option[Config],
+                           ecp: ExecutionContextProvider) extends VerityNode {
 
   var isAvailable: Boolean = false
   private var _httpServer: HttpServer = _
@@ -45,23 +48,23 @@ case class VerityLocalNode(tmpDirPath: Path,
 
   //is this really ungraceful shutdown?
   private def stopUngracefully(): Unit = {
+    def stopHttpServer(): Unit = {
+      val httpStopFut = httpServer.stop()
+      Await.result(httpStopFut, 30.seconds)
+    }
+
+    def stopActorSystem(): Unit = {
+      val platformStopFut = platform.actorSystem.terminate()
+      Await.result(platformStopFut, 30.seconds)
+    }
+
     isAvailable = false
     stopHttpServer()
     stopActorSystem()
   }
 
-  private def stopHttpServer(): Unit = {
-    val httpStopFut = httpServer.stop()
-    Await.result(httpStopFut, 30.seconds)
-  }
-
-  private def stopActorSystem(): Unit = {
-    val platformStopFut = platform.actorSystem.terminate()
-    Await.result(platformStopFut, 30.seconds)
-  }
-
   private def stopGracefully(): Unit = {
-    //TODO: to find out why this one fails intermittently
+    //TODO: before starting using this method, need to find out why this one fails intermittently
     isAvailable = false
     val cluster = Cluster(platform.actorSystem)
     platform.nodeSingleton.tell(DrainNode, ActorRef.noSender)
@@ -73,7 +76,7 @@ case class VerityLocalNode(tmpDirPath: Path,
   }
 
   private def startVerityInstance(): HttpServer = {
-    LocalVerity(verityNodeParam, bootstrapApp = false)
+    LocalVerity(verityNodeParam, ecp, bootstrapApp = false)
   }
 
   /**

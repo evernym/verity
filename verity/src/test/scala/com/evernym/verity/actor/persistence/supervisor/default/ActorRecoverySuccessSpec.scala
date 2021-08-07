@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.persistence.supervisor.default
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.persistence.supervisor.MockActorRecoverySuccess
 import com.evernym.verity.actor.{ForIdentifier, ShardUtil}
@@ -16,7 +17,7 @@ class ActorRecoverySuccessSpec
   with Eventually
   with ShardUtil {
 
-  lazy val mockUnsupervised = createPersistentRegion("MockActor", MockActorRecoverySuccess.props(appConfig))
+  lazy val mockUnsupervised = createPersistentRegion("MockActor", MockActorRecoverySuccess.props(appConfig, ecp.futureExecutionContext))
 
   "Unsupervised actor" - {
     "when asked for actor detail" - {
@@ -27,7 +28,8 @@ class ActorRecoverySuccessSpec
       }
     }
   }
-
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 

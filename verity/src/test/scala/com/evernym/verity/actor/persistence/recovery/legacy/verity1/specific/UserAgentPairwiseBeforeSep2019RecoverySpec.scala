@@ -1,8 +1,11 @@
 package com.evernym.verity.actor.persistence.recovery.legacy.verity1.specific
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.persistence.recovery.legacy.verity1.{AgencyAgentEventSetter, UserAgentEventSetter, UserAgentPairwiseEventSetter}
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
+
+import scala.concurrent.ExecutionContext
 
 
 /**
@@ -39,4 +42,11 @@ class UserAgentPairwiseBeforeSep2019RecoverySpec
     }
   }
 
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

@@ -1,6 +1,7 @@
 package com.evernym.verity.itemmanager
 
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager._
@@ -21,7 +22,7 @@ class DeleteMessageFailureItemManagerSpec
     with ItemManagerSpecBase
     with SystemExitSpec {
 
-  val asmTestKit = new AppStateManagerTestKit(this, appConfig)
+  val asmTestKit = new AppStateManagerTestKit(this, appConfig, ecp.futureExecutionContext)
 
   override lazy val overrideConfig: Option[Config] = Option {
     watcherConfig
@@ -127,6 +128,9 @@ class DeleteMessageFailureItemManagerSpec
   def configForDeleteEventFailure: Config =  {
     AkkaTestBasic.customJournal("com.evernym.verity.itemmanager.FailsOnDeleteEventsTestJournal")
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 

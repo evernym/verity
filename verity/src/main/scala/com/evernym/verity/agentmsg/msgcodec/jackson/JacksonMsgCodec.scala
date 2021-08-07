@@ -1,7 +1,8 @@
 package com.evernym.verity.agentmsg.msgcodec.jackson
 
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat, Thread}
+import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat}
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgcodec.{MsgCodec, MsgMetadata, MsgTypeException}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor.JsonStr

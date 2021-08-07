@@ -1,9 +1,11 @@
 package com.evernym.integrationtests.e2e.third_party_apis.s3
 
 import java.util.UUID
+
 import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.alpakka.s3.BucketAccess.{AccessGranted, NotExists}
+import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.storage_services.StorageAPI
@@ -33,7 +35,8 @@ class AlpakkaS3APISpec
 
   val DEV_S3_BUCKET: String = appConfig.config.getConfig("verity.blob-store").getString("bucket-name")
 
-  val alpAkkaS3API: S3AlpakkaApi = StorageAPI.loadFromConfig(appConfig).asInstanceOf[S3AlpakkaApi]
+  val alpAkkaS3API: S3AlpakkaApi =
+    StorageAPI.loadFromConfig(appConfig, TestExecutionContextProvider.ecp.futureExecutionContext).asInstanceOf[S3AlpakkaApi]
 
   lazy val ID1: String = UUID.randomUUID.toString
   lazy val ID2: String = UUID.randomUUID.toString

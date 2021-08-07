@@ -3,15 +3,21 @@ package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, ProofCreated, ProofVerifResult}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.{AnonCredRequests, WalletAccess}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
-
 import java.util.UUID
+
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.util.TestExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
 abstract class PresentProofSpecBase
@@ -23,6 +29,13 @@ abstract class PresentProofSpecBase
   val agencyVerkey = "87shCEvKAWw6JncoirStGxkRptVriLeNXytw9iRxpzGY"
   val agencyDidkey = "did:key:z2DXXwXqC5VKhhDVLCoZSX98Gr33w1TGfNnA3y192dsDjbv"
   val publicDid = "UmTXHz4Kf4p8XHh5MiA4PK"
+
+
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   def createTest1CredDef: String = "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1"
 
@@ -191,14 +204,14 @@ abstract class PresentProofSpecBase
 object PresentProofSpec {
   import com.evernym.verity.protocol.testkit.MockableAnonCredRequests.basic
   val invalidEncoding: AnonCredRequests = new AnonCredRequests {
-    override def createSchema(issuerDID: DID,
+    override def createSchema(issuerDID: DidStr,
                               name: String,
                               version: String,
                               data: String)
                              (handler: Try[SchemaCreated] => Unit): Unit =
       basic.createSchema(issuerDID, name, version, data)(handler)
 
-    override def createCredDef(issuerDID: DID,
+    override def createCredDef(issuerDID: DidStr,
                                schemaJson: String,
                                tag: String,
                                sigType: Option[String],
@@ -207,7 +220,7 @@ object PresentProofSpec {
       basic.createCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails)(handler)
 
     override def createCredOffer(a1: String)(handler: Try[CredOfferCreated] => Unit): Unit = basic.createCredOffer(a1)(handler)
-    override def createCredReq(a1: String, a2: DID, a3: String, a4: String)
+    override def createCredReq(a1: String, a2: DidStr, a3: String, a4: String)
                               (handler: Try[CredReqCreated] => Unit): Unit =
       basic.createCredReq(a1, a2, a3, a4)(handler)
     override def createCred(a1: String, a2: String, a3: String, a4: String, a5: Int)
@@ -264,14 +277,14 @@ object PresentProofSpec {
   }
 
   val invalidProof: AnonCredRequests = new AnonCredRequests {
-    override def createSchema(issuerDID: DID,
+    override def createSchema(issuerDID: DidStr,
                               name: String,
                               version: String,
                               data: String)
                              (handler: Try[SchemaCreated] => Unit): Unit =
       basic.createSchema(issuerDID, name, version, data)(handler)
 
-    override def createCredDef(issuerDID: DID,
+    override def createCredDef(issuerDID: DidStr,
                                schemaJson: String,
                                tag: String,
                                sigType: Option[String],
@@ -280,7 +293,7 @@ object PresentProofSpec {
       basic.createCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails)(handler)
 
     override def createCredOffer(a1: String)(handler: Try[CredOfferCreated] => Unit): Unit = basic.createCredOffer(a1)(handler)
-    override def createCredReq(a1: String, a2: DID, a3: String, a4: String)
+    override def createCredReq(a1: String, a2: DidStr, a3: String, a4: String)
                               (handler: Try[CredReqCreated] => Unit): Unit =
       basic.createCredReq(a1, a2, a3, a4)(handler)
     override def createCred(a1: String, a2: String, a3: String, a4: String, a5: Int)

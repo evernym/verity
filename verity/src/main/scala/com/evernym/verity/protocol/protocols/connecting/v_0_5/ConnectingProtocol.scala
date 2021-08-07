@@ -15,10 +15,15 @@ import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common._
 import com.evernym.verity.push_notification.PushNotifMsgBuilder
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.did.{DidStr, VerKeyStr}
+
+import scala.concurrent.ExecutionContext
 
 
 //noinspection ScalaDeprecation
-class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String])
+class ConnectingProtocol(
+                          val ctx: ProtocolContextApi[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String]
+                        )
     extends Protocol[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String](ConnectingProtoDef)
       with ConnectingProtocolBase[ConnectingProtocol,Role,ConnectingState,String]
       with HasAppConfig
@@ -26,8 +31,10 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol,Role,Pro
       with MsgDeliveryResultHandler
       with PushNotifMsgBuilder {
 
-  lazy val myPairwiseDIDReq : DID = ctx.getState.parameters.paramValueRequired(MY_PAIRWISE_DID)
-  lazy val myPairwiseVerKeyReq : VerKey = ctx.getState.parameters.paramValueRequired(MY_PAIRWISE_DID_VER_KEY)
+  override def futureExecutionContext: ExecutionContext = ctx.executionContext
+
+  lazy val myPairwiseDIDReq : DidStr = ctx.getState.parameters.paramValueRequired(MY_PAIRWISE_DID)
+  lazy val myPairwiseVerKeyReq : VerKeyStr = ctx.getState.parameters.paramValueRequired(MY_PAIRWISE_DID_VER_KEY)
 
   def initState(params: Seq[ParameterStored]): ConnectingState = {
     val seed = params.find(_.name == THIS_AGENT_WALLET_ID).get.value
@@ -96,7 +103,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol,Role,Pro
 
   lazy val inviteDetailVersion: String = "1.0"
 
-  override def getEncryptForDID: DID= ctx.getState.mySelfRelDIDReq
+  override def getEncryptForDID: DidStr= ctx.getState.mySelfRelDIDReq
 }
 
 /**

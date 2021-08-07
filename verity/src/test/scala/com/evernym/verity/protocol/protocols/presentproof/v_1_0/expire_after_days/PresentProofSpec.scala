@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0.expire_after_days
 
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
@@ -10,7 +11,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.Presentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{Role, _}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableUrlShorteningAccess, MockableWalletAccess}
-import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 import org.json.JSONObject
 
 
@@ -1109,5 +1110,5 @@ class PresentProofSpec
       }
     }
   }
-
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }

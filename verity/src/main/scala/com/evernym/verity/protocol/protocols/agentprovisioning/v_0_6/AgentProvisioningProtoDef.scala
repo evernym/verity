@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_6
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine.Constants._
@@ -44,8 +45,7 @@ object AgentProvisioningProtoDef
 
   override def createInitMsg(params: Parameters): Control = Init(params)
 
-  override def create(context: ProtocolContextApi[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String]):
-  Protocol[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String] =
+  override def create(context: ProtocolContextApi[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String]): Protocol[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String] =
     new AgentProvisioningProtocol(context)
 
   override def initialState: State = State.Uninitialized()
@@ -53,7 +53,7 @@ object AgentProvisioningProtoDef
   override val requiredAccess: Set[AccessRight] = Set(DEPRECATED_AccessSetupNewWallet, AccessVerKey, AccessNewDid, AccessStoreTheirDiD)
 }
 
-case class CreateAgentReqMsg_MFV_0_6(fromDID: DID, fromDIDVerKey: VerKey) extends ProtoMsg
+case class CreateAgentReqMsg_MFV_0_6(fromDID: DidStr, fromDIDVerKey: VerKeyStr) extends ProtoMsg
 
 
-case class AgentCreatedRespMsg_MFV_0_6(withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey) extends ProtoMsg
+case class AgentCreatedRespMsg_MFV_0_6(withPairwiseDID: DidStr, withPairwiseDIDVerKey: VerKeyStr) extends ProtoMsg

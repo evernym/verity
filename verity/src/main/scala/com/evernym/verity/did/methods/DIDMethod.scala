@@ -1,6 +1,6 @@
-package com.evernym.verity.DID
+package com.evernym.verity.did.methods
 
-trait DID {
+trait DIDMethod {
   val scheme: String = "did"
   val method: String
   val identifier: String

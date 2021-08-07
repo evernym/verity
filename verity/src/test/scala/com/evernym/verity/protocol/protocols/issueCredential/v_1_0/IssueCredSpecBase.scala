@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
@@ -9,8 +10,9 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCre
 import com.evernym.verity.protocol.testkit.DSL.state
 import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
 import com.evernym.verity.testkit.BasicFixtureSpec
-import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success}
 
@@ -18,7 +20,11 @@ abstract class IssueCredSpecBase
   extends TestsProtocolsImpl(IssueCredentialProtoDef, Option(OneToOne))
     with BasicFixtureSpec {
 
-  lazy val config: AppConfig = new TestAppConfig()
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   def createTest1CredDef: String = "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1"
 

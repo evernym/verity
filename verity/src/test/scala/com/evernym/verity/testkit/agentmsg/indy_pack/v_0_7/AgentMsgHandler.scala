@@ -1,7 +1,6 @@
 package com.evernym.verity.testkit.agentmsg.indy_pack.v_0_7
 
-import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.{DidStr, DidPair}
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.util.{AgentCreated_MFV_0_7, CreateAgentProblemReport_MFV_0_7}
 import com.evernym.verity.actor.wallet.PackedMsg
@@ -22,7 +21,7 @@ trait AgentMsgHandler{ this: AgentMsgHelper with MockAgent with HasCloudAgent =>
       unpackCreateAgentProblemReport(rmw, getDIDToUnsealAgentRespMsg)
     }
 
-    private def unpackCreateAgentProblemReport(pmw: PackedMsg, unsealFromDID: DID)
+    private def unpackCreateAgentProblemReport(pmw: PackedMsg, unsealFromDID: DidStr)
     : CreateAgentProblemReport_MFV_0_7 = {
       val cm = unpackResp_MPV_1_0(pmw, unsealFromDID).head.convertTo[CreateAgentProblemReport_MFV_0_7]
       require(Option(cm.msg).isDefined, "not received agent create problem")
@@ -39,7 +38,7 @@ trait AgentMsgHandler{ this: AgentMsgHelper with MockAgent with HasCloudAgent =>
       acm
     }
 
-    def unpackAgentCreatedRespMsg(pmw: PackedMsg, unsealFromDID: DID)
+    def unpackAgentCreatedRespMsg(pmw: PackedMsg, unsealFromDID: DidStr)
     : AgentCreated_MFV_0_7 = {
       val cm = unpackResp_MPV_1_0(pmw, unsealFromDID).head.convertTo[AgentCreated_MFV_0_7]
       logApiCallProgressMsg("agent-created: " + cm)

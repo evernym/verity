@@ -5,13 +5,14 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
+import com.evernym.verity.util2.HasWalletExecutionContextProvider
 import com.evernym.verity.constants.Constants.URL
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.http.base.open._
 import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, AppStatusHealthCheckSpec, RestrictedRestApiSpec}
 import com.evernym.verity.http.route_handlers.EndpointHandlerBase
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
@@ -36,11 +37,12 @@ trait EdgeEndpointBaseSpec
     with MockPushNotifListener
     with MockMsgSendingSvcListener
     with AriesInvitationDecodingSpec
-    with AppStatusHealthCheckSpec {
+    with AppStatusHealthCheckSpec
+    with HasWalletExecutionContextProvider {
 
   lazy val (mockEntEdgeEnv, mockUserEdgeEnv) = {
-    val edge1 = MockEnvUtil.buildNewEnv("edge1", appConfig, "localhost:9001/agency/msg")
-    val edge2 = MockEnvUtil.buildNewEnv("edge2", appConfig, "localhost:9002/agency/msg")
+    val edge1 = MockEnvUtil.buildNewEnv("edge1", appConfig, "localhost:9001/agency/msg", futureExecutionContext, futureWalletExecutionContext)
+    val edge2 = MockEnvUtil.buildNewEnv("edge2", appConfig, "localhost:9002/agency/msg", futureExecutionContext, futureWalletExecutionContext)
     (edge1.withOthersMockEnvSet(edge2), edge2.withOthersMockEnvSet(edge1))
   }
 
@@ -69,7 +71,7 @@ trait EdgeEndpointBaseSpec
     edgeAgent.inviteUrl.split(":", 2).last.split("/", 2).last
   }
 
-  def addAgencyEndpointToLedger(agencyDID: DID, endpoint: String): Unit = {
+  def addAgencyEndpointToLedger(agencyDID: DidStr, endpoint: String): Unit = {
     platform.agentActorContext.ledgerSvc.addAttrib(null, agencyDID,
       URL, endpoint)
   }
@@ -136,8 +138,8 @@ trait EndpointHandlerBaseSpec
 
 }
 
-case class RemoteAgentAndAgencyIdentity(agentDID: DID, agentVerKey: VerKey,
-                                        agencyDID: DID, agencyVerKey: VerKey)
+case class RemoteAgentAndAgencyIdentity(agentDID: DidStr, agentVerKey: VerKeyStr,
+                                        agencyDID: DidStr, agencyVerKey: VerKeyStr)
 
 
 trait ApiClientSpecCommon {

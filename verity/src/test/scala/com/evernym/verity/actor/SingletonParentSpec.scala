@@ -1,5 +1,6 @@
 package com.evernym.verity.actor
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper, GetValue}
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
@@ -47,5 +48,6 @@ class SingletonParentSpec extends PersistentActorSpec with BasicSpec {
 
     }
   }
-
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

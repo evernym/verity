@@ -15,10 +15,14 @@ import com.evernym.verity.constants.ActorNameConstants.{AGENT_ROUTES_MIGRATOR, L
 import com.evernym.verity.constants.Constants.YES
 import com.evernym.verity.util.Util.getActorRefFromSelection
 
+import scala.concurrent.ExecutionContext
 
-class AgentRoutesMigrator(val appConfig: AppConfig)
+
+class AgentRoutesMigrator(val appConfig: AppConfig, executionContext: ExecutionContext)
   extends BasePersistentActor
   with DefaultPersistenceEncryption {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   override def receiveCmd: Receive = receiveMain orElse receiveOther
 
@@ -208,7 +212,13 @@ class AgentRoutesMigrator(val appConfig: AppConfig)
 
 object AgentRoutesMigrator {
   val name: String = AGENT_ROUTES_MIGRATOR
-  def props(appConfig: AppConfig): Props = Props(new AgentRoutesMigrator(appConfig))
+  def props(appConfig: AppConfig, executionContext: ExecutionContext): Props =
+    Props(
+      new AgentRoutesMigrator(
+        appConfig,
+        executionContext
+      )
+    )
 }
 
 object GetMigrationStatus {

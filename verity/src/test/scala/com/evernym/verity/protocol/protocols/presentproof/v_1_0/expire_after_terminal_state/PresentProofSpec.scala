@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0.expire_after_terminal_state
 
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
@@ -9,7 +10,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPrese
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{Role, _}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableUrlShorteningAccess, MockableWalletAccess}
-import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 import org.json.JSONObject
 
 import scala.util.{Failure, Success}
@@ -1123,4 +1124,5 @@ class PresentProofSpec
       case Failure(e)       => throw e
     }
   }
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }

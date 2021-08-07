@@ -6,23 +6,24 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model.{FormData, HttpMethods, HttpRequest}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.{GetTokenFailed, GetTokenSuccess}
 import com.evernym.verity.util2.Exceptions
+import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 //responsible for getting oauth access token
 object OAuthAccessTokenRefresherImplV1 {
 
-  def apply(): Behavior[OAuthAccessTokenRefresher.Cmd] = {
+  def apply(executionContext: ExecutionContext): Behavior[OAuthAccessTokenRefresher.Cmd] = {
     Behaviors.setup { actorContext =>
-      initialized(actorContext.system)
+      initialized(actorContext.system, executionContext)
     }
   }
 
-  private def initialized(implicit system: ActorSystem[Nothing]):
+  private def initialized(implicit system: ActorSystem[Nothing], executionContext: ExecutionContext):
   Behavior[OAuthAccessTokenRefresher.Cmd] = Behaviors.receiveMessage {
     case OAuthAccessTokenRefresher.Commands.GetToken(params, _, replyTo) =>
       getAccessToken(params).map { resp =>
@@ -32,9 +33,11 @@ object OAuthAccessTokenRefresherImplV1 {
   }
 
   private def getAccessToken(params: Map[String, String])
-                            (implicit system: ActorSystem[Nothing]): Future[OAuthAccessTokenRefresher.Reply] = {
+                            (implicit system: ActorSystem[Nothing],
+                             executionContext: ExecutionContext): Future[OAuthAccessTokenRefresher.Reply] = {
     try {
       val url = params("url")
+      logger.info("[OAuth] about to send get access token request to: " + url)
       val formData = Seq("grant_type", "client_id", "client_secret").map(attrName =>
         attrName -> params(attrName)
       ).toMap
@@ -52,8 +55,7 @@ object OAuthAccessTokenRefresherImplV1 {
             val expiresIn = jsonObject.getInt("expires_in")
             GetTokenSuccess(accessToken, expiresIn, None)
           } else {
-            val error = s"error response ('${hr.status.value}') received from '$url': $respMsg"
-            GetTokenFailed(error)
+            GetTokenFailed(s"error response ('${hr.status.value}') received from '$url': $respMsg")
           }
         }
       }
@@ -62,4 +64,6 @@ object OAuthAccessTokenRefresherImplV1 {
         Future.successful(GetTokenFailed(Exceptions.getErrorMsg(e)))
     }
   }
+
+  private val logger: Logger = getLoggerByClass(getClass)
 }

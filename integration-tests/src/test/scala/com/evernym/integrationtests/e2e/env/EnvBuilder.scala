@@ -7,7 +7,7 @@ import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION
 import com.evernym.verity.config.validator.base.ConfigReadHelper
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.util.CollectionUtil.containsDuplicates
 import com.evernym.verity.util2.UrlParam
 import com.typesafe.config.{Config, ConfigFactory, ConfigObject, ConfigValueFactory}
@@ -545,7 +545,7 @@ case class SdkConfig(sdkTypeStr: String,
 }
 
 case class LedgerConfig(genesisFilePath: String,
-                        submitterDID: DID,
+                        submitterDID: DidStr,
                         submitterSeed: String,
                         submitterRole: String,
                         timeout: Int,

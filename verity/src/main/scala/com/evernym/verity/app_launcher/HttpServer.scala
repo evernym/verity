@@ -4,6 +4,7 @@ import akka.Done
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.server.Route
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager._
@@ -20,11 +21,14 @@ import sun.misc.{Signal, SignalHandler}
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import scala.concurrent.duration.{Duration, SECONDS}
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
-class HttpServer(val platform: Platform, routes: Route)
-  extends HttpServerUtil {
+class HttpServer(val platform: Platform, routes: Route, executionContext: ExecutionContext)
+  extends HttpServerUtil
+  with HasExecutionContextProvider {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   val logger: Logger = LoggingUtil.getLoggerByClass(classOf[HttpServer])
   implicit lazy val appConfig: AppConfig = platform.agentActorContext.appConfig
@@ -36,7 +40,7 @@ class HttpServer(val platform: Platform, routes: Route)
   var httpBinding: Option[ServerBinding] = None
 
   def start(): Unit = {
-    LaunchPreCheck.checkReqDependencies(platform.agentActorContext)
+    LaunchPreCheck.checkReqDependencies(platform.agentActorContext, futureExecutionContext)
     startService(init _)
   }
 

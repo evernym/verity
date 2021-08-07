@@ -1,7 +1,10 @@
 package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship, RelationshipName, SelfRelationship}
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
@@ -12,21 +15,22 @@ import com.evernym.verity.util.MsgUtil
 import com.typesafe.scalalogging.Logger
 
 import scala.annotation.tailrec
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
 
-case class DidRouter(routes: Map[DID,Domain] = Map.empty) {
+case class DidRouter(routes: Map[DidStr,Domain] = Map.empty) {
 
-  def -(did: DID): DidRouter = copy(routes - did)
-  def +(route: (DID, Domain)): DidRouter = withRoute(route)
-  def get(did: DID): Domain = routes.getOrElse(did, throw new RuntimeException(s"route not found for DID $did"))
+  def -(did: DidStr): DidRouter = copy(routes - did)
+  def +(route: (DidStr, Domain)): DidRouter = withRoute(route)
+  def get(did: DidStr): Domain = routes.getOrElse(did, throw new RuntimeException(s"route not found for DID $did"))
 
-  def withRoute(route: (DID,Domain)): DidRouter = {
+  def withRoute(route: (DidStr,Domain)): DidRouter = {
     val (did, domain) = route
     withRoute(did, domain)
   }
 
-  def withRoute(did: DID, domain: Domain): DidRouter = {
+  def withRoute(did: DidStr, domain: Domain): DidRouter = {
     routes.get(did) match {
       case None => copy(routes = routes + (did -> domain))
       case Some(d) if d == domain => this // did already registered to domain, so no change
@@ -76,9 +80,9 @@ class SimpleProtocolSystem() extends HasContainers with HasDidRouter with Segmen
 
   def totalStoredSegments: Int = segmentedState.size
 
-  def handleControl[A <: Control](env: CtlEnvelope[A], myDid: DID): Unit = {
+  def handleControl[A <: Control](env: CtlEnvelope[A], myDid: DidStr): Unit = {
     val domain = didRouter.get(myDid)
-    domain.handleControl(env, myDid: DID)
+    domain.handleControl(env, myDid: DidStr)
   }
 
   def handleOutMsg[A](env: Envelope1[A]): Unit = {
@@ -156,16 +160,16 @@ trait HasDidRouter {
 
   var didRouter: DidRouter = DidRouter()
 
-  def addRoute(did: DID, domain: Domain): Unit = {
+  def addRoute(did: DidStr, domain: Domain): Unit = {
     didRouter = didRouter + (did -> domain)
   }
 
-  def removeRoute(did: DID): Unit = {
+  def removeRoute(did: DidStr): Unit = {
     didRouter = didRouter - did
   }
 
-  def lookupRoute(did: DID): Domain = {
-    didRouter.get(did: DID)
+  def lookupRoute(did: DidStr): Domain = {
+    didRouter.get(did: DidStr)
   }
 
 }
@@ -174,13 +178,17 @@ trait HasDidRouter {
 class Domain(override val domainId: DomainId,
              override val protocolRegistry: ProtocolRegistry[SimpleControllerProviderInputType],
              val system: SimpleProtocolSystem,
+             val executionContext: ExecutionContext,
+             val appConfig: AppConfig,
              val defaultInitParams: Map[String, String] = Map.empty
             ) extends JournalLogging with JournalProtocolSupport with HasRelationships with SimpleLaunchesProtocol  {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   type Container = InMemoryProtocolContainer[_,_,_,_,_,_]
 
   def containerProvider[P,R,M,E,S,I](pce: ProtocolContainerElements[P,R,M,E,S,I])(implicit ct: ClassTag[M]): Container = {
-    new InMemoryProtocolContainer(pce)
+    new InMemoryProtocolContainer(pce, executionContext, appConfig)
   }
 
   var usedWalletAccess: Option[WalletAccess] = None
@@ -229,7 +237,7 @@ class Domain(override val domainId: DomainId,
     startInteraction(domainId, ctl)
   }
 
-  def startInteraction(did: DID, ctl: Control): ThreadId = {
+  def startInteraction(did: DidStr, ctl: Control): ThreadId = {
     val rel = lookup_!(did)
     startInteractionRel(rel, ctl)
   }
@@ -257,7 +265,7 @@ class Domain(override val domainId: DomainId,
     containerFor(e, rel)
   }
 
-  def handleControl[A <: Control](cenv: CtlEnvelope[A], myDid: DID): Unit = {
+  def handleControl[A <: Control](cenv: CtlEnvelope[A], myDid: DidStr): Unit = {
     handleControlRel(cenv, lookup_!(myDid))
   }
 
@@ -289,21 +297,21 @@ trait HasRelationships {
     system.addRoute(rel.myDid_!, this)
   }
 
-  def addSelfRelationship(did: DID): Relationship = {
+  def addSelfRelationship(did: DidStr): Relationship = {
     val rel = SelfRelationship(Some(DidDoc(did)))
     addRelationship(rel)
     rel
   }
 
   //had to add this to be able to fix dead drop spec
-  def removeRelationship(did: DID): Unit = {
+  def removeRelationship(did: DidStr): Unit = {
     relationships = relationships - did
   }
 
   /**
     * Allows to look up a relationship by DID (this DID or that DID)
     */
-  def lookup(did: DID): Option[Relationship] = {
+  def lookup(did: DidStr): Option[Relationship] = {
     val filt = relationships.values.filter(r => r.myDid_! == did || r.theirDid.contains(did))
     filt.size match {
       case 0 => None
@@ -312,13 +320,13 @@ trait HasRelationships {
     }
   }
 
-  def lookup_!(did: DID): Relationship = {
+  def lookup_!(did: DidStr): Relationship = {
     lookup(did).getOrElse(throw new RuntimeException(s"relationship with DID $did not found"))
   }
 }
 
 
-trait SimpleLaunchesProtocol extends LaunchesProtocol {
+trait SimpleLaunchesProtocol extends LaunchesProtocol with HasExecutionContextProvider {
 
   self: JournalLogging =>
 
@@ -365,7 +373,7 @@ trait SimpleLaunchesProtocol extends LaunchesProtocol {
 
       val driverParam = SimpleControllerProviderInputType(system, rel.myDid_!, threadId)
 
-      val driver = protocolRegistry.find_!(protoDef.msgFamily.protoRef).driverGen map { _.apply(driverParam) }
+      val driver = protocolRegistry.find_!(protoDef.msgFamily.protoRef).driverGen map { _.apply(driverParam, futureExecutionContext) }
 
       val pce = ProtocolContainerElements( system, rel.myDid_!, pinstId, Option(threadId), protoDef,
         initProvider, None, driver, journalContext, walletAccessProvider, ledgerAccessProvider, urlShorteningAccessProvider)
@@ -382,4 +390,4 @@ trait SimpleLaunchesProtocol extends LaunchesProtocol {
 
 }
 
-case class SimpleControllerProviderInputType(system: SimpleProtocolSystem, myDid: DID, threadId: ThreadId)
+case class SimpleControllerProviderInputType(system: SimpleProtocolSystem, myDid: DidStr, threadId: ThreadId)

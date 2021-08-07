@@ -2,6 +2,7 @@ package com.evernym.verity.apphealth
 
 import akka.cluster.Cluster
 import akka.cluster.MemberStatus.{Down, Removed}
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.appStateManager.{AppStateDetailed, AppStateUpdateAPI, CauseDetail, DrainingStarted, ErrorEvent, EventDetail, ListeningSuccessful, ManualUpdate, MildSystemError, RecoverIfNeeded, SeriousSystemError, SuccessEvent}
 import com.evernym.verity.actor.testkit.{ActorSpec, AppStateManagerTestKit}
@@ -322,7 +323,7 @@ class AppStateManagerSpec
   }
 
   def withFixture(test: OneArgTest): Outcome = {
-    val fixture = new AppStateManagerTestKit(this, appConfig)
+    val fixture = new AppStateManagerTestKit(this, appConfig, ecp.futureExecutionContext)
     val r = super.withFixture(test.toNoArgTest(fixture))
     Try(fixture.stop())   //best effort to stop the app state manager actor
     Thread.sleep(100)  //just to make sure the app state manager actor gets stopped
@@ -338,4 +339,7 @@ class AppStateManagerSpec
         |}""".stripMargin
     )
   )
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

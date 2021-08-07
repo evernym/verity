@@ -11,8 +11,7 @@ import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
-import com.evernym.verity.util2.UrlParam
-import com.evernym.verity.util2.ActorErrorResp
+import com.evernym.verity.util2.{ActorErrorResp, HasWalletExecutionContextProvider, UrlParam}
 import org.scalatest.concurrent.Eventually
 
 
@@ -21,13 +20,14 @@ trait AgencyAgentScaffolding
     with PersistentActorSpec
     with AgentSpecHelper
     with MockPushNotifListener
-    with Eventually {
+    with Eventually
+    with HasWalletExecutionContextProvider {
 
   override lazy val mockAgencyAdmin: MockEdgeAgent =
-    new MockEdgeAgent(UrlParam("localhost:9001"), platform.agentActorContext.appConfig)
+    new MockEdgeAgent(UrlParam("localhost:9001"), platform.agentActorContext.appConfig, futureExecutionContext, futureWalletExecutionContext)
 
-  override lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
-  lazy val mockEdgeAgent1: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin)
+  override lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
+  lazy val mockEdgeAgent1: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
 
   protected def agencySetupSpecs(): Unit = {
     "when agency admin is interacting" - {

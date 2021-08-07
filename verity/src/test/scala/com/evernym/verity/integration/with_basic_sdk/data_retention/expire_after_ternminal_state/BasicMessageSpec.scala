@@ -1,6 +1,7 @@
 package com.evernym.verity.integration.with_basic_sdk.data_retention.expire_after_ternminal_state
 
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
@@ -9,13 +10,18 @@ import com.evernym.verity.integration.with_basic_sdk.data_retention.DataRetentio
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Ctl.SendMessage
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Msg.Message
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
+import com.evernym.verity.util.TestExecutionContextProvider
 import com.typesafe.config.ConfigFactory
+
+import scala.concurrent.ExecutionContext
 
 
 class BasicMessageSpec
   extends VerityProviderBaseSpec
     with DataRetentionBaseSpec
     with SdkProvider {
+  lazy val ecp = TestExecutionContextProvider.ecp
+  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   lazy val issuerVerityEnv =
     VerityEnvBuilder
@@ -26,8 +32,8 @@ class BasicMessageSpec
 
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
@@ -110,4 +116,11 @@ class BasicMessageSpec
       |}
       |""".stripMargin
   }
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

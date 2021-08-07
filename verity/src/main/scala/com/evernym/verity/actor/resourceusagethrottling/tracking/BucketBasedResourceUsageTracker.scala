@@ -12,7 +12,7 @@ import com.typesafe.scalalogging.Logger
 
 //below is custom implementation of 'ResourceUsageProvider'
 // which later on can be replaced with better one
-class BucketBasedResourceUsageTracker extends ResourceUsageProvider {
+class BucketBasedResourceUsageTracker(resourceUsageRuleHelper: ResourceUsageRuleHelper) extends ResourceUsageProvider {
 
   val logger: Logger = getLoggerByClass(classOf[BucketBasedResourceUsageTracker])
 
@@ -70,7 +70,7 @@ class BucketBasedResourceUsageTracker extends ResourceUsageProvider {
   }
 
   def getSnapshotState: ResourceUsageState = {
-    val isPersistAllUsageState = ResourceUsageRuleHelper.resourceUsageRules.persistAllBucketUsages
+    val isPersistAllUsageState = resourceUsageRuleHelper.resourceUsageRules.persistAllBucketUsages
 
     val resourceBuckets =
       resourceUsages.map { ru =>
@@ -128,10 +128,10 @@ class BucketBasedResourceUsageTracker extends ResourceUsageProvider {
   Option[PersistUpdatedBucketState] = {
     metricsWriter.runWithSpan("updateResourceUsage", "BucketBasedResourceUsageTracker", InternalSpan) {
       val curDate = getCurrentUTCZonedDateTime
-      ResourceUsageRuleHelper.getResourceUsageRule(entityId, resourceType, resourceName).map { usageRule =>
+      resourceUsageRuleHelper.getResourceUsageRule(entityId, resourceType, resourceName).map { usageRule =>
         val curResourceUsages = resourceUsages.get(resourceName).map(_.buckets).getOrElse(Map.empty)
         val updatedBucketsDetail = createUpdatedBuckets(resourceType, resourceName, curDate, curResourceUsages,
-          usageRule, ResourceUsageRuleHelper.resourceUsageRules.persistAllBucketUsages)
+          usageRule, resourceUsageRuleHelper.resourceUsageRules.persistAllBucketUsages)
         val updatedBuckets = updatedBucketsDetail.map(e => e._1 -> e._2._1)
         val updatedBucketsToBePersisted = updatedBucketsDetail.filter(e => e._2._2.isDefined).map(e => e._2._2.get).toSet
         replaceExistingBuckets(resourceType, resourceName, updatedBuckets)

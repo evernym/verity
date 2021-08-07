@@ -5,6 +5,8 @@ import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.protocol.engine.{ProtoDef, ProtoRef}
 
+import scala.concurrent.ExecutionContext
+
 /**
   * A Protocol representation in an actor system
   */
@@ -27,8 +29,8 @@ class ActorProtocol(val protoDef: ProtoDef) {
   def typeName: String = ActorProtocol.buildTypeName(protoDef)
   def region(implicit system: ActorSystem): ActorRef = ClusterSharding(system).shardRegion(typeName)
 
-  def props(agentActorContext: AgentActorContext): Props = {
-    Props(classOf[ActorProtocolContainer[_, _, _, _, _, _, _]], agentActorContext, protoDef)
+  def props(agentActorContext: AgentActorContext, executionContext: ExecutionContext): Props = {
+    Props(classOf[ActorProtocolContainer[_, _, _, _, _, _, _]], agentActorContext, protoDef, executionContext)
   }
 
 }

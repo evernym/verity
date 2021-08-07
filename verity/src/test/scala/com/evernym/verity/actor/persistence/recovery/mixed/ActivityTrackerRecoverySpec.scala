@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.persistence.recovery.mixed
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
@@ -8,6 +9,7 @@ import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, Persisten
 import com.evernym.verity.actor.persistent.event_adapters.record_agent_activity.RecordingAgentActivityV0
 import com.evernym.verity.constants.ActorNameConstants._
 import scalapb.GeneratedMessageCompanion
+import scala.concurrent.ExecutionContext
 
 class ActivityTrackerRecoverySpec
   extends BaseRecoveryActorSpec {
@@ -54,4 +56,7 @@ class ActivityTrackerRecoverySpec
       201 -> RecordingAgentActivityV0
     )
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

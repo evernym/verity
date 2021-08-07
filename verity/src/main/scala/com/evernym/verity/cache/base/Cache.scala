@@ -1,7 +1,8 @@
 package com.evernym.verity.cache.base
 
 import java.util.UUID
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetcher, SyncCacheValueFetcher}
 import com.evernym.verity.cache.providers.{CacheProvider, CaffeineCacheParam, CaffeineCacheProvider}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -9,14 +10,16 @@ import com.evernym.verity.metrics.CustomMetrics._
 import com.evernym.verity.metrics.MetricsWriter
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 //TODO: as of now NOT using any distributed cache
 // so in case of multi node cluster,
 // there may/will be edge cases wherein same purpose cache exists on different nodes
 // and they may give different values for same key for certain time (based on cache configured expiration time)
 
-trait CacheBase {
+trait CacheBase extends HasExecutionContextProvider {
+
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   type Key = String
   type FetcherId = Int
@@ -211,8 +214,13 @@ case class CacheQueryResponse(data: Map[String, Any]) extends CacheResponseUtil
 
 class Cache(override val name: String,
             override val fetchers: Map[FetcherParam, CacheValueFetcher],
-            override val metricsWriter: MetricsWriter) extends CacheBase
-
+            override val metricsWriter: MetricsWriter,
+            executionContext: ExecutionContext) extends CacheBase {
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
+}
 /**
  *
  * @param key key used by code for search/lookup purposes

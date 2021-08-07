@@ -23,6 +23,7 @@ import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.actor.typed.base.{PersistentEventAdapter, PersistentStateAdapter}
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics.{AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT}
 import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
@@ -32,8 +33,11 @@ import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.Status
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
-
 import java.time.ZonedDateTime
+
+import com.evernym.verity.config.AppConfig
+
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 //persistent entity, holds undelivered messages
@@ -44,7 +48,7 @@ object Outbox {
   //commands
   trait Cmd extends ActorMessage
   object Commands {
-    case class UpdateOutboxParam(walletId: String, senderVerKey: VerKey, comMethods: Map[ComMethodId, ComMethod]) extends Cmd
+    case class UpdateOutboxParam(walletId: String, senderVerKey: VerKeyStr, comMethods: Map[ComMethodId, ComMethod]) extends Cmd
     case class GetOutboxParam(replyTo: ActorRef[StatusReply[RelationshipResolver.Replies.OutboxParam]]) extends Cmd
     case class GetDeliveryStatus(replyTo: ActorRef[StatusReply[Replies.DeliveryStatus]]) extends Cmd
     case class AddMsg(msgId: MsgId, expiryDuration: FiniteDuration, replyTo: ActorRef[StatusReply[Replies.MsgAddedReply]]) extends Cmd
@@ -89,32 +93,35 @@ object Outbox {
   val TypeKey: EntityTypeKey[Cmd] = EntityTypeKey("Outbox")
 
   def apply(entityContext: EntityContext[Cmd],
-            config: Config,
+            appConfig: AppConfig,
             accessTokenRefreshers: AccessTokenRefreshers,
             relResolver: Behavior[RelationshipResolver.Cmd],
             msgStore: ActorRef[MsgStore.Cmd],
             msgPackagers: MsgPackagers,
-            msgTransports: MsgTransports): Behavior[Cmd] = {
+            msgTransports: MsgTransports,
+            executionContext: ExecutionContext): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
+
       Behaviors.withTimers { timer =>
-        timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery, scheduledJobInterval(config))
+        timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery, scheduledJobInterval(appConfig.config))
         Behaviors.withStash(100) { buffer =>                     //TODO: finalize this
-          actorContext.setReceiveTimeout(receiveTimeout(config), Commands.TimedOut)
+          actorContext.setReceiveTimeout(receiveTimeout(appConfig.config), Commands.TimedOut)
           val relResolverReplyAdapter = actorContext.messageAdapter(reply => RelResolverReplyAdapter(reply))
           val messageMetaReplyAdapter = actorContext.messageAdapter(reply => MessageMetaReplyAdapter(reply))
           val dispatcher = new Dispatcher(
             actorContext,
             accessTokenRefreshers,
-            config,
+            appConfig,
             msgStore,
             msgPackagers,
-            msgTransports
+            msgTransports,
+            executionContext
           )
 
           val setup = SetupOutbox(actorContext,
             entityContext,
             MetricsWriterExtension(actorContext.system).get(),
-            config,
+            appConfig.config,
             buffer,
             dispatcher,
             relResolver,
@@ -129,9 +136,9 @@ object Outbox {
               commandHandler(setup),
               eventHandler(dispatcher))
             .receiveSignal(signalHandler(setup))
-            .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper))
-            .snapshotAdapter(PersistentStateAdapter(entityContext.entityId, StateObjectMapper))
-            .withRetention(retentionCriteria(config))
+            .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper, appConfig))
+            .snapshotAdapter(PersistentStateAdapter(entityContext.entityId, StateObjectMapper, appConfig))
+            .withRetention(retentionCriteria(appConfig.config))
         }
       }
     }

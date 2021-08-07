@@ -17,13 +17,13 @@ trait DataRetentionBaseSpec { this: VerityProviderBaseSpec =>
 
   lazy val appConfig: TestAppConfig = TestAppConfig(Option(DATA_RETENTION_CONFIG), clearValidators = true)
 
-  val ledgerTxnExecutor = new MockLedgerTxnExecutor()
+  val ledgerTxnExecutor = new MockLedgerTxnExecutor(futureExecutionContext)
 
   def buildSvcParam: ServiceParam =
     ServiceParam
       .empty
       .withLedgerTxnExecutor(ledgerTxnExecutor)
-      .withStorageApi(StorageAPI.loadFromConfig(appConfig))
+      .withStorageApi(StorageAPI.loadFromConfig(appConfig, futureExecutionContext))
 
   val arteryPort: Int = PortProvider.generateUnusedPort(3000)
 

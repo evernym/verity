@@ -4,7 +4,6 @@ import akka.Done
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.http.scaladsl.model.HttpHeader
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.util2.UrlParam
@@ -12,6 +11,8 @@ import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter.Commands.{SendBinary, SendJson}
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter.Replies.SendResponse
 import com.evernym.verity.transports.MsgSendingSvc
+
+import scala.concurrent.ExecutionContext
 
 import scala.collection.immutable
 
@@ -33,7 +34,7 @@ object HttpTransporter {
     case class SendResponse(resp: Either[StatusDetail, Done]) extends Reply
   }
 
-  def apply(msgSendingSvc: MsgSendingSvc): Behavior[Cmd] = {
+  def apply(msgSendingSvc: MsgSendingSvc, executionContext: ExecutionContext): Behavior[Cmd] = {
     Behaviors.receiveMessage {
       case SendBinary(payload, toUrl, headers, replyTo) =>
         msgSendingSvc.sendBinaryMsg(payload, headers)(UrlParam(toUrl)).map {
@@ -41,7 +42,7 @@ object HttpTransporter {
             replyTo ! SendResponse(Left(StatusDetail(he.respCode, he.responseMsg)))
           case Right(_) =>
             replyTo ! SendResponse(Right(Done))
-        }
+        }(executionContext)
         Behaviors.stopped
 
       case SendJson(payload, toUrl, headers, replyTo) =>
@@ -50,7 +51,7 @@ object HttpTransporter {
             replyTo ! SendResponse(Left(StatusDetail(he.respCode, he.responseMsg)))
           case Right(_) =>
             replyTo ! SendResponse(Right(Done))
-        }
+        }(executionContext)
         Behaviors.stopped
     }
   }

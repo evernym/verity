@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, ProofCreated, ProofVerifResult}
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.AnonCredRequests
 
 import scala.util.Try
@@ -10,7 +10,7 @@ import scala.util.Try
 object MockableAnonCredRequests {
   val basic = new AnonCredRequests {
 
-    override def createSchema(issuerDID: DID,
+    override def createSchema(issuerDID: DidStr,
                               name: String,
                               version: String,
                               data: String)
@@ -30,7 +30,7 @@ object MockableAnonCredRequests {
       handler(Try(SchemaCreated(schemaId, schemaJson)))
     }
 
-    override def createCredDef(issuerDID: DID,
+    override def createCredDef(issuerDID: DidStr,
                                schemaJson: String,
                                tag: String,
                                sigType: Option[String],
@@ -72,7 +72,7 @@ object MockableAnonCredRequests {
         	"key_correctness_proof" : "<key_correctness_proof>"
         }""".stripMargin)))
 
-    override def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String)
+    override def createCredReq(credDefId: String, proverDID: DidStr, credDefJson: String, credOfferJson: String)
                               (handler: Try[CredReqCreated] => Unit): Unit =
       handler(Try(CredReqCreated(
         s"""

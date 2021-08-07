@@ -3,10 +3,11 @@ package com.evernym.verity.vault.operation_executor
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.util.Util.jsonArray
-import com.evernym.verity.util2.ExecutionContextProvider.walletFutureExecutionContext
+
+import scala.concurrent.ExecutionContext
 import com.evernym.verity.util2.Status.{INVALID_VALUE, SIGNATURE_VERIF_FAILED, UNHANDLED}
 import com.evernym.verity.actor.wallet.{LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, SignedMsg, UnpackMsg, UnpackedMsg, VerifySigResult}
-import com.evernym.verity.protocol.engine.VerKey
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.service.WalletMsgHandler.handleGetVerKey
 import com.evernym.verity.vault.WalletExt
@@ -21,7 +22,7 @@ import scala.concurrent.Future
 object CryptoOpExecutor extends OpExecutorBase {
 
   def handleLegacyPackMsg(lpm: LegacyPackMsg, ledgerPoolManager: Option[LedgerPoolConnManager])
-                         (implicit we: WalletExt): Future[PackedMsg] = {
+                         (implicit we: WalletExt, ec: ExecutionContext): Future[PackedMsg] = {
     val resp = for (
       recipKeyResp      <- verKeyFuture(lpm.recipVerKeyParams, ledgerPoolManager).map(_.head);
       senderVerKeyResp  <- verKeyFuture(lpm.senderVerKeyParam.toSet, ledgerPoolManager).map(_.headOption)
@@ -36,7 +37,7 @@ object CryptoOpExecutor extends OpExecutorBase {
   }
 
   def handleLegacyUnpackMsg(lum: LegacyUnpackMsg, ledgerPoolManager: Option[LedgerPoolConnManager])
-                           (implicit we: WalletExt): Future[UnpackedMsg] = {
+                           (implicit we: WalletExt, ec: ExecutionContext): Future[UnpackedMsg] = {
 
     val result = for (
       fromVerKeyResp <- verKeyFuture(lum.fromVerKeyParam.toSet, ledgerPoolManager).map(_.head)
@@ -65,7 +66,7 @@ object CryptoOpExecutor extends OpExecutorBase {
   }
 
   def handlePackMsg(pm: PackMsg, ledgerPoolManager: Option[LedgerPoolConnManager])
-                   (implicit we: WalletExt): Future[PackedMsg] = {
+                   (implicit we: WalletExt, ec: ExecutionContext): Future[PackedMsg] = {
     // Question: Should JSON validation for msg happen here or is it left to libindy?
     // Question: Since libindy expects bytes, should msg be bytes and not string. This will
     // make API of pack and unpack consistent (pack takes input what unpack outputs)
@@ -80,7 +81,7 @@ object CryptoOpExecutor extends OpExecutorBase {
     result.flatten
   }
 
-  def handleUnpackMsg(um: UnpackMsg)(implicit we: WalletExt): Future[UnpackedMsg] = {
+  def handleUnpackMsg(um: UnpackMsg)(implicit we: WalletExt, ec: ExecutionContext): Future[UnpackedMsg] = {
     Crypto.unpackMessage(we.wallet, um.msg)
       .map(r => UnpackedMsg(r, None, None))
       .recover {
@@ -104,7 +105,7 @@ object CryptoOpExecutor extends OpExecutorBase {
       }
   }
 
-  def handleSignMsg(smp: SignMsg)(implicit wmp: WalletMsgParam, we: WalletExt): Future[SignedMsg] = {
+  def handleSignMsg(smp: SignMsg)(implicit wmp: WalletMsgParam, we: WalletExt, ec: ExecutionContext): Future[SignedMsg] = {
     val verKeyFuture = handleGetVerKey(smp.keyParam)
     verKeyFuture.flatMap { gvkr =>
       Crypto.cryptoSign(we.wallet, gvkr.verKey, smp.msg)
@@ -112,7 +113,8 @@ object CryptoOpExecutor extends OpExecutorBase {
     }
   }
 
-  def verifySig(verKey: VerKey, challenge: Array[Byte], signature: Array[Byte]): Future[VerifySigResult] = {
+  def verifySig(verKey: VerKeyStr, challenge: Array[Byte], signature: Array[Byte])
+               (implicit ec: ExecutionContext): Future[VerifySigResult] = {
     val detail = s"challenge: '$challenge', signature: '$signature'"
     Crypto.cryptoVerify(verKey, challenge, signature)
       .map(VerifySigResult(_))
@@ -132,9 +134,9 @@ object CryptoOpExecutor extends OpExecutorBase {
       }
   }
 
-  def verifySig(vs: VerifySigByVerKey): Future[VerifySigResult] = {
+  def verifySig(vs: VerifySigByVerKey)(implicit ec: ExecutionContext): Future[VerifySigResult] = {
     verifySig(vs.verKey, vs.challenge, vs.signature)
   }
 }
 
-case class VerifySigByVerKey(verKey: VerKey, challenge: Array[Byte], signature: Array[Byte])
+case class VerifySigByVerKey(verKey: VerKeyStr, challenge: Array[Byte], signature: Array[Byte])

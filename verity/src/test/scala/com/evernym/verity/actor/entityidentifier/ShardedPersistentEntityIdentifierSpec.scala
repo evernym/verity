@@ -1,9 +1,12 @@
 package com.evernym.verity.actor.entityidentifier
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.base.ActorDetail
 import com.evernym.verity.actor.entityidentifier.base.{EntityIdentifierBaseSpec, MockPersistentActor}
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.{ForIdentifier, ShardUtil}
+
+import scala.concurrent.ExecutionContext
 
 class ShardedPersistentEntityIdentifierSpec
   extends EntityIdentifierBaseSpec
@@ -11,8 +14,10 @@ class ShardedPersistentEntityIdentifierSpec
 
   lazy val mockActorRegion = createNonPersistentRegion(
     "MockActor",
-    MockPersistentActor.props(appConfig)
+    MockPersistentActor.props(appConfig, futureExecutionContext)
   )
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  lazy val futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   "A sharded persistent actor" - {
     "when asked for GetPersistentActorDetail" - {
@@ -27,5 +32,7 @@ class ShardedPersistentEntityIdentifierSpec
       }
     }
   }
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 

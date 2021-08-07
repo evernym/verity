@@ -6,8 +6,10 @@ import com.evernym.verity.protocol.engine.SignalEnvelope
 import com.evernym.verity.protocol.protocols.trustping.v_1_0.Ctl.SendResponse
 import com.evernym.verity.protocol.protocols.trustping.v_1_0.Sig.ReceivedPing
 
-class TrustPingDriver(cp: ActorDriverGenParam)
-  extends ActorDriver(cp) {
+import scala.concurrent.ExecutionContext
+
+class TrustPingDriver(cp: ActorDriverGenParam, ec: ExecutionContext)
+  extends ActorDriver(cp, ec) {
 
   override def signal[A]: SignalHandler[A] = {
 

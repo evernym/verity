@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.persistence.supervisor.default
 
 import akka.testkit.EventFilter
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.supervisor.{MockActorMsgHandlerFailure, ThrowException}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
@@ -13,7 +14,7 @@ class ActorMsgHandlerFailureSpec
   with BasicSpec
   with Eventually {
 
-  lazy val mockUnsupervised = system.actorOf(MockActorMsgHandlerFailure.props(appConfig))
+  lazy val mockUnsupervised = system.actorOf(MockActorMsgHandlerFailure.props(appConfig, executionContextProvider.futureExecutionContext))
 
   "Unsupervised actor" - {
 
@@ -39,4 +40,7 @@ class ActorMsgHandlerFailureSpec
       akka.test.filter-leeway = 15s   # to make the event filter run for little longer time
       """
   )}
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

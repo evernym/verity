@@ -1,11 +1,15 @@
 package com.evernym.verity.protocol.protocols.trustping.v_1_0
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.protocols.trustping.v_1_0.Role.{Receiver, Sender}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
 import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.util.TestExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 import scala.language.{implicitConversions, reflectiveCalls}
 
 class TrustPingProtocolSpec extends TestsProtocolsImpl(TrustPingDefinition) with BasicFixtureSpec {
@@ -13,8 +17,6 @@ class TrustPingProtocolSpec extends TestsProtocolsImpl(TrustPingDefinition) with
   import TrustPingVars._
 
   import scala.language.reflectiveCalls
-
-  lazy val config: AppConfig = new TestAppConfig()
 
   override val containerNames: Set[ContainerName] = Set(TrustPingVars.SENDER, TrustPingVars.RECEIVER)
 
@@ -91,8 +93,13 @@ class TrustPingProtocolSpec extends TestsProtocolsImpl(TrustPingDefinition) with
     }
   }
 
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
-
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }
 
 object TrustPingVars {

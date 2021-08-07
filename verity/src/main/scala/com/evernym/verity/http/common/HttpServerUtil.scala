@@ -3,17 +3,18 @@ package com.evernym.verity.http.common
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.{HTTP_INTERFACE, HTTP_PORT}
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, SeriousSystemError}
 import com.evernym.verity.util2.Exceptions
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
-trait HttpServerUtil extends CorsSupport {
+trait HttpServerUtil extends CorsSupport with HasExecutionContextProvider {
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   implicit def system: ActorSystem
 

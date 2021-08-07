@@ -12,19 +12,18 @@ import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.{ActorMessage, SendCmdToAllNodes, StopProgressTracking}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.util.Util.getActorRefFromSelection
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.util2.ReqId
 import com.evernym.verity.actor.base.{CoreActorExtended, DoNotRecordLifeCycleMetrics}
 import com.evernym.verity.protocol.engine.MsgId
 import org.apache.http.conn.util.InetAddressUtils
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 //NOTE: This is NOT a feature code, its a utility code to see/troubleshoot msg progress in a system
 
 object MsgProgressTracker {
-  def props(appConfig: AppConfig): Props = Props(new MsgProgressTracker(appConfig))
+  def props(appConfig: AppConfig, executionContext: ExecutionContext): Props = Props(new MsgProgressTracker(appConfig, executionContext))
 
   def isGlobalOrIpAddress(trackingId: String): Boolean = {
     InetAddressUtils.isIPv4Address(trackingId) ||
@@ -36,10 +35,12 @@ object MsgProgressTracker {
  * msg progress tracker sharded actor
  * @param appConfig app config
  */
-class MsgProgressTracker(val appConfig: AppConfig)
+class MsgProgressTracker(val appConfig: AppConfig, executionContext: ExecutionContext)
   extends CoreActorExtended
     with DoNotRecordLifeCycleMetrics
     with HasActorResponseTimeout {
+
+  private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   override def receiveCmd: Receive = {
     case ct: ConfigureTracking      => handleConfigureTracking(ct)

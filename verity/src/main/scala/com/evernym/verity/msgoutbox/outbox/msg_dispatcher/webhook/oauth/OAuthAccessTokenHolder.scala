@@ -3,18 +3,22 @@ package com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth
 import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.actor.base.EntityIdentifier
 import com.evernym.verity.config.validator.base.ConfigReadHelper
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Cmd
-import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.{GetToken, TimedOut, AccessTokenRefresherReplyAdapter, UpdateParams}
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.{AccessTokenRefresherReplyAdapter, GetToken, TimedOut, UpdateParams}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Replies.AuthToken
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.GetTokenSuccess
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.slf4j.event.Level
 
 import java.time.LocalDateTime
 import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
 
 
 object OAuthAccessTokenHolder {
@@ -78,6 +82,7 @@ object OAuthAccessTokenHolder {
       } else {
         authTokenParam match {
           case Some(at) if !at.isExpired =>
+            logger.info(s"[${setup.identifier}][OAuth] access token sent back (to ${replyTo.path})")
             replyTo ! AuthToken(at.value)
             Behaviors.same
 
@@ -89,6 +94,7 @@ object OAuthAccessTokenHolder {
   }
 
   private def refreshToken(implicit setup: Setup): Behavior[Cmd] = {
+    logger.info(s"[${setup.identifier}][OAuth] refresh access token started")
     val refresher = setup.actorContext.spawnAnonymous(setup.tokenRefresher)
     refresher ! OAuthAccessTokenRefresher.Commands.GetToken(
       setup.params,
@@ -100,10 +106,12 @@ object OAuthAccessTokenHolder {
 
   private def waitingForGetTokenResponse(implicit setup: Setup): Behavior[Cmd] = Behaviors.receiveMessage {
     case AccessTokenRefresherReplyAdapter(reply: GetTokenSuccess) =>
+      logger.info(s"[${setup.identifier}][OAuth] refreshed access token received (expires in seconds: ${reply.expiresInSeconds})")
       setup.buffer.unstashAll(initialized(Option(AuthTokenParam(reply.value, reply.expiresInSeconds)))
       (setup.copy(prevTokenRefreshResponse = reply.respJSONObject)))
 
     case AccessTokenRefresherReplyAdapter(reply: OAuthAccessTokenRefresher.Replies.GetTokenFailed) =>
+      logger.error(s"[${setup.identifier}][OAuth] refresh access token failed: " + reply.errorMsg)
       handleError(reply.errorMsg)
 
     case TimedOut =>
@@ -127,6 +135,8 @@ object OAuthAccessTokenHolder {
       .getDurationOption("verity.outbox.oauth-token-holder.receive-timeout")
       .getOrElse(FiniteDuration(30, SECONDS))
   }
+
+  private val logger: Logger = getLoggerByClass(getClass)
 }
 
 case class Setup(config: Config,
@@ -135,7 +145,16 @@ case class Setup(config: Config,
                  tokenRefresher: Behavior[OAuthAccessTokenRefresher.Cmd],
                  tokenRefresherReplyAdapter: ActorRef[OAuthAccessTokenRefresher.Reply],
                  actorContext: ActorContext[Cmd],
-                 buffer: StashBuffer[Cmd])
+                 buffer: StashBuffer[Cmd]) {
+
+  private val selfEntityIdentifier = Try(EntityIdentifier.parsePath(actorContext.self.path))
+  private val parentEntityIdentifier = Try(EntityIdentifier.parsePath(actorContext.self.path.parent))
+  val identifier = (parentEntityIdentifier, selfEntityIdentifier) match {
+    case (Success(pei), Success(sei)) => s"${pei.entityType}/${pei.entityId}/${sei.entityId}"
+    case (Failure(_),   Success(sei)) => sei.entityId
+    case _                            => actorContext.self.path.toString
+  }
+}
 
 object AuthTokenParam {
   def apply(value: String, expiresInSeconds: Int): AuthTokenParam = {

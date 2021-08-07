@@ -8,7 +8,8 @@ import com.evernym.verity.util2.Status.{getStatusMsgFromCode, _}
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
-import com.evernym.verity.actor.agent.{AttrName, AttrValue, DidPair, EncryptionParamBuilder, MsgPackFormat, PayloadMetadata, Thread}
+import com.evernym.verity.did.didcomm.v1.Thread
+import com.evernym.verity.actor.agent.{AttrName, AttrValue, EncryptionParamBuilder, MsgPackFormat, PayloadMetadata}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -18,6 +19,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.cache.base.Cache
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Constants._
@@ -33,11 +35,11 @@ import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import com.evernym.verity.util2.{Exceptions, MsgPayloadStoredEventBuilder, Status, UrlParam}
+import com.evernym.verity.util2.{Exceptions, HasExecutionContextProvider, MsgPayloadStoredEventBuilder, Status, UrlParam}
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.Left
 
@@ -63,7 +65,10 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     with ConnReqMsgHandler[S]
     with ConnReqRedirectMsgHandler[S]
     with DEPRECATED_HasWallet
+    with HasExecutionContextProvider
     with HasLogger { this: Protocol[P,R,ProtoMsg,Any,S,I] =>
+
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   val logger: Logger = ctx.logger
 
@@ -72,7 +77,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
   def encryptionParamBuilder: EncryptionParamBuilder = EncryptionParamBuilder()
 
-  def agencyDIDReq: DID = ctx.getState.agencyDIDOpt.getOrElse(
+  def agencyDIDReq: DidStr = ctx.getState.agencyDIDOpt.getOrElse(
     throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("agency DID not found"))
   )
 
@@ -117,8 +122,8 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     ctx.updatedRoster(params.map(p => InitParamBase(p.name, p.value)))
   }
 
-  protected def verifyAgentKeyDlgProof(agentKeyDlgProof: AgentKeyDlgProof, signedByVerKey: VerKey,
-                                     isEdgeAgentsKeyDlgProof: Boolean): Unit = {
+  protected def verifyAgentKeyDlgProof(agentKeyDlgProof: AgentKeyDlgProof, signedByVerKey: VerKeyStr,
+                                       isEdgeAgentsKeyDlgProof: Boolean): Unit = {
     val challenge = agentKeyDlgProof.buildChallenge.getBytes
     val sig = Base64Util.getBase64Decoded(agentKeyDlgProof.signature)
     val vs = VerifySigByVerKey(signedByVerKey, challenge, sig)
@@ -357,7 +362,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
 
   def buildMsgCreatedEvt(msgId: MsgId,
                          mType: String,
-                         senderDID: DID,
+                         senderDID: DidStr,
                          sendMsg: Boolean,
                          threadOpt: Option[Thread]=None): MsgCreated = {
     val msgStatus =
@@ -370,7 +375,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
 
   def inviteDetailVersion: String
 
-  def getEncryptForDID: DID
+  def getEncryptForDID: DidStr
 
   def buildAgentPackedMsg(msgPackFormat: MsgPackFormat, param: PackMsgParam): PackedMsg = {
     val fut = AgentMsgPackagingUtil.buildAgentMsg(msgPackFormat, param)(agentMsgTransformer, wap, ctx.metricsWriter)
@@ -391,12 +396,12 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     ctx.getState.pairwiseConnReceiver orElse
       ctx.getState.connectingMsgState.msgEventReceiver
 
-  def isUserPairwiseVerKey(verKey: VerKey): Boolean = {
+  def isUserPairwiseVerKey(verKey: VerKeyStr): Boolean = {
     val userPairwiseVerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq).verKey
     verKey == userPairwiseVerKey
   }
 
-  def encParamBasedOnMsgSender(senderVerKeyOpt: Option[VerKey]): EncryptParam = {
+  def encParamBasedOnMsgSender(senderVerKeyOpt: Option[VerKeyStr]): EncryptParam = {
     senderVerKeyOpt match {
       case Some(vk) =>
         if (isUserPairwiseVerKey(vk)) encParamFromThisAgentToOwner
@@ -431,7 +436,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           v1.agencyDID, getKeyFromPool = GET_AGENCY_VER_KEY_FROM_POOL).verKey)))
         val fwdRouteForAgentPairwiseActor = FwdRouteMsg(v1.agentKeyDID, Left(theirAgencySealParam))
         AgentMsgPackagingUtil.buildRoutedAgentMsg(msgPackFormat, PackedMsg(packedMsg),
-          List(fwdRouteForAgentPairwiseActor))(agentMsgTransformer, wap, ctx.metricsWriter)
+          List(fwdRouteForAgentPairwiseActor))(agentMsgTransformer, wap, ctx.metricsWriter, futureExecutionContext)
       case (None, Some(v2: RoutingDetail)) =>
         val routingKeys = if (v2.routingKeys.nonEmpty) Vector(v2.verKey) ++ v2.routingKeys else v2.routingKeys
         AgentMsgPackagingUtil.packMsgForRoutingKeys(
@@ -439,7 +444,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           packedMsg,
           routingKeys,
           msgType
-        )(agentMsgTransformer, wap, ctx.metricsWriter)
+        )(agentMsgTransformer, wap, ctx.metricsWriter, futureExecutionContext)
       case x => throw new RuntimeException("unsupported routing detail" + x)
     }
     awaitResult(result)
@@ -456,14 +461,14 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
 
   val REDIRECT_DETAIL = "redirect-detail"
 
-  override def msgRecipientDID: DID = myPairwiseDIDReq
+  override def msgRecipientDID: DidStr = myPairwiseDIDReq
   override lazy val appConfig: AppConfig = ctx.SERVICES_DEPRECATED.appConfig
   override lazy val msgSendingSvc: MsgSendingSvc = ctx.SERVICES_DEPRECATED.msgSendingSvc
   override lazy val generalCache: Cache = ctx.SERVICES_DEPRECATED.generalCache
   override implicit lazy val agentMsgTransformer: AgentMsgTransformer = ctx.SERVICES_DEPRECATED.agentMsgTransformer
 
-  def myPairwiseDIDReq: DID
-  def myPairwiseVerKeyReq: VerKey
+  def myPairwiseDIDReq: DidStr
+  def myPairwiseVerKeyReq: VerKeyStr
 
   lazy val `userName_!`: String = ctx.getState.parameters.paramValueRequired(NAME)
   lazy val `userLogoUrl_!`: String = ctx.getState.parameters.paramValueRequired(LOGO_URL)
@@ -565,20 +570,20 @@ case class CreateAndSendTinyUrlParam(uid: MsgId, phoneNo: String, urlMappingServ
  *
  * @param endpoint - agency endpoint of the connection requester or connection request responder
  */
-case class SenderAgencyDetail(DID: DID, verKey: VerKey, endpoint: String) {
+case class SenderAgencyDetail(DID: DidStr, verKey: VerKeyStr, endpoint: String) {
   def toAbbreviated: SenderAgencyDetailAbbreviated = {
     SenderAgencyDetailAbbreviated(DID, verKey, endpoint)
   }
 }
 
-case class SenderAgencyDetailAbbreviated(d: DID, v: VerKey, e: String)
+case class SenderAgencyDetailAbbreviated(d: DidStr, v: VerKeyStr, e: String)
 
 /**
  * Used during preparing invitation detail and also when connection request answer message is sent to remote cloud agent.
  * It provides connection participant's pairwise information to the other side of a connection.
  */
-case class SenderDetail(DID: DID, verKey: VerKey, agentKeyDlgProof: Option[AgentKeyDlgProof], name: Option[String],
-                        logoUrl: Option[String], publicDID: Option[DID]) {
+case class SenderDetail(DID: DidStr, verKey: VerKeyStr, agentKeyDlgProof: Option[AgentKeyDlgProof], name: Option[String],
+                        logoUrl: Option[String], publicDID: Option[DidStr]) {
   def toAbbreviated: SenderDetailAbbreviated = {
     SenderDetailAbbreviated(
       DID,
@@ -591,8 +596,8 @@ case class SenderDetail(DID: DID, verKey: VerKey, agentKeyDlgProof: Option[Agent
   }
 }
 
-case class SenderDetailAbbreviated(d: DID, v: VerKey, dp: Option[AgentKeyDlgProofAbbreviated], n: Option[String],
-                                   l: Option[String], publicDID: Option[DID])
+case class SenderDetailAbbreviated(d: DidStr, v: VerKeyStr, dp: Option[AgentKeyDlgProofAbbreviated], n: Option[String],
+                                   l: Option[String], publicDID: Option[DidStr])
 
 
 /**
@@ -628,7 +633,7 @@ case object AddMsg {
     AddMsg(msgCreated.uid, msgCreated.typ, msgCreated.senderDID, msgCreated.statusCode, msgCreated.sendMsg, payload, refMsgId)
   }
 }
-case class AddMsg(msgId: MsgId, msgType: String, senderDID: DID, statusCode: String, sendMsg: Boolean,
+case class AddMsg(msgId: MsgId, msgType: String, senderDID: DidStr, statusCode: String, sendMsg: Boolean,
                   payload: Option[Array[Byte]], refMsgId: Option[MsgId]) extends LegacyConnectingSignal
 
 case class UpdateMsg(msgId: MsgId, statusCode: String, refMsgId: Option[MsgId]) extends LegacyConnectingSignal
@@ -655,11 +660,11 @@ trait DEPRECATED_HasWallet {
   protected def prepareNewAgentWalletData(forDIDPair: DidPair, walletId: String): NewKeyCreated = {
     val agentWAP = WalletAPIParam(walletId)
     ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[WalletCreated.type](CreateWallet())(agentWAP))
-    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(forDIDPair.DID, forDIDPair.verKey))(agentWAP))
+    ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(forDIDPair.did, forDIDPair.verKey))(agentWAP))
     ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[NewKeyCreated](CreateNewKey())(agentWAP))
   }
 
-  def getVerKeyReqViaCache(did: DID, getKeyFromPool: Boolean = false): GetVerKeyResp =
+  def getVerKeyReqViaCache(did: DidStr, getKeyFromPool: Boolean = false): GetVerKeyResp =
     ctx.DEPRECATED_convertAsyncToSync(walletAPI.executeAsync[GetVerKeyResp](GetVerKey(did, getKeyFromPool)))
 
 }

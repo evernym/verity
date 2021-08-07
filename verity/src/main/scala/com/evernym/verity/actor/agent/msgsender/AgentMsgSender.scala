@@ -1,11 +1,10 @@
 package com.evernym.verity.actor.agent.msgsender
 
 import com.evernym.verity.util2.Exceptions._
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
-import com.evernym.verity.actor.appStateManager.{AppStateEvent, ErrorEvent, MildSystemError}
-import com.evernym.verity.actor.appStateManager.AppStateConstants._
+import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.ledger.LedgerSvcException
 import com.evernym.verity.protocol.engine._
@@ -15,12 +14,13 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.cache.AGENCY_IDENTITY_CACHE_FETCHER
 import com.evernym.verity.cache.base.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.GetAgencyIdentityCacheParam
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.metrics.{InternalSpan, MetricsWriter}
 import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.util2.Exceptions
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Left
 
 
@@ -29,7 +29,10 @@ import scala.util.Left
  */
 trait AgentMsgSender
   extends HasGeneralCache
-    with HasLogger {
+    with HasLogger
+    with HasExecutionContextProvider {
+
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   def publishAppStateEvent (event: AppStateEvent): Unit
   def msgSendingSvc: MsgSendingSvc
@@ -45,19 +48,17 @@ trait AgentMsgSender
     }
   }
 
-  private def theirAgencyEndpointFut(localAgencyDID:DID, theirAgencyDID: DID,
+  private def theirAgencyEndpointFut(localAgencyDID:DidStr, theirAgencyDID: DidStr,
                                      mw: MetricsWriter): Future[CacheQueryResponse] = {
     val gad = GetAgencyIdentity(theirAgencyDID, getVerKey = false)
     getAgencyIdentityFut(localAgencyDID, gad, mw)
   }
 
-  private def handleRemoteAgencyEndpointNotFound(theirAgencyDID: DID): Exception = {
+  private def handleRemoteAgencyEndpointNotFound(theirAgencyDID: DidStr): Exception = {
     val errorMsg =
       "error while getting endpoint from ledger (" +
         "possible-causes: ledger pool not reachable/up/responding etc, " +
         s"target DID: $theirAgencyDID)"
-    publishAppStateEvent(ErrorEvent(MildSystemError, CONTEXT_GENERAL,
-      new RemoteEndpointNotFoundErrorException(Option(errorMsg)), Option(errorMsg)))
     LedgerSvcException(errorMsg)
   }
 
@@ -69,8 +70,7 @@ trait AgentMsgSender
             throw handleRemoteAgencyEndpointNotFound(theirAgencyDID)
           )
         }.recover {
-          case _: Exception =>
-            throw handleRemoteAgencyEndpointNotFound(theirAgencyDID)
+          case _: Exception => throw handleRemoteAgencyEndpointNotFound(theirAgencyDID)
         }
       case Right(endpoint) => Future.successful(endpoint)
     }
@@ -108,7 +108,7 @@ trait AgentMsgSender
 case class SendMsgParam(uid: MsgId,
                         msgType: String,
                         msg: Array[Byte],
-                        localAgencyDID: DID,
+                        localAgencyDID: DidStr,
                         theirRoutingParam: TheirRoutingParam,
                         isItARetryAttempt: Boolean)
 

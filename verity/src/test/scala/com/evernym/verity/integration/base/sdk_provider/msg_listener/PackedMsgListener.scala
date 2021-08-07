@@ -10,7 +10,6 @@ import com.evernym.verity.http.common.HttpCustomTypes
 import scala.concurrent.duration._
 
 class PackedMsgListener(val port: Int,
-                        val checkAuthToken: Boolean = false,
                         val tokenExpiresInDuration: Option[FiniteDuration] = None)(implicit val actorSystem: ActorSystem)
   extends MsgListenerBase[Array[Byte]] {
 
@@ -38,7 +37,7 @@ class PackedMsgListener(val port: Int,
       case MediaTypes.`application/octet-stream` | HttpCustomTypes.MEDIA_TYPE_SSI_AGENT_WIRE =>
         entity(as[Array[Byte]]) { data =>
           complete {
-            receiveMsg(data)
+            addToQueue(data)
             OK
           }
         }

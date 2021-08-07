@@ -5,6 +5,7 @@ import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives.ignoreTrailingSlash
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
@@ -13,6 +14,8 @@ import com.evernym.verity.http.common.HttpRouteBase
 import com.evernym.verity.http.route_handlers.PlatformServiceProvider
 import com.evernym.verity.http.route_handlers.open.PackedMsgEndpointHandler
 import com.evernym.verity.testkit.BasicSpec
+
+import scala.concurrent.ExecutionContext
 
 
 class RequestSizeSpec
@@ -52,4 +55,11 @@ class RequestSizeSpec
 
   override lazy val agentActorContext: AgentActorContext = platform.agentActorContext
   override protected def createActorSystem(): ActorSystem = AkkaTestBasic.system()
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

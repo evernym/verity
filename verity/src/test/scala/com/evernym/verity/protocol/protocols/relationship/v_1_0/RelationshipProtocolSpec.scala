@@ -1,27 +1,34 @@
 package com.evernym.verity.protocol.protocols.relationship.v_1_0
 
 import akka.http.scaladsl.model.Uri
-import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.DidPair
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.ProtocolRegistry._
-import com.evernym.verity.protocol.engine.{DebugProtocols, ServiceFormatted, InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, SignalEnvelope}
+import com.evernym.verity.protocol.engine.{DebugProtocols, InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, ServiceFormatted, SignalEnvelope}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Role.{Provisioner, Requester}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.{InteractionController, MockableUrlShorteningAccess, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
-import com.evernym.verity.util.Base64Util
-import com.evernym.verity.DID.Methods.DIDKey
+import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
+import com.evernym.verity.did.methods.DIDKey
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.config.AppConfig
 import org.json.JSONObject
+
+import scala.concurrent.ExecutionContext
 
 class RelationshipProtocolSpec
   extends TestsProtocolsImpl(RelationshipDef, None)
   with BasicFixtureSpec
   with DebugProtocols
   with CommonSpecUtil {
+
+  lazy val testAppConfig: AppConfig = new TestAppConfig()
+  override def appConfig: AppConfig = testAppConfig
 
   lazy val newIdentity: DidPair = generateNewDid()
 
@@ -45,16 +52,17 @@ class RelationshipProtocolSpec
     DATA_RETENTION_POLICY -> policy
   )
 
-  val controllerProvider: SimpleControllerProviderInputType => InteractionController = { i: SimpleControllerProviderInputType =>
-    new InteractionController(i) {
-      override def signal[A]: SignalHandler[A] = {
-        case SignalEnvelope(_: Signal.CreatePairwiseKey, _, _, _, _) =>
-          Option(KeyCreated(newIdentity.DID, newIdentity.verKey))
-        case se: SignalEnvelope[A] =>
-          super.signal(se)
+  val controllerProvider: DriverGen[SimpleControllerProviderInputType] =
+    Some({ (i: SimpleControllerProviderInputType, ec: ExecutionContext) =>
+      new InteractionController(i) {
+        override def signal[A]: SignalHandler[A] = {
+          case SignalEnvelope(_: Signal.CreatePairwiseKey, _, _, _, _) =>
+            Option(KeyCreated(newIdentity.did, newIdentity.verKey))
+          case se: SignalEnvelope[A] =>
+            super.signal(se)
+        }
       }
-    }
-  }
+    })
 
   "The Relationship Protocol" - {
     "has two roles" in { _ =>
@@ -198,7 +206,7 @@ class RelationshipProtocolSpec
         (requester engage provisioner) ~ Create(label, None)
 
         val pkc = requester expect signal[Signal.Created]
-        pkc.did shouldBe newIdentity.DID
+        pkc.did shouldBe newIdentity.did
         pkc.verKey shouldBe newIdentity.verKey
         requester.state shouldBe a[State.Created]
       }
@@ -213,7 +221,7 @@ class RelationshipProtocolSpec
         (requester engage provisioner) ~ Create(label, logo)
 
         val pkc = requester expect signal[Signal.Created]
-        pkc.did shouldBe newIdentity.DID
+        pkc.did shouldBe newIdentity.did
         pkc.verKey shouldBe newIdentity.verKey
         requester.state shouldBe a[State.Created]
       }
@@ -1043,13 +1051,13 @@ class RelationshipProtocolSpec
 
     val serviceBlock = DefaultMsgCodec.fromJson[ServiceFormatted](service.optString(0))
     serviceBlock should (be (ServiceFormatted(
-      s"${newIdentity.DID};indy",
+      s"${newIdentity.did};indy",
       "IndyAgent",
       Vector(newIdentity.verKey),
       Option(Vector(newIdentity.verKey, defAgencyVerkey)),
       inviteURL.split('?').head
     )) or be (ServiceFormatted(
-        s"${newIdentity.DID};indy",
+        s"${newIdentity.did};indy",
         "IndyAgent",
         Vector(new DIDKey(newIdentity.verKey).toString),
         Option(Vector(new DIDKey(newIdentity.verKey).toString, new DIDKey(defAgencyVerkey).toString)),
@@ -1072,4 +1080,9 @@ class RelationshipProtocolSpec
     )
   }
 
+  lazy val executionContextProvider: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContextProvider.futureExecutionContext
 }

@@ -1,12 +1,18 @@
 package com.evernym.verity.vault.wallet_api.base
 
+import com.evernym.verity.util2.HasExecutionContextProvider
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Minutes, Span}
+
+import scala.concurrent.ExecutionContext
 
 
 trait NonActorClientWalletAPISpec
   extends ClientWalletAPISpecBase
+    with HasExecutionContextProvider
     with Eventually {
+  lazy implicit val executionContext: ExecutionContext = futureExecutionContext
+
 
   def startUserWalletSetupWithAsyncAPI(): Unit = {
     (1 to totalUsers).foreach { _ =>

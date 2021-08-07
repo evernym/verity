@@ -2,21 +2,22 @@ package com.evernym.verity.actor.persistence.supervisor
 
 import akka.actor.Props
 import akka.persistence.AtomicWrite
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SupervisorUtil}
 import com.evernym.verity.actor.{ActorMessage, KeyCreated, TestJournal}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.PERSISTENT_ACTOR_BASE
 
 import scala.collection.immutable
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 object MockActorCreationFailure extends PropsProvider {
-  def props(appConfig: AppConfig): Props =
-    Props(new MockActorCreationFailure(appConfig))
+  def props(appConfig: AppConfig, executionContext: ExecutionContext): Props =
+    Props(new MockActorCreationFailure(appConfig, executionContext))
 }
 
-class MockActorCreationFailure(val appConfig: AppConfig)
+class MockActorCreationFailure(val appConfig: AppConfig, ec: ExecutionContext)
   extends BasePersistentActor
     with DefaultPersistenceEncryption {
 
@@ -28,16 +29,20 @@ class MockActorCreationFailure(val appConfig: AppConfig)
 
   throw new RuntimeException("purposefully throwing exception during construction of Actor")
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ec
 }
 
 //-------------------------
 
 object MockActorRecoveryFailure extends PropsProvider {
-  def props(appConfig: AppConfig): Props =
-    Props(new MockActorRecoveryFailure(appConfig))
+  def props(appConfig: AppConfig, executionContext: ExecutionContext): Props =
+    Props(new MockActorRecoveryFailure(appConfig, executionContext))
 }
 
-class MockActorRecoveryFailure(val appConfig: AppConfig)
+class MockActorRecoveryFailure(val appConfig: AppConfig, ec: ExecutionContext)
   extends BasePersistentActor
     with DefaultPersistenceEncryption {
 
@@ -55,6 +60,11 @@ class MockActorRecoveryFailure(val appConfig: AppConfig)
       Thread.sleep(exceptionSleepTimeInMillis)
     throw new RuntimeException("purposefully throwing exception after persistent recovery")
   }
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ec
 }
 
 case object GenerateRecoveryFailure extends ActorMessage
@@ -62,11 +72,11 @@ case object GenerateRecoveryFailure extends ActorMessage
 
 //-------------------------
 object MockActorRecoverySuccess extends PropsProvider {
-  def props(appConfig: AppConfig): Props =
-    Props(new MockActorRecoverySuccess(appConfig))
+  def props(appConfig: AppConfig, executionContext: ExecutionContext): Props =
+    Props(new MockActorRecoverySuccess(appConfig, executionContext))
 }
 
-class MockActorRecoverySuccess(val appConfig: AppConfig)
+class MockActorRecoverySuccess(val appConfig: AppConfig, ec: ExecutionContext)
   extends BasePersistentActor
     with DefaultPersistenceEncryption {
 
@@ -75,16 +85,21 @@ class MockActorRecoverySuccess(val appConfig: AppConfig)
   }
 
   override def receiveEvent: Receive = ???
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ec
 }
 
 //-------------------------
 
 object MockActorMsgHandlerFailure extends PropsProvider {
-  def props(appConfig: AppConfig): Props =
-    Props(new MockActorMsgHandlerFailure(appConfig))
+  def props(appConfig: AppConfig, executionContext: ExecutionContext): Props =
+    Props(new MockActorMsgHandlerFailure(appConfig, executionContext))
 }
 
-class MockActorMsgHandlerFailure(val appConfig: AppConfig)
+class MockActorMsgHandlerFailure(val appConfig: AppConfig, ec: ExecutionContext)
   extends BasePersistentActor
     with DefaultPersistenceEncryption {
 
@@ -95,6 +110,11 @@ class MockActorMsgHandlerFailure(val appConfig: AppConfig)
   override def receiveEvent: Receive = ???
 
   supervisorStrategy
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ec
 }
 
 case object ThrowException extends ActorMessage
@@ -103,11 +123,11 @@ case object ThrowException extends ActorMessage
 //-------------------------
 
 object MockActorPersistenceFailure extends PropsProvider {
-  def props(appConfig: AppConfig): Props =
-    Props(new MockActorPersistenceFailure(appConfig))
+  def props(appConfig: AppConfig, executionContext: ExecutionContext): Props =
+    Props(new MockActorPersistenceFailure(appConfig, executionContext))
 }
 
-class MockActorPersistenceFailure(val appConfig: AppConfig)
+class MockActorPersistenceFailure(val appConfig: AppConfig, executionContext: ExecutionContext)
   extends BasePersistentActor
     with DefaultPersistenceEncryption {
 
@@ -119,6 +139,11 @@ class MockActorPersistenceFailure(val appConfig: AppConfig)
   override def receiveEvent: Receive = {
     case _ => //nothing to do
   }
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 case object GeneratePersistenceFailure extends ActorMessage
@@ -133,19 +158,19 @@ class GeneratePersistenceFailureJournal extends TestJournal {
 
 
 trait PropsProvider {
-  def props(appConfig: AppConfig): Props
+  def props(appConfig: AppConfig, executionContext: ExecutionContext): Props
 
-  def backOffOnStopProps(appConfig: AppConfig): Props =
+  def backOffOnStopProps(appConfig: AppConfig, executionContext: ExecutionContext): Props =
     SupervisorUtil.onStopSupervisorProps(
       appConfig,
       PERSISTENT_ACTOR_BASE,
       "MockSupervisor",
-      props(appConfig)).get
+      props(appConfig, executionContext)).get
 
-  def backOffOnFailureProps(appConfig: AppConfig): Props =
+  def backOffOnFailureProps(appConfig: AppConfig, executionContext: ExecutionContext): Props =
     SupervisorUtil.onFailureSupervisorProps(
       appConfig,
       PERSISTENT_ACTOR_BASE,
       "MockSupervisor",
-      props(appConfig)).get
+      props(appConfig, executionContext)).get
 }

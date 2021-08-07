@@ -1,34 +1,40 @@
 package com.evernym.verity.protocol.testkit
 
 import akka.actor.ActorRef
-import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.testkit.TestWallet
 import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException}
+import com.evernym.verity.util.TestExecutionContextProvider
+import com.evernym.verity.util2.Status.StatusDetail
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.WalletAPIParam
 import org.json.JSONObject
 
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Try}
 
 object MockableLedgerAccess {
   val MOCK_NO_DID = "MOCK_NO_DID"
   val MOCK_NOT_ENDORSER = "MOCK_NOT_ENDORSER"
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
   def apply(): MockableLedgerAccess = {
-    new MockableLedgerAccess()
+    new MockableLedgerAccess(ecp.walletFutureExecutionContext)
   }
 
   def apply(ledgerAvailable: Boolean): MockableLedgerAccess =
-    new MockableLedgerAccess(ledgerAvailable=ledgerAvailable)
+    new MockableLedgerAccess(ecp.walletFutureExecutionContext, ledgerAvailable=ledgerAvailable)
 }
 
-class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerData.schemas01,
+class MockableLedgerAccess(walletExecutionContext: ExecutionContext,
+                           val schemas: Map[String, GetSchemaResp] = MockLedgerData.schemas01,
                            val credDefs: Map[String, GetCredDefResp] = MockLedgerData.credDefs01,
                            val ledgerAvailable: Boolean = true)
   extends LedgerAccess with MockAsyncOpRunner {
@@ -36,7 +42,7 @@ class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerD
   import MockableLedgerAccess._
   implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
-  val testWallet = new TestWallet(false)
+  val testWallet = new TestWallet(walletExecutionContext, false)
   implicit val wap: WalletAPIParam = testWallet.wap
   override val walletAccess = new WalletAccessController (
     Set(),
@@ -60,7 +66,7 @@ class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerD
     }
   }
 
-  override def writeCredDef(submitterDID: DID, credDefJson: String)
+  override def writeCredDef(submitterDID: DidStr, credDefJson: String)
                            (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
     handler {
       if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
@@ -77,7 +83,7 @@ class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerD
     }
   }
 
-  override def writeSchema(submitterDID: DID, schemaJson: String)
+  override def writeSchema(submitterDID: DidStr, schemaJson: String)
                           (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
     handler {
       if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
@@ -87,7 +93,7 @@ class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerD
     }
   }
 
-  override def prepareSchemaForEndorsement(submitterDID: DID, schemaJson: String, endorserDID: DID)
+  override def prepareSchemaForEndorsement(submitterDID: DidStr, schemaJson: String, endorserDID: DidStr)
                                           (handler: Try[LedgerRequest] => Unit): Unit = {
     handler {
       val json = new JSONObject(schemaJson)
@@ -96,7 +102,7 @@ class MockableLedgerAccess(val schemas: Map[String, GetSchemaResp] = MockLedgerD
     }
   }
 
-  override def prepareCredDefForEndorsement(submitterDID: DID, credDefJson: String, endorserDID: DID)
+  override def prepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr)
                                            (handler: Try[LedgerRequest] => Unit): Unit = {
     handler {
       val json = new JSONObject(credDefJson)

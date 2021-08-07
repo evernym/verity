@@ -1,6 +1,8 @@
 package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0
 
 import java.util.Base64
+
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{SigBlock, Timing => BaseTiming}
@@ -10,7 +12,9 @@ import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.StatusR
 import com.evernym.verity.protocol.testkit.DSL._
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.util.TestExecutionContextProvider
 
+import scala.concurrent.ExecutionContext
 import scala.language.{implicitConversions, reflectiveCalls}
 
 
@@ -20,7 +24,11 @@ abstract class QuestionAnswerBaseSpec
 
   import QuestionAnswerVars._
 
-  lazy val config: AppConfig = new TestAppConfig
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   protected implicit def EnhancedScenario(s: Scenario) = new {
     val questioner: TestEnvir = s(QUESTIONER)
@@ -56,7 +64,7 @@ abstract class QuestionAnswerBaseSpec
   override val containerNames: Set[ContainerName] = Set(QUESTIONER, RESPONDER)
 }
 
-object QuestionAnswerVars extends CommonSpecUtil {
+object QuestionAnswerVars {
   val QUESTIONER = "questioner"
   val RESPONDER = "responder"
   val QUESTION_TEXT = "ask a question"

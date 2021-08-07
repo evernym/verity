@@ -5,7 +5,8 @@ import java.util.concurrent.TimeUnit
 import akka.pattern.ask
 import akka.actor.ActorSystem
 import akka.util.Timeout
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+
+import scala.concurrent.ExecutionContext
 import com.evernym.verity.util2.Exceptions.NoResponseFromLedgerPoolServiceException
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
@@ -30,15 +31,15 @@ object LaunchPreCheck {
 
   private val logger = getLoggerByClass(getClass)
 
-  def checkReqDependencies(aac: AgentActorContext): Unit = {
-    checkAkkaEventStorageConnection(aac)(aac.system)
+  def checkReqDependencies(aac: AgentActorContext, ec: ExecutionContext): Unit = {
+    checkAkkaEventStorageConnection(aac)(aac.system, ec)
     checkWalletStorageConnection(aac)(aac.system)
-    checkLedgerPoolConnection(aac)(aac.system)
+    checkLedgerPoolConnection(aac)(aac.system, ec)
   }
 
   @tailrec
   private def checkLedgerPoolConnection(aac: AgentActorContext, delay: Int = 0)
-                                       (implicit as: ActorSystem): Unit = {
+                                       (implicit as: ActorSystem, ec: ExecutionContext): Unit = {
     try {
       if (delay > 0)
         logger.debug(s"Retrying after $delay seconds")
@@ -73,14 +74,14 @@ object LaunchPreCheck {
 
   @tailrec
   private def checkAkkaEventStorageConnection(aac: AgentActorContext, delay: Int = 0)
-                                             (implicit as: ActorSystem): Unit = {
+                                             (implicit as: ActorSystem, ec: ExecutionContext): Unit = {
     try {
       if (delay > 0)
         logger.debug(s"Retrying after $delay seconds")
       Thread.sleep(delay * 1000)    //this is only executed during agent service start time
       implicit val timeout: Timeout = Timeout(Duration.create(15, TimeUnit.SECONDS))
       val actorId = "dummy-actor-" + UUID.randomUUID().toString
-      val keyValueMapper = aac.system.actorOf(KeyValueMapper.props(aac), actorId)
+      val keyValueMapper = aac.system.actorOf(KeyValueMapper.props(ec)(aac), actorId)
       val fut = (keyValueMapper ? GetValue("dummy-key"))
           .mapTo[Option[String]]
           .recover {

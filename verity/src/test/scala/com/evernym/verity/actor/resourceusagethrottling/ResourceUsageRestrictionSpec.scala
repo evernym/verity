@@ -7,12 +7,14 @@ import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warnin
 import com.evernym.verity.actor.resourceusagethrottling.tracking.{BucketExt, ResourceUsageCommon, ResourceUsages}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util2.Status.USAGE_BLOCKED
 
 class ResourceUsageRestrictionSpec
   extends BaseResourceUsageTrackerSpec
     with ResourceUsageCommon {
-
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
   val ipAddress = "5.6.7.8"
 
   "ResourceUsageTracker" - {

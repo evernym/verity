@@ -3,6 +3,7 @@ package com.evernym.verity.actor.agent.relationship
 import java.util.UUID
 
 import akka.actor.{ActorRef, Props}
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.ShardUtil
 import com.evernym.verity.actor.testkit.{HasBasicActorSystem, TestAppConfig}
 import com.evernym.verity.testkit.{BasicAsyncSpec, CleansUpIndyClientFirst, HasTestAgentWalletAPI}
@@ -12,8 +13,11 @@ import com.evernym.verity.actor.wallet.{Close, CreateNewKey, CreateWallet, NewKe
 import com.evernym.verity.constants.ActorNameConstants.WALLET_REGION_ACTOR_NAME
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.protocol.protocols.connecting.common.LegacyRoutingDetail
+import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.vault.WalletAPIParam
 import org.scalatest.OptionValues
+
+import scala.concurrent.ExecutionContext
 
 class DidDocBuilderSpec
   extends BasicAsyncSpec
@@ -25,7 +29,7 @@ class DidDocBuilderSpec
 
   val walletActorRegion: ActorRef = createNonPersistentRegion(
       WALLET_REGION_ACTOR_NAME,
-      Props(new WalletActor(appConfig, new IndyLedgerPoolConnManager(system, appConfig)))
+      Props(new WalletActor(appConfig, new IndyLedgerPoolConnManager(system, appConfig, executionContext), executionContext))
   )
 
   implicit val walletAPIParam: WalletAPIParam = WalletAPIParam(UUID.randomUUID().toString)
@@ -41,6 +45,10 @@ class DidDocBuilderSpec
     (relDIDPair, thisAgentKey, otherAgentKey, theirAgentKey)
   }
 
+  lazy val ecp = TestExecutionContextProvider.ecp
+  override implicit lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+
   implicit lazy val didDocBuilderParam: DidDocBuilderParam =
     DidDocBuilderParam(new TestAppConfig(), Option(thisAgentKey.did))
 
@@ -49,7 +57,7 @@ class DidDocBuilderSpec
     "when building DidDoc with auth keys with and without ver keys" - {
       "should create expected DidDic" in {
         val didDoc =
-          DidDocBuilder()
+          DidDocBuilder(executionContext)
             .withDid(relDidPair.did)
             .withAuthKey(relDidPair.did, relDidPair.verKey, Set(EDGE_AGENT_KEY))
             .withAuthKey(thisAgentKey.did, "", Set.empty)
@@ -68,7 +76,7 @@ class DidDocBuilderSpec
     "when try to add duplicate auth key" - {
       "should throw appropriate exception" in {
         val ex1 = intercept[RuntimeException] {
-          DidDocBuilder()
+          DidDocBuilder(executionContext)
             .withDid(relDidPair.did)
             .withAuthKey(relDidPair.did, relDidPair.verKey, Set(EDGE_AGENT_KEY))
             .withAuthKey(relDidPair.verKey, relDidPair.verKey, Set(CLOUD_AGENT_KEY))
@@ -76,7 +84,7 @@ class DidDocBuilderSpec
         ex1.getMessage shouldBe "duplicate auth keys not allowed"
 
         val ex2 = intercept[RuntimeException] {
-          DidDocBuilder()
+          DidDocBuilder(executionContext)
             .withDid(relDidPair.did)
             .withAuthKey(relDidPair.did, relDidPair.verKey, Set(EDGE_AGENT_KEY))
             .withAuthKey(thisAgentKey.did, relDidPair.verKey, Set(CLOUD_AGENT_KEY))
@@ -87,7 +95,7 @@ class DidDocBuilderSpec
 
     "when called 'updatedDidDocWithMigratedAuthKeys'" - {
       "should respond with updated did doc with proper auth ver keys" in {
-        DidDocBuilder()
+        DidDocBuilder(executionContext)
           .withDid(relDidPair.did)
           .withAuthKey(relDidPair.did, relDidPair.verKey, Set(EDGE_AGENT_KEY))
           .withAuthKey(thisAgentKey.did, "", Set.empty)
@@ -106,7 +114,7 @@ class DidDocBuilderSpec
 
     "when called 'updatedDidDocWithMigratedAuthKeys' with key id as empty value" - {
       "should respond with updated did doc with proper auth ver keys" in {
-        DidDocBuilder()
+        DidDocBuilder(executionContext)
           .withDid(relDidPair.did)
           .withAuthKey(relDidPair.did, relDidPair.verKey, Set(EDGE_AGENT_KEY))
           .withAuthKey("", "", Set.empty)
@@ -123,7 +131,7 @@ class DidDocBuilderSpec
 
     "when called 'withAuthKeyAndEndpointDetail' for this agent's auth key and endpoint" - {
       "should update did doc as expected" in {
-        val didDoc = DidDocBuilder()
+        val didDoc = DidDocBuilder(executionContext)
           .withDid(relDidPair.did)
           .withAuthKey(relDidPair.did, relDidPair.verKey)
           .withAuthKeyAndEndpointDetail(
@@ -144,7 +152,7 @@ class DidDocBuilderSpec
 
     "when called 'withAuthKeyAndEndpointDetail' for their auth key and endpoint" - {
       "should update did doc as expected" in {
-        val didDoc = DidDocBuilder()
+        val didDoc = DidDocBuilder(executionContext)
           .withDid(relDidPair.did)
           .withAuthKey(relDidPair.did, relDidPair.verKey)
           .withAuthKeyAndEndpointDetail(
@@ -165,7 +173,7 @@ class DidDocBuilderSpec
 
     "when called 'updatedDidDocWithMigratedAuthKeys' with possible dup auth keys" - {
       "should be updated successfully" in {
-        val didDoc = DidDocBuilder()
+        val didDoc = DidDocBuilder(executionContext)
           .withDid(relDidPair.did)
           .withAuthKey(relDidPair.did, "", Set(EDGE_AGENT_KEY))
           .withAuthKeyAndEndpointDetail(
@@ -178,7 +186,7 @@ class DidDocBuilderSpec
             .updatedWithNewAuthKey(relDidPair.verKey, relDidPair.verKey, Set(RECIP_KEY))
             .updatedWithEndpoint(HttpEndpoint("1", "http://abc.xyz.com", Seq(relDidPair.did, relDidPair.verKey)))
 
-        DidDocBuilder(updatedDidDoc)
+        DidDocBuilder(executionContext, updatedDidDoc)
         .updatedDidDocWithMigratedAuthKeys(Set.empty, agentWalletAPI)
           .map { didDoc =>
             didDoc.did shouldBe relDidPair.did

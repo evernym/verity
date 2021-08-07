@@ -4,17 +4,20 @@ import com.evernym.verity.actor.wallet.{CredCreated, CredOfferCreated, CredReqCr
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.ledger.GetCredDefResp
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.didcomm.conventions.CredValueEncoderV1_0
-import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor._
-import com.evernym.verity.protocol.didcomm.decorators.{AttachmentDescriptor, Base64, PleaseAck}
+import com.evernym.verity.did.didcomm.v1.conventions.CredValueEncoderV1_0
+import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor._
+import com.evernym.verity.did.didcomm.v1.decorators.{AttachmentDescriptor, Base64, PleaseAck}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentId
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols.ProtocolHelpers
+import com.evernym.verity.protocol.protocols.{HasAppConfig, ProtocolHelpers}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.ProblemReportCodes._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Role.{Holder, Issuer}
@@ -38,6 +41,8 @@ class IssueCredential(implicit val ctx: ProtocolContextApi[IssueCredential, Role
     with IssueCredentialHelpers
     with IssueCredentialLegacy {
   import IssueCredential._
+
+  override def serviceDidKeyFormat: Boolean = ctx.serviceKeyDidFormat
 
   override def handleControl: Control ?=> Any =
     handleMainControl orElse
@@ -219,6 +224,8 @@ trait IssueCredentialHelpers
 
   import IssueCredential._
 
+  def serviceDidKeyFormat: Boolean
+
   override type Context = ProtocolContextApi[IssueCredential, Role, ProtoMsg, Event, S, String]
 
   implicit val ctx: Context
@@ -351,7 +358,7 @@ trait IssueCredentialHelpers
     }
   }
 
-  def handleRequest(credOfferRef: SegmentId, m: Ctl.Request, myPwDid: DID): Unit = {
+  def handleRequest(credOfferRef: SegmentId, m: Ctl.Request, myPwDid: DidStr): Unit = {
     ctx.withSegment[CredOffered](credOfferRef) {
       case Success(o) if o.isDefined => handleRequest(m, myPwDid, buildOfferCred(o))
       case Success(None)  => expiredSegment("Credential Offer")
@@ -359,7 +366,7 @@ trait IssueCredentialHelpers
     }
   }
 
-  def handleRequest(m: Ctl.Request, myPwDid: DID, credOffer: OfferCred): Unit = {
+  def handleRequest(m: Ctl.Request, myPwDid: DidStr, credOffer: OfferCred): Unit = {
     ctx.ledger.getCredDef(m.cred_def_id) {
       case Success(GetCredDefResp(_, Some(cdj))) => sendCredRequest(m, myPwDid, credOffer, DefaultMsgCodec.toJson(cdj))
 
@@ -379,7 +386,7 @@ trait IssueCredentialHelpers
     }
   }
 
-  def sendCredRequest(m: Ctl.Request, myPwDid: DID, credOffer: OfferCred, credDefJson: String): Unit = {
+  def sendCredRequest(m: Ctl.Request, myPwDid: DidStr, credOffer: OfferCred, credDefJson: String): Unit = {
     val credOfferJson = extractCredOfferJson(credOffer)
     ctx.wallet.createCredReq(m.cred_def_id, myPwDid, credDefJson, credOfferJson) {
       case Success(credRequest: CredReqCreated) =>
@@ -696,6 +703,7 @@ trait IssueCredentialHelpers
           offerAttachment,
           goalCode = Some("issue-vc"),
           goal = Some("To issue a credential"),
+          serviceDidKeyFormat
         )
 
         handler(Success(

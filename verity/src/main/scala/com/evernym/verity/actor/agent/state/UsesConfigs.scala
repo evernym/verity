@@ -2,25 +2,26 @@ package com.evernym.verity.actor.agent.state
 
 import java.time.ZonedDateTime
 import com.evernym.verity.util2.Exceptions.InternalServerErrorException
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status.getUnhandledError
 import com.evernym.verity.actor.agent.user.{AgentConfig, AgentConfigs, GetConfigDetail, GetConfigs}
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.cache.AGENT_ACTOR_CONFIG_CACHE_FETCHER
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.GetConfigCacheParam
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.protocols.HasAppConfig
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * supposed to be used from a pairwise actor (UserAgentPairwise actor)
  * it contains utility functions to get configs from agent actor (UserAgent actor) which has the config state
  */
-trait UsesConfigs extends HasAppConfig {
+trait UsesConfigs extends HasAppConfig with HasExecutionContextProvider {
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
-  def ownerAgentKeyDIDReq: DID
+  def ownerAgentKeyDIDReq: DidStr
   def agentConfigs: Map[String, AgentConfig]
   def agentCache: Cache
 

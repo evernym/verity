@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.metrics
 
 import akka.actor.{Actor, ActorSystem}
-import com.evernym.verity.util2.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
@@ -10,11 +9,14 @@ import com.evernym.verity.util2.Exceptions
 import org.hyperledger.indy.sdk.metrics.Metrics
 
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
 
-class LibindyMetricsCollector(implicit val actorSystem: ActorSystem) extends Actor {
+class LibindyMetricsCollector(executionContext: ExecutionContext)(implicit val actorSystem: ActorSystem)
+  extends Actor {
+
+  private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   private val logger = getLoggerByClass(getClass)
 

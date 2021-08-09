@@ -84,9 +84,13 @@ publish-docker:
     - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main"
       variables:
         INCLUDE_DOCKER_AWS_DESTINATIONS: "true"
+      when: on_success
     - if: $CI_PROJECT_NAMESPACE == "dev/verity" && $CI_COMMIT_REF_NAME == "master"
       variables:
         INCLUDE_DOCKER_AWS_DESTINATIONS: "false"
+      when: on_success
+    - if: $CI_PROJECT_NAMESPACE #This should "default" to never, unless matched above on main branches
+      when: never
 
 publish-docker-manual:
   extends:
@@ -94,13 +98,17 @@ publish-docker-manual:
     - .publish-common-docker
   dependencies:
     - package-manual
-  only:
-    refs:
-      - master
-      - main
-      - tags
-      - merge_requests
-  when: manual
+  rules:
+    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main"
+      variables:
+        INCLUDE_DOCKER_AWS_DESTINATIONS: "true"
+      when: manual
+    - if: $CI_PROJECT_NAMESPACE == "dev/verity" && $CI_COMMIT_REF_NAME == "master"
+      variables:
+        INCLUDE_DOCKER_AWS_DESTINATIONS: "false"
+      when: manual
+    - if: $CI_PROJECT_NAMESPACE #This should "default" to never, unless matched above on main branches
+      when: never
 
 .publish-common-helm:
   tags:

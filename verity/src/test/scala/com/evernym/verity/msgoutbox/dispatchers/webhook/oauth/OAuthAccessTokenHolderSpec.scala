@@ -19,21 +19,21 @@ class OAuthAccessTokenHolderSpec
   "OAuth access token holder" - {
     "when asked for token for first time" - {
       "should be successful" in {
-        MockOAuthAccessTokenRefresher.tokenRefreshCount shouldBe 0
+        val prevRefreshCount = MockOAuthAccessTokenRefresher.tokenRefreshCount
 
         val testProbe = createTestProbe[OAuthAccessTokenHolder.Reply]()
         val oAuthAccessTokenHolder = buildOAuthAccessTokenHolder(tokenExpiresInSeconds = 60)
 
         oAuthAccessTokenHolder ! GetToken(testProbe.ref)
         val tokenReceived1 = testProbe.expectMessageType[AuthToken]
-        MockOAuthAccessTokenRefresher.tokenRefreshCount shouldBe 1
+        MockOAuthAccessTokenRefresher.tokenRefreshCount shouldBe prevRefreshCount + 1
 
         Thread.sleep(4000)
 
         oAuthAccessTokenHolder ! GetToken(testProbe.ref)
         val tokenReceived2 = testProbe.expectMessageType[AuthToken]
         tokenReceived2 shouldBe tokenReceived1
-        MockOAuthAccessTokenRefresher.tokenRefreshCount shouldBe 1
+        MockOAuthAccessTokenRefresher.tokenRefreshCount shouldBe prevRefreshCount + 1
       }
     }
 

@@ -5,7 +5,7 @@ import akka.cluster.sharding.ShardRegion.{ExtractEntityId, ExtractShardId}
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 import com.evernym.verity.actor.persistence.SupervisorUtil.{logger, supervisorProps}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants._
 
 import scala.concurrent.duration.FiniteDuration
@@ -43,7 +43,7 @@ case class ShardIdExtractor(appConfig: AppConfig, regionName: String) {
 
   lazy val numberOfShards: Int =
     appConfig
-      .getConfigIntOption(s"akka.cluster.region.$normalizedRegionName.total-shards")
+      .getIntOption(s"akka.cluster.region.$normalizedRegionName.total-shards")
       .getOrElse(100)
 
   def getShardId(entityId: String): String =

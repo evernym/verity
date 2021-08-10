@@ -18,10 +18,10 @@ trait LegacyTransformationRegistry { this: HasTransformationRegistry =>
   val legacyStateObjectMapper: ObjectCodeMapperBase = DEPRECATED_StateCodeMapper
 
   lazy val legacyEventTransformer: Any <=> DeprecatedEventMsg =
-    createLegacyEventTransformer(persistenceEncryptionKey, legacyEventObjectMapper)
+    createLegacyEventTransformer(persistenceEncryptionKey, this.appConfig, legacyEventObjectMapper)
 
   lazy val legacyStateTransformer: Any <=> DeprecatedStateMsg =
-    createLegacyStateTransformer(persistenceEncryptionKey, legacyStateObjectMapper)
+    createLegacyStateTransformer(persistenceEncryptionKey, this.appConfig, legacyStateObjectMapper)
 
   /**
    * These constants should only be used to lookup legacy event/state transformers

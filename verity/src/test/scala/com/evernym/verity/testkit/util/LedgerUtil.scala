@@ -1,6 +1,6 @@
 package com.evernym.verity.testkit.util
 
-import com.evernym.verity.Status.StatusDetailException
+import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
@@ -9,7 +9,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter, TransactionAuthorAgreement}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.testkit.HasDefaultTestWallet
 import com.evernym.verity.util.OptionUtil
 import com.evernym.verity.util.Util._
@@ -17,17 +17,19 @@ import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.ledger.Ledger._
 import org.hyperledger.indy.sdk.pool.Pool
-
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
-import scala.concurrent.Await
+
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.util.{Failure, Success}
 
 
 class LedgerUtil (val appConfig: AppConfig,
                   val poolConfigName: Option[String],
-                  val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y",
+                  executionContext: ExecutionContext,
+                  walletExecutionContext: ExecutionContext,
+                  val submitterDID: DidStr = "Th7MpTaRZVRYnPiabds81Y",
                   val submitterKeySeed: String = "000000000000000000000000Steward1",
                   val submitterRole: String = "STEWARD",
                   val taa: Option[TransactionAuthorAgreement] = None,
@@ -47,6 +49,7 @@ class LedgerUtil (val appConfig: AppConfig,
     val pc = new IndyLedgerPoolConnManager(
       ActorSystemVanilla("ledger-pool"),
       appConfig,
+      executionContext,
       poolConfigName,
       genesisTxnPath
     )
@@ -54,7 +57,7 @@ class LedgerUtil (val appConfig: AppConfig,
     pc
   }
   // Read requests don't require a particular submitterDID, so here is a random one
-  private val privateGetDID: DID = "KZyKVMqt5ShMvxLF1zKM7F"
+  private val privateGetDID: DidStr = "KZyKVMqt5ShMvxLF1zKM7F"
   private val respWaitTime: FiniteDuration = Duration.create(20, TimeUnit.SECONDS)
 
   Pool.setProtocolVersion(LEDGER_TXN_PROTOCOL_V2).get
@@ -81,13 +84,13 @@ class LedgerUtil (val appConfig: AppConfig,
     }
   }
 
-  def getWalletName(did: DID): String = did + "local"
+  def getWalletName(did: DidStr): String = did + "local"
 
-  def setupWallet(did: DID, seed: String): NewKeyCreated = {
+  def setupWallet(did: DidStr, seed: String): NewKeyCreated = {
     testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(Option(did), Option(seed)))
   }
 
-  def bootstrapNewDID(did: DID, verKey: VerKey, role: String = null): Unit = {
+  def bootstrapNewDID(did: DidStr, verKey: VerKeyStr, role: String = null): Unit = {
     val req = buildGetNymRequest(privateGetDID, did).get
     val response = executeLedgerRequest(req)
 
@@ -127,12 +130,12 @@ class LedgerUtil (val appConfig: AppConfig,
     sendAddAttrib(raw)
   }
 
-  def sendGetAttrib(did: DID, attrName: String): LedgerResponse = {
+  def sendGetAttrib(did: DidStr, attrName: String): LedgerResponse = {
     val req = buildGetAttribRequest(submitterDID, did, attrName, null, null).get
     executeLedgerRequest(req)
   }
 
-  def setEndpointUrl(did: DID, ep: String): LedgerResponse = {
+  def setEndpointUrl(did: DidStr, ep: String): LedgerResponse = {
     val raw = getJsonStringFromMap (Map(URL -> ep))
     sendAddAttrib(raw)
   }
@@ -179,7 +182,7 @@ class LedgerUtil (val appConfig: AppConfig,
     assert(txnTime.asInstanceOf[Int] > 0, "txnTime must be greater than zero")
   }
 
-  def checkSchemaOnLedger(did: DID, name: String, version:String): Unit = {
+  def checkSchemaOnLedger(did: DidStr, name: String, version:String): Unit = {
     val schema_id = s"$did:2:$name:$version"
     val req = buildGetSchemaRequest(privateGetDID, schema_id).get
     val response = executeLedgerRequest(req)
@@ -200,7 +203,7 @@ class LedgerUtil (val appConfig: AppConfig,
     checkTxn(response)
   }
 
-  def checkDidOnLedger(did: DID, verkey: VerKey, role: String = null): Unit = {
+  def checkDidOnLedger(did: DidStr, verkey: VerKeyStr, role: String = null): Unit = {
     val req = buildGetNymRequest(privateGetDID, did).get
     val response = executeLedgerRequest(req)
 
@@ -216,4 +219,9 @@ class LedgerUtil (val appConfig: AppConfig,
       case _ =>
     }
   }
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
 }

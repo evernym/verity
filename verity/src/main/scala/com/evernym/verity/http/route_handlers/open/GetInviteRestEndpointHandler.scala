@@ -6,8 +6,8 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, get, handleExceptions, logRequestResult, parameters, pathPrefix, _}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import com.evernym.verity.Exceptions.{BadRequestErrorException, NotImplementedErrorException}
-import com.evernym.verity.Status.{AGENT_NOT_YET_CREATED, DATA_NOT_FOUND, VALIDATION_FAILED}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, NotImplementedErrorException}
+import com.evernym.verity.util2.Status.{AGENT_NOT_YET_CREATED, DATA_NOT_FOUND, VALIDATION_FAILED}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_ENDPOINT
@@ -15,10 +15,11 @@ import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCo
 import com.evernym.verity.actor.{ActorItemDetail, ForIdentifier, GetDetail}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.constants.Constants.{UNKNOWN_RECIP_PARTICIPANT_ID, UNKNOWN_SENDER_PARTICIPANT_ID}
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.protocol.container.actor.{ActorProtocol, MsgEnvelope, ProtocolCmd}
-import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, MsgId, ProtoDef}
+import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, MsgId, ProtoDef}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{GetInviteDetail_MFV_0_5, ConnectingProtoDef => ConnectingProtoDef_v_0_5}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{GetInviteDetail_MFV_0_6, ConnectingProtoDef => ConnectingProtoDef_v_0_6}
@@ -68,7 +69,7 @@ trait GetInviteRestEndpointHandler
     handleGetInviteDetailFut(getInviteDetailFut)
   }
 
-  protected def getInviteDetailByDIDAndUid(DID: DID, uid: MsgId): Future[Any] = {
+  protected def getInviteDetailByDIDAndUid(DID: DidStr, uid: MsgId): Future[Any] = {
     val gr = GetRoute(DID)
     val respFut = platform.agentActorContext.agentMsgRouter.execute(gr) flatMap {
       case Some(aa: ActorAddressDetail) =>
@@ -105,7 +106,7 @@ trait GetInviteRestEndpointHandler
     }
   }
 
-  protected def handleGetInviteByDIDAndUidReq(DID: DID, uid: MsgId)(implicit remoteAddress: RemoteAddress): Route = {
+  protected def handleGetInviteByDIDAndUidReq(DID: DidStr, uid: MsgId)(implicit remoteAddress: RemoteAddress): Route = {
     addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_did", clientIpAddress, None)
     complete {
       getInviteDetailByDIDAndUid(DID, uid).map[ToResponseMarshallable] {

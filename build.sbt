@@ -59,11 +59,11 @@ val debPkgDepLibIndyMinVersion = libIndyVer
 //dependency versions
 val indyWrapperVer  = "1.15.0-dev-1618"
 
-val akkaVer         = "2.6.14"
+val akkaVer         = "2.6.15"
 val akkaHttpVer     = "10.2.4"
 val akkaMgtVer      = "1.1.0"
-val alpAkkaVer      = "3.0.1"
-val kamonVer        = "2.2.0"
+val alpAkkaVer      = "3.0.2"
+val kamonVer        = "2.2.1"
 val kanelaAgentVer  = "1.0.10"
 val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
                                   // around base64 decoding etc, should look into it.
@@ -72,7 +72,7 @@ val sdnotifyVer     = "1.3"
 //test dependency versions
 val scalatestVer    = "3.2.9"
 val mockitoVer      = "1.16.37"
-val veritySdkVer    = "0.4.5-77b158ab"
+val veritySdkVer    = "0.4.9-1024e509"
 val vcxWrapperVer   = "0.10.1.1131"
 
 // compiler plugin versions
@@ -167,7 +167,7 @@ lazy val integrationTests = (project in file("integration-tests"))
 
 lazy val settings = Seq(
   organization := "com.evernym",
-  scalaVersion := "2.12.13",
+  scalaVersion := "2.12.14",
 
   scalacOptions := Seq(
     "-feature",
@@ -188,7 +188,7 @@ lazy val settings = Seq(
   resolvers += Resolver.mavenLocal,
   resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public",
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
-  resolvers += "evernym-dev" at "https://evernym.mycloudrepo.io/public/repositories/evernym-dev/",
+  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",
 
   Test / parallelExecution := false,
   Test / logBuffered := false,
@@ -275,6 +275,10 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-cluster-sharding" % akkaVer,
     akkaGrp %% "akka-http" % akkaHttpVer,
 
+    akkaGrp %% "akka-actor-typed" % akkaVer,
+    akkaGrp %% "akka-persistence-typed" % akkaVer,
+    akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
+
     //akka persistence dependencies
     akkaGrp %% "akka-persistence-dynamodb" % "1.1.1",
 
@@ -297,8 +301,8 @@ lazy val commonLibraryDependencies = {
     "org.hyperledger" % "indy" % indyWrapperVer,
 
     //logging dependencies
-    "com.typesafe.scala-logging" %% "scala-logging" % "3.9.3",
-    "ch.qos.logback" % "logback-classic" % "1.2.3",
+    "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4",
+    "ch.qos.logback" % "logback-classic" % "1.2.5",
     akkaGrp %% "akka-slf4j" % akkaVer,
 
     //message codec dependencies (native classes to json and vice versa) [used by JacksonMsgCodec]
@@ -328,7 +332,7 @@ lazy val commonLibraryDependencies = {
     "org.msgpack" %% "msgpack-scala" % "0.8.13",  //used by legacy pack/unpack operations
     "org.fusesource.jansi" % "jansi" % "2.3.2",    //used by protocol engine for customized logging
     "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
-    "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.4",  //used for libindy sync api calls
+    "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.5",  //used for libindy sync api calls
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
     //"org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0",   //commented as seemed not used
 
@@ -344,10 +348,6 @@ lazy val commonLibraryDependencies = {
     "org.scalatest" %% "scalatest-freespec" % scalatestVer,
     "org.scalatest" %% "scalatest-shouldmatchers" % scalatestVer,
     "org.mockito" %% "mockito-scala-scalatest" % mockitoVer,
-
-    akkaGrp %% "akka-actor-typed" % akkaVer,
-    akkaGrp %% "akka-persistence-typed" % akkaVer,
-    akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
 
     akkaGrp %% "akka-testkit" % akkaVer,
     akkaGrp %% "akka-persistence-testkit" % akkaVer,

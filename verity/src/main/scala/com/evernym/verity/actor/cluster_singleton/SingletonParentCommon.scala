@@ -5,40 +5,41 @@ import akka.cluster.Cluster
 import akka.cluster.ClusterEvent._
 import akka.pattern.ask
 import akka.util.Timeout
-import com.evernym.verity.Exceptions
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.maintenance.ActorStateCleanupManager
-import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.{ErrorEvent, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.ResourceBlockingStatusMngr
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.ResourceWarningStatusMngr
 import com.evernym.verity.actor.cluster_singleton.watcher.WatcherManager
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
-import com.evernym.verity.actor.cluster_singleton.maintenance.{AgentRoutesMigrator, RouteMaintenanceHelper}
+import com.evernym.verity.actor.cluster_singleton.maintenance.AgentRoutesMigrator
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants.{AGENT_ROUTES_MIGRATOR, _}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.metrics.{AllNodeMetricsData, NodeMetricsData}
 import com.evernym.verity.util.Util._
+import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success}
 
 
 object SingletonParent {
-  def props(name: String)(implicit agentActorContext: AgentActorContext): Props = Props(new SingletonParent(name))
+  def props(name: String, ec: ExecutionContext)(implicit agentActorContext: AgentActorContext): Props =
+    Props(new SingletonParent(name, ec))
 }
 
-class SingletonParent(val name: String)(implicit val agentActorContext: AgentActorContext)
+class SingletonParent(val name: String, executionContext: ExecutionContext)(implicit val agentActorContext: AgentActorContext)
   extends CoreActorExtended
-    with ShardRegionFromActorContext {
+    with ShardRegionFromActorContext{
+
+  implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   override final def receiveCmd: Receive = {
     case forCmd: ForWatcherManagerChild => forwardToChild(WATCHER_MANAGER, forCmd)
@@ -50,7 +51,6 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
 
     case RefreshConfigOnAllNodes        => refreshConfigOnAllNodes()
     case oc: OverrideConfigOnAllNodes   => overrideConfigOnAllNodes(oc)
-    case sm: SendMetricsOfAllNodes      => sendMetricsOfAllNodes(sm)
   }
 
   override def sysCmdHandler: Receive = {
@@ -74,13 +74,12 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
 
   private def allSingletonPropsMap: Map[String, Props] =
     Map(
-      KeyValueMapper.name -> KeyValueMapper.props,
-      WatcherManager.name -> WatcherManager.props(appConfig),
-      ResourceBlockingStatusMngr.name -> ResourceBlockingStatusMngr.props(agentActorContext),
-      ResourceWarningStatusMngr.name -> ResourceWarningStatusMngr.props(agentActorContext),
-      ActorStateCleanupManager.name -> ActorStateCleanupManager.props(appConfig),
-      RouteMaintenanceHelper.name -> RouteMaintenanceHelper.props(appConfig, agentActorContext.agentMsgRouter),
-      AgentRoutesMigrator.name -> AgentRoutesMigrator.props(appConfig)
+      KeyValueMapper.name -> KeyValueMapper.props(futureExecutionContext),
+      WatcherManager.name -> WatcherManager.props(appConfig, futureExecutionContext),
+      ResourceBlockingStatusMngr.name -> ResourceBlockingStatusMngr.props(agentActorContext, futureExecutionContext),
+      ResourceWarningStatusMngr.name -> ResourceWarningStatusMngr.props(agentActorContext, futureExecutionContext),
+      ActorStateCleanupManager.name -> ActorStateCleanupManager.props(appConfig, futureExecutionContext),
+      AgentRoutesMigrator.name -> AgentRoutesMigrator.props(appConfig, futureExecutionContext)
     )
 
   implicit def appConfig: AppConfig = agentActorContext.appConfig
@@ -163,19 +162,6 @@ class SingletonParent(val name: String)(implicit val agentActorContext: AgentAct
     }
   }
 
-  private def sendMetricsOfAllNodes(sm: SendMetricsOfAllNodes): Unit = {
-    logger.debug(s"fetching metrics from nodes: $nodes")
-    val f = sendCmdToAllNodeSingletonsWithReducedFuture(GetNodeMetrics(sm.filters))
-    val sndr = sender()
-    f.onComplete{
-      case Success(result) =>
-        sndr ! AllNodeMetricsData(result.asInstanceOf[Iterable[NodeMetricsData]].toList)
-      case Failure(e: Throwable) =>
-        logger.error("could not fetch metrics", (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
-        handleException(e, sndr)
-    }
-  }
-
   private def overrideConfigOnAllNodes(oc: OverrideConfigOnAllNodes): Unit = {
     logger.debug(s"override config on nodes: $nodes")
     val f = sendCmdToAllNodeSingletonsWithReducedFuture(OverrideNodeConfig(oc.configStr))
@@ -236,9 +222,6 @@ case class ForAgentRoutesMigrator(override val cmd: Any) extends ForSingletonChi
 }
 trait ForWatcherManager extends ForSingletonChild
 
-case class ForRouteMaintenanceHelper(override val cmd: Any) extends ForSingletonChild {
-  def getActorName: String = ROUTE_MAINTENANCE_HELPER
-}
 case object NodeAddedToClusterSingleton extends ActorMessage
 
 case class SendNodeAddedAck(address: Address, curAttemptCount: Int = 1, maxAttemptCount: Int = 10) extends ActorMessage

@@ -1,24 +1,23 @@
 package com.evernym.verity.actor.resourceusagethrottling
 
-import com.evernym.verity.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.actor._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking._
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning._
-import com.evernym.verity.actor.node_singleton.{ResourceBlockingStatusMngrCache, ResourceWarningStatusMngrCache}
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelperExtension
 import com.evernym.verity.actor.resourceusagethrottling.tracking._
-import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
-import com.evernym.verity.actor._
 import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.route_handlers.restricted.{ResourceUsageCounterDetail, UpdateResourcesUsageCounter}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
 import org.scalatest.time.{Seconds, Span}
+import com.evernym.verity.util2.ExecutionContextProvider
 
-import java.time.ZonedDateTime
-import scala.concurrent.duration._
 
 class ResourceUsageViolationSpec
   extends BaseResourceUsageTrackerSpec {
@@ -34,14 +33,15 @@ class ResourceUsageViolationSpec
   val user3IpAddress = "127.3.0.3"
   val user4IpAddress = "127.4.0.4"
 
-  val user1DID = OWNER_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
-  val user2DID = OWNER_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
-  val user3DID = COUNTERPARTY_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
-  val user4DID = COUNTERPARTY_ID_PREFIX + CommonSpecUtil.generateNewDid().DID
+  val user1DID = OWNER_ID_PREFIX + CommonSpecUtil.generateNewDid().did
+  val user2DID = OWNER_ID_PREFIX + CommonSpecUtil.generateNewDid().did
+  val user3DID = COUNTERPARTY_ID_PREFIX + CommonSpecUtil.generateNewDid().did
+  val user4DID = COUNTERPARTY_ID_PREFIX + CommonSpecUtil.generateNewDid().did
 
   val createMsgConnReq: String = MSG_FAMILY_CONNECTING + "/" + MSG_TYPE_CREATE_MSG + "_" + CREATE_MSG_TYPE_CONN_REQ
 
   def resourceUsageTrackerSpec() {
+    val resourceUsageRules = ResourceUsageRuleHelperExtension(system).get().resourceUsageRules
 
     // Begin resources and helper functions used in the testResourceGetsBlockedWarnedIfExceedsSetLimit test
     val resourceUsageParams: List[ResourceUsageParam] = List(
@@ -88,7 +88,7 @@ class ResourceUsageViolationSpec
         resourceUsageParams.foreach { rup =>
           try {
             logger.debug(s"Adding resource usage for resourceName: ${rup.resourceName} and IP: ${rup.ipAddress} and user DID: ${rup.userId}")
-            sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, rup.resourceName, rup.ipAddress, rup.userId)
+            sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, rup.resourceName, rup.ipAddress, rup.userId, resourceUsageRules)
             expectNoMessage()
           } catch {
             case e: BadRequestErrorException =>
@@ -213,22 +213,20 @@ class ResourceUsageViolationSpec
         }
       }
 
-      /* Unblock resources using BlockCaller with a block period of 0 seconds. Expect all resources to be unblocked
-       * AND all counts for each resource to be reset/set to 0
+      /* Unblock resources using BlockCaller with a block period of 0 seconds and allBlockedResources flag set to Y.
+       * Expect all resources to be unblocked AND all counts for each resource to be reset/set to 0.
        * */
       expectedBlockedResources.foreach { rup =>
-        // Block resource resourceToUnblock._2 for caller resourceToUnblock._1 with a period of 0 to clear/delete the
-        // block instead of unblock indefinitely
-        singletonParentProxy ! ForResourceBlockingStatusMngr(BlockCaller(rup.entityId, blockPeriod=Option(0),
-          allBlockedResources=Option("Y")))
-        fishForMessage(10.seconds, hint="Failed to process all response messages from BlockCaller") {
-          case rbl: CallerResourceBlocked if rbl.callerId.equals(rup.entityId) && rbl.blockPeriod == 0 => false
-          case bl: CallerBlocked if bl.callerId.equals(rup.entityId) && bl.blockPeriod == 0 => true
-          case _ => false
+        singletonParentProxy ! ForResourceBlockingStatusMngr(BlockCaller(rup.entityId, blockPeriod=Some(0),
+          allBlockedResources=Some("Y")))
+        expectMsgPF() {
+          case ub: CallerBlocked =>
+            ub.callerId shouldBe rup.entityId
+            ub.blockPeriod shouldBe 0
         }
       }
 
-      // Expect no blocked resources
+      // Expect no blocked entities and resources
       eventually (timeout(Span(10, Seconds))) {
         // Give time for the system to process all of the BlockCaller messages. The sleep causes GetBlockedList
         // to be called once per second for up to 10 seconds.
@@ -254,66 +252,54 @@ class ResourceUsageViolationSpec
       // Test warned
       //
       // The following rule in resource-usage-rule.conf (resource-usage-rule.conf file used for tests) causes
-      // violation-action group 50 to call log-msg and warn-resource after the fifth iteration, when
-      // allowed-counts of 5 is exceeded on bucket 300 (5 connecting/CREATE_MSG_connReq allowed within 300 seconds).
+      // violation-action group 70 to call log-msg, warn-entity and block-resource after the second iteration, when
+      // allowed-counts of 2 is exceeded on bucket -1 (infinite bucket)
+      // (2 connecting/CREATE_MSG_connReq allowed for lifetime).
+      // (Block from the resource for the entity was already removed earlier.)
       //
-      // 300: {"allowed-counts": 5, "violation-action-id": 50}
+      // -1: {"allowed-counts": 2, "violation-action-id": 70, "persist-usage-state": true}
       //
-      // ... where violation-action group 50 is defined as:
+      // ... where violation-action group 70 is defined as:
       //
-      // # suspicious, log it
-      // 50 {
+      // # log it and block only resource
+      // 70 {
       //   log-msg: {"level": "info"}
-      //   warn-resource: {"entity-types": "ip", "period": 600}
+      //   warn-entity: {"entity-types": "ip", "period": -1}
+      //   block-resource: {"entity-types": "ip", "period": 600}
       // }
       //
-      // Expect both a warning on the connecting/CREATE_MSG_connReq resource
-      // (warn-resource from violation-action group 50)
-      // and a warning on the caller's IP
-      // (warn-entity from violation-action group 70 - see "Test blocked" comment above)
+      // Expect a warning on the caller's IP
       eventually {
         singletonParentProxy ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = true, onlyUnwarned = false,
           onlyActive = true, inChunks = false))
         expectMsgPF() {
-          case bl: UsageWarningStatusChunk if bl.usageWarningStatus.nonEmpty =>
+          case wl: UsageWarningStatusChunk =>
+            wl.usageWarningStatus.contains(user1IpAddress) shouldBe true
+            wl.usageWarningStatus(user1IpAddress).status.warnFrom.nonEmpty shouldBe true
+            wl.usageWarningStatus(user1IpAddress).status.warnTill.isEmpty shouldBe true
+            wl.usageWarningStatus(user1IpAddress).status.unwarnFrom.isEmpty shouldBe true
+            wl.usageWarningStatus(user1IpAddress).status.unwarnTill.isEmpty shouldBe true
+            wl.usageWarningStatus(user1IpAddress).resourcesStatus.isEmpty shouldBe true
         }
       }
 
-      // Remove warning on the connecting/CREATE_MSG_connReq resource
-      singletonParentProxy ! ForResourceWarningStatusMngr(UnwarnResourceForCaller(user1IpAddress,
-        createMsgConnReq, Some(ZonedDateTime.now())))
+      /* Unwarn the caller's IP using WarnCaller with a warn period of 0 seconds and allWarnedResources flag set to Y.
+       * Expect the caller's IP to be unwarned.
+       * */
+      singletonParentProxy ! ForResourceWarningStatusMngr(WarnCaller(user1IpAddress, warnPeriod=Some(0),
+        allWarnedResources=Some("Y")))
       expectMsgPF() {
-        case uu: CallerResourceUnwarned if uu.callerId == user1IpAddress && uu.resourceName == createMsgConnReq =>
+        case uw: CallerWarned =>
+          uw.callerId shouldBe user1IpAddress
+          uw.warnPeriod shouldBe 0
       }
-      // Expect the resource warning to be removed (resourcesStatus is empty), but the IP warning to remain
-      // (status.warnFrom is non-empty and status.warnTill is empty)
+
+      // Expect no warned entities and resources
       eventually {
         singletonParentProxy ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = true, onlyUnwarned = false,
           onlyActive = true, inChunks = false))
         expectMsgPF() {
-          case wl: UsageWarningStatusChunk if wl.usageWarningStatus.nonEmpty &&
-            wl.usageWarningStatus.contains(user1IpAddress) &&
-            wl.usageWarningStatus(user1IpAddress).status.warnFrom.nonEmpty &&
-            wl.usageWarningStatus(user1IpAddress).status.warnTill.isEmpty &&
-            wl.usageWarningStatus(user1IpAddress).status.unwarnFrom.isEmpty &&
-            wl.usageWarningStatus(user1IpAddress).status.unwarnTill.isEmpty &&
-            wl.usageWarningStatus(user1IpAddress).resourcesStatus.isEmpty =>
-        }
-      }
-
-      singletonParentProxy ! ForResourceWarningStatusMngr(WarnCaller(user1IpAddress, warnPeriod=Option(0),
-        allWarnedResources=Option("Y")))
-      fishForMessage(10.seconds, hint="Failed to process all response messages from WarnCaller") {
-        case w: CallerWarned if w.callerId.equals(user1IpAddress) && w.warnPeriod == 0 => true
-        case _ => false
-      }
-
-      // Expect resource and caller warnings for caller user1IpAddress to be removed
-      eventually {
-        singletonParentProxy ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = true, onlyUnwarned = false,
-          onlyActive = true, inChunks = false))
-        expectMsgPF() {
-          case wl: UsageWarningStatusChunk if wl.usageWarningStatus.isEmpty =>
+          case wl: UsageWarningStatusChunk => wl.usageWarningStatus.isEmpty shouldBe true
         }
       }
 
@@ -330,19 +316,19 @@ class ResourceUsageViolationSpec
           )))
         expectMsg(Done)
 
-        sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, createMsgConnReq, user1IpAddress, None)
+        sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, createMsgConnReq, user1IpAddress, None, resourceUsageRules)
         expectNoMessage()
 
         // Expect usageBlockingStatus and usageWarningStatus to continue to be empty
         singletonParentProxy ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = true, onlyUnblocked=false,
           onlyActive=true, inChunks = false))
         expectMsgPF() {
-          case bl: UsageBlockingStatusChunk if bl.usageBlockingStatus.isEmpty =>
+          case bl: UsageBlockingStatusChunk => bl.usageBlockingStatus.isEmpty shouldBe true
         }
         singletonParentProxy ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = true, onlyUnwarned=false,
           onlyActive=true, inChunks = false))
         expectMsgPF() {
-          case wl: UsageWarningStatusChunk if wl.usageWarningStatus.isEmpty =>
+          case wl: UsageWarningStatusChunk => wl.usageWarningStatus.isEmpty shouldBe true
         }
       }
     }
@@ -351,9 +337,9 @@ class ResourceUsageViolationSpec
 
       "when sent AddResourceUsage command for two different IP addresses" - {
         "should succeed and respond with no message (async)" in {
-          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user1IpAddress, Some(user1DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user1IpAddress, Some(user1DID), resourceUsageRules)
           expectNoMessage()
-          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user2IpAddress, Some(user2DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user2IpAddress, Some(user2DID), resourceUsageRules)
           expectNoMessage()
         }
       }
@@ -383,9 +369,9 @@ class ResourceUsageViolationSpec
 
       "when sent same AddResourceUsage commands again" - {
         "should respond with no message (async)" in {
-          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user1IpAddress, Some(user1DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user1IpAddress, Some(user1DID), resourceUsageRules)
           expectNoMessage()
-          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user2IpAddress, Some(user2DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_ENDPOINT, "resource1", user2IpAddress, Some(user2DID), resourceUsageRules)
           expectNoMessage()
         }
       }
@@ -415,9 +401,9 @@ class ResourceUsageViolationSpec
 
       "when sent same AddResourceUsage command for another resource type" - {
         "should respond with no message (async)" in {
-          sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, createMsgConnReq, user1IpAddress, None)
+          sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, createMsgConnReq, user1IpAddress, None, resourceUsageRules)
           expectNoMessage()
-          sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, DUMMY_MSG, user2IpAddress, Some(user2DID))
+          sendToResourceUsageTracker(RESOURCE_TYPE_MESSAGE, DUMMY_MSG, user2IpAddress, Some(user2DID), resourceUsageRules)
           expectNoMessage()
         }
       }
@@ -550,341 +536,12 @@ class ResourceUsageViolationSpec
       }
     }
 
-    "ResourceBlockingStatusMngr" - {
-
-      "when sent GetBlockedList command" - {
-        "should respond with no resources/callers blocked" in {
-          // Expect no blocked resources
-          eventually(timeout(Span(10, Seconds))) {
-            singletonParentProxy ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = true, onlyUnblocked = false,
-              onlyActive = true, inChunks = false))
-            expectMsgPF() {
-              case bl: UsageBlockingStatusChunk if bl.usageBlockingStatus.isEmpty =>
-            }
-          }
-        }
-      }
-
-      s"when sent BlockCaller command for $user1IpAddress" - {
-        "should respond with CallerBlocked" in {
-          singletonParentProxy ! ForResourceBlockingStatusMngr(BlockCaller(user1IpAddress))
-          expectMsgPF() {
-            case ub: CallerBlocked if ub.callerId == user1IpAddress =>
-          }
-        }
-      }
-
-      "when sent GetBlockedList command" - {
-        s"should respond with blocked list containing $user1IpAddress" in {
-          singletonParentProxy ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = true, onlyUnblocked=false,
-            onlyActive=true, inChunks = false))
-          expectMsgPF() {
-            case bl: UsageBlockingStatusChunk if
-            bl.usageBlockingStatus.size == 1 &&
-              bl.usageBlockingStatus.contains(user1IpAddress) =>
-          }
-          eventually {
-            ResourceBlockingStatusMngrCache.getOnlyBlocked().size shouldBe 1
-          }
-        }
-      }
-
-      s"when sent BlockCaller command for $user2IpAddress with some blocking time" - {
-        "should respond with CallerBlocked" in {
-          singletonParentProxy ! ForResourceBlockingStatusMngr(
-            BlockCaller(user2IpAddress, blockPeriod = Option(600)))
-          expectMsgPF() {
-            case ub: CallerBlocked if ub.callerId == user2IpAddress && ub.blockPeriod==600 =>
-          }
-        }
-      }
-
-      "when sent GetBlockedList command again" - {
-        s"should respond with blocked list containing $user2IpAddress" in {
-          singletonParentProxy ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = true, onlyUnblocked=false,
-            onlyActive=true, inChunks = false))
-          expectMsgPF() {
-            case bl: UsageBlockingStatusChunk if
-            bl.usageBlockingStatus.size == 2 &&
-              bl.usageBlockingStatus.contains(user2IpAddress) =>
-          }
-          eventually {
-            ResourceBlockingStatusMngrCache.getOnlyBlocked().size shouldBe 2
-          }
-        }
-      }
-
-      s"when sent BlockResourceForCaller command for $user3IpAddress" - {
-        "should respond with CallerResourceBlocked" in {
-          singletonParentProxy ! ForResourceBlockingStatusMngr(
-            BlockResourceForCaller(user3IpAddress, "resource1", Some(ZonedDateTime.now()), Some(60)))
-          expectMsgPF() {
-            case urb: CallerResourceBlocked if
-            urb.callerId==user3IpAddress &&
-              urb.resourceName=="resource1" &&
-              urb.blockPeriod == 60 =>
-          }
-        }
-      }
-
-      s"when sent BlockResourceForCaller command for $user3IpAddress for two more resources" - {
-        "should respond with CallerResourceBlocked" in {
-          List("resource2", "resource3").foreach { rn =>
-            singletonParentProxy ! ForResourceBlockingStatusMngr(
-              BlockResourceForCaller(user3IpAddress, rn, Some(ZonedDateTime.now()), Some(60)))
-            expectMsgPF() {
-              case urb: CallerResourceBlocked if
-              urb.callerId == user3IpAddress &&
-                urb.resourceName == rn &&
-                urb.blockPeriod == 60 =>
-            }
-          }
-        }
-      }
-
-      "when sent GetBlockedList command" - {
-        "should respond with blocked list containing user3 for resource1" in {
-          singletonParentProxy ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = false,
-            onlyUnblocked=false, onlyActive=false, inChunks = true))
-          expectMsgPF() {
-            case rubd: UsageBlockingStatusChunk if
-            rubd.usageBlockingStatus.size == expectedBlockedResources.size + 1 &&
-              rubd.usageBlockingStatus(user3IpAddress).resourcesStatus.contains("resource1") =>
-          }
-        }
-      }
-
-      s"when sent UnblockCaller command for $user3IpAddress" - {
-        "should respond with CallerUnblocked" in {
-          singletonParentProxy ! ForResourceBlockingStatusMngr(UnblockCaller(user3IpAddress, Some(ZonedDateTime.now())))
-          expectMsgPF() {
-            case uu: CallerUnblocked if uu.callerId == user3IpAddress  =>
-
-          }
-        }
-      }
-
-      s"when sent GetBlockedList command after unblocking $user3IpAddress" - {
-        s"should respond with blocked list still containing $user3IpAddress because resource1 is still blocked" in {
-          singletonParentProxy ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = true,
-            onlyUnblocked=false, onlyActive=true, inChunks = false))
-          expectMsgPF() {
-            case rubd: UsageBlockingStatusChunk if rubd.usageBlockingStatus.contains(user3IpAddress)  =>
-          }
-        }
-      }
-
-      s"when sent UnblockResourceForCaller command for $user3IpAddress and resource1" - {
-        "should respond with CallerResourceUnblocked" in {
-          singletonParentProxy ! ForResourceBlockingStatusMngr(UnblockResourceForCaller(user3IpAddress,
-            "resource1", Some(ZonedDateTime.now())))
-          expectMsgPF() {
-            case uu: CallerResourceUnblocked if uu.callerId == user3IpAddress && uu.resourceName == "resource1" =>
-          }
-        }
-      }
-
-      s"when sent GetBlockedList command after unblocking $user3IpAddress for resource1" - {
-        s"should respond with blocked list with $user3IpAddress but without resource1" in {
-          singletonParentProxy ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = true,
-            onlyUnblocked=false, onlyActive=true, inChunks = false))
-          expectMsgPF() {
-            case rubd: UsageBlockingStatusChunk if
-            rubd.usageBlockingStatus.size == 3 &&
-              ! rubd.usageBlockingStatus(user3IpAddress).resourcesStatus.contains("resource1") =>
-          }
-        }
-      }
-
-      s"when sent UnblockCaller command for $user3IpAddress for all resources" - {
-        "should respond with CallerUnblocked" in {
-          singletonParentProxy ! ForResourceBlockingStatusMngr(UnblockCaller(user3IpAddress,
-            Some(ZonedDateTime.now()), allBlockedResources = Option(YES)))
-          expectMsgPF() {
-            case uu: CallerUnblocked if uu.callerId == user3IpAddress =>
-          }
-        }
-      }
-
-      s"when sent GetBlockedList command after unblocking $user3IpAddress for all blocked resources" - {
-        s"should respond with blocked list without $user3IpAddress" in {
-          eventually {
-            singletonParentProxy ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = true,
-              onlyUnblocked = false, onlyActive = true, inChunks = false))
-            expectMsgPF() {
-              case rubd: UsageBlockingStatusChunk if
-              rubd.usageBlockingStatus.size == 2 &&
-                !rubd.usageBlockingStatus.contains(user3IpAddress) =>
-            }
-          }
-        }
-      }
-
-    }
-
-    "ResourceWarningStatusMngr" - {
-
-      s"when sent WarnCaller command for $user1IpAddress" - {
-        "should respond with CallerWarned" in {
-          singletonParentProxy ! ForResourceWarningStatusMngr(WarnCaller(user1IpAddress))
-          expectMsgPF() {
-            case ub: CallerWarned if ub.callerId == user1IpAddress =>
-          }
-        }
-      }
-
-      "when sent GetWarnedList command" - {
-        s"should respond with warned list containing $user1IpAddress" in {
-          singletonParentProxy ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = true, onlyUnwarned=false,
-            onlyActive=true, inChunks = false))
-          expectMsgPF() {
-            case bl: UsageWarningStatusChunk if
-            bl.usageWarningStatus.size == 1 &&
-              bl.usageWarningStatus.contains(user1IpAddress) =>
-          }
-          eventually {
-            ResourceWarningStatusMngrCache.getOnlyWarned().size shouldBe 1
-          }
-        }
-      }
-
-      s"when sent WarnCaller command for $user2IpAddress with some warning time" - {
-        "should respond with CallerWarned" in {
-          singletonParentProxy ! ForResourceWarningStatusMngr(
-            WarnCaller(user2IpAddress, warnPeriod = Option(600)))
-          expectMsgPF() {
-            case ub: CallerWarned if ub.callerId == user2IpAddress && ub.warnPeriod==600 =>
-          }
-        }
-      }
-
-      "when sent GetWarnedList command again" - {
-        s"should respond with warned list containing $user2IpAddress" in {
-          singletonParentProxy ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = true, onlyUnwarned=false,
-            onlyActive=true, inChunks = false))
-          expectMsgPF() {
-            case bl: UsageWarningStatusChunk if
-            bl.usageWarningStatus.size == 2 &&
-              bl.usageWarningStatus.contains(user2IpAddress) =>
-          }
-          eventually {
-            ResourceWarningStatusMngrCache.getOnlyWarned().size shouldBe 2
-          }
-        }
-      }
-
-      s"when sent WarnResourceForCaller command for $user3IpAddress" - {
-        "should respond with CallerResourceWarned" in {
-          singletonParentProxy ! ForResourceWarningStatusMngr(
-            WarnResourceForCaller(user3IpAddress, "resource1", Some(ZonedDateTime.now()), Some(60)))
-          expectMsgPF() {
-            case urb: CallerResourceWarned if
-            urb.callerId==user3IpAddress &&
-              urb.resourceName=="resource1" &&
-              urb.warnPeriod == 60 =>
-          }
-        }
-      }
-
-      s"when sent WarnResourceForCaller command for $user3IpAddress for two more resources" - {
-        "should respond with CallerResourceWarned" in {
-          List("resource2", "resource3").foreach { rn =>
-            singletonParentProxy ! ForResourceWarningStatusMngr(
-              WarnResourceForCaller(user3IpAddress, rn, Some(ZonedDateTime.now()), Some(60)))
-            expectMsgPF() {
-              case urb: CallerResourceWarned if
-              urb.callerId == user3IpAddress &&
-                urb.resourceName == rn &&
-                urb.warnPeriod == 60 =>
-            }
-          }
-        }
-      }
-
-      "when sent GetWarnedList command" - {
-        "should respond with warned list containing user3 for resource1" in {
-          singletonParentProxy ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = false,
-            onlyUnwarned=false, onlyActive=false, inChunks = true))
-          expectMsgPF() {
-            case rubd: UsageWarningStatusChunk if
-            rubd.usageWarningStatus.size == 3 &&
-              rubd.usageWarningStatus(user3IpAddress).resourcesStatus.contains("resource1") =>
-          }
-        }
-      }
-
-      s"when sent UnwarnCaller command for $user3IpAddress" - {
-        "should respond with CallerUnwarned" in {
-          singletonParentProxy ! ForResourceWarningStatusMngr(UnwarnCaller(user3IpAddress, Some(ZonedDateTime.now())))
-          expectMsgPF() {
-            case uu: CallerUnwarned if uu.callerId == user3IpAddress  =>
-
-          }
-        }
-      }
-
-      s"when sent GetWarnedList command after unwarning $user3IpAddress" - {
-        s"should respond with warned list still containing $user3IpAddress as resource1 is still warned" in {
-          singletonParentProxy ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = true,
-            onlyUnwarned=false, onlyActive=true, inChunks = false))
-          expectMsgPF() {
-            case rubd: UsageWarningStatusChunk if rubd.usageWarningStatus.contains(user3IpAddress)  =>
-          }
-        }
-      }
-
-      s"when sent UnwarnResourceForCaller command for $user3IpAddress and resource1" - {
-        "should respond with CallerResourceUnwarned" in {
-          singletonParentProxy ! ForResourceWarningStatusMngr(UnwarnResourceForCaller(user3IpAddress,
-            "resource1", Some(ZonedDateTime.now())))
-          expectMsgPF() {
-            case uu: CallerResourceUnwarned if uu.callerId == user3IpAddress && uu.resourceName == "resource1" =>
-
-          }
-        }
-      }
-
-      s"when sent GetWarnedList command after unwarning $user3IpAddress for resource1" - {
-        s"should respond with warned list with $user3IpAddress but without resource1" in {
-          singletonParentProxy ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = true,
-            onlyUnwarned=false, onlyActive=true, inChunks = false))
-          expectMsgPF() {
-            case rubd: UsageWarningStatusChunk if
-            rubd.usageWarningStatus.size == 3 &&
-              ! rubd.usageWarningStatus(user3IpAddress).resourcesStatus.contains("resource1") =>
-          }
-        }
-      }
-
-      s"when sent UnwarnCaller command for $user3IpAddress for all resources" - {
-        "should respond with CallerUnwarned" in {
-          singletonParentProxy ! ForResourceWarningStatusMngr(UnwarnCaller(user3IpAddress,
-            Some(ZonedDateTime.now()), allWarnedResources = Option(YES)))
-          expectMsgPF() {
-            case uu: CallerUnwarned if uu.callerId == user3IpAddress =>
-          }
-        }
-      }
-
-      s"when sent GetWarnedList command after unwarning $user3IpAddress for all warned resources" - {
-        s"should respond with warned list without $user3IpAddress" in {
-          eventually {
-            singletonParentProxy ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = true,
-              onlyUnwarned = false, onlyActive = true, inChunks = false))
-            expectMsgPF() {
-              case rubd: UsageWarningStatusChunk if
-              rubd.usageWarningStatus.size == 2 &&
-                !rubd.usageWarningStatus.contains(user3IpAddress) =>
-            }
-          }
-        }
-      }
-
-    }
-
   }
 
   resourceUsageTrackerSpec()
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 case class ResourceUsageParam(resourceName: String,

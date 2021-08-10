@@ -12,7 +12,7 @@ import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemId, _}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.util.TimeZoneUtil._
 
 import scala.concurrent.Future
@@ -170,11 +170,11 @@ trait ItemContainerBase
 
   lazy val itemManagerRegion: ActorRef = ClusterSharding(context.system).shardRegion(ITEM_MANAGER_REGION_ACTOR_NAME)
 
-  lazy val scheduledJobInterval: Int = appConfig.getConfigIntOption(
+  lazy val scheduledJobInterval: Int = appConfig.getIntOption(
     ITEM_CONTAINER_SCHEDULED_JOB_INTERVAL_IN_SECONDS).getOrElse(300)
-  lazy val itemMigrationChunkSize: Int = appConfig.getConfigIntOption(
+  lazy val itemMigrationChunkSize: Int = appConfig.getIntOption(
     ITEM_CONTAINER_MIGRATION_CHUNK_SIZE).getOrElse(20)
-  lazy val itemMigrationCheckResultHistorySize: Int = appConfig.getConfigIntOption(
+  lazy val itemMigrationCheckResultHistorySize: Int = appConfig.getIntOption(
     ITEM_CONTAINER_MIGRATION_CHECK_RESULT_HISTORY_SIZE).getOrElse(20)
   //determines after how many tries scheduled job should be stopped if there is no more work.
   val disableScheduleJobAfterTriesWithoutWork = 20
@@ -307,8 +307,7 @@ trait ItemContainerBase
       migrationCheckResults.size == disableScheduleJobAfterTriesWithoutWork
       && migrationCheckResults.forall { mcr =>
       //this means, this actor is not doing anything meaningful
-      ! mcr.migrateToLatestVersionedContainers &&
-        ! mcr.migrateToNextLinkedContainer &&
+      ! mcr.migrateToNextLinkedContainer &&
         ! mcr.keepProcessingStartedMigrations}) {
       stopPeriodicJob()
     }
@@ -404,7 +403,7 @@ trait ItemContainerBase
   }
 
   def buildItemContainerEntityId(itemId: ItemId): ItemContainerEntityId = {
-    ItemConfigManager.buildItemContainerEntityId(getItemContainerConfigReq.managerEntityId, itemId, appConfig)
+    buildItemContainerEntityId(getItemContainerConfigReq.managerEntityId, itemId)
   }
 
   def handleItemFound(gi: GetItem, id: ItemDetail): Unit = {
@@ -640,7 +639,6 @@ case class ItemDetail(status: Int, detail: Option[String], isFromMigration: Bool
 }
 case class ItemDetailResponse(id: ItemId, status: Int, isFromMigration: Boolean, detail: Option[String]) extends ActorMessage
 case class MigrationCheckResult(checkedAt: ZonedDateTime,
-                                migrateToLatestVersionedContainers: Boolean=false,
                                 migrateToNextLinkedContainer: Boolean=false,
                                 keepProcessingStartedMigrations: Boolean=false,
                                 detail: Option[String]=None)

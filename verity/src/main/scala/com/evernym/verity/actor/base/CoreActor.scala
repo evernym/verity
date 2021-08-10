@@ -1,16 +1,14 @@
 package com.evernym.verity.actor.base
 
 import java.time.LocalDateTime
-
 import akka.actor.{Actor, ActorLogging, ActorRef}
-import com.evernym.verity.Exceptions
-import com.evernym.verity.actor.appStateManager.AppStateEvent
-import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
+import com.evernym.verity.actor.appStateManager.{AppStateEvent, AppStateUpdateAPI}
 import com.evernym.verity.constants.ActorNameConstants.DEFAULT_ENTITY_TYPE
 import com.evernym.verity.actor.{ActorMessage, ExceptionHandler}
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.metrics.CustomMetrics.{AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX, AS_AKKA_ACTOR_TYPE_PREFIX}
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.util2.Exceptions
+import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.typesafe.scalalogging.Logger
 
 /**
@@ -23,6 +21,8 @@ trait CoreActor
   extends Actor
     with EntityIdentifier
     with ActorLogging {
+
+  val metricsWriter: MetricsWriter = MetricsWriterExtension(context.system).get()
 
   override def receive: Receive = coreCommandHandler(cmdHandler)
 
@@ -78,9 +78,9 @@ trait CoreActor
 
   override def preStart(): Unit = {
     if (recordStartCountMetrics)
-      MetricsWriter.gaugeApi.incrementWithTags(
+      metricsWriter.gaugeIncrement(
         s"$AS_AKKA_ACTOR_TYPE_PREFIX.$AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX",
-        Map("entity-type"-> entityTypeTagName))
+        tags = Map("entity-type"-> entityTypeTagName))
     log.debug(s"[$actorId]: in pre start")
     beforeStart()
     super.preStart()
@@ -88,9 +88,9 @@ trait CoreActor
 
   override def postStop(): Unit = {
     if (recordStopCountMetrics)
-      MetricsWriter.gaugeApi.incrementWithTags(
+      metricsWriter.gaugeIncrement(
         s"$AS_AKKA_ACTOR_TYPE_PREFIX.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX",
-        Map("entity-type"-> entityTypeTagName)
+        tags = Map("entity-type"-> entityTypeTagName)
       )
     log.debug(s"[$actorId]: in post stop")
     afterStop()
@@ -99,9 +99,9 @@ trait CoreActor
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
     if (recordRestartCountMetrics)
-      MetricsWriter.gaugeApi.incrementWithTags(
+      metricsWriter.gaugeIncrement(
         s"$AS_AKKA_ACTOR_TYPE_PREFIX.$AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX",
-        Map("entity-type"-> entityTypeTagName)
+        tags = Map("entity-type"-> entityTypeTagName)
       )
     log.debug(s"[$actorId]: in pre restart")
     logCrashReason(reason, message)
@@ -151,7 +151,7 @@ trait CoreActor
   val recordStopCountMetrics = true
 
   def publishAppStateEvent (event: AppStateEvent): Unit = {
-    publishEvent(event)(context.system)
+    AppStateUpdateAPI(context.system).publishEvent(event)
   }
 
 }

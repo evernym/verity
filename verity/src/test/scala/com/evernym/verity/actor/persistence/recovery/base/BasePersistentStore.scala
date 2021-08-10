@@ -2,7 +2,6 @@ package com.evernym.verity.actor.persistence.recovery.base
 
 import akka.persistence.testkit.{PersistenceTestKitSnapshotPlugin, SnapshotMeta}
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.msgrouter.RoutingAgentUtil
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
@@ -12,13 +11,13 @@ import com.evernym.verity.actor.testkit.actor.MockAppConfig
 import com.evernym.verity.actor.testkit.HasTestActorSystem
 import com.evernym.verity.actor.wallet.{Close, CreateDID, CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, LegacyRouteSet, MappingAdded, PersistentMsg, RouteSet}
-import com.evernym.verity.config.CommonConfig
+import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.transformations.transformers.v1._
 import com.evernym.verity.transformations.transformers.legacy._
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import com.evernym.verity.testkit.HasTestWalletAPI
 import com.evernym.verity.transformations.transformers.{<=>, legacy, v1}
 import com.evernym.verity.vault.WalletAPIParam
@@ -33,8 +32,8 @@ trait BasePersistentStore
     with HasTestWalletAPI {
 
   lazy val keyValueMapperPersistenceId = PersistenceIdParam(CLUSTER_SINGLETON_MANAGER, KEY_VALUE_MAPPER_ACTOR_NAME)
-  lazy val keyValueMapperEncKey = appConfig.getConfigStringReq(CommonConfig.SECRET_KEY_VALUE_MAPPER)
-  lazy val agentRouteStoreEncKey = appConfig.getConfigStringReq(CommonConfig.SECRET_ROUTING_AGENT)
+  lazy val keyValueMapperEncKey = appConfig.getStringReq(ConfigConstants.SECRET_KEY_VALUE_MAPPER)
+  lazy val agentRouteStoreEncKey = appConfig.getStringReq(ConfigConstants.SECRET_ROUTING_AGENT)
 
   def createWallet(walletId: String): Unit = {
     testWalletAPI.executeSync[WalletCreated.type](CreateWallet())(WalletAPIParam(walletId))
@@ -49,10 +48,10 @@ trait BasePersistentStore
   }
 
   def storeTheirKey(walletId: String, didPair: DidPair): TheirKeyStored = {
-    storeTheirKey(walletId, didPair.DID, didPair.verKey)
+    storeTheirKey(walletId, didPair.did, didPair.verKey)
   }
 
-  def storeTheirKey(walletId: String, theirDID: DID, theirDIDVerKey: VerKey): TheirKeyStored = {
+  def storeTheirKey(walletId: String, theirDID: DidStr, theirDIDVerKey: VerKeyStr): TheirKeyStored = {
     testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(theirDID, theirDIDVerKey))(WalletAPIParam(walletId))
   }
 
@@ -60,7 +59,7 @@ trait BasePersistentStore
     testWalletAPI.executeSync[Done.type](Close())(WalletAPIParam(walletId))
   }
 
-  def storeAgentRoute(agentDID: DID, actorTypeId: Int, address: EntityId)
+  def storeAgentRoute(agentDID: DidStr, actorTypeId: Int, address: EntityId)
                      (implicit pp: PersistParam = PersistParam()): Unit = {
     val persistenceId = PersistenceIdParam(ROUTE_REGION_ACTOR_NAME, agentDID)
     addEventsToPersistentStorage(persistenceId,
@@ -70,7 +69,7 @@ trait BasePersistentStore
     )(pp.copy(encryptionKey = Option(agentRouteStoreEncKey)))
   }
 
-  def storeLegacyAgentRoute(agentDID: DID, actorTypeId: Int, address: EntityId)
+  def storeLegacyAgentRoute(agentDID: DidStr, actorTypeId: Int, address: EntityId)
                            (implicit pp: PersistParam = PersistParam()): Unit = {
     val entityId = RoutingAgentUtil.getBucketEntityId(agentDID)
     val persistenceId = PersistenceIdParam(LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME, entityId)
@@ -85,7 +84,7 @@ trait BasePersistentStore
    * key value mapper is the actor which gets updated when we setup agency agent
    * this method will store proper event to setup the agency DID in that actor
    */
-  def storeAgencyDIDKeyValueMapping(agencyDID: DID)(implicit pp: PersistParam = PersistParam()): Unit = {
+  def storeAgencyDIDKeyValueMapping(agencyDID: DidStr)(implicit pp: PersistParam = PersistParam()): Unit = {
 
     addEventsToPersistentStorage(keyValueMapperPersistenceId,
       scala.collection.immutable.Seq(
@@ -110,7 +109,7 @@ trait BasePersistentStore
 
   def getTransformerFor(pp: PersistenceIdParam, encryptionKey: Option[String]=None): Any <=> PersistentMsg = {
     val encKey = encryptionKey.getOrElse(
-      DefaultPersistenceEncryption.getEventEncryptionKeyWithoutWallet(pp.entityId, appConfig))
+      DefaultPersistenceEncryption.getEventEncryptionKey(pp.entityId, appConfig))
     getTransformer(encKey)
   }
 
@@ -175,14 +174,14 @@ trait BasePersistentStore
                              objectType: String)(implicit pp: PersistParam)
     : <=>[Any, _ >: TransformedMsg] = {
     val encKey = pp.encryptionKey.getOrElse(
-      DefaultPersistenceEncryption.getEventEncryptionKeyWithoutWallet(entityId, appConfig))
+      DefaultPersistenceEncryption.getEventEncryptionKey(entityId, appConfig))
     (pp.transformerId, objectType) match {
       case (LEGACY_PERSISTENCE_TRANSFORMATION_ID, "event")  =>
-        legacy.createLegacyEventTransformer(encKey, objectCodeMapper)
+        legacy.createLegacyEventTransformer(encKey, appConfig, objectCodeMapper)
       case (LEGACY_PERSISTENCE_TRANSFORMATION_ID, "state")  =>
-        legacy.createLegacyStateTransformer(encKey, objectCodeMapper)
+        legacy.createLegacyStateTransformer(encKey, appConfig, objectCodeMapper)
       case (PERSISTENCE_TRANSFORMATION_ID_V1, _)            =>
-        v1.createPersistenceTransformerV1(encKey, objectCodeMapper)
+        v1.createPersistenceTransformerV1(encKey, appConfig, objectCodeMapper)
       case other                                            =>
         throw new RuntimeException("transformer not supported for: " + other)
     }
@@ -207,7 +206,7 @@ trait BasePersistentStore
     }
   }
 
-  def getTransformer(encrKey: String): Any <=> PersistentMsg = createPersistenceTransformerV1(encrKey)
+  def getTransformer(encrKey: String): Any <=> PersistentMsg = createPersistenceTransformerV1(encrKey, appConfig)
 }
 
 /**

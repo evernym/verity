@@ -1,12 +1,13 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
-import com.evernym.verity.Exceptions.HandledErrorException
+import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{DID, MsgBase}
-import com.evernym.verity.Status
+import com.evernym.verity.protocol.engine.MsgBase
+import com.evernym.verity.util2.Status
 
 
 case class UpdateMsgStatusByConnsReqMsg_MFV_0_5(statusCode: String,
@@ -105,14 +106,14 @@ object UpdateMsgStatusByConnsMsgHelper {
   }
 }
 
-case class PairwiseMsgUids(pairwiseDID: DID, uids: List[String]) extends MsgBase {
+case class PairwiseMsgUids(pairwiseDID: DidStr, uids: List[String]) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("pairwiseDID", pairwiseDID)
     checkRequired("uids", uids)
   }
 }
 
-case class PairwiseError(pairwiseDID: DID, statusCode: String, statusMsg: String) extends MsgBase {
+case class PairwiseError(pairwiseDID: DidStr, statusCode: String, statusMsg: String) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("pairwiseDID", pairwiseDID)
     checkRequired("statusCode", statusCode)

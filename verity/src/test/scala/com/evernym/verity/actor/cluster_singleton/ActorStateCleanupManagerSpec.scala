@@ -1,18 +1,20 @@
 package com.evernym.verity.actor.cluster_singleton
 
 import java.util.UUID
-import akka.actor.{ActorRef, Props}
+
+import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.cluster.sharding.ShardRegion.EntityId
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.maintenance.{GetManagerStatus, InitialActorState, ManagerStatus, StartJob, StopJob}
 import com.evernym.verity.actor.agent.msghandler.{ActorStateCleanupStatus, FixActorState}
-import com.evernym.verity.actor.agent.msgrouter.legacy.LegacySetRoute
+import com.evernym.verity.actor.agent.msgrouter.legacy.{GetRouteBatch, GetRouteBatchResult, LegacySetRoute}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, RoutingAgentUtil}
 import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, PersistentActorSpec}
 import com.evernym.verity.actor.{ForIdentifier, LegacyRouteSet, ShardUtil}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.BeforeAndAfterAll
@@ -32,7 +34,7 @@ class ActorStateCleanupManagerSpec
   }
 
   val shardSize = 100           //total possible legacy routing actors
-  val totalRouteEntries = 150   //total routing entries distributed over 'shardSize'
+  val totalRouteEntries = 250   //total routing entries distributed over 'shardSize'
 
   "Platform" - {
     "during launch" - {
@@ -51,6 +53,7 @@ class ActorStateCleanupManagerSpec
         expectMsgType[Done.type]
 
         addRandomRoutes()
+        checkRoutes()
 
         //start the cleanup job so that it can start its processing
         platform.singletonParentProxy ! ForActorStateCleanupManager(StartJob)
@@ -74,7 +77,7 @@ class ActorStateCleanupManagerSpec
 
     "after some time" - {
       "should have processed all state cleanup" taggedAs (UNSAFE_IgnoreLog, UNSAFE_IgnoreAkkaEvents) in {
-        eventually(timeout(Span(35, Seconds)), interval(Span(200, Millis))) {
+        eventually(timeout(Span(50, Seconds)), interval(Span(200, Millis))) {
           platform.singletonParentProxy ! ForActorStateCleanupManager(GetManagerStatus())
           val status = expectMsgType[ManagerStatus]
           status.registeredRouteStoreActorCount shouldBe shardSize
@@ -88,14 +91,14 @@ class ActorStateCleanupManagerSpec
   }
 
   //route store actor entity id and its stored route mapping
-  val entityIdsToRoutes: Map[EntityId, Set[DID]] = (1 to totalRouteEntries).map { i =>
+  val entityIdsToRoutes: Map[EntityId, Set[DidStr]] = (1 to totalRouteEntries).map { i =>
     val routeDID = generateDID(i.toString)
     val routeStoreActorEntityId = RoutingAgentUtil.getBucketEntityId(routeDID)
     (routeStoreActorEntityId, routeDID)
   }.groupBy(_._1).mapValues(_.map(_._2).toSet)
 
-  def generateDID(seed: String): DID =
-    CommonSpecUtil.generateNewDid(Option(UUID.nameUUIDFromBytes(seed.getBytes()).toString)).DID
+  def generateDID(seed: String): DidStr =
+    CommonSpecUtil.generateNewDid(Option(UUID.nameUUIDFromBytes(seed.getBytes()).toString)).did
 
   def addRandomRoutes(): Unit = {
     entityIdsToRoutes.values.map(_.size).sum shouldBe totalRouteEntries
@@ -110,15 +113,25 @@ class ActorStateCleanupManagerSpec
       expectMsgType[PersistentActorDetail].totalPersistedEvents shouldBe routeDIDs.size
 
       //stop actor
-      //sendMsgToAgentRouteStore(entityId, PoisonPill)
+      sendMsgToAgentRouteStore(entityId, PoisonPill)
+    }
+  }
+
+  def checkRoutes(): Unit = {
+    entityIdsToRoutes.foreach { case (entityId, routeDIDs) =>
+      routeDIDs.zipWithIndex.foreach { case (routeDID, index) =>
+        sendMsgToAgentRouteStore(entityId, GetRouteBatch(index, 1))
+        val result = expectMsgType[GetRouteBatchResult]
+        result.dids shouldBe Set(routeDID)
+      }
     }
   }
 
   def sendMsgToAgentRouteStore(entityId: String, msg: Any): Unit = {
-    routeStoreRegion ! ForIdentifier(entityId, msg)
+    legacyRouteStoreRegion ! ForIdentifier(entityId, msg)
   }
 
-  lazy val routeStoreRegion: ActorRef = platform.legacyAgentRouteStoreRegion
+  lazy val legacyRouteStoreRegion: ActorRef = platform.legacyAgentRouteStoreRegion
 
   lazy val DUMMY_ACTOR_TYPE_ID: Int = 1
 
@@ -174,6 +187,8 @@ class ActorStateCleanupManagerSpec
          """.stripMargin
     }
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 class DummyAgentActor extends CoreActorExtended {

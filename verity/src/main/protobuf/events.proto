@@ -51,11 +51,18 @@ message ComMethodPackaging {
     repeated string recipientKeys = 2;
 }
 
+message ComMethodAuthentication {
+    string type = 1;
+    string version = 2;
+    map<string, string> data = 3;
+}
+
 message ComMethodUpdated {
     string id = 1;
     int32 typ = 2;
     string value = 3;
     ComMethodPackaging packaging = 4;
+    ComMethodAuthentication authentication = 5;
 }
 
 message ComMethodDeleted {
@@ -476,6 +483,7 @@ message StorageInfo {
 }
 
 message StorageReferenceStored {
+    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
     int32 eventCode = 1;
     StorageInfo storageInfo = 2;
 }

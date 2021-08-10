@@ -1,13 +1,13 @@
 package com.evernym.verity.http.verity
 
 import akka.http.scaladsl.model.StatusCodes._
-import com.evernym.verity.Exceptions.InvalidValueException
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.InvalidValueException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent._
 import com.evernym.verity.actor.testkit.actor.MockSMSSender
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CONN_REQ, CREATE_MSG_TYPE_CONN_REQ_ANSWER}
-import com.evernym.verity.config.CommonConfig.HTTP_PORT
+import com.evernym.verity.config.ConfigConstants.HTTP_PORT
 import com.evernym.verity.http.base.open.{ExpectedMsgCriteria, ExpectedMsgDetail}
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.texter.SMSSender
@@ -117,8 +117,8 @@ trait ConnectionSpec { this: VerityEndpointHandlerSpec =>
             mockEnv.cloudAgent.agencyEndpoint.toString)
           val le = mockEnv.edgeAgent.addNewLocalPairwiseKey(connIda1)
           val rec = mockEnv.cloudAgent.addNewLocalPairwiseKey(connIda1)
-          le.setMyCloudAgentPairwiseDidPair(rec.myPairwiseDidPair.DID, rec.myPairwiseDidPair.verKey)
-          rec.setTheirPairwiseDidPair(le.myPairwiseDidPair.DID, le.myPairwiseDidPair.verKey)
+          le.setMyCloudAgentPairwiseDidPair(rec.myPairwiseDidPair.did, rec.myPairwiseDidPair.verKey)
+          rec.setTheirPairwiseDidPair(le.myPairwiseDidPair.did, le.myPairwiseDidPair.verKey)
         }
       }
     }
@@ -217,7 +217,7 @@ trait ConnectionSpec { this: VerityEndpointHandlerSpec =>
 
   }
 
-  lazy val httpPort: Int = appConfig.getConfigIntReq(HTTP_PORT)
+  lazy val httpPort: Int = appConfig.getIntReq(HTTP_PORT)
   lazy val INVITE_URL_REG_EX: Regex = s"""$inviteSenderName would like you to install Connect-Me for greater identity verification: https:\\/\\/connectme.app.link\\?t=(.*)""".r
   lazy val smsSender: SMSSender = platform.agentActorContext.smsSvc
 

@@ -8,22 +8,12 @@ import com.evernym.verity.integration.base.verity_provider.node.local.{ServicePa
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.{BeforeAndAfterAll, Suite}
-
 import java.nio.file.{Files, Path}
+
+import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider}
+
 import scala.language.postfixOps
 import scala.util.Random
-
-
-//TODO: below are list of known (there might be more) "global singleton objects"
-// which may/will cause issues sooner or later
-// if try to use multi node cluster in single JVM (like what this VerityProviderBaseSpec does)
-//    1. AppConfigWrapper
-//    2. ResourceBlockingStatusMngrCache
-//    3. ResourceWarningStatusMngrCache
-//    4. MsgProgressTrackerCache
-//    5. MetricsReader and KamonPrometheusMetricsReporter
-//    6. ItemConfigManager
-//    7. AppStateUpdateAPI
 
 /**
  * base class for specs to use LocalVerity
@@ -31,7 +21,8 @@ import scala.util.Random
 trait VerityProviderBaseSpec
   extends BasicSpec
     with CancelGloballyAfterFailure
-    with BeforeAndAfterAll {
+    with BeforeAndAfterAll
+    with HasExecutionContextProvider {
     this: Suite =>
 
   object VerityEnvBuilder {
@@ -81,12 +72,13 @@ trait VerityProviderBaseSpec
           portProfile,
           otherNodesArteryPorts,
           multiNodeServiceParam,
-          multiNodeClusterConfig
+          multiNodeClusterConfig,
+          executionContextProvider
         )
       }
 
       if (verityNodes.isEmpty) throw new RuntimeException("at least one node needed for a verity environment")
-      val verityEnv = VerityEnv(appSeed, verityNodes)
+      val verityEnv = VerityEnv(appSeed, verityNodes, futureExecutionContext)
       allVerityEnvs = allVerityEnvs :+ verityEnv
       verityEnv
     }
@@ -96,7 +88,7 @@ trait VerityProviderBaseSpec
   // implementing class can override it or send specific one for specific verity instance as well
   // but for external storage type of services (like ledger) we should make sure
   // it is the same instance across the all verity environments
-  lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new MockLedgerTxnExecutor())
+  lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new MockLedgerTxnExecutor(futureExecutionContext))
 
   private def randomTmpDirPath(): Path = {
     val tmpDir = TempDir.findSuiteTempDir(this.suiteName)
@@ -141,19 +133,23 @@ trait VerityProviderBaseSpec
 
   private val VAS_DEFAULT_CONFIG = ConfigFactory.parseString(
     """
-      |sharding-region-name {
+      |akka {
+      |  sharding-region-name {
       |    user-agent = "VerityAgent"
       |    user-agent-pairwise = "VerityAgentPairwise"
       |  }
+      |}
       |""".stripMargin
   )
 
   private val CAS_DEFAULT_CONFIG = ConfigFactory.parseString(
     """
-      |sharding-region-name {
+      |akka {
+      |  sharding-region-name {
       |    user-agent = "ConsumerAgent"
       |    user-agent-pairwise = "ConsumerAgentPairwise"
       |  }
+      |}
       |""".stripMargin
   )
 
@@ -166,6 +162,7 @@ trait VerityProviderBaseSpec
       |}
       |""".stripMargin
   )
+  def executionContextProvider: ExecutionContextProvider
 }
 
 trait AppType

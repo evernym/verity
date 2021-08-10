@@ -3,7 +3,7 @@ package com.evernym.integrationtests.e2e.sdk.process
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject, TokenAsJsonObject, sdkErrExitCode}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
@@ -39,13 +39,15 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
   override def jsonParam: AsJsonObject => String = { j => s"""JSON.parse(${rawJsonParam(j)})""" }
   override def mapParam: Map[_, _] => String = {m => jsonParam(MapAsJsonObject(m))}
 
+  val scopedModule = "@evernym/verity-sdk"
+
   override lazy val interpreter: InterpreterEnv = {
+    npmrcFile(interpreterWorkingDir)
     Process(
       Seq(
         "npm",
-        "--strict-ssl", "false",
         "install",
-        packageUrl("npm", sdkVersion, "tgz")
+        s"$scopedModule@$sdkVersion"
       ),
       interpreterWorkingDir.toFile,
     ).!
@@ -68,13 +70,13 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     val fParams = Seq("context", mkParams(funcParams)).mkString(",")
     executeOneLine(
       ctx,
-      """require('verity-sdk')""",
+      s"""require('$scopedModule')""",
       s"await new sdk.protocols.$versionConversion.$obj($params).$func($fParams)"
     )
   }
 
   override def available(): Unit = {
-    """const sdk = require('verity-sdk')""".execute()
+    s"""const sdk = require('$scopedModule')""".execute()
   }
 
   override def provision_0_7: ProvisionV0_7 = {
@@ -82,7 +84,7 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
       override def provision(ctx: Context): Context = {
         val newContext = executeOneLine(
           ctx,
-          """require('verity-sdk')""",
+          s"""require('$scopedModule')""",
           "console.log(JSON.stringify(await new sdk.protocols.v0_7.Provision().provision(context)))"
         )
 
@@ -100,7 +102,7 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
         val tokenObj = TokenAsJsonObject(token)
         val newContext = executeOneLine(
           ctx,
-          """require('verity-sdk')""",
+          s"""require('$scopedModule')""",
           s"""console.log(JSON.stringify(await new sdk.protocols.v0_7.Provision(null, ${rawJsonParam(tokenObj)}).provision(context)))"""
         )
 
@@ -165,7 +167,7 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           Seq(name, schemaId, tag, revocationDetails.orNull, None))
     }
 
-  override def basicMessage_1_0(forRelationship: DID,
+  override def basicMessage_1_0(forRelationship: DidStr,
                                 content: String,
                                 sentTime: String,
                                 localization: String): BasicMessageV1_0 = {
@@ -182,7 +184,7 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
   }
 
 
-  override def committedAnswer_1_0(forRelationship: DID,
+  override def committedAnswer_1_0(forRelationship: DidStr,
                                    questionText: String,
                                    questionDescription: String,
                                    validResponses: Seq[String],
@@ -199,7 +201,7 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     }
 
 
-  override def committedAnswer_1_0(forRelationship: DID, threadId: String, answerStr: String): CommittedAnswerV1_0 =
+  override def committedAnswer_1_0(forRelationship: DidStr, threadId: String, answerStr: String): CommittedAnswerV1_0 =
     new UndefinedCommittedAnswer_1_0 {
       override def answer(ctx: Context): Unit =
         executeCmd(
@@ -220,7 +222,7 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
         )
     }
 
-  override def committedAnswer_1_0(forRelationship: DID, threadId: String): CommittedAnswerV1_0 =
+  override def committedAnswer_1_0(forRelationship: DidStr, threadId: String): CommittedAnswerV1_0 =
     new UndefinedCommittedAnswer_1_0 {
       override def status(ctx: Context): Unit =
         executeCmd(
@@ -304,7 +306,7 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     }
   }
 
-  override def presentProof_1_0(forRelationship: DID, threadId: String): PresentProofV1_0 = {
+  override def presentProof_1_0(forRelationship: DidStr, threadId: String): PresentProofV1_0 = {
     new UndefinedPresentProof_1_0 {
       override def status(ctx: Context): Unit = {
         executeCmd(ctx, "PresentProof", this.version, "status", Seq(forRelationship, threadId))
@@ -330,6 +332,12 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 }
 
 object NodeSdkProvider {
+  def npmrcFile(cwd: Path): Unit = {
+    val fileContent = s"@evernym:registry=https://gitlab.com/api/v4/packages/npm/"
+
+    ProcessSdkProvider.writeConfigFile(cwd, ".npmrc", fileContent)
+  }
+
   def buildNodeScript(imports: String, context: String, cmd: String): String = {
     s"""
 'use strict'

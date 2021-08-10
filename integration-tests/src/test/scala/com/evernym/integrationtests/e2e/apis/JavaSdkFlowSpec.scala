@@ -6,6 +6,9 @@ import com.evernym.integrationtests.e2e.tag.annotation.Integration
 @Integration
 class JavaSdkFlowSpec extends SdkFlowSpec {
 
-  override def specifySdkType(env: IntegrationTestEnv): IntegrationTestEnv =
-    SdkFlowSpec.specifySdkForType("java", "0.4.1-fa1eaca7", env)
+  override def specifySdkType(env: IntegrationTestEnv): IntegrationTestEnv = {
+    // Does not respect the version, defined in build.sbt but we should in the future
+    // load this exact version
+    SdkFlowSpec.specifySdkForType("java", "0.4.9-1024e509", env)
+  }
 }

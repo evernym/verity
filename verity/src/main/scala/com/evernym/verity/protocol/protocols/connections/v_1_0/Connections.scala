@@ -3,8 +3,7 @@ package com.evernym.verity.protocol.protocols.connections.v_1_0
 import java.nio.charset.StandardCharsets
 import java.nio.{ByteBuffer, ByteOrder}
 import java.time.Instant
-
-import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
@@ -16,9 +15,8 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.TheirDidDocUp
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Role.{Invitee, Inviter}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.SetupTheirDidDoc
 import com.evernym.verity.util.Base64Util
-import com.evernym.verity.UrlParam
-import com.evernym.verity.actor.agent.relationship.URL
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
+import com.evernym.verity.util2.UrlParam
 
 import scala.util.{Failure, Success, Try}
 
@@ -319,7 +317,7 @@ object Connections {
   case class InvalidInviteException(explain: String, `problem-report`: String = "invalid_invitation") extends Exception
   case class InvalidSigException(explain: String, `problem-report`: String = "response_not_accepted") extends Exception
 
-  def getInvitationJsonFromUrl(inviteURL: URL): Try[String] = {
+  def getInvitationJsonFromUrl(inviteURL: String): Try[String] = {
     val urlParam = UrlParam(inviteURL)
     val invB64 = if (urlParam.isHttp || urlParam.isHttps) {
       urlParam.query match {

@@ -84,9 +84,13 @@ publish-docker:
     - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main"
       variables:
         INCLUDE_DOCKER_AWS_DESTINATIONS: "true"
+      when: on_success
     - if: $CI_PROJECT_NAMESPACE == "dev/verity" && $CI_COMMIT_REF_NAME == "master"
       variables:
         INCLUDE_DOCKER_AWS_DESTINATIONS: "false"
+      when: on_success
+    - if: $CI_PROJECT_NAMESPACE #This should "default" to never, unless matched above on main branches
+      when: never
 
 publish-docker-manual:
   extends:
@@ -94,6 +98,43 @@ publish-docker-manual:
     - .publish-common-docker
   dependencies:
     - package-manual
+  rules:
+    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main"
+      variables:
+        INCLUDE_DOCKER_AWS_DESTINATIONS: "true"
+      when: manual
+    - if: $CI_PROJECT_NAMESPACE == "dev/verity" && $CI_COMMIT_REF_NAME == "master"
+      variables:
+        INCLUDE_DOCKER_AWS_DESTINATIONS: "false"
+      when: manual
+    - if: $CI_PROJECT_NAMESPACE #This should "default" to never, unless matched above on main branches
+      when: never
+
+.publish-common-helm:
+  tags:
+    - docker-machine
+    - micro
+  script:
+    - curl --request POST --user gitlab-ci-token:$CI_JOB_TOKEN --form "chart=@$(find ${CI_PROJECT_DIR}/verity/target/helm -type f -name '*.tgz')" "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/api/stable/charts"
+
+publish-helm:
+  extends:
+    - .publish-common
+    - .publish-common-helm
+  dependencies:
+    - package-helm
+  only:
+    refs:
+      - main@evernym/verity/verity
+    changes:
+      - verity/src/helm/**/* 
+
+publish-helm-manual:
+  extends:
+    - .publish-common
+    - .publish-common-helm
+  dependencies:
+    - package-helm-manual
   only:
     refs:
       - master

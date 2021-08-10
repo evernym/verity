@@ -1,15 +1,13 @@
 package com.evernym.verity.libindy
 
-import com.evernym.verity.Exceptions.InvalidValueException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.{StatusDetail, StatusDetailException}
-import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.util2.Exceptions.InvalidValueException
+import com.evernym.verity.util2.Status.{StatusDetail, StatusDetailException}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.ledger._
 import com.evernym.verity.libindy.ledger.{IndyLedgerPoolConnManager, LedgerTxnExecutorV1, SubmitToLedger}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.{DidStr, DidPair}
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -17,10 +15,11 @@ import org.hyperledger.indy.sdk.ErrorCode.PoolLedgerTimeout
 import org.hyperledger.indy.sdk.IndyException
 import org.hyperledger.indy.sdk.pool.Pool
 import org.mockito.invocation.InvocationOnMock
+import com.evernym.verity.util2.ExecutionContextProvider
 import org.mockito.scalatest.MockitoSugar
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 
@@ -33,15 +32,18 @@ class LedgerTxnExecutorV1Spec
   lazy val mockWalletAPI: WalletAPI = mock[WalletAPI]
   lazy val mockLedgerSubmitAPI: SubmitToLedger = mock[SubmitToLedger]
   lazy val poolConnManager: IndyLedgerPoolConnManager =
-    new IndyLedgerPoolConnManager(system, appConfig) {
+    new IndyLedgerPoolConnManager(system, appConfig, executionContext) {
       override def poolConn: Some[Pool] = Some(null)
     }
   lazy val ledgerTxnExecutor: LedgerTxnExecutorV1 =
-    new LedgerTxnExecutorV1(system, appConfig, Some(mockWalletAPI), poolConnManager.poolConn, None) {
+    new LedgerTxnExecutorV1(system, appConfig, Some(mockWalletAPI), poolConnManager.poolConn, None, executionContext) {
       override def ledgerSubmitAPI:SubmitToLedger = mockLedgerSubmitAPI
     }
 
-  lazy val submitterDID: DID = "Th7MpTaRZVRYnPiabds81Y"
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  lazy implicit val executionContext: ExecutionContext = ecp.futureExecutionContext
+
+  lazy val submitterDID: DidStr = "Th7MpTaRZVRYnPiabds81Y"
   implicit lazy val wap: WalletAPIParam =  WalletAPIParam(submitterDID)
   lazy val submitter: Submitter = Submitter(submitterDID, Some(wap))
 
@@ -194,7 +196,7 @@ class LedgerTxnExecutorV1Spec
             doReturn(Future(ivr))
               .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
             val response = Await.ready(
-              ledgerTxnExecutor.getNym(submitter, targetDidPair.DID), maxWaitTime
+              ledgerTxnExecutor.getNym(submitter, targetDidPair.did), maxWaitTime
             ).value.get
             response match {
               case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
@@ -207,7 +209,7 @@ class LedgerTxnExecutorV1Spec
       "and if underlying wallet api throw an exception" - {
         "should return error response" taggedAs (UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
           val response = Await.ready(
-            ledgerTxnExecutor.getNym(submitter, targetDidPair.DID), maxWaitTime
+            ledgerTxnExecutor.getNym(submitter, targetDidPair.did), maxWaitTime
           ).value.get
           response match {
             case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
@@ -252,4 +254,5 @@ class LedgerTxnExecutorV1Spec
 
   }
 
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

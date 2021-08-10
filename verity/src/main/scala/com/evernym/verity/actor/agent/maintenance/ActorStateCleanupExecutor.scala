@@ -11,11 +11,13 @@ import com.evernym.verity.actor.base.{Done, Stop}
 import com.evernym.verity.actor.cluster_singleton.ForActorStateCleanupManager
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.{ActorMessage, ActorStateCleaned, ActorStateStored, BatchSizeRecorded, Completed, ForIdentifier, StatusUpdated}
-import com.evernym.verity.config.CommonConfig._
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.ConfigConstants._
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.ActorNameConstants._
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.util.Util.getActorRefFromSelection
+
+import scala.concurrent.ExecutionContext
 
 
 /**
@@ -23,7 +25,7 @@ import com.evernym.verity.util.Util.getActorRefFromSelection
  * @param appConfig application config
  * @param aac agent actor context
  */
-class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorContext)
+class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorContext, executionContext: ExecutionContext)
   extends BasePersistentActor
     with ActorStateCleanupBase {
 
@@ -87,9 +89,9 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
     }
   }
 
-  def handleActorNotResponding(did: DID): Unit = {
-    applyEvent(ActorStateStored(did, -1))
-    applyEvent(ActorStateCleaned(did, -1, -1))
+  def handleActorNotResponding(did: DidStr): Unit = {
+    writeAndApply(ActorStateStored(did, -1))
+    writeAndApply(ActorStateCleaned(did, -1, -1))
     val batchItemStatus = batchStatus.candidates.getOrElse(did, BatchItemStatus.empty)
     batchStatus = batchStatus.withItemStatusUpdated(did, batchItemStatus.copy(stateCleaningCompleted = true))
   }
@@ -168,7 +170,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
     }
   }
 
-  def sendFixActorStateCleanupCmd(did: DID): Unit = {
+  def sendFixActorStateCleanupCmd(did: DidStr): Unit = {
     aac.agentMsgRouter.forward(InternalMsgRouteParam(did, FixActorState(did, self)), self)
     batchStatus = batchStatus.withReqSentIncremented(did)
     batchStatus.candidates.get(did).foreach { itemStatus =>
@@ -186,7 +188,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
       case 0 => routeStoreStatusReq.totalProcessed
       case _ => (routeStoreStatusReq.totalProcessed/batchSizeToBeUsed)*batchSizeToBeUsed
     }
-    val cmd = GetRouteBatch(routeStoreStatusReq.totalCandidates, fromIndex, batchSizeToBeUsed)
+    val cmd = GetRouteBatch(fromIndex, batchSizeToBeUsed)
     legacyAgentRouteStoreRegion ! ForIdentifier(routeStoreStatusReq.agentRouteStoreEntityId, cmd)
   }
 
@@ -282,13 +284,13 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
     }
   }
 
-  def onActorStateCleanup(actorDID: DID, successfullyMigrated: Int, nonMigrated: Int): Unit = {
+  def onActorStateCleanup(actorDID: DidStr, successfullyMigrated: Int, nonMigrated: Int): Unit = {
     //agentMsgRouter.execute(InternalMsgRouteParam(actorDID, Stop()))   //stop agent actor
     handleActorStateCleaned(ActorStateCleaned(actorDID, successfullyMigrated, nonMigrated))
   }
 
   var actorStateCleanupManager: Option[ActorRef] = None
-  var agentActorCleanupState: Map[DID, CleanupStatus] = Map.empty
+  var agentActorCleanupState: Map[DidStr, CleanupStatus] = Map.empty
   var routeStoreStatus: Option[RouteStoreStatus] = None
   var recordedBatchSize: BatchSize = BatchSize(-1, -1)
   var batchStatus: BatchStatus = BatchStatus.empty
@@ -302,7 +304,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
   }
 
   lazy val nextSeqNoForDeletion: Int =
-    appConfig.getConfigIntOption(CommonConfig.AAS_CLEANUP_EXECUTOR_BATCH_SIZE)
+    appConfig.getIntOption(ConfigConstants.AAS_CLEANUP_EXECUTOR_BATCH_SIZE)
       .getOrElse(5)
 
   val legacyAgentRouteStoreRegion: ActorRef = ClusterSharding.get(context.system).shardRegion(LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
@@ -313,18 +315,22 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
 
   lazy val scheduledJobInterval: Int =
     appConfig
-      .getConfigIntOption(AAS_CLEANUP_EXECUTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
+      .getIntOption(AAS_CLEANUP_EXECUTOR_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
       .getOrElse(300)
 
   scheduleJob("periodic_job", scheduledJobInterval, ProcessPending)
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 //status of a route store entity candidates
 case class RouteStoreStatus(agentRouteStoreEntityId: EntityId,
                             totalCandidates: Int,
                             totalProcessed: Int,
-                            inProgressCleanupStatus: Map[DID, CleanupStatus] = Map.empty) extends ActorMessage {
+                            inProgressCleanupStatus: Map[DidStr, CleanupStatus] = Map.empty) extends ActorMessage {
   def isAllCompleted: Boolean = totalCandidates == totalProcessed
 }
 
@@ -348,32 +354,32 @@ case class GetExecutorStatus(includeDetails: Boolean = false) extends ActorMessa
 case class ProcessRouteStore(agentRouteStoreEntityId: EntityId, totalRoutes: Int) extends ActorMessage
 
 object ActorStateCleanupExecutor {
-  def props(appConfig: AppConfig, aac: AgentActorContext): Props =
-    Props(new ActorStateCleanupExecutor(appConfig, aac))
+  def props(appConfig: AppConfig, aac: AgentActorContext, executionContext: ExecutionContext): Props =
+    Props(new ActorStateCleanupExecutor(appConfig, aac, executionContext))
 }
 
 object BatchStatus {
   def empty: BatchStatus = BatchStatus(Map.empty)
 }
-case class BatchStatus(candidates: Map[DID, BatchItemStatus]) {
+case class BatchStatus(candidates: Map[DidStr, BatchItemStatus]) {
   def isInProgress: Boolean = candidates.exists(_._2.stateCleaningCompleted == false)
   def isCompleted: Boolean = candidates.nonEmpty && candidates.forall(_._2.stateCleaningCompleted == true)
   def isEmpty: Boolean = candidates.isEmpty
 
-  def candidatesWithStatus(status: Boolean): Map[DID, BatchItemStatus] =
+  def candidatesWithStatus(status: Boolean): Map[DidStr, BatchItemStatus] =
     candidates.filter(_._2.stateCleaningCompleted == status)
 
-  def withReqSentIncremented(did: DID): BatchStatus = {
+  def withReqSentIncremented(did: DidStr): BatchStatus = {
     val updatedItemStatus = candidates.getOrElse(did, BatchItemStatus.empty).withReqCountIncremented
     withItemStatusUpdated(did, updatedItemStatus)
   }
 
-  def withCleaningStarted(did: DID): BatchStatus = {
+  def withCleaningStarted(did: DidStr): BatchStatus = {
     val updatedItemStatus = candidates.getOrElse(did, BatchItemStatus.empty).withCleaningStarted
     withItemStatusUpdated(did, updatedItemStatus)
   }
 
-  def withItemStatusUpdated(did: DID, itemStatus: BatchItemStatus): BatchStatus = {
+  def withItemStatusUpdated(did: DidStr, itemStatus: BatchItemStatus): BatchStatus = {
     val updatedCandidates = candidates ++ Map(did-> itemStatus)
     BatchStatus(updatedCandidates)
   }
@@ -381,11 +387,11 @@ case class BatchStatus(candidates: Map[DID, BatchItemStatus]) {
 
 case class ExecutorStatus(routeStoreStatus: Option[RouteStoreStatus],
                           batchStatus: BatchStatus,
-                          actorStateCleanupStatus: Option[Map[DID, CleanupStatus]]=None) extends ActorMessage
+                          actorStateCleanupStatus: Option[Map[DidStr, CleanupStatus]]=None) extends ActorMessage
 
 case class Destroyed(entityId: EntityId) extends ActorMessage
 
-case class InitialActorState(actorId: DID, isRouteSet: Boolean, threadContexts: Int) extends ActorMessage
+case class InitialActorState(actorId: DidStr, isRouteSet: Boolean, threadContexts: Int) extends ActorMessage
 
 case class BatchSize(last: Int, current: Int)
 
@@ -401,4 +407,4 @@ case class BatchItemStatus(reqSentCount: Int, stateCleaningStarted: Boolean, sta
     BatchItemStatus(reqSentCount, stateCleaningStarted = true, stateCleaningCompleted)
 }
 
-case class ActorNotResponding(actorId: DID) extends ActorMessage
+case class ActorNotResponding(actorId: DidStr) extends ActorMessage

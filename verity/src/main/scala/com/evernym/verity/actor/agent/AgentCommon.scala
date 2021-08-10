@@ -2,9 +2,8 @@ package com.evernym.verity.actor.agent
 
 import java.time.ZonedDateTime
 import akka.pattern.ask
-import com.evernym.verity.Exceptions.InternalServerErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.InternalServerErrorException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.{ActorMessage, AuthKeyAdded, FirstProtoMsgSent, ProtoMsgReceivedOrderIncremented, ProtoMsgSenderOrderIncremented, ProtocolIdDetailSet, ThreadContextStored}
 import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
@@ -13,11 +12,10 @@ import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByClass
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasAgentWallet
-import com.evernym.verity.Exceptions
+import com.evernym.verity.util2.{Exceptions, HasWalletExecutionContextProvider}
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{HasMsgProgressTracker, TrackingIdParam}
@@ -26,16 +24,17 @@ import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
 import com.evernym.verity.cache.{AGENCY_IDENTITY_CACHE_FETCHER, AGENT_ACTOR_CONFIG_CACHE_FETCHER, KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER}
 import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
-import com.evernym.verity.config.CommonConfig.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VERITY_ENDORSER_DEFAULT_DID}
+import com.evernym.verity.config.ConfigConstants.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VERITY_ENDORSER_DEFAULT_DID}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.metrics.{InternalSpan, MetricsUnit, MetricsWriter}
 import com.evernym.verity.protocol.container.actor.ProtocolIdDetail
+import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.google.protobuf.ByteString
 import com.typesafe.scalalogging.Logger
-import kamon.metric.MeasurementUnit
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * common interface for any type of agent actor (agencyAgent, agencyPairwiseAgent, userAgent, userPairwiseAgent)
@@ -46,8 +45,12 @@ trait AgentCommon
     with HasAgentWallet
     with HasSetRoute
     with HasMsgProgressTracker
-    with ResourceUsageCommon { this: AgentPersistentActor =>
+    with ResourceUsageCommon
+    with HasWalletExecutionContextProvider { this: AgentPersistentActor =>
 
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
+
+  def metricsWriter : MetricsWriter
 
   def agentCommonCmdReceiver[A]: Receive = {
     case _: AgentActorDetailSet    => //nothing to do
@@ -131,10 +134,10 @@ trait AgentCommon
   def agentWalletId: Option[String] = state.agentWalletId
   def agentMsgTransformer: AgentMsgTransformer = agentActorContext.agentMsgTransformer
 
-  def agencyDIDReq: DID = state.agencyDIDReq
+  def agencyDIDReq: DidStr = state.agencyDIDReq
 
-  def ownerDID: Option[DID]
-  def ownerDIDReq: DID = ownerDID.getOrElse(throw new RuntimeException("owner DID not found"))
+  def ownerDID: Option[DidStr]
+  def ownerDIDReq: DidStr = ownerDID.getOrElse(throw new RuntimeException("owner DID not found"))
   def domainId: DomainId = ownerDIDReq    //TODO: can be related with 'ownerDIDReq'
 
   def ownerAgentKeyDIDPair: Option[DidPair]
@@ -143,19 +146,19 @@ trait AgentCommon
   def trackingIdParam: TrackingIdParam = TrackingIdParam(domainId, state.myDid, state.theirDid)
 
   lazy val cacheFetchers: Map[FetcherParam, CacheValueFetcher] = Map (
-    AGENT_ACTOR_CONFIG_CACHE_FETCHER -> new AgentConfigCacheFetcher(agentActorContext.agentMsgRouter, agentActorContext.appConfig)
+    AGENT_ACTOR_CONFIG_CACHE_FETCHER -> new AgentConfigCacheFetcher(agentActorContext.agentMsgRouter, agentActorContext.appConfig, futureExecutionContext)
   )
   /**
    * per agent actor cache
    */
-  lazy val agentCache = new Cache("AC", cacheFetchers)
+  lazy val agentCache = new Cache("AC", cacheFetchers, metricsWriter, futureExecutionContext)
 
   /**
    * general/global (per actor system) cache
    */
   lazy val generalCache: Cache = agentActorContext.generalCache
 
-  lazy val defaultEndorserDid: String = appConfig.getConfigStringOption(VERITY_ENDORSER_DEFAULT_DID).getOrElse("")
+  lazy val defaultEndorserDid: String = appConfig.getStringOption(VERITY_ENDORSER_DEFAULT_DID).getOrElse("")
 
   def updateAgentWalletId(actorEntityId: String): Unit = {
     if (agentWalletId.nonEmpty && ! agentWalletId.contains(actorEntityId))
@@ -195,7 +198,7 @@ trait AgentCommon
     }
   }
 
-  def agencyDidPairFutByCache(agencyDID: DID): Future[DidPair] = {
+  def agencyDidPairFutByCache(agencyDID: DidStr): Future[DidPair] = {
     val gadp = GetAgencyIdentityCacheParam(agencyDID, GetAgencyIdentity(agencyDID, getEndpoint = false))
     val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER)
     generalCache.getByParamAsync(gadfcParam)
@@ -230,11 +233,11 @@ trait AgentCommon
     try {
       val stateSize = s.serializedSize
       if (stateSize >= 0) { // so only states that can calculate size are part the metric
-        MetricsWriter.histogramApi.recordWithTag(
+        metricsWriter.histogramUpdate(
           AS_ACTOR_AGENT_STATE_SIZE,
-          MeasurementUnit.information.bytes,
+          MetricsUnit.Information.Bytes,
           stateSize,
-          "actor_class" -> this.getClass.getSimpleName,
+          Map("actor_class" -> this.getClass.getSimpleName)
         )
       }
     } catch {
@@ -254,7 +257,7 @@ trait AgentCommon
   }
 
   def fixAgentState(): Unit = {
-    runWithInternalSpan("fixAgentState", s"${getClass.getSimpleName}") {
+    metricsWriter.runWithSpan("fixAgentState", s"${getClass.getSimpleName}", InternalSpan) {
       val sndr = sender()
       val preAddedAuthKeys = _addedAuthKeys
       val preAgencyDidPair = state.agencyDIDPair
@@ -328,18 +331,18 @@ trait AgentCommon
   def updatedDidDocs(explicitlyAddedAuthKeys: Set[AuthKey],
                      didDocs: Seq[DidDoc]): Future[Seq[DidDoc]] =
     Future.traverse(didDocs) { dd =>
-      DidDocBuilder(dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
+      DidDocBuilder(futureWalletExecutionContext, dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
     }
 
   lazy val isVAS: Boolean =
     appConfig
-      .getConfigStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
+      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
       .contains("VerityAgent")
 }
 
 case class UpdateState(agencyDidPair: DidPair, relationship: Relationship, persistAuthKeys: Set[AuthKey]) extends ActorMessage
 
-case class AuthKey(keyId: KeyId, verKey: VerKey) {
+case class AuthKey(keyId: KeyId, verKey: VerKeyStr) {
   require(verKey.nonEmpty)
 }
 
@@ -373,27 +376,27 @@ trait SponsorRelCompanion {
  */
 case class SetupCreateKeyEndpoint(newAgentKeyDIDPair: DidPair,
                                   forDIDPair: DidPair,
-                                  mySelfRelDID: DID,    //domain id
+                                  mySelfRelDID: DidStr, //domain id
                                   ownerAgentKeyDIDPair: Option[DidPair] = None,
                                   ownerAgentActorEntityId: Option[EntityId]=None,
                                   pid: Option[ProtocolIdDetail]=None,
-				                          publicIdentity: Option[DidPair]=None) extends ActorMessage {
+                                  publicIdentity: Option[DidPair]=None) extends ActorMessage {
 
   def ownerAgentKeyDIDPairReq: DidPair = ownerAgentKeyDIDPair.getOrElse(
     throw new RuntimeException("ownerAgentKeyDIDPair not supplied")
   )
-  def ownerAgentKeyDIDReq: DID = ownerAgentKeyDIDPairReq.DID
-  def ownerAgentKeyDIDVerKeyReq: VerKey = ownerAgentKeyDIDPairReq.verKey
+  def ownerAgentKeyDIDReq: DidStr = ownerAgentKeyDIDPairReq.DID
+  def ownerAgentKeyDIDVerKeyReq: VerKeyStr = ownerAgentKeyDIDPairReq.verKey
 }
 
 trait SetupEndpoint extends ActorMessage {
   def ownerDIDPair: DidPair
   def agentKeyDIDPair: DidPair
 
-  def ownerDID: DID = ownerDIDPair.DID
-  def ownerDIDVerKey: VerKey = ownerDIDPair.verKey
-  def agentKeyDID: DID = agentKeyDIDPair.DID
-  def agentKeyDIDVerKey: VerKey = agentKeyDIDPair.verKey
+  def ownerDID: DidStr = ownerDIDPair.DID
+  def ownerDIDVerKey: VerKeyStr = ownerDIDPair.verKey
+  def agentKeyDID: DidStr = agentKeyDIDPair.DID
+  def agentKeyDIDVerKey: VerKeyStr = agentKeyDIDPair.verKey
 }
 
 case class SetupAgentEndpoint(ownerDIDPair: DidPair,
@@ -402,7 +405,7 @@ case class SetupAgentEndpoint(ownerDIDPair: DidPair,
 case class SetupAgentEndpoint_V_0_7 (threadId: ThreadId,
                                      ownerDIDPair: DidPair,
                                      agentKeyDIDPair: DidPair,
-                                     requesterVerKey: VerKey,
+                                     requesterVerKey: VerKeyStr,
                                      sponsorRel: Option[SponsorRel]=None) extends SetupEndpoint
 
 import com.evernym.verity.util.TimeZoneUtil._

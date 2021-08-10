@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent.relationship
 
+import com.evernym.verity.actor.ComMethodAuthentication
 import com.evernym.verity.actor.agent._
 
 import scala.language.implicitConversions
@@ -47,7 +48,11 @@ trait EndpointsLike {
   def upsert(newEndpoint: EndpointADT): Endpoints = {
     endpoints.find(_.value == newEndpoint.value) match {
       case Some(oldEndpoint) =>
-        val updatedEndpoint = oldEndpoint.updateAuthKeyIds((oldEndpoint.authKeyIds ++ newEndpoint.authKeyIds).distinct)
+        val updatedEndpoint =
+          oldEndpoint
+            .updateAuthKeyIds((oldEndpoint.authKeyIds ++ newEndpoint.authKeyIds).distinct)
+            .updatePackagingContext(newEndpoint.packagingContext)
+            .updateAuthentication(newEndpoint.authentication)
         val otherEndpoints = endpoints.filter(_.value != newEndpoint.value)
         copy(endpoints = otherEndpoints :+ updatedEndpoint)
       case None =>
@@ -100,14 +105,24 @@ trait EndpointType {
    */
   def `type`: Int
   def isOfType(typ: Int): Boolean = typ == `type`
-  def packagingContext: Option[PackagingContext]
+
   def authKeyIds: Seq[KeyId]
+  def packagingContext: Option[PackagingContext]
+  def authentication: Option[Authentication]
+
   def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT
+  def updatePackagingContext(newPackagingContext: Option[PackagingContext]): EndpointADT
+  def updateAuthentication(newAuthentication: Option[Authentication]): EndpointADT
 }
 
 trait PackagingContextCompanion {
   def apply(packVersion: String): PackagingContext =
     PackagingContext(MsgPackFormat.fromString(packVersion))
+}
+
+trait AuthenticationCompanion {
+  def apply(cmAuth: ComMethodAuthentication): Authentication =
+    Authentication(cmAuth.`type`, cmAuth.version, cmAuth.data)
 }
 
 trait EndpointLike extends EndpointType {
@@ -132,10 +147,17 @@ trait EndpointLikePassThrough extends EndpointLike {
   def id: EndpointId = endpoint.id
   def value: String = endpoint.value
   def `type`: Int = endpoint.`type`
-  def packagingContext: Option[PackagingContext] = endpoint.packagingContext
-  def authKeyIds: Seq[KeyId] = endpoint.authKeyIds
 
-  def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT = endpoint.updateAuthKeyIds(newAuthKeyIds)
+  def authKeyIds: Seq[KeyId] = endpoint.authKeyIds
+  def packagingContext: Option[PackagingContext] = endpoint.packagingContext
+  def authentication: Option[Authentication] = endpoint.authentication
+
+  def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT =
+    endpoint.updateAuthKeyIds(newAuthKeyIds)
+  def updatePackagingContext(newPackagingContext: Option[PackagingContext]): EndpointADT =
+    endpoint.updatePackagingContext(newPackagingContext)
+  def updateAuthentication(newAuthentication: Option[Authentication]): EndpointADT =
+    endpoint.updateAuthentication(newAuthentication)
 }
 
 object EndpointType {
@@ -151,6 +173,7 @@ trait RoutingServiceEndpointBase extends EndpointLike {
   def id = "0"
   def `type`: Int = EndpointType.ROUTING_SERVICE_ENDPOINT
   def packagingContext: Option[PackagingContext] = None
+  def authentication: Option[Authentication] = None
 }
 
 /**
@@ -160,6 +183,8 @@ trait RoutingServiceEndpointLike
   extends RoutingServiceEndpointBase { this: RoutingServiceEndpoint =>
   def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT =
     EndpointADT(copy(authKeyIds = newAuthKeyIds))
+  def updatePackagingContext(newPackagingContext: Option[PackagingContext]): EndpointADT = EndpointADT(this)
+  def updateAuthentication(newAuthentication: Option[Authentication]): EndpointADT = EndpointADT(this)
 }
 
 trait LegacyRoutingServiceEndpointLike
@@ -167,6 +192,8 @@ trait LegacyRoutingServiceEndpointLike
   def value = "their-route"
   def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT =
     EndpointADT(copy(authKeyIds = newAuthKeyIds))
+  def updatePackagingContext(newPackagingContext: Option[PackagingContext]): EndpointADT = EndpointADT(this)
+  def updateAuthentication(newAuthentication: Option[Authentication]): EndpointADT = EndpointADT(this)
 }
 
 trait HttpEndpointLike
@@ -174,6 +201,10 @@ trait HttpEndpointLike
     with HttpEndpointType { this: HttpEndpoint =>
   def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT =
     EndpointADT(copy(authKeyIds = newAuthKeyIds))
+  def updatePackagingContext(newPackagingContext: Option[PackagingContext]): EndpointADT =
+    EndpointADT(copy(packagingContext = newPackagingContext))
+  def updateAuthentication(newAuthentication: Option[Authentication]): EndpointADT =
+    EndpointADT(copy(authentication = newAuthentication))
 }
 
 trait ForwardPushEndpointLike
@@ -181,6 +212,9 @@ trait ForwardPushEndpointLike
     with FwdPushEndpointType { this: ForwardPushEndpoint =>
   def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT =
     EndpointADT(copy(authKeyIds = newAuthKeyIds))
+  def updatePackagingContext(newPackagingContext: Option[PackagingContext]): EndpointADT =
+    EndpointADT(copy(packagingContext = newPackagingContext))
+  def updateAuthentication(newAuthentication: Option[Authentication]): EndpointADT = EndpointADT(this)
 }
 
 trait SponsorPushEndpointLike
@@ -188,6 +222,8 @@ trait SponsorPushEndpointLike
     with SponsorPushEndpointType
     with EnforceNoAuthKeyIds { this: SponsorPushEndpoint =>
   def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT = EndpointADT(this)
+  def updatePackagingContext(newPackagingContext: Option[PackagingContext]): EndpointADT = EndpointADT(this)
+  def updateAuthentication(newAuthentication: Option[Authentication]): EndpointADT = EndpointADT(this)
 }
 
 trait PushEndpointLike
@@ -195,6 +231,8 @@ trait PushEndpointLike
     with PushEndpointType
     with EnforceNoAuthKeyIds { this: PushEndpoint =>
   def updateAuthKeyIds(newAuthKeyIds: Seq[String]): EndpointADT = EndpointADT(this)
+  def updatePackagingContext(newPackagingContext: Option[PackagingContext]): EndpointADT = EndpointADT(this)
+  def updateAuthentication(newAuthentication: Option[Authentication]): EndpointADT = EndpointADT(this)
 }
 
 /**
@@ -202,6 +240,7 @@ trait PushEndpointLike
  */
 trait HttpEndpointType extends EndpointType {
   def `type`: Int = EndpointType.HTTP
+  def authentication: Option[Authentication]
 }
 
 /**
@@ -210,6 +249,7 @@ trait HttpEndpointType extends EndpointType {
 trait PushEndpointType extends EndpointType {
   def `type`: Int = EndpointType.PUSH
   def packagingContext: Option[PackagingContext] = None
+  def authentication: Option[Authentication] = None
 }
 
 /**
@@ -217,6 +257,7 @@ trait PushEndpointType extends EndpointType {
  */
 trait FwdPushEndpointType extends EndpointType {
   def `type`: Int = EndpointType.FWD_PUSH
+  def authentication: Option[Authentication] = None
 }
 
 /**
@@ -224,6 +265,7 @@ trait FwdPushEndpointType extends EndpointType {
  */
 trait SponsorPushEndpointType extends EndpointType {
   def `type`: Int = EndpointType.SPR_PUSH
+  def authentication: Option[Authentication] = None
 }
 
 trait EnforceNoAuthKeyIds { this: EndpointType =>

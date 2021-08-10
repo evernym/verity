@@ -5,18 +5,19 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequ
 import akka.http.scaladsl.model.StatusCodes.{Accepted, OK}
 import akka.http.scaladsl.model.headers.RawHeader
 import com.evernym.verity.actor.ComMethodUpdated
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
-import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_PLAIN}
 import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_TYPE_UPDATE_COM_METHOD}
-import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, ComMethodPackaging, UpdateComMethodReqMsg, UpdateConfigReqMsg}
+import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, ComMethodAuthentication, ComMethodPackaging, UpdateComMethodReqMsg, UpdateConfigReqMsg}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
+import com.evernym.verity.did.{DidPair, VerKeyStr}
 import com.evernym.verity.integration.base.PortProvider
-import com.evernym.verity.integration.base.sdk_provider.msg_listener.{MsgListenerBase, PackedMsgListener, PlainMsgListener}
+import com.evernym.verity.integration.base.sdk_provider.msg_listener.{JsonMsgListener, MsgListenerBase, PackedMsgListener, ReceivedMsgCounter}
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
-import com.evernym.verity.protocol.engine.{MsgFamily, VerKey}
+import com.evernym.verity.protocol.engine.{MsgFamily, MsgFamilyName, MsgFamilyVersion, ThreadId}
 import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateEdgeAgent}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete, ConnRequestReceived, ConnResponseSent}
@@ -28,12 +29,13 @@ import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
 
 import java.util.UUID
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.reflect.ClassTag
 
-abstract class VeritySdkBase(param: SdkParam) extends SdkBase(param) {
+abstract class VeritySdkBase(param: SdkParam, ec: ExecutionContext, wec: ExecutionContext, oauthParam: Option[OAuthParam]=None) extends SdkBase(param, ec, wec) {
 
-  def registerWebhook(): ComMethodUpdated
+  def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created]
   def sendCreateConnectionInvitation(connId: String, thread: Option[MsgThread]): Invitation
 
@@ -93,21 +95,29 @@ abstract class VeritySdkBase(param: SdkParam) extends SdkBase(param) {
     expectMsgOnWebhook[ConfigResult]().msg
   }
 
-  protected def registerWebhookBase(packaging: Option[ComMethodPackaging]): ComMethodUpdated = {
-    val updateComMethod = UpdateComMethodReqMsg(ComMethod("1", COM_METHOD_TYPE_HTTP_ENDPOINT, msgListener.endpoint, packaging))
-    val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
-    val updateComMethodJson = JsonMsgUtil.createJsonString(typeStr, updateComMethod)
-    val routedPackedMsg = packForMyVerityAgent(updateComMethodJson)
-    parseAndUnpackResponse[ComMethodUpdated](checkOKResponse(sendPOST(routedPackedMsg))).msg
-  }
-
   protected def addForRel(connId: String, jsonMsgParam: JsonMsgBuilder): JsonMsgBuilder = {
     val relationship = myPairwiseRelationships(connId)
-    jsonMsgParam.forRelDID(relationship.verityAgentDIDPair.get.DID)
+    jsonMsgParam.forRelDID(relationship.verityAgentDIDPair.get.did)
+  }
+
+  def defaultAuthentication: Option[ComMethodAuthentication] = oauthParam.map { _ =>
+    ComMethodAuthentication(
+      "OAuth2",
+      "v1",
+      Map(
+        "url"           -> msgListener.oAuthAccessTokenEndpoint,
+        "grant_type"    -> "client_credentials",
+        "client_id"     -> "client_id",           //dummy data
+        "client_secret" -> "client_secret"        //dummy data
+      )
+    )
   }
 
   def msgListener: MsgListenerBase[_]
   def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T]
+  def resetPlainMsgsCounter: ReceivedMsgCounter = msgListener.resetPlainMsgsCounter
+  def resetAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetAuthedMsgsCounter
+  def resetFailedAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetFailedAuthedMsgsCounter
 }
 
 /**
@@ -115,11 +125,30 @@ abstract class VeritySdkBase(param: SdkParam) extends SdkBase(param) {
  *
  * @param param sdk parameters
  */
-abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
+abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+  extends VeritySdkBase(param, executionContext, walletExecutionContext, oauthParam) {
 
-  def registerWebhook(): ComMethodUpdated = {
+  def appConfig: AppConfig = testAppConfig
+
+  def registerWebhookWithoutOAuth(): ComMethodUpdated = {
+    registerWebhookBase(None)
+  }
+
+  def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
+    registerWebhookBase(authentication orElse defaultAuthentication)
+  }
+
+  private def registerWebhookBase(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
+    msgListener.setCheckAuth(authentication.isDefined)
     val packaging = Option(ComMethodPackaging(MPF_INDY_PACK.toString, Option(Set(myLocalAgentVerKey))))
-    registerWebhookBase(packaging)
+    val updateComMethod = UpdateComMethodReqMsg(
+      ComMethod("1", COM_METHOD_TYPE_HTTP_ENDPOINT, msgListener.webhookEndpoint, packaging, authentication))
+    val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
+    val updateComMethodJson = JsonMsgUtil.createJsonString(typeStr, updateComMethod)
+    val routedPackedMsg = packForMyVerityAgent(updateComMethodJson)
+    val cmu = parseAndUnpackResponse[ComMethodUpdated](checkOKResponse(sendPOST(routedPackedMsg))).msg
+    cmu.id.nonEmpty shouldBe true
+    cmu
   }
 
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created] = {
@@ -165,7 +194,7 @@ abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
   private def addForRelAndPackForConn(connId: String, jsonMsgBuilder: JsonMsgBuilder): Array[Byte] = {
     val forRelMsg = addForRel(connId, jsonMsgBuilder).jsonMsg
     val verityAgentPackedMsg = packFromLocalAgentKey(forRelMsg, Set(KeyParam.fromVerKey(verityAgentDidPair.verKey)))
-    prepareFwdMsg(agencyDID, verityAgentDidPair.DID, verityAgentPackedMsg)
+    prepareFwdMsg(agencyDID, verityAgentDidPair.did, verityAgentPackedMsg)
   }
 
   /**
@@ -175,26 +204,72 @@ abstract class IssuerVerifierSdk(param: SdkParam) extends VeritySdkBase(param) {
    */
   def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T] = {
     val msg = msgListener.expectMsg(timeout)
-    unpackMsg(msg)
+    try {
+      unpackMsg(msg)
+    } catch {
+      case _: UnexpectedMsgException =>
+        //TODO: This is temporary workaround to fix the intermittent failure around message ordering
+        // should analyze it and see if there is any better way to fix it
+        msgListener.addToQueue(msg)
+        expectMsgOnWebhook(timeout)
+    }
   }
 
-  val msgListener: PackedMsgListener = {
-    val port = PortProvider.getUnusedPort(7000)
-    new PackedMsgListener(port)(system)
+  val msgListener: MsgListenerBase[Array[Byte]] = {
+    val port = PortProvider.generateUnusedPort(7000)
+    val ml = new PackedMsgListener(port, oauthParam.map(_.tokenExpiresDuration))(system)
+    ml.setCheckAuth(oauthParam.isDefined)
+    ml
   }
 
 }
 
-case class IssuerSdk(param: SdkParam) extends IssuerVerifierSdk(param)
+case class IssuerSdk(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+  extends IssuerVerifierSdk(param, executionContext, walletExecutionContext, oauthParam)
 
-case class VerifierSdk(param: SdkParam) extends IssuerVerifierSdk(param)
+case class VerifierSdk(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+  extends IssuerVerifierSdk(param, executionContext, walletExecutionContext, oauthParam)
 
-case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
+case class IssuerRestSDK(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+  extends VeritySdkBase(param, executionContext, walletExecutionContext, oauthParam) {
+
+  def appConfig: AppConfig = testAppConfig
   import scala.collection.immutable
 
-  def registerWebhook(): ComMethodUpdated = {
+  def registerWebhookWithoutOAuth(): ComMethodUpdated = {
+    registerWebhookBase(None)
+  }
+
+  def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
+    registerWebhookBase(authentication orElse defaultAuthentication)
+  }
+
+  private def registerWebhookBase(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
+    msgListener.setCheckAuth(authentication.isDefined)
     val packaging = Option(ComMethodPackaging(MPF_PLAIN.toString, None))
-    registerWebhookBase(packaging)
+    val updateComMethodJson = {
+      val updateComMethod = UpdateComMethodReqMsg(
+        ComMethod(
+          "1",
+          COM_METHOD_TYPE_HTTP_ENDPOINT,
+          msgListener.webhookEndpoint,
+          packaging,
+          authentication
+        )
+      )
+      val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
+      JsonMsgUtil.createJsonString(typeStr, updateComMethod)
+    }
+    sendPostReqBase(
+      MSG_FAMILY_CONFIGS,
+      MFV_0_6,
+      updateComMethodJson,
+      UUID.randomUUID().toString,
+      verityAgentDidPair.did, myDIDApiKey
+    )
+    val cmu = expectMsgOnWebhook[ComMethodUpdated]().msg
+    cmu.id.nonEmpty shouldBe true
+    cmu
   }
 
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created] = {
@@ -216,7 +291,7 @@ case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
               applyToJsonMsg: String => String = { msg => msg },
               expectedRespStatus: StatusCode = Accepted): HttpResponse = {
     val jsonMsgBuilder = JsonMsgBuilder(msg, threadOpt, applyToJsonMsg)
-    checkResponse(sendPostReqBase(jsonMsgBuilder, verityAgentDidPair.DID, myDIDApiKey), Accepted)
+    checkResponse(sendPostReqBase(jsonMsgBuilder, verityAgentDidPair.did, myDIDApiKey), Accepted)
   }
 
   def sendMsgForConn(connId: String,
@@ -225,15 +300,30 @@ case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
                      applyToJsonMsg: String => String = { msg => msg},
                      expectedRespStatus: StatusCode = Accepted): HttpResponse = {
     val jsonMsgBuilder = addForRel(connId, JsonMsgBuilder(msg, threadOpt, applyToJsonMsg))
-    checkResponse(sendPostReqBase(jsonMsgBuilder, verityAgentDidPair.DID, myDIDApiKey), expectedRespStatus)
+    checkResponse(sendPostReqBase(jsonMsgBuilder, verityAgentDidPair.did, myDIDApiKey), expectedRespStatus)
   }
 
   private def sendPostReqBase(jsonMsgBuilder: JsonMsgBuilder,
                               route: String,
                               routeApiKey: String): HttpResponse = {
-    val url = s"${param.verityRestApiUrl}/$route/${jsonMsgBuilder.msgFamily.name}/" +
-      s"${jsonMsgBuilder.msgFamily.version}/${jsonMsgBuilder.threadId}"
-    sendPostJsonReqToUrl(jsonMsgBuilder.jsonMsg, url, routeApiKey)
+    sendPostReqBase(
+      jsonMsgBuilder.msgFamily.name,
+      jsonMsgBuilder.msgFamily.version,
+      jsonMsgBuilder.jsonMsg,
+      jsonMsgBuilder.threadId,
+      route,
+      routeApiKey
+    )
+  }
+
+  private def sendPostReqBase(msgFamilyName: MsgFamilyName,
+                              msgFamilyVersion: MsgFamilyVersion,
+                              jsonMsg: String,
+                              threadId: ThreadId,
+                              route: String,
+                              routeApiKey: String): HttpResponse = {
+    val url = s"${param.verityRestApiUrl}/$route/$msgFamilyName/$msgFamilyVersion/$threadId"
+    sendPostJsonReqToUrl(jsonMsg, url, routeApiKey)
   }
 
   def sendGetStatusReqForConn[T: ClassTag](connId: String,
@@ -241,12 +331,12 @@ case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
                                            threadOpt: Option[MsgThread] = None): RestGetResponse[T] = {
     val forRel = myPairwiseRelationships(connId).myVerityAgentDID
     val queryParam = Option(s"~for_relationship=$forRel")
-    sendGetReqBase(msgFamily, verityAgentDidPair.DID, myDIDApiKey, threadOpt, queryParam)
+    sendGetReqBase(msgFamily, verityAgentDidPair.did, myDIDApiKey, threadOpt, queryParam)
   }
 
   def sendGetStatusReq[T: ClassTag](threadOpt: Option[MsgThread] = None): RestGetResponse[T] = {
     val msgFamily = MsgFamilyHelper.getMsgFamily
-    sendGetReqBase(msgFamily, verityAgentDidPair.DID, myDIDApiKey, threadOpt)
+    sendGetReqBase(msgFamily, verityAgentDidPair.did, myDIDApiKey, threadOpt)
   }
 
   private def sendGetReqBase[T: ClassTag](msgFamily: MsgFamily,
@@ -297,7 +387,7 @@ case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
     s"$myLocalAgentVerKey:$myDIDSignature"
   }
 
-  private def computeSignature(verKey: VerKey): String = {
+  private def computeSignature(verKey: VerKeyStr): String = {
     val signedMsg = testWalletAPI.executeSync[SignedMsg](
       SignMsg(KeyParam.fromVerKey(verKey), verKey.getBytes))(walletAPIParam)
     Base58Util.encode(signedMsg.msg)
@@ -310,12 +400,22 @@ case class IssuerRestSDK(param: SdkParam) extends VeritySdkBase(param) {
    */
   def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T] = {
     val msg = msgListener.expectMsg(timeout)
-    ReceivedMsgParam(msg)
+    try {
+      ReceivedMsgParam(msg)
+    } catch {
+      case _: UnexpectedMsgException =>
+        //TODO: This is temporary workaround to fix the intermittent failure around message ordering
+        // should analyze it and see if there is any better way to fix it
+        msgListener.addToQueue(msg)
+        expectMsgOnWebhook(timeout)
+    }
   }
 
-  val msgListener: PlainMsgListener = {
-    val port = PortProvider.getUnusedPort(7000)
-    new PlainMsgListener(port)(system)
+  val msgListener: MsgListenerBase[String] = {
+    val port = PortProvider.generateUnusedPort(7000)
+    val ml = new JsonMsgListener(port, oauthParam.map(_.tokenExpiresDuration))(system)
+    ml.setCheckAuth(oauthParam.isDefined)
+    ml
   }
 }
 

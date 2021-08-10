@@ -1,8 +1,10 @@
 package com.evernym.verity.actor.node_singleton
 
-object MsgProgressTrackerCache {
+import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
 
-  val GLOBAL_TRACKING_ID = "global"
+class MsgProgressTrackerCacheImpl extends Extension{
+
+  //TODO: how to make sure this extension is thread safe?
 
   private var trackingParams: Set[TrackingParam] = Set.empty
 
@@ -16,6 +18,14 @@ object MsgProgressTrackerCache {
   def isTracked(id: String): Boolean = trackingParams.exists(_.trackingId == id)
 
   def allIdsBeingTracked: TrackingStatus = TrackingStatus(trackingParams)
+}
+
+object MsgProgressTrackerCache extends ExtensionId[MsgProgressTrackerCacheImpl] with ExtensionIdProvider {
+  val GLOBAL_TRACKING_ID = "global"
+
+  override def lookup = MsgProgressTrackerCache
+
+  override def createExtension(system: ExtendedActorSystem) = new MsgProgressTrackerCacheImpl
 }
 
 case class TrackingParam(trackingId: String)

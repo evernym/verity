@@ -2,22 +2,21 @@ package com.evernym.verity.texter
 
 import akka.actor.Props
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.Exceptions.{HandledErrorException, InternalServerErrorException, SmsSendingFailedException}
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{HandledErrorException, InternalServerErrorException, SmsSendingFailedException}
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.MetricsWriter
 import com.evernym.verity.util.Util
 import com.evernym.verity.util.Util._
-import com.evernym.verity.Exceptions
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.actor.base.CoreActorExtended
+import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
@@ -79,26 +78,26 @@ class DefaultSMSSender(val config: AppConfig) extends CoreActorExtended {
       case Left(_) =>
         providerId match {
           case SMS_PROVIDER_ID_TWILIO =>
-            MetricsWriter.gaugeApi.increment(AS_SERVICE_TWILIO_DURATION, duration)
-            MetricsWriter.gaugeApi.increment(AS_SERVICE_TWILIO_FAILED_COUNT)
+            metricsWriter.gaugeIncrement(AS_SERVICE_TWILIO_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_TWILIO_FAILED_COUNT)
           case SMS_PROVIDER_ID_BANDWIDTH =>
-            MetricsWriter.gaugeApi.increment(AS_SERVICE_BANDWIDTH_DURATION, duration)
-            MetricsWriter.gaugeApi.increment(AS_SERVICE_BANDWIDTH_FAILED_COUNT)
+            metricsWriter.gaugeIncrement(AS_SERVICE_BANDWIDTH_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_BANDWIDTH_FAILED_COUNT)
 	        case SMS_PROVIDER_ID_OPEN_MARKET =>
-            MetricsWriter.gaugeApi.increment(AS_SERVICE_OPEN_MARKET_DURATION, duration)
-            MetricsWriter.gaugeApi.increment(AS_SERVICE_OPEN_MARKET_FAILED_COUNT)
+            metricsWriter.gaugeIncrement(AS_SERVICE_OPEN_MARKET_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_OPEN_MARKET_FAILED_COUNT)
         }
       case Right(_) =>
         providerId match {
           case SMS_PROVIDER_ID_TWILIO =>
-            MetricsWriter.gaugeApi.increment(AS_SERVICE_TWILIO_DURATION, duration)
-            MetricsWriter.gaugeApi.increment(AS_SERVICE_TWILIO_SUCCEED_COUNT)
+            metricsWriter.gaugeIncrement(AS_SERVICE_TWILIO_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_TWILIO_SUCCEED_COUNT)
           case SMS_PROVIDER_ID_BANDWIDTH =>
-            MetricsWriter.gaugeApi.increment(AS_SERVICE_BANDWIDTH_DURATION, duration)
-            MetricsWriter.gaugeApi.increment(AS_SERVICE_BANDWIDTH_SUCCEED_COUNT)
+            metricsWriter.gaugeIncrement(AS_SERVICE_BANDWIDTH_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_BANDWIDTH_SUCCEED_COUNT)
 	        case SMS_PROVIDER_ID_OPEN_MARKET =>
-            MetricsWriter.gaugeApi.increment(AS_SERVICE_OPEN_MARKET_DURATION, duration)
-            MetricsWriter.gaugeApi.increment(AS_SERVICE_OPEN_MARKET_SUCCEED_COUNT)
+            metricsWriter.gaugeIncrement(AS_SERVICE_OPEN_MARKET_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_OPEN_MARKET_SUCCEED_COUNT)
         }
     }
   }
@@ -117,7 +116,7 @@ class DefaultSMSSender(val config: AppConfig) extends CoreActorExtended {
    * @return
    */
   def servicesToBeUsedInOrder: List[SMSServiceProvider] = {
-    val preferredOrder = config.getConfigListOfStringReq(SMS_EXTERNAL_SVC_PREFERRED_ORDER)
+    val preferredOrder = config.getStringListReq(SMS_EXTERNAL_SVC_PREFERRED_ORDER)
     preferredOrder.flatMap(id => allServices.find(s => s.providerId == id))
   }
 

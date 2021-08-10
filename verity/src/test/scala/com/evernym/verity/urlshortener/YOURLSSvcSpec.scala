@@ -3,22 +3,29 @@ package com.evernym.verity.urlshortener
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.HttpMethods.POST
 import akka.http.scaladsl.model._
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.URL_SHORTENING_FAILED
+import com.evernym.verity.util2.Status.URL_SHORTENING_FAILED
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.Util.buildHandledError
+import com.evernym.verity.util2.ExecutionContextProvider
 import org.json.JSONObject
 import org.mockito.ArgumentCaptor
 import org.mockito.scalatest.MockitoSugar
 import org.scalatest.concurrent.ScalaFutures
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{Duration, DurationInt}
 
-class YOURLSSvcSpec extends ActorSpec with BasicSpec with MockitoSugar with ScalaFutures {
+class YOURLSSvcSpec
+  extends ActorSpec
+    with BasicSpec
+    with MockitoSugar
+    with ScalaFutures {
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  lazy implicit val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  class TestYOURLSSvc(mock: HttpRequest => Future[HttpResponse]) extends YOURLSSvc(appConfig) {
+
+  class TestYOURLSSvc(mock: HttpRequest => Future[HttpResponse]) extends YOURLSSvc(appConfig, executionContext) {
     override lazy val timeout: Duration = testTimeoutSeconds.seconds
     override lazy val apiUrl: String = testApiUrl
     override lazy val apiSignature: Option[String] = Option(testApiSignature)
@@ -298,4 +305,6 @@ class YOURLSSvcSpec extends ActorSpec with BasicSpec with MockitoSugar with Scal
     json.put("shorturl", shortUrl)
     HttpEntity(ContentTypes.`application/json`, json.toString)
   }
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

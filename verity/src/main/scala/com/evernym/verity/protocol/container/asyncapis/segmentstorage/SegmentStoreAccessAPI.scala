@@ -7,6 +7,7 @@ import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
 import com.evernym.verity.actor.{ForIdentifier, StorageInfo, StorageReferenceStored}
 import com.evernym.verity.actor.segmentedstates.{DeleteSegmentedState, GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
+import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.encryptor.PersistentDataEncryptor
 import com.evernym.verity.logging.LoggingUtil
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
@@ -14,7 +15,7 @@ import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreA
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner, BaseAccessController}
 import com.evernym.verity.protocol.engine.{BaseAsyncOpExecutorImpl, ProtoRef}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
-import com.evernym.verity.storage_services.StorageAPI
+import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
@@ -55,13 +56,13 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
   }
 
   private def blobEncryptionSeed(id: String): String =
-    DefaultPersistenceEncryption.getEventEncryptionKeyWithoutWallet(id, appConfig)
+    DefaultPersistenceEncryption.getEventEncryptionKey(id, appConfig)
 
   private def encryptBlob(blob: Array[Byte], id: String): Array[Byte] =
-    PersistentDataEncryptor.encrypt(blob, blobEncryptionSeed(id))
+    new PersistentDataEncryptor(appConfig.getStringReq(SALT_EVENT_ENCRYPTION)).encrypt(blob, blobEncryptionSeed(id))
 
   private def decryptBlob(encryptedBlob: Array[Byte], id: String): Array[Byte] =
-    PersistentDataEncryptor.decrypt(encryptedBlob, blobEncryptionSeed(id))
+    new PersistentDataEncryptor(appConfig.getStringReq(SALT_EVENT_ENCRYPTION)).decrypt(encryptedBlob, blobEncryptionSeed(id))
 
   private def blobStoreBucket: String = appConfig
     .config
@@ -112,12 +113,12 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
   private def readFromBlobStore[T](blob: BlobSegment,
                                    storageRef: StorageReferenceStored)
                                   (implicit ec: ExecutionContext): Future[Option[T]] = {
-    storageAPI.get(blob.bucketName, blob.lifecycleAddress).map { encryptedData: Array[Byte]  =>
-      Option(
+    storageAPI.get(blob.bucketName, blob.lifecycleAddress).map { encryptedData: Option[Array[Byte]]  =>
+      encryptedData.map { ed =>
         SegmentedStateStore
-          .buildEvent(storageRef.eventCode, decryptBlob(encryptedData, blob.segmentAddress))
+          .buildEvent(storageRef.eventCode, decryptBlob(ed, blob.segmentAddress))
           .asInstanceOf[T]
-      )
+      }
     }
   }
 
@@ -190,5 +191,5 @@ case class BlobSegment(bucketName: String,
                        segmentAddress: SegmentAddress,
                        segmentKey: SegmentKey,
                        lifecycle: Option[String]) {
-  def lifecycleAddress: String = lifecycle.map(x => s"$x/").getOrElse("") + segmentAddress
+  def lifecycleAddress: String = BucketLifeCycleUtil.lifeCycleAddress(lifecycle, segmentAddress)
 }

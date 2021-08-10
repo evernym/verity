@@ -3,7 +3,7 @@ package com.evernym.verity.actor.itemmanager
 import akka.cluster.sharding.ShardRegion.EntityId
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemManagerEntityId}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.util.TimeZoneUtil._
 
 /**
@@ -31,27 +31,12 @@ class TimeBasedItemContainerMapper extends ItemContainerMapper {
 ////NOTE: Most of the logic in this class should not be changed else it may break things
 object ItemConfigManager {
 
-  def buildItemContainerEntityId(itemManagerEntityId: ItemManagerEntityId,
-                                 itemId: ItemId,
-                                 appConfig: AppConfig): ItemContainerEntityId = {
-    versionedItemManagerEntityId(itemManagerEntityId, appConfig) + "-" + itemContainerMapper(appConfig).getItemContainerId(itemId)
-  }
-
-  private def itemContainerMapper(appConfig: AppConfig): ItemContainerMapper = {
-    val clazz = appConfig.getConfigStringReq(ITEM_CONTAINER_MAPPER_CLASS)
-    Class
-      .forName(clazz)
-      .getConstructor()
-      .newInstance()
-      .asInstanceOf[ItemContainerMapper]
-  }
-
-  private def versionedItemManagerEntityId(itemManagerEntityId: EntityId, appConfig: AppConfig): String = {
+  def versionedItemManagerEntityId(itemManagerEntityId: EntityId, appConfig: AppConfig): String = {
     itemManagerEntityId + "-" + getManagerVersionPrefix(itemManagerEntityId, appConfig)
   }
 
   private def getManagerVersionPrefix(itemManagerEntityId: ItemManagerEntityId, appConfig: AppConfig): String =
-    appConfig.getConfigStringOption(s"$VERITY.item-manager.$itemManagerEntityId.version")
+    appConfig.getStringOption(s"$VERITY.item-manager.$itemManagerEntityId.version")
       .getOrElse("v1")
 
 }

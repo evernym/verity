@@ -17,10 +17,10 @@ trait RestrictedApiRoutes
     with ResourceUsageEndpointHandler
     with AgencySetupEndpointHandler
     with MaintenanceEndpointHandler
-    with MetricsEndpointHandler
     with ItemManagerEndpointHandler
-    with MsgProgressTrackerEndpointHandler {
+    with MsgProgressTrackerEndpointHandler
+    with OutboxEndpointHandler {
 
   protected val restrictedApiRoutes: Route = healthCheckRoute ~ resourceUsageRoute ~ setupRoutes ~
-    maintenanceRoutes ~ metricsRoutes ~ itemManagerRoutes ~ msgProgressTrackerRoutes
+    maintenanceRoutes ~ itemManagerRoutes ~ msgProgressTrackerRoutes ~ outboxRoute
 }

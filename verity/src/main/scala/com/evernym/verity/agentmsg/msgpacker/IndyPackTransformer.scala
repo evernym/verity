@@ -3,7 +3,8 @@ package com.evernym.verity.agentmsg.msgpacker
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+
+import scala.concurrent.ExecutionContext
 import com.evernym.verity.actor.wallet.{PackMsg, PackedMsg, UnpackMsg, UnpackedMsg}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.vault.wallet_api.WalletAPI
@@ -30,10 +31,8 @@ class IndyPackTransformer
     walletAPI.executeAsync[PackedMsg](PackMsg(msg.getBytes, recipVerKeyParams, senderVerKeyParam))
   }
 
-  override def unpackAsync(msg: Array[Byte],
-                           fromVerKeyParam: Option[KeyParam],
-                           unpackParam: UnpackParam)
-                          (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentBundledMsg] = {
+  override def unpackAsync(msg: Array[Byte], fromVerKeyParam: Option[KeyParam], unpackParam: UnpackParam)
+                          (implicit wap: WalletAPIParam, walletAPI: WalletAPI, ec: ExecutionContext): Future[AgentBundledMsg] = {
     walletAPI.executeAsync[UnpackedMsg](UnpackMsg(msg)).map { um =>
       prepareAgentBundledMsg(um, unpackParam)
     }

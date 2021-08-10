@@ -1,21 +1,22 @@
 package com.evernym.verity.actor.agent.user
 
 import akka.actor.ActorRef
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.MsgPayloadStoredEventBuilder
-import com.evernym.verity.Status.{ALREADY_EXISTS, MSG_DELIVERY_STATUS_FAILED, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED}
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.{ALREADY_EXISTS, MSG_DELIVERY_STATUS_FAILED, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED}
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsMsgHelper, GetMsgsReqMsg, UpdateMsgStatusMsgHelper, UpdateMsgStatusReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
-import com.evernym.verity.protocol.engine.{DID, MsgId}
+import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.{MsgDetail, StorePayloadParam}
 import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
+import com.evernym.verity.util2.MsgPayloadStoredEventBuilder
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 
 import scala.util.Left
@@ -32,7 +33,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
    * @param reqMsgContext req msg context
    */
   def handleGetMsgs(amw: AgentMsgWrapper)(implicit reqMsgContext: ReqMsgContext): Unit = {
-    runWithInternalSpan("handleGetMsgs", "UserAgentCommon") {
+    metricsWriter.runWithSpan("handleGetMsgs", "UserAgentCommon", InternalSpan) {
       val userId = userIdForResourceUsageTracking(amw.senderVerKey)
       val resourceName = ResourceUsageUtil.getMessageResourceName(amw.msgType)
       addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
@@ -44,14 +45,14 @@ trait MsgStoreAPI { this: UserAgentCommon =>
   }
 
   def handleGetMsgsInternal(gmr: GetMsgsReqMsg): Unit = {
-    runWithInternalSpan("handleGetMsgsInternal", "UserAgentCommon") {
+    metricsWriter.runWithSpan("handleGetMsgsInternal", "UserAgentCommon", InternalSpan) {
       sender ! GetMsgRespInternal(msgStore.getMsgs(gmr))
     }
   }
 
   private def buildAndSendGetMsgsResp(filteredMsgs: List[MsgDetail], sndr: ActorRef)
                              (implicit reqMsgContext: ReqMsgContext): Unit = {
-    runWithInternalSpan("buildAndSendGetMsgsResp", "UserAgentCommon") {
+    metricsWriter.runWithSpan("buildAndSendGetMsgsResp", "UserAgentCommon", InternalSpan) {
       val getMsgsRespMsg = GetMsgsMsgHelper.buildRespMsg(filteredMsgs)(reqMsgContext.agentMsgContext)
 
       val encParam = EncryptParam(
@@ -62,7 +63,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
       logger.debug(s"filtered get msgs: $logPrefix" + filteredMsgs.mkString(logPrefix))
       logger.debug("get msgs response: " + getMsgsRespMsg)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, getMsgsRespMsg, reqMsgContext.wrapInBundledMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
       sendRespMsg("GetMsgsResp", rp, sndr)
     }
   }
@@ -86,7 +87,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
       Option(KeyParam(Left(state.thisAgentVerKeyReq)))
     )
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParam, msgStatusUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
-    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
     sendRespMsg("MsgStatusUpdatedResp", rp)
   }
 
@@ -116,7 +117,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   def storeMsg(msgId: MsgId,
                msgName: String,
-               senderDID: DID,
+               senderDID: DidStr,
                msgStatusCode: String,
                sendMsg: Boolean,
                threadOpt: Option[Thread],
@@ -134,8 +135,8 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   def buildMsgStoredEventsV1(msgId: MsgId,
                              msgName: String,
-                             myPairwiseDID: DID,
-                             senderDID: DID,
+                             myPairwiseDID: DidStr,
+                             senderDID: DidStr,
                              sendMsg: Boolean,
                              threadOpt: Option[Thread],
                              refMsgId: Option[MsgId],
@@ -146,7 +147,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   def buildMsgStoredEventsV2(msgId: MsgId,
                              msgName: String,
-                             senderDID: DID,
+                             senderDID: DidStr,
                              statusCode: String,
                              sendMsg: Boolean,
                              threadOpt: Option[Thread],
@@ -173,14 +174,21 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   private def buildMsgCreatedEvt(msgId: MsgId,
                                  mType: String,
-                                 senderDID: DID,
+                                 senderDID: DidStr,
                                  sendMsg: Boolean,
                                  msgStatus: String,
                                  threadOpt: Option[Thread],
                                  LEGACY_refMsgId: Option[MsgId]=None): MsgCreated = {
     checkIfMsgAlreadyNotExists(msgId)
-    MsgHelper.buildMsgCreatedEvt(msgId, mType, senderDID, sendMsg,
-      msgStatus, threadOpt, LEGACY_refMsgId)
+    MsgHelper.buildMsgCreatedEvt(
+      msgId,
+      mType,
+      senderDID,
+      sendMsg,
+      msgStatus,
+      threadOpt,
+      LEGACY_refMsgId
+    )
   }
 
   private def buildPayloadEvent(msgId: MsgId,

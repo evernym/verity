@@ -1,10 +1,10 @@
 package com.evernym.verity.actor
 
 import akka.actor.ActorRef
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.node_singleton.DrainInitiated
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
-import com.evernym.verity.metrics.NodeMetricsData
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 
 
@@ -15,8 +15,6 @@ class NodeSingletonSpec
   lazy val nodeSingleton: ActorRef = platform.nodeSingleton
 
   configNodeSpecs()
-
-  metricNodeSpec()
 
   def configNodeSpecs(): Unit = {
 
@@ -42,17 +40,7 @@ class NodeSingletonSpec
     }
   }
 
-  def metricNodeSpec(): Unit = {
-
-    "MetricsNodeSpec" - {
-      "should be able to fetch metrics" taggedAs UNSAFE_IgnoreLog in {
-        nodeSingleton ! GetNodeMetrics(MetricsFilterCriteria())
-
-        expectMsgPF() {
-          case _ : NodeMetricsData =>
-        }
-      }
-    }
-  }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 
 }

@@ -1,11 +1,12 @@
 package com.evernym.verity.actor.agent.user
 
+import akka.actor.typed.scaladsl.adapter._
 import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
+import com.evernym.verity.util2.Status._
+import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent._
@@ -19,6 +20,9 @@ import com.evernym.verity.actor.agent.user.UserAgent._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.ChildEvent
+import com.evernym.verity.msgoutbox.DestId
+import com.evernym.verity.msgoutbox.rel_resolver.GetOutboxParam
+import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.OutboxParamResp
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.actor.wallet._
@@ -34,9 +38,10 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.metrics.MetricsUnit
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
@@ -51,21 +56,32 @@ import com.evernym.verity.push_notification.PusherUtil
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
-import com.evernym.verity.{ActorErrorResp, UrlParam, actor}
-import kamon.metric.MeasurementUnit
+import com.evernym.verity.{actor, msgoutbox}
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.UpdateParams
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.AUTH_TYPE_OAUTH2
+import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
+import com.evernym.verity.util2.ActorErrorResp
 
-import scala.concurrent.Future
-import scala.util.{Failure, Success}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 /**
  Represents user's agent
  */
-class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: ActorRef)
+class UserAgent(val agentActorContext: AgentActorContext,
+                val metricsActorRef: ActorRef,
+                executionContext: ExecutionContext,
+                walletExecutionContext: ExecutionContext)
   extends UserAgentCommon
     with UserAgentStateUpdateImpl
     with HasAgentActivity
     with MsgNotifierForUserAgent
     with AgentSnapshotter[UserAgentState] {
+
+  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
+  implicit def futureExecutionContext: ExecutionContext = executionContext
 
   type StateType = UserAgentState
   var state = new UserAgentState
@@ -117,7 +133,8 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     case dcm: DeleteComMethod                    => handleDeleteComMethod(dcm)
     case ads: AgentDetailSet                     => handleAgentDetailSet(ads)
     case GetSponsorRel                           => sendSponsorDetails()
-
+    case GetTokenForUrl(forUrl, cmd)             => sendToOAuthAccessTokenHolder(forUrl, cmd)
+    case GetOutboxParam(destId)                  => sendOutboxParam(destId, sender)
     case hck: HandleCreateKeyWithThisAgentKey    =>
       handleCreateKeyWithThisAgentKey(hck.thisAgentKey, hck.createKeyReqMsg)(hck.reqMsgContext)
   }
@@ -149,6 +166,38 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       if (!isVAS) addRelationshipAgent(AgentDetail(ads.forDID, ads.agentKeyDID))
   }
 
+  def sendOutboxParam(destId: DestId, sndr: ActorRef): Unit = {
+    //NOTE: below logic will have to be changed once we start supporting multiple destinations
+    if (destId == DESTINATION_ID_DEFAULT) {
+      outboxActorRefs += destId -> sender
+      val comMethods =
+        state.myDidDoc.flatMap(_.endpoints.map(_.endpoints)).getOrElse(Seq.empty)
+          .map { ep =>
+            val (recipPackaging, authentication) = ep.endpointADTX match {
+              case hp: HttpEndpointType =>
+                val packFormat = hp.packagingContext.map(_.packFormat.toString()).getOrElse(MPF_INDY_PACK.toString)
+                val packaging = Option(msgoutbox.RecipPackaging(packFormat, state.myDidAuthKey.map(_.verKey).toSeq))
+                val auth = hp.authentication.map(a => msgoutbox.Authentication(a.`type`, a.version, a.data))
+                (packaging, auth)
+              case _                    =>
+                (None, None)
+            }
+            ep.id -> msgoutbox.ComMethod(ep.`type`, ep.value, recipPackaging, authentication = authentication)
+          }.toMap
+      sndr ! OutboxParamResp(state.getAgentWalletId, state.thisAgentVerKeyReq, comMethods)
+    } else {
+      throw new RuntimeException("destId not supported: " + destId)
+    }
+  }
+
+  def sendToOAuthAccessTokenHolder(forUrl: String, cmd: OAuthAccessTokenHolder.Cmd): Unit = {
+    httpComMethodsWithAuth.filter(_.value == forUrl).foreach { hc =>
+      context.child(oAuthHolderKey(hc)).foreach { actorRef =>
+        actorRef ! cmd
+      }
+    }
+  }
+
   def handleRemoveComMethod(cmd: ComMethodDeleted): Unit = {
     state = state.copy(relationship = state.relWithEndpointRemoved(cmd.id))
   }
@@ -164,25 +213,27 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     }
     val allAuthKeyIds = (authKeyIds ++ existingEdgeAuthKeys.map(_.keyId)).toSeq
     val packagingContext = cmu.packaging.map(p => PackagingContext(p.pkgType))
+    val authentication = cmu.authentication.map (a => Authentication(a))
     val endpoint: EndpointADTUntyped = cmu.typ match {
       case EndpointType.PUSH        => PushEndpoint(cmu.id, cmu.value)
       case EndpointType.SPR_PUSH    => SponsorPushEndpoint(cmu.id, cmu.value)
-      case EndpointType.HTTP        => HttpEndpoint(cmu.id, cmu.value, allAuthKeyIds, packagingContext)
+      case EndpointType.HTTP        => HttpEndpoint(cmu.id, cmu.value, allAuthKeyIds, packagingContext, authentication)
       case EndpointType.FWD_PUSH    => ForwardPushEndpoint(cmu.id, cmu.value, allAuthKeyIds, packagingContext)
     }
     state = state.copy(relationship = state.relWithEndpointAddedOrUpdatedInMyDidDoc(endpoint))
+    updateOAuthAccessTokenHolder()
   }
 
-  def handleOwnerDIDSet(did: DID, verKey: VerKey): Unit = {
+  def handleOwnerDIDSet(did: DidStr, verKey: VerKeyStr): Unit = {
     val myDidDoc =
-      DidDocBuilder()
+      DidDocBuilder(futureWalletExecutionContext)
         .withDid(did)
         .withAuthKey(did, verKey, Set(EDGE_AGENT_KEY))
         .didDoc
     state = state.withRelationship(SelfRelationship(myDidDoc))
   }
 
-  def handleAgentKeyCreated(forDID: DID, verKey: VerKey): Unit = {
+  def handleAgentKeyCreated(forDID: DidStr, verKey: VerKeyStr): Unit = {
     state = state.withThisAgentKeyId(forDID)
     if (forDID != state.myDid_!) {
       state = state.copy(relationship =
@@ -216,7 +267,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     }
   }
 
-  def handleRecoveryKeyAdded(verKey: VerKey): Unit = {
+  def handleRecoveryKeyAdded(verKey: VerKeyStr): Unit = {
     state = state.copy(relationship = state.relWithNewAuthKeyAddedInMyDidDoc(
       "recovery-key", verKey, Set(RECOVERY_KEY)))
   }
@@ -228,7 +279,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     }
   }
 
-  def storePublicIdentity(DID: DID, verKey: VerKey): Future[Option[ControlMsg]] = {
+  def storePublicIdentity(DID: DidStr, verKey: VerKeyStr): Future[Option[ControlMsg]] = {
     if (state.publicIdentity.isEmpty) {
       writeAndApply(PublicIdentityStored(DID, verKey))
     }
@@ -236,7 +287,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   }
 
   // The recovery key mentioned here is the one used during wallet backup.
-  def registerRecoveryKey(recoveryKey: VerKey): Future[Option[ControlMsg]] = {
+  def registerRecoveryKey(recoveryKey: VerKeyStr): Future[Option[ControlMsg]] = {
     writeAndApply(RecoveryKeyAdded(recoveryKey))
     Future.successful(Option(ControlMsg(RecoveryKeyRegistered())))
   }
@@ -280,8 +331,9 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       val verKeys = state.myDidDoc_!.authorizedKeys_!.safeAuthorizedKeys
         .filterByKeyIds(ep.authKeyIds)
         .map(_.verKey).toSet
-      val cmp = ep.packagingContext.map(pc => ComMethodsPackaging(pc.packFormat, verKeys))
-      ComMethodDetail(ep.`type`, ep.value, cmp)
+      val hasAuthEnabled = Try(ep.endpointADTX.asInstanceOf[HttpEndpointType].authentication.isDefined).getOrElse(false)
+      val packaging = ep.packagingContext.map(pc => ComMethodsPackaging(pc.packFormat, verKeys))
+      ComMethodDetail(ep.`type`, ep.value, hasAuthEnabled, packaging)
     }
     CommunicationMethods(comMethods.toSet, withSponsorId)
   }
@@ -294,8 +346,8 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
 
   def sendFwdComMethods(): Unit = sendComMethodsByType(Seq(COM_METHOD_TYPE_FWD_PUSH))
 
-  def handleInitPairwiseConnResp(agentDID: DID,
-                                 agentDIDVerKey: VerKey,
+  def handleInitPairwiseConnResp(agentDID: DidStr,
+                                 agentDIDVerKey: VerKeyStr,
                                  futResp: Future[Any], sndr: ActorRef)
                                 (implicit reqMsgContext: ReqMsgContext): Unit = {
     futResp map {
@@ -308,7 +360,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     implicit val reqMsgContext: ReqMsgContext = pd.reqMsgContext
     val keyCreatedRespMsg = CreateKeyMsgHelper.buildRespMsg(pd.agentDID, pd.agentDIDVerKey)(reqMsgContext.agentMsgContext)
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, keyCreatedRespMsg, reqMsgContext.wrapInBundledMsg)
-    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+    val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
     sendRespMsg("CreateNewPairwiseKeyResp", rp, sndr)
   }
 
@@ -338,14 +390,24 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
 
   def createNewPairwiseEndpoint(): Future[Option[ControlMsg]] = {
     walletAPI.executeAsync[NewKeyCreated](CreateNewKey()).flatMap { requesterKey =>
-      val respFut = createNewPairwiseEndpointBase(requesterKey, requesterKey.didPair, Option(requesterKey.verKey))
-      respFut.map(_ => Option(ControlMsg(Ctl.KeyCreated(requesterKey.did, requesterKey.verKey))))
+      val respFut = createNewPairwiseEndpointBase(
+        requesterKey,
+        requesterKey.didPair.toAgentDidPair,
+        Option(requesterKey.verKey)
+      )
+      respFut.map { _ =>
+        Option(
+          ControlMsg(
+            Ctl.KeyCreated(requesterKey.did, requesterKey.verKey)
+          )
+        )
+      }
     }
   }
 
   def createNewPairwiseEndpointBase(thisAgentKey: NewKeyCreated,
                                     requesterDIDPair: DidPair,
-                                    requesterVerKeyOpt: Option[VerKey]=None)
+                                    requesterVerKeyOpt: Option[VerKeyStr]=None)
   : Future[Any] = {
     val requesterVerKeyFut = requesterVerKeyOpt match {
       case Some(vk) => Future.successful(vk)
@@ -408,7 +470,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
         }
       case MPF_INDY_PACK | MPF_MSG_PACK =>
         val param = AgentMsgPackagingUtil.buildPackMsgParam (encParamFromThisAgentToOwner, comMethodUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
-        val rp = AgentMsgPackagingUtil.buildAgentMsg (reqMsgContext.msgPackFormatReq, param) (agentMsgTransformer, wap)
+        val rp = AgentMsgPackagingUtil.buildAgentMsg (reqMsgContext.msgPackFormatReq, param) (agentMsgTransformer, wap, metricsWriter)
         sendRespMsg("ComMethodUpdatedResp", rp)
       case Unrecognized(_) =>
         throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
@@ -425,15 +487,26 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       .map(_.verKey).toSet
     val existingEndpointOpt = state.myDidDoc_!.endpoints_!.findById(comMethod.id)
     val isComMethodExists = existingEndpointOpt.exists { eep =>
-      eep.`type` == comMethod.`type` && eep.value == comMethod.value && {
-        (eep.packagingContext, comMethod.packaging) match {
-          case (Some(epc), Some(newp)) =>
-            epc.packFormat.isEqual(newp.pkgType) &&
-              newp.recipientKeys.exists(_.exists(verKeys.contains))
-          case (None, None) => true
-          case _            => false
-        }
+      val isPkgContextSame = (eep.packagingContext, comMethod.packaging) match {
+        case (Some(epc), Some(newp)) =>
+          epc.packFormat.isEqual(newp.pkgType) &&
+            newp.recipientKeys.exists(_.exists(verKeys.contains))
+        case (None, None) => true
+        case _            => false
       }
+      val isAuthSame = (eep.authentication, comMethod.authentication) match {
+        case (Some(ea), Some(newa)) =>
+          ea.`type` == newa.`type` &&
+            ea.version == newa.version &&
+            ea.data == newa.data
+        case (None, None) => true
+        case _            => false
+      }
+
+      eep.`type` == comMethod.`type` &&
+        eep.value == comMethod.value &&
+        isPkgContextSame &&
+        isAuthSame
     }
     if (! isComMethodExists) {
       logger.debug(s"comMethods: ${state.myDidDoc_!.endpoints}")
@@ -457,11 +530,24 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
               pkg.pkgType,
               pkg.recipientKeys.getOrElse(Set.empty).toSeq
             )
+          },
+          comMethod.authentication.map { auth =>
+            actor.ComMethodAuthentication(
+              auth.`type`,
+              auth.version,
+              auth.data
+            )
           }
         )
       )
-      logger.info(s"update com method updated - id=${comMethod.id} - type: ${comMethod.`type`} - " +
-        s"value: ${comMethod.value}")
+      logger.info(
+        s"update com method updated => " +
+          s"id:${comMethod.id}, " +
+          s"type: ${comMethod.`type`}, " +
+          s"value: ${comMethod.value}, " +
+          s"packaging: ${comMethod.packaging.map(p => s"pkg-type: ${p.pkgType}")}, " +
+          s"authentication: ${comMethod.authentication.map(a => s"auth-type: ${a.`type`}[${a.version}]")}"
+      )
       logger.debug(
         s"update com method => updated (userDID=<${state.myDid}>, id=${comMethod.id}, " +
           s"old=$existingEndpointOpt): new: $comMethod", (LOG_KEY_SRC_DID, state.myDid))
@@ -479,17 +565,30 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     addUserResourceUsage(RESOURCE_TYPE_MESSAGE, resourceName, reqMsgContext.clientIpAddressReq, userId)
     val comMethod = validatedComMethod(ucm)
     processValidatedUpdateComMethodMsg(comMethod)
+    //TODO: below line to be uncommented during outbox integration
+    //outboxActorRefs.foreach { case (destId, sender) => sendOutboxParam(destId, sender)}
     buildAndSendComMethodUpdatedRespMsg(comMethod)
   }
 
   def validatedComMethod(ucm: UpdateComMethodReqMsg)(implicit reqMsgContext: ReqMsgContext): ComMethod = {
+    if (! isVAS && ucm.comMethod.authentication.isDefined) {
+      throw new BadRequestErrorException(INVALID_VALUE.statusCode,
+        Option("authentication not supported"))
+    }
+
     try {
       ucm.comMethod.`type` match {
         case COM_METHOD_TYPE_PUSH =>
           PusherUtil.checkIfValidPushComMethod(
-            ComMethodDetail(COM_METHOD_TYPE_PUSH, ucm.comMethod.value), appConfig)
+            ComMethodDetail(COM_METHOD_TYPE_PUSH, ucm.comMethod.value, hasAuthEnabled = ucm.comMethod.authentication.isDefined),
+            appConfig,
+            executionContext
+          )
           ucm.comMethod
-        case COM_METHOD_TYPE_HTTP_ENDPOINT => UrlParam(ucm.comMethod.value); ucm.comMethod
+        case COM_METHOD_TYPE_HTTP_ENDPOINT =>
+          ucm.comMethod.authentication.foreach(_.validate())
+          UrlParam(ucm.comMethod.value)
+          ucm.comMethod
         case COM_METHOD_TYPE_FWD_PUSH =>
           if (state.sponsorRel.isEmpty) {
             throw new BadRequestErrorException(INVALID_VALUE.statusCode,
@@ -514,7 +613,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     }
   }
 
-  def validatePairwiseFromDIDs(givenPairwiseFromDIDs: List[DID]): Unit = {
+  def validatePairwiseFromDIDs(givenPairwiseFromDIDs: List[DidStr]): Unit = {
     val unmatched = givenPairwiseFromDIDs.filter(pd => ! state.relationshipAgents.contains(pd))
     if (unmatched.nonEmpty) {
       throw new BadRequestErrorException(INVALID_VALUE.statusCode,
@@ -570,7 +669,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       val msgStatusUpdatedByConnsRespMsg =
         UpdateMsgStatusByConnsMsgHelper.buildRespMsg(successResult, errorResult)(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, msgStatusUpdatedByConnsRespMsg, reqMsgContext.wrapInBundledMsg)
-      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+      val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
       sendRespMsg(respMsgType, rp, sndr)
     }
   }
@@ -629,7 +728,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
         val getMsgsByConnsRespMsg = GetMsgsByConnsMsgHelper.buildRespMsg(pairwiseResults)(reqMsgContext.agentMsgContext)
         val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
           getMsgsByConnsRespMsg, reqMsgContext.wrapInBundledMsg)
-        val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap)
+        val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
         sendRespMsg("GetMsgsByConnsResp", rp, sndr)
       case Failure(e) =>
         handleException(e, sndr)
@@ -639,9 +738,9 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
   def handleGetMsgsByConns(getMsgsByConnsReq: GetMsgsByConnsReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val sndr = sender()
     val connectionSize = getMsgsByConnsReq.pairwiseDIDs.map(_.size).getOrElse(0)
-    MetricsWriter.histogramApi.record(
+    metricsWriter.histogramUpdate(
       AS_USER_AGENT_API_GET_MSGS_BY_CONNS_PCS_COUNT,
-      MeasurementUnit.none,
+      MetricsUnit.None,
       connectionSize)
     val givenPairwiseDIDs = getMsgsByConnsReq.pairwiseDIDs.getOrElse(List.empty)
     validatePairwiseFromDIDs(givenPairwiseDIDs)
@@ -673,7 +772,7 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     }
 
     logger.info(s"new user agent created - domainId: ${se.ownerDID}, sponsorRel: $sponsorRel")
-    AgentActivityTracker.newAgent(sponsorRel)
+    AgentActivityTracker.newAgent(sponsorRel, metricsWriter)
     setRouteFut map {
       case _: RouteSet          => sndr ! resp
       case ras: RouteAlreadySet => sndr ! ras
@@ -681,12 +780,12 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     }
   }
 
-  def authedMsgSenderVerKeys: Set[VerKey] = (
+  def authedMsgSenderVerKeys: Set[VerKeyStr] = (
     state.relationship.map(_.myDidDocAuthKeysByTag(EDGE_AGENT_KEY)).getOrElse(Set.empty) ++
       state.relationship.map(_.myDidDocAuthKeysByTag(RECOVERY_KEY)).getOrElse(Set.empty)
     ).flatMap(_.verKeyOpt).toSet
 
-  def checkIfKeyNotCreated(forDID: DID): Unit = {
+  def checkIfKeyNotCreated(forDID: DidStr): Unit = {
     if (state.relationshipAgents.contains(forDID)) {
       throw new BadRequestErrorException(KEY_ALREADY_CREATED.statusCode)
     }
@@ -698,12 +797,12 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       CreateKeyEndpointDetail(
         userAgentPairwiseRegionName,
         state.myDid_!,
-        state.thisAgentAuthKey.map(ak => DidPair(ak.keyId, ak.verKey)),
+        state.thisAgentAuthKey.map(ak => com.evernym.verity.did.DidPair(ak.keyId, ak.verKey)),
         agentWalletId)
     )
     val filteredConfs = getFilteredConfigs(Set(NAME_KEY, LOGO_URL_KEY))
 
-    def paramMap(agencyVerKey: VerKey): ProtoRef => String ?=> Parameter = p => {
+    def paramMap(agencyVerKey: VerKeyStr): ProtoRef => String ?=> Parameter = p => {
       case SELF_ID                                  => Parameter(SELF_ID, ParticipantUtil.participantId(state.thisAgentKeyDIDReq, state.thisAgentKeyDID))
       case OTHER_ID                                 => Parameter(OTHER_ID, ParticipantUtil.participantId(state.thisAgentKeyDIDReq, state.myDid))
       case NAME                                     => Parameter(NAME, agentName(filteredConfs))
@@ -717,14 +816,14 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
       case MY_PUBLIC_DID                            => Parameter(MY_PUBLIC_DID, state.publicIdentity.map(_.DID).orElse(state.configs.get(PUBLIC_DID).map(_.value)).getOrElse(""))
       case MY_ISSUER_DID                            => Parameter(MY_ISSUER_DID, state.publicIdentity.map(_.DID).getOrElse("")) // FIXME what to do if publicIdentity is not setup
       case DEFAULT_ENDORSER_DID                     => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
-      case DATA_RETENTION_POLICY                    => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getRetentionPolicy(appConfig, domainId, p.msgFamilyName).configString)
+      case DATA_RETENTION_POLICY                    => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getProtoStateRetentionPolicy(appConfig, domainId, p.msgFamilyName).configString)
     }
 
     agencyDidPairFut().map(adp => paramMap(adp.verKey))
 
   }
 
-  override def senderParticipantId(senderVerKey: Option[VerKey]): ParticipantId = {
+  override def senderParticipantId(senderVerKey: Option[VerKeyStr]): ParticipantId = {
     val edgeAgentVerKeys = allAuthedKeys
     if (senderVerKey.exists(svk => edgeAgentVerKeys.contains(svk))) {
       ParticipantUtil.participantId(state.thisAgentKeyDIDReq, state.myDid)
@@ -742,12 +841,14 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
 
   updateAgentWalletId(entityId)
 
+  var outboxActorRefs: Map[DestId, ActorRef] = Map.empty
+
   /**
    * this is in-memory state only
    */
   var pendingEdgeAuthKeyToBeAdded: Option[PendingAuthKey] = None
 
-  def ownerDID: Option[DID] = state.myDid
+  def ownerDID: Option[DidStr] = state.myDid
   def ownerAgentKeyDIDPair: Option[DidPair] = state.thisAgentAuthKeyDidPair
 
   /**
@@ -767,6 +868,44 @@ class UserAgent(val agentActorContext: AgentActorContext, val metricsActorRef: A
     metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_DETAILS_TAG, this.actorId)
     metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, this.actorId)
   }
+
+  private def updateOAuthAccessTokenHolder(): Unit = {
+    httpComMethodsWithAuth.foreach { hc =>
+      hc.authentication match {
+        case Some(auth) if auth.`type` == AUTH_TYPE_OAUTH2 =>
+          context.child(oAuthHolderKey(hc)) match {
+            case Some(child) =>
+              child ! UpdateParams(auth.data, OAuthAccessTokenRefresher.getRefresher(auth.version, executionContext))
+            case None =>
+              context.spawn(
+                OAuthAccessTokenHolder(
+                  appConfig.config,
+                  auth.data,
+                  agentActorContext.oAuthAccessTokenRefreshers.refreshers(auth.version)
+                ),
+                oAuthHolderKey(hc)
+              )
+          }
+        case None => //nothing to do
+      }
+    }
+  }
+
+  private def httpComMethodsWithAuth: Seq[HttpEndpoint] = {
+    state.relationship.map { rel =>
+      val endpoints = rel.myDidDoc.flatMap(_.endpoints).map(_.endpoints).getOrElse(Seq.empty)
+      endpoints
+        .filter(_.`type` == COM_METHOD_TYPE_HTTP_ENDPOINT)
+        .map(_.endpointADTX)
+        .flatMap {
+          case he: HttpEndpoint if he.authentication.isDefined => Option(he)
+          case _                => None
+        }
+    }.getOrElse(Seq.empty)
+  }
+
+  private def oAuthHolderKey(hc: HttpEndpoint): String = hc.id + hc.value.hashCode
+
 }
 
 object UserAgent {
@@ -777,7 +916,7 @@ object UserAgent {
   final val COLLECTION_METRIC_MND_MSGS_DELIVRY_STATUS_TAG = "user-agent.mnd.msgs-delivery-status"
 }
 
-case class PairwiseConnSetExt(agentDID: DID, agentDIDVerKey: VerKey, reqMsgContext: ReqMsgContext)
+case class PairwiseConnSetExt(agentDID: DidStr, agentDIDVerKey: VerKeyStr, reqMsgContext: ReqMsgContext)
 case class PendingAuthKey(rka: RequesterKeyAdded, applied: Boolean = false)
 
 //cmd
@@ -789,10 +928,10 @@ case object GetSponsorRel extends ActorMessage
 case class DeleteComMethod(value: String, reason: String) extends ActorMessage
 
 //response msgs
-case class Initialized(pairwiseDID: DID, pairwiseDIDVerKey: VerKey) extends ActorMessage
-case class ComMethodsPackaging(pkgType: MsgPackFormat = MPF_INDY_PACK, recipientKeys: Set[VerKey]) extends ActorMessage
-case class ComMethodDetail(`type`: Int, value: String, packaging: Option[ComMethodsPackaging]=None) extends ActorMessage
-case class AgentProvisioningDone(selfDID: DID, agentVerKey: VerKey, threadId: ThreadId) extends ActorMessage
+case class Initialized(pairwiseDID: DidStr, pairwiseDIDVerKey: VerKeyStr) extends ActorMessage
+case class ComMethodsPackaging(pkgType: MsgPackFormat = MPF_INDY_PACK, recipientKeys: Set[VerKeyStr]) extends ActorMessage
+case class ComMethodDetail(`type`: Int, value: String, hasAuthEnabled: Boolean, packaging: Option[ComMethodsPackaging]=None) extends ActorMessage
+case class AgentProvisioningDone(selfDID: DidStr, agentVerKey: VerKeyStr, threadId: ThreadId) extends ActorMessage
 
 case class CommunicationMethods(comMethods: Set[ComMethodDetail], sponsorId: Option[String]=None) extends ActorMessage {
 
@@ -813,11 +952,11 @@ trait UserAgentStateImpl
     with UserAgentCommonState { this: UserAgentState =>
 
   def domainId: DomainId = relationshipReq.myDid_!
-  def relationshipAgentsContains(forDID: DID): Boolean =
+  def relationshipAgentsContains(forDID: DidStr): Boolean =
     relationshipAgents.contains(forDID)
   def relationshipAgentDetails: List[AgentDetail] =
     relationshipAgents.values.toList
-  def relationshipAgentByForDid(did: DID): AgentDetail = {
+  def relationshipAgentByForDid(did: DidStr): AgentDetail = {
     relationshipAgents.getOrElse(did,
       throw new RuntimeException("relationship agent doesn't exists for DID: " + did)
     )
@@ -887,3 +1026,7 @@ trait UserAgentStateUpdateImpl
 }
 
 case class HandleCreateKeyWithThisAgentKey(thisAgentKey: NewKeyCreated, createKeyReqMsg: CreateKeyReqMsg, reqMsgContext: ReqMsgContext) extends ActorMessage
+
+//NOTE: the 'forUrl' is only needed in case anybody has registered more than one webhook
+// (ideally there shouldn't be more than one)
+case class GetTokenForUrl(forUrl: String, cmd: OAuthAccessTokenHolder.Cmd) extends ActorMessage

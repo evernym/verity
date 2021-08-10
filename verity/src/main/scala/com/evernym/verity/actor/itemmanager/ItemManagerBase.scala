@@ -6,15 +6,13 @@ import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.pattern.ask
 import com.evernym.verity.constants.ActorNameConstants._
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SnapshotConfig, SnapshotterExt}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.metrics.{CustomMetrics, MetricsWriter}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 trait ItemManagerBase
@@ -22,6 +20,8 @@ trait ItemManagerBase
     with SnapshotterExt[ItemManagerState]
     with ItemCommandHandlerBase
     with DefaultPersistenceEncryption {
+
+  private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   implicit def appConfig: AppConfig
 
@@ -113,13 +113,13 @@ trait ItemManagerBase
   }
 
   def buildItemContainerEntityId(itemId: ItemId): ItemContainerEntityId = {
-    ItemConfigManager.buildItemContainerEntityId(entityId, itemId, appConfig)
+    buildItemContainerEntityId(entityId, itemId)
   }
 
   def recordMetrics(): Unit = {
     itemManagerState.foreach { ims =>
-      import CustomMetrics._
-      MetricsWriter.gaugeApi.updateWithTags(AS_USER_AGENT_PAIRWISE_WATCHER_TOTAL_CONTAINER_COUNT,
+      import com.evernym.verity.metrics.CustomMetrics._
+      metricsWriter.gaugeUpdate(AS_USER_AGENT_PAIRWISE_WATCHER_TOTAL_CONTAINER_COUNT,
         ims.totalEverAllocatedContainers, Map(TAG_KEY_ID -> entityId))
     }
   }

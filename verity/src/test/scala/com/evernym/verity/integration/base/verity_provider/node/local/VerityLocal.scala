@@ -7,9 +7,9 @@ import akka.pattern.ask
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.evernym.verity.actor.Platform
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.appStateManager.GetCurrentState
 import com.evernym.verity.actor.appStateManager.state.{AppState, ListeningState}
-import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.app_launcher.{DefaultAgentActorContext, HttpServer, PlatformBuilder}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.route_handlers.HttpRouteHandler
@@ -18,36 +18,39 @@ import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
 import com.typesafe.config.{Config, ConfigFactory}
-
 import java.nio.file.Path
+
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContextExecutor}
+import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
 import scala.language.postfixOps
 
 
 object LocalVerity {
   lazy val waitAtMost: FiniteDuration = 25 seconds
 
-  lazy val defaultSvcParam: ServiceParam =
-    ServiceParam
-      .empty
-      .withLedgerTxnExecutor(new MockLedgerTxnExecutor())
+//  lazy val defaultSvcParam: ServiceParam =
+//    ServiceParam
+//      .empty
+//      .withLedgerTxnExecutor(new MockLedgerTxnExecutor())
 
   def apply(tempDir: Path,
             appSeed: String,
-            portProfile: PortProfile): HttpServer = {
-    LocalVerity(VerityNodeParam(tempDir, appSeed, portProfile))
+            portProfile: PortProfile,
+            ecp: ExecutionContextProvider): HttpServer = {
+    LocalVerity(VerityNodeParam(tempDir, appSeed, portProfile), ecp)
   }
 
   def apply(verityNodeParam: VerityNodeParam,
+            ecp: ExecutionContextProvider,
             bootstrapApp: Boolean = true,
             trackMessageProgress: Boolean = true): HttpServer = {
 
     val config = buildStandardVerityConfig(verityNodeParam)
+    val appConfig = new AppConfigWrapper(config)
 
-    val platform = initializeApp(new AppConfigWrapper(config), verityNodeParam.serviceParam)
+    val platform = initializeApp(appConfig, verityNodeParam.serviceParam, ecp)
 
-    val httpServer = new HttpServer(platform, new HttpRouteHandler(platform).endpointRoutes)
+    val httpServer = new HttpServer(platform, new HttpRouteHandler(platform, ecp.futureExecutionContext).endpointRoutes, ecp.futureExecutionContext)
     httpServer.start()
 
     waitTillUp(platform.appStateManager)
@@ -85,31 +88,34 @@ object LocalVerity {
     Await.result(fut, 3.seconds).asInstanceOf[AppState] == ListeningState
   }
 
-  class Starter(appConfig: AppConfig, serviceParam: Option[ServiceParam]) {
-    class MockDefaultAgentActorContext(override val appConfig: AppConfig, serviceParam: Option[ServiceParam])
-      extends DefaultAgentActorContext {
+  class Starter(appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider) {
+    class MockDefaultAgentActorContext(override val appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider)
+      extends DefaultAgentActorContext(executionContextProvider, appConfig) {
 
       implicit val executor: ExecutionContextExecutor = system.dispatcher
       override lazy val poolConnManager: LedgerPoolConnManager = {
-        new InMemLedgerPoolConnManager(serviceParam.flatMap(_.ledgerTxnExecutor))
+        new InMemLedgerPoolConnManager(executionContextProvider.futureExecutionContext, serviceParam.flatMap(_.ledgerTxnExecutor))(executor)
       }
       override lazy val storageAPI: StorageAPI = {
-        serviceParam.flatMap(_.storageAPI).getOrElse(StorageAPI.loadFromConfig(appConfig))
+        serviceParam.flatMap(_.storageAPI).getOrElse(StorageAPI.loadFromConfig(appConfig, executionContextProvider.futureExecutionContext))
       }
     }
 
     val platform: Platform = PlatformBuilder.build(
-      Option(new MockDefaultAgentActorContext(appConfig, serviceParam)))
+      executionContextProvider,
+      appConfig,
+      Option(new MockDefaultAgentActorContext(appConfig, serviceParam, executionContextProvider))
+    )
   }
 
   object Starter {
-    def apply(appConfig: AppConfig, serviceParam: Option[ServiceParam]): Starter =
-      new Starter(appConfig, serviceParam)
+    def apply(appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider): Starter =
+      new Starter(appConfig, serviceParam, executionContextProvider)
   }
 
 
-  private def initializeApp(appConfig: AppConfig, serviceParam: Option[ServiceParam]): Platform = {
-    val s = Starter(appConfig, serviceParam)
+  private def initializeApp(appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider): Platform = {
+    val s = Starter(appConfig, serviceParam, executionContextProvider)
     assert(s.platform != null)
     s.platform
   }

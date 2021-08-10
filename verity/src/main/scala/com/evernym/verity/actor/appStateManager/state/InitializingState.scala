@@ -3,21 +3,18 @@ package com.evernym.verity.actor.appStateManager.state
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
-import com.evernym.verity.Exceptions.TransitionHandlerNotProvidedException
+import com.evernym.verity.util2.Exceptions.TransitionHandlerNotProvidedException
 import com.evernym.verity.actor.appStateManager.{AppStateManagerBase, DrainingStarted, ErrorOccurrences, EventParam, ListeningSuccessful, MildSystemError, RecoveredFromCause, SeriousSystemError}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
-import com.evernym.verity.config.CommonConfig.{APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_COUNT, APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_DURATION}
-import com.evernym.verity.config.AppConfigWrapper
 
 
-object InitializingState extends AppState {
+class InitializingState(val mrc: Int, val mrd: Int) extends AppState {
 
   override val name: String = STATUS_INITIALIZING
 
   var errorOccurrencesByCauseCode: Map[String, ErrorOccurrences] = Map.empty
-  lazy val maxRetryCount = AppConfigWrapper.getConfigIntOption(APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_COUNT).getOrElse(10)
-  lazy val maxRetryDuration = AppConfigWrapper.getConfigIntOption(APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_DURATION).getOrElse(240)
-
+  lazy val maxRetryCount = mrc
+  lazy val maxRetryDuration = mrd
   /**
    * When app state is 'InitializingState', it handles below events apart from
    * what is handled in 'commonEventHandler' in AppState

@@ -4,9 +4,7 @@ import java.security.MessageDigest
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 
-import com.evernym.verity.Exceptions.EventDecryptionErrorException
-import com.evernym.verity.config.CommonConfig.SALT_EVENT_ENCRYPTION
-import com.evernym.verity.config.AppConfigWrapper
+import com.evernym.verity.util2.Exceptions.EventDecryptionErrorException
 
 
 trait Encryptor {
@@ -47,6 +45,6 @@ trait AESEncryptor extends Encryptor {
   override val algorithm: String = "AES"
 }
 
-object PersistentDataEncryptor extends AESEncryptor {
-  override lazy val salt: String = AppConfigWrapper.getConfigStringReq(SALT_EVENT_ENCRYPTION)
+class PersistentDataEncryptor(val s: String) extends AESEncryptor {
+  override lazy val salt: String = s
 }

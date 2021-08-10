@@ -4,18 +4,19 @@ import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
 import akka.event.LoggingReceive
-import com.evernym.verity.RouteId
+import com.evernym.verity.util2.RouteId
 import com.evernym.verity.actor.agent.maintenance.{AlreadyCompleted, AlreadyRegistered, RegisteredRouteSummary}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, Migrated, RouteAlreadySet, RoutingAgentUtil, StoreFromLegacy, StoreRoute}
 import com.evernym.verity.actor.cluster_singleton.ForAgentRoutesMigrator
 import com.evernym.verity.actor.cluster_singleton.maintenance.RecordMigrationStatus
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, LegacyRouteSet, Registered, RouteSet, RoutesMigrated, SendCmd}
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.ActorNameConstants._
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.util.Util.getActorRefFromSelection
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.Random
 
@@ -28,8 +29,10 @@ import scala.util.Random
  *
  * @param appConfig application config
  */
-class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
+class LegacyAgentRouteStore(executionContext: ExecutionContext)(implicit val appConfig: AppConfig)
   extends BasePersistentActor {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case sr: LegacySetRoute if routes.contains(sr.forDID) => sender ! RouteAlreadySet(sr.forDID)
@@ -39,7 +42,9 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
         LegacyRouteSet(sr.forDID, sr.actorAddressDetail.actorTypeId, sr.actorAddressDetail.address))
     case gr: LegacyGetRoute             => handleGetRoute(gr)
 
-    case GetRegisteredRouteSummary      => sender ! RegisteredRouteSummary(entityId, getAllRouteDIDs().size)
+    case GetRegisteredRouteSummary      =>
+      sender ! RegisteredRouteSummary(entityId, orderedRoutes.routes.size)
+
     case grd: GetRouteBatch             => handleGetRouteBatch(grd)
 
     case mp: MigratePending             => migratePending(mp)
@@ -57,7 +62,7 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
       val aad = ActorAddressDetail(rs.actorTypeId, rs.address)
       routes = routes.updated(rs.forDID, aad)
       pendingRouteMigration = pendingRouteMigration.updated(rs.forDID, aad)
-      routesByInsertionOrder = routesByInsertionOrder :+ (rs.forDID, aad.actorTypeId)
+      orderedRoutes.add(routes.size-1, rs)
 
     case m: RoutesMigrated =>
       m.routes.foreach { r =>
@@ -66,21 +71,9 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
       pendingRouteMigration = pendingRouteMigration -- m.routes
   }
 
-  var routesByInsertionOrder: List[(DID, Int)] = List.empty
-
-  def getAllRouteDIDs(totalCandidates:Int = routesByInsertionOrder.size,
-                      actorTypeIds: List[Int] = List.empty): List[String] = {
-    routesByInsertionOrder
-      .take(totalCandidates)
-      .filter(r => actorTypeIds.isEmpty || actorTypeIds.contains(r._2))
-      .map(_._1)
-  }
-
   def handleGetRouteBatch(grd: GetRouteBatch): Unit = {
     logger.debug(s"ASC [$persistenceId] [ASCE->ARS] received GetRouteBatch: " + grd)
-    val candidates =
-      getAllRouteDIDs(grd.totalCandidates, grd.actorTypeIds)
-      .slice(grd.fromIndex, grd.fromIndex + grd.batchSize)
+    val candidates = orderedRoutes.getRouteBatch(grd)
     val resp = GetRouteBatchResult(entityId, candidates.toSet)
     logger.debug(s"ASC [$persistenceId] sending response: " + resp)
     sender ! resp
@@ -91,7 +84,7 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
     val ri = routes.get(gr.forDID)
     logger.debug("get route result: " + ri)
     sndr ! ri
-    ri.foreach{ aad =>
+    ri.foreach { aad =>
       routeRegion ! ForIdentifier(gr.forDID, StoreRoute(aad))
     }
   }
@@ -152,32 +145,49 @@ class LegacyAgentRouteStore(implicit val appConfig: AppConfig)
   }
 
   var routes: Map[RouteId, ActorAddressDetail] = Map.empty
+  var orderedRoutes = new OrderedRoutes()
+
   var pendingRouteMigration: Map[RouteId, ActorAddressDetail] = Map.empty
   var migrationStatus: Map[RouteId, RouteMigrationStatus] = Map.empty
 
-  override lazy val persistenceEncryptionKey: String = appConfig.getConfigStringReq(CommonConfig.SECRET_ROUTING_AGENT)
+  override lazy val persistenceEncryptionKey: String = appConfig.getStringReq(ConfigConstants.SECRET_ROUTING_AGENT)
 
   val routeRegion: ActorRef = ClusterSharding(context.system).shardRegion(ROUTE_REGION_ACTOR_NAME)
   lazy val singletonParentProxyActor: ActorRef = getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)
 
 }
 
+class OrderedRoutes {
+  private var routesByInsertionOrder: Map[Int, DidStr] = Map.empty
+
+  def routes: List[DidStr] = routesByInsertionOrder.toSeq.sortBy(_._1).map(_._2).toList
+
+  def add(index: Int, lrs: LegacyRouteSet): Unit = {
+    routesByInsertionOrder += index -> lrs.forDID
+  }
+
+  def getRouteBatch(grd: GetRouteBatch): List[DidStr] = {
+    (grd.fromIndex until grd.fromIndex + grd.batchSize).flatMap { index =>
+      routesByInsertionOrder.get(index)
+    }.toList
+  }
+}
+
 object LegacyAgentRouteStore {
-  def props(implicit appConfig: AppConfig): Props = Props(new LegacyAgentRouteStore)
+  def props(executionContext: ExecutionContext)(implicit appConfig: AppConfig): Props =
+    Props(new LegacyAgentRouteStore(executionContext))
 }
 
 //cmds
-case class LegacySetRoute(forDID: DID, actorAddressDetail: ActorAddressDetail) extends ActorMessage
-case class LegacyGetRoute(forDID: DID, oldBucketMapperVersions: Set[String] = RoutingAgentUtil.oldBucketMapperVersionIds)
+case class LegacySetRoute(forDID: DidStr, actorAddressDetail: ActorAddressDetail) extends ActorMessage
+case class LegacyGetRoute(forDID: DidStr, oldBucketMapperVersions: Set[String] = RoutingAgentUtil.oldBucketMapperVersionIds)
   extends ActorMessage
-case class GetRouteBatch(totalCandidates: Int,
-                         fromIndex: Int,
-                         batchSize: Int,
-                         actorTypeIds: List[Int] = List.empty) extends ActorMessage
+case class GetRouteBatch(fromIndex: Int,
+                         batchSize: Int) extends ActorMessage
 case object GetRegisteredRouteSummary extends ActorMessage
 
 //response msgs
-case class GetRouteBatchResult(routeStoreEntityId: EntityId, dids: Set[DID]) extends ActorMessage
+case class GetRouteBatchResult(routeStoreEntityId: EntityId, dids: Set[DidStr]) extends ActorMessage
 
 case class Status(totalCandidates: Int, processedRoutes: Int) extends ActorMessage
 

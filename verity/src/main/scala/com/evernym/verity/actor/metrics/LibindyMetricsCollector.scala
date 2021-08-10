@@ -1,20 +1,26 @@
 package com.evernym.verity.actor.metrics
 
 import akka.actor.{Actor, ActorSystem}
-import com.evernym.verity.Exceptions
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.util.JsonUtil.deserializeJsonStringToObject
-import com.evernym.verity.util.Util.logger
+import com.evernym.verity.util2.Exceptions
 import org.hyperledger.indy.sdk.metrics.Metrics
 
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
 
-class LibindyMetricsCollector(implicit val actorSystem: ActorSystem) extends Actor {
+class LibindyMetricsCollector(executionContext: ExecutionContext)(implicit val actorSystem: ActorSystem)
+  extends Actor {
+
+  private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
+
+  private val logger = getLoggerByClass(getClass)
+
+  val metricsWriter: MetricsWriter = MetricsWriterExtension(context.system).get()
 
   final override def receive: Receive = {
     case CollectLibindyMetrics() => this.collectLibindyMetrics()
@@ -37,9 +43,10 @@ class LibindyMetricsCollector(implicit val actorSystem: ActorSystem) extends Act
                 val metricsList = metricsItem._2
                 metricsList foreach (
                   metricsRecord => {
-                    MetricsWriter.gaugeApi.updateWithTags(s"libindy_$metricsName", metricsRecord.value, metricsRecord.tags)
+                    //TODO: need to fix this soon (VE-2763)
+                    //metricsWriter.gaugeUpdate(s"libindy_$metricsName", metricsRecord.value, metricsRecord.tags)
                   }
-                  )
+                )
               })
             }
           }

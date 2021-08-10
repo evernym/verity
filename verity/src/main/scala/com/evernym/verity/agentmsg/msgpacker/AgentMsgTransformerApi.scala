@@ -4,7 +4,8 @@ import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.util.JsonUtil.getDeserializedJson
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+
+import scala.concurrent.ExecutionContext
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
@@ -41,7 +42,7 @@ object AgentMsgTransformerApi {
   def unpackAsync(msg: Array[Byte],
                   fromVerKeyParam: Option[KeyParam],
                   unpackParam: UnpackParam = UnpackParam())
-                 (implicit wap: WalletAPIParam, walletAPI: WalletAPI): Future[AgentMsgWrapper] = {
+                 (implicit wap: WalletAPIParam, walletAPI: WalletAPI, ec: ExecutionContext): Future[AgentMsgWrapper] = {
 
     val (transformer, fromVerKeyParamFinal) = if (isIndyPacked(msg)) {
       (indyPackTransformer, None)

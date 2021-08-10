@@ -1,12 +1,14 @@
 package com.evernym.verity.actor.url_mapper
 
 import akka.actor.Props
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.{ActorMessage, HasProps}
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.urlmapper.UrlAdded
+
+import scala.concurrent.ExecutionContext
 
 
 /**
@@ -18,11 +20,11 @@ import com.evernym.verity.urlmapper.UrlAdded
  * for a given "hashed url" (during accept invite process)
  *
  */
-class UrlStore(val appConfig: AppConfig) extends BasePersistentActor {
+class UrlStore(val appConfig: AppConfig, executionContext: ExecutionContext) extends BasePersistentActor {
 
   var url: Option[String] = None
 
-  override lazy val persistenceEncryptionKey: String = appConfig.getConfigStringReq(CommonConfig.SECRET_URL_STORE)
+  override lazy val persistenceEncryptionKey: String = appConfig.getStringReq(ConfigConstants.SECRET_URL_STORE)
 
   // This is for event sourcing; it is called when the actor starts for the first
   // time (once for each event persisted from DynamoDB); after, all new events
@@ -42,10 +44,14 @@ class UrlStore(val appConfig: AppConfig) extends BasePersistentActor {
     case GetActualUrl => sender ! url
   }
 
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 object UrlStore extends HasProps {
-  def props(implicit appConfig: AppConfig): Props = Props(new UrlStore(appConfig))
+  def props(implicit appConfig: AppConfig, executionContext: ExecutionContext): Props = Props(new UrlStore(appConfig, executionContext))
 }
 
 //cmds

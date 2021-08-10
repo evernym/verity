@@ -1,9 +1,9 @@
 package com.evernym.verity.config.validator
 
-import com.evernym.verity.Exceptions.ConfigLoadingFailedException
-import com.evernym.verity.Status.VALIDATION_FAILED
+import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
+import com.evernym.verity.util2.Status.VALIDATION_FAILED
 import com.evernym.verity.actor.agent.msghandler.AgentMsgProcessor.{PACKED_MSG_LIMIT, REST_LIMIT}
-import com.evernym.verity.config.CommonConfig.MSG_LIMITS
+import com.evernym.verity.config.ConfigConstants.MSG_LIMITS
 import com.evernym.verity.config.validator.base.{ConfigValidator, ConfigValidatorCreator}
 import com.typesafe.config.{Config, ConfigValueType}
 

@@ -1,18 +1,20 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import akka.actor.ActorRef
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.ThreadContextDetail
 import com.evernym.verity.actor.agent.maintenance.InitialActorState
 import com.evernym.verity.actor.agent.msgrouter.RouteAlreadySet
 import com.evernym.verity.actor.persistence.AgentPersistentActor
-import com.evernym.verity.config.CommonConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants
+import com.evernym.verity.config.ConfigConstants._
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.container.actor._
-import com.evernym.verity.protocol.engine.{DID, PinstId, PinstIdResolution, ProtoRef}
+import com.evernym.verity.protocol.engine.{PinstId, PinstIdResolution, ProtoRef}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageDefinition
+import com.evernym.verity.util2.Exceptions
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 
 
@@ -22,9 +24,11 @@ import scala.concurrent.duration.{Duration, MILLISECONDS}
 trait AgentStateCleanupHelper {
   this: AgentMsgHandler with AgentPersistentActor =>
 
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
+
   def cleanupCmdHandler: Receive = {
     case FixThreadMigrationState                  => fixThreadMigrationState()
-    case MigrateThreadContexts                    => migrateThreadContexts()
+    case MigrateThreadContexts                    => migrateThreadContextsByScheduledJob()
     case FixActorState(did, sndrActorRef)         => fixActorState(did, sndrActorRef)
     case cs: CheckActorStateCleanupState          => checkActorStateCleanupState(cs.sendCurrentStatus)
     case rss: RouteSetStatus                      => handleRouteSet(rss)
@@ -138,63 +142,69 @@ trait AgentStateCleanupHelper {
   }
 
   def migrateThreadContexts(): Unit = {
-    logger.debug(s"ASC [$persistenceId] [ASCH->ASCH] received migrateThreadContext")
-    if (isMigrateThreadContextsEnabled && ! isThreadContextMigrationFinished) {
-      val candidateThreadContexts = state.currentThreadContexts.take(migrateThreadContextBatchSize)
-      if (candidateThreadContexts.isEmpty && routeSetStatus.forall(_.isSet)) {
-        finishThreadContextMigration()
-      } else {
-        scheduleThreadContextMigrationJobIfNotScheduled()
-        candidateThreadContexts.foreach { case (pinstId, tcd) =>
-          val candidateProtoActors = com.evernym.verity.protocol.protocols.protocolRegistry.entries.map { e =>
-            val migrationStatus = threadContextMigrationStatus.get(pinstId)
-            val successResp = migrationStatus.map(_.successResponseFromProtoActors).getOrElse(Set.empty)
-            val nonSuccessResp = migrationStatus.map(_.nonSuccessResponseFromProtoActors).getOrElse(Set.empty)
-            val respReceivedFromProtoActors = successResp ++ nonSuccessResp
+    try {
+      logger.debug(s"ASC [$persistenceId] [ASCH->ASCH] received migrateThreadContext")
+      if (isMigrateThreadContextsEnabled && !isThreadContextMigrationFinished) {
+        val candidateThreadContexts = state.currentThreadContexts.take(migrateThreadContextBatchSize)
+        if (candidateThreadContexts.isEmpty && routeSetStatus.forall(_.isSet)) {
+          finishThreadContextMigration()
+        } else {
+          scheduleThreadContextMigrationJobIfNotScheduled()
+          candidateThreadContexts.foreach { case (pinstId, tcd) =>
+            val candidateProtoActors = com.evernym.verity.protocol.protocols.protocolRegistry.entries.map { e =>
+              val migrationStatus = threadContextMigrationStatus.get(pinstId)
+              val successResp = migrationStatus.map(_.successResponseFromProtoActors).getOrElse(Set.empty)
+              val nonSuccessResp = migrationStatus.map(_.nonSuccessResponseFromProtoActors).getOrElse(Set.empty)
+              val respReceivedFromProtoActors = successResp ++ nonSuccessResp
 
-            if (! respReceivedFromProtoActors.contains(e.protoDef.msgFamily.protoRef)) {
-              val pinstProtoRefStr = pinstId + e.protoDef.msgFamily.protoRef.toString
-              val currAttempt = threadContextMigrationAttempt.getOrElse(pinstProtoRefStr, 0)
-              if (currAttempt < migrateThreadContextMaxAttemptPerPinstProtoRef) {
-                val calcPinstId = e.pinstIdResol.resolve(e.protoDef, domainId, relationshipId, Option(tcd.threadId), None, state.thisAgentKeyDID)
-                if (e.pinstIdResol == PinstIdResolution.DEPRECATED_V0_1 || pinstId == calcPinstId) {
-                  threadContextMigrationAttempt += (pinstProtoRefStr -> (currAttempt + 1))
-                  val cmd = ForIdentifier(
-                    pinstId,
-                    ProtocolCmd(SetThreadContext(tcd), None)
-                  )
-                  e -> Option(cmd)
-                } else e -> None
-              } else {
-                handleThreadContextMigrationAttemptExceeded(currAttempt, pinstId, e.protoDef.msgFamily.protoRef)
-                e -> None
-              }
-            } else e -> None
-          }.filter(_._2.isDefined).map(r => r._1 -> r._2.get)
+              if (!respReceivedFromProtoActors.contains(e.protoDef.msgFamily.protoRef)) {
+                val pinstProtoRefStr = pinstId + e.protoDef.msgFamily.protoRef.toString
+                val currAttempt = threadContextMigrationAttempt.getOrElse(pinstProtoRefStr, 0)
+                if (currAttempt < migrateThreadContextMaxAttemptPerPinstProtoRef) {
+                  val calcPinstId = e.pinstIdResol.resolve(e.protoDef, domainId, relationshipId, Option(tcd.threadId), None, state.thisAgentKeyDID)
+                  if (e.pinstIdResol == PinstIdResolution.DEPRECATED_V0_1 || pinstId == calcPinstId) {
+                    threadContextMigrationAttempt += (pinstProtoRefStr -> (currAttempt + 1))
+                    val cmd = ForIdentifier(
+                      pinstId,
+                      ProtocolCmd(SetThreadContext(tcd), None)
+                    )
+                    e -> Option(cmd)
+                  } else e -> None
+                } else {
+                  handleThreadContextMigrationAttemptExceeded(currAttempt, pinstId, e.protoDef.msgFamily.protoRef)
+                  e -> None
+                }
+              } else e -> None
+            }.filter(_._2.isDefined).map(r => r._1 -> r._2.get)
 
-          if (! threadContextMigrationStatus.contains(pinstId)) {
-            val deprecatedV01Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.DEPRECATED_V0_1)
-            val v02Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.V0_2)
-            logger.debug(s"[$persistenceId] thread context migration candidates for pinst $pinstId => total: ${candidateProtoActors.size} (DEPRECATED_V01: $deprecatedV01Count, V02: $v02Count)")
-            val event = ThreadContextMigrationStarted(pinstId, candidateProtoActors.map(_._1.protoDef.msgFamily.protoRef.toString))
-            cleanupEventReceiver(event)
-            writeWithoutApply(event)
-          }
+            if (!threadContextMigrationStatus.contains(pinstId)) {
+              val deprecatedV01Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.DEPRECATED_V0_1)
+              val v02Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.V0_2)
+              logger.debug(s"[$persistenceId] thread context migration candidates for pinst $pinstId => total: ${candidateProtoActors.size} (DEPRECATED_V01: $deprecatedV01Count, V02: $v02Count)")
+              val event = ThreadContextMigrationStarted(pinstId, candidateProtoActors.map(_._1.protoDef.msgFamily.protoRef.toString))
+              cleanupEventReceiver(event)
+              writeWithoutApply(event)
+            }
 
-          candidateProtoActors.zipWithIndex.foreach { case (entry, index) =>
-            val key = entry._1.protoDef.msgFamily.protoRef.toString + entry._2.id
-            val toActor = ActorProtocol(entry._1.protoDef).region(context.system)
-            val timeout = Duration(migrateThreadContextBatchItemSleepInterval* index, MILLISECONDS)
-            timers.startSingleTimer(key, SendCmd(toActor, entry._2), timeout)
+            logger.info(s"ASC [$persistenceId] [ASCH->ASCH] candidateProtoActors: " + candidateProtoActors.size)
+            candidateProtoActors.zipWithIndex.foreach { case (entry, index) =>
+              val key = entry._1.protoDef.msgFamily.protoRef.toString + entry._2.id
+              val toActor = ActorProtocol(entry._1.protoDef).region(context.system)
+              val timeout = Duration(migrateThreadContextBatchItemSleepInterval * index, MILLISECONDS)
+              timers.startSingleTimer(key, SendCmd(toActor, entry._2), timeout)
+            }
           }
         }
+      } else {
+        stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
       }
-    } else {
-      stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
+    } catch {
+      case e: Throwable =>
+        logger.error("error while thread context migration: " + Exceptions.getStackTraceAsSingleLineString(e))
     }
   }
 
-  def fixActorState(did: DID, sndrActorRef: ActorRef): Unit = {
+  def fixActorState(did: DidStr, sndrActorRef: ActorRef): Unit = {
     logger.info(
       s"[$persistenceId] received fixActorState (" +
         s"did: $did, domainDID: $domainId, " +
@@ -204,9 +214,10 @@ trait AgentStateCleanupHelper {
         s"isThreadContextMigrationFinished: $isThreadContextMigrationFinished"
     )
 
+    actorStateCleanupExecutor = Option(sndrActorRef)
+
     if (routeSetStatus.isEmpty) {
       isStateCleanupCompleted = false
-      actorStateCleanupExecutor = Option(sndrActorRef)
       val isRouteSet = state.myDid.isEmpty || ! state.myDid.contains(did)
       routeSetStatus = Option(RouteSetStatus(did, isSet = isRouteSet))
       sndrActorRef ! InitialActorState(did, isRouteSet, getTotalThreadContextSize)
@@ -219,8 +230,6 @@ trait AgentStateCleanupHelper {
         }
       }
       migrateThreadContexts()
-    } else {
-
     }
     checkActorStateCleanupState(forceSendCurStatus = true)
   }
@@ -242,9 +251,16 @@ trait AgentStateCleanupHelper {
             threadContextMigrationStatus.count(_._2.isNotMigrated))
           if (rss.isSet && pendingThreadContextSize == 0) {
             finishThreadContextMigration()
+            finishActorStateCleanup()
           }
         }
       case _ => //nothing to do
+    }
+  }
+
+  def migrateThreadContextsByScheduledJob(): Unit = {
+    if (routeSetStatus.isEmpty) {   //this means the actor state clean up is not interacting with this agent actor
+      migrateThreadContexts()
     }
   }
 
@@ -258,16 +274,17 @@ trait AgentStateCleanupHelper {
 
   def finishThreadContextMigration(): Unit = {
     isThreadContextMigrationFinished = true
-
+    stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
+    threadContextMigrationStatus = Map.empty
+    threadContextMigrationAttempt = Map.empty
     if (! isSnapshotTaken) {
       saveSnapshotStateIfAvailable()
       isSnapshotTaken = true
     }
+  }
 
+  def finishActorStateCleanup(): Unit = {
     if (! isStateCleanupCompleted) {
-      stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
-      threadContextMigrationStatus = Map.empty
-      threadContextMigrationAttempt = Map.empty
       actorStateCleanupExecutor = None
       routeSetStatus = None
       isStateCleanupCompleted = true
@@ -287,29 +304,29 @@ trait AgentStateCleanupHelper {
 
   lazy val migrateThreadContextBatchSize: Int =
     appConfig
-      .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_SIZE)
+      .getIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_SIZE)
       .getOrElse(5)
 
   lazy val migrateThreadContextBatchItemSleepInterval: Int =
     appConfig
-      .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
+      .getIntOption(MIGRATE_THREAD_CONTEXTS_BATCH_ITEM_SLEEP_INTERVAL_IN_MILLIS)
       .getOrElse(5000)
 
   lazy val migrateThreadContextScheduledJobInterval: Int =
     appConfig
-      .getConfigIntOption(MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
+      .getIntOption(MIGRATE_THREAD_CONTEXTS_SCHEDULED_JOB_INTERVAL_IN_SECONDS)
       .getOrElse(300)
 
   val MIGRATE_SCHEDULED_JOB_ID = "MigrateThreadContexts"
 
   lazy val migrateThreadContextMaxAttemptPerPinstProtoRef: Int =
     appConfig
-      .getConfigIntOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_MAX_ATTEMPT_PER_PINST_PROTO_REF)
+      .getIntOption(ConfigConstants.MIGRATE_THREAD_CONTEXTS_MAX_ATTEMPT_PER_PINST_PROTO_REF)
       .getOrElse(15)
 
   def isMigrateThreadContextsEnabled: Boolean =
     appConfig
-      .getConfigBooleanOption(CommonConfig.MIGRATE_THREAD_CONTEXTS_ENABLED)
+      .getBooleanOption(ConfigConstants.MIGRATE_THREAD_CONTEXTS_ENABLED)
       .getOrElse(false)
 
   def scheduleThreadContextMigrationJobIfNotScheduled(): Unit = {
@@ -319,14 +336,16 @@ trait AgentStateCleanupHelper {
       MigrateThreadContexts)
   }
 
+  scheduleThreadContextMigrationJobIfNotScheduled()
+
   self ! FixThreadMigrationState
 }
 
 case object MigrateThreadContexts extends ActorMessage
 case object FixThreadMigrationState extends ActorMessage
-case class FixActorState(actorDID: DID, senderActorRef: ActorRef) extends ActorMessage
+case class FixActorState(actorDID: DidStr, senderActorRef: ActorRef) extends ActorMessage
 case class CheckActorStateCleanupState(sendCurrentStatus: Boolean = false) extends ActorMessage
-case class ActorStateCleanupStatus(actorDID: DID,
+case class ActorStateCleanupStatus(actorDID: DidStr,
                                    isRouteFixed: Boolean,
                                    pendingCount: Int,
                                    successfullyMigratedCount: Int,
@@ -343,4 +362,4 @@ case class ThreadContextMigrationStatus(candidateProtoActors: Set[ProtoRef],
   def isNotMigrated: Boolean = isAllRespReceived && successResponseFromProtoActors.isEmpty
 }
 
-case class RouteSetStatus(did: DID, isSet: Boolean) extends ActorMessage
+case class RouteSetStatus(did: DidStr, isSet: Boolean) extends ActorMessage

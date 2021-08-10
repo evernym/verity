@@ -1,9 +1,9 @@
 package com.evernym.verity.actor
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper, GetValue}
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
-import com.evernym.verity.metrics.AllNodeMetricsData
 import com.evernym.verity.testkit.BasicSpec
 
 
@@ -44,18 +44,10 @@ class SingletonParentSpec extends PersistentActorSpec with BasicSpec {
             }
           }
         }
-
-        "when sent GetMetricsOfAllNodes command" - {
-          "should respond with AllNodeMetricsData" in {
-            singletonParentProxy ! SendMetricsOfAllNodes(MetricsFilterCriteria())
-            expectMsgPF() {
-              case _: AllNodeMetricsData =>
-            }
-          }
-        }
       }
 
     }
   }
-
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

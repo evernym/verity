@@ -3,6 +3,7 @@ package com.evernym.verity.actor.testkit.logging
 import akka.actor.ActorRef
 import akka.event.Logging._
 import akka.testkit.{EventFilter, ImplicitSender}
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
@@ -78,4 +79,7 @@ class InfoFilterSpec
         |""".stripMargin
     }
   }
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

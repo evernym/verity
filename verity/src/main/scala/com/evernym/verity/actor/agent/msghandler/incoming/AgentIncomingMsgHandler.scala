@@ -8,15 +8,16 @@ import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.config.AgentAuthKeyUtil
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.ReqMsgContext
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 import com.evernym.verity.actor.resourceusagethrottling.{COUNTERPARTY_ID_PREFIX, OWNER_ID_PREFIX, UserId}
+import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.metrics.InternalSpan
 
 import scala.concurrent.Future
 
 trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor =>
+  private implicit val executionContext = futureExecutionContext
 
   def agentIncomingCommonCmdReceiver[A]: Receive = {
 
@@ -36,7 +37,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
 
     //agent-msg-processor-actor -> this actor
     case um: UnhandledMsg                 =>
-      runWithInternalSpan(s"${um.amw.msgType}", "AgentIncomingMsgHandler") {
+      metricsWriter.runWithSpan(s"${um.amw.msgType}", "AgentIncomingMsgHandler", InternalSpan) {
         try {
           if (incomingMsgHandler(um.rmc).isDefinedAt(um.amw)) {
             recordInMsgEvent(um.rmc.id,
@@ -81,7 +82,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
   def stateDetailsFor: Future[ProtoRef => PartialFunction[String, Parameter]]
   def sponsorRel: Option[SponsorRel] = None
 
-  def userIdForResourceUsageTracking(senderVerKey: Option[VerKey]): Option[UserId] = {
+  def userIdForResourceUsageTracking(senderVerKey: Option[VerKeyStr]): Option[UserId] = {
     val myDomainAuthedKeys = state.myAuthVerKeys ++ configuredAuthedKeys
     senderVerKey match {
       case Some(svk) =>
@@ -116,7 +117,8 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
             agentActorContext.walletAPI,
             agentActorContext.agentMsgRouter,
             agentActorContext.protocolRegistry,
-            param
+            param,
+            agentActorContext.futureExecutionContext
           )), "amp-" + UUID.randomUUID().toString)
       msgProcessor.tell(cmd, sndr)
     }.recover {
@@ -164,7 +166,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
    * list of authorized msg sender ver keys (need to be implemented by individual agent actors)
    * @return
    */
-  def authedMsgSenderVerKeys: Set[VerKey]
+  def authedMsgSenderVerKeys: Set[VerKeyStr]
 
   /**
    * list of message types which are allowed to be processed if sent by un authorized sender
@@ -179,12 +181,12 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
    * reads configured authorized key for domainId (self rel id) belonging to this agent
    * @return
    */
-  def configuredAuthedKeys: Set[VerKey] = {
+  def configuredAuthedKeys: Set[VerKeyStr] = {
     AgentAuthKeyUtil.keysForSelfRelDID(agentActorContext.appConfig, domainId)
   }
 
   /**
    * combination of configured and other added authed keys
    */
-  def allAuthedKeys: Set[VerKey] = configuredAuthedKeys ++ authedMsgSenderVerKeys
+  def allAuthedKeys: Set[VerKeyStr] = configuredAuthedKeys ++ authedMsgSenderVerKeys
 }

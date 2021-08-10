@@ -2,11 +2,16 @@ package com.evernym.verity.actor.segmentedstates
 
 import akka.actor.PoisonPill
 import com.evernym.verity.actor._
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.testkit.BasicSpec
 
+import scala.concurrent.ExecutionContext
+
 class SegmentedStateStoreSpec extends PersistentActorSpec with BasicSpec with ShardUtil {
+  lazy val ecp = new ExecutionContextProvider(appConfig)
+  implicit lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   private lazy val ssRegion = createPersistentRegion("segment-state-region", SegmentedStateStore.props)
 
@@ -76,4 +81,6 @@ class SegmentedStateStoreSpec extends PersistentActorSpec with BasicSpec with Sh
     }
 
   }
+
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

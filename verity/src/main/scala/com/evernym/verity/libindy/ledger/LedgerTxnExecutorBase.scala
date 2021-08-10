@@ -1,28 +1,26 @@
 package com.evernym.verity.libindy.ledger
 
 import akka.actor.ActorSystem
-import com.evernym.verity.Exceptions.{InvalidValueException, MissingReqFieldException, NoResponseFromLedgerPoolServiceException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status
-import com.evernym.verity.Status.{TIMEOUT, UNHANDLED, _}
-import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI._
-import com.evernym.verity.actor.appStateManager.{ErrorEvent, MildSystemError, RecoverIfNeeded, SeriousSystemError}
+import com.evernym.verity.util2.Exceptions.{InvalidValueException, MissingReqFieldException, NoResponseFromLedgerPoolServiceException}
+import com.evernym.verity.util2.HasExecutionContextProvider
+import com.evernym.verity.util2.Status.{TIMEOUT, UNHANDLED, _}
+import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, MildSystemError, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.ConfigUtil.findTAAConfig
-import com.evernym.verity.config.{AppConfig, CommonConfig, ConfigUtil}
+import com.evernym.verity.config.{AppConfig, ConfigConstants, ConfigUtil}
 import com.evernym.verity.ledger._
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.{DidStr, DidPair}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.util.LogUtil.logFutureDuration
 import com.evernym.verity.util.OptionUtil.orNone
 import com.evernym.verity.util.Util.getJsonStringFromMap
 import com.evernym.verity.util.{TAAUtil, Util}
+import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.IndyException
@@ -31,7 +29,7 @@ import org.hyperledger.indy.sdk.ledger.Ledger._
 import org.hyperledger.indy.sdk.pool.{LedgerNotFoundException, Pool}
 
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
-import scala.concurrent.{Future, Promise, TimeoutException}
+import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
 import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
 
@@ -76,7 +74,8 @@ object SubmitToLedger extends SubmitToLedger {
   def submitRequest(pool: Pool, request: String): Future[RawLedgerResponse] = toFuture(Ledger.submitRequest(pool, request))
 }
 
-trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
+trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextProvider {
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   implicit def actorSystem: ActorSystem
   def appConfig: AppConfig
@@ -109,8 +108,8 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
               throw new TaaConfiguredVersionInvalidError(errorMsg + " Error details: " + taaFailure.getMessage)
             case None =>
               val errorMsg = s"No Valid TAA -- TAA version $currentVersion is not configured. You must add " +
-                s"the digest, mechanism, and time-of-acceptance to ${CommonConfig.LIB_INDY_LEDGER_TAA_AGREEMENTS} " +
-                s"for TAA version $currentVersion AND enable ${CommonConfig.LIB_INDY_LEDGER_TAA}."
+                s"the digest, mechanism, and time-of-acceptance to ${ConfigConstants.LIB_INDY_LEDGER_TAA_AGREEMENTS} " +
+                s"for TAA version $currentVersion AND enable ${ConfigConstants.LIB_INDY_LEDGER_TAA}."
               throw new TaaConfigurationForVersionNotFoundError(errorMsg + " Error details: " + taaFailure.getMessage)
           }
         }.recover {
@@ -175,7 +174,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     val pr = getResultFromJson(response)
     pr.get(OP) match {
       case Some(op) if op.equals(REPLY) =>
-        publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
+        AppStateUpdateAPI(actorSystem).publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
         pr
       case Some(op) if op.equals(REJECT) || op.equals(REQNACK) =>
         // TODO: get REASON_CODE/STATUS_CODE (whatever indy folks end up calling it) instead of REASON and change
@@ -206,36 +205,36 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     case e: StatusDetailException => throw e
     case e: TimeoutException =>
       val errorMsg = "no response from ledger pool: " + e.toString
-      publishEvent(ErrorEvent(MildSystemError, CONTEXT_LEDGER_OPERATION,
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(MildSystemError, CONTEXT_LEDGER_OPERATION,
         new NoResponseFromLedgerPoolServiceException(Option(errorMsg)), Option(errorMsg)))
       throw StatusDetailException(TIMEOUT.withMessage(e.getMessage))
     case e: TaaConfiguredVersionInvalidError =>
-      publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$TAA_CONFIGURED_VERSION_INVALID Details: ${e.getMessage}")))
       throw StatusDetailException(TAA_CONFIGURED_VERSION_INVALID)
     case e: TaaConfigurationForVersionNotFoundError =>
-      publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$TAA_CONFIGURATION_FOR_VERSION_NOT_FOUND Details: ${e.getMessage}")))
       throw StatusDetailException(TAA_CONFIGURATION_FOR_VERSION_NOT_FOUND)
     case e: TaaFailedToGetCurrentVersionError =>
-      publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$TAA_FAILED_TO_GET_CURRENT_VERSION Details: ${e.getMessage}")))
       throw StatusDetailException(TAA_FAILED_TO_GET_CURRENT_VERSION)
     case e: TaaRequiredButDisabledError =>
-      publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$TAA_REQUIRED_BUT_DISABLED Details: ${e.getMessage}")))
       throw StatusDetailException(TAA_REQUIRED_BUT_DISABLED)
     case e: UnknownTxnRejectReasonError =>
-      publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$LEDGER_UNKNOWN_REJECT_ERROR Details: ${e.getMessage}")))
       throw StatusDetailException(LEDGER_UNKNOWN_REJECT_ERROR )
     case e: UnhandledIndySdkException =>
-      publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e,
         Some(s"$INDY_SDK_UNHANDLED_EXCEPTION Details: ${e.getMessage}")))
       throw StatusDetailException(INDY_SDK_UNHANDLED_EXCEPTION)
     case e: Exception =>
       val errorMsg = "unhandled error/response while interacting with ledger: " + e.toString
-      publishEvent(ErrorEvent(MildSystemError, CONTEXT_LEDGER_OPERATION, e, Option(errorMsg)))
+      AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(MildSystemError, CONTEXT_LEDGER_OPERATION, e, Option(errorMsg)))
       throw StatusDetailException(UNHANDLED.withMessage( e.getMessage))
     case e =>
       logger.warn(e.getMessage)
@@ -249,7 +248,10 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
       } else {
         prepareRequest(submitterDetail, request)
           .flatMap(submitRequest(_, pool.get))
-          .map(parseResponse)
+          .map { resp =>
+            AppStateUpdateAPI(actorSystem).publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
+            parseResponse(resp)
+          }
           .recoverWith(retryRecovery(submitterDetail, LedgerRequest(request.req, request.needsSigning)))
           .recover(handleError)
       }
@@ -271,7 +273,6 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
   private def submitWriteRequest(submitterDetail: Submitter,
                                  reqDetail: LedgerRequest):Future[TxnResp] ={
     completeRequest(submitterDetail, reqDetail).map { resp =>
-      publishEvent(RecoverIfNeeded(CONTEXT_LEDGER_OPERATION))
       buildTxnRespForWriteOp(resp)
     }.recover {
       case e: StatusDetailException => throw e
@@ -279,12 +280,12 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
   }
 
   override def getAttrib(submitter: Submitter,
-                         did: DID,
+                         did: DidStr,
                          attrName: String): Future[GetAttribResp] = {
     toFuture(buildGetAttribRequest(submitter.did, did, attrName, null, null)) flatMap { req =>
       submitGetRequest(submitter, req, needsSigning=true).map{ r =>
         val txnResp = buildTxnRespForReadOp(r)
-        val data = getOptFieldFromResult(r, DATA).map(_.toString)
+        getOptFieldFromResult(r, DATA).map(_.toString)
         GetAttribResp(txnResp)
       }
     }
@@ -319,7 +320,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     }
   }
 
-  override def getNym(submitterDetail: Submitter, did: DID): Future[GetNymResp] = {
+  override def getNym(submitterDetail: Submitter, did: DidStr): Future[GetNymResp] = {
     toFuture(buildGetNymRequest(submitterDetail.did, did)) flatMap { req =>
       submitGetRequest(submitterDetail, req, needsSigning=false).map{ r =>
         val txnResp = buildTxnRespForReadOp(r)
@@ -337,7 +338,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     }
   }
 
-  override def writeSchema(submitterDID: DID,
+  override def writeSchema(submitterDID: DidStr,
                            schemaJson: String,
                            walletAccess: WalletAccess): Future[TxnResp] = {
     toFuture(buildSchemaRequest(submitterDID, schemaJson)) flatMap { req =>
@@ -356,9 +357,9 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     }
   }
 
-  override def prepareSchemaForEndorsement(submitterDID: DID,
+  override def prepareSchemaForEndorsement(submitterDID: DidStr,
                                            schemaJson: String,
-                                           endorserDID: DID,
+                                           endorserDID: DidStr,
                                            walletAccess: WalletAccess): Future[LedgerRequest] = {
     toFuture(buildSchemaRequest(submitterDID, schemaJson)) flatMap { req =>
       val schemaReq = LedgerRequest(req, needsSigning=false, taa=None)
@@ -372,7 +373,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     }
   }
 
-  def writeCredDef(submitterDID: DID,
+  def writeCredDef(submitterDID: DidStr,
                    credDefJson: String,
                    walletAccess: WalletAccess): Future[TxnResp] = {
     toFuture(buildCredDefRequest(submitterDID, credDefJson)) flatMap { req =>
@@ -391,9 +392,9 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
     }
   }
 
-  override def prepareCredDefForEndorsement(submitterDID: DID,
+  override def prepareCredDefForEndorsement(submitterDID: DidStr,
                                             credDefJson: String,
-                                            endorserDID: DID,
+                                            endorserDID: DidStr,
                                             walletAccess: WalletAccess): Future[LedgerRequest] = {
     toFuture(buildCredDefRequest(submitterDID, credDefJson)) flatMap { req =>
       val credDefReq = LedgerRequest(req, needsSigning=false, taa=None)
@@ -446,7 +447,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
   override def addNym(submitterDetail: Submitter, targetDid: DidPair): Future[TxnResp] = {
     toFuture(buildNymRequest(
       submitterDetail.did,
-      targetDid.DID,
+      targetDid.did,
       targetDid.verKey,
       null,
       null
@@ -456,7 +457,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor {
   }
 
   override def addAttrib(submitterDetail: Submitter,
-                         did: DID,
+                         did: DidStr,
                          attrName: String,
                          attrValue: String): Future[TxnResp] = {
     val raw = getJsonStringFromMap (Map(attrName -> attrValue))

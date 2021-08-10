@@ -2,13 +2,12 @@ package com.evernym.integrationtests.e2e.apis
 
 import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
 import com.evernym.integrationtests.e2e.tag.annotation.Integration
-import com.evernym.verity.Status
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.ConfigUtil.nowTimeOfAcceptance
-import com.evernym.verity.config.{CommonConfig, ConfigUtil}
+import com.evernym.verity.config.{ConfigConstants, ConfigUtil}
+import com.evernym.verity.did.DidPair
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.ledger.{LedgerPoolConnManager, OpenConnException, TransactionAuthorAgreement}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
@@ -16,13 +15,16 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
+import com.evernym.verity.util2.Status
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory, ConfigUtil => TypesafeConfigUtil}
 import com.typesafe.scalalogging.Logger
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time._
-
 import java.util.UUID
+
+import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
+
 import scala.collection.JavaConverters._
 
 @Integration
@@ -48,14 +50,15 @@ class LedgerFlowSpec extends BasicSpec
   def newConfig(enableTAA: Boolean, poolName: String = UUID.randomUUID().toString): Config = {
     taaEnabled = enableTAA
     ConfigFactory.load()
-      .withValue(CommonConfig.LIB_INDY_LEDGER_TAA_ENABLED, ConfigValueFactory.fromAnyRef(enableTAA))
-      .withValue(CommonConfig.LIB_INDY_LEDGER_POOL_NAME,   ConfigValueFactory.fromAnyRef(poolName))
+      .withValue(ConfigConstants.LIB_INDY_LEDGER_TAA_ENABLED, ConfigValueFactory.fromAnyRef(enableTAA))
+      .withValue(ConfigConstants.LIB_INDY_LEDGER_POOL_NAME,   ConfigValueFactory.fromAnyRef(poolName))
   }
 
   def newPoolConnManager(taaEnabled: Boolean): LedgerPoolConnManager = {
     val pc = new IndyLedgerPoolConnManager(
       ActorSystemVanilla("test"),
       appConfig,
+      TestExecutionContextProvider.ecp.futureExecutionContext,
       genesisFile = Some(testEnv.ledgerConfig.genesisFilePath)
     )
     pc.open()
@@ -66,6 +69,8 @@ class LedgerFlowSpec extends BasicSpec
     val taa = if(enabled) ConfigUtil.findTAAConfig(appConfig, version) else None
     buildLedgerUtil(
       appConfig,
+      TestExecutionContextProvider.ecp.futureExecutionContext,
+      TestExecutionContextProvider.ecp.walletFutureExecutionContext,
       taa = taa,
       genesisTxnPath = Some(testEnv.ledgerConfig.genesisFilePath)
     )
@@ -120,16 +125,16 @@ class LedgerFlowSpec extends BasicSpec
           "should respond with TaaRequiredButDisabledError" taggedAs (UNSAFE_IgnoreLog) in {
             runEnabledOnLedgerScenario("TAA is disabled in Verity Config", (taa: TransactionAuthorAgreement) => {
               val c = appConfig.config.withValue(
-                CommonConfig.LIB_INDY_LEDGER_TAA_ENABLED,
+                ConfigConstants.LIB_INDY_LEDGER_TAA_ENABLED,
                 ConfigValueFactory.fromAnyRef(false)
               )
               .withValue(
-                CommonConfig.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT,
+                ConfigConstants.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT,
                 ConfigValueFactory.fromAnyRef(false)
               )
               appConfig.setConfig(c)
               val caught = intercept[Exception] {
-                ledgerUtil.bootstrapNewDID(newDID.DID, newDID.verKey, "ENDORSER")
+                ledgerUtil.bootstrapNewDID(newDID.did, newDID.verKey, "ENDORSER")
               }
               //TaaRequiredButDisabledError
               caught.getMessage should include (Status.TAA_REQUIRED_BUT_DISABLED.statusCode)
@@ -139,7 +144,7 @@ class LedgerFlowSpec extends BasicSpec
         "because TAA digest is invalid" - {
           "should respond with OpenConnException" taggedAs (UNSAFE_IgnoreLog) in {
             runEnabledOnLedgerScenario("TAA digest is invalid", (taa: TransactionAuthorAgreement) => {
-              val agreementVersionPath = s"${CommonConfig.LIB_INDY_LEDGER_TAA_AGREEMENTS}" +
+              val agreementVersionPath = s"${ConfigConstants.LIB_INDY_LEDGER_TAA_AGREEMENTS}" +
                 s".${TypesafeConfigUtil.quoteString(taa.version)}"
 
               val badConfig = Map(
@@ -155,12 +160,12 @@ class LedgerFlowSpec extends BasicSpec
                   ConfigValueFactory.fromMap(badConfig.asJava)
                 )
                 .withValue(
-                  CommonConfig.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT,
+                  ConfigConstants.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT,
                   ConfigValueFactory.fromAnyRef(false)
                 )
               appConfig.setConfig(c1)
               val caught = intercept[Exception] {
-                ledgerUtil.bootstrapNewDID(newDID.DID, newDID.verKey, "ENDORSER")
+                ledgerUtil.bootstrapNewDID(newDID.did, newDID.verKey, "ENDORSER")
               }
               caught shouldBe a [OpenConnException]
               caught.getMessage shouldBe "Configured TAA Digest doesn't match ledger TAA"
@@ -170,18 +175,18 @@ class LedgerFlowSpec extends BasicSpec
         "because TAA version does not exist in Verity Config" - {
           "should respond with an OpenConnException" in {
             runEnabledOnLedgerScenario("TAA version does not exist in VerityConfig", (taa: TransactionAuthorAgreement) => {
-              val agreementVersionPath = s"${CommonConfig.LIB_INDY_LEDGER_TAA_AGREEMENTS}" +
+              val agreementVersionPath = s"${ConfigConstants.LIB_INDY_LEDGER_TAA_AGREEMENTS}" +
                 s".${com.typesafe.config.ConfigUtil.quoteString(taa.version)}"
               val c2 = appConfig
                 .config
                 .withoutPath(agreementVersionPath)
                 .withValue(
-                  CommonConfig.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT,
+                  ConfigConstants.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT,
                   ConfigValueFactory.fromAnyRef(false)
                 )
               appConfig.setConfig(c2)
               val caught2 = intercept[Exception] {
-                ledgerUtil.bootstrapNewDID(newDID.DID, newDID.verKey, "ENDORSER")
+                ledgerUtil.bootstrapNewDID(newDID.did, newDID.verKey, "ENDORSER")
               }
               caught2 shouldBe a [OpenConnException]
               caught2.getMessage shouldBe "TAA is not configured"
@@ -209,7 +214,7 @@ class LedgerFlowSpec extends BasicSpec
               // NOTE: A newer version of indy-node will simply ignore a TAA appended to a write transaction when not
               //      required. Once that happens, this test should be changed to expect bootstrapNewID to successfully
               //      write to the ledger.
-              val c = appConfig.config.withValue(CommonConfig.LIB_INDY_LEDGER_TAA_ENABLED,
+              val c = appConfig.config.withValue(ConfigConstants.LIB_INDY_LEDGER_TAA_ENABLED,
                 ConfigValueFactory.fromAnyRef(false))
               appConfig.setConfig(c)
 
@@ -225,7 +230,7 @@ class LedgerFlowSpec extends BasicSpec
                   )
                 )
                 val e = intercept[Exception] {
-                  ledgerUtil.bootstrapNewDID(newDID.DID, newDID.verKey, "ENDORSER")
+                  ledgerUtil.bootstrapNewDID(newDID.did, newDID.verKey, "ENDORSER")
                 }
                 //TaaNotRequiredButIncludedError
                 e.getMessage should include (Status.TAA_NOT_REQUIRED_BUT_INCLUDED.statusMsg)

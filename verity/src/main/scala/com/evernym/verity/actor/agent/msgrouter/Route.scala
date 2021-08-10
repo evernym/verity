@@ -3,20 +3,24 @@ package com.evernym.verity.actor.agent.msgrouter
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.event.LoggingReceive
-import com.evernym.verity.RouteId
+import com.evernym.verity.util2.RouteId
 import com.evernym.verity.actor.agent.msgrouter.legacy.LegacyGetRoute
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, RouteSet}
-import com.evernym.verity.config.{AppConfig, CommonConfig}
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.ActorNameConstants._
+
+import scala.concurrent.ExecutionContext
 
 /**
  * stores only one route mapping per actor
  *
  * @param appConfig application config
  */
-class Route(implicit val appConfig: AppConfig)
+class Route(executionContext: ExecutionContext)(implicit val appConfig: AppConfig)
   extends BasePersistentActor {
+
+  override def futureExecutionContext: ExecutionContext = executionContext
 
   override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case _: StoreRoute | _: StoreFromLegacy
@@ -52,11 +56,11 @@ class Route(implicit val appConfig: AppConfig)
 
   val legacyRouteStoreActorRegion: ActorRef = ClusterSharding(context.system).shardRegion(LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME)
 
-  override lazy val persistenceEncryptionKey: String = appConfig.getConfigStringReq(CommonConfig.SECRET_ROUTING_AGENT)
+  override lazy val persistenceEncryptionKey: String = appConfig.getStringReq(ConfigConstants.SECRET_ROUTING_AGENT)
 }
 
 object Route {
-  def props(implicit appConfig: AppConfig): Props = Props(new Route)
+  def props(executionContext: ExecutionContext)(implicit appConfig: AppConfig): Props = Props(new Route(executionContext))
 }
 
 

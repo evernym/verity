@@ -1,17 +1,19 @@
 package com.evernym.verity.actor.clustering
 
 import java.util.UUID
-
 import akka.actor.ActorSystem
 import akka.testkit.TestProbe
-import com.evernym.verity.Status.StatusDetail
+import com.evernym.verity.util2.Status.StatusDetail
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.{ActorSystemConfig, MockAgentActorContext, MockPlatformServices}
 import com.evernym.verity.actor.{Platform, agentRegion}
 import com.evernym.verity.testkit.{BasicSpec, CleansUpIndyClientFirst}
-import com.evernym.verity.ActorErrorResp
+import com.evernym.verity.util2.ActorErrorResp
+import com.evernym.verity.util.TestExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory}
 
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
 
@@ -24,6 +26,8 @@ trait MultiNodeClusterSpecLike
   extends BasicSpec
     with ActorSystemConfig
     with CleansUpIndyClientFirst {
+  implicit lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+
 
   //can be overridden by implementing class
   def numberOfNodes: Int = 2
@@ -39,7 +43,7 @@ trait MultiNodeClusterSpecLike
       } else {
         createNodeSystem(systemName, seedNodeConfig)
       }
-      new NodePlatform(as, config)
+      new NodePlatform(as, config, ecp)
     }
   }.toList
 
@@ -74,8 +78,8 @@ trait MultiNodeClusterSpecLike
    * @param as
    * @param config
    */
-  class NodePlatform(as: ActorSystem, config: Config)
-    extends Platform(new MockAgentActorContext(as, new TestAppConfig(Option(config))), MockPlatformServices) {
+  class NodePlatform(as: ActorSystem, config: Config, ecp: ExecutionContextProvider)
+    extends Platform(new MockAgentActorContext(as, new TestAppConfig(Option(config)), ecp), MockPlatformServices, ecp) {
     lazy val agencyAgentEntityId: String = UUID.nameUUIDFromBytes("agency-DID".getBytes()).toString
     lazy val aa: agentRegion = agentRegion(agencyAgentEntityId, agencyAgentRegion)
     val client: NodeClient = NodeClient(TestProbe(), this)

@@ -7,27 +7,37 @@ import com.evernym.integrationtests.e2e.env.AppInstance.AppInstance
 import com.evernym.integrationtests.e2e.env.{IntegrationTestEnv, SdkConfig, VerityInstance}
 import com.evernym.integrationtests.e2e.scenario.InteractionMode.{Automated, InteractionMode, Manual, Simulated}
 import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider
-import com.evernym.verity.UrlParam
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
+import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.testkit.agentmsg.AgentMsgSenderHttpWrapper
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
+import com.evernym.verity.util2.{ExecutionContextProvider, UrlParam}
+import com.typesafe.config.ConfigFactory
 
 import java.nio.file.Path
+
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 
 class ApplicationAdminExt(val scenario: Scenario,
                           val instance: VerityInstance,
+                          ecp: ExecutionContextProvider,
                           sdkConfigs: List[SdkConfig] = List.empty)
   extends AgentMsgSenderHttpWrapper
     with AdminClient {
-
 
   override implicit lazy val system: ActorSystem = scenario.actorSystem
 
   override def urlParam: UrlParam = instance.endpoint
 
-  override val mockClientAgent = new MockEdgeAgent(urlParam, appConfig)
+  override val mockClientAgent =
+    new MockEdgeAgent(
+      urlParam,
+      appConfig,
+      ecp.futureExecutionContext,
+      ecp.walletFutureExecutionContext
+    )
 
   val sdks: List[VeritySdkProvider] = sdkConfigs.map(VeritySdkProvider.fromSdkConfig(_, scenario))
 
@@ -36,9 +46,28 @@ class ApplicationAdminExt(val scenario: Scenario,
   def `sdk_!`: VeritySdkProvider = sdk.get
 
   def name: String = instance.name
+
+  lazy val conf : ConfigReadHelper = ConfigReadHelper(ConfigFactory.load(s"${instance.appType.toString}/application.conf"))
+
+
+  lazy val metricsHost : String = {
+    val host = conf.getStringReq("kamon.prometheus.embedded-server.hostname") match {
+      case "0.0.0.0" => "localhost"
+      case x => x
+    }
+    val port = conf.getIntReq("kamon.prometheus.embedded-server.port")
+    s"$host:$port"
+  }
+
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
-case class ScenarioAppEnvironment(scenario: Scenario, testEnv: IntegrationTestEnv) {
+case class ScenarioAppEnvironment(
+                                   scenario: Scenario,
+                                   testEnv: IntegrationTestEnv,
+                                   executionContextProvider: ExecutionContextProvider
+                                 ) {
   if (testEnv.isAnyRemoteInstanceExists && testEnv.sdks.isEmpty) {
     throw new RuntimeException("edge agents should be defined with proper endpoint information")
   }
@@ -50,7 +79,7 @@ case class ScenarioAppEnvironment(scenario: Scenario, testEnv: IntegrationTestEn
     scenario.applications.map { app =>
       val vi = testEnv.instance_!(app.instanceName)
       val sdkConfigs = testEnv.sdks.filter(_.verityInstance == vi).toList
-      vi.name -> new ApplicationAdminExt(scenario, vi, sdkConfigs)
+      vi.name -> new ApplicationAdminExt(scenario, vi, executionContextProvider, sdkConfigs)
     }.toMap
   }
 

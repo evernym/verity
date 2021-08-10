@@ -1,7 +1,7 @@
 package com.evernym.verity.http.base.open
 
 import akka.http.scaladsl.model.StatusCodes._
-import com.evernym.verity.Status.StatusDetail
+import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.http.base.{EndpointHandlerBaseSpec, HasMsgStore}
@@ -103,7 +103,7 @@ trait GetMsgsSpec extends HasMsgStore { this : EndpointHandlerBaseSpec =>
   }
 
   private def pairwiseIdForConn(mockEdgeAgent: MockEdgeAgent, connId: String): String =
-    mockEdgeAgent.pairwiseConnDetails(connId).myPairwiseDidPair.DID
+    mockEdgeAgent.pairwiseConnDetails(connId).myPairwiseDidPair.did
 
 }
 

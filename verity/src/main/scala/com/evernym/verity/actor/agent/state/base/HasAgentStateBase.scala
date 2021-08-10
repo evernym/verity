@@ -2,6 +2,7 @@ package com.evernym.verity.actor.agent.state.base
 
 import com.evernym.verity.actor.agent.relationship.{EndpointADT, EndpointADTUntyped, EndpointId, KeyId, Relationship, Tags}
 import com.evernym.verity.actor.agent.{ProtocolRunningInstances, ThreadContext, ThreadContextDetail}
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.engine._
 
 //NOTE: over the period of time, as we make all agent actors starts using
@@ -33,7 +34,7 @@ trait AgentStateImplBase extends AgentStateInterface {
     relationship.map(_.copy(myDidDoc = relationship.flatMap(_.myDidDoc.map(_.updatedWithRemovedEndpointById(endpointId)))))
   }
 
-  def relWithAuthKeyMergedToMyDidDoc(keyId: KeyId, verKey: VerKey, tags: Set[Tags]): Option[Relationship] = {
+  def relWithAuthKeyMergedToMyDidDoc(keyId: KeyId, verKey: VerKeyStr, tags: Set[Tags]): Option[Relationship] = {
     relationship.map(_.copy(myDidDoc = relationship.flatMap(_.myDidDoc.map(_.updatedWithMergedAuthKey(keyId, verKey, tags)))))
   }
 
@@ -42,7 +43,7 @@ trait AgentStateImplBase extends AgentStateInterface {
       _.updatedWithEndpoint(EndpointADT(endpoint))))))
   }
 
-  def relWithNewAuthKeyAddedInMyDidDoc(keyId: KeyId, verKey: VerKey, tags: Set[Tags]): Option[Relationship] = {
+  def relWithNewAuthKeyAddedInMyDidDoc(keyId: KeyId, verKey: VerKeyStr, tags: Set[Tags]): Option[Relationship] = {
     relationship.map(_.copy(myDidDoc = relationship.flatMap(_.myDidDoc.map(_.updatedWithNewAuthKey(keyId, verKey, tags)))))
   }
 

@@ -5,7 +5,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.{AgentMsgContext, _}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMessageWrapper, AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine.{MsgBase, ThreadId}
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, InviteDetail, InviteDetailAbbreviated}

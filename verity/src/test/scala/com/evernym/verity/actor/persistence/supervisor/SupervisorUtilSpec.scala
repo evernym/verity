@@ -7,16 +7,24 @@ import com.evernym.verity.actor.persistence.SupervisorUtil
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.actor.wallet.WalletActor
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
+import com.evernym.verity.util2.ExecutionContextProvider
+
+import scala.concurrent.ExecutionContext
 
 
 class SupervisorUtilSpec
   extends ActorSpec
     with ProvidesMockPlatform
     with BasicSpec {
+
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  implicit lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
+  implicit lazy val walletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+
 
   "SupervisorUtil" - {
     "when asked to generate backoff supervisor for AgencyAgent" - {
@@ -25,7 +33,7 @@ class SupervisorUtilSpec
           appConfig,
           PERSISTENT_ACTOR_BASE,
           AGENCY_AGENT_REGION_ACTOR_NAME,
-          Props(new AgencyAgent(agentActorContext))
+          Props(new AgencyAgent(agentActorContext, executionContext, walletExecutionContext))
         )
         onFailureProps.isDefined shouldBe true
 
@@ -33,7 +41,7 @@ class SupervisorUtilSpec
           appConfig,
           PERSISTENT_ACTOR_BASE,
           AGENCY_AGENT_REGION_ACTOR_NAME,
-          Props(new AgencyAgent(agentActorContext))
+          Props(new AgencyAgent(agentActorContext, executionContext, walletExecutionContext))
         )
         onStopProps.isDefined shouldBe true
       }
@@ -45,7 +53,7 @@ class SupervisorUtilSpec
           appConfig,
           PERSISTENT_ACTOR_BASE,
           AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME,
-          Props(new AgencyAgentPairwise(agentActorContext))
+          Props(new AgencyAgentPairwise(agentActorContext, executionContext, walletExecutionContext))
         )
         onFailureProps.isDefined shouldBe true
 
@@ -53,7 +61,7 @@ class SupervisorUtilSpec
           appConfig,
           PERSISTENT_ACTOR_BASE,
           AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME,
-          Props(new AgencyAgentPairwise(agentActorContext))
+          Props(new AgencyAgentPairwise(agentActorContext, executionContext, walletExecutionContext))
         )
         onStopProps.isDefined shouldBe true
       }
@@ -68,7 +76,7 @@ class SupervisorUtilSpec
             appConfig,
             PERSISTENT_ACTOR_BASE,
             agentRegionName,
-            Props(new UserAgent(agentActorContext, platform.collectionsMetricsCollector))
+            Props(new UserAgent(agentActorContext, platform.collectionsMetricsCollector, executionContext, walletExecutionContext))
           )
           onFailureProps.isDefined shouldBe true
 
@@ -76,7 +84,7 @@ class SupervisorUtilSpec
             appConfig,
             PERSISTENT_ACTOR_BASE,
             agentRegionName,
-            Props(new UserAgent(agentActorContext, platform.collectionsMetricsCollector))
+            Props(new UserAgent(agentActorContext, platform.collectionsMetricsCollector, executionContext, walletExecutionContext))
           )
           onStopProps.isDefined shouldBe true
         }
@@ -91,7 +99,7 @@ class SupervisorUtilSpec
             appConfig,
             PERSISTENT_ACTOR_BASE,
             agentRegionName,
-            Props(new UserAgentPairwise(agentActorContext, platform.collectionsMetricsCollector))
+            Props(new UserAgentPairwise(agentActorContext, platform.collectionsMetricsCollector, executionContext, walletExecutionContext))
           )
           onFailureProps.isDefined shouldBe true
 
@@ -99,7 +107,7 @@ class SupervisorUtilSpec
             appConfig,
             PERSISTENT_ACTOR_BASE,
             agentRegionName,
-            Props(new UserAgentPairwise(agentActorContext, platform.collectionsMetricsCollector))
+            Props(new UserAgentPairwise(agentActorContext, platform.collectionsMetricsCollector, executionContext, walletExecutionContext))
           )
           onStopProps.isDefined shouldBe true
         }
@@ -112,7 +120,7 @@ class SupervisorUtilSpec
           appConfig,
           NON_PERSISTENT_ACTOR_BASE,
           WALLET_REGION_ACTOR_NAME,
-          Props(new WalletActor(agentActorContext.appConfig, agentActorContext.poolConnManager))
+          Props(new WalletActor(agentActorContext.appConfig, agentActorContext.poolConnManager, executionContext))
         )
         onFailureProps.isDefined shouldBe false
 
@@ -120,7 +128,7 @@ class SupervisorUtilSpec
           appConfig,
           NON_PERSISTENT_ACTOR_BASE,
           WALLET_REGION_ACTOR_NAME,
-          Props(new WalletActor(agentActorContext.appConfig, agentActorContext.poolConnManager))
+          Props(new WalletActor(agentActorContext.appConfig, agentActorContext.poolConnManager, executionContext))
         )
         onStopProps.isDefined shouldBe false
       }
@@ -141,4 +149,5 @@ class SupervisorUtilSpec
     """
   )}
 
+  override def executionContextProvider: ExecutionContextProvider = ecp
 }

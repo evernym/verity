@@ -1,11 +1,11 @@
 package com.evernym.verity.protocol.protocols.connections.v_1_0
 
-import com.evernym.verity.ServiceEndpoint
-import com.evernym.verity.actor.agent.relationship.URL
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.{DID, DIDDocFormatted, MsgBase, MsgFamily, MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName, Parameters, VerKey}
+import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.SigBlockCommunity
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.Init
+import com.evernym.verity.util2.ServiceEndpoint
 
 
 object ConnectionsMsgFamily extends MsgFamily {
@@ -69,35 +69,35 @@ object Msg {
     }
   }
 
-  case class ProvisionalRelationship(did: DID, verKey: VerKey, endpoint: ServiceEndpoint,
-                                     theirVerKeys: Vector[VerKey], theirEndpoint: ServiceEndpoint,
-                                     theirRoutingKeys: Vector[VerKey]) extends Msg
+  case class ProvisionalRelationship(did: DidStr, verKey: VerKeyStr, endpoint: ServiceEndpoint,
+                                     theirVerKeys: Vector[VerKeyStr], theirEndpoint: ServiceEndpoint,
+                                     theirRoutingKeys: Vector[VerKeyStr]) extends Msg
 
   object Relationship {
     def apply(rel: com.evernym.verity.protocol.protocols.connections.v_1_0.Relationship): Relationship = {
       Msg.Relationship(rel.myDid, rel.myVerKey, rel.myEndpoint, rel.theirDid, rel.theirVerKey, rel.theirEndpoint, rel.theirRoutingKeys.toVector)
     }
   }
-  case class Relationship(myDid: DID, myVerKey: VerKey, myEndpoint: ServiceEndpoint,
-                          theirDid: String, theirVerKey: VerKey,
-                          theirEndpoint: ServiceEndpoint, theirRoutingKeys: Vector[VerKey]) extends Msg
+  case class Relationship(myDid: DidStr, myVerKey: VerKeyStr, myEndpoint: ServiceEndpoint,
+                          theirDid: String, theirVerKey: VerKeyStr,
+                          theirEndpoint: ServiceEndpoint, theirRoutingKeys: Vector[VerKeyStr]) extends Msg
 
-  case class Connection(DID: DID, DIDDoc: DIDDocFormatted) extends Msg {
-    def did: DID = DID
+  case class Connection(DID: DidStr, DIDDoc: DIDDocFormatted) extends Msg {
+    def did: DidStr = DID
     def did_doc: DIDDocFormatted = DIDDoc
   }
 
   case class ConnRequest(label: String, connection: Connection) extends Msg
   case class ConnResponse(`connection~sig`: SigBlockCommunity) extends Msg
 
-  case class InviteWithDID(did: DID, label: String) extends Msg
+  case class InviteWithDID(did: DidStr, label: String) extends Msg
 
   case class InviteWithKey(serviceEndpoint: ServiceEndpoint,
-                           recipientKeys: Vector[VerKey],
-                           routingKeys: Option[Vector[VerKey]],
+                           recipientKeys: Vector[VerKeyStr],
+                           routingKeys: Option[Vector[VerKeyStr]],
                            label: String) extends Msg {
 
-    def routingKeys_! : Vector[VerKey] = routingKeys.getOrElse(Vector.empty)
+    def routingKeys_! : Vector[VerKeyStr] = routingKeys.getOrElse(Vector.empty)
   }
 
   type Invitation = Either[InviteWithDID, InviteWithKey]
@@ -110,9 +110,9 @@ object Ctl {
 
   case class Init(params: Parameters) extends Ctl
 
-  case class Accept(label: String, invite_url: URL) extends Ctl
+  case class Accept(label: String, invite_url: String) extends Ctl
 
-  case class TheirDidDocUpdated(myDID: DID, myVerKey: VerKey, myRoutingKeys: Vector[VerKey]) extends Ctl
+  case class TheirDidDocUpdated(myDID: DidStr, myVerKey: VerKeyStr, myRoutingKeys: Vector[VerKeyStr]) extends Ctl
 
   case class TheirDidUpdated() extends Ctl
 
@@ -128,19 +128,19 @@ object Signal {
   case class InvalidInvite(inviteURL: String) extends SignalMsg
   case class UnhandledError(message: String) extends SignalMsg
 
-  case class SetupTheirDidDoc(myDID: DID, theirVerKey: VerKey, theirServiceEndpoint: ServiceEndpoint,
-                              theirRoutingKeys: Vector[VerKey], theirDID: Option[DID]) extends SignalMsg
+  case class SetupTheirDidDoc(myDID: DidStr, theirVerKey: VerKeyStr, theirServiceEndpoint: ServiceEndpoint,
+                              theirRoutingKeys: Vector[VerKeyStr], theirDID: Option[DidStr]) extends SignalMsg
 
-  case class UpdateTheirDid(myDID: DID, theirDID: DID) extends SignalMsg
+  case class UpdateTheirDid(myDID: DidStr, theirDID: DidStr) extends SignalMsg
 
   case class ConnRequestSent(req: Msg.ConnRequest) extends SignalMsg
-  case class ConnRequestReceived(conn: Msg.Connection, myDID: DID) extends SignalMsg
+  case class ConnRequestReceived(conn: Msg.Connection, myDID: DidStr) extends SignalMsg
 
-  case class ConnResponseSent(resp: Msg.ConnResponse, myDID: DID) extends SignalMsg
+  case class ConnResponseSent(resp: Msg.ConnResponse, myDID: DidStr) extends SignalMsg
   case class ConnResponseReceived(conn: Msg.Connection) extends SignalMsg
 
   case class ConnResponseInvalid() extends SignalMsg
-  case class Complete(theirDid: DID) extends SignalMsg
+  case class Complete(theirDid: DidStr) extends SignalMsg
 
   case class StatusReport(status: String) extends SignalMsg
 }

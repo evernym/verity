@@ -3,7 +3,8 @@ package com.evernym.verity.http.base.open
 import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
+import com.evernym.verity.util.Util
 
 trait AgencyIdentitySpec { this : EdgeEndpointBaseSpec =>
 
@@ -29,10 +30,10 @@ trait AgencyIdentitySpec { this : EdgeEndpointBaseSpec =>
       }
     }
 
-    def hasValidDIDVerKeyPair(did: DID, verKey: VerKey): Unit = {
+    def hasValidDIDVerKeyPair(did: DidStr, verKey: VerKeyStr): Unit = {
       try {
-        util.checkIfDIDIsValid(did)
-        util.checkIfDIDBelongsToVerKey(did, verKey)
+        Util.checkIfDIDIsValid(did)
+        Util.checkIfDIDBelongsToVerKey(did, verKey)
       } catch {
         case e: Exception => fail(s"Must include a valid DID/verKey pair. Details: $e" )
       }

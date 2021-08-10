@@ -8,19 +8,19 @@ import akka.http.scaladsl.server.directives.BasicDirectives.extract
 import akka.http.scaladsl.server.directives.HeaderDirectives.optionalHeaderValueByName
 import akka.http.scaladsl.server.{Directive1, Route}
 import com.evernym.verity.constants.Constants.{API_KEY_HTTP_HEADER, CLIENT_REQUEST_ID_HTTP_HEADER}
-import com.evernym.verity.Exceptions.{BadRequestErrorException, FeatureNotEnabledException, UnauthorisedErrorException}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, FeatureNotEnabledException, UnauthorisedErrorException}
 import com.evernym.verity.actor.agent.msghandler.outgoing.JsonMsg
 import com.evernym.verity.actor.agent.msgrouter.RestMsgRouteParam
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.actor.agent.Thread
-import com.evernym.verity.config.CommonConfig.REST_API_ENABLED
+import com.evernym.verity.did.didcomm.v1.Thread
+import com.evernym.verity.config.ConfigConstants.REST_API_ENABLED
 import com.evernym.verity.http.LoggingRouteUtil.{incomingLogMsg, outgoingLogMsg}
 import com.evernym.verity.http.common.{ActorResponseHandler, StatusDetailResp}
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.protocol.engine.{MsgFamily, MsgType, ProtoRef}
 import com.evernym.verity.util.{ReqMsgContext, RestAuthContext, RestMsgContext}
-import com.evernym.verity.{ActorErrorResp, Status}
+import com.evernym.verity.util2.{ActorErrorResp, Status}
 import org.json.JSONObject
 
 
@@ -34,7 +34,7 @@ final case class `API-REQUEST-ID`(id: String) extends CustomHeader {
 
 trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
 
-  lazy val restApiEnabled: Boolean = appConfig.getConfigBooleanOption(REST_API_ENABLED).getOrElse(false)
+  lazy val restApiEnabled: Boolean = appConfig.getBooleanOption(REST_API_ENABLED).getOrElse(false)
 
   protected def checkIfRestApiEnabled(): Unit = {
     if (!restApiEnabled) {
@@ -86,7 +86,12 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
     entity(as[String]) { payload =>
       val msgType = extractMsgType(payload)
       checkMsgFamily(msgType, protoRef)
-      val restMsgContext: RestMsgContext = RestMsgContext(msgType, auth, Option(Thread(thid)), reqMsgContext)
+      val restMsgContext: RestMsgContext = RestMsgContext(
+        msgType,
+        auth,
+        Option(Thread(thid)),
+        reqMsgContext
+      )
 
       complete {
         platform.agentActorContext.agentMsgRouter.execute(RestMsgRouteParam(route, payload, restMsgContext))

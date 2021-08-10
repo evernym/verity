@@ -1,9 +1,9 @@
 package com.evernym.verity.config.validator.base
 
-import com.evernym.verity.Exceptions
-import com.evernym.verity.Exceptions.ConfigLoadingFailedException
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.util2.Exceptions
 import com.typesafe.config.ConfigException.Missing
 import com.typesafe.config._
 import com.typesafe.scalalogging.Logger

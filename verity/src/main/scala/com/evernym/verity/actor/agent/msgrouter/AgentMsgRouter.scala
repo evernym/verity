@@ -1,6 +1,8 @@
 package com.evernym.verity.actor.agent.msgrouter
 
 
+import akka.Done
+
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import akka.actor.{ActorRef, ActorSystem}
@@ -9,10 +11,9 @@ import akka.pattern.{AskTimeoutException, ask}
 import akka.util.Timeout
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InvalidValueException}
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.RouteId
-import com.evernym.verity.Status._
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidValueException}
+import com.evernym.verity.util2.RouteId
+import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.EntityTypeMapper
 import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessPackedMsg, ProcessRestMsg}
@@ -21,16 +22,17 @@ import com.evernym.verity.cache.ROUTING_DETAIL_CACHE_FETCHER
 import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{CacheValueFetcher, RoutingDetailCacheFetcher}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.metrics.MetricsWriterExtension
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.util.LogUtil.logDuration
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util.{Base58Util, ReqMsgContext, RestMsgContext}
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -38,9 +40,11 @@ import scala.util.{Failure, Success, Try}
  * @param appConfig application config
  * @param system actor system
  */
-class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
+class AgentMsgRouter(executionContext: ExecutionContext)(implicit val appConfig: AppConfig, val system: ActorSystem)
   extends ShardRegionNameFromActorSystem
-   with HasLegacyRegionNames {
+    with HasLegacyRegionNames {
+
+  implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   def execute: PartialFunction[Any, Future[Any]] = {
     case cmd: Any => withAskTimeoutLogged(executeCmd(cmd, None))
@@ -74,9 +78,9 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   val logger: Logger = getLoggerByClass(classOf[AgentMsgRouter])
 
   lazy val fetchers: Map[FetcherParam, CacheValueFetcher] = Map (
-    ROUTING_DETAIL_CACHE_FETCHER -> new RoutingDetailCacheFetcher(system, appConfig)
+    ROUTING_DETAIL_CACHE_FETCHER -> new RoutingDetailCacheFetcher(system, appConfig, futureExecutionContext)
   )
-  lazy val routingCache: Cache = new Cache("RC", fetchers)
+  lazy val routingCache: Cache = new Cache("RC", fetchers, MetricsWriterExtension(system).get(), futureExecutionContext)
 
   lazy val agencyAgentRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_REGION_ACTOR_NAME)
   lazy val agencyAgentPairwiseRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME)
@@ -131,8 +135,11 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
   private def sendCmdToGivenActor(to: ActorRef, cmd: ForIdentifier)
                                  (implicit senderOpt: Option[ActorRef]): AskResp = {
     val fut = senderOpt match {
-      case Some(sndr) => (to ? cmd).map { r => sndr ! r }
-      case None => to ? cmd
+      case Some(sndr) =>
+        to.tell(cmd, sndr)
+        Future(Done)
+      case None =>
+        to ? cmd
     }
     AskResp(fut, Option(s"region actor: $to, route: ${cmd.id}, cmd class: ${cmd.msg.getClass.getSimpleName}"))
   }
@@ -189,7 +196,7 @@ class AgentMsgRouter(implicit val appConfig: AppConfig, val system: ActorSystem)
 }
 
 object AgentMsgRouter {
-  def getDIDForRoute(route: RouteId): Try[DID] = {
+  def getDIDForRoute(route: RouteId): Try[DidStr] = {
     // We support DID based routing but to support community routing we are allowing a temporary
     // hack to support verkey based routing.
     // Assumption:
@@ -233,5 +240,5 @@ case class RestMsgRouteParam(toRoute: RouteId, msg: String, restMsgContext: Rest
 
 case class AskResp(actualFut: Future[Any], reason: Option[String]=None)
 
-case class SetRoute(routeDID: DID, actorAddressDetail: ActorAddressDetail) extends ActorMessage
-case class GetRoute(routeDID: DID) extends ActorMessage
+case class SetRoute(routeDID: DidStr, actorAddressDetail: ActorAddressDetail) extends ActorMessage
+case class GetRoute(routeDID: DidStr) extends ActorMessage

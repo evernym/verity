@@ -5,7 +5,6 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model.{HttpEntity, HttpMethod, HttpMethods, HttpRequest, MediaTypes, RemoteAddress, StatusCode}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractClientIP, extractRequest, handleExceptions, logRequestResult, path, post, reject, _}
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.agency.AgencyPackedMsgHandler
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.base.Done
@@ -15,6 +14,7 @@ import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.util.{PackedMsgWrapper, ReqMsgContext}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.msgpacker.UnpackParam
+import com.evernym.verity.did.DidPair
 import com.evernym.verity.http.LoggingRouteUtil.{incomingLogMsg, outgoingLogMsg}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 
@@ -67,7 +67,7 @@ trait PackedMsgEndpointHandler
    */
   protected def sendPackedMsgToAgencyAgent(pmw: PackedMsgWrapper): Future[Any] = {
     getAgencyDidPairFut flatMap { adp =>
-      agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(adp.DID, pmw))
+      agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(adp.did, pmw))
     }
   }
 
@@ -120,7 +120,7 @@ trait PackedMsgEndpointHandler
     logIncoming(HttpMethods.POST)
     MsgRespTimeTracker.recordReqReceived(reqMsgContext.id)    //tracing metrics related
     req.entity.contentType.mediaType match {
-      case MediaTypes.`application/octet-stream` | HttpCustomTypes.MEDIA_TYPE_SSI_AGENT_WIRE =>
+      case MediaTypes.`application/octet-stream` | HttpCustomTypes.MEDIA_TYPE_SSI_AGENT_WIRE | HttpCustomTypes.MEDIA_TYPE_DIDCOMM_ENVELOPE_ENC =>
         handleAgentMsgReqForOctetStreamContentType
       case _ =>
         logger.info(s"[${reqMsgContext.id}] [outgoing response] content type not supported")

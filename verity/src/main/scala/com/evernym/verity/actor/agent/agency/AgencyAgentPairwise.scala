@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent.agency
 
 import akka.event.LoggingReceive
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
@@ -19,22 +18,30 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentBundledMsg, AgentMsgParseUtil
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{DID, ParticipantId, VerKey, _}
+import com.evernym.verity.protocol.engine.{ParticipantId, _}
 import com.evernym.verity.protocol.protocols.connecting.common.ConnReqReceived
 import com.evernym.verity.util.ParticipantUtil
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  The subset or shard of an agency's agent that is dedicated to
  managing one pairwise relationship between the agency and a user.
  */
-class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
+class AgencyAgentPairwise(val agentActorContext: AgentActorContext,
+                          generalExecutionContext: ExecutionContext,
+                          walletExecutionContext: ExecutionContext)
   extends AgencyAgentCommon
     with AgencyAgentPairwiseStateUpdateImpl
     with PairwiseConnState
     with AgentSnapshotter[AgencyAgentPairwiseState] {
+
+  private implicit val executionContext: ExecutionContext = generalExecutionContext
+  override def futureExecutionContext: ExecutionContext = generalExecutionContext
+  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
+
 
   type StateType = AgencyAgentPairwiseState
   var state = new AgencyAgentPairwiseState
@@ -64,16 +71,16 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     case _ @ (_: OwnerSetForAgent | _: SignedUp) => //nothing to do, kept it for backward compatibility
   }
 
-  def handleSetupRelationship(myPairwiseDID: DID, myPairwiseDIDVerKey: VerKey,
-                              theirPairwiseDID: DID, theirPairwiseDIDVerKey: VerKey): Unit = {
+  def handleSetupRelationship(myPairwiseDID: DidStr, myPairwiseDIDVerKey: VerKeyStr,
+                              theirPairwiseDID: DidStr, theirPairwiseDIDVerKey: VerKeyStr): Unit = {
     state = state.withThisAgentKeyId(myPairwiseDID)
     val myDidDoc =
-      DidDocBuilder()
+      DidDocBuilder(futureWalletExecutionContext)
       .withDid(myPairwiseDID)
       .withAuthKey(myPairwiseDID, myPairwiseDIDVerKey, Set(EDGE_AGENT_KEY))
       .didDoc
     val theirDidDoc =
-      DidDocBuilder()
+      DidDocBuilder(futureWalletExecutionContext)
         .withDid(theirPairwiseDID)
         .withAuthKey(theirPairwiseDID, theirPairwiseDIDVerKey)
         .didDoc
@@ -120,7 +127,7 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     sendToAgentMsgProcessor(ProcessUnpackedMsg(amw))
   }
 
-  def authedMsgSenderVerKeys: Set[VerKey] = state.allAuthedVerKeys
+  def authedMsgSenderVerKeys: Set[VerKeyStr] = state.allAuthedVerKeys
 
   def prepareAgencyPairwiseDetailForActor(): Future[Any] = {
     agencyDidPairFut().flatMap { adp =>
@@ -130,11 +137,11 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
 
   override def stateDetailsFor: Future[ProtoRef => String ?=> Parameter] = {
 
-    def paramMap(agencyVerKey: VerKey, protoRef: ProtoRef): String ?=> Parameter = {
+    def paramMap(agencyVerKey: VerKeyStr, protoRef: ProtoRef): String ?=> Parameter = {
       case SELF_ID     => Parameter(SELF_ID, ParticipantUtil.participantId(state.myDid_!, None))
       case OTHER_ID    => Parameter(OTHER_ID, ParticipantUtil.participantId(state.theirDid_!, None))
       case DATA_RETENTION_POLICY => Parameter(DATA_RETENTION_POLICY,
-        ConfigUtil.getRetentionPolicy(appConfig, domainId, protoRef.msgFamilyName).configString)
+        ConfigUtil.getProtoStateRetentionPolicy(appConfig, domainId, protoRef.msgFamilyName).configString)
     }
 
     for (
@@ -151,10 +158,10 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext)
     prepareAgencyPairwiseDetailForActor()
   }
 
-  def ownerDID: Option[DID] = state.agencyDIDPair.map(_.DID)
+  def ownerDID: Option[DidStr] = state.agencyDIDPair.map(_.DID)
   def ownerAgentKeyDIDPair: Option[DidPair] = state.agencyDIDPair
 
-  override def senderParticipantId(senderVerKey: Option[VerKey]): ParticipantId = {
+  override def senderParticipantId(senderVerKey: Option[VerKeyStr]): ParticipantId = {
     val didDocs = state.relationship.flatMap(_.myDidDoc) ++ state.relationship.flatMap(_.theirDidDoc)
     didDocs.find(_.authorizedKeys_!.keys.exists(ak => senderVerKey.exists(svk => ak.containsVerKey(svk)))) match {
       case Some (dd)  => ParticipantUtil.participantId(dd.did, None)

@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.walletBackup
 
-import com.evernym.verity.Base64Encoded
+import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Constants.MFV_0_1_0
 import com.evernym.verity.protocol.engine._
@@ -65,7 +66,7 @@ object WalletBackupMsgFamily extends MsgFamily {
   case class RecoverBackup()                      extends BackupControl
   case class RecoveryKeyRegistered()              extends BackupControl
   case class FailedToRegisterRecoveryKey()        extends BackupControl
-  case class RestoreBackup(recoveryVk: VerKey)    extends BackupControl
+  case class RestoreBackup(recoveryVk: VerKeyStr)    extends BackupControl
 
   /**
     * Driver Messages

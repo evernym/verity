@@ -3,13 +3,14 @@ package com.evernym.verity.actor.resourceusagethrottling
 import akka.actor.{ActorRef, ReceiveTimeout}
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.BlockingDetail
-import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
+import com.evernym.verity.actor.resourceusagethrottling.tracking.{GetAllResourceUsages, ResourceUsageTracker, ResourceUsages}
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
-
 import java.time.{DateTimeException, ZonedDateTime}
 import java.time.temporal.ChronoUnit
+
+import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleConfig
 
 trait BaseResourceUsageTrackerSpec
   extends PersistentActorSpec
@@ -45,6 +46,7 @@ trait BaseResourceUsageTrackerSpec
                                  resourceName: ResourceName,
                                  ipAddress: IpAddress,
                                  userIdOpt: Option[UserId],
+                                 resourceUsageRules: ResourceUsageRuleConfig,
                                  restartActorBefore: Boolean=false): Unit = {
     if (restartActorBefore) {
       (Option(ipAddress) ++ userIdOpt).foreach { entityId =>
@@ -53,6 +55,27 @@ trait BaseResourceUsageTrackerSpec
     }
 
     ResourceUsageTracker.addUserResourceUsage(resourceType, resourceName,
-      ipAddress, userIdOpt, sendBackAck = false)(resourceUsageTracker)
+      ipAddress, userIdOpt, sendBackAck = false, resourceUsageRules)(resourceUsageTracker)
   }
+
+  def checkUsage(entityId: EntityId,
+                 expectedUsages: ResourceUsages): Unit = {
+    sendToResourceUsageTrackerRegion(entityId, GetAllResourceUsages)
+    val actualUsages = expectMsgType[ResourceUsages]
+    expectedUsages.usages.foreach { expResourceUsage =>
+      val actualResourceUsageOpt = actualUsages.usages.get(expResourceUsage._1)
+      actualResourceUsageOpt.isDefined shouldBe true
+      val actualResourceUsage = actualResourceUsageOpt.get
+      expResourceUsage._2.foreach { case (expBucketId, expBucketExt) =>
+        val actualBucketExtOpt = actualResourceUsage.get(expBucketId)
+        actualBucketExtOpt.isDefined shouldBe true
+        val actualBucketExt = actualBucketExtOpt.get
+        actualBucketExt.usedCount shouldBe expBucketExt.usedCount
+        actualBucketExt.allowedCount shouldBe expBucketExt.allowedCount
+        actualBucketExt.startDateTime.isDefined shouldBe true
+        actualBucketExt.endDateTime.isDefined shouldBe true
+      }
+    }
+  }
+
 }

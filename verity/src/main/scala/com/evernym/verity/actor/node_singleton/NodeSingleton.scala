@@ -1,9 +1,10 @@
 package com.evernym.verity.actor.node_singleton
 
+import akka.actor.typed.eventstream.EventStream.Subscribe
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.HasSingletonParentProxy
 import com.evernym.verity.actor.appStateManager.StartDraining
 import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{GetBlockedList, UpdateBlockingStatus, UsageBlockingStatusChunk}
@@ -12,26 +13,27 @@ import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr
 import com.evernym.verity.actor.maintenance.{ActorParam, ReadOnlyPersistentActor}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.metrics.MetricsReader
-import com.evernym.verity.util.Util._
+import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.metrics.MetricsWriterExtension
+import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.typesafe.config.ConfigFactory
 
+import scala.concurrent.ExecutionContext
 
-class NodeSingleton(val appConfig: AppConfig)
+
+class NodeSingleton(val appConfig: AppConfig, executionContext: ExecutionContext)
   extends CoreActorExtended
-    with HasActorResponseTimeout {
+    with HasActorResponseTimeout
+    with HasSingletonParentProxy
+    with HasAppConfig {
 
-  def sendGetBlockingList(singletonActorRef: ActorRef): Unit =  {
-    singletonActorRef ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = false, onlyUnblocked = false,
-      onlyActive = true, inChunks = true))
-  }
+  private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
-  def sendGetWarningList(singletonActorRef: ActorRef): Unit =  {
-    singletonActorRef ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = false, onlyUnwarned = false,
-      onlyActive = true, inChunks = true))
-  }
+  private val logger = getLoggerByClass(getClass)
 
-  def receiveCmd: Receive = {
+  override def receiveCmd: Receive = handleEvents orElse handleCmds
+
+  def handleCmds: Receive = {
 
     case NodeAddedToClusterSingleton =>
       logger.info(s"sending blocked/warned started...")
@@ -44,6 +46,7 @@ class NodeSingleton(val appConfig: AppConfig)
       appConfig.reload()
       sender ! NodeConfigRefreshed
       logger.info(s"configuration refresh done !!")
+      MetricsWriterExtension(context.system).updateFilters(appConfig.config)
 
     case onc: OverrideNodeConfig =>
       logger.info(s"configuration override started...")
@@ -57,33 +60,28 @@ class NodeSingleton(val appConfig: AppConfig)
         logger.error("configuration override failed: " + e.getMessage)
       }
 
-    case getNodeMetrics: GetNodeMetrics =>
-      logger.debug(s"fetching metrics data...")
-      sender ! MetricsReader.getNodeMetrics(getNodeMetrics.filters)
-      logger.debug(s"metrics data fetched !!")
-
     case uws: UpdateWarningStatus =>
-      ResourceWarningStatusMngrCache.processEvent(uws)
+      ResourceWarningStatusMngrCache(context.system).processEvent(uws)
       sender ! Done
 
     case cuws: UsageWarningStatusChunk =>
-      ResourceWarningStatusMngrCache.initWarningList(cuws)
+      ResourceWarningStatusMngrCache(context.system).initWarningList(cuws)
       sender ! Done
 
     case ubs: UpdateBlockingStatus =>
-      ResourceBlockingStatusMngrCache.processEvent(ubs)
+      ResourceBlockingStatusMngrCache(context.system).processEvent(ubs)
       sender ! Done
 
     case cubs: UsageBlockingStatusChunk =>
-      ResourceBlockingStatusMngrCache.initBlockingList(cubs)
+      ResourceBlockingStatusMngrCache(context.system).initBlockingList(cubs)
       sender ! Done
 
     case spt: StartProgressTracking =>
-      MsgProgressTrackerCache.startProgressTracking(spt.trackingId)
+      MsgProgressTrackerCache(context.system).startProgressTracking(spt.trackingId)
       sender ! Done
 
     case spt: StopProgressTracking =>
-      MsgProgressTrackerCache.stopProgressTracking(spt.trackingId)
+      MsgProgressTrackerCache(context.system).stopProgressTracking(spt.trackingId)
       sender ! Done
 
     case DrainNode =>
@@ -93,14 +91,34 @@ class NodeSingleton(val appConfig: AppConfig)
       logger.info(s"draining in progress !!")
 
     case p: PersistentActorQueryParam =>
-      val ar = getRequiredActor(ReadOnlyPersistentActor.prop(appConfig, p.actorParam), p.actorParam.id)
+      val ar = getRequiredActor(ReadOnlyPersistentActor.prop(appConfig, p.actorParam, executionContext), p.actorParam.id)
       val sndr = sender()
       val fut = ar ? p.cmd
       fut.map(r => sndr ! r)
   }
 
-  def getRequiredActor(props: Props, name: String): ActorRef =
+  //handles published events
+  private def handleEvents: Receive = {
+    case SingletonProxyEvent(cmd: ActorMessage)   => singletonParentProxyActor ! cmd
+  }
+
+  private def sendGetBlockingList(singletonActorRef: ActorRef): Unit =  {
+    singletonActorRef ! ForResourceBlockingStatusMngr(GetBlockedList(onlyBlocked = false, onlyUnblocked = false,
+      onlyActive = true, inChunks = true))
+  }
+
+  private def sendGetWarningList(singletonActorRef: ActorRef): Unit =  {
+    singletonActorRef ! ForResourceWarningStatusMngr(GetWarnedList(onlyWarned = false, onlyUnwarned = false,
+      onlyActive = true, inChunks = true))
+  }
+
+  private def getRequiredActor(props: Props, name: String): ActorRef =
     context.child(name).getOrElse(context.actorOf(props, name))
+
+  override def beforeStart(): Unit = {
+    import akka.actor.typed.scaladsl.adapter._
+    context.system.toTyped.eventStream ! Subscribe[SingletonProxyEvent](self)
+  }
 }
 
 case object DrainNode extends ActorMessage
@@ -109,5 +127,7 @@ case class PersistentActorQueryParam(actorParam: ActorParam, cmd: Any)
   extends ActorMessage
 
 object NodeSingleton {
-  def props(appConfig: AppConfig): Props = Props(new NodeSingleton(appConfig))
+  def props(appConfig: AppConfig, executionContext: ExecutionContext): Props = Props(new NodeSingleton(appConfig, executionContext))
 }
+
+case class SingletonProxyEvent(cmd: ActorMessage) extends ActorMessage

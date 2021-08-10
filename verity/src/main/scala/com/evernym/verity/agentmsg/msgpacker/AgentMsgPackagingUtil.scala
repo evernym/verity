@@ -1,20 +1,22 @@
 package com.evernym.verity.agentmsg.msgpacker
 
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.agent.SpanUtil.runWithInternalSpan
 import com.evernym.verity.actor.agent.msghandler.outgoing.JsonMsg
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
+
+import scala.concurrent.ExecutionContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdReqMsg_MFV_0_5, FwdReqMsg_MFV_1_0_1}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER, typeStrFromMsgType}
-import com.evernym.verity.protocol.engine.{DID, MsgFamilyQualifier, MsgName, VerKey}
+import com.evernym.verity.protocol.engine.{MsgFamilyQualifier, MsgName}
 import com.evernym.verity.util.MessagePackUtil
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.did.{DidStr, VerKeyStr}
+import com.evernym.verity.metrics.{InternalSpan, MetricsWriter}
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 import org.json.JSONObject
 
@@ -48,8 +50,10 @@ object AgentMsgPackagingUtil {
    */
   def buildAgentMsg(msgPackFormat: MsgPackFormat,
                     packMsgParam: PackMsgParam)
-                   (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
-    runWithInternalSpan("buildAgentMsg", "AgentMsgPackagingUtil") {
+                   (implicit agentMsgTransformer: AgentMsgTransformer,
+                    wap: WalletAPIParam,
+                    mw: MetricsWriter): Future[PackedMsg] = {
+    mw.runWithSpan("buildAgentMsg", "AgentMsgPackagingUtil", InternalSpan) {
       val agentMsgJson = buildAgentMsgJson(packMsgParam.msgs, packMsgParam.wrapInBundledMsgs)
       agentMsgTransformer.packAsync(msgPackFormat, agentMsgJson, packMsgParam.encryptParam)
     }
@@ -69,7 +73,10 @@ object AgentMsgPackagingUtil {
                                           packMsgParam: PackMsgParam,
                                           fwdRoutes: List[FwdRouteMsg],
                                           fwdMsgTypeVersion: String = MTV_1_0)
-                                         (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
+                                         (implicit agentMsgTransformer: AgentMsgTransformer,
+                                          wap: WalletAPIParam,
+                                          mw: MetricsWriter,
+                                          ec: ExecutionContext): Future[PackedMsg] = {
 
     buildAgentMsg(msgPackFormat, packMsgParam).flatMap { packedAgentMsg =>
       buildRoutedAgentMsg(msgPackFormat, packedAgentMsg, fwdRoutes, fwdMsgTypeVersion)
@@ -90,8 +97,11 @@ object AgentMsgPackagingUtil {
                           packedMsg: PackedMsg,
                           fwdRoutes: List[FwdRouteMsg],
                           fwdMsgTypeVersion: String = MTV_1_0)
-                         (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
-    runWithInternalSpan("buildRoutedAgentMsg", "AgentMsgPackagingUtil") {
+                         (implicit agentMsgTransformer: AgentMsgTransformer,
+                          wap: WalletAPIParam,
+                          mw: MetricsWriter,
+                          ec: ExecutionContext): Future[PackedMsg] = {
+    mw.runWithSpan("buildRoutedAgentMsg", "AgentMsgPackagingUtil", InternalSpan) {
       if (fwdRoutes.isEmpty) Future.successful(packedMsg)
       else {
         buildFwdMsg(msgPackFormat, packedMsg, fwdRoutes, fwdMsgTypeVersion)
@@ -103,7 +113,9 @@ object AgentMsgPackagingUtil {
                           packedMsg: PackedMsg,
                           fwdRoutes: List[FwdRouteMsg],
                           fwdMsgTypeVersion: String = MTV_1_0)
-                          (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
+                          (implicit agentMsgTransformer: AgentMsgTransformer,
+                           wap: WalletAPIParam,
+                           ec: ExecutionContext): Future[PackedMsg] = {
     if (fwdRoutes.isEmpty) throw new RuntimeException("empty fwdRoutes not supported")
     buildFwdMsgForRoute(msgPackFormat, packedMsg, fwdRoutes.head, fwdMsgTypeVersion).flatMap { pm =>
       fwdRoutes match {
@@ -118,7 +130,8 @@ object AgentMsgPackagingUtil {
                                   packedMsg: PackedMsg,
                                   fwdRoutes: FwdRouteMsg,
                                   fwdMsgTypeVersion: String = MTV_1_0)
-                                 (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
+                                 (implicit agentMsgTransformer: AgentMsgTransformer,
+                                  wap: WalletAPIParam): Future[PackedMsg] = {
     val fwdMsg = buildFwdJsonMsg(
       msgPackFormat,
       fwdRoutes.to,
@@ -141,7 +154,7 @@ object AgentMsgPackagingUtil {
    * @return
    */
   def buildFwdJsonMsg(mpf: MsgPackFormat,
-                      toDID: DID,
+                      toDID: DidStr,
                       msg: Array[Byte],
                       msgQualifier: MsgFamilyQualifier=EVERNYM_QUALIFIER,
                       msgName: MsgName=MSG_TYPE_FWD,
@@ -166,8 +179,8 @@ object AgentMsgPackagingUtil {
     }
   }
 
-  def buildRoutingKeys(recipKey: VerKey,
-                       givenRoutingKeys: Seq[VerKey]): Seq[VerKey] = {
+  def buildRoutingKeys(recipKey: VerKeyStr,
+                       givenRoutingKeys: Seq[VerKeyStr]): Seq[VerKeyStr] = {
     if (givenRoutingKeys.contains(recipKey)) givenRoutingKeys
     else if (givenRoutingKeys.nonEmpty) Seq(recipKey) ++ givenRoutingKeys
     else givenRoutingKeys
@@ -185,10 +198,13 @@ object AgentMsgPackagingUtil {
   //TODO: come back to this and see if this requires any more refactoring
   def packMsgForRoutingKeys(msgPackFormat: MsgPackFormat,
                             msg: Array[Byte],
-                            routingKeys: Seq[VerKey],
+                            routingKeys: Seq[VerKeyStr],
                             msgType: String)
-                           (implicit agentMsgTransformer: AgentMsgTransformer, wap: WalletAPIParam): Future[PackedMsg] = {
-    runWithInternalSpan("packMsgForRoutingKeys", "AgentMsgPackagingUtil") {
+                           (implicit agentMsgTransformer: AgentMsgTransformer,
+                            wap: WalletAPIParam,
+                            mw: MetricsWriter,
+                            ec: ExecutionContext): Future[PackedMsg] = {
+    mw.runWithSpan("packMsgForRoutingKeys", "AgentMsgPackagingUtil", InternalSpan) {
       routingKeys.size match {
         case 0 => Future.successful(PackedMsg(msg))
         case 1 => throw new RuntimeException("insufficient routing keys: " + routingKeys)
@@ -196,8 +212,10 @@ object AgentMsgPackagingUtil {
           val to = routingKeys.head
           val remaining = routingKeys.tail
           val encryptWith = remaining.head
-          val fwdJsonMsg = buildFwdJsonMsg(MPF_INDY_PACK, to, msg, COMMUNITY_QUALIFIER, MSG_TYPE_FORWARD, fwdMsgType = Option(msgType))
-          agentMsgTransformer.packAsync(msgPackFormat, fwdJsonMsg, EncryptParam(Set(KeyParam(Left(encryptWith))), None)).flatMap { newPackedMsg =>
+          val fwdJsonMsg = buildFwdJsonMsg(MPF_INDY_PACK, to, msg,
+            COMMUNITY_QUALIFIER, MSG_TYPE_FORWARD, fwdMsgType = Option(msgType))
+          agentMsgTransformer.packAsync(msgPackFormat, fwdJsonMsg,
+            EncryptParam(Set(KeyParam(Left(encryptWith))), None)).flatMap { newPackedMsg =>
             if (remaining.size >= 2) {
               packMsgForRoutingKeys(msgPackFormat, newPackedMsg.msg, remaining, msgType)
             } else {

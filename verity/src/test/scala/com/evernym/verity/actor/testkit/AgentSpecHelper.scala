@@ -4,8 +4,8 @@ import java.util.UUID
 
 import akka.actor.{ActorRef, PoisonPill}
 import akka.testkit.{ImplicitSender, TestKitBase}
-import com.evernym.verity.Exceptions.HandledErrorException
-import com.evernym.verity.Version
+import com.evernym.verity.util2.Exceptions.HandledErrorException
+import com.evernym.verity.util2.Version
 import com.evernym.verity.actor.agent.agency.{CreateKey, SetEndpoint}
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet, agentRegion}
@@ -104,9 +104,11 @@ trait AgentSpecHelper
   }
 
   protected def restartPersistentActor(ar: agentRegion): Unit = {
+    // TODO: VE-2780
     ar ! PoisonPill
     expectNoMessage()
-    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+    // TODO: Figure out why it is taking SO long to restore actor
+    eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
       ar ! GetPersistentActorDetail
       expectMsgType[PersistentActorDetail]
     }

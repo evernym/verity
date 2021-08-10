@@ -1,5 +1,6 @@
 package com.evernym.verity.http.consumer
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
@@ -12,6 +13,8 @@ import com.evernym.verity.util.HashAlgorithm.SHA256_trunc4
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util._
 
+import scala.concurrent.ExecutionContext
+
 
 class ConsumerEndpointHandlerSpec
   extends BasicSpecWithIndyCleanup
@@ -21,7 +24,6 @@ class ConsumerEndpointHandlerSpec
     with MsgExchangeSpec
     with UpdateConnectionStatusSpec
     with UrlMappingSpec {
-
 
   override def testEdgeAgent(): Unit = {
     "Consumer edge 1 (MFV 0.5)" - {
@@ -54,7 +56,8 @@ class ConsumerEndpointHandlerSpec
   }
 
   override lazy val agentActorContext: AgentActorContext = platform.agentActorContext
-  lazy val mockNewEdgeAgent: MockEdgeAgent = MockEnvUtil.buildMockEdgeAgent(mockEntEdgeEnv.agencyEdgeAgent)
+  lazy val mockNewEdgeAgent: MockEdgeAgent =
+    MockEnvUtil.buildMockEdgeAgent(mockEntEdgeEnv.agencyEdgeAgent, futureExecutionContext, futureWalletExecutionContext)
   override implicit val msgPackagingContext: AgentMsgPackagingContext =
     AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
 
@@ -70,4 +73,16 @@ class ConsumerEndpointHandlerSpec
       addAgencyEndpointToLedger(pcd.lastSentInvite.senderAgencyDetail.DID, pcd.lastSentInvite.senderAgencyDetail.endpoint)
     }
   }
+  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+  override def executionContextProvider: ExecutionContextProvider = ecp
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  /**
+   * custom thread pool executor
+   */
+  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

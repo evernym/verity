@@ -1,9 +1,9 @@
 package com.evernym.verity.actor.agent.msgrouter
 
 import com.evernym.verity.constants.Constants.{VALID_DID_BYTE_LENGTH, VALID_VER_KEY_BYTE_LENGTH}
-import com.evernym.verity.Exceptions.InvalidValueException
+import com.evernym.verity.util2.Exceptions.InvalidValueException
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter.getDIDForRoute
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.testkit.BasicSpec
 
@@ -17,24 +17,24 @@ class GetDIDForRouteSpec extends AgentMsgRouteSpecValues with BasicSpec {
 
       "should return DID when a DID is given" in {
         getDIDForRoute(did1) map {
-          d: DID =>
+          d: DidStr =>
             assert(d == did1)
         }
 
         getDIDForRoute(did2) map {
-          d: DID =>
+          d: DidStr =>
             assert(d == did2)
         }
       }
 
       "should return DID when a verkey is given" in {
         getDIDForRoute(verkey1) map {
-          d: DID =>
+          d: DidStr =>
             assert(d == did1)
         }
 
         getDIDForRoute(verkey2) map {
-          d: DID =>
+          d: DidStr =>
             assert(d == did2)
         }
       }

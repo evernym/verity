@@ -2,13 +2,13 @@ package com.evernym.verity.actor.agent.maintenance
 
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.persistence.BasePersistentActor
-import com.evernym.verity.config.CommonConfig
+import com.evernym.verity.config.ConfigConstants
 
 trait ActorStateCleanupBase { this: BasePersistentActor =>
 
   def isActorStateCleanupEnabled: Boolean =
     appConfig
-      .getConfigBooleanOption(CommonConfig.AGENT_ACTOR_STATE_CLEANUP_ENABLED)
+      .getBooleanOption(ConfigConstants.AGENT_ACTOR_STATE_CLEANUP_ENABLED)
       .getOrElse(false)
 
   //this is internal actor for short period of time and doesn't contain any sensitive data

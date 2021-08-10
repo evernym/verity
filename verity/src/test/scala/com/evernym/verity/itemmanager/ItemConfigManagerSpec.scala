@@ -12,14 +12,18 @@ class ItemConfigManagerSpec
   extends BasicSpec {
 
   "ItemConfigManager" - {
-    "when tried to build container entity id" - {
+    "when tried to build manager and container entity id" - {
       "should respond it as expected" in {
-        ItemConfigManager
-          .buildItemContainerEntityId("watcher", "123", buildAppConfig("watcher", "v11")) shouldBe "watcher-v11-123"
-        ItemConfigManager
-          .buildItemContainerEntityId("mock", "456", buildAppConfig("mock", "v12")) shouldBe "mock-v12-456"
+        checkEntityIds("watcher", "v1")
+        checkEntityIds("mock", "v2")
       }
     }
+  }
+
+  private def checkEntityIds(managerIdPrefix: String, version: String): Unit = {
+    val watcherConfig = buildAppConfig(managerIdPrefix, version)
+    val itemManagerEntityId = ItemConfigManager.versionedItemManagerEntityId(managerIdPrefix, watcherConfig)
+    itemManagerEntityId shouldBe s"$managerIdPrefix-$version"
   }
 
   private def buildAppConfig(forManagerId: ItemManagerEntityId, withVersion: String): AppConfig = {

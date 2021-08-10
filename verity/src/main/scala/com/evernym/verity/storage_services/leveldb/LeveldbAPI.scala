@@ -2,15 +2,14 @@ package com.evernym.verity.storage_services.leveldb
 
 import akka.actor.ActorSystem
 import akka.Done
-import com.evernym.verity.Exceptions.BadRequestErrorException
-import com.evernym.verity.ExecutionContextProvider.futureExecutionContext
-import com.evernym.verity.Status.DATA_NOT_FOUND
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.DATA_NOT_FOUND
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI
 import org.iq80.leveldb.impl.Iq80DBFactory
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import org.iq80.leveldb.{DB, Options}
 
 import java.io.File
@@ -23,7 +22,9 @@ import java.io.File
 //NOTE: if at all this file gets moved to different package, then it will require configuration change
 // so until it is important, should avoid moving this to different package.
 
-class LeveldbAPI(config: AppConfig)(implicit val as: ActorSystem) extends StorageAPI(config) {
+class LeveldbAPI(config: AppConfig, executionContext: ExecutionContext)(implicit val as: ActorSystem)
+  extends StorageAPI(config, executionContext) {
+  private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   lazy val path: String = config.config.getConfig("verity.blob-store").getString("local-store-path")
   lazy val options: Options = new Options()
@@ -31,7 +32,7 @@ class LeveldbAPI(config: AppConfig)(implicit val as: ActorSystem) extends Storag
     .paranoidChecks(true)
     .verifyChecksums(true)
 
-  def withDB[T](f: DB => T): T = {
+  def withDB[T](f: DB => T): T = synchronized {
     val db = Iq80DBFactory.factory.open(new File(path), options)
     val result = f(db)
     db.close()
@@ -52,10 +53,10 @@ class LeveldbAPI(config: AppConfig)(implicit val as: ActorSystem) extends Storag
     }
   }
 
-  def get(bucketName: String, id: String): Future[Array[Byte]] = {
+  def get(bucketName: String, id: String): Future[Option[Array[Byte]]] = {
     withDB { db =>
       Option(db.get(dbKey(bucketName, id).getBytes())) match {
-        case Some(x: Array[Byte]) => Future(x)
+        case Some(x: Array[Byte]) => Future(Some(x))
         case None => failure(DATA_NOT_FOUND.statusCode, s"No object for id: $id in bucket: $bucketName")
       }
     }

@@ -1,28 +1,31 @@
 package com.evernym.verity.actor.resourceusagethrottling
 
-import com.evernym.verity.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{BlockingDetail, EntityBlockingStatus, UsageBlockingStatusChunk}
 import com.evernym.verity.actor.node_singleton.ResourceBlockingStatusMngrCache
-import com.evernym.verity.actor.resourceusagethrottling.helper.{ResourceUsageRuleConfig, ResourceUsageRuleHelper, UsageRule, ViolationActions}
+import com.evernym.verity.actor.resourceusagethrottling.helper.{ResourceUsageRuleConfig, ResourceUsageRuleHelper, ResourceUsageRuleHelperExtension, UsageRule, ViolationActions}
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
+import com.evernym.verity.actor.testkit.HasBasicActorSystem
 import com.evernym.verity.testkit.BasicSpec
-
 import java.time.ZonedDateTime
 
 
 class CheckUsageBlockSpec
-  extends BasicSpec {
+  extends BasicSpec
+  with HasBasicActorSystem {
 
   val ipAddressV4 = "1.2.3.4"
   val userId = "userId1"
+
+  val resourceUsageRuleHelper: ResourceUsageRuleHelper = ResourceUsageRuleHelperExtension(system).get()
 
   "ResourceUsageTracker" - {
 
     "for unblocked ip address and user id" - {
       "when called 'checkIfUsageIsBlocked'" - {
         "should be successful" in {
-          checkResourceUsageIsAllowed(ipAddressV4, ipAddressV4, "pairwise/GET_MSGS")
-          checkResourceUsageIsAllowed(ipAddressV4, userId, "pairwise/GET_MSGS")
+          checkResourceUsageIsAllowed(ipAddressV4, ipAddressV4, "pairwise/GET_MSGS", resourceUsageRuleHelper.resourceUsageRules)
+          checkResourceUsageIsAllowed(ipAddressV4, userId, "pairwise/GET_MSGS", resourceUsageRuleHelper.resourceUsageRules)
         }
       }
     }
@@ -31,7 +34,7 @@ class CheckUsageBlockSpec
       "when called 'checkIfUsageIsBlocked' for ip address entity id" - {
         "should throw exception" in {
           blockEntity(ipAddressV4)
-          checkUsageBlockedExceptionIsThrown(ipAddressV4, ipAddressV4, "pairwise/GET_MSGS")
+          checkUsageBlockedExceptionIsThrown(ipAddressV4, ipAddressV4, "pairwise/GET_MSGS", resourceUsageRuleHelper.resourceUsageRules)
         }
       }
     }
@@ -42,7 +45,7 @@ class CheckUsageBlockSpec
           //NOTE: in real scenario, this situation won't be reached
           // as it first checks with 'ipAddress' as entity id and it will throw an exception there itself
           blockEntity(ipAddressV4)
-          checkResourceUsageIsAllowed(ipAddressV4, userId, "pairwise/GET_MSGS")
+          checkResourceUsageIsAllowed(ipAddressV4, userId, "pairwise/GET_MSGS", resourceUsageRuleHelper.resourceUsageRules)
         }
       }
     }
@@ -51,7 +54,7 @@ class CheckUsageBlockSpec
       "when called 'checkIfUsageIsBlocked' for ip address entity id" - {
         "should be successful" in {
           blockEntity(userId)
-          checkResourceUsageIsAllowed(ipAddressV4, ipAddressV4, "pairwise/GET_MSGS")
+          checkResourceUsageIsAllowed(ipAddressV4, ipAddressV4, "pairwise/GET_MSGS", resourceUsageRuleHelper.resourceUsageRules)
         }
       }
     }
@@ -60,7 +63,7 @@ class CheckUsageBlockSpec
       "when called 'checkIfUsageIsBlocked' for userid entity id" - {
         "should throw exception" in {
           blockEntity(userId)
-          checkUsageBlockedExceptionIsThrown(ipAddressV4, userId, "pairwise/GET_MSGS")
+          checkUsageBlockedExceptionIsThrown(ipAddressV4, userId, "pairwise/GET_MSGS", resourceUsageRuleHelper.resourceUsageRules)
         }
       }
     }
@@ -140,7 +143,7 @@ class CheckUsageBlockSpec
       currentChunkNumber = 1,
       totalChunks = 1
     )
-    ResourceBlockingStatusMngrCache.initBlockingList(ubsc)
+    ResourceBlockingStatusMngrCache(system).initBlockingList(ubsc)
   }
 
   def blockEntityResource(entityId: EntityId, resourceName: ResourceName, sinceMinutesInPast: Int): Unit = {
@@ -151,13 +154,13 @@ class CheckUsageBlockSpec
       currentChunkNumber = 1,
       totalChunks = 1
     )
-    ResourceBlockingStatusMngrCache.initBlockingList(ubsc)
+    ResourceBlockingStatusMngrCache(system).initBlockingList(ubsc)
   }
 
   def checkUsageBlockedExceptionIsThrown(ipAddress: IpAddress,
                                          entityId: EntityId,
                                          resourceName: ResourceName,
-                                         resourceUsageRuleConfig: ResourceUsageRuleConfig = ResourceUsageRuleHelper.resourceUsageRules): Unit = {
+                                         resourceUsageRuleConfig: ResourceUsageRuleConfig): Unit = {
     val ex = intercept[BadRequestErrorException] {
       ResourceUsageTracker.checkIfUsageIsBlocked(ipAddress, entityId, resourceName, resourceUsageRuleConfig)
     }
@@ -167,7 +170,7 @@ class CheckUsageBlockSpec
   def checkResourceUsageIsAllowed(ipAddress: IpAddress,
                                   entityId: EntityId,
                                   resourceName: ResourceName,
-                                  resourceUsageRuleConfig: ResourceUsageRuleConfig = ResourceUsageRuleHelper.resourceUsageRules): Unit = {
+                                  resourceUsageRuleConfig: ResourceUsageRuleConfig): Unit = {
     ResourceUsageTracker.checkIfUsageIsBlocked(ipAddress, entityId, resourceName, resourceUsageRuleConfig)
   }
 

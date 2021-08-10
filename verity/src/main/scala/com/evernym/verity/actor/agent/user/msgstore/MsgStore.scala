@@ -1,30 +1,30 @@
 package com.evernym.verity.actor.agent.user.msgstore
 
-import java.time.ZonedDateTime
-import java.time.temporal.ChronoUnit
-
-import com.evernym.verity.Exceptions.{BadRequestErrorException, InternalServerErrorException}
-import com.evernym.verity.Status.{DATA_NOT_FOUND, MSG_DELIVERY_STATUS_SENT, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED, MSG_STATUS_REVIEWED, MSG_STATUS_SENT}
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent._
 import com.evernym.verity.actor.agent.user.MsgHelper
+import com.evernym.verity.actor.agent._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.GetMsgsReqMsg
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.CommonConfig._
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.Constants.YES
+import com.evernym.verity.did.didcomm.v1.ThreadBase
 import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}
 import com.evernym.verity.protocol.engine.{MsgId, MsgName, RefMsgId}
 import com.evernym.verity.protocol.protocols.MsgDetail
-import kamon.metric.MeasurementUnit
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException}
+import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, MSG_DELIVERY_STATUS_SENT, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED, MSG_STATUS_REVIEWED, MSG_STATUS_SENT}
 import org.slf4j.LoggerFactory
 
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 import scala.collection.immutable.ListSet
 
 
 class MsgStore(appConfig: AppConfig,
                msgStateAPIProvider: MsgStateAPIProvider,
-               failedMsgTracker: Option[FailedMsgTracker]){
+               failedMsgTracker: Option[FailedMsgTracker],
+               val metricsWriter: MetricsWriter) {
   /**
    * imagine below collection of messages (each of the below line is a message record with different fields)
    *  uid1, conReq,       refMsgId=uid2 ,...
@@ -51,11 +51,17 @@ class MsgStore(appConfig: AppConfig,
   private var msgExpirationTime: Map[MsgName, Seconds] = Map.empty
 
   def allUnseenMsgIds: Set[MsgId] = unseenMsgIds
+
   def getReplyToMsgId(msgId: MsgId): Option[MsgId] = refMsgIdToMsgId.get(msgId)
+
   def getMsgReq(msgId: MsgId): Msg = msgStateAPIProvider.getMsgReq(msgId)
+
   def getMsgOpt(msgId: MsgId): Option[Msg] = msgStateAPIProvider.getMsgOpt(msgId)
+
   def getMsgDetails(msgId: MsgId): Map[String, String] = msgStateAPIProvider.getMsgDetails(msgId)
-  def getMsgDeliveryStatus(msgId: MsgId): Map[String, MsgDeliveryDetail] =msgStateAPIProvider.getMsgDeliveryStatus(msgId)
+
+  def getMsgDeliveryStatus(msgId: MsgId): Map[String, MsgDeliveryDetail] = msgStateAPIProvider.getMsgDeliveryStatus(msgId)
+
   def getMsgPayload(msgId: MsgId): Option[PayloadWrapper] = msgStateAPIProvider.getMsgPayload(msgId)
 
   def getMsgs(gmr: GetMsgsReqMsg): List[MsgDetail] = {
@@ -83,7 +89,16 @@ class MsgStore(appConfig: AppConfig,
       val payloadWrapper = if (gmr.excludePayload.contains(YES)) None else msgAndDelivery.msgPayloads.get(uid)
       val payload = payloadWrapper.map(_.msg)
       MsgParam(
-        MsgDetail(uid, msg.`type`, msg.senderDID, msg.statusCode, msg.refMsgId, msg.thread, payload, Set.empty),
+        MsgDetail(
+          uid,
+          msg.`type`,
+          msg.senderDID,
+          msg.statusCode,
+          msg.refMsgId,
+          ThreadBase.convertOpt(msg.thread),
+          payload,
+          Set.empty
+        ),
         msg.creationTimeInMillis
       )
     }
@@ -108,7 +123,7 @@ class MsgStore(appConfig: AppConfig,
       removeExtraMsgsToAccommodateNewMsg()
     }
     val receivedOrders = mc.thread.map(th => th.receivedOrders.map(ro => ro.from -> ro.order).toMap).getOrElse(Map.empty)
-    val msgThread = mc.thread.map(th => Thread(
+    val msgThread = mc.thread.map(th => com.evernym.verity.actor.agent.Thread(
       Evt.getOptionFromValue(th.id),
       Evt.getOptionFromValue(th.parentId),
       Option(th.senderOrder),
@@ -152,7 +167,7 @@ class MsgStore(appConfig: AppConfig,
       val msgConsideredToBeDelivered = isMsgConsideredToBeDelivered(mdsu, msg)
       if (msgConsideredToBeDelivered && candidateForRemoval) {
         removeMsgsFromState(Set(mdsu.uid))
-      } else  {
+      } else {
         if (msgConsideredToBeDelivered) {
           retainedDeliveredMsgIds += mdsu.uid
           retainedUndeliveredMsgIds -= mdsu.uid
@@ -216,7 +231,7 @@ class MsgStore(appConfig: AppConfig,
     }
   }
 
-  private def updateFailedMsgTracker(msgId: MsgId, mdsu: Option[MsgDeliveryStatusUpdated]=None): Unit = {
+  private def updateFailedMsgTracker(msgId: MsgId, mdsu: Option[MsgDeliveryStatusUpdated] = None): Unit = {
     msgStateAPIProvider.getMsgOpt(msgId).foreach { msg =>
       val deliveryStatus = msgStateAPIProvider.getMsgDeliveryStatus(msgId)
       failedMsgTracker.foreach(_.updateDeliveryState(msgId, msg, deliveryStatus, mdsu))
@@ -232,7 +247,7 @@ class MsgStore(appConfig: AppConfig,
     val isMsgSuccessfullyDelivered = mdsu.statusCode == MSG_DELIVERY_STATUS_SENT.statusCode
     val isMsgDeliveryAcknowledged = msg.statusCode == MSG_STATUS_REVIEWED.statusCode
     if (isMsgAckNeeded && isMsgDeliveryAcknowledged) true
-    else if (! isMsgAckNeeded && isMsgSuccessfullyDelivered) true
+    else if (!isMsgAckNeeded && isMsgSuccessfullyDelivered) true
     else false
   }
 
@@ -250,9 +265,9 @@ class MsgStore(appConfig: AppConfig,
 
   def updateMsgStateMetrics(): Unit = {
     if (removedMsgsCount > 0) {
-      MetricsWriter.histogramApi.record(AS_AKKA_ACTOR_AGENT_RETAINED_MSGS, MeasurementUnit.none, allMsgs.size)
-      MetricsWriter.histogramApi.record(AS_AKKA_ACTOR_AGENT_REMOVED_MSGS, MeasurementUnit.none, removedMsgsCount)
-      MetricsWriter.histogramApi.record(AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED, MeasurementUnit.none, 1)
+      metricsWriter.histogramUpdate(AS_AKKA_ACTOR_AGENT_RETAINED_MSGS, MetricsUnit.None, allMsgs.size)
+      metricsWriter.histogramUpdate(AS_AKKA_ACTOR_AGENT_REMOVED_MSGS, MetricsUnit.None, removedMsgsCount)
+      metricsWriter.histogramUpdate(AS_AKKA_ACTOR_AGENT_WITH_MSGS_REMOVED, MetricsUnit.None, 1)
     }
   }
 
@@ -272,28 +287,29 @@ class MsgStore(appConfig: AppConfig,
    * know if that message can be considered as delivered and acknowledged too
    */
   private lazy val isMsgAckNeeded: Boolean =
-    ! appConfig
-      .getConfigStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
+    !appConfig
+      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
       .contains("VerityAgent")
 
   private lazy val timeToRetainDeliveredMsgsInDays: Int =
     appConfig
-      .getConfigIntOption(AGENT_STATE_MESSAGES_CLEANUP_DAYS_TO_RETAIN_DELIVERED_MSGS).getOrElse(14)
+      .getIntOption(AGENT_STATE_MESSAGES_CLEANUP_DAYS_TO_RETAIN_DELIVERED_MSGS).getOrElse(14)
 
   private lazy val totalMsgsToRetain: Int =
     appConfig
-      .getConfigIntOption(AGENT_STATE_MESSAGES_CLEANUP_TOTAL_MSGS_TO_RETAIN).getOrElse(75)
+      .getIntOption(AGENT_STATE_MESSAGES_CLEANUP_TOTAL_MSGS_TO_RETAIN).getOrElse(75)
 
   private lazy val isStateMessagesCleanupEnabled: Boolean =
-    appConfig.getConfigBooleanOption(AGENT_STATE_MESSAGES_CLEANUP_ENABLED).getOrElse(false)
+    appConfig.getBooleanOption(AGENT_STATE_MESSAGES_CLEANUP_ENABLED).getOrElse(false)
 
   private lazy val getMsgsLimit: Int =
-    appConfig.getConfigIntOption(AGENT_STATE_MESSAGES_GET_MSGS_LIMIT).getOrElse(920000)
+    appConfig.getIntOption(AGENT_STATE_MESSAGES_GET_MSGS_LIMIT).getOrElse(920000)
 }
 
 trait MsgStateAPIProvider {
 
   def msgAndDelivery: Option[MsgAndDelivery]
+
   def updateMsgAndDelivery(msgAndDelivery: MsgAndDelivery): Unit
 
   def msgAndDeliveryReq: MsgAndDelivery = msgAndDelivery.getOrElse(MsgAndDelivery())

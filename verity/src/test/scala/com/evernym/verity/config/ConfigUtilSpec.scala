@@ -1,11 +1,11 @@
 package com.evernym.verity.config
 
-import com.evernym.{PolicyElements, RetentionPolicy}
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.metrics.{ActiveRelationships, ActiveUsers, ActiveWindowRules, CalendarMonth, VariableDuration}
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.typesafe.config.{ConfigException, ConfigFactory}
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.util2.{PolicyElements, RetentionPolicy}
 
 
 class ConfigUtilSpec extends BasicSpec {
@@ -183,30 +183,32 @@ class ConfigUtilSpec extends BasicSpec {
       s"""
         |verity {
         |   retention-policy {
-        |     domainId123 {
-        |       basicmessage {
-        |         expire-after-days = $domainProtocolPolicy
-        |       }
-        |       max-proto {
-        |         expire-after-days = "731 d"
+        |     protocol-state {
+        |       domainId123 {
+        |         basicmessage {
+        |           expire-after-days = $domainProtocolPolicy
+        |         }
+        |         max-proto {
+        |           expire-after-days = "731 d"
+        |         }
+        |
+        |         years-proto {
+        |           expire-after-days = "1 years"
+        |         }
+        |
+        |         undefined-fallback {
+        |           expire-after-days = $domainFallback
+        |           expire-after-terminal-state = true
+        |         }
         |       }
         |
-        |       years-proto {
-        |         expire-after-days = "1 years"
-        |       }
-        |
-        |       undefined-fallback {
-        |         expire-after-days = $domainFallback
-        |         expire-after-terminal-state = true
-        |       }
-        |     }
-        |
-        |     default {
-        |       undefined-fallback {
-        |         expire-after-days = $defaultFallback
-        |       }
-        |       relationship {
-        |         expire-after-days = $defaultProtocolPolicy
+        |       default {
+        |         undefined-fallback {
+        |           expire-after-days = $defaultFallback
+        |         }
+        |         relationship {
+        |           expire-after-days = $defaultProtocolPolicy
+        |         }
         |       }
         |     }
         |   }
@@ -217,72 +219,74 @@ class ConfigUtilSpec extends BasicSpec {
       """
         |verity {
         |   retention-policy {
-        |     missing-fallback { }
-        |     default { }
+        |     protocol-state {
+        |       missing-fallback { }
+        |       default { }
+        |     }
         |   }
         | }
         |""".stripMargin)
 
-    val testConfig = new TestAppConfig(Some(dataRetentionConfig), clearValidators=true)
-    val testMissingFallbackConfig = new TestAppConfig(Some(missingFallbackConfig), clearValidators=true)
+    val testConfig = new TestAppConfig(Some(dataRetentionConfig), clearValidators=true, baseAsFallback = false)
+    val testMissingFallbackConfig = new TestAppConfig(Some(missingFallbackConfig), clearValidators=true, baseAsFallback = false)
 
     "should fail with greater than max value" in {
       intercept[ConfigException.BadValue] {
-        ConfigUtil.getRetentionPolicy(testConfig, domainId, "max-proto")
+        ConfigUtil.getProtoStateRetentionPolicy(testConfig, domainId, "max-proto")
       }
     }
 
     "should fail with anything different than days" in {
       intercept[ConfigException.BadValue] {
-        ConfigUtil.getRetentionPolicy(testConfig, domainId, "years-proto")
+        ConfigUtil.getProtoStateRetentionPolicy(testConfig, domainId, "years-proto")
       }
     }
 
     "should find defined policy for domain id" in {
-      ConfigUtil.getRetentionPolicy(testConfig, domainId, "basicmessage") shouldBe
+      ConfigUtil.getProtoStateRetentionPolicy(testConfig, domainId, "basicmessage") shouldBe
         RetentionPolicy("""{"expire-after-days":"7 d"}""",
           PolicyElements(domainProtocolPolicy, expireAfterTerminalState = false))
     }
 
     "should select domain's 'undefined-default' when protocol not defined" in {
-      ConfigUtil.getRetentionPolicy(testConfig, domainId, "relationship") shouldBe
+      ConfigUtil.getProtoStateRetentionPolicy(testConfig, domainId, "relationship") shouldBe
         RetentionPolicy("""{"expire-after-days":"1d","expire-after-terminal-state":true}""",
           PolicyElements(domainFallback, expireAfterTerminalState = true))  // domain's undefined-fallback
     }
 
     "should throw exception when domain is registered with no fallback" in {
       intercept[ConfigException.Missing] {
-        ConfigUtil.getRetentionPolicy(testMissingFallbackConfig, "missing-fallback", "relationship")
+        ConfigUtil.getProtoStateRetentionPolicy(testMissingFallbackConfig, "missing-fallback", "relationship")
       }
     }
 
     "should select default's defined protocol policy when domain isn't registered" in {
-      ConfigUtil.getRetentionPolicy(testConfig, "not registered", "relationship") shouldBe
+      ConfigUtil.getProtoStateRetentionPolicy(testConfig, "not registered", "relationship") shouldBe
         RetentionPolicy("""{"expire-after-days":"3 day"}""",
           PolicyElements(defaultProtocolPolicy, expireAfterTerminalState = false))
     }
 
     "should select default's 'undefined-default' when protocol not defined for domain or default" in {
-      ConfigUtil.getRetentionPolicy(testConfig, "not registered", "questionanswer") shouldBe
+      ConfigUtil.getProtoStateRetentionPolicy(testConfig, "not registered", "questionanswer") shouldBe
         RetentionPolicy("""{"expire-after-days":"365 days"}""",
           PolicyElements(defaultFallback, expireAfterTerminalState = false))
     }
 
     "should select default's 'undefined-default' when domain id not provided" in {
-      ConfigUtil.getRetentionPolicy(testConfig, "", "questionanswer") shouldBe
+      ConfigUtil.getProtoStateRetentionPolicy(testConfig, "", "questionanswer") shouldBe
         RetentionPolicy("""{"expire-after-days":"365 days"}""",
           PolicyElements(defaultFallback, expireAfterTerminalState = false))
     }
 
     "should select domainId's 'undefined-default' when protoref not provided" in {
-      ConfigUtil.getRetentionPolicy(testConfig, domainId, "") shouldBe
+      ConfigUtil.getProtoStateRetentionPolicy(testConfig, domainId, "") shouldBe
         RetentionPolicy("""{"expire-after-days":"1d","expire-after-terminal-state":true}""",
           PolicyElements(domainFallback, expireAfterTerminalState = true))
     }
 
     "should throw exception with no fallback" in {
       intercept[ConfigException.Missing] {
-        ConfigUtil.getRetentionPolicy(testMissingFallbackConfig, "not registered", "123")
+        ConfigUtil.getProtoStateRetentionPolicy(testMissingFallbackConfig, "not registered", "123")
       }
     }
   }

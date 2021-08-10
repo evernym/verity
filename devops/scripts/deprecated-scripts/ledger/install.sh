@@ -46,7 +46,7 @@ tries=${NETCAT_TRIES:-20}
 sleep_time_in_seconds=${SLEEP_TIME_IN_SECONDS:-3}
 tried=1
 echo "Attempting to netcat(nc) pool genesis from Ledger with pool_ip: ${pool_ip}"
-GENESIS_OUT=$SCRIPT_DIR/../../../target/genesis.txt
+GENESIS_OUT=$SCRIPT_DIR/../../../../target/genesis.txt
 until curl -sf http://"$pool_ip":5679/genesis.txt > "$GENESIS_OUT"
 do
   tries=$((tries-1))

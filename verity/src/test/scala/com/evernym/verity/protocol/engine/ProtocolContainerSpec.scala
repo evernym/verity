@@ -1,6 +1,8 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.ServiceEndpoint
+import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
+import com.evernym.verity.util2.ServiceEndpoint
+import com.evernym.verity.metrics.{MetricsWriter, NoOpMetricsWriter}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
@@ -9,7 +11,9 @@ import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{Se
 import com.evernym.verity.protocol.protocols.tictactoe.State.Offered
 import com.evernym.verity.protocol.protocols.tictactoe.{Accepted, State, TicTacToe, TicTacToeProtoDef, Role => TicTacToeRole}
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.util.TestExecutionContextProvider
 
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 class ProtocolContainerSpec extends BasicSpec {
@@ -19,6 +23,8 @@ class ProtocolContainerSpec extends BasicSpec {
         class TestProtocolContainer[P,R,M,E,S,I](val definition: ProtocolDefinition[P,R,M,E,S,I])
           extends ProtocolContainer[P,R,M,E,S,I] { // [TicTacToe, Role, Any, Any, State, String]
           override def pinstId: PinstId = "12345"
+
+          override def metricsWriter: MetricsWriter = NoOpMetricsWriter()
 
           override def eventRecorder: RecordsEvents = new RecordsEvents {
             override def recoverState(pinstId: PinstId): (_, Vector[_]) = (Offered(), Vector(Accepted()))
@@ -59,6 +65,10 @@ class ProtocolContainerSpec extends BasicSpec {
           override def urlShortening: UrlShorteningAccess = ???
 
           override def runAsyncOp(op: => Any): Unit = ???
+
+          lazy val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
+
+          override def serviceKeyDidFormat: Boolean = TestExecutionContextProvider.testAppConfig.getBooleanReq(SERVICE_KEY_DID_FORMAT)
         }
 
         val container = new TestProtocolContainer[TicTacToe, TicTacToeRole, Any, Any, State, String](TicTacToeProtoDef)

@@ -19,15 +19,21 @@ class OAuthAccessTokenHolderSpec
   "OAuth access token holder" - {
     "when asked for token for first time" - {
       "should be successful" in {
+        val prevRefreshCount = MockOAuthAccessTokenRefresher.tokenRefreshCount
+
         val testProbe = createTestProbe[OAuthAccessTokenHolder.Reply]()
-        val oAuthAccessTokenHolder = buildOAuthAccessTokenHolder(tokenExpiresInSeconds = 5)
+        val oAuthAccessTokenHolder = buildOAuthAccessTokenHolder(tokenExpiresInSeconds = 60)
 
         oAuthAccessTokenHolder ! GetToken(testProbe.ref)
         val tokenReceived1 = testProbe.expectMessageType[AuthToken]
+        MockOAuthAccessTokenRefresher.tokenRefreshCount shouldBe prevRefreshCount + 1
+
+        Thread.sleep(4000)
 
         oAuthAccessTokenHolder ! GetToken(testProbe.ref)
         val tokenReceived2 = testProbe.expectMessageType[AuthToken]
         tokenReceived2 shouldBe tokenReceived1
+        MockOAuthAccessTokenRefresher.tokenRefreshCount shouldBe prevRefreshCount + 1
       }
     }
 
@@ -138,7 +144,7 @@ class OAuthAccessTokenHolderSpec
 
   lazy val defaultConfig: Config = ConfigFactory.parseString {
     """
-      |verity.outbox.oauth-token-holder.receive-timeout = 5s
+      |verity.outbox.oauth-token-holder.receive-timeout = 2s
       |""".stripMargin
   }
 }

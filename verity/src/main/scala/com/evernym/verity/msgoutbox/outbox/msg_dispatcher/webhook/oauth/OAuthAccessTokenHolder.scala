@@ -62,7 +62,7 @@ object OAuthAccessTokenHolder {
           .onFailure[RuntimeException](
             SupervisorStrategy
               .restart
-              .withLogLevel(Level.INFO)
+              .withLogLevel(Level.WARN)
               .withLoggingEnabled(enabled = true)
               .withLimit(maxNrOfRetries = 10, withinTimeRange = 10.seconds)
           )
@@ -87,6 +87,7 @@ object OAuthAccessTokenHolder {
             Behaviors.same
 
           case _ =>
+            logger.info(s"[${setup.identifier}][OAuth] access token not exists or expired (will be refreshed)")
             setup.buffer.stash(cmd)
             refreshToken(setup)
         }
@@ -106,11 +107,13 @@ object OAuthAccessTokenHolder {
 
   private def waitingForGetTokenResponse(implicit setup: Setup): Behavior[Cmd] = Behaviors.receiveMessage {
     case AccessTokenRefresherReplyAdapter(reply: GetTokenSuccess) =>
+      setup.actorContext.cancelReceiveTimeout()
       logger.info(s"[${setup.identifier}][OAuth] refreshed access token received (expires in seconds: ${reply.expiresInSeconds})")
       setup.buffer.unstashAll(initialized(Option(AuthTokenParam(reply.value, reply.expiresInSeconds)))
       (setup.copy(prevTokenRefreshResponse = reply.respJSONObject)))
 
     case AccessTokenRefresherReplyAdapter(reply: OAuthAccessTokenRefresher.Replies.GetTokenFailed) =>
+      setup.actorContext.cancelReceiveTimeout()
       logger.error(s"[${setup.identifier}][OAuth] refresh access token failed: " + reply.errorMsg)
       handleError(reply.errorMsg)
 

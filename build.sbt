@@ -59,10 +59,10 @@ val debPkgDepLibIndyMinVersion = libIndyVer
 //dependency versions
 val indyWrapperVer  = "1.15.0-dev-1618"
 
-val akkaVer         = "2.6.14"
+val akkaVer         = "2.6.15"
 val akkaHttpVer     = "10.2.4"
 val akkaMgtVer      = "1.1.1"
-val alpAkkaVer      = "3.0.1"
+val alpAkkaVer      = "3.0.2"
 val kamonVer        = "2.2.1"
 val kanelaAgentVer  = "1.0.10"
 val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
@@ -301,8 +301,8 @@ lazy val commonLibraryDependencies = {
     "org.hyperledger" % "indy" % indyWrapperVer,
 
     //logging dependencies
-    "com.typesafe.scala-logging" %% "scala-logging" % "3.9.3",
-    "ch.qos.logback" % "logback-classic" % "1.2.3",
+    "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4",
+    "ch.qos.logback" % "logback-classic" % "1.2.5",
     akkaGrp %% "akka-slf4j" % akkaVer,
 
     //message codec dependencies (native classes to json and vice versa) [used by JacksonMsgCodec]

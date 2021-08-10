@@ -41,6 +41,7 @@ class RestIssuerSdkSpec
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+    issuerRestSDK.msgListener.accessTokenRefreshCount shouldBe 0
     issuerRestSDK.resetPlainMsgsCounter.plainMsgsBeforeLastReset shouldBe 0
     issuerRestSDK.fetchAgencyKey()
     issuerRestSDK.provisionVerityEdgeAgent()    //this sends a packed message (not REST api call)
@@ -157,6 +158,7 @@ class RestIssuerSdkSpec
       "should get 'question' (questionanswer 1.0) message" in {
         val receivedMsgParam = holderSDK.expectMsgFromConn[Question](firstConn)
         lastReceivedThread = receivedMsgParam.threadOpt
+        holderSDK.sendUpdateMsgStatusAsReviewedForConn(firstConn, receivedMsgParam.msgId)
         val question = receivedMsgParam.msg
         question.question_text shouldBe "How are you?"
       }
@@ -182,7 +184,13 @@ class RestIssuerSdkSpec
       "should be successful" in {
         val restOkResp = issuerRestSDK.sendGetStatusReqForConn[QAStatusReport](firstConn, QuestionAnswerMsgFamily, lastReceivedThread)
         restOkResp.status shouldBe "OK"
+      }
+    }
+
+    "when checked oauth stats" - {
+      "should be as expected" in {
         issuerRestSDK.resetPlainMsgsCounter.plainMsgsBeforeLastReset shouldBe 1
+        issuerRestSDK.msgListener.accessTokenRefreshCount <= 2 shouldBe true
       }
     }
   }

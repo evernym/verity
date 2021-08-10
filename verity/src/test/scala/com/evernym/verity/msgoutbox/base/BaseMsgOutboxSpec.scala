@@ -257,6 +257,8 @@ case class DestParam(walletId: WalletId, myVerKey: VerKeyStr, comMethods: Map[Co
 
 object MockOAuthAccessTokenRefresher {
 
+  var tokenRefreshCount = 0
+
   def apply(): Behavior[OAuthAccessTokenRefresher.Cmd] = {
     Behaviors.setup { _ =>
       Behaviors.receiveMessage {
@@ -268,6 +270,7 @@ object MockOAuthAccessTokenRefresher {
             replyTo ! OAuthAccessTokenRefresher.Replies.GetTokenFailed("purposefully failing")
           } else if (! shallTimeout) {
             replyTo ! GetTokenSuccess(UUID.randomUUID().toString, expiresInSeconds, Option(new JSONObject("{}")))
+            tokenRefreshCount += 1
           }
           Behaviors.stopped
       }

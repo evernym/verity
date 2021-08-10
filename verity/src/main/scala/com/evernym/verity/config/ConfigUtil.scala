@@ -179,13 +179,7 @@ object ConfigUtil {
   def getProtoStateRetentionPolicy(config: AppConfig,
                                    domainId: String,
                                    protoRef: String): RetentionPolicy = {
-    try {
-      //TODO: for backward compatibility (in case corresponding new config changes is not rolled out)
-      getRetentionPolicy(config, RETENTION_POLICY, domainId, protoRef)
-    } catch {
-      case _: ConfigException.Missing =>
-        getRetentionPolicy(config, RETENTION_POLICY_PROTOCOL_STATE, domainId, protoRef)
-    }
+    getRetentionPolicy(config, RETENTION_POLICY_PROTOCOL_STATE, domainId, protoRef)
   }
 
   def getOutboxStateRetentionPolicyForIntraDomain(config: AppConfig,

@@ -87,6 +87,8 @@ trait HasOAuthSupport {
   private lazy val tokenExpiresInSeconds: Long = tokenExpiresInDuration.map(_.toSeconds).getOrElse(10L)
   private lazy val oAuthAccessTokenEndpointPath: String = "access-token"
 
+  def accessTokenRefreshCount: Int = _tokenRefreshCount
+
   protected lazy val oAuthAccessTokenRoute: Route =
     logRequestResult("access-token") {
       pathPrefix(s"$oAuthAccessTokenEndpointPath") {
@@ -117,10 +119,11 @@ trait HasOAuthSupport {
 
   private def refreshToken(): Unit = {
     token = Option(Token(UUID.randomUUID().toString, LocalDateTime.now().plusSeconds(tokenExpiresInSeconds)))
+    _tokenRefreshCount += 1
   }
 
-
   private var token: Option[Token] = None
+  private var _tokenRefreshCount = 0
   protected var _authedMsgSinceLastReset: Int = 0
   protected var _failedAuthedMsgSinceLastReset: Int = 0
 

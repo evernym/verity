@@ -60,7 +60,7 @@ val debPkgDepLibIndyMinVersion = libIndyVer
 val indyWrapperVer  = "1.15.0-dev-1618"
 
 val akkaVer         = "2.6.15"
-val akkaHttpVer     = "10.2.4"
+val akkaHttpVer     = "10.2.6"
 val akkaMgtVer      = "1.1.1"
 val alpAkkaVer      = "3.0.2"
 val kamonVer        = "2.2.1"
@@ -332,7 +332,7 @@ lazy val commonLibraryDependencies = {
     "org.msgpack" %% "msgpack-scala" % "0.8.13",  //used by legacy pack/unpack operations
     "org.fusesource.jansi" % "jansi" % "2.3.2",    //used by protocol engine for customized logging
     "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
-    "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.4",  //used for libindy sync api calls
+    "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.5",  //used for libindy sync api calls
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
     //"org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0",   //commented as seemed not used
 

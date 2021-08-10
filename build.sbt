@@ -302,7 +302,7 @@ lazy val commonLibraryDependencies = {
 
     //logging dependencies
     "com.typesafe.scala-logging" %% "scala-logging" % "3.9.3",
-    "ch.qos.logback" % "logback-classic" % "1.2.3",
+    "ch.qos.logback" % "logback-classic" % "1.2.5",
     akkaGrp %% "akka-slf4j" % akkaVer,
 
     //message codec dependencies (native classes to json and vice versa) [used by JacksonMsgCodec]

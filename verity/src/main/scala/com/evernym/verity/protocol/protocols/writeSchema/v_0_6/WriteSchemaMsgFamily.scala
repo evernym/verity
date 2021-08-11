@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 
@@ -41,7 +42,7 @@ case class NeedsEndorsement(schemaId: String, schemaJson: String) extends Signal
  * Control Messages
  */
 trait SchemaControl extends Control with MsgBase
-case class Write(name: String, version: String, attrNames: Seq[String], endorserDID: Option[String]=None) extends Msg with SchemaControl {
+case class Write(name: String, version: String, attrNames: Seq[String], endorserDID: Option[DidStr]=None) extends Msg with SchemaControl {
   override def validate(): Unit = {
     checkRequired("name", name)
     checkRequired("version", version)

@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.constants.Constants.VALID_DID_BYTE_LENGTH
+import com.evernym.verity.did.validateDID
 import com.evernym.verity.util.Base58Util
 
 import scala.util.{Failure, Success, Try}
@@ -75,13 +76,11 @@ trait MsgBase {
     if (fieldValue.length > 100) { // value that definitely cover 32 byte payload
       throwInvalidFieldProtocolEngineException(fieldName, Some("Value too long"))
     }
-    val decoded = Base58Util.decode(fieldValue)
-    decoded match {
-      case Success(m) =>
-        if (m.length != VALID_DID_BYTE_LENGTH)
-          throwInvalidFieldProtocolEngineException(fieldName, Some("Invalid length"))
-      case Failure(_) =>
-        throwInvalidFieldProtocolEngineException(fieldName, Some("Unable to decode"))
+    try {
+      validateDID(fieldValue)
+    } catch {
+      case _: Throwable =>
+        throwInvalidFieldProtocolEngineException(fieldName, Some("Invalid DID"))
     }
   }
 }

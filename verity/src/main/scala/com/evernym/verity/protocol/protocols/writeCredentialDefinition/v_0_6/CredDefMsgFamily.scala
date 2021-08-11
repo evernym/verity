@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6
 
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import org.json.JSONObject
@@ -60,7 +61,7 @@ case class Write(name: String,
                  schemaId: String,
                  tag: Option[String],
                  revocationDetails: Option[RevocationDetails],
-                 endorserDID: Option[String]=None) extends Msg with CredDefControl {
+                 endorserDID: Option[DidStr]=None) extends Msg with CredDefControl {
   override def validate(): Unit = {
     checkRequired("name", name)
     checkRequired("schemaId", schemaId)

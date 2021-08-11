@@ -2,8 +2,6 @@ package com.evernym.verity.transformations.transformers
 
 import com.evernym.verity.actor.PersistentMsg
 import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, ObjectCodeMapperBase}
-import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 
 package object v1 {
   /**
@@ -19,15 +17,13 @@ package object v1 {
    * @return
    */
   def createPersistenceTransformerV1(persistenceEncryptionKey: String,
-                                     appConfig: AppConfig,
+                                     eventEncryptionSalt: String,
                                      objectCodeMapper: ObjectCodeMapperBase = DefaultObjectCodeMapper,
                                      schemaEvolutionTransformation: Any <=> Any = new IdentityTransformer
                                     ): Any <=> PersistentMsg = {
-
-    val salt = appConfig.getStringReq(SALT_EVENT_ENCRYPTION)
     schemaEvolutionTransformation andThen
       new ProtoBufTransformerV1(objectCodeMapper) andThen
-      new AESEncryptionTransformerV1(persistenceEncryptionKey, salt) andThen
+      new AESEncryptionTransformerV1(persistenceEncryptionKey, eventEncryptionSalt) andThen
       new PersistenceTransformer(PERSISTENCE_TRANSFORMATION_ID_V1)
   }
 }

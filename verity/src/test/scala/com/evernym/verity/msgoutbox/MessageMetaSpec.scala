@@ -11,15 +11,15 @@ import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies._
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpecBase
 import com.evernym.verity.msgoutbox.base.BaseMsgOutboxSpec
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
-import com.evernym.verity.msgoutbox.outbox.Outbox
+import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxConfigImpl}
 import com.evernym.verity.storage_services.BucketLifeCycleUtil
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
-import java.util.UUID
 
+import java.util.UUID
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
@@ -260,9 +260,10 @@ class MessageMetaSpec
 
   val outboxRegion: ActorRef[ShardingEnvelope[Outbox.Cmd]] =
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
+      val config = OutboxConfigImpl.fromConfig(appConfig.withFallback(SNAPSHOT_CONFIG).config)
       Outbox(
         entityContext,
-        appConfig.withFallback(SNAPSHOT_CONFIG),
+        config,
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,

@@ -119,7 +119,7 @@ class TransformerSpec extends ActorSpec with BasicSpec {
     }
 
     "persistence transformer v1" - {
-      val compositeTransformer = createPersistenceTransformerV1("secret", appConfig)
+      val compositeTransformer = createPersistenceTransformerV1("secret", appConfig.getStringReq(SALT_EVENT_ENCRYPTION))
 
       val event = KeyCreated("forDID")
       val transformed = compositeTransformer.execute(event)

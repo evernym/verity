@@ -26,11 +26,12 @@ import com.evernym.verity.util2.Status.UNAUTHORIZED
 import com.evernym.verity.util2.{ExecutionContextProvider, UrlParam}
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
-import java.util.UUID
 
+import java.util.UUID
 import com.evernym.verity.util.TestExecutionContextProvider
 
 import scala.collection.immutable
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -326,13 +327,17 @@ object MockSelfRelActor {
 class MockSelfRelActor(appConfig: AppConfig)
   extends CoreActorExtended {
 
-  val oAuthAccessTokenHolder: ActorRef[OAuthAccessTokenHolder.Cmd] = context.spawnAnonymous(
-    OAuthAccessTokenHolder(
-      appConfig.config,
-      Map.empty,
-      MockOAuthAccessTokenRefresher()
+  val oAuthAccessTokenHolder: ActorRef[OAuthAccessTokenHolder.Cmd] = {
+    val timeout = appConfig.getDurationOption("verity.outbox.oauth-token-holder.receive-timeout")
+      .getOrElse(FiniteDuration(30, SECONDS))
+    context.spawnAnonymous(
+      OAuthAccessTokenHolder(
+        timeout,
+        Map.empty,
+        MockOAuthAccessTokenRefresher()
+      )
     )
-  )
+  }
 
   override def receiveCmd: Receive = {
     case GetTokenForUrl(forUrl, cmd: OAuthAccessTokenHolder.Cmd) => oAuthAccessTokenHolder ! cmd

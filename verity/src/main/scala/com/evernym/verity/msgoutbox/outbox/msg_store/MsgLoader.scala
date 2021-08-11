@@ -12,6 +12,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_store.MsgLoader.Commands.MsgStore
 import com.evernym.verity.msgoutbox.{MsgId, RecipPackaging}
 import com.evernym.verity.actor.typed.base.PersistentEventAdapter
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
+import com.evernym.verity.msgoutbox.outbox.OutboxConfig
 
 //responsible for loading message meta event from event journal
 // and then go to external storage and download the message payload
@@ -45,7 +46,7 @@ object MsgLoader {
   def apply(msgId: MsgId,
             msgStore: ActorRef[MsgStore.Cmd],
             replyTo: ActorRef[Reply],
-            appConfig: AppConfig): Behavior[Cmd] = {
+            eventEncryptionSalt: String): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
       val msgStoreReplyAdapter = actorContext.messageAdapter(reply => MsgStoreReplyAdapter(reply))
       EventSourcedBehavior(
@@ -53,7 +54,7 @@ object MsgLoader {
         States.Uninitialized,
         commandHandler(replyTo),
         eventHandler)
-        .eventAdapter(new PersistentEventAdapter(msgId, com.evernym.verity.msgoutbox.message_meta.EventObjectMapper, appConfig))
+        .eventAdapter(new PersistentEventAdapter(msgId, com.evernym.verity.msgoutbox.message_meta.EventObjectMapper, eventEncryptionSalt))
         .receiveSignal(signalHandler(msgId, msgStore, msgStoreReplyAdapter))
     }
     //TODO: do we want to load all events or limit it to just 1st (as that much would be sufficient)

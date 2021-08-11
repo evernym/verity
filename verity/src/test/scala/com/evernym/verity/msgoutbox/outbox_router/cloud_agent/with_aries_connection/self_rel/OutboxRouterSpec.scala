@@ -9,7 +9,7 @@ import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.SELF_REL
 import com.evernym.verity.msgoutbox.{DestId, RelId}
 import com.evernym.verity.msgoutbox.base.DestParam
 import com.evernym.verity.msgoutbox.outbox_router.cloud_agent.with_aries_connection.{CloudAgentOutboxRouterBaseSpec, VerityCloudAgent}
-import com.evernym.verity.msgoutbox.outbox.Outbox
+import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxConfigImpl}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.{GetRelParam, SendOutboxParam}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Replies.{OutboxParam, RelParam}
@@ -40,9 +40,10 @@ class OutboxRouterSpec
 
   val outboxRegion: ActorRef[ShardingEnvelope[Outbox.Cmd]] =
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
+      val config = OutboxConfigImpl.fromConfig(appConfig.withFallback(OVERRIDE_CONFIG).config)
       Outbox(
         entityContext,
-        appConfig.withFallback(OVERRIDE_CONFIG),
+        config,
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,

@@ -3,7 +3,6 @@ package com.evernym.verity.msgoutbox.outbox
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.ActorRef
 import akka.actor.typed.scaladsl.ActorContext
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.msgoutbox.{Authentication, ComMethod, ComMethodId, MsgId, WalletId}
@@ -16,7 +15,6 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.plain.PlainWeb
 import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.MsgTransports
-import com.typesafe.config.Config
 
 import scala.concurrent.ExecutionContext
 
@@ -28,7 +26,7 @@ import scala.concurrent.ExecutionContext
 
 class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
                  accessTokenRefreshers: AccessTokenRefreshers,
-                 appConfig: AppConfig,
+                 config: OutboxConfig,
                  msgStore: ActorRef[MsgStore.Cmd],
                  msgPackagers: MsgPackagers,
                  msgTransports: MsgTransports,
@@ -68,7 +66,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
                                            senderVerKey: VerKeyStr): DispatcherType = {
     new PlainWebhookDispatcher(
       outboxActorContext,
-      appConfig,
+      config,
       comMethodId,
       comMethod,
       MsgStoreParam(msgStore),
@@ -93,7 +91,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
       case None =>
         outboxActorContext.spawn(
           OAuthAccessTokenHolder(
-            appConfig.config,
+            config.oauthReceiveTimeout,
             auth.data,
             accessTokenRefreshers.refreshers(auth.version)
           ),
@@ -111,7 +109,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
     new OAuthWebhookDispatcher(
       outboxActorContext,
       oAuthAccessTokenHolder,
-      appConfig,
+      config,
       comMethodId,
       comMethod,
       MsgStoreParam(msgStore),

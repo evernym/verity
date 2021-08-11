@@ -877,9 +877,10 @@ class UserAgent(val agentActorContext: AgentActorContext,
             case Some(child) =>
               child ! UpdateParams(auth.data, OAuthAccessTokenRefresher.getRefresher(auth.version, executionContext))
             case None =>
+              val receiveTimeout = appConfig.getDurationReq("verity.outbox.oauth-token-holder.receive-timeout")
               context.spawn(
                 OAuthAccessTokenHolder(
-                  appConfig.config,
+                  receiveTimeout,
                   auth.data,
                   agentActorContext.oAuthAccessTokenRefreshers.refreshers(auth.version)
                 ),

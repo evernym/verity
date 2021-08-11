@@ -39,3 +39,8 @@ message MsgRemoved {
     option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.Event";
     string msgId = 1;
 }
+
+message ConfigUpdated { //todo
+    option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.Event";
+    string configStr = 1;
+}

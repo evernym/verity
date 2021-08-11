@@ -12,6 +12,7 @@ import com.evernym.verity.msgoutbox.message_meta.MessageMeta.States.{Initialized
 import com.evernym.verity.msgoutbox.{MsgId, OutboxId, RecipPackaging}
 import com.evernym.verity.actor.typed.base.PersistentEventAdapter
 import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Commands.MsgStoreReplyAdapter
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
@@ -19,8 +20,8 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.msgoutbox.outbox.Outbox
 import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.{RetentionPolicy, Status}
-import java.time.ZonedDateTime
 
+import java.time.ZonedDateTime
 import scala.concurrent.duration._
 
 
@@ -112,8 +113,11 @@ object MessageMeta {
 
   def apply(entityContext: EntityContext[Cmd],
             msgStore: ActorRef[MsgStore.Cmd],
-            apConfig: AppConfig): Behavior[Cmd] = {
+            apConfig: AppConfig): Behavior[Cmd] = { //todo use salt instead of whole config
     Behaviors.setup { actorContext =>
+
+      val eventEncryptionSalt = apConfig.getStringReq(SALT_EVENT_ENCRYPTION)
+
       val msgStoreReplyAdapter = actorContext.messageAdapter(reply => MsgStoreReplyAdapter(reply))
 
       actorContext.setReceiveTimeout(300.seconds, Commands.TimedOut)   //TODO: finalize this
@@ -124,7 +128,7 @@ object MessageMeta {
           commandHandler(entityContext.entityId, msgStore)(actorContext, msgStoreReplyAdapter),
           eventHandler)
         .receiveSignal(signalHandler(entityContext.entityId, msgStore)(actorContext, msgStoreReplyAdapter))
-        .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper, apConfig))
+        .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper, eventEncryptionSalt))
     }
   }
 

@@ -4,13 +4,13 @@ import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.scaladsl.ActorContext
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.msgoutbox.outbox.States.MsgDeliveryAttempt
-import com.evernym.verity.msgoutbox.outbox.{Outbox, msg_packager}
+import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxConfig, msg_packager}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher._
 import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, MsgId}
 
 //responsible to create sender with appropriate input for each new message dispatch
 class PlainWebhookDispatcher(parentActorContext: ActorContext[Outbox.Cmd],
-                             appConfig: AppConfig,
+                             config: OutboxConfig,
                              comMethodId: ComMethodId,
                              comMethod: ComMethod,
                              msgStoreParam: MsgStoreParam,
@@ -20,13 +20,13 @@ class PlainWebhookDispatcher(parentActorContext: ActorContext[Outbox.Cmd],
   override def dispatch(msgId: MsgId,
                         deliveryAttempts: Map[String, MsgDeliveryAttempt]): Unit = {
     val currFailedAttempt = deliveryAttempts.get(comMethodId).map(_.failedCount).getOrElse(0)
-    val retryParam = Option(Outbox.prepareRetryParam(comMethod.typ, currFailedAttempt, appConfig.config))
+    val retryParam = Option(Outbox.prepareRetryParam(comMethod.typ, currFailedAttempt, config))
     val dispatchParam = DispatchParam(msgId, comMethodId, retryParam, parentActorContext.self)
     val uniqueSenderId = prepareUniqueSenderId(msgId)
     val existingSender = parentActorContext.child(uniqueSenderId)
     existingSender match {
       case None =>
-        val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, appConfig)
+        val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, config.eventEncryptionSalt)
         parentActorContext.spawn(
           PlainWebhookSender(
             dispatchParam,

@@ -7,6 +7,7 @@ import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.{DidPair, MsgOrders, ProtocolRunningInstances, ThreadContext, ThreadContextDetail}
 import com.evernym.verity.actor.testkit.ActorSpec
+import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningDefinition
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.ConnectingProtoDef
 import com.evernym.verity.testkit.BasicSpec
@@ -14,7 +15,7 @@ import com.evernym.verity.transformations.transformers.v1._
 
 class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
 
-  lazy val transformer = createPersistenceTransformerV1("enc key", appConfig)
+  lazy val transformer = createPersistenceTransformerV1("enc key", appConfig.getStringReq(SALT_EVENT_ENCRYPTION))
 
   "AgencyAgentState" - {
 

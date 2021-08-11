@@ -17,10 +17,11 @@ import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessageCompanion
-import java.util.UUID
 
+import java.util.UUID
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 
 
 class PersistentBehaviourSpec
@@ -142,9 +143,10 @@ object Account {
 
   def apply(entityContext: EntityContext[Cmd], appConfig: AppConfig): Behavior[Cmd] = {
     val persistenceId = PersistenceId(TypeKey.name, entityContext.entityId)
+    val salt = appConfig.getStringReq(SALT_EVENT_ENCRYPTION)
     EventSourcedBehavior
       .withEnforcedReplies(persistenceId, States.Empty, commandHandler, eventHandler)
-      .eventAdapter(PersistentEventAdapter(entityContext.entityId, TestObjectCodeMapper, appConfig))
+      .eventAdapter(PersistentEventAdapter(entityContext.entityId, TestObjectCodeMapper, salt))
       .receiveSignal(signalHandler(persistenceId))
   }
 

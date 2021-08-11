@@ -21,7 +21,6 @@ import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.MsgTransports
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.actor.typed.base.{PersistentEventAdapter, PersistentStateAdapter}
-import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -31,11 +30,9 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.RetryParam
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.AccessTokenRefreshers
 import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.Status
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
-import java.time.ZonedDateTime
 
-import com.evernym.verity.config.AppConfig
+import java.time.ZonedDateTime
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -71,6 +68,7 @@ object Outbox {
     case class RemoveMsg(msgId: MsgId) extends Cmd
     case object ProcessDelivery extends Cmd     //sent by scheduled job
     case object TimedOut extends Cmd
+    case class UpdateConfig(config: OutboxConfig) extends Cmd
   }
 
   trait Reply extends ActorMessage
@@ -93,7 +91,7 @@ object Outbox {
   val TypeKey: EntityTypeKey[Cmd] = EntityTypeKey("Outbox")
 
   def apply(entityContext: EntityContext[Cmd],
-            appConfig: AppConfig,
+            config: OutboxConfig,
             accessTokenRefreshers: AccessTokenRefreshers,
             relResolver: Behavior[RelationshipResolver.Cmd],
             msgStore: ActorRef[MsgStore.Cmd],
@@ -103,15 +101,15 @@ object Outbox {
     Behaviors.setup { actorContext =>
 
       Behaviors.withTimers { timer =>
-        timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery, scheduledJobInterval(appConfig.config))
+        timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery, config.scheduledJobInterval)
         Behaviors.withStash(100) { buffer =>                     //TODO: finalize this
-          actorContext.setReceiveTimeout(receiveTimeout(appConfig.config), Commands.TimedOut)
+          actorContext.setReceiveTimeout(config.receiveTimeout, Commands.TimedOut)
           val relResolverReplyAdapter = actorContext.messageAdapter(reply => RelResolverReplyAdapter(reply))
           val messageMetaReplyAdapter = actorContext.messageAdapter(reply => MessageMetaReplyAdapter(reply))
           val dispatcher = new Dispatcher(
             actorContext,
             accessTokenRefreshers,
-            appConfig,
+            config,
             msgStore,
             msgPackagers,
             msgTransports,
@@ -121,7 +119,7 @@ object Outbox {
           val setup = SetupOutbox(actorContext,
             entityContext,
             MetricsWriterExtension(actorContext.system).get(),
-            appConfig.config,
+            config,
             buffer,
             dispatcher,
             relResolver,
@@ -136,9 +134,9 @@ object Outbox {
               commandHandler(setup),
               eventHandler(dispatcher))
             .receiveSignal(signalHandler(setup))
-            .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper, appConfig))
-            .snapshotAdapter(PersistentStateAdapter(entityContext.entityId, StateObjectMapper, appConfig))
-            .withRetention(retentionCriteria(appConfig.config))
+            .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper, config.eventEncryptionSalt))
+            .snapshotAdapter(PersistentStateAdapter(entityContext.entityId, StateObjectMapper, config.eventEncryptionSalt))
+            .withRetention(config.retentionCriteria)
         }
       }
     }
@@ -223,7 +221,7 @@ object Outbox {
 
     case (st: States.Initialized, rfa: Commands.RecordFailedAttempt) =>
       val isDeliveryFailed = isMsgDeliveryFailed(rfa.comMethodId,
-        rfa.isItANotification, rfa.isAnyRetryAttemptsLeft, st)(setup.config)
+        rfa.isItANotification, rfa.isAnyRetryAttemptsLeft, st)
       Effect
         .persist(MsgSendingFailed(rfa.msgId, rfa.comMethodId, isDeliveryFailed))
         .thenRun((_: State) => setup.itemManagerEntityHelper.register())
@@ -378,8 +376,7 @@ object Outbox {
   private def isMsgDeliveryFailed(comMethodId: String,
                                   isItANotification: Boolean,
                                   isAnyRetryAttemptLeft: Boolean,
-                                  st: States.Initialized)
-                                 (implicit config: Config): Boolean = {
+                                  st: States.Initialized): Boolean = {
     //TODO: check/confirm this logic
     if (isItANotification) {
       false  //failed notification doesn't mean message delivery is failed
@@ -463,7 +460,7 @@ object Outbox {
         pendingMsgs
           .toSeq
           .sortBy(_._2.creationTimeInMillis)    //TODO: any issue with sorting here?
-          .take(batchSize(setup.config))
+          .take(setup.config.batchSize)
           .foreach{case (msgId, _) => sendToDispatcher(msgId, i)}
       case _                       => //nothing to do
     }
@@ -499,46 +496,6 @@ object Outbox {
 
   private val logger: Logger = getLoggerByClass(getClass)
 
-  private def batchSize(config: Config): Int = {
-    ConfigReadHelper(config)
-      .getIntOption("verity.outbox.batch-size")
-      .getOrElse(50)
-  }
-
-  private def receiveTimeout(config: Config): FiniteDuration = {
-    //TODO: finalize this
-    ConfigReadHelper(config)
-      .getDurationOption("verity.outbox.receive-timeout")
-      .getOrElse(FiniteDuration(600, SECONDS))
-  }
-
-  private def scheduledJobInterval(config: Config): FiniteDuration = {
-    //TODO: finalize this
-    ConfigReadHelper(config)
-      .getDurationOption("verity.outbox.scheduled-job-interval")
-      .getOrElse(FiniteDuration(5, SECONDS))
-  }
-
-  private def retentionCriteria(config: Config): RetentionCriteria = {
-    //TODO: finalize this
-    val afterEveryEvents =
-      ConfigReadHelper(config)
-        .getIntOption("verity.outbox.retention-criteria.snapshot.after-every-events")
-        .getOrElse(100)
-    val keepSnapshots =
-      ConfigReadHelper(config)
-        .getIntOption("verity.outbox.retention-criteria.snapshot.keep-snapshots")
-        .getOrElse(2)
-    val deleteEventOnSnapshot =
-      ConfigReadHelper(config)
-        .getBooleanOption("verity.outbox.retention-criteria.snapshot.delete-events-on-snapshots")
-        .getOrElse(true)
-    val retentionCriteria =
-      RetentionCriteria.snapshotEvery(numberOfEvents = afterEveryEvents, keepNSnapshots = keepSnapshots)
-    if (deleteEventOnSnapshot) retentionCriteria.withDeleteEventsOnSnapshot
-    else retentionCriteria
-  }
-
   private def comMethodTypeTags(comMethod: Option[ComMethod]): Map[String, String] = {
     val comMethodTypeStr =
       comMethod.map(_.typ) match {
@@ -550,22 +507,18 @@ object Outbox {
     Map("com-method-type" -> comMethodTypeStr)
   }
 
+  // todo could be moved to config itself
   def prepareRetryParam(comMethodType: Int,
                         failedAttemptCount: Int,
-                        config: Config): RetryParam = {
+                        config: OutboxConfig): RetryParam = {
     val comMethodTypeStr = comMethodType match {
       case COM_METHOD_TYPE_HTTP_ENDPOINT  => "webhook"
       case _                              => "default"
     }
-    val maxRetries =
-      ConfigReadHelper(config)
-        .getIntOption(s"verity.outbox.$comMethodTypeStr.retry-policy.max-retries")
-        .getOrElse(5)
 
-    val initialInterval =
-      ConfigReadHelper(config)
-        .getDurationOption(s"verity.outbox.$comMethodTypeStr.retry-policy.initial-interval")
-        .getOrElse(FiniteDuration(5, SECONDS))
+    val maxRetries = config.retryPolicyMaxRetries(comMethodTypeStr)
+
+    val initialInterval = config.retryPolicyInitialInterval(comMethodTypeStr)
 
     RetryParam(
       failedAttemptCount,
@@ -612,7 +565,7 @@ case class OutboxIdParam(relId: RelId, recipId: RecipId, destId: DestId) {
 case class SetupOutbox(actorContext: ActorContext[Cmd],
                        entityContext: EntityContext[Cmd],
                        metricsWriter: MetricsWriter,
-                       config: Config,
+                       config: OutboxConfig,
                        buffer: StashBuffer[Cmd],
                        dispatcher: Dispatcher,
                        relResolver: Behavior[RelationshipResolver.Cmd],

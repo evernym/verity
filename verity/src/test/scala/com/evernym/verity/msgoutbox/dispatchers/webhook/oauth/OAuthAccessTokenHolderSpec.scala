@@ -10,6 +10,8 @@ import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 
+import scala.concurrent.duration.{Duration, FiniteDuration, SECONDS}
+
 
 class OAuthAccessTokenHolderSpec
   extends BehaviourSpecBase
@@ -127,9 +129,13 @@ class OAuthAccessTokenHolderSpec
       "shallTimeout"          -> shallTimeoutString,
       "shallFail"             -> shallFailString
     )
+    val timeout = if (config.hasPath("verity.outbox.oauth-token-holder.receive-timeout")) //todo!
+      Duration.fromNanos( config.getDuration("verity.outbox.oauth-token-holder.receive-timeout").toNanos)
+    else
+      FiniteDuration(30, SECONDS)
     spawn(
       OAuthAccessTokenHolder(
-        config,
+        timeout,
         data,
         MockOAuthAccessTokenRefresher()
       )

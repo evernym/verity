@@ -60,10 +60,10 @@ val debPkgDepLibIndyMinVersion = libIndyVer
 val indyWrapperVer  = "1.15.0-dev-1618"
 
 val akkaVer         = "2.6.15"
-val akkaHttpVer     = "10.2.4"
-val akkaMgtVer      = "1.1.0"
+val akkaHttpVer     = "10.2.6"
+val akkaMgtVer      = "1.1.1"
 val alpAkkaVer      = "3.0.2"
-val kamonVer        = "2.2.1"
+val kamonVer        = "2.2.3"
 val kanelaAgentVer  = "1.0.10"
 val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
                                   // around base64 decoding etc, should look into it.
@@ -330,7 +330,7 @@ lazy val commonLibraryDependencies = {
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",
     "org.msgpack" %% "msgpack-scala" % "0.8.13",  //used by legacy pack/unpack operations
-    "org.fusesource.jansi" % "jansi" % "2.3.2",    //used by protocol engine for customized logging
+    "org.fusesource.jansi" % "jansi" % "2.3.4",    //used by protocol engine for customized logging
     "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.5",  //used for libindy sync api calls
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",

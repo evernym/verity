@@ -329,7 +329,7 @@ class MockSelfRelActor(appConfig: AppConfig)
   extends CoreActorExtended {
 
   val oAuthAccessTokenHolder: ActorRef[OAuthAccessTokenHolder.Cmd] = {
-    val timeout = appConfig.getDurationOption("verity.outbox.oauth-token-holder.receive-timeout")
+    val timeout = appConfig.getDurationOption(OUTBOX_OAUTH_RECEIVE_TIMEOUT)
       .getOrElse(FiniteDuration(30, SECONDS))
     context.spawnAnonymous(
       OAuthAccessTokenHolder(

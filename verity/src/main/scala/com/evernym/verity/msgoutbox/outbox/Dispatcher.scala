@@ -94,7 +94,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
       case None =>
         outboxActorContext.spawn(
           OAuthAccessTokenHolder(
-            FiniteDuration(config.oauthReceiveTimeout, MILLISECONDS),
+            FiniteDuration(config.oauthReceiveTimeoutMs, MILLISECONDS),
             auth.data,
             accessTokenRefreshers.refreshers(auth.version)
           ),

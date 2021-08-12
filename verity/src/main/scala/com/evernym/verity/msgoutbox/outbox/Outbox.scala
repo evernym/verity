@@ -4,7 +4,7 @@ import akka.actor.typed.{ActorRef, Behavior, Signal}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
-import akka.persistence.typed.{DeleteEventsCompleted, DeleteEventsFailed, DeleteSnapshotsFailed, PersistenceId, RecoveryCompleted, SnapshotCompleted, SnapshotFailed}
+import akka.persistence.typed.{DeleteEventsCompleted, DeleteEventsFailed, DeleteSnapshotsFailed, PersistenceId, RecoveryCompleted, SnapshotCompleted, SnapshotFailed, scaladsl}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.actor.ActorMessage
@@ -21,6 +21,8 @@ import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.MsgTransports
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.actor.typed.base.{PersistentEventAdapter, PersistentStateAdapter}
+import com.evernym.verity.config.ConfigConstants.{OUTBOX, OUTBOX_BATCH_SIZE, OUTBOX_OAUTH_RECEIVE_TIMEOUT, OUTBOX_RECEIVE_TIMEOUT, OUTBOX_RETENTION_SNAPSHOT_AFTER_EVERY_EVENTS, OUTBOX_RETENTION_SNAPSHOT_DELETE_EVENTS_ON_SNAPSHOTS, OUTBOX_RETENTION_SNAPSHOT_KEEP_SNAPSHOTS, OUTBOX_SCHEDULED_JOB_INTERVAL, SALT_EVENT_ENCRYPTION}
+import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
@@ -98,12 +100,12 @@ object Outbox {
             msgTransports: MsgTransports,
             executionContext: ExecutionContext): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
-      //FIXME  pass AppConfig and construct config here
-      val config = OutboxConfigBuilder.fromConfig(configuration)
+      val config = buildOutboxConfig(configuration)
       Behaviors.withTimers { timer =>
-        timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery, FiniteDuration.apply(config.scheduledJobInterval,MILLISECONDS))
+        timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery,
+          FiniteDuration.apply(config.scheduledJobIntervalMs,MILLISECONDS))
         Behaviors.withStash(100) { buffer =>                     //TODO: finalize this
-          actorContext.setReceiveTimeout(FiniteDuration.apply(config.receiveTimeout, MILLISECONDS), Commands.TimedOut)
+          actorContext.setReceiveTimeout(FiniteDuration.apply(config.receiveTimeoutMs, MILLISECONDS), Commands.TimedOut)
           val relResolverReplyAdapter = actorContext.messageAdapter(reply => RelResolverReplyAdapter(reply))
           val messageMetaReplyAdapter = actorContext.messageAdapter(reply => MessageMetaReplyAdapter(reply))
           val dispatcher = new Dispatcher(
@@ -136,7 +138,7 @@ object Outbox {
             .receiveSignal(signalHandler(setup))
             .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper, config.eventEncryptionSalt))
             .snapshotAdapter(PersistentStateAdapter(entityContext.entityId, StateObjectMapper, config.eventEncryptionSalt))
-            .withRetention(IRetentionCriteria.convert(config.retentionCriteria))
+            .withRetention(convertRetentionCriteria(config.retentionCriteria))
         }
       }
     }
@@ -266,7 +268,7 @@ object Outbox {
   private def eventHandler(dispatcher: Dispatcher): (State, Event) => State = {
     case (_, opu @ OutboxParamUpdated(walletId, senderVerKey, comMethods)) =>
       dispatcher.updateDispatcher(opu.walletId, opu.senderVerKey, opu.comMethods)
-      States.Initialized(walletId, senderVerKey, comMethods, config = Option(dispatcher.getConfig)) //todo!
+      States.Initialized(walletId, senderVerKey, comMethods, config = Option(dispatcher.getConfig))
 
     case (st: States.Initialized, ma: Events.MsgAdded) =>
       val msg = Message(
@@ -325,10 +327,7 @@ object Outbox {
   private def signalHandler(implicit setup: SetupOutbox): PartialFunction[(State, Signal), Unit] = {
     case (st: State, RecoveryCompleted) =>
       st match {
-        case i: Initialized =>
-          i.config.foreach(cfg =>
-              if (cfg != setup.config) setup.config = cfg
-          )
+        case i: Initialized => i.config.foreach(cfg => if (cfg != setup.config) setup.config = cfg)
         case _ =>
       }
       setup.metricsWriter.gaugeUpdate(AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, getPendingMsgs(st).size)
@@ -514,7 +513,6 @@ object Outbox {
     Map("com-method-type" -> comMethodTypeStr)
   }
 
-  // todo could be moved to config itself
   def prepareRetryParam(comMethodType: Int,
                         failedAttemptCount: Int,
                         config: OutboxConfig): RetryParam = {
@@ -526,7 +524,7 @@ object Outbox {
     RetryParam(
       failedAttemptCount,
       retryPolicy.maxRetries,
-      FiniteDuration(retryPolicy.initialInterval, MILLISECONDS)
+      FiniteDuration(retryPolicy.initialIntervalMs, MILLISECONDS)
     )
   }
 
@@ -542,6 +540,52 @@ object Outbox {
     Status.MSG_DELIVERY_STATUS_SENT,
     Status.MSG_DELIVERY_STATUS_FAILED
   ).map(_.statusCode)
+
+  def convertRetentionCriteria(rc: RetentionCriteria): scaladsl.RetentionCriteria = {
+    val retentionCriteria = scaladsl.RetentionCriteria.snapshotEvery(numberOfEvents = rc.afterEveryEvents,
+      keepNSnapshots = rc.keepSnapshots)
+
+    if (rc.deleteEventsOnSnapshots)
+      retentionCriteria.withDeleteEventsOnSnapshot
+    else
+      retentionCriteria
+  }
+
+  def buildOutboxConfig(config: Config): OutboxConfig = {
+    val ch = ConfigReadHelper(config)
+
+    val batchSize: Int = ch.getIntOption(OUTBOX_BATCH_SIZE).getOrElse(50)
+
+    val receiveTimeout: Long = ch.getDurationOption(OUTBOX_RECEIVE_TIMEOUT).map(_.toMillis).getOrElse(600000)
+
+    val scheduledJobInterval: Long = ch.getDurationOption(OUTBOX_SCHEDULED_JOB_INTERVAL).map(_.toMillis).getOrElse(5000)
+
+    val rcsAfterEveryEvents: Int = ch.getIntOption(OUTBOX_RETENTION_SNAPSHOT_AFTER_EVERY_EVENTS).getOrElse(100)
+
+    val rcsKeepSnapshots: Int = ch.getIntOption(OUTBOX_RETENTION_SNAPSHOT_KEEP_SNAPSHOTS).getOrElse(2)
+
+    val rcsDeleteEventsSnapshot: Boolean = ch.getBooleanOption(OUTBOX_RETENTION_SNAPSHOT_DELETE_EVENTS_ON_SNAPSHOTS).getOrElse(false)
+
+    val eventEncryptionSalt: String = ch.getStringReq(SALT_EVENT_ENCRYPTION)
+
+    val oauthReceiveTimeout: Long = ch.getDurationOption(OUTBOX_OAUTH_RECEIVE_TIMEOUT).map(_.toMillis).getOrElse(30000)
+
+    val retryPolicy: Map[String, RetryPolicy] = List("webhook", "default").map { name =>
+      val maxRetries = ch.getIntOption(s"$OUTBOX.$name.retry-policy.max-retries").getOrElse(5)
+      val initialInterval = ch.getDurationOption(s"$OUTBOX.$name.retry-policy.initial-interval").map(_.toMillis).getOrElse(30000L)
+      name -> RetryPolicy(maxRetries, initialInterval)
+    }.toMap
+
+    OutboxConfig(
+      batchSize,
+      receiveTimeout,
+      scheduledJobInterval,
+      RetentionCriteria(rcsAfterEveryEvents, rcsKeepSnapshots, rcsDeleteEventsSnapshot),
+      retryPolicy,
+      eventEncryptionSalt,
+      oauthReceiveTimeout
+    )
+  }
 }
 
 object OutboxIdParam {
@@ -568,7 +612,7 @@ case class OutboxIdParam(relId: RelId, recipId: RecipId, destId: DestId) {
 case class SetupOutbox(actorContext: ActorContext[Cmd],
                        entityContext: EntityContext[Cmd],
                        metricsWriter: MetricsWriter,
-                       var config: OutboxConfig, //todo mutable state!
+                       var config: OutboxConfig,
                        buffer: StashBuffer[Cmd],
                        dispatcher: Dispatcher,
                        relResolver: Behavior[RelationshipResolver.Cmd],

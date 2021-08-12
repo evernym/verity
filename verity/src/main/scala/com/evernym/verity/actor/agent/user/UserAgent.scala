@@ -33,7 +33,8 @@ import com.evernym.verity.agentmsg.msgfamily.configs._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.FwdReqMsg
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
-import com.evernym.verity.config.ConfigUtil
+import com.evernym.verity.config.ConfigConstants.OUTBOX_OAUTH_RECEIVE_TIMEOUT
+import com.evernym.verity.config.{ConfigConstants, ConfigUtil}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
@@ -878,7 +879,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
             case Some(child) =>
               child ! UpdateParams(auth.data, OAuthAccessTokenRefresher.getRefresher(auth.version, executionContext))
             case None =>
-              val receiveTimeout = appConfig.getDurationOption("verity.outbox.oauth-token-holder.receive-timeout")
+              val receiveTimeout = appConfig.getDurationOption(OUTBOX_OAUTH_RECEIVE_TIMEOUT)
                 .getOrElse(FiniteDuration(30, SECONDS))
               context.spawn(
                 OAuthAccessTokenHolder(

@@ -2,6 +2,9 @@ package com.evernym.verity.msgoutbox.dispatchers.webhook.oauth
 
 import akka.actor.typed.ActorRef
 import com.evernym.verity.actor.typed.BehaviourSpecBase
+import com.evernym.verity.config.ConfigConstants
+import com.evernym.verity.config.ConfigConstants.OUTBOX_OAUTH_RECEIVE_TIMEOUT
+import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.msgoutbox.base.MockOAuthAccessTokenRefresher
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.{GetToken, UpdateParams}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Replies.{AuthToken, GetTokenFailed}
@@ -129,10 +132,9 @@ class OAuthAccessTokenHolderSpec
       "shallTimeout"          -> shallTimeoutString,
       "shallFail"             -> shallFailString
     )
-    val timeout = if (config.hasPath("verity.outbox.oauth-token-holder.receive-timeout")) //todo!
-      Duration.fromNanos( config.getDuration("verity.outbox.oauth-token-holder.receive-timeout").toNanos)
-    else
-      FiniteDuration(30, SECONDS)
+    val timeout = ConfigReadHelper(config)
+      .getDurationOption(OUTBOX_OAUTH_RECEIVE_TIMEOUT)
+      .getOrElse(FiniteDuration(30, SECONDS))
     spawn(
       OAuthAccessTokenHolder(
         timeout,

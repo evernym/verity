@@ -6,25 +6,22 @@ import "scalapb/scalapb.proto";
 package com.evernym.verity.msgoutbox.outbox;
 
 message RetentionCriteria {
-  option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.IRetentionCriteria";
   int32 afterEveryEvents = 1;
   int32 keepSnapshots = 2;
   bool deleteEventsOnSnapshots = 3;
 }
 
 message RetryPolicy {
-  option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.IRetryPolicy";
   int32 maxRetries = 1;
-  int64 initialInterval = 2;
+  int64 initialIntervalMs = 2;
 }
 
 message OutboxConfig {
-  option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.IOutboxConfig";
   int32 batchSize = 1;
-  int64 receiveTimeout = 2;
-  int64 scheduledJobInterval = 3;
-  RetentionCriteria retentionCriteria = 4 [(scalapb.field).no_box = true]; // todo no need for optional wrapper around criteria
+  int64 receiveTimeoutMs = 2;
+  int64 scheduledJobIntervalMs = 3;
+  RetentionCriteria retentionCriteria = 4 [(scalapb.field).no_box = true];
   map<string, RetryPolicy> retryPolicy = 5;
   string eventEncryptionSalt = 6;
-  int64 oauthReceiveTimeout = 7;
+  int64 oauthReceiveTimeoutMs = 7;
 }

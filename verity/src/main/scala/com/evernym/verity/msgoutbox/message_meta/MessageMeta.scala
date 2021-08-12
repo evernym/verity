@@ -113,7 +113,7 @@ object MessageMeta {
 
   def apply(entityContext: EntityContext[Cmd],
             msgStore: ActorRef[MsgStore.Cmd],
-            apConfig: AppConfig): Behavior[Cmd] = { //todo use salt instead of whole config
+            apConfig: AppConfig): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
 
       val eventEncryptionSalt = apConfig.getStringReq(SALT_EVENT_ENCRYPTION)

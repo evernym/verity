@@ -7,7 +7,7 @@ import com.evernym.verity.util2.RetentionPolicy
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
-import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxConfigBuilder}
+import com.evernym.verity.msgoutbox.outbox.Outbox
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_packager.{MsgPackagers, didcom_v1}
 import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.{DIDCommV1Packager, WalletOpExecutor}

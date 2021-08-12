@@ -867,7 +867,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
           agentActorContext.msgSendingSvc,
           futureExecutionContext
         ) map { result =>
-          logger.info(s"Sent SMS invite to number: ${ssi.phoneNo} with content '$content'. Result: $result")
+          logger.info(s"Sent SMS for invite ${ssi.invitationId} with content '$content'. Result: $result")
           Option(ControlMsg(SMSSent(ssi.invitationId, ssi.inviteURL, shortUrl)))
         } recover {
           case he: HandledErrorException => Option(ControlMsg(SMSSendingFailed(ssi.invitationId, s"Exception: $he")))

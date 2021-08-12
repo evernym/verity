@@ -1,10 +1,8 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.constants.Constants.VALID_DID_BYTE_LENGTH
 import com.evernym.verity.did.validateDID
-import com.evernym.verity.util.Base58Util
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 class EmptyValueForOptionalFieldProtocolEngineException(statusMsg: String)
   extends ProtocolEngineException(statusMsg)

@@ -23,6 +23,8 @@ import com.evernym.verity.util.{ReqMsgContext, RestAuthContext, RestMsgContext}
 import com.evernym.verity.util2.{ActorErrorResp, Status}
 import org.json.JSONObject
 
+import scala.util.Try
+
 
 final case class `API-REQUEST-ID`(id: String) extends CustomHeader {
   override def name(): String = CLIENT_REQUEST_ID_HTTP_HEADER
@@ -179,7 +181,12 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
       DefaultMsgCodec.msgTypeFromDoc(DefaultMsgCodec.docFromStrUnchecked(payload))
     } catch {
       case e: Exception =>
-        logger.warn(s"Invalid payload. Exception: $e, Payload: $payload")
+        val sanitizedPayload = Try {
+          val jsonObject = new JSONObject(payload)
+          jsonObject.remove("phoneNumber")
+          jsonObject.toString
+        }.getOrElse(payload)
+        logger.warn(s"Invalid payload. Exception: $e, Payload: $sanitizedPayload")
         throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option("Invalid payload"))
     }
   }

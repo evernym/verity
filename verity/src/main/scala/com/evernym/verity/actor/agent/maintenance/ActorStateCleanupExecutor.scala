@@ -65,7 +65,10 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
           pendingCount = 0,
           successfullyMigratedCount = asc.successfullyMigratedCount,
           nonMigratedCount = asc.nonMigratedCount))
-        routeStoreStatus = routeStoreStatus.map(s => s.copy(totalProcessed = s.totalProcessed + 1))
+        routeStoreStatus = routeStoreStatus.map { s =>
+          val totalProcessed = if (s.totalProcessed + 1 <= agentActorCleanupState.size) s.totalProcessed + 1 else s.totalProcessed
+          s.copy(totalProcessed = totalProcessed)
+        }
       }
   }
 
@@ -97,7 +100,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
   }
 
   def handleActorStateCleaned(asc: ActorStateCleaned): Unit = {
-    logger.debug(s"ASC [$persistenceId] [ASCE->ASCE]: received ActorStateCleaned: " + asc)
+    logger.debug(s"ASC [$persistenceId] [ASCE->ASCE] received ActorStateCleaned: " + asc)
     if (agentActorCleanupState.contains(asc.actorId)) {
       writeAndApply(asc)
       val batchItemStatus = batchStatus.candidates.getOrElse(asc.actorId, BatchItemStatus.empty)
@@ -249,9 +252,10 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
           writeAndApply(StatusUpdated(routeStoreStatusReq.agentRouteStoreEntityId,
             routeStoreStatusReq.totalCandidates, routeStoreStatusReq.totalCandidates))
         } else {
-          logger.warn(s"ASC [$persistenceId] (totalCandidates: ${routeStoreStatusReq.totalCandidates}, " +
-            s"totalProcessed: ${routeStoreStatusReq.totalProcessed}) suspicious, " +
-            s"expected candidates but received 0")
+          logger.warn(s"ASC [$persistenceId] suspicious: " +
+            s"route store status = ${routeStoreStatusReq.totalProcessed}/${routeStoreStatusReq.totalCandidates}, " +
+            s"cleanup state size = ${agentActorCleanupState.size}, " +
+            s"expected new candidates but found = ${grbr.dids}")
         }
       }
     }

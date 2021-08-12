@@ -17,6 +17,7 @@ import org.json.JSONObject
 import org.slf4j.event.Level
 
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
@@ -82,12 +83,12 @@ object OAuthAccessTokenHolder {
       } else {
         authTokenParam match {
           case Some(at) if !at.isExpired =>
-            logger.info(s"[${setup.identifier}][OAuth] access token sent back (to ${replyTo.path})")
+            logger.info(s"[${setup.identifier}][OAuth] access token sent back to ${replyTo.path} (valid-for-seconds: ${at.secondsRemaining})")
             replyTo ! AuthToken(at.value)
             Behaviors.same
 
-          case _ =>
-            logger.info(s"[${setup.identifier}][OAuth] access token not exists or expired (will be refreshed)")
+          case atp =>
+            logger.info(s"[${setup.identifier}][OAuth] access token not exists or expired (${atp.map(_.secondsRemaining)}), will be refreshed")
             setup.buffer.stash(cmd)
             refreshToken(setup)
         }
@@ -167,4 +168,5 @@ object AuthTokenParam {
 
 case class AuthTokenParam(value: String, expiresAt: LocalDateTime) {
   def isExpired: Boolean = LocalDateTime.now().isAfter(expiresAt)
+  def secondsRemaining: Long = ChronoUnit.SECONDS.between(LocalDateTime.now(), expiresAt)
 }

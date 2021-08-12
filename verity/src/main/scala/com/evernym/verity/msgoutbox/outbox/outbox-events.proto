@@ -14,6 +14,13 @@ message OutboxParamUpdated {
     map<string, ComMethod> comMethods = 3;
 }
 
+message MetadataStored {
+    option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.Event";
+    string relId = 1;
+    string recipId = 2;
+    string destId = 3;
+}
+
 message MsgAdded {
     option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.Event";
     uint64 creationTimeInMillis = 1;

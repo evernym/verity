@@ -12,10 +12,10 @@ import com.evernym.verity.actor.itemmanager.ItemManagerEntityHelper
 import com.evernym.verity.msgoutbox._
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.MsgActivity
-import com.evernym.verity.msgoutbox.outbox.Events.{MsgSendingFailed, MsgSentSuccessfully, OutboxParamUpdated}
+import com.evernym.verity.msgoutbox.outbox.Events.{MetadataStored, MsgSendingFailed, MsgSentSuccessfully, OutboxParamUpdated}
 import com.evernym.verity.msgoutbox.outbox.Outbox.Cmd
 import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{GetOutboxParam, MessageMetaReplyAdapter, ProcessDelivery, RelResolverReplyAdapter}
-import com.evernym.verity.msgoutbox.outbox.States.{Message, MsgDeliveryAttempt}
+import com.evernym.verity.msgoutbox.outbox.States.{Message, Metadata, MsgDeliveryAttempt}
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.MsgTransports
@@ -34,6 +34,7 @@ import com.evernym.verity.util2.Status
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 import java.time.ZonedDateTime
+import java.util.UUID
 
 import com.evernym.verity.config.AppConfig
 
@@ -52,6 +53,7 @@ object Outbox {
     case class GetOutboxParam(replyTo: ActorRef[StatusReply[RelationshipResolver.Replies.OutboxParam]]) extends Cmd
     case class GetDeliveryStatus(replyTo: ActorRef[StatusReply[Replies.DeliveryStatus]]) extends Cmd
     case class AddMsg(msgId: MsgId, expiryDuration: FiniteDuration, replyTo: ActorRef[StatusReply[Replies.MsgAddedReply]]) extends Cmd
+    case class Init(relId: RelId, recipId: RecipId, destId: DestId) extends Cmd
 
     case class RecordSuccessfulAttempt(msgId: MsgId,
                                        comMethodId: String,
@@ -78,6 +80,7 @@ object Outbox {
     trait MsgAddedReply extends Reply
     case object MsgAlreadyAdded extends MsgAddedReply
     case object MsgAdded extends MsgAddedReply
+    case object NotInitialized extends MsgAddedReply
     case class DeliveryStatus(messages: Map[MsgId, Message]) extends Reply
   }
 
@@ -106,6 +109,7 @@ object Outbox {
         timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery, scheduledJobInterval(appConfig.config))
         Behaviors.withStash(100) { buffer =>                     //TODO: finalize this
           actorContext.setReceiveTimeout(receiveTimeout(appConfig.config), Commands.TimedOut)
+          logger.warn(s"entityId: ${entityContext.entityId}")
           val relResolverReplyAdapter = actorContext.messageAdapter(reply => RelResolverReplyAdapter(reply))
           val messageMetaReplyAdapter = actorContext.messageAdapter(reply => MessageMetaReplyAdapter(reply))
           val dispatcher = new Dispatcher(
@@ -132,9 +136,9 @@ object Outbox {
           EventSourcedBehavior
             .withEnforcedReplies(
               PersistenceId(TypeKey.name, entityContext.entityId),
-              States.Uninitialized.apply(), //TODO: wasn't able to just use 'States.Uninitialized'
+              States.Uninitialized(), //TODO: wasn't able to just use 'States.Uninitialized'
               commandHandler(setup),
-              eventHandler(dispatcher))
+              eventHandler(dispatcher)(setup))
             .receiveSignal(signalHandler(setup))
             .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper, appConfig))
             .snapshotAdapter(PersistentStateAdapter(entityContext.entityId, StateObjectMapper, appConfig))
@@ -148,23 +152,43 @@ object Outbox {
 
     //during initialization
     case (_: States.Uninitialized, RelResolverReplyAdapter(reply: RelationshipResolver.Replies.OutboxParam)) =>
+      logger.warn("Uninitialized:RelResolverReplyAdapter")
       Effect
         .persist(OutboxParamUpdated(reply.walletId, reply.senderVerKey, reply.comMethods))
-        .thenRun((_: State) => setup.buffer.unstashAll(Behaviors.same))
+        .thenNoReply()
+
+    case (_: States.Uninitialized, cmd @ Commands.AddMsg(_, _, replyTo)) =>
+      logger.warn("Uninitialized:AddMsg")
+      setup.buffer.stash(cmd)
+      Effect
+        .reply(replyTo)(StatusReply.success(Replies.NotInitialized))
+
+    case (_: States.Uninitialized, Commands.Init(relId, recipId, destId)) =>
+      logger.warn("Uninitialized:Init")
+      Effect
+        .persist(MetadataStored(relId = relId, recipId = recipId, destId = destId))
         .thenNoReply()
 
     case (_: States.Uninitialized, cmd) =>
+      logger.warn("Uninitialized:generic")
       setup.buffer.stash(cmd)
       Effect
         .noReply
 
+    //post initialization
+    case (States.Initialized(_, _, _, _, None), Commands.Init(relId, recipId, destId)) =>
+      logger.warn("Initialized:RelResolverReplyAdapter")
+      Effect
+        .persist(MetadataStored(relId, recipId, destId))
+        .thenRun((_: State) => setup.buffer.unstashAll(Behaviors.same))
+        .thenNoReply()
 
-      //post initialization
     case (st: States.Initialized, RelResolverReplyAdapter(reply: RelationshipResolver.Replies.OutboxParam)) =>
-
+      logger.warn("Uninitialized:AddMsg")
       if (st.senderVerKey != reply.senderVerKey || st.comMethods != reply.comMethods) {
         Effect
           .persist(OutboxParamUpdated(reply.walletId, reply.senderVerKey, reply.comMethods))
+          .thenRun((_: State) => setup.buffer.unstashAll(Behaviors.same))
           .thenNoReply()
       } else {
         Effect
@@ -265,10 +289,28 @@ object Outbox {
       }
   }
 
-  private def eventHandler(dispatcher: Dispatcher): (State, Event) => State = {
-    case (_, opu @ OutboxParamUpdated(walletId, senderVerKey, comMethods)) =>
-      dispatcher.updateDispatcher(opu.walletId, opu.senderVerKey, opu.comMethods)
+  private def eventHandler(dispatcher: Dispatcher)(implicit setupOutbox: SetupOutbox): (State, Event) => State = {
+    case (_: States.Uninitialized, OutboxParamUpdated(walletId, senderVerKey, comMethods)) =>
+      logger.warn("uninitialized:OutboxParam")
+      dispatcher.updateDispatcher(walletId, senderVerKey, comMethods)
       States.Initialized(walletId, senderVerKey, comMethods)
+
+    case (_: States.Uninitialized, Events.MetadataStored(relId, recipId, destId)) =>
+      logger.warn("uninitialized:MetadataStored")
+      val metadata = Metadata(relId, recipId, destId)
+      fetchOutboxParam(metadata)
+      States.Initialized(metadata = Some(metadata))
+
+    case (st @ States.Initialized(_, _, _, _, None), Events.MetadataStored(relId, recipId, destId)) =>
+      logger.warn("initialized:OutboxParam")
+      val metadata = Metadata(relId, recipId, destId)
+      fetchOutboxParam(metadata)
+      States.Initialized(st.walletId, st.senderVerKey, st.comMethods, st.messages, Some(metadata))
+
+    case (st @ States.Initialized(_, _, _, _, None), OutboxParamUpdated(walletId, senderVerKey, comMethods)) =>
+      logger.warn("initialized:OutboxParam")
+      dispatcher.updateDispatcher(walletId, senderVerKey, comMethods)
+      States.Initialized(walletId, senderVerKey, comMethods, metadata = st.metadata)
 
     case (st: States.Initialized, ma: Events.MsgAdded) =>
       val msg = Message(
@@ -328,8 +370,9 @@ object Outbox {
     case (st: State, RecoveryCompleted) =>
       setup.metricsWriter.gaugeUpdate(AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, getPendingMsgs(st).size)
       updateDispatcher(setup.dispatcher, st)
-      val outboxIdParam = OutboxIdParam(setup.entityContext.entityId)
-      fetchOutboxParam(outboxIdParam)
+//      st match {
+//        case States.Initialized(_,_,_,_,Some(metadata)) => fetchOutboxParam(metadata)
+//      }
 
     case (_: States.Initialized, sc: SnapshotCompleted) =>
       logger.debug(s"[${setup.entityContext.entityId}] snapshot completed: " + sc)
@@ -490,11 +533,11 @@ object Outbox {
     }
   }
 
-  private def fetchOutboxParam(outboxIdParam: OutboxIdParam)
+  private def fetchOutboxParam(metadata: Metadata)
                               (implicit setup: SetupOutbox): Unit =  {
     val relResolverRef = setup.actorContext.spawnAnonymous(setup.relResolver)
     relResolverRef ! RelationshipResolver.Commands.SendOutboxParam(
-      outboxIdParam.relId, outboxIdParam.destId, setup.relResolverReplyAdapter)
+      metadata.relId, metadata.destId, setup.relResolverReplyAdapter)
   }
 
   private val logger: Logger = getLoggerByClass(getClass)
@@ -588,17 +631,6 @@ object Outbox {
   ).map(_.statusCode)
 }
 
-object OutboxIdParam {
-  def apply(entityId: String): OutboxIdParam = {
-    val tokens = entityId.split("-", 3)
-    if (tokens.size != 3) {
-      Behaviors.stopped
-      throw new RuntimeException("invalid outbox entity id: " + entityId)
-    }
-    OutboxIdParam(tokens(0), tokens(1), tokens(2))
-  }
-}
-
 /**
  *
  * @param relId used to query delivery mechanism information
@@ -607,6 +639,7 @@ object OutboxIdParam {
  */
 case class OutboxIdParam(relId: RelId, recipId: RecipId, destId: DestId) {
   val outboxId: OutboxId = relId + "-" + recipId + "-" + destId
+  def entityId: UUID = UUID.nameUUIDFromBytes((relId+recipId+destId).getBytes())
 }
 
 case class SetupOutbox(actorContext: ActorContext[Cmd],

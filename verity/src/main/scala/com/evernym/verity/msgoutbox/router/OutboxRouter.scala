@@ -140,25 +140,32 @@ object OutboxRouter {
       val clusterSharding = ClusterSharding(actorContext.system)
       val outboxReplyAdapter = actorContext.messageAdapter(reply => OutboxReplyAdapter(reply))
       outboxIdParams.foreach { outboxIdParam =>
-        val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.outboxId)
+        val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.entityId.toString)
         outboxEntityRef ! Outbox.Commands.AddMsg(msgId, retentionPolicy.elements.expiryDuration, outboxReplyAdapter)
       }
-      waitingForOutboxReply(msgId, outboxIdParams.map(_.outboxId), 0, replyTo)
+      waitingForOutboxReply(msgId, outboxIdParams, 0, replyTo)
   }
 
   def waitingForOutboxReply(msgId: MsgId,
-                            targetOutboxIds: Seq[OutboxId],
+                            targetOutboxIds: Seq[OutboxIdParam],
                             ackReceivedCount: Int,
                             replyTo:Option[ActorRef[Reply]])
                            (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] = Behaviors.receiveMessage {
     case OutboxReplyAdapter(Success(Outbox.Replies.MsgAdded)) =>
       val totalAckReceived = ackReceivedCount + 1
       if (totalAckReceived == targetOutboxIds.size) {
-        replyTo.foreach(_ ! Replies.Ack(msgId, targetOutboxIds))
+        replyTo.foreach(_ ! Replies.Ack(msgId, targetOutboxIds.map(_.outboxId)))
         Behaviors.stopped
       } else {
         waitingForOutboxReply(msgId, targetOutboxIds, totalAckReceived, replyTo)
       }
+    case OutboxReplyAdapter(Success(Outbox.Replies.NotInitialized)) =>
+      val clusterSharding = ClusterSharding(actorContext.system)
+      targetOutboxIds.foreach { outboxIdParam =>
+        val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.entityId.toString)
+        outboxEntityRef ! Outbox.Commands.Init(outboxIdParam.relId, outboxIdParam.recipId, outboxIdParam.destId)
+      }
+      waitingForOutboxReply(msgId, targetOutboxIds, ackReceivedCount, replyTo)
   }
 
   final val DESTINATION_ID_DEFAULT = "default"

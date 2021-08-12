@@ -20,6 +20,8 @@ message Initialized {
 
     // map of msgId and Message
     map<string, Message> messages = 4;
+
+    Metadata metadata = 5;
 }
 
 message Message {
@@ -35,4 +37,10 @@ message Message {
 message MsgDeliveryAttempt {
     int32 successCount = 1;
     int32 failedCount = 2;
+}
+
+message Metadata {
+    string relId = 1;
+    string recipId = 2;
+    string destId = 3;
 }

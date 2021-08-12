@@ -119,8 +119,8 @@ class OutboxRetentionPolicySpec
   lazy val outboxId1 = outboxIdParam1.outboxId
   lazy val outboxId2 = outboxIdParam2.outboxId
 
-  lazy val outboxIdParam1 = OutboxIdParam("relId1-recipId1-default")
-  lazy val outboxIdParam2 = OutboxIdParam("relId2-recipId2-default")
+  lazy val outboxIdParam1 = OutboxIdParam("relId1", "recipId1", "default")
+  lazy val outboxIdParam2 = OutboxIdParam("relId2", "recipId2", "default")
 
   override lazy val retentionPolicy: RetentionPolicy = RetentionPolicy(
     """{"expire-after-days":1 day,"expire-after-terminal-state":true}""",

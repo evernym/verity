@@ -4,15 +4,12 @@ import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.base.EntityIdentifier
-import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.msgoutbox.outbox.OutboxConfig
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Cmd
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.{AccessTokenRefresherReplyAdapter, GetToken, TimedOut, UpdateParams}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Replies.AuthToken
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.GetTokenSuccess
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.slf4j.event.Level

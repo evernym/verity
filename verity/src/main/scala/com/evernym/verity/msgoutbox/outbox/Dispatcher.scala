@@ -17,6 +17,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.MsgTransports
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.{FiniteDuration, MILLISECONDS}
 
 
 //one instance gets created for each outbox at the time of outbox actor start
@@ -39,6 +40,8 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
   def ack(msgId: MsgId): Unit = {
     currentDispatcher.ack(msgId)
   }
+
+  def getConfig : OutboxConfig = config
 
   //NOTE: this is the initial logic
   // and it may/will have to change as we integrate/support more scenarios/dispatchers
@@ -91,7 +94,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
       case None =>
         outboxActorContext.spawn(
           OAuthAccessTokenHolder(
-            config.oauthReceiveTimeout,
+            FiniteDuration(config.oauthReceiveTimeout, MILLISECONDS),
             auth.data,
             accessTokenRefreshers.refreshers(auth.version)
           ),

@@ -11,7 +11,7 @@ import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies._
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpecBase
 import com.evernym.verity.msgoutbox.base.BaseMsgOutboxSpec
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
-import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxConfigImpl}
+import com.evernym.verity.msgoutbox.outbox.Outbox
 import com.evernym.verity.storage_services.BucketLifeCycleUtil
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.{ExecutionContextProvider, Status}
@@ -260,10 +260,9 @@ class MessageMetaSpec
 
   val outboxRegion: ActorRef[ShardingEnvelope[Outbox.Cmd]] =
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
-      val config = OutboxConfigImpl.fromConfig(appConfig.withFallback(SNAPSHOT_CONFIG).config)
       Outbox(
         entityContext,
-        config,
+        appConfig.withFallback(SNAPSHOT_CONFIG).config,
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,

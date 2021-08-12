@@ -15,7 +15,8 @@ import com.evernym.verity.actor.agent.user.GetTokenForUrl
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.OUTBOX_OAUTH_RECEIVE_TIMEOUT
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.GetTokenSuccess

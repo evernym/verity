@@ -1,95 +1,87 @@
 package com.evernym.verity.msgoutbox.outbox
 
-import akka.persistence.typed.scaladsl.RetentionCriteria
-import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
+import akka.persistence.typed.scaladsl
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.validator.base.ConfigReadHelper
-import com.typesafe.config.{Config, ConfigFactory, ConfigRenderOptions, ConfigValueFactory}
+import com.typesafe.config.Config
 
-import scala.concurrent.duration.{FiniteDuration, SECONDS}
+//todo do we still need interfaces?
+trait IRetentionCriteria {
+  def afterEveryEvents: Int
 
-trait OutboxConfig {
-  def batchSize: Int
+  def keepSnapshots: Int
 
-  def receiveTimeout: FiniteDuration
-
-  def scheduledJobInterval: FiniteDuration
-
-  def retentionCriteria: RetentionCriteria
-
-  def retryPolicyMaxRetries(comMethodType: String): Int
-
-  def retryPolicyInitialInterval(comMethodType: String): FiniteDuration
-
-  def eventEncryptionSalt: String
-
-  def oauthReceiveTimeout: FiniteDuration
+  def deleteEventsOnSnapshots: Boolean
 }
 
-// todo move hardcoded strings to config constants
-class OutboxConfigImpl(val configStr: String) extends OutboxConfig { //todo
-  private val configReader = ConfigReadHelper(ConfigFactory.parseString(configStr))
+object IRetentionCriteria { //todo move?
+  def convert(irc: IRetentionCriteria): scaladsl.RetentionCriteria = {
+    val retentionCriteria = scaladsl.RetentionCriteria.snapshotEvery(numberOfEvents = irc.afterEveryEvents,
+      keepNSnapshots = irc.keepSnapshots)
 
-  override def batchSize: Int = configReader
-    .getIntOption("verity.outbox.batch-size")
-    .getOrElse(50)
-
-  override def receiveTimeout: FiniteDuration = configReader
-    .getDurationOption("verity.outbox.receive-timeout")
-    .getOrElse(FiniteDuration(600, SECONDS))
-
-  override def scheduledJobInterval: FiniteDuration = configReader
-    .getDurationOption("verity.outbox.scheduled-job-interval")
-    .getOrElse(FiniteDuration(5, SECONDS))
-
-  override def retentionCriteria: RetentionCriteria = {
-    val afterEveryEvents = configReader
-      .getIntOption("verity.outbox.retention-criteria.snapshot.after-every-events")
-      .getOrElse(100)
-    val keepSnapshots = configReader
-      .getIntOption("verity.outbox.retention-criteria.snapshot.keep-snapshots")
-      .getOrElse(2)
-    val deleteEventOnSnapshot = configReader
-      .getBooleanOption("verity.outbox.retention-criteria.snapshot.delete-events-on-snapshots")
-      .getOrElse(true)
-    val retentionCriteria = RetentionCriteria.snapshotEvery(numberOfEvents = afterEveryEvents, keepNSnapshots = keepSnapshots)
-
-    if (deleteEventOnSnapshot)
+    if (irc.deleteEventsOnSnapshots)
       retentionCriteria.withDeleteEventsOnSnapshot
     else
       retentionCriteria
   }
-
-  override def retryPolicyMaxRetries(comMethodType: String): Int = configReader
-    .getIntOption(s"verity.outbox.$comMethodType.retry-policy.max-retries")
-    .getOrElse(5)
-
-  override def retryPolicyInitialInterval(comMethodType: String): FiniteDuration = configReader
-    .getDurationOption(s"verity.outbox.$comMethodType.retry-policy.initial-interval")
-    .getOrElse(FiniteDuration(5, SECONDS))
-
-  override def eventEncryptionSalt: String = configReader.getStringReq(SALT_EVENT_ENCRYPTION)
-
-  override def oauthReceiveTimeout: FiniteDuration = configReader
-    .getDurationOption("verity.outbox.oauth-token-holder.receive-timeout")
-    .getOrElse(FiniteDuration(30, SECONDS))
 }
 
-// todo decide where should we store default values
-//       it's better to move defaults check to this function
-object OutboxConfigImpl {
-  def fromConfig(config: Config): OutboxConfigImpl = {
-    var outboxConfig = ConfigFactory.empty()
+trait IRetryPolicy {
+  def maxRetries: Int
 
-    val salt = config.getString(SALT_EVENT_ENCRYPTION)
-    outboxConfig = outboxConfig.withValue(SALT_EVENT_ENCRYPTION, ConfigValueFactory.fromAnyRef(salt))
+  def initialInterval: Long
+}
 
-    if (config.hasPath("verity.outbox")){
-      val c = config.withOnlyPath("verity.outbox")
-      outboxConfig = outboxConfig.withFallback(c)
-    }
+trait IOutboxConfig {
+  def batchSize: Int
 
+  def receiveTimeout: Long
 
+  def scheduledJobInterval: Long
 
-    new OutboxConfigImpl(outboxConfig.root().render(ConfigRenderOptions.concise())) // Todo decide how to store this
+  def retentionCriteria: IRetentionCriteria
+
+  def retryPolicy: Map[String, IRetryPolicy]
+
+  def eventEncryptionSalt: String
+
+  def oauthReceiveTimeout: Long
+}
+
+object OutboxConfigBuilder { //todo should be moved to Outbox?
+  def fromConfig(config: Config): OutboxConfig = {
+    val ch = ConfigReadHelper(config)
+
+    val batchSize: Int = ch.getIntOption(OUTBOX_BATCH_SIZE).getOrElse(50)
+
+    val receiveTimeout: Long = ch.getDurationOption(OUTBOX_RECEIVE_TIMEOUT).map(_.toMillis).getOrElse(600000)
+
+    val scheduledJobInterval: Long = ch.getDurationOption(OUTBOX_SCHEDULED_JOB_INTERVAL).map(_.toMillis).getOrElse(5000)
+
+    val rcsAfterEveryEvents: Int = ch.getIntOption(OUTBOX_RETENTION_SNAPSHOT_AFTER_EVERY_EVENTS).getOrElse(100)
+
+    val rcsKeepSnapshots: Int = ch.getIntOption(OUTBOX_RETENTION_SNAPSHOT_KEEP_SNAPSHOTS).getOrElse(2)
+
+    val rcsDeleteEventsSnapshot: Boolean = ch.getBooleanOption(OUTBOX_RETENTION_SNAPSHOT_DELETE_EVENTS_ON_SNAPSHOTS).getOrElse(false)
+
+    val eventEncryptionSalt: String = ch.getStringReq(SALT_EVENT_ENCRYPTION)
+
+    val oauthReceiveTimeout: Long = ch.getDurationOption(OUTBOX_OAUTH_RECEIVE_TIMEOUT).map(_.toMillis).getOrElse(30000)
+
+    val retryPolicy: Map[String, RetryPolicy] = List("webhook", "default").map { name =>
+      val maxRetries = ch.getIntOption(s"$OUTBOX.$name.retry-policy.max-retries").getOrElse(5)
+      val initialInterval = ch.getDurationOption(s"$OUTBOX.$name.retry-policy.initial-interval").map(_.toMillis).getOrElse(30000L)
+      name -> RetryPolicy(maxRetries, initialInterval)
+    }.toMap
+
+    OutboxConfig(
+      batchSize,
+      receiveTimeout,
+      scheduledJobInterval,
+      RetentionCriteria(rcsAfterEveryEvents, rcsKeepSnapshots, rcsDeleteEventsSnapshot),
+      retryPolicy,
+      eventEncryptionSalt,
+      oauthReceiveTimeout
+    )
   }
 }

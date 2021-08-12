@@ -2,7 +2,6 @@ package com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.plain
 
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.scaladsl.ActorContext
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.msgoutbox.outbox.States.MsgDeliveryAttempt
 import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxConfig, msg_packager}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher._

@@ -12,7 +12,6 @@ import com.evernym.verity.msgoutbox.outbox.msg_store.MsgLoader.Commands.MsgStore
 import com.evernym.verity.msgoutbox.{MsgId, RecipPackaging}
 import com.evernym.verity.actor.typed.base.PersistentEventAdapter
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
-import com.evernym.verity.msgoutbox.outbox.OutboxConfig
 
 //responsible for loading message meta event from event journal
 // and then go to external storage and download the message payload

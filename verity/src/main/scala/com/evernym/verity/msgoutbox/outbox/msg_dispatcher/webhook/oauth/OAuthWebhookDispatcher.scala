@@ -3,7 +3,6 @@ package com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth
 import akka.actor.typed.ActorRef
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.adapter._
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.msgoutbox.outbox.States.MsgDeliveryAttempt
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher._
 import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxConfig, msg_packager}

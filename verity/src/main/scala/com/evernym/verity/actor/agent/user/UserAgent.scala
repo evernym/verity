@@ -64,6 +64,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_t
 import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
 import com.evernym.verity.util2.ActorErrorResp
 
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
@@ -877,7 +878,8 @@ class UserAgent(val agentActorContext: AgentActorContext,
             case Some(child) =>
               child ! UpdateParams(auth.data, OAuthAccessTokenRefresher.getRefresher(auth.version, executionContext))
             case None =>
-              val receiveTimeout = appConfig.getDurationReq("verity.outbox.oauth-token-holder.receive-timeout")
+              val receiveTimeout = appConfig.getDurationOption("verity.outbox.oauth-token-holder.receive-timeout")
+                .getOrElse(FiniteDuration(30, SECONDS))
               context.spawn(
                 OAuthAccessTokenHolder(
                   receiveTimeout,

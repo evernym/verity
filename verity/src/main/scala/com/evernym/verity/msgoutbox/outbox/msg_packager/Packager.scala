@@ -4,9 +4,7 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_PLAIN}
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.msgoutbox.MsgId
-import com.evernym.verity.msgoutbox.outbox.OutboxConfig
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.{MsgPackagingParam, MsgStoreParam}
 import com.evernym.verity.msgoutbox.outbox.msg_packager.Packager.Commands.{DIDCommV1PackagerReplyAdapter, MsgLoaderReplyAdapter, PackMsg, TimedOut}
 import com.evernym.verity.msgoutbox.outbox.msg_packager.Packager.Replies.{DIDCommV1PackedMsg, UnPackedMsg}

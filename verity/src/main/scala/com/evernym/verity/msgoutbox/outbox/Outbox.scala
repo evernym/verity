@@ -5,7 +5,7 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
 import akka.persistence.typed.{DeleteEventsCompleted, DeleteEventsFailed, DeleteSnapshotsFailed, PersistenceId, RecoveryCompleted, SnapshotCompleted, SnapshotFailed}
-import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.itemmanager.ItemManagerEntityHelper
@@ -15,7 +15,7 @@ import com.evernym.verity.msgoutbox.message_meta.MessageMeta.MsgActivity
 import com.evernym.verity.msgoutbox.outbox.Events.{MsgSendingFailed, MsgSentSuccessfully, OutboxParamUpdated}
 import com.evernym.verity.msgoutbox.outbox.Outbox.Cmd
 import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{GetOutboxParam, MessageMetaReplyAdapter, ProcessDelivery, RelResolverReplyAdapter}
-import com.evernym.verity.msgoutbox.outbox.States.{Message, MsgDeliveryAttempt}
+import com.evernym.verity.msgoutbox.outbox.States.{Initialized, Message, MsgDeliveryAttempt}
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.MsgTransports
@@ -30,10 +30,10 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.RetryParam
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.AccessTokenRefreshers
 import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.Status
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 
 import java.time.ZonedDateTime
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -68,7 +68,6 @@ object Outbox {
     case class RemoveMsg(msgId: MsgId) extends Cmd
     case object ProcessDelivery extends Cmd     //sent by scheduled job
     case object TimedOut extends Cmd
-    case class UpdateConfig(config: OutboxConfig) extends Cmd
   }
 
   trait Reply extends ActorMessage
@@ -91,7 +90,7 @@ object Outbox {
   val TypeKey: EntityTypeKey[Cmd] = EntityTypeKey("Outbox")
 
   def apply(entityContext: EntityContext[Cmd],
-            config: OutboxConfig,
+            configuration: Config,
             accessTokenRefreshers: AccessTokenRefreshers,
             relResolver: Behavior[RelationshipResolver.Cmd],
             msgStore: ActorRef[MsgStore.Cmd],
@@ -99,11 +98,12 @@ object Outbox {
             msgTransports: MsgTransports,
             executionContext: ExecutionContext): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
-
+      //FIXME  pass AppConfig and construct config here
+      val config = OutboxConfigBuilder.fromConfig(configuration)
       Behaviors.withTimers { timer =>
-        timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery, config.scheduledJobInterval)
+        timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery, FiniteDuration.apply(config.scheduledJobInterval,MILLISECONDS))
         Behaviors.withStash(100) { buffer =>                     //TODO: finalize this
-          actorContext.setReceiveTimeout(config.receiveTimeout, Commands.TimedOut)
+          actorContext.setReceiveTimeout(FiniteDuration.apply(config.receiveTimeout, MILLISECONDS), Commands.TimedOut)
           val relResolverReplyAdapter = actorContext.messageAdapter(reply => RelResolverReplyAdapter(reply))
           val messageMetaReplyAdapter = actorContext.messageAdapter(reply => MessageMetaReplyAdapter(reply))
           val dispatcher = new Dispatcher(
@@ -136,7 +136,7 @@ object Outbox {
             .receiveSignal(signalHandler(setup))
             .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper, config.eventEncryptionSalt))
             .snapshotAdapter(PersistentStateAdapter(entityContext.entityId, StateObjectMapper, config.eventEncryptionSalt))
-            .withRetention(config.retentionCriteria)
+            .withRetention(IRetentionCriteria.convert(config.retentionCriteria))
         }
       }
     }
@@ -266,7 +266,7 @@ object Outbox {
   private def eventHandler(dispatcher: Dispatcher): (State, Event) => State = {
     case (_, opu @ OutboxParamUpdated(walletId, senderVerKey, comMethods)) =>
       dispatcher.updateDispatcher(opu.walletId, opu.senderVerKey, opu.comMethods)
-      States.Initialized(walletId, senderVerKey, comMethods)
+      States.Initialized(walletId, senderVerKey, comMethods, config = Option(dispatcher.getConfig)) //todo!
 
     case (st: States.Initialized, ma: Events.MsgAdded) =>
       val msg = Message(
@@ -324,6 +324,13 @@ object Outbox {
 
   private def signalHandler(implicit setup: SetupOutbox): PartialFunction[(State, Signal), Unit] = {
     case (st: State, RecoveryCompleted) =>
+      st match {
+        case i: Initialized =>
+          i.config.foreach(cfg =>
+              if (cfg != setup.config) setup.config = cfg
+          )
+        case _ =>
+      }
       setup.metricsWriter.gaugeUpdate(AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, getPendingMsgs(st).size)
       updateDispatcher(setup.dispatcher, st)
       val outboxIdParam = OutboxIdParam(setup.entityContext.entityId)
@@ -515,15 +522,11 @@ object Outbox {
       case COM_METHOD_TYPE_HTTP_ENDPOINT  => "webhook"
       case _                              => "default"
     }
-
-    val maxRetries = config.retryPolicyMaxRetries(comMethodTypeStr)
-
-    val initialInterval = config.retryPolicyInitialInterval(comMethodTypeStr)
-
+    val retryPolicy = config.retryPolicy(comMethodTypeStr)
     RetryParam(
       failedAttemptCount,
-      maxRetries,
-      initialInterval
+      retryPolicy.maxRetries,
+      FiniteDuration(retryPolicy.initialInterval, MILLISECONDS)
     )
   }
 
@@ -565,7 +568,7 @@ case class OutboxIdParam(relId: RelId, recipId: RecipId, destId: DestId) {
 case class SetupOutbox(actorContext: ActorContext[Cmd],
                        entityContext: EntityContext[Cmd],
                        metricsWriter: MetricsWriter,
-                       config: OutboxConfig,
+                       var config: OutboxConfig, //todo mutable state!
                        buffer: StashBuffer[Cmd],
                        dispatcher: Dispatcher,
                        relResolver: Behavior[RelationshipResolver.Cmd],

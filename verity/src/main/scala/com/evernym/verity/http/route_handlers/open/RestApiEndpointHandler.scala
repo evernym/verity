@@ -179,7 +179,9 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
       DefaultMsgCodec.msgTypeFromDoc(DefaultMsgCodec.docFromStrUnchecked(payload))
     } catch {
       case e: Exception =>
-        logger.warn(s"Invalid payload. Exception: $e, Payload: $payload")
+        val payloadJson = new JSONObject(payload)
+        payloadJson.remove("phoneNumber")
+        logger.warn(s"Invalid payload. Exception: $e, Payload: ${payloadJson.toString}")
         throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option("Invalid payload"))
     }
   }

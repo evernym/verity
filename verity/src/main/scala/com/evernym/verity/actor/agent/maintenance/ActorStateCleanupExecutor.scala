@@ -126,7 +126,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
   def handleProcessRouteStore(prs: ProcessRouteStore): Unit = {
     logger.debug(s"ASC [$persistenceId] [ASCM->ASCE] received ProcessRouteStore: " + prs)
     if (routeStoreStatus.isDefined) {
-      logger.info(s"ASC [$persistenceId] status: " + routeStoreStatusReq)
+      logger.debug(s"ASC [$persistenceId] status: " + routeStoreStatusReq)
       sender ! routeStoreStatusExtended
     } else {
       val event = StatusUpdated(prs.agentRouteStoreEntityId, prs.totalRoutes)

@@ -122,7 +122,7 @@ object OutboxRouter {
       messageMetaEntityRef ! MessageMeta.Commands.Add(
         msgType,
         retentionPolicy.configString,
-        outboxIdParams.map(_.outboxId).toSet,
+        outboxIdParams.map(_.entityId.toString).toSet,
         None,
         None,
         msgMetaReplyAdapter
@@ -154,7 +154,7 @@ object OutboxRouter {
     case OutboxReplyAdapter(Success(Outbox.Replies.MsgAdded)) =>
       val totalAckReceived = ackReceivedCount + 1
       if (totalAckReceived == targetOutboxIds.size) {
-        replyTo.foreach(_ ! Replies.Ack(msgId, targetOutboxIds.map(_.outboxId)))
+        replyTo.foreach(_ ! Replies.Ack(msgId, targetOutboxIds.map(_.entityId.toString)))
         Behaviors.stopped
       } else {
         waitingForOutboxReply(msgId, targetOutboxIds, totalAckReceived, replyTo)

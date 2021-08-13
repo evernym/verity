@@ -10,7 +10,6 @@ import com.evernym.verity.actor.Platform
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.appStateManager.GetCurrentState
 import com.evernym.verity.actor.appStateManager.state.{AppState, ListeningState}
-import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.app_launcher.{DefaultAgentActorContext, HttpServer, PlatformBuilder}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.route_handlers.HttpRouteHandler

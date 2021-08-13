@@ -46,10 +46,11 @@ class OutboxSpec
       "should fetch required information from relationship actor" in {
         val probe = createTestProbe[StatusReply[RelationshipResolver.Replies.OutboxParam]]()
         outboxRegion ! ShardingEnvelope(outboxId, GetOutboxParam(probe.ref))
+        outboxRegion ! ShardingEnvelope(outboxId, Commands.Init(relId, recipId, destId))
         val outboxParam = probe.expectMessageType[StatusReply[RelationshipResolver.Replies.OutboxParam]].getValue
         outboxParam.walletId shouldBe testWallet.walletId
         outboxParam.comMethods shouldBe defaultDestComMethods
-        checkRetention(expectedSnapshots = 1, expectedEvents = 1)
+        checkRetention(expectedSnapshots = 2, expectedEvents = 1)
       }
     }
 
@@ -61,7 +62,7 @@ class OutboxSpec
           val probe = createTestProbe()
           outboxRegion ! ShardingEnvelope(outboxId, Commands.TimedOut)
           probe.expectNoMessage()
-          checkRetention(expectedSnapshots = 1, expectedEvents = 1)
+          checkRetention(expectedSnapshots = 2, expectedEvents = 1)
         }
       }
 
@@ -72,7 +73,7 @@ class OutboxSpec
           val outboxParam = probe.expectMessageType[StatusReply[RelationshipResolver.Replies.OutboxParam]].getValue
           outboxParam.walletId shouldBe testWallet.walletId
           outboxParam.comMethods shouldBe defaultDestComMethods
-          checkRetention(expectedSnapshots = 1, expectedEvents = 1)
+          checkRetention(expectedSnapshots = 2, expectedEvents = 1)
           checkMsgDeliveryMetrics(0, 0, 0)
         }
       }
@@ -228,8 +229,11 @@ class OutboxSpec
       |""".stripMargin
   }
 
-  lazy val outboxId = outboxIdParam.outboxId
-  lazy val outboxIdParam = OutboxIdParam("relId-recipId-default")
+  lazy val relId : String = "relId"
+  lazy val recipId: String = "recipId"
+  lazy val destId: String = "default"
+  lazy val outboxIdParam = OutboxIdParam(relId, recipId, destId)
+  lazy val outboxId = outboxIdParam.entityId.toString
   lazy val outboxPersistenceId = PersistenceId(TypeKey.name, outboxId).id
 
   lazy val outboxRegion: ActorRef[ShardingEnvelope[Outbox.Cmd]] =

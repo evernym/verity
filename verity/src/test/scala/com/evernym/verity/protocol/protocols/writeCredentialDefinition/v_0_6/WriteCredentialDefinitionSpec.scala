@@ -4,6 +4,7 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
+import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
@@ -21,6 +22,7 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
   }
 
   val defaultEndorser = "8XFh8yBzrpJQmNyZzgoTqB"
+  val userEndorser = "Vr9eqqnUJpJkBwcRV4cHnV"
 
   override val defaultInitParams = Map(
     DEFAULT_ENDORSER_DID -> defaultEndorser
@@ -36,22 +38,97 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
     }
   }
 
-  "CredDefProtocol" - {
-    "should signal it needs endorsement when issuer did is not written to ledger" in { f =>
-      f.writer.initParams(Map(
-        MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
-      ))
-      interaction(f.writer) {
-        withDefaultWalletAccess(f, {
-          withDefaultLedgerAccess(f, {
-            f.writer ~ Write(credDefName, schemaId, None, None)
+  "Endorser DID validation" - {
+    "If endorser did not provided, validation should pass" in { _ =>
+      Write(credDefName, schemaId, None, None, None).validate()
+    }
 
-            val needsEndorsement = f.writer expect signal[NeedsEndorsement]
-            val json = new JSONObject(needsEndorsement.credDefJson)
-            json.getString("endorser") shouldBe defaultEndorser
-            f.writer.state shouldBe a[State.WaitingOnEndorser]
+    "If valid endorser did provided, validation should pass" in { _ =>
+      Write(credDefName, schemaId, None, None, Some(userEndorser)).validate()
+    }
+
+    "If invalid endorser did provided, validation should fail" in { _ =>
+      assertThrows[InvalidFieldValueProtocolEngineException] {
+        Write(credDefName, schemaId, None, None, Some("invalid did")).validate()
+      }
+    }
+  }
+
+
+  "CredDefProtocol" - {
+    "should signal it needs endorsement when issuer did is not written to ledger" - {
+      "and use default endorser if not set in control msg" in { f =>
+        f.writer.initParams(Map(
+          MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
+        ))
+        interaction(f.writer) {
+          withDefaultWalletAccess(f, {
+            withDefaultLedgerAccess(f, {
+              f.writer ~ Write(credDefName, schemaId, None, None)
+
+              val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+              val json = new JSONObject(needsEndorsement.credDefJson)
+              json.getString("endorser") shouldBe defaultEndorser
+              f.writer.state shouldBe a[State.WaitingOnEndorser]
+            })
           })
-        })
+        }
+      }
+
+      "and use endorser from control msg if defined" in { f =>
+        f.writer.initParams(Map(
+          MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
+        ))
+        interaction(f.writer) {
+          withDefaultWalletAccess(f, {
+            withDefaultLedgerAccess(f, {
+              f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
+
+              val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+              val json = new JSONObject(needsEndorsement.credDefJson)
+              json.getString("endorser") shouldBe userEndorser
+              f.writer.state shouldBe a[State.WaitingOnEndorser]
+            })
+          })
+        }
+      }
+    }
+
+    "should signal it needs endorsement when issuer did doesn't have ledger permissions" - {
+      "and use default endorser if not set in control msg" in { f =>
+        f.writer.initParams(Map(
+          MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
+        ))
+        interaction(f.writer) {
+          withDefaultWalletAccess(f, {
+            withDefaultLedgerAccess(f, {
+              f.writer ~ Write(credDefName, schemaId, None, None)
+
+              val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+              val json = new JSONObject(needsEndorsement.credDefJson)
+              json.getString("endorser") shouldBe defaultEndorser
+              f.writer.state shouldBe a[State.WaitingOnEndorser]
+            })
+          })
+        }
+      }
+
+      "and use endorser from control msg if defined" in { f =>
+        f.writer.initParams(Map(
+          MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
+        ))
+        interaction(f.writer) {
+          withDefaultWalletAccess(f, {
+            withDefaultLedgerAccess(f, {
+              f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
+
+              val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+              val json = new JSONObject(needsEndorsement.credDefJson)
+              json.getString("endorser") shouldBe userEndorser
+              f.writer.state shouldBe a[State.WaitingOnEndorser]
+            })
+          })
+        }
       }
     }
 
@@ -123,6 +200,24 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
         })
       }
     }
+
+    "should transition to Done state after WriteCredDef msg and ignore endorser if not needed" in { f =>
+      f.writer.initParams(Map(
+        MY_ISSUER_DID -> "V4SGRU86Z58d6TV7PBUe6f"
+      ))
+      interaction(f.writer) {
+        withDefaultWalletAccess(f, {
+          withDefaultLedgerAccess(f, {
+            f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
+
+            f.writer expect signal[StatusReport]
+
+            f.writer.state shouldBe a[State.Done]
+          })
+        })
+      }
+    }
+
   }
 
   def withDefaultWalletAccess(s: Scenario, f: => Unit): Unit = {

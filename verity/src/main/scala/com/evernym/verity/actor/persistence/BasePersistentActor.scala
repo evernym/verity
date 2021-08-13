@@ -7,7 +7,7 @@ import akka.event.LoggingReceive
 import akka.persistence._
 import akka.util.Timeout
 import com.evernym.agency.common.actor.{TransformedEvent, TransformedMultiEvents}
-import com.evernym.verity.util2.{Exceptions, HasExecutionContextProvider}
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Exceptions._
 import com.evernym.verity.util2.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor._

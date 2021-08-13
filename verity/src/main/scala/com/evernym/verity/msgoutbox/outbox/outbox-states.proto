@@ -11,6 +11,11 @@ message Uninitialized {
     option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.State";
 }
 
+message MetadataReceived {
+    option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.State";
+    Metadata metadata = 1;
+}
+
 message Initialized {
     option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.State";
     string walletId = 1;
@@ -22,7 +27,9 @@ message Initialized {
     // map of msgId and Message
     map<string, Message> messages = 4;
 
-    OutboxConfig config = 5 [(scalapb.field).no_box = true];
+    Metadata metadata = 5;
+
+    OutboxConfig config = 6 [(scalapb.field).no_box = true];
 }
 
 message Message {
@@ -38,4 +45,10 @@ message Message {
 message MsgDeliveryAttempt {
     int32 successCount = 1;
     int32 failedCount = 2;
+}
+
+message Metadata {
+    string relId = 1;
+    string recipId = 2;
+    string destId = 3;
 }

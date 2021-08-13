@@ -1,13 +1,12 @@
 package com.evernym.verity.actor.typed.spec
 
 import akka.Done
-import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.cluster.sharding.ShardRegion.EntityId
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
-import akka.persistence.typed.PersistenceId
+import akka.persistence.typed.{PersistenceId, RecoveryCompleted}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
 import com.evernym.verity.actor.typed.spec.Events._
 import com.evernym.verity.actor.typed.BehaviourSpecBase
@@ -22,6 +21,8 @@ import java.util.UUID
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
+
+import scala.concurrent.duration._
 
 
 class PersistentBehaviourSpec
@@ -52,7 +53,7 @@ class PersistentBehaviourSpec
         val entityId = openNewAccount("mock-user")
         val prob = createTestProbe[StatusReply[Done]]()
         accountRegion ! ShardingEnvelope(entityId, Commands.Stop(prob.ref))
-        prob.expectMessage(StatusReply.Ack)
+        prob.expectNoMessage(5.seconds)
         val state = getState(entityId)
         state shouldBe States.Opened("mock-user", 0)
       }
@@ -177,20 +178,25 @@ object Account {
     case (st: State, Commands.GetState(replyTo)) =>
       Effect.reply(replyTo)(st)
 
-    case (_: State, Commands.Stop(replyTo)) =>
-      Behaviors.stopped
-      Effect.reply(replyTo)(StatusReply.Ack)
+    case (_: State, Commands.Stop(_)) =>
+      Effect
+        .stop()
+        .thenNoReply()
+
   }
 
   private def signalHandler(persistenceId: PersistenceId): PartialFunction[(State, Signal), Unit] = {
-    case (_: State, PostStop) => logger.debug(s"[$persistenceId] behaviour stopped")
+    case (_: State, RecoveryCompleted) =>
+      logger.debug(s"[$persistenceId] recovered")
+    case (_: State, PostStop) =>
+      logger.debug(s"[$persistenceId] behaviour stopped")
   }
 
   private val eventHandler: (State, Any) => State = {
-    case (States.Empty, Events.Opened(name, balance)) => States.Opened(name, balance)
-    case (cs:States.Opened, Events.Credited(amount))  => cs.copy(balance = cs.balance + amount)
-    case (cs:States.Opened, Events.Debited(amount))   => cs.copy(balance = cs.balance - amount)
-    case (st:States.Opened, Events.Closed())          => States.Closed(st.name, st.balance)
+    case (States.Empty,     Events.Opened(name, balance)) => States.Opened(name, balance)
+    case (cs:States.Opened, Events.Credited(amount))      => cs.copy(balance = cs.balance + amount)
+    case (cs:States.Opened, Events.Debited(amount))       => cs.copy(balance = cs.balance - amount)
+    case (st:States.Opened, Events.Closed())              => States.Closed(st.name, st.balance)
   }
 }
 

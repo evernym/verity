@@ -143,8 +143,8 @@ class OAuthWebhookSenderSpec
     }
   }
 
-  lazy val outboxId = outboxIdParam.outboxId
-  lazy val outboxIdParam = OutboxIdParam("relId-recipId-default")
+  lazy val outboxId = outboxIdParam.entityId.toString
+  lazy val outboxIdParam = OutboxIdParam("relId", "recipId", "default")
   lazy val outboxPersistenceId = PersistenceId(TypeKey.name, outboxId).id
 
   def sendMsgToWebhookSender(msgId: MsgId,

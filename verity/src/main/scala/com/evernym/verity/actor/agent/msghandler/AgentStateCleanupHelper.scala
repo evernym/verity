@@ -9,13 +9,14 @@ import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.logging.ThrottledLogger
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.{PinstId, PinstIdResolution, ProtoRef}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageDefinition
 import com.evernym.verity.util2.Exceptions
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{Duration, MILLISECONDS}
+import scala.concurrent.duration._
 
 
 /**
@@ -143,7 +144,9 @@ trait AgentStateCleanupHelper {
 
   def migrateThreadContexts(): Unit = {
     try {
-      logger.debug(s"ASC [$persistenceId] [ASCH->ASCH] received migrateThreadContext")
+      throttledLogger.info(
+        MigrateThreadContextsReceived(s"$persistenceId-1"),
+        s"ASC [$persistenceId] [ASCH->ASCH] received migrateThreadContext")
       if (isMigrateThreadContextsEnabled && !isThreadContextMigrationFinished) {
         val candidateThreadContexts = state.currentThreadContexts.take(migrateThreadContextBatchSize)
         if (candidateThreadContexts.isEmpty && routeSetStatus.forall(_.isSet)) {
@@ -180,13 +183,17 @@ trait AgentStateCleanupHelper {
             if (!threadContextMigrationStatus.contains(pinstId)) {
               val deprecatedV01Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.DEPRECATED_V0_1)
               val v02Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.V0_2)
-              logger.debug(s"[$persistenceId] thread context migration candidates for pinst $pinstId => total: ${candidateProtoActors.size} (DEPRECATED_V01: $deprecatedV01Count, V02: $v02Count)")
+              throttledLogger.info(
+                MigrateThreadContextsReceived(s"$persistenceId-2"),
+                s"[$persistenceId] thread context migration candidates for pinst $pinstId => total: ${candidateProtoActors.size} (DEPRECATED_V01: $deprecatedV01Count, V02: $v02Count)")
               val event = ThreadContextMigrationStarted(pinstId, candidateProtoActors.map(_._1.protoDef.msgFamily.protoRef.toString))
               cleanupEventReceiver(event)
               writeWithoutApply(event)
             }
 
-            logger.info(s"ASC [$persistenceId] [ASCH->ASCH] candidateProtoActors: " + candidateProtoActors.size)
+            throttledLogger.info(
+              MigrateThreadContextsReceived(s"$persistenceId-3"),
+              s"ASC [$persistenceId] [ASCH->ASCH] candidateProtoActors: " + candidateProtoActors.size)
             candidateProtoActors.zipWithIndex.foreach { case (entry, index) =>
               val key = entry._1.protoDef.msgFamily.protoRef.toString + entry._2.id
               val toActor = ActorProtocol(entry._1.protoDef).region(context.system)
@@ -197,6 +204,9 @@ trait AgentStateCleanupHelper {
         }
       } else {
         stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
+        throttledLogger.info(
+          MigrateThreadContextsReceived(s"$persistenceId-4"),
+          s"ASC [$persistenceId] [ASCH->ASCH] migrateThreadContext job stopped")
       }
     } catch {
       case e: Throwable =>
@@ -205,7 +215,8 @@ trait AgentStateCleanupHelper {
   }
 
   def fixActorState(did: DidStr, sndrActorRef: ActorRef): Unit = {
-    logger.info(
+    throttledLogger.info(
+      FixActorStateReceived(persistenceId),
       s"[$persistenceId] received fixActorState (" +
         s"did: $did, domainDID: $domainId, " +
         s"pending: $getPendingThreadContextSize, " +
@@ -339,6 +350,8 @@ trait AgentStateCleanupHelper {
   scheduleThreadContextMigrationJobIfNotScheduled()
 
   self ! FixThreadMigrationState
+
+  private val throttledLogger = new ThrottledLogger[ActorStateCleanupHelper](logger, min_period = 10.minutes)
 }
 
 case object MigrateThreadContexts extends ActorMessage
@@ -363,3 +376,7 @@ case class ThreadContextMigrationStatus(candidateProtoActors: Set[ProtoRef],
 }
 
 case class RouteSetStatus(did: DidStr, isSet: Boolean) extends ActorMessage
+
+sealed trait ActorStateCleanupHelper
+case class FixActorStateReceived(persistenceId: String) extends ActorStateCleanupHelper
+case class MigrateThreadContextsReceived(persistenceId: String) extends ActorStateCleanupHelper

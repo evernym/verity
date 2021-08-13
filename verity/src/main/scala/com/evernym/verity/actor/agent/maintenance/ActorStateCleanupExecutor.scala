@@ -177,9 +177,18 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
   def sendFixActorStateCleanupCmd(did: DidStr): Unit = {
     aac.agentMsgRouter.forward(InternalMsgRouteParam(did, FixActorState(did, self)), self)
     batchStatus = batchStatus.withReqSentIncremented(did)
+
     batchStatus.candidates.get(did).foreach { itemStatus =>
-      val agentActorNotRespondedAtAll = ! itemStatus.stateCleaningStarted && itemStatus.reqSentCount >= 25
-      if (agentActorNotRespondedAtAll) {
+      val agentActorNotRespondedAtAll =
+        ! itemStatus.stateCleaningStarted &&
+          itemStatus.reqSentCount >= 25
+
+      val threadContextNotMigratingAtAll =
+        itemStatus.stateCleaningStarted &&
+          agentActorCleanupState.get(did).exists(_.successfullyMigratedCount == 0) &&
+          itemStatus.reqSentCount >= 100
+
+      if (agentActorNotRespondedAtAll || threadContextNotMigratingAtAll) {
         self ! ActorNotResponding(did)
       }
     }
@@ -195,9 +204,9 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
       logger.debug(s"ASC [$persistenceId] cleanup will be retried for pending actors: " + pending.mkString(", "))
       batchStatus = BatchStatus(pending.map(_ -> BatchItemStatus.empty).toMap)
     } else {
-        val fromIndex = routeStoreStatusReq.totalProcessed%batchSizeToBeUsed match {
+        val fromIndex = routeStoreStatusReq.totalProcessed % batchSizeToBeUsed match {
           case 0 => routeStoreStatusReq.totalProcessed
-          case _ => (routeStoreStatusReq.totalProcessed/batchSizeToBeUsed)*batchSizeToBeUsed
+          case _ => (routeStoreStatusReq.totalProcessed / batchSizeToBeUsed) * batchSizeToBeUsed
         }
         val cmd = GetRouteBatch(fromIndex, batchSizeToBeUsed)
         legacyAgentRouteStoreRegion ! ForIdentifier(routeStoreStatusReq.agentRouteStoreEntityId, cmd)

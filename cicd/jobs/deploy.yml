@@ -23,7 +23,7 @@
       $TRIGGERAPI_URL_VERITY_RELEASE
   tags:
     - docker-machine
-  needs: ["package"]
+  needs: ["publish-deb"]
 
 deploy-manually-team1:
   extends: .deploy-common

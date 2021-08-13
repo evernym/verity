@@ -9,7 +9,7 @@ Licensor:             Evernym, Inc.
 Licensed Work:        Verity 
                       and the components thereof, to the extent and only to  
                       the extent contained in the code repository set forth at  
-                      https://github.com/evernym/verity  
+                      https://gitlab.com/evernym/verity/verity
                       ("Code Repository").  
                       The Licensed Work is (c) 2020 Evernym, Inc.
 

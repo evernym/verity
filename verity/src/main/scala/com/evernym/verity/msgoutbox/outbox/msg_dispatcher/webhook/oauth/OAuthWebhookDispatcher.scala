@@ -12,7 +12,6 @@ import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, MsgId}
 //responsible to create sender with appropriate input for each new message dispatch
 class OAuthWebhookDispatcher(parentActorContext: ActorContext[Outbox.Cmd],
                              oAuthAccessTokenHolder: ActorRef[OAuthAccessTokenHolder.Cmd],
-                             config: OutboxConfig,
                              eventEncryptionSalt: String,
                              comMethodId: ComMethodId,
                              comMethod: ComMethod,
@@ -21,7 +20,8 @@ class OAuthWebhookDispatcher(parentActorContext: ActorContext[Outbox.Cmd],
                              msgTransportParam: MsgTransportParam) extends DispatcherType {
 
   override def dispatch(msgId: MsgId,
-                        deliveryAttempts: Map[String, MsgDeliveryAttempt]): Unit = {
+                        deliveryAttempts: Map[String, MsgDeliveryAttempt],
+                        config: OutboxConfig): Unit = {
     val currFailedAttempt = deliveryAttempts.get(comMethodId).map(_.failedCount).getOrElse(0)
     val retryParam = Option(Outbox.prepareRetryParam(comMethod.typ, currFailedAttempt, config))
     val dispatchParam = DispatchParam(msgId, comMethodId, retryParam, parentActorContext.self)

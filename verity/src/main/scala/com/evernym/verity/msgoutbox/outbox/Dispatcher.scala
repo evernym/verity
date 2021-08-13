@@ -27,28 +27,26 @@ import scala.concurrent.duration.{FiniteDuration, MILLISECONDS}
 
 class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
                  accessTokenRefreshers: AccessTokenRefreshers,
-                 config: OutboxConfig,
                  eventEncryptionSalt: String,
                  msgStore: ActorRef[MsgStore.Cmd],
                  msgPackagers: MsgPackagers,
                  msgTransports: MsgTransports,
                  executionContext: ExecutionContext) {
 
-  def dispatch(msgId: MsgId, deliveryAttempts: Map[String, MsgDeliveryAttempt]): Unit = {
-    currentDispatcher.dispatch(msgId, deliveryAttempts)
+  def dispatch(msgId: MsgId, deliveryAttempts: Map[String, MsgDeliveryAttempt], config: OutboxConfig): Unit = {
+    currentDispatcher.dispatch(msgId, deliveryAttempts, config)
   }
 
   def ack(msgId: MsgId): Unit = {
     currentDispatcher.ack(msgId)
   }
 
-  def getConfig : OutboxConfig = config
-
   //NOTE: this is the initial logic
   // and it may/will have to change as we integrate/support more scenarios/dispatchers
   def updateDispatcher(walletId: WalletId,
                        senderVerKey: VerKeyStr,
-                       comMethods: Map[ComMethodId, ComMethod]): Unit = {
+                       comMethods: Map[ComMethodId, ComMethod],
+                       oauthReceiveTimeoutMs: Long): Unit = {
     dispatcherType =
       comMethods
         .find(_._2.typ == COM_METHOD_TYPE_HTTP_ENDPOINT)
@@ -57,7 +55,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
             case None =>
               createPlainWebhookDispatcher(comMethodId, comMethod, walletId, senderVerKey)
             case Some(auth) if auth.`type` == AUTH_TYPE_OAUTH2 =>
-              createOAuthWebhookDispatcher(comMethodId, comMethod, walletId, senderVerKey, auth)
+              createOAuthWebhookDispatcher(comMethodId, comMethod, walletId, senderVerKey, auth, oauthReceiveTimeoutMs)
             case Some(auth) =>
               throw new RuntimeException("authentication type not supported: " + auth.`type`)
           }
@@ -70,7 +68,6 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
                                            senderVerKey: VerKeyStr): DispatcherType = {
     new PlainWebhookDispatcher(
       outboxActorContext,
-      config,
       eventEncryptionSalt,
       comMethodId,
       comMethod,
@@ -89,14 +86,15 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
                                            comMethod: ComMethod,
                                            walletId: WalletId,
                                            senderVerKey: VerKeyStr,
-                                           auth: Authentication): DispatcherType = {
+                                           auth: Authentication,
+                                           oauthReceiveTimeoutMs: Long): DispatcherType = {
     val uniqueOAuthAccessTokenHolderId = "oauth-access-token-holder-" + comMethodId
 
     val oAuthAccessTokenHolder = outboxActorContext.child(uniqueOAuthAccessTokenHolderId) match {
       case None =>
         outboxActorContext.spawn(
           OAuthAccessTokenHolder(
-            FiniteDuration(config.oauthReceiveTimeoutMs, MILLISECONDS),
+            FiniteDuration(oauthReceiveTimeoutMs, MILLISECONDS),
             auth.data,
             accessTokenRefreshers.refreshers(auth.version)
           ),
@@ -114,7 +112,6 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
     new OAuthWebhookDispatcher(
       outboxActorContext,
       oAuthAccessTokenHolder,
-      config,
       eventEncryptionSalt,
       comMethodId,
       comMethod,

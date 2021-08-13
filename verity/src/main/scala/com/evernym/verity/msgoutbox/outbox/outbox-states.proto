@@ -22,7 +22,7 @@ message Initialized {
     // map of msgId and Message
     map<string, Message> messages = 4;
 
-    OutboxConfig config = 5;
+    OutboxConfig config = 5 [(scalapb.field).no_box = true];
 }
 
 message Message {

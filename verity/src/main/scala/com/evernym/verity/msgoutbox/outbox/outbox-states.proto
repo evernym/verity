@@ -10,6 +10,11 @@ message Uninitialized {
     option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.State";
 }
 
+message MetadataReceived {
+    option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.State";
+    Metadata metadata = 1;
+}
+
 message Initialized {
     option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.State";
     string walletId = 1;

@@ -137,7 +137,7 @@ object Outbox {
               PersistenceId(TypeKey.name, entityContext.entityId),
               States.Uninitialized(), //TODO: wasn't able to just use 'States.Uninitialized'
               commandHandler(setup),
-              eventHandler(dispatcher)(setup))
+              eventHandler(dispatcher))
             .receiveSignal(signalHandler(setup))
             .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper, appConfig))
             .snapshotAdapter(PersistentStateAdapter(entityContext.entityId, StateObjectMapper, appConfig))
@@ -150,11 +150,6 @@ object Outbox {
   private def commandHandler(implicit setup: SetupOutbox): (State, Cmd) => ReplyEffect[Event, State] = {
 
     //during initialization
-    case (_: States.Uninitialized, RelResolverReplyAdapter(reply: RelationshipResolver.Replies.OutboxParam)) =>
-      Effect
-        .persist(OutboxParamUpdated(reply.walletId, reply.senderVerKey, reply.comMethods))
-        .thenNoReply()
-
     case (_: States.Uninitialized, cmd @ Commands.AddMsg(_, _, replyTo)) =>
       setup.buffer.stash(cmd)
       Effect
@@ -163,6 +158,7 @@ object Outbox {
     case (_: States.Uninitialized, Commands.Init(relId, recipId, destId)) =>
       Effect
         .persist(MetadataStored(relId = relId, recipId = recipId, destId = destId))
+        .thenRun((_: State) => fetchOutboxParam(Metadata(relId, recipId, destId)))
         .thenNoReply()
 
     case (_: States.Uninitialized, cmd) =>
@@ -170,18 +166,23 @@ object Outbox {
       Effect
         .noReply
 
-    //post initialization
-    case (States.Initialized(_, _, _, _, None), Commands.Init(relId, recipId, destId)) =>
+    //waiting for OutboxParam
+    case (_: States.MetadataReceived, RelResolverReplyAdapter(reply: RelationshipResolver.Replies.OutboxParam)) =>
       Effect
-        .persist(MetadataStored(relId, recipId, destId))
+        .persist(OutboxParamUpdated(reply.walletId, reply.senderVerKey, reply.comMethods))
         .thenRun((_: State) => setup.buffer.unstashAll(Behaviors.same))
         .thenNoReply()
 
+    case (_: States.MetadataReceived, cmd) =>
+      setup.buffer.stash(cmd)
+      Effect
+        .noReply
+
+    //post initialization
     case (st: States.Initialized, RelResolverReplyAdapter(reply: RelationshipResolver.Replies.OutboxParam)) =>
       if (st.senderVerKey != reply.senderVerKey || st.comMethods != reply.comMethods) {
         Effect
           .persist(OutboxParamUpdated(reply.walletId, reply.senderVerKey, reply.comMethods))
-          .thenRun((_: State) => setup.buffer.unstashAll(Behaviors.same))
           .thenNoReply()
       } else {
         Effect
@@ -189,7 +190,6 @@ object Outbox {
       }
 
     case (st: States.Initialized, Commands.UpdateOutboxParam(walletId, senderVerKey, comMethods)) =>
-
       if (st.senderVerKey != senderVerKey || st.comMethods != comMethods) {
         Effect
           .persist(OutboxParamUpdated(walletId, senderVerKey, comMethods))
@@ -282,24 +282,19 @@ object Outbox {
       }
   }
 
-  private def eventHandler(dispatcher: Dispatcher)(implicit setupOutbox: SetupOutbox): (State, Event) => State = {
-    case (_: States.Uninitialized, OutboxParamUpdated(walletId, senderVerKey, comMethods)) =>
-      dispatcher.updateDispatcher(walletId, senderVerKey, comMethods)
-      States.Initialized(walletId, senderVerKey, comMethods)
+  private def eventHandler(dispatcher: Dispatcher): (State, Event) => State = {
 
     case (_: States.Uninitialized, Events.MetadataStored(relId, recipId, destId)) =>
       val metadata = Metadata(relId, recipId, destId)
-      fetchOutboxParam(metadata)
-      States.Initialized(metadata = Some(metadata))
+      States.MetadataReceived(Some(metadata))
 
-    case (States.Initialized(walletId, senderVerKey, comMethods, msgs, None), Events.MetadataStored(relId, recipId, destId)) =>
-      val metadata = Metadata(relId, recipId, destId)
-      fetchOutboxParam(metadata)
-      States.Initialized(walletId, senderVerKey, comMethods, msgs, Some(metadata))
+    case (States.MetadataReceived(Some(metadata)), OutboxParamUpdated(walletId, senderVerKey, comMethods)) =>
+      dispatcher.updateDispatcher(walletId, senderVerKey, comMethods)
+      States.Initialized(walletId, senderVerKey, comMethods, metadata = Some(metadata))
 
     case (States.Initialized(_, _, _, msgs, Some(metadata)), OutboxParamUpdated(walletId, senderVerKey, comMethods)) =>
       dispatcher.updateDispatcher(walletId, senderVerKey, comMethods)
-      States.Initialized(walletId, senderVerKey, comMethods, msgs, Some(metadata))
+      States.Initialized(walletId, senderVerKey, comMethods, msgs, metadata = Some(metadata))
 
     case (st: States.Initialized, ma: Events.MsgAdded) =>
       val msg = Message(
@@ -628,7 +623,6 @@ object Outbox {
  * @param destId to be used to limit/filter delivery mechanism information for this destination id
  */
 case class OutboxIdParam(relId: RelId, recipId: RecipId, destId: DestId) {
-  val outboxId: OutboxId = relId + "-" + recipId + "-" + destId
   def entityId: UUID = UUID.nameUUIDFromBytes((relId+recipId+destId).getBytes())
 }
 

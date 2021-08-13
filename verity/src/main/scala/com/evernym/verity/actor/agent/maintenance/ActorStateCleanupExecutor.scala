@@ -93,6 +93,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
   }
 
   def handleActorNotResponding(did: DidStr): Unit = {
+    logger.debug(s"ASC [$persistenceId] [ASCE->ASCE] received ActorNotResponding: " + did)
     writeAndApply(ActorStateStored(did, -1))
     writeAndApply(ActorStateCleaned(did, -1, -1))
     val batchItemStatus = batchStatus.candidates.getOrElse(did, BatchItemStatus.empty)
@@ -164,7 +165,7 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
           stopActor()
       } else if (batchStatus.isEmpty) { //no batch in progress
         logger.debug(s"ASC [$persistenceId] no batch is in progress: " + batchStatus)
-        sendGetNextRouteBatchCmd()
+        processNextBatch()
       } else if (batchStatus.isInProgress) {
         batchStatus.candidatesWithStatus(false).keySet.foreach { did =>
           sendFixActorStateCleanupCmd(did)
@@ -177,22 +178,30 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
     aac.agentMsgRouter.forward(InternalMsgRouteParam(did, FixActorState(did, self)), self)
     batchStatus = batchStatus.withReqSentIncremented(did)
     batchStatus.candidates.get(did).foreach { itemStatus =>
-      if (itemStatus.reqSentCount >= 25 && ! itemStatus.stateCleaningStarted) {
+      val agentActorNotRespondedAtAll = ! itemStatus.stateCleaningStarted && itemStatus.reqSentCount >= 25
+      if (agentActorNotRespondedAtAll) {
         self ! ActorNotResponding(did)
       }
     }
   }
 
-  def sendGetNextRouteBatchCmd(): Unit = {
+  def processNextBatch(): Unit = {
     val batchSizeToBeUsed = if (recordedBatchSize.last != recordedBatchSize.current) {
       recordedBatchSize.last
     } else recordedBatchSize.current
-    val fromIndex = routeStoreStatusReq.totalProcessed%batchSizeToBeUsed match {
-      case 0 => routeStoreStatusReq.totalProcessed
-      case _ => (routeStoreStatusReq.totalProcessed/batchSizeToBeUsed)*batchSizeToBeUsed
+
+    val pending = agentActorCleanupState.filter(as => !as._2.actorStateCleaned).keys.take(batchSizeToBeUsed)
+    if (pending.nonEmpty) {
+      logger.debug(s"ASC [$persistenceId] cleanup will be retried for pending actors: " + pending.mkString(", "))
+      batchStatus = BatchStatus(pending.map(_ -> BatchItemStatus.empty).toMap)
+    } else {
+        val fromIndex = routeStoreStatusReq.totalProcessed%batchSizeToBeUsed match {
+          case 0 => routeStoreStatusReq.totalProcessed
+          case _ => (routeStoreStatusReq.totalProcessed/batchSizeToBeUsed)*batchSizeToBeUsed
+        }
+        val cmd = GetRouteBatch(fromIndex, batchSizeToBeUsed)
+        legacyAgentRouteStoreRegion ! ForIdentifier(routeStoreStatusReq.agentRouteStoreEntityId, cmd)
     }
-    val cmd = GetRouteBatch(fromIndex, batchSizeToBeUsed)
-    legacyAgentRouteStoreRegion ! ForIdentifier(routeStoreStatusReq.agentRouteStoreEntityId, cmd)
   }
 
   def handleDestroy(): Unit = {

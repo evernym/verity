@@ -80,7 +80,7 @@ object Outbox {
     trait MsgAddedReply extends Reply
     case object MsgAlreadyAdded extends MsgAddedReply
     case object MsgAdded extends MsgAddedReply
-    case object NotInitialized extends MsgAddedReply
+    case class NotInitialized(entityId: String) extends MsgAddedReply
     case class DeliveryStatus(messages: Map[MsgId, Message]) extends Reply
   }
 
@@ -153,7 +153,7 @@ object Outbox {
     case (_: States.Uninitialized, cmd @ Commands.AddMsg(_, _, replyTo)) =>
       setup.buffer.stash(cmd)
       Effect
-        .reply(replyTo)(StatusReply.success(Replies.NotInitialized))
+        .reply(replyTo)(StatusReply.success(Replies.NotInitialized(setup.entityContext.entityId)))
 
     case (_: States.Uninitialized, Commands.Init(relId, recipId, destId)) =>
       Effect

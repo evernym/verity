@@ -13,6 +13,8 @@ MsgStoreAdapter -> OutboxRouter: PayloadStored
 OutboxRouter -> MessageMeta: AddMsgMetadata
 OutboxRouter -> Outbox: AddMsg
 Outbox -> Outbox: Stash
+Outbox -> OutboxRouter: NotInitialized
+OutboxRouter -> Outbox: Init
 ...
 Outbox -> RelResolverAdapter: GetOutboxParam
 ...

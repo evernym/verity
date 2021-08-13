@@ -159,12 +159,13 @@ object OutboxRouter {
       } else {
         waitingForOutboxReply(msgId, targetOutboxIds, totalAckReceived, replyTo)
       }
-    case OutboxReplyAdapter(Success(Outbox.Replies.NotInitialized)) =>
+    case OutboxReplyAdapter(Success(Outbox.Replies.NotInitialized(entityId))) =>
       val clusterSharding = ClusterSharding(actorContext.system)
-      targetOutboxIds.foreach { outboxIdParam =>
-        val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.entityId.toString)
-        outboxEntityRef ! Outbox.Commands.Init(outboxIdParam.relId, outboxIdParam.recipId, outboxIdParam.destId)
-      }
+      val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, entityId)
+      targetOutboxIds
+        .filter(_.entityId.toString == entityId)
+        .foreach(outboxParam => outboxEntityRef ! Outbox.Commands.Init(outboxParam.relId, outboxParam.recipId, outboxParam.destId))
+
       waitingForOutboxReply(msgId, targetOutboxIds, ackReceivedCount, replyTo)
   }
 

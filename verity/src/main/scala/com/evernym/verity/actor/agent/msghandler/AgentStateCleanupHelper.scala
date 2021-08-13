@@ -159,11 +159,13 @@ trait AgentStateCleanupHelper {
               val successResp = migrationStatus.map(_.successResponseFromProtoActors).getOrElse(Set.empty)
               val nonSuccessResp = migrationStatus.map(_.nonSuccessResponseFromProtoActors).getOrElse(Set.empty)
               val respReceivedFromProtoActors = successResp ++ nonSuccessResp
-
               if (!respReceivedFromProtoActors.contains(e.protoDef.msgFamily.protoRef)) {
                 val pinstProtoRefStr = pinstId + e.protoDef.msgFamily.protoRef.toString
                 val currAttempt = threadContextMigrationAttempt.getOrElse(pinstProtoRefStr, 0)
                 if (currAttempt < migrateThreadContextMaxAttemptPerPinstProtoRef) {
+                  throttledLogger.info(
+                    MigrateThreadContextsReceived(s"$persistenceId-2a"),
+                    s"ASC [$persistenceId] [ASCH->ASCH] max attempt NOT reached: " + pinstProtoRefStr)
                   val calcPinstId = e.pinstIdResol.resolve(e.protoDef, domainId, relationshipId, Option(tcd.threadId), None, state.thisAgentKeyDID)
                   if (e.pinstIdResol == PinstIdResolution.DEPRECATED_V0_1 || pinstId == calcPinstId) {
                     threadContextMigrationAttempt += (pinstProtoRefStr -> (currAttempt + 1))
@@ -174,6 +176,9 @@ trait AgentStateCleanupHelper {
                     e -> Option(cmd)
                   } else e -> None
                 } else {
+                  throttledLogger.info(
+                    MigrateThreadContextsReceived(s"$persistenceId-2b"),
+                    s"ASC [$persistenceId] [ASCH->ASCH] max attempt reached: " + pinstProtoRefStr)
                   handleThreadContextMigrationAttemptExceeded(currAttempt, pinstId, e.protoDef.msgFamily.protoRef)
                   e -> None
                 }
@@ -184,7 +189,7 @@ trait AgentStateCleanupHelper {
               val deprecatedV01Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.DEPRECATED_V0_1)
               val v02Count = candidateProtoActors.map(_._1.pinstIdResol).count(_ == PinstIdResolution.V0_2)
               throttledLogger.info(
-                MigrateThreadContextsReceived(s"$persistenceId-2"),
+                MigrateThreadContextsReceived(s"$persistenceId-3"),
                 s"[$persistenceId] thread context migration candidates for pinst $pinstId => total: ${candidateProtoActors.size} (DEPRECATED_V01: $deprecatedV01Count, V02: $v02Count)")
               val event = ThreadContextMigrationStarted(pinstId, candidateProtoActors.map(_._1.protoDef.msgFamily.protoRef.toString))
               cleanupEventReceiver(event)
@@ -192,7 +197,7 @@ trait AgentStateCleanupHelper {
             }
 
             throttledLogger.info(
-              MigrateThreadContextsReceived(s"$persistenceId-3"),
+              MigrateThreadContextsReceived(s"$persistenceId-4"),
               s"ASC [$persistenceId] [ASCH->ASCH] candidateProtoActors: " + candidateProtoActors.size)
             candidateProtoActors.zipWithIndex.foreach { case (entry, index) =>
               val key = entry._1.protoDef.msgFamily.protoRef.toString + entry._2.id
@@ -205,7 +210,7 @@ trait AgentStateCleanupHelper {
       } else {
         stopScheduledJob(MIGRATE_SCHEDULED_JOB_ID)
         throttledLogger.info(
-          MigrateThreadContextsReceived(s"$persistenceId-4"),
+          MigrateThreadContextsReceived(s"$persistenceId-5"),
           s"ASC [$persistenceId] [ASCH->ASCH] migrateThreadContext job stopped")
       }
     } catch {

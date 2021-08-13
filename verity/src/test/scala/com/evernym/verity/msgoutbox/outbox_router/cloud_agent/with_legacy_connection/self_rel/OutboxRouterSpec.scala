@@ -9,7 +9,7 @@ import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.SELF_REL
 import com.evernym.verity.msgoutbox.{DestId, RelId}
 import com.evernym.verity.msgoutbox.base.DestParam
 import com.evernym.verity.msgoutbox.outbox_router.cloud_agent.with_legacy_connection.{CloudAgentOutboxRouterBaseSpec, VerityCloudAgent}
-import com.evernym.verity.msgoutbox.outbox.Outbox
+import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.{GetRelParam, SendOutboxParam}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Replies.{OutboxParam, RelParam}
@@ -30,7 +30,7 @@ class OutboxRouterSpec
           "msg",
           "msg-type"
         )
-        checkOutboxProcessing(ack, Seq("selfRelDID-selfRelDID-default"))
+        checkOutboxProcessing(ack, Seq(OutboxIdParam("selfRelDID","selfRelDID", "default").entityId.toString))
       }
     }
   }

@@ -122,7 +122,7 @@ object OutboxRouter {
       messageMetaEntityRef ! MessageMeta.Commands.Add(
         msgType,
         retentionPolicy.configString,
-        outboxIdParams.map(_.outboxId).toSet,
+        outboxIdParams.map(_.entityId.toString).toSet,
         None,
         None,
         msgMetaReplyAdapter
@@ -140,25 +140,33 @@ object OutboxRouter {
       val clusterSharding = ClusterSharding(actorContext.system)
       val outboxReplyAdapter = actorContext.messageAdapter(reply => OutboxReplyAdapter(reply))
       outboxIdParams.foreach { outboxIdParam =>
-        val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.outboxId)
+        val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.entityId.toString)
         outboxEntityRef ! Outbox.Commands.AddMsg(msgId, retentionPolicy.elements.expiryDuration, outboxReplyAdapter)
       }
-      waitingForOutboxReply(msgId, outboxIdParams.map(_.outboxId), 0, replyTo)
+      waitingForOutboxReply(msgId, outboxIdParams, 0, replyTo)
   }
 
   def waitingForOutboxReply(msgId: MsgId,
-                            targetOutboxIds: Seq[OutboxId],
+                            targetOutboxIds: Seq[OutboxIdParam],
                             ackReceivedCount: Int,
                             replyTo:Option[ActorRef[Reply]])
                            (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] = Behaviors.receiveMessage {
     case OutboxReplyAdapter(Success(Outbox.Replies.MsgAdded)) =>
       val totalAckReceived = ackReceivedCount + 1
       if (totalAckReceived == targetOutboxIds.size) {
-        replyTo.foreach(_ ! Replies.Ack(msgId, targetOutboxIds))
+        replyTo.foreach(_ ! Replies.Ack(msgId, targetOutboxIds.map(_.entityId.toString)))
         Behaviors.stopped
       } else {
         waitingForOutboxReply(msgId, targetOutboxIds, totalAckReceived, replyTo)
       }
+    case OutboxReplyAdapter(Success(Outbox.Replies.NotInitialized(entityId))) =>
+      val clusterSharding = ClusterSharding(actorContext.system)
+      val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, entityId)
+      targetOutboxIds
+        .filter(_.entityId.toString == entityId)
+        .foreach(outboxParam => outboxEntityRef ! Outbox.Commands.Init(outboxParam.relId, outboxParam.recipId, outboxParam.destId))
+
+      waitingForOutboxReply(msgId, targetOutboxIds, ackReceivedCount, replyTo)
   }
 
   final val DESTINATION_ID_DEFAULT = "default"

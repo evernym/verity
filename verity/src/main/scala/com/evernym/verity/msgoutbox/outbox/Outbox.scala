@@ -5,7 +5,7 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
 import akka.persistence.typed.{DeleteEventsCompleted, DeleteEventsFailed, DeleteSnapshotsFailed, PersistenceId, RecoveryCompleted, SnapshotCompleted, SnapshotFailed, scaladsl}
-import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
+import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.itemmanager.ItemManagerEntityHelper
@@ -70,6 +70,7 @@ object Outbox {
     case class RemoveMsg(msgId: MsgId) extends Cmd
     case object ProcessDelivery extends Cmd     //sent by scheduled job
     case object TimedOut extends Cmd
+    case class UpdateConfig(config: OutboxConfig) extends Cmd
   }
 
   trait Reply extends ActorMessage
@@ -100,18 +101,18 @@ object Outbox {
             msgTransports: MsgTransports,
             executionContext: ExecutionContext): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
-      val config = buildOutboxConfig(configuration)
+      val (config, eventEncryptionSalt, retentionCriteria) = buildConfig(configuration)
       Behaviors.withTimers { timer =>
         timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery,
           FiniteDuration.apply(config.scheduledJobIntervalMs,MILLISECONDS))
         Behaviors.withStash(100) { buffer =>                     //TODO: finalize this
-          actorContext.setReceiveTimeout(FiniteDuration.apply(config.receiveTimeoutMs, MILLISECONDS), Commands.TimedOut)
           val relResolverReplyAdapter = actorContext.messageAdapter(reply => RelResolverReplyAdapter(reply))
           val messageMetaReplyAdapter = actorContext.messageAdapter(reply => MessageMetaReplyAdapter(reply))
           val dispatcher = new Dispatcher(
             actorContext,
             accessTokenRefreshers,
             config,
+            eventEncryptionSalt,
             msgStore,
             msgPackagers,
             msgTransports,
@@ -121,7 +122,6 @@ object Outbox {
           val setup = SetupOutbox(actorContext,
             entityContext,
             MetricsWriterExtension(actorContext.system).get(),
-            config,
             buffer,
             dispatcher,
             relResolver,
@@ -135,10 +135,10 @@ object Outbox {
               States.Uninitialized.apply(), //TODO: wasn't able to just use 'States.Uninitialized'
               commandHandler(setup),
               eventHandler(dispatcher))
-            .receiveSignal(signalHandler(setup))
-            .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper, config.eventEncryptionSalt))
-            .snapshotAdapter(PersistentStateAdapter(entityContext.entityId, StateObjectMapper, config.eventEncryptionSalt))
-            .withRetention(convertRetentionCriteria(config.retentionCriteria))
+            .receiveSignal(signalHandler(setup, config))
+            .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper, eventEncryptionSalt))
+            .snapshotAdapter(PersistentStateAdapter(entityContext.entityId, StateObjectMapper, eventEncryptionSalt))
+            .withRetention(retentionCriteria)
         }
       }
     }
@@ -263,6 +263,13 @@ object Outbox {
           .thenRun((_: State) => setup.itemManagerEntityHelper.deregister())
           .thenNoReply()
       }
+
+    case (_, Commands.UpdateConfig(cfg)) =>
+      Effect
+        .persist(Events.ConfigUpdated(cfg))
+        .thenRun((_:State) => setup.actorContext
+          .setReceiveTimeout(FiniteDuration.apply(cfg.receiveTimeoutMs, MILLISECONDS), Commands.TimedOut))
+        .thenNoReply()
   }
 
   private def eventHandler(dispatcher: Dispatcher): (State, Event) => State = {
@@ -322,12 +329,19 @@ object Outbox {
 
     case (st: States.Initialized, Events.MsgRemoved(msgId)) =>
       st.copy(messages = st.messages - msgId)
+
+    case (st: States.Initialized, Events.ConfigUpdated(cfg)) =>
+      st.copy(config = Option(cfg))
   }
 
-  private def signalHandler(implicit setup: SetupOutbox): PartialFunction[(State, Signal), Unit] = {
+  private def signalHandler(implicit setup: SetupOutbox, config: OutboxConfig): PartialFunction[(State, Signal), Unit] = {
     case (st: State, RecoveryCompleted) =>
       st match {
-        case i: Initialized => i.config.foreach(cfg => if (cfg != setup.config) setup.config = cfg)
+        case i: Initialized => i.config.foreach(cfg =>
+          if (cfg != config) {
+            setup.actorContext.self ! Commands.UpdateConfig(config)
+          }
+        )
         case _ =>
       }
       setup.metricsWriter.gaugeUpdate(AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, getPendingMsgs(st).size)
@@ -466,7 +480,7 @@ object Outbox {
         pendingMsgs
           .toSeq
           .sortBy(_._2.creationTimeInMillis)    //TODO: any issue with sorting here?
-          .take(setup.config.batchSize)
+          .take(i.config.get.batchSize)
           .foreach{case (msgId, _) => sendToDispatcher(msgId, i)}
       case _                       => //nothing to do
     }
@@ -484,7 +498,7 @@ object Outbox {
               msg.deliveryStatus == Status.MSG_DELIVERY_STATUS_PENDING.statusCode &&
                 msg.deliveryAttempts.forall { case (comMethodId, msgDeliveryAttempt) =>
                   i.comMethods.get(comMethodId).exists { cm =>
-                    val rp = prepareRetryParam(cm.typ, msgDeliveryAttempt.failedCount, setup.config)
+                    val rp = prepareRetryParam(cm.typ, msgDeliveryAttempt.failedCount, i.config.get)
                     msgDeliveryAttempt.failedCount < rp.maxRetries
                   }
                 }
@@ -541,17 +555,7 @@ object Outbox {
     Status.MSG_DELIVERY_STATUS_FAILED
   ).map(_.statusCode)
 
-  def convertRetentionCriteria(rc: RetentionCriteria): scaladsl.RetentionCriteria = {
-    val retentionCriteria = scaladsl.RetentionCriteria.snapshotEvery(numberOfEvents = rc.afterEveryEvents,
-      keepNSnapshots = rc.keepSnapshots)
-
-    if (rc.deleteEventsOnSnapshots)
-      retentionCriteria.withDeleteEventsOnSnapshot
-    else
-      retentionCriteria
-  }
-
-  def buildOutboxConfig(config: Config): OutboxConfig = {
+  def buildConfig(config: Config): (OutboxConfig, String, RetentionCriteria) = {
     val ch = ConfigReadHelper(config)
 
     val batchSize: Int = ch.getIntOption(OUTBOX_BATCH_SIZE).getOrElse(50)
@@ -566,7 +570,12 @@ object Outbox {
 
     val rcsDeleteEventsSnapshot: Boolean = ch.getBooleanOption(OUTBOX_RETENTION_SNAPSHOT_DELETE_EVENTS_ON_SNAPSHOTS).getOrElse(false)
 
-    val eventEncryptionSalt: String = ch.getStringReq(SALT_EVENT_ENCRYPTION)
+    var retentionCriteria = RetentionCriteria.snapshotEvery(numberOfEvents = rcsAfterEveryEvents,
+      keepNSnapshots = rcsKeepSnapshots)
+
+     if (rcsDeleteEventsSnapshot) {
+       retentionCriteria =  retentionCriteria.withDeleteEventsOnSnapshot
+     }
 
     val oauthReceiveTimeout: Long = ch.getDurationOption(OUTBOX_OAUTH_RECEIVE_TIMEOUT).map(_.toMillis).getOrElse(30000)
 
@@ -576,15 +585,17 @@ object Outbox {
       name -> RetryPolicy(maxRetries, initialInterval)
     }.toMap
 
-    OutboxConfig(
+    val cfg = OutboxConfig(
       batchSize,
       receiveTimeout,
       scheduledJobInterval,
-      RetentionCriteria(rcsAfterEveryEvents, rcsKeepSnapshots, rcsDeleteEventsSnapshot),
       retryPolicy,
-      eventEncryptionSalt,
       oauthReceiveTimeout
     )
+
+    val eventEncryptionSalt: String = ch.getStringReq(SALT_EVENT_ENCRYPTION)
+
+    (cfg, eventEncryptionSalt, retentionCriteria)
   }
 }
 
@@ -612,7 +623,6 @@ case class OutboxIdParam(relId: RelId, recipId: RecipId, destId: DestId) {
 case class SetupOutbox(actorContext: ActorContext[Cmd],
                        entityContext: EntityContext[Cmd],
                        metricsWriter: MetricsWriter,
-                       var config: OutboxConfig,
                        buffer: StashBuffer[Cmd],
                        dispatcher: Dispatcher,
                        relResolver: Behavior[RelationshipResolver.Cmd],

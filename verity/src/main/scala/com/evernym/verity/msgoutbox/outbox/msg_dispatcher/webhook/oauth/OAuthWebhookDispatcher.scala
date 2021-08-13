@@ -13,6 +13,7 @@ import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, MsgId}
 class OAuthWebhookDispatcher(parentActorContext: ActorContext[Outbox.Cmd],
                              oAuthAccessTokenHolder: ActorRef[OAuthAccessTokenHolder.Cmd],
                              config: OutboxConfig,
+                             eventEncryptionSalt: String,
                              comMethodId: ComMethodId,
                              comMethod: ComMethod,
                              msgStoreParam: MsgStoreParam,
@@ -28,7 +29,7 @@ class OAuthWebhookDispatcher(parentActorContext: ActorContext[Outbox.Cmd],
     val existingSender = parentActorContext.child(uniqueSenderId)
     existingSender match {
       case None =>
-        val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, config.eventEncryptionSalt)
+        val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, eventEncryptionSalt)
         parentActorContext.spawn(
           OAuthWebhookSender(
             oAuthAccessTokenHolder,

@@ -10,6 +10,7 @@ import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, MsgId}
 //responsible to create sender with appropriate input for each new message dispatch
 class PlainWebhookDispatcher(parentActorContext: ActorContext[Outbox.Cmd],
                              config: OutboxConfig,
+                             eventEncryptionSalt: String,
                              comMethodId: ComMethodId,
                              comMethod: ComMethod,
                              msgStoreParam: MsgStoreParam,
@@ -25,7 +26,7 @@ class PlainWebhookDispatcher(parentActorContext: ActorContext[Outbox.Cmd],
     val existingSender = parentActorContext.child(uniqueSenderId)
     existingSender match {
       case None =>
-        val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, config.eventEncryptionSalt)
+        val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, eventEncryptionSalt)
         parentActorContext.spawn(
           PlainWebhookSender(
             dispatchParam,

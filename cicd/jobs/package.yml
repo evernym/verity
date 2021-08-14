@@ -51,7 +51,7 @@ package-manual:
       - verity/target/helm
     when: always
   script:
-    - helm package -d verity/target/helm verity/src/helm
+    - helm package -d $CI_PROJECT_DIR/verity/target/helm $CI_PROJECT_DIR/verity/src/helm
 
 package-helm:
   extends: .package-common-helm

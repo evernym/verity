@@ -16,7 +16,6 @@ import com.evernym.verity.msgoutbox.outbox.Events.{MetadataStored, MsgSendingFai
 import com.evernym.verity.msgoutbox.outbox.Outbox.Cmd
 import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{GetOutboxParam, MessageMetaReplyAdapter, ProcessDelivery, RelResolverReplyAdapter}
 import com.evernym.verity.msgoutbox.outbox.States.{Message, Metadata, MsgDeliveryAttempt}
-import com.evernym.verity.msgoutbox.outbox.States.{Initialized, Message, MsgDeliveryAttempt}
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.MsgTransports
@@ -89,7 +88,9 @@ object Outbox {
   }
 
   trait Event   //all events would be defined in outbox-events.proto file
-  trait State   //all states would be defined in outbox-states.proto file (because of snapshotting purposes)
+  trait State { //all states would be defined in outbox-states.proto file (because of snapshotting purposes)
+    def config: OutboxConfig
+  }
 
   trait MessageBase {
     def creationTimeInMillis: Long
@@ -150,7 +151,7 @@ object Outbox {
           EventSourcedBehavior
             .withEnforcedReplies(
               PersistenceId(TypeKey.name, entityContext.entityId),
-              States.Uninitialized(), //TODO: wasn't able to just use 'States.Uninitialized'
+              States.Uninitialized(config),
               commandHandler(setup),
               eventHandler(dispatcher))
             .receiveSignal(signalHandler(setup, config))
@@ -305,13 +306,13 @@ object Outbox {
   }
 
   private def eventHandler(dispatcher: Dispatcher): (State, Event) => State = {
-    case (_: States.Uninitialized, Events.MetadataStored(relId, recipId, destId)) =>
+    case (States.Uninitialized(cfg), Events.MetadataStored(relId, recipId, destId)) =>
       val metadata = Metadata(relId, recipId, destId)
-      States.MetadataReceived(Some(metadata))
+      States.MetadataReceived(Some(metadata), cfg)
 
-    case (States.MetadataReceived(Some(metadata)), OutboxParamUpdated(walletId, senderVerKey, comMethods)) =>
-      dispatcher.updateDispatcher(walletId, senderVerKey, comMethods, defaultConfig.oauthReceiveTimeoutMs)
-      States.Initialized(walletId, senderVerKey, comMethods, metadata = Some(metadata), config = defaultConfig)
+    case (States.MetadataReceived(Some(metadata), cfg), OutboxParamUpdated(walletId, senderVerKey, comMethods)) =>
+      dispatcher.updateDispatcher(walletId, senderVerKey, comMethods, cfg.oauthReceiveTimeoutMs)
+      States.Initialized(walletId, senderVerKey, comMethods, metadata = Some(metadata), config = cfg)
 
     case (States.Initialized(_, _, _, msgs, Some(metadata), cfg), OutboxParamUpdated(walletId, senderVerKey, comMethods)) =>
       dispatcher.updateDispatcher(walletId, senderVerKey, comMethods, cfg.oauthReceiveTimeoutMs)
@@ -372,16 +373,22 @@ object Outbox {
 
     case (st: States.Initialized, Events.ConfigUpdated(cfg)) =>
       st.copy(config = cfg)
+
+    case (st: States.Uninitialized, Events.ConfigUpdated(cfg)) =>
+      st.copy(config = cfg)
+
+    case (st: States.MetadataReceived, Events.ConfigUpdated(cfg)) =>
+      st.copy(config = cfg)
   }
 
   private def signalHandler(implicit setup: SetupOutbox, config: OutboxConfig): PartialFunction[(State, Signal), Unit] = {
     case (st: State, RecoveryCompleted) =>
       st match {
-        case States.Initialized(_,_,_,_,Some(metadata), cfg) =>
+        case States.Initialized(_,_,_,_,Some(metadata), _) =>
           fetchOutboxParam(metadata)
-          if (cfg != config) setup.actorContext.self ! Commands.UpdateConfig(config)
         case _ =>
       }
+      if (st.config != config) setup.actorContext.self ! Commands.UpdateConfig(config)
       setup.metricsWriter.gaugeUpdate(AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, getPendingMsgs(st).size)
       updateDispatcher(setup.dispatcher, st)
 

@@ -20,7 +20,7 @@ import com.evernym.verity.protocol.protocols.HasWallet
 import com.evernym.verity.protocol.{Control, CtlEnvelope, PairwiseRelIdsChanged}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
-import com.evernym.verity.util2.ServiceEndpoint
+import com.evernym.verity.util2.{ActorResponse, Exceptions, ServiceEndpoint}
 import com.typesafe.scalalogging.Logger
 
 import java.util.UUID
@@ -39,7 +39,6 @@ import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAc
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
-import com.evernym.verity.util2.ActorResponse
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -430,7 +429,7 @@ class ActorProtocolContainer[
         }
 
       case Failure(e) =>
-        logger.error("error response from protocol actor: " + e.getMessage)
+        logger.error("error response from protocol actor: " + Exceptions.getStackTraceAsSingleLineString(e))
         val error = convertProtoEngineException(e)
         sendRespToCaller(error, msgIdOpt, sndr)
     }

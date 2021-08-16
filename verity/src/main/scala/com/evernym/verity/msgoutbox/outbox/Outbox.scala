@@ -4,7 +4,7 @@ import akka.actor.typed.{ActorRef, Behavior, Signal}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
-import akka.persistence.typed.{DeleteEventsCompleted, DeleteEventsFailed, DeleteSnapshotsFailed, PersistenceId, RecoveryCompleted, SnapshotCompleted, SnapshotFailed, scaladsl}
+import akka.persistence.typed.{DeleteEventsCompleted, DeleteEventsFailed, DeleteSnapshotsFailed, PersistenceId, RecoveryCompleted, SnapshotCompleted, SnapshotFailed}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.actor.ActorMessage
@@ -32,13 +32,11 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.RetryParam
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.AccessTokenRefreshers
 import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.Status
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 
 import java.time.ZonedDateTime
 import java.util.UUID
-
-import com.evernym.verity.config.AppConfig
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -300,8 +298,6 @@ object Outbox {
     case (_, Commands.UpdateConfig(cfg)) =>
       Effect
         .persist(Events.ConfigUpdated(cfg))
-        .thenRun((_:State) => setup.actorContext
-          .setReceiveTimeout(FiniteDuration.apply(cfg.receiveTimeoutMs, MILLISECONDS), Commands.TimedOut))
         .thenNoReply()
   }
 
@@ -389,6 +385,7 @@ object Outbox {
         case _ =>
       }
       if (st.config != config) setup.actorContext.self ! Commands.UpdateConfig(config)
+      setup.actorContext.setReceiveTimeout(FiniteDuration.apply(config.receiveTimeoutMs, MILLISECONDS), Commands.TimedOut)
       setup.metricsWriter.gaugeUpdate(AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, getPendingMsgs(st).size)
       updateDispatcher(setup.dispatcher, st)
 
@@ -653,7 +650,6 @@ object Outbox {
     )
   }
 
-  private val defaultConfig = prepareOutboxConfig(ConfigFactory.empty())
 }
 
 /**

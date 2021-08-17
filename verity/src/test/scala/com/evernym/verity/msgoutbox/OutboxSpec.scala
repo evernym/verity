@@ -240,7 +240,7 @@ class OutboxSpec
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
       Outbox(
         entityContext,
-        appConfig.withFallback(SNAPSHOT_CONFIG),
+        appConfig.withFallback(SNAPSHOT_CONFIG).config,
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,

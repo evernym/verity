@@ -45,7 +45,7 @@ object MsgLoader {
   def apply(msgId: MsgId,
             msgStore: ActorRef[MsgStore.Cmd],
             replyTo: ActorRef[Reply],
-            appConfig: AppConfig): Behavior[Cmd] = {
+            eventEncryptionSalt: String): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
       val msgStoreReplyAdapter = actorContext.messageAdapter(reply => MsgStoreReplyAdapter(reply))
       EventSourcedBehavior(
@@ -53,7 +53,7 @@ object MsgLoader {
         States.Uninitialized,
         commandHandler(replyTo),
         eventHandler)
-        .eventAdapter(new PersistentEventAdapter(msgId, com.evernym.verity.msgoutbox.message_meta.EventObjectMapper, appConfig))
+        .eventAdapter(new PersistentEventAdapter(msgId, com.evernym.verity.msgoutbox.message_meta.EventObjectMapper, eventEncryptionSalt))
         .receiveSignal(signalHandler(msgId, msgStore, msgStoreReplyAdapter))
     }
     //TODO: do we want to load all events or limit it to just 1st (as that much would be sufficient)

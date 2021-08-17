@@ -6,6 +6,7 @@ import com.evernym.verity.actor.persistence.stdPersistenceId
 import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.transformations.transformers.v1.createPersistenceTransformerV1
@@ -69,7 +70,7 @@ trait SnapshotSpecBase
   def regionActorName: String
   def actorEntityId: String
 
-  lazy val transformer = createPersistenceTransformerV1(encrKey, appConfig)
+  lazy val transformer = createPersistenceTransformerV1(encrKey, appConfig.getStringReq(SALT_EVENT_ENCRYPTION))
   def persId: String = stdPersistenceId(regionActorName, actorEntityId)
   def encrKey: String = {
     val secret = Util.saltedHashedName(actorEntityId + "actor-wallet", appConfig)

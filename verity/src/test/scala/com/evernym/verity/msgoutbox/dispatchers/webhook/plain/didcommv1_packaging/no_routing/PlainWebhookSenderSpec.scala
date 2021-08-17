@@ -10,6 +10,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.plain.PlainWeb
 import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam, msg_packager}
 import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, MsgId, RecipPackaging}
 import com.evernym.verity.actor.typed.BehaviourSpecBase
+import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -157,7 +158,8 @@ class PlainWebhookSenderSpec
       comMethod.routePackaging,
       testMsgPackagers)
 
-    val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, appConfig)
+    val salt = appConfig.getStringReq(SALT_EVENT_ENCRYPTION)
+    val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, salt)
     val sender = PlainWebhookSender(
       dispatchParam,
       packager,

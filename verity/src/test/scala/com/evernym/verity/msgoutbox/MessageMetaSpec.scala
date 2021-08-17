@@ -18,8 +18,8 @@ import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
-import java.util.UUID
 
+import java.util.UUID
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
@@ -262,7 +262,7 @@ class MessageMetaSpec
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
       Outbox(
         entityContext,
-        appConfig.withFallback(SNAPSHOT_CONFIG),
+        appConfig.withFallback(SNAPSHOT_CONFIG).config,
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,

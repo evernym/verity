@@ -33,7 +33,8 @@ import com.evernym.verity.agentmsg.msgfamily.configs._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.FwdReqMsg
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
-import com.evernym.verity.config.ConfigUtil
+import com.evernym.verity.config.ConfigConstants.OUTBOX_OAUTH_RECEIVE_TIMEOUT
+import com.evernym.verity.config.{ConfigConstants, ConfigUtil}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
@@ -64,6 +65,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_t
 import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
 import com.evernym.verity.util2.ActorErrorResp
 
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
@@ -877,9 +879,11 @@ class UserAgent(val agentActorContext: AgentActorContext,
             case Some(child) =>
               child ! UpdateParams(auth.data, OAuthAccessTokenRefresher.getRefresher(auth.version, executionContext))
             case None =>
+              val receiveTimeout = appConfig.getDurationOption(OUTBOX_OAUTH_RECEIVE_TIMEOUT)
+                .getOrElse(FiniteDuration(30, SECONDS))
               context.spawn(
                 OAuthAccessTokenHolder(
-                  appConfig.config,
+                  receiveTimeout,
                   auth.data,
                   agentActorContext.oAuthAccessTokenRefreshers.refreshers(auth.version)
                 ),

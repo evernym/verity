@@ -69,10 +69,9 @@ object UserGuardian {
         val msgTransports: MsgTransports = new MsgTransports {
           override val httpTransporter: Behavior[HttpTransporter.Cmd] = HttpTransporter.apply(agentActorContext.msgSendingSvc, executionContext)
         }
-
         Outbox(
           entityContext,
-          appConfig,
+          appConfig.config,
           agentActorContext.oAuthAccessTokenRefreshers,
           relResolver,
           msgStore,

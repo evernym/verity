@@ -338,7 +338,7 @@ trait AgentStateCleanupHelper {
   lazy val migrateThreadContextMaxAttemptPerPinstProtoRef: Int =
     appConfig
       .getIntOption(ConfigConstants.MIGRATE_THREAD_CONTEXTS_MAX_ATTEMPT_PER_PINST_PROTO_REF)
-      .getOrElse(15)
+      .getOrElse(10)
 
   def isMigrateThreadContextsEnabled: Boolean =
     appConfig

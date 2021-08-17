@@ -1,5 +1,5 @@
 deployment:
-  image: "727797026123.dkr.ecr.us-west-2.amazonaws.com/verity"
+  image: "177276529591.dkr.ecr.us-west-2.amazonaws.com/verity"
   tag: "latest"
   imagePullPolicy: "Always"
   containerPort: 9000

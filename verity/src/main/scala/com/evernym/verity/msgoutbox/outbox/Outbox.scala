@@ -1,7 +1,7 @@
 package com.evernym.verity.msgoutbox.outbox
 
 import akka.actor.typed.{ActorRef, Behavior, Signal}
-import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer, TimerScheduler}
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
 import akka.persistence.typed.{DeleteEventsCompleted, DeleteEventsFailed, DeleteSnapshotsFailed, PersistenceId, RecoveryCompleted, SnapshotCompleted, SnapshotFailed}
@@ -37,7 +37,6 @@ import com.typesafe.scalalogging.Logger
 
 import java.time.ZonedDateTime
 import java.util.UUID
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -121,8 +120,6 @@ object Outbox {
       val eventEncryptionSalt = prepareEventEncryptionSalt(configuration)
       val retentionCriteria = prepareRetentionCriteria(configuration)
       Behaviors.withTimers { timer =>
-        timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery,
-          FiniteDuration.apply(config.scheduledJobIntervalMs,MILLISECONDS))
         Behaviors.withStash(100) { buffer =>                     //TODO: finalize this
           val relResolverReplyAdapter = actorContext.messageAdapter(reply => RelResolverReplyAdapter(reply))
           val messageMetaReplyAdapter = actorContext.messageAdapter(reply => MessageMetaReplyAdapter(reply))
@@ -144,14 +141,15 @@ object Outbox {
             relResolver,
             relResolverReplyAdapter,
             messageMetaReplyAdapter,
-            new ItemManagerEntityHelper(entityContext.entityId, TypeKey.name, actorContext.system)
+            new ItemManagerEntityHelper(entityContext.entityId, TypeKey.name, actorContext.system),
+            timer
           )
           EventSourcedBehavior
             .withEnforcedReplies(
               PersistenceId(TypeKey.name, entityContext.entityId),
               States.Uninitialized(config),
               commandHandler(setup),
-              eventHandler(dispatcher))
+              eventHandler(dispatcher, timer))
             .receiveSignal(signalHandler(setup, config))
             .eventAdapter(PersistentEventAdapter(entityContext.entityId, EventObjectMapper, eventEncryptionSalt))
             .snapshotAdapter(PersistentStateAdapter(entityContext.entityId, StateObjectMapper, eventEncryptionSalt))
@@ -301,7 +299,7 @@ object Outbox {
         .thenNoReply()
   }
 
-  private def eventHandler(dispatcher: Dispatcher): (State, Event) => State = {
+  private def eventHandler(dispatcher: Dispatcher, timer: TimerScheduler[Cmd]): (State, Event) => State = {
     case (States.Uninitialized(cfg), Events.MetadataStored(relId, recipId, destId)) =>
       val metadata = Metadata(relId, recipId, destId)
       States.MetadataReceived(Some(metadata), cfg)
@@ -368,12 +366,15 @@ object Outbox {
       st.copy(messages = st.messages - msgId)
 
     case (st: States.Initialized, Events.ConfigUpdated(cfg)) =>
+      updateTimeouts(cfg, dispatcher.outboxActorContext, timer)
       st.copy(config = cfg)
 
     case (st: States.Uninitialized, Events.ConfigUpdated(cfg)) =>
+      updateTimeouts(cfg, dispatcher.outboxActorContext, timer)
       st.copy(config = cfg)
 
     case (st: States.MetadataReceived, Events.ConfigUpdated(cfg)) =>
+      updateTimeouts(cfg, dispatcher.outboxActorContext, timer)
       st.copy(config = cfg)
   }
 
@@ -384,8 +385,12 @@ object Outbox {
           fetchOutboxParam(metadata)
         case _ =>
       }
-      if (st.config != config) setup.actorContext.self ! Commands.UpdateConfig(config)
-      setup.actorContext.setReceiveTimeout(FiniteDuration.apply(config.receiveTimeoutMs, MILLISECONDS), Commands.TimedOut)
+      if (st.config != config) {
+        setup.actorContext.self ! Commands.UpdateConfig(config)
+        updateTimeouts(config, setup.actorContext, setup.timer)
+      } else {
+        updateTimeouts(st.config, setup.actorContext, setup.timer)
+      }
       setup.metricsWriter.gaugeUpdate(AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, getPendingMsgs(st).size)
       updateDispatcher(setup.dispatcher, st)
 
@@ -488,6 +493,13 @@ object Outbox {
 
     //remove processed messages (either delivered or permanently failed or expired)
     removeProcessedMsgs(st)
+  }
+
+  private def updateTimeouts(config: OutboxConfig, actorContext: ActorContext[Cmd], timer: TimerScheduler[Cmd]): Unit = {
+    actorContext.setReceiveTimeout(FiniteDuration.apply(config.receiveTimeoutMs, MILLISECONDS), Commands.TimedOut)
+    timer.cancel("process-delivery")
+    timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery,
+      FiniteDuration.apply(config.scheduledJobIntervalMs,MILLISECONDS))
   }
 
   private def removeProcessedMsgs(st: State)(implicit setup: SetupOutbox): Unit = {
@@ -670,4 +682,5 @@ case class SetupOutbox(actorContext: ActorContext[Cmd],
                        relResolver: Behavior[RelationshipResolver.Cmd],
                        relResolverReplyAdapter: ActorRef[RelationshipResolver.Reply],
                        messageMetaReplyAdapter: ActorRef[MessageMeta.Reply],
-                       itemManagerEntityHelper: ItemManagerEntityHelper)
+                       itemManagerEntityHelper: ItemManagerEntityHelper,
+                       timer: TimerScheduler[Cmd])

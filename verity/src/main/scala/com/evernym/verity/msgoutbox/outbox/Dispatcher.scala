@@ -25,7 +25,7 @@ import scala.concurrent.duration.{FiniteDuration, MILLISECONDS}
 // * updating dispatcher whenever outbox communication details changes
 // * dispatching messages via the current dispatcher set
 
-class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
+class Dispatcher(val outboxActorContext: ActorContext[Outbox.Cmd],
                  accessTokenRefreshers: AccessTokenRefreshers,
                  eventEncryptionSalt: String,
                  msgStore: ActorRef[MsgStore.Cmd],

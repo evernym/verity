@@ -120,7 +120,6 @@ object MessageMeta {
 
       val msgStoreReplyAdapter = actorContext.messageAdapter(reply => MsgStoreReplyAdapter(reply))
 
-      actorContext.setReceiveTimeout(300.seconds, Commands.TimedOut)   //TODO: finalize this
       EventSourcedBehavior
         .withEnforcedReplies(
           PersistenceId(TypeKey.name, entityContext.entityId),

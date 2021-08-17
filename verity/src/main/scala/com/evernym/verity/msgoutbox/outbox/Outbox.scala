@@ -496,7 +496,6 @@ object Outbox {
   }
 
   private def updateTimeouts(config: OutboxConfig, actorContext: ActorContext[Cmd], timer: TimerScheduler[Cmd]): Unit = {
-    actorContext.setReceiveTimeout(FiniteDuration.apply(config.receiveTimeoutMs, MILLISECONDS), Commands.TimedOut)
     timer.cancel("process-delivery")
     timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery,
       FiniteDuration.apply(config.scheduledJobIntervalMs,MILLISECONDS))

@@ -34,7 +34,7 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.FwdReqMsg
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.config.ConfigConstants.OUTBOX_OAUTH_RECEIVE_TIMEOUT
-import com.evernym.verity.config.{ConfigConstants, ConfigUtil}
+import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
@@ -514,6 +514,11 @@ class UserAgent(val agentActorContext: AgentActorContext,
       logger.debug(s"comMethods: ${state.myDidDoc_!.endpoints}")
       state.myDidDoc_!.endpoints_!.filterByTypes(comMethod.`type`)
         .filter (_ => isOnlyOneComMethodAllowed(comMethod.`type`)).foreach { ep =>
+          logger.info(
+            s"com method to be deleted => " +
+              s"id: ${ep.id}, " +
+              s"value: ${ep.value}"
+          )
 	        writeAndApply(
             ComMethodDeleted(
               ep.id,
@@ -543,20 +548,24 @@ class UserAgent(val agentActorContext: AgentActorContext,
         )
       )
       logger.info(
-        s"update com method updated => " +
-          s"id:${comMethod.id}, " +
+        s"com method updated => " +
+          s"id: ${comMethod.id}, " +
           s"type: ${comMethod.`type`}, " +
           s"value: ${comMethod.value}, " +
           s"packaging: ${comMethod.packaging.map(p => s"pkg-type: ${p.pkgType}")}, " +
           s"authentication: ${comMethod.authentication.map(a => s"auth-type: ${a.`type`}[${a.version}]")}"
       )
-      logger.debug(
-        s"update com method => updated (userDID=<${state.myDid}>, id=${comMethod.id}, " +
-          s"old=$existingEndpointOpt): new: $comMethod", (LOG_KEY_SRC_DID, state.myDid))
     } else {
-      logger.debug(
-        s"update com method => update not needed (userDID=<${state.myDid}>, id=${comMethod.id}, " +
-          s"old=$existingEndpointOpt): new: $comMethod",  (LOG_KEY_SRC_DID, state.myDid))
+      logger.info(
+        s"com method NOT updated => " +
+          s"id: ${comMethod.id} (old: ${existingEndpointOpt.map(_.id)}), " +
+          s"type: ${comMethod.`type`} (old: ${existingEndpointOpt.map(_.`type`)}), " +
+          s"value: ${comMethod.value} (old: ${existingEndpointOpt.map(_.value)}), " +
+          s"packaging: ${comMethod.packaging.map(p => s"pkg-type: ${p.pkgType}")} " +
+              s"(old: ${existingEndpointOpt.flatMap(_.packagingContext).map(p => s"pkg-type: ${p.packFormat.toString}")}), " +
+          s"authentication: ${comMethod.authentication.map(a => s"auth-type: ${a.`type`}[${a.version}]")}" +
+              s"(old: ${existingEndpointOpt.flatMap(_.authentication).map(a => s"auth-type: ${a.`type`}[${a.version}]")})"
+      )
     }
   }
 

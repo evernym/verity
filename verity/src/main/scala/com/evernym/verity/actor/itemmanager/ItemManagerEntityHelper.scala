@@ -25,6 +25,7 @@ class ItemManagerEntityHelper(entityId: EntityId,
     if (! isAlreadyUnregistered) {
       system.eventStream.tell(Publish(SingletonProxyEvent(ForEntityItemWatcher(RemoveItem(entityId, entityType)))))
       isAlreadyUnregistered = true
+      isAlreadyRegistered = false
     }
   }
 }

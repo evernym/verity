@@ -31,6 +31,14 @@ trait WalletBackupLegacy extends Protocol[WalletBackup, Role, BackupMsg, BackupE
   def legacyApplyEvt: ApplyEvent = {
     case (s: S.ReadyToPersistBackup    , _ , BackupStored(w)              ) => S.ReadyToPersistBackup(s.vk, Some(w.toByteArray))
     case (_: S.ReadyToPersistBackup    , _ , RecoveredBackup()            ) => ctx.getState
+    case (s: S, _, e) =>
+      //NOTE:
+      // As of today this protocol is not used, but a scheduled job was trying to spin up this older protocol
+      // and it was causing unhandled error which was changing app state to Sick unnecessarily.
+      // This block is to handle those older events which is no more backward compatible with new code
+      logger.warn(s"[${definition.msgFamily.protoRef.toString}] unhandled event '${e.getClass.getSimpleName}' in state: '${s.getClass.getSimpleName}' " +
+        s"(this is known issue for very old non-backward compatible 'wallet-backup' protocol events)")
+      s
   }
 
   //TODO: This is a duplicate function - in WalletBackup.scala

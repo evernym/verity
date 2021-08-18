@@ -82,7 +82,7 @@ spec:
           name: file-{{ template "verity.fullname" . }}
       - name: ledger-genesis-files
         configMap:
-          name: ledger-genesis-files
+          name: ledger-genesis-{{ template "verity.fullname" . }}
 
 ---
 kind: Role

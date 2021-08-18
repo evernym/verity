@@ -13,6 +13,9 @@ k8sService:
 sponsors:
 # List configuration for for TAA.
 taa:
+# Defaul vars
+vars:
+  VERITY__LIB_INDY__LEDGER__GENESIS_TXN_FILE_LOCATION: /var/lib/indy/genesis.txt
 # Custom and Adhoc Configuration for Verity in HOCON Notation
 # Intended to allow quick injection of config that is
 # not managed by this helm chart

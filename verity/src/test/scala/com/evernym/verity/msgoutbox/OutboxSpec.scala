@@ -57,15 +57,6 @@ class OutboxSpec
 
     "in already started state" - {
 
-      "when sent Stop command" - {
-        "should be stopped" in {
-          val probe = createTestProbe()
-          outboxRegion ! ShardingEnvelope(outboxId, Commands.TimedOut)
-          probe.expectNoMessage()
-          checkRetention(expectedSnapshots = 2, expectedEvents = 1)
-        }
-      }
-
       "when sent GetOutboxParam" - {
         "should respond with proper information" in {
           val probe = createTestProbe[StatusReply[RelationshipResolver.Replies.OutboxParam]]()

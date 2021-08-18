@@ -71,7 +71,6 @@ object Outbox {
 
     case class RemoveMsg(msgId: MsgId) extends Cmd
     case object ProcessDelivery extends Cmd     //sent by scheduled job
-    case object TimedOut extends Cmd
     case class UpdateConfig(config: OutboxConfig) extends Cmd
   }
 
@@ -277,21 +276,6 @@ object Outbox {
           .persist(Events.MsgRemoved(msgId))
           .thenNoReply()
       } else Effect.noReply
-
-    case (st: State, Commands.TimedOut) =>
-      val pendingMsgsCount = getPendingMsgs(st).size
-
-      if (pendingMsgsCount > 0 ) {
-        logger.info(s"[${setup.entityContext.entityId}] unusual situation found, outbox actor timed out with pending messages")
-        processPendingDeliveries(st)
-        Effect
-          .noReply
-      } else {
-        Effect
-          .stop()
-          .thenRun((_: State) => setup.itemManagerEntityHelper.deregister())
-          .thenNoReply()
-      }
 
     case (_, Commands.UpdateConfig(cfg)) =>
       Effect

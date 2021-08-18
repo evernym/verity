@@ -50,7 +50,6 @@ object MessageMeta {
     case class GetDeliveryStatus(replyTo: ActorRef[StatusReply[Replies.MsgDeliveryStatus]]) extends Cmd
 
     case class MsgStoreReplyAdapter(reply: MsgStore.Reply) extends Cmd
-    case object TimedOut extends Cmd
   }
 
   //events
@@ -213,11 +212,6 @@ object MessageMeta {
     case (st: States.Processed, Commands.Get(replyTo)) =>
       Effect
         .reply(replyTo)(StatusReply.success(st.msgDetail.buildMsg(msgId)))
-
-    case (_: State, Commands.TimedOut) =>
-      Effect
-        .stop()
-        .thenNoReply()
   }
 
   private val eventHandler: (State, Event) => State = {

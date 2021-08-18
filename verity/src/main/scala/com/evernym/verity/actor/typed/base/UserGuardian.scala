@@ -79,8 +79,8 @@ object UserGuardian {
               appConfig,
               defaultMessageMetaPassivationTimeoutInSeconds,
               PERSISTENT_ACTOR_BASE,
-              null,
-              MessageMeta.TypeKey.name
+              MessageMeta.TypeKey.name,
+              null
             ).toSeconds, TimeUnit.SECONDS))))
 
       sharding.init(Entity(Outbox.TypeKey) { entityContext =>
@@ -104,8 +104,8 @@ object UserGuardian {
               appConfig,
               defaultOutboxPassivationTimeoutInSeconds,
               PERSISTENT_ACTOR_BASE,
+              Outbox.TypeKey.name,
               null,
-              Outbox.TypeKey.name
             ).toSeconds, TimeUnit.SECONDS)
           )))
 

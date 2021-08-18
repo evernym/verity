@@ -104,8 +104,12 @@ class AkkaHttpMsgSendingSvc(config: Config, metricsWriter: MetricsWriter, execut
                                              (respHandler: HttpResponse => Future[Either[HandledErrorException, T]])
                                              (implicit up: UrlParam):
   Future[Either[HandledErrorException, T]] = {
-    val headerNames = req.headers.map(_.name()).mkString(", ")
-    logger.info(s"[$id] [outgoing request] [${req.method.value}] to uri ${up.host}:${up.port}/${up.path} (with headers: $headerNames)")
+    val headersDetail =
+      if (req.headers.nonEmpty)
+        s"with headers: ${req.headers.map(_.name()).mkString(", ")})"
+      else
+        "without any headers"
+    logger.info(s"[$id] [outgoing request] [${req.method.value}] to uri ${up.host}:${up.port}/${up.path} ($headersDetail)")
     sendRequest(req).flatMap { response =>
       logger.info(s"[$id] [incoming response] [${response.status}]")
       respHandler(response)

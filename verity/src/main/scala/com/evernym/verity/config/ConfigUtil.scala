@@ -315,6 +315,8 @@ object ConfigUtil {
       (entityTypeOpt, entityIdOpt) match {
         case (Some(entityType), Some(entityId)) =>
           safeGetAppConfigStringOption(s"$entityCategory.$entityType.$entityId.$confName", appConfig)
+        case (Some(entityType), None) =>
+          safeGetAppConfigStringOption(s"$entityCategory.$entityType.$confName", appConfig)
         case _ => None
       }
 

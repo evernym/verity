@@ -79,7 +79,7 @@ object UserGuardian {
               appConfig,
               defaultMessageMetaPassivationTimeoutInSeconds,
               PERSISTENT_ACTOR_BASE,
-              "",
+              null,
               MessageMeta.TypeKey.name
             ).toSeconds, TimeUnit.SECONDS))))
 
@@ -104,7 +104,7 @@ object UserGuardian {
               appConfig,
               defaultOutboxPassivationTimeoutInSeconds,
               PERSISTENT_ACTOR_BASE,
-              "",
+              null,
               Outbox.TypeKey.name
             ).toSeconds, TimeUnit.SECONDS)
           )))

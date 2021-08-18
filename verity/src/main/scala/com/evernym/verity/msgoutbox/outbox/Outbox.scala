@@ -510,14 +510,18 @@ object Outbox {
 
   private def processPendingDeliveries(st: State)(implicit setup: SetupOutbox): Unit = {
     val pendingMsgs = getPendingMsgs(st)
-    st match {
-      case i: States.Initialized =>
-        pendingMsgs
-          .toSeq
-          .sortBy(_._2.creationTimeInMillis)    //TODO: any issue with sorting here?
-          .take(i.config.batchSize)
-          .foreach{case (msgId, _) => sendToDispatcher(msgId, i)}
-      case _                       => //nothing to do
+    if (pendingMsgs.isEmpty) {
+      setup.itemManagerEntityHelper.deregister()
+    } else {
+      st match {
+        case i: States.Initialized =>
+          pendingMsgs
+            .toSeq
+            .sortBy(_._2.creationTimeInMillis) //TODO: any issue with sorting here?
+            .take(i.config.batchSize)
+            .foreach { case (msgId, _) => sendToDispatcher(msgId, i) }
+        case _ => //nothing to do
+      }
     }
   }
 

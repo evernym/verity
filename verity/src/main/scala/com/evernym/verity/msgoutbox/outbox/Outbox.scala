@@ -71,7 +71,6 @@ object Outbox {
 
     case class RemoveMsg(msgId: MsgId) extends Cmd
     case object ProcessDelivery extends Cmd     //sent by scheduled job
-    case object TimedOut extends Cmd
     case class UpdateConfig(config: OutboxConfig) extends Cmd
   }
 
@@ -278,21 +277,6 @@ object Outbox {
           .thenNoReply()
       } else Effect.noReply
 
-    case (st: State, Commands.TimedOut) =>
-      val pendingMsgsCount = getPendingMsgs(st).size
-
-      if (pendingMsgsCount > 0 ) {
-        logger.info(s"[${setup.entityContext.entityId}] unusual situation found, outbox actor timed out with pending messages")
-        processPendingDeliveries(st)
-        Effect
-          .noReply
-      } else {
-        Effect
-          .stop()
-          .thenRun((_: State) => setup.itemManagerEntityHelper.deregister())
-          .thenNoReply()
-      }
-
     case (_, Commands.UpdateConfig(cfg)) =>
       Effect
         .persist(Events.ConfigUpdated(cfg))
@@ -496,7 +480,6 @@ object Outbox {
   }
 
   private def updateTimeouts(config: OutboxConfig, actorContext: ActorContext[Cmd], timer: TimerScheduler[Cmd]): Unit = {
-    actorContext.setReceiveTimeout(FiniteDuration.apply(config.receiveTimeoutMs, MILLISECONDS), Commands.TimedOut)
     timer.cancel("process-delivery")
     timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery,
       FiniteDuration.apply(config.scheduledJobIntervalMs,MILLISECONDS))
@@ -527,14 +510,18 @@ object Outbox {
 
   private def processPendingDeliveries(st: State)(implicit setup: SetupOutbox): Unit = {
     val pendingMsgs = getPendingMsgs(st)
-    st match {
-      case i: States.Initialized =>
-        pendingMsgs
-          .toSeq
-          .sortBy(_._2.creationTimeInMillis)    //TODO: any issue with sorting here?
-          .take(i.config.batchSize)
-          .foreach{case (msgId, _) => sendToDispatcher(msgId, i)}
-      case _                       => //nothing to do
+    if (pendingMsgs.isEmpty) {
+      setup.itemManagerEntityHelper.deregister()
+    } else {
+      st match {
+        case i: States.Initialized =>
+          pendingMsgs
+            .toSeq
+            .sortBy(_._2.creationTimeInMillis) //TODO: any issue with sorting here?
+            .take(i.config.batchSize)
+            .foreach { case (msgId, _) => sendToDispatcher(msgId, i) }
+        case _ => //nothing to do
+      }
     }
   }
 

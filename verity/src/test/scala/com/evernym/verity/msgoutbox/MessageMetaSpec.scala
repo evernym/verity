@@ -88,14 +88,6 @@ class MessageMetaSpec
         }
       }
 
-      "when sent Stop command" - {
-        "should be stopped" in {
-          val probe = createTestProbe()
-          messageMetaRegion ! ShardingEnvelope(msgId, Commands.TimedOut)
-          probe.expectNoMessage()
-        }
-      }
-
       "when sent Get command again" - {
         "should respond with Message" in {
           val probe = createTestProbe[StatusReply[GetMsgReply]]()
@@ -219,14 +211,6 @@ class MessageMetaSpec
             val result = Await.result(fut, 1.seconds)
             result.isEmpty shouldBe true
           }
-        }
-      }
-
-      "when sent Stop command again" - {
-        "should be stopped" in {
-          val probe = createTestProbe()
-          messageMetaRegion ! ShardingEnvelope(msgId, Commands.TimedOut)
-          probe.expectNoMessage()
         }
       }
 

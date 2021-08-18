@@ -50,7 +50,6 @@ object MessageMeta {
     case class GetDeliveryStatus(replyTo: ActorRef[StatusReply[Replies.MsgDeliveryStatus]]) extends Cmd
 
     case class MsgStoreReplyAdapter(reply: MsgStore.Reply) extends Cmd
-    case object TimedOut extends Cmd
   }
 
   //events
@@ -120,7 +119,6 @@ object MessageMeta {
 
       val msgStoreReplyAdapter = actorContext.messageAdapter(reply => MsgStoreReplyAdapter(reply))
 
-      actorContext.setReceiveTimeout(300.seconds, Commands.TimedOut)   //TODO: finalize this
       EventSourcedBehavior
         .withEnforcedReplies(
           PersistenceId(TypeKey.name, entityContext.entityId),
@@ -214,11 +212,6 @@ object MessageMeta {
     case (st: States.Processed, Commands.Get(replyTo)) =>
       Effect
         .reply(replyTo)(StatusReply.success(st.msgDetail.buildMsg(msgId)))
-
-    case (_: State, Commands.TimedOut) =>
-      Effect
-        .stop()
-        .thenNoReply()
   }
 
   private val eventHandler: (State, Event) => State = {

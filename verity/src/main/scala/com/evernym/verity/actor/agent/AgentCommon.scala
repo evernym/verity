@@ -138,7 +138,7 @@ trait AgentCommon
 
   def ownerDID: Option[DidStr]
   def ownerDIDReq: DidStr = ownerDID.getOrElse(throw new RuntimeException("owner DID not found"))
-  def domainId: DomainId = ownerDIDReq    //TODO: can be related with 'ownerDIDReq'
+  def domainId: DomainId = ownerDIDReq
 
   def ownerAgentKeyDIDPair: Option[DidPair]
 

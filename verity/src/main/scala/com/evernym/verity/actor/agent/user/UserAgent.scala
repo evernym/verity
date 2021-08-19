@@ -852,6 +852,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
 
   updateAgentWalletId(entityId)
 
+  //to be used to send com method updates to associated outbox actors
   var outboxActorRefs: Map[DestId, ActorRef] = Map.empty
 
   /**

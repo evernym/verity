@@ -15,8 +15,9 @@ import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.MsgId
+import com.evernym.verity.protocol.engine.{DomainId, MsgId}
 import com.evernym.verity.util.StrUtil.camelToCapitalize
 import com.evernym.verity.util.Util.getOptionalField
 import com.evernym.verity.util2.Exceptions
@@ -26,7 +27,11 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 
 
-class Pusher(config: AppConfig, executionContext: ExecutionContext) extends CoreActorExtended with HasExecutionContextProvider {
+class Pusher(domainId: DomainId,
+             config: AppConfig,
+             executionContext: ExecutionContext)
+  extends CoreActorExtended
+    with HasExecutionContextProvider {
   implicit lazy val futureExecutionContext: ExecutionContext = executionContext
   val logger: Logger = getLoggerByClass(classOf[Pusher])
 
@@ -35,14 +40,12 @@ class Pusher(config: AppConfig, executionContext: ExecutionContext) extends Core
       spn.comMethods.foreach { cm =>
         try {
           val (pusher, regId) = PusherUtil.extractServiceProviderAndRegId(cm, config, futureExecutionContext, spn.sponsorId)
-          logger.info(s"[sponsorId: ${spn.sponsorId}] about to send push notification", (LOG_KEY_REG_ID, regId))
+          logger.info(s"[domainId: $domainId, sponsorId: ${spn.sponsorId}] about to send push notification", (LOG_KEY_REG_ID, regId))
           val notifParam = PushNotifParam(cm.value, regId, spn.sendAsAlertPushNotif, spn.notifData, spn.extraData)
           val pushFutureResp = pusher.push(notifParam)(context.system)
           val sndr = sender()
           pushFutureResp.map { r =>
-            logger.info(s"[sponsorId: ${spn.sponsorId}] push notification send response: " + r,
-              (LOG_KEY_STATUS_CODE, r.statusCode), (LOG_KEY_STATUS_CODE, r.statusCode),
-              (LOG_KEY_STATUS_DETAIL, r.statusDetail), (LOG_KEY_REG_ID, regId))
+            logger.info(s"[domainId: $domainId, sponsorId: ${spn.sponsorId}] push notification send response: " + r)
             if (r.statusCode == MSG_DELIVERY_STATUS_SENT.statusCode) {
               publishAppStateEvent(RecoverIfNeeded(CONTEXT_PUSH_NOTIF))
             } else {
@@ -51,9 +54,7 @@ class Pusher(config: AppConfig, executionContext: ExecutionContext) extends Core
                   getOrElse(PUSH_COM_METHOD_WARN_ON_ERROR_LIST)
               if (pushNotifWarnOnErrorList.contains(r.detail.orNull)) {
                 // Do not degrade state for certain push notification errors
-                logger.warn(s"[sponsorId: ${spn.sponsorId}] push notification failed with response: " + r,
-                  (LOG_KEY_STATUS_CODE, r.statusCode), (LOG_KEY_STATUS_CODE, r.statusCode),
-                  (LOG_KEY_STATUS_DETAIL, r.statusDetail), (LOG_KEY_REG_ID, regId))
+                logger.warn(s"[domainId: $domainId, sponsorId: ${spn.sponsorId}] sending push notification failed: " + r)
               } else {
                 publishAppStateEvent(ErrorEvent(MildSystemError, CONTEXT_PUSH_NOTIF,
                   new PushNotifSendingFailedException(r.statusDetail), r.statusDetail))
@@ -62,22 +63,29 @@ class Pusher(config: AppConfig, executionContext: ExecutionContext) extends Core
             sndr ! r
           }.recover {
             case e: Exception =>
-              val errMsg = s"[sponsorId: ${spn.sponsorId}] could not send push notification"
+              val errMsg = s"[domainId: $domainId, sponsorId: ${spn.sponsorId}] could not send push notification"
               logger.error(errMsg, ("com_method", cm), (LOG_KEY_ERR_MSG, Exceptions.getErrorMsg(e)))
               sndr ! PushNotifResponse(cm.value, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(e.getMessage), Option(errMsg))
           }
         } catch {
           case e: BadRequestErrorException =>
-            val errMsg = s"[sponsorId: ${spn.sponsorId}] could not send push notification"
+            val errMsg = s"[domainId: $domainId, sponsorId: ${spn.sponsorId}] could not send push notification"
             logger.error(errMsg, ("com_method", cm), (LOG_KEY_STATUS_CODE, e.respCode),
               (LOG_KEY_RESPONSE_CODE, e.respCode), (LOG_KEY_ERR_MSG, e.getErrorMsg))
             sender ! PushNotifResponse(cm.value, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(e.toString), Option(errMsg))
         }
       }
 
-    case unknown => logger.error("unrecognized message", (LOG_KEY_ERR_MSG,
-      "unrecognized message received by pusher actor: " + unknown))
+    case unknown => logger.error(
+      s"[domainId: $domainId]: unrecognized message",
+      (LOG_KEY_ERR_MSG, "unrecognized message received by pusher actor: " + unknown))
   }
+
+  lazy val pushNotifWarnOnErrorList: Set[String] =
+    config
+      .getStringSetOption(PUSH_NOTIF_WARN_ON_ERROR_LIST)
+      .getOrElse(PUSH_COM_METHOD_WARN_ON_ERROR_LIST)
+
 }
 
 case class SendPushNotif(comMethods: Set[ComMethodDetail],
@@ -97,7 +105,9 @@ trait PushServiceProvider {
 
   def createPushContent(notifParam: PushNotifParam): String = {
 
-    val collapseKeyMap = getOptionalField(FOR_DID, notifParam.extraData).map(fd => Map(COLLAPSE_KEY -> fd)).getOrElse(Map.empty)
+    val collapseKeyMap =
+      getOptionalField(FOR_DID, notifParam.extraData)
+        .map(fd => Map(COLLAPSE_KEY -> fd)).getOrElse(Map.empty)
 
     val generalData = Map(
       TO -> notifParam.regId,
@@ -117,7 +127,8 @@ trait PushServiceProvider {
 
 object PusherUtil  {
 
-  private def buildFirebasePusher(appConfig: AppConfig, executionContext: ExecutionContext): Option[PushServiceProvider] = {
+  private def buildFirebasePusher(appConfig: AppConfig,
+                                  executionContext: ExecutionContext): Option[PushServiceProvider] = {
     if (appConfig.getBooleanOption(PUSH_NOTIF_ENABLED).contains(true)) {
       val key = appConfig.getStringReq(FCM_API_KEY)
       val host = appConfig.getStringReq(FCM_API_HOST)
@@ -126,13 +137,15 @@ object PusherUtil  {
     } else None
   }
 
-  private def buildMockPusher(config: AppConfig, executionContext: ExecutionContext): Option[PushServiceProvider] = {
+  private def buildMockPusher(config: AppConfig,
+                              executionContext: ExecutionContext): Option[PushServiceProvider] = {
     //This MCM (Mock Cloud Messaging) is only enabled in integration test
     val isMCMEnabled = config.getBooleanOption(MCM_ENABLED).getOrElse(false)
     if (isMCMEnabled) Option(new MockPusher(config, executionContext)) else None
   }
 
-  private def supportedPushNotifProviders(config: AppConfig, executionContext: ExecutionContext): PushNotifProviders = {
+  private def supportedPushNotifProviders(config: AppConfig,
+                                          executionContext: ExecutionContext): PushNotifProviders = {
     val providers = (buildFirebasePusher(config, executionContext) ++ buildMockPusher(config, executionContext)).toList
     val providerId = providers.map(_.comMethodPrefix).mkString("|")
     PushNotifProviders(s"($providerId):(.*)".r, providers)
@@ -206,7 +219,8 @@ object PusherUtil  {
 }
 
 object Pusher {
-  def props(config: AppConfig, executionContext: ExecutionContext): Props = Props(new Pusher(config, executionContext))
+  def props(userDID: DidStr, config: AppConfig, executionContext: ExecutionContext): Props =
+    Props(new Pusher(userDID, config, executionContext))
 }
 
 case class PushNotifResponse(comMethodValue: String,

@@ -8,9 +8,10 @@ NotifyAccess=all
 User=verity-application
 WorkingDirectory=/var/lib/verity-application
 Environment="JAVA_OPTS="
+Environment="JAVA_TOOL_OPTIONS=-javaagent:/usr/lib/verity-application/kanela-agent.jar"
 SuccessExitStatus=143
 #EnvironmentFile=
-ExecStart=/usr/bin/java -javaagent:/usr/lib/verity-application/kanela-agent.jar -cp "/etc/verity/verity-application:/usr/lib/verity-application/verity-application-assembly.jar" com.evernym.verity.Main
+ExecStart=/usr/bin/java -cp "/etc/verity/verity-application:/usr/lib/verity-application/verity-application-assembly.jar" com.evernym.verity.Main
 Restart=on-failure
 TimeoutStopSec=6min
 

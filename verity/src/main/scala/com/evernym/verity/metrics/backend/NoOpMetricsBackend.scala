@@ -6,11 +6,11 @@ import java.time.Instant
 
 class NoOpMetricsBackend extends MetricsBackend{
 
-  override def gaugeIncrement(name: String, value: Double, tags: TagMap): Unit = ()
+  override def gaugeIncrement(name: String, value: Long, tags: TagMap): Unit = ()
 
-  override def gaugeDecrement(name: String, value: Double, tags: TagMap): Unit = ()
+  override def gaugeDecrement(name: String, value: Long, tags: TagMap): Unit = ()
 
-  override def gaugeUpdate(name: String, value: Double, tags: TagMap): Unit = ()
+  override def gaugeUpdate(name: String, value: Long, tags: TagMap): Unit = ()
 
   override def histogramUpdate(name: String, unit: MetricsUnit, value: Long, tags: TagMap): Unit = ()
 

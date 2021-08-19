@@ -29,7 +29,7 @@ object Util {
     if (!shouldTruncate) {
       cur
     } else {
-      System.out.println("Truncating timestamps...")
+      println("Truncating timestamps...")
       def truncateMtime(s: Stamp): Stamp = s match {
         case mtime: LastModified =>
           val truncated = SECONDS.toMillis(MILLISECONDS.toSeconds(mtime.value))
@@ -80,16 +80,6 @@ object Util {
     val dirs = children.filter(_.isDirectory)
     val childDirs = dirs.flatMap(dirsContaining(filter))
     if (children.exists(f => f.isFile && filter(f))) directory :: childDirs  else childDirs
-  }
-
-  def addDeps(deps:Seq[ModuleID], modifyDepTagForDeps:Seq[String], tags:String ): Seq[ModuleID] ={
-    deps.map { dep =>
-      if(modifyDepTagForDeps contains dep.name){
-        dep.organization % dep.name % dep.revision % tags
-      } else {
-        dep
-      }
-    }
   }
 
   def searchForAdditionalJars(dependencies: Classpath, jarNames: Seq[String]): Seq[(File, String)] = {
@@ -152,19 +142,6 @@ object Util {
           }
           .getOrElse(throw new Exception("Unable to merge reference.conf file"))
       )
-    }
-  }
-
-  lazy val cloudrepoUsername: String = sys.env.getOrElse("IO_CLOUDREPO_ACCOUNT_USER", "")
-  lazy val cloudrepoPassword: String = sys.env.getOrElse("IO_CLOUDREPO_ACCOUNT_PASSWORD", "")
-
-  def conditionallyAddArtifact(artifact : sbt.Def.Initialize[sbt.librarymanagement.Artifact], taskDef : sbt.Def.Initialize[sbt.Task[java.io.File]]) : sbt.Def.SettingsDefinition = {
-    if (cloudrepoUsername != "" &&  cloudrepoPassword != "") {
-      println("Adding artifact " + artifact + " produced during task " + taskDef)
-      addArtifact(artifact, taskDef)
-    } else {
-      println("Skip publishing " + taskDef + " artifacts")
-      sbt.Def.SettingsDefinition.wrapSettingsDefinition(Seq.empty)
     }
   }
 }

@@ -190,6 +190,7 @@ object ActivityTracker {
  def props(implicit config: AppConfig, agentMsgRouter: AgentMsgRouter, executionContext: ExecutionContext): Props = {
   Props(new ActivityTracker(config, agentMsgRouter, executionContext))
  }
+  val defaultReceiveTimeoutInSeconds = 600
 }
 
 /** Types of agent activity that may be used for metrics

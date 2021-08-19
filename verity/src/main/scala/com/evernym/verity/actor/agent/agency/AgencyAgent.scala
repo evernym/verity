@@ -331,6 +331,10 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_ACTOR
 }
 
+object AgencyAgent {
+  val defaultPassivationTimeout = 600
+}
+
 //response
 case class AgencyInfo(verKey: Option[Either[StatusDetail, VerKeyStr]], endpoint: Option[Either[StatusDetail, String]]) extends ActorMessage {
 

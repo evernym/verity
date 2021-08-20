@@ -15,7 +15,6 @@ import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.did.DidStr
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.{DomainId, MsgId}
 import com.evernym.verity.util.StrUtil.camelToCapitalize
@@ -219,8 +218,8 @@ object PusherUtil  {
 }
 
 object Pusher {
-  def props(userDID: DidStr, config: AppConfig, executionContext: ExecutionContext): Props =
-    Props(new Pusher(userDID, config, executionContext))
+  def props(domainId: DomainId, config: AppConfig, executionContext: ExecutionContext): Props =
+    Props(new Pusher(domainId, config, executionContext))
 }
 
 case class PushNotifResponse(comMethodValue: String,

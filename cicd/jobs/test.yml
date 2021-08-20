@@ -19,7 +19,15 @@ unit-test:
       - tags
       - merge_requests
   script:
-    - devops/scripts/test/docker-unit-tests $CI_PROJECT_DIR
+    - sbt test
+  artifacts:
+    when: always
+    paths:
+      - verity/target/test-reports
+#      - verity/target/scala-2.12/jacoco
+    reports:
+#      junit: verity/target/test-reports/TEST-*.xml
+#      cobertura:
 
 .static-analysis: # This test don't work and is currently not providing value
   extends: .test

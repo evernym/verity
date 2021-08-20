@@ -1,3 +1,4 @@
+import DevEnvironmentTasks.agentJars
 import K8sConfigTemplateGen.genConfig
 import com.typesafe.config.{ConfigFactory, ConfigObject, ConfigOrigin, ConfigValue, ConfigValueType, ConfigUtil => TypesafeUtil}
 import sbt.Keys._
@@ -12,7 +13,7 @@ import java.nio.file.Path
 import scala.collection.JavaConverters._
 
 object K8sTasks {
-  def init(addedJars: Seq[String], libindyVer: String) = {
+  def init(libindyVer: String) = {
     Seq(
       k8sDockerPackageDir := { target.value / "docker" },
       k8sConfigGenDir := { k8sDockerPackageDir.value / "configuration" },
@@ -41,8 +42,8 @@ object K8sTasks {
         log.info(s"Found main assembly jar: $assemblyFile")
 
         val additionalJars = searchForAdditionalJars(
-          (assembly / externalDependencyClasspath).value,
-          addedJars
+          (Compile / dependencyClasspath).value,
+          agentJars.value
         )
 
         additionalJars.foreach(j => log.info(s"Found additional jar: ${j._1}"))

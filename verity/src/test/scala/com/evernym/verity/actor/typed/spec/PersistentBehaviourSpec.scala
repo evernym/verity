@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.typed.spec
 
 import akka.Done
+import akka.actor.NoSerializationVerificationNeeded
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.cluster.sharding.ShardRegion.EntityId
 import akka.cluster.sharding.typed.ShardingEnvelope
@@ -8,6 +9,7 @@ import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityCont
 import akka.pattern.StatusReply
 import akka.persistence.typed.{PersistenceId, RecoveryCompleted}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.typed.spec.Events._
 import com.evernym.verity.actor.typed.BehaviourSpecBase
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
@@ -123,7 +125,7 @@ class PersistentBehaviourSpec
 
 object Account {
 
-  trait Cmd
+  trait Cmd extends ActorMessage
   object Commands {
     case class Open(name: String, balance: Double, replyTo: ActorRef[StatusReply[Done]]) extends Cmd
     case class Credit(amount: Double, replyTo: ActorRef[StatusReply[Done]]) extends Cmd
@@ -133,7 +135,7 @@ object Account {
     case class Stop(replyTo: ActorRef[StatusReply[Done]]) extends Cmd
   }
 
-  trait State
+  trait State extends NoSerializationVerificationNeeded
   object States {
     case object Empty extends State
     case class Opened(name: String, balance: Double) extends State

@@ -8,15 +8,15 @@ import java.time.Instant
 
 class KamonMetricsBackend extends MetricsBackend {
 
-  override def gaugeIncrement(name: String, value: Double, tags: TagMap): Unit = {
+  override def gaugeIncrement(name: String, value: Long, tags: TagMap): Unit = {
     Kamon.gauge(name).withTags(TagSet.from(tags)).increment(value)
   }
 
-  override def gaugeDecrement(name: String, value: Double, tags: TagMap): Unit = {
+  override def gaugeDecrement(name: String, value: Long, tags: TagMap): Unit = {
     Kamon.gauge(name).withTags(TagSet.from(tags)).decrement(value)
   }
 
-  override def gaugeUpdate(name: String, value: Double, tags: TagMap): Unit = {
+  override def gaugeUpdate(name: String, value: Long, tags: TagMap): Unit = {
     Kamon.gauge(name).withTags(TagSet.from(tags)).update(value)
   }
 
@@ -25,7 +25,26 @@ class KamonMetricsBackend extends MetricsBackend {
   }
 
 
-  override def taggedSpan(name: String, start: Instant, tags: TagMap): Unit = {
+  override def taggedSpan(name: String, start: Instant, tags: TagMap): Unit = KamonMetricsBackend.taggedSpan(
+    name,
+    start,
+    tags
+  )
+
+  override def runWithSpan[T](opName: String, componentName: String, spanType: SpanType)(fn: => T): T = {
+    KamonMetricsBackend.runWithSpan(
+      opName, componentName, spanType
+    )(fn)
+  }
+
+  override def setup(): Unit = Kamon.init()
+
+  override def shutdown(): Unit = Kamon.stop()
+
+}
+
+object KamonMetricsBackend {
+  def taggedSpan(name: String, start: Instant, tags: TagMap): Unit = {
     val span = Kamon.spanBuilder(name).start(start)
     val taggedSpan = tags.foldLeft(span) { case (sp, mt) =>
       sp.tagMetrics(mt._1, mt._2)
@@ -33,7 +52,7 @@ class KamonMetricsBackend extends MetricsBackend {
     taggedSpan.finish(Instant.now())
   }
 
-  override def runWithSpan[T](opName: String, componentName: String, spanType: SpanType)(fn: => T): T = {
+  def runWithSpan[T](opName: String, componentName: String, spanType: SpanType)(fn: => T): T = {
     val spanBuilder = spanType match {
       case DefaultSpan  => Kamon.spanBuilder(opName)
       case ClientSpan   => Kamon.clientSpanBuilder(opName, componentName)
@@ -41,9 +60,4 @@ class KamonMetricsBackend extends MetricsBackend {
     }
     Kamon.runWithSpan(spanBuilder.start())(fn)
   }
-
-  override def setup(): Unit = Kamon.init()
-
-  override def shutdown(): Unit = Kamon.stop()
-
 }

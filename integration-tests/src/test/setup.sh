@@ -54,15 +54,6 @@ prepare_jars(){
 
   pushd ${PROJECT_DIR} > /dev/null
 
-  #  Build integration jar if it don't exist
-  if find ${PROJECT_DIR}/integration-tests/target/scala-2.12 -name '*.jar' 2>/dev/null  | grep -q '.'; then
-    appendToLogWithDashLinePrefix "integration test jar found and ready"
-  else
-    appendToLogWithDashLinePrefix "creating integration test jar..."
-    sbt "project integrationTests" assembly >> ${PROGRESS_LOG_FILE_PATH}
-    delete_indy_client_dir
-  fi
-
   # check if source code changed
   source_code_changed=$(isSourceCodeChanged)
   appendToProgressLog "is source code changed: ${source_code_changed}"

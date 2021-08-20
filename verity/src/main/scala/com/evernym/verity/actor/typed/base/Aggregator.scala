@@ -2,6 +2,7 @@ package com.evernym.verity.actor.typed.base
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
+import com.evernym.verity.actor.ActorMessage
 
 import scala.collection.immutable
 import scala.concurrent.duration.FiniteDuration
@@ -9,7 +10,7 @@ import scala.reflect.ClassTag
 
 object Aggregator {
 
-  sealed trait Cmd
+  sealed trait Cmd extends ActorMessage
 
   private case object ReceiveTimeout extends Cmd
 

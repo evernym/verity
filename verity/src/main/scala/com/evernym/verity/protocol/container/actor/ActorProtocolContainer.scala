@@ -39,6 +39,7 @@ import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAc
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -429,7 +430,12 @@ class ActorProtocolContainer[
         }
 
       case Failure(e) =>
-        logger.error("error response from protocol actor: " + Exceptions.getStackTraceAsSingleLineString(e))
+        e match {
+          case bre: BadRequestErrorException =>
+            logger.info("bad request response from protocol actor: " + bre.getMessage)
+          case other =>
+            logger.error("error response from protocol actor: " + Exceptions.getStackTraceAsSingleLineString(other))
+        }
         val error = convertProtoEngineException(e)
         sendRespToCaller(error, msgIdOpt, sndr)
     }

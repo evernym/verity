@@ -95,7 +95,7 @@ class AgentMsgRouter(executionContext: ExecutionContext)(implicit val appConfig:
     val routeDID = AgentMsgRouter.getDIDForRoute(route) match {
       case Success(did) => did
       case Failure(e) =>
-        logger.error(s"Could not extract DID for route: $route")
+        logger.info(s"Could not extract DID for route: $route")
         throw e
     }
     val startTime = LocalDateTime.now

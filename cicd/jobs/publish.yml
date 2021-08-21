@@ -56,13 +56,13 @@ publish-deb-manual:
       $CI_REGISTRY
       $CI_REGISTRY_USER
       $CI_REGISTRY_PASSWORD
-      $AWS_DEV_ECR_REGISTRY
+      $AWS_ECR_REGISTRY
       > /kaniko/.docker/config.json
     #- if [ "$CI_COMMIT_REF_NAME" == "master" ]; then DRY_RUN=""; else DRY_RUN="--no-push"; fi
     - >
       if [ "$INCLUDE_DOCKER_AWS_DESTINATIONS" = "true" ]; then
-        DOCKER_AWS_DESTINATIONS="--destination $AWS_DEV_ECR_REGISTRY/verity:$VERITY_VERSION
-                                 --destination $AWS_DEV_ECR_REGISTRY/verity:latest" ;
+        DOCKER_AWS_DESTINATIONS="--destination $AWS_ECR_REGISTRY/verity:$VERITY_VERSION
+                                 --destination $AWS_ECR_REGISTRY/verity:latest" ;
       else DOCKER_AWS_DESTINATIONS=""; fi
     - >
       /kaniko/executor

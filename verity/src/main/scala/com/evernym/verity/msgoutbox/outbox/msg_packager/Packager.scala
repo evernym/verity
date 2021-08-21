@@ -4,7 +4,6 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_PLAIN}
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.msgoutbox.MsgId
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.{MsgPackagingParam, MsgStoreParam}
 import com.evernym.verity.msgoutbox.outbox.msg_packager.Packager.Commands.{DIDCommV1PackagerReplyAdapter, MsgLoaderReplyAdapter, PackMsg, TimedOut}
@@ -36,21 +35,21 @@ object Packager {
 
   def apply(msgPackagingParam: MsgPackagingParam,
             msgStoreParam: MsgStoreParam,
-            appConfig: AppConfig): Behavior[Cmd] = {
+            eventEncryptionSalt: String): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
       actorContext.setReceiveTimeout(10.seconds, Commands.TimedOut) //TODO: finalize this
-      initialized(msgPackagingParam, msgStoreParam, appConfig)(actorContext)
+      initialized(msgPackagingParam, msgStoreParam, eventEncryptionSalt)(actorContext)
     }
   }
 
   private def initialized(msgPackagingParam: MsgPackagingParam,
                           msgStoreParam: MsgStoreParam,
-                          appConfig: AppConfig)
+                          eventEncryptionSalt: String)
                          (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] =
     Behaviors.receiveMessage {
       case PackMsg(msgId, replyTo) =>
         val msgLoaderReplyAdapter = actorContext.messageAdapter(reply => MsgLoaderReplyAdapter(reply))
-        actorContext.spawnAnonymous(MsgLoader(msgId, msgStoreParam.msgStore, msgLoaderReplyAdapter, appConfig))
+        actorContext.spawnAnonymous(MsgLoader(msgId, msgStoreParam.msgStore, msgLoaderReplyAdapter, eventEncryptionSalt))
         handlePostPayloadRetrieval(msgId, msgPackagingParam, replyTo)(actorContext)
     }
 

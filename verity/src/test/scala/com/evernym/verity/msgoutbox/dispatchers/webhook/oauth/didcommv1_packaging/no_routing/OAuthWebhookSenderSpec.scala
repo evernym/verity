@@ -3,6 +3,8 @@ package com.evernym.verity.msgoutbox.dispatchers.webhook.oauth.didcommv1_packagi
 import akka.actor.typed.ActorRef
 import akka.persistence.typed.PersistenceId
 import com.evernym.verity.actor.typed.BehaviourSpecBase
+import com.evernym.verity.config.ConfigConstants.{OUTBOX_OAUTH_RECEIVE_TIMEOUT, SALT_EVENT_ENCRYPTION}
+import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.msgoutbox.base.{BaseMsgOutboxSpec, MockOAuthAccessTokenRefresher}
 import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{RecordFailedAttempt, RecordSuccessfulAttempt}
@@ -158,7 +160,8 @@ class OAuthWebhookSenderSpec
       comMethod.routePackaging,
       testMsgPackagers)
 
-    val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, appConfig)
+    val salt = appConfig.getStringReq(SALT_EVENT_ENCRYPTION)
+    val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, salt)
     val sender = OAuthWebhookSender(
       buildOAuthAccessTokenHolder(tokenExpiresInSeconds = 5),
       dispatchParam,
@@ -180,9 +183,12 @@ class OAuthWebhookSenderSpec
       "shallTimeout"          -> shallTimeoutString,
       "shallFail"             -> shallFailString
     )
+    val timeout = ConfigReadHelper(config)
+      .getDurationOption(OUTBOX_OAUTH_RECEIVE_TIMEOUT)
+      .getOrElse(FiniteDuration(30, SECONDS))
     spawn(
       OAuthAccessTokenHolder(
-        config,
+        timeout,
         data,
         MockOAuthAccessTokenRefresher()
       )

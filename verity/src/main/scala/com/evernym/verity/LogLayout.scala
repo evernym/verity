@@ -78,11 +78,20 @@ class LogLayout extends LayoutBase[ILoggingEvent] {
 /**
  * A more human read (specially for consoles) log layout
  */
-class DevLogLayout extends LayoutBase[ILoggingEvent] {
+
+class DevLogLayoutWithColor extends DevLogLayoutBase {
+  override def pattern: String = "[%highlight(%-5le)] [%magenta(%d{HH:mm:ss.SSS})] [%yellow(%10.15t)] [%cyan(%lo{25}:%M:%L)] [%yellow(%mdc)] -- %msg"
+}
+
+class DevLogLayout extends DevLogLayoutBase {
+  override def pattern: String = "[%-5le] [%d{HH:mm:ss.SSS}] [%10.15t] [%lo{25}:%M:%L] [%mdc] -- %msg"
+}
+
+abstract protected class DevLogLayoutBase extends LayoutBase[ILoggingEvent] {
 
   import LogLayout._
 
-  val pattern = "[%highlight(%-5le)] [%magenta(%d{HH:mm:ss.SSS})] [%yellow(%10.15t)] [%cyan(%lo{25}:%M:%L)] -- %msg"
+  def pattern: String
 
   private lazy val patternedLayout = {
     val layout = new PatternLayout()

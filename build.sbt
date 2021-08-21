@@ -10,16 +10,20 @@ import Util.amGitlabCI
 See https://docs.gitlab.com/ce/ci/caching/ for details and/or possible alternatives.
 */
 import DevEnvironment.DebianRepo
-import DevEnvironmentTasks.{envRepos, jdkExpectedVersion}
+import DevEnvironmentTasks.{agentJars, envRepos, jdkExpectedVersion}
+import Lightbend.{lightbendCinnamonAgentJar, lightbendCinnamonVer, lightbendClassFilter, lightbendDeps, lightbendResolvers}
 import SharedLibrary.{NonMatchingDistLib, NonMatchingLib}
 import SharedLibraryTasks.{sharedLibraries, updateSharedLibraries}
-import Util.{addDeps, buildPackageMappings, cloudrepoPassword, cloudrepoUsername, conditionallyAddArtifact, dirsContaining, referenceConfMerge, searchForAdditionalJars}
+import Util.{buildPackageMappings, dirsContaining, referenceConfMerge, searchForAdditionalJars}
 import Version._
 import sbt.Keys.{libraryDependencies, organization, update}
 import sbtassembly.AssemblyKeys.assemblyMergeStrategy
 import sbtassembly.MergeStrategy
 
+import java.io.BufferedReader
+import java.io.FileReader
 import scala.language.postfixOps
+import scala.util.Try
 
 enablePlugins(JavaAppPackaging)
 
@@ -49,10 +53,6 @@ val sharedLibDeps = Seq(
   NonMatchingLib("libvcx-async-test", "0.11.0-bionic~9999", "libvcx.so")  // For integration testing ONLY
 )
 
-val additionalJars: Seq[String] = Seq(
-  "kanela-agent"
-)
-
 //deb package dependencies versions
 val debPkgDepLibIndyMinVersion = libIndyVer
 
@@ -65,6 +65,7 @@ val akkaMgtVer      = "1.1.1"
 val alpAkkaVer      = "3.0.3"
 val kamonVer        = "2.2.3"
 val kanelaAgentVer  = "1.0.10"
+val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
 val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
                                   // around base64 decoding etc, should look into it.
 val sdnotifyVer     = "1.3"
@@ -99,10 +100,9 @@ maintainer := "Evernym Inc <dev@evernym.com>"
 
 ThisBuild / sharedLibraries := sharedLibDeps
 ThisBuild / envRepos := Seq(evernymDevRepo, evernymUbuntuRepo)
+
 SharedLibraryTasks.init
 DevEnvironmentTasks.init
-
-val jars = taskKey[Seq[File]]("List of Jars to package")
 
 lazy val root = (project in file("."))
   .aggregate(verity)
@@ -116,58 +116,24 @@ lazy val verity = (project in file("verity"))
     testSettings,
     packageSettings,
     protoBufSettings,
-    libraryDependencies ++= addDeps(commonLibraryDependencies, Seq("scalatest_2.12"),"it,test"),
+    lightbendCommercialSettings,
+    libraryDependencies ++= commonLibraryDependencies,
     // Conditionally download an unpack shared libraries
     update := update.dependsOn(updateSharedLibraries).value,
-    K8sTasks.init(additionalJars, debPkgDepLibIndyMinVersion)
+    K8sTasks.init(debPkgDepLibIndyMinVersion)
   )
 
 lazy val integrationTests = (project in file("integration-tests"))
   .settings(
     name := "integration-tests",
     settings,
-    protoBufSettings,
-    libraryDependencies ++= addDeps(
-      commonLibraryDependencies ++ Seq.apply ("org.iq80.leveldb" % "leveldb" % "0.12" ),
-      Seq("scalatest_2.12"),
-      "test"),
-
-    // Do not publish any artifacts created during the Compile or Test tasks.
-    // Suppress publishing of pom, docs, source and bin jar.
-    // The only artifact that must be published is added when calling conditionallyAddArtifact below.
-    publishArtifact in Compile := false,
-    publishArtifact in Test := false,
-
-    // Assembly task in this sub-project must assemble a jar containing the test classes
-    // Include Test classes in assembled jar when integrationTests/assembly is run
-    Project.inConfig(Test)(baseAssemblySettings),
-    assembly := (assembly in Test).value,
-    // Merge strategy during assembly
-    assemblyMergeStrategy in (Test, assembly) := mergeStrategy,
-    // Only add the assembly artifact if a username and password are defined for the repo.
-    // The assumption here is that developers will be creating SNAPSHOTs in their dev
-    // environments and will NOT have a username and password defined. Therefore, SNAPSHOTS
-    // will effectively be excluded if a integrationTests/test:publish is run from a dev environment.
-    conditionallyAddArtifact(artifact in (Test, assembly), assembly in Test),
-    // Do NOT run tests (integration in this case) during assembly
-    test in assembly := {},
-    test in (Test, assembly) := {},
-    publishTo := {
-      val nexus = "https://evernym.mycloudrepo.io/repositories/"
-      Some("releases"  at nexus + "evernym-dev")
-    },
-    credentials += Credentials(
-      "evernym.mycloudrepo.io",
-      "evernym.mycloudrepo.io",
-      cloudrepoUsername,
-      cloudrepoPassword
-    ),
-    publishMavenStyle := true
   ).dependsOn(verity % "test->test; compile->compile")
 
 lazy val settings = Seq(
   organization := "com.evernym",
   scalaVersion := "2.12.14",
+
+  agentJars := Seq("kanela-agent"),
 
   scalacOptions := Seq(
     "-feature",
@@ -211,7 +177,7 @@ lazy val testSettings = Seq (
   //TODO: with sbt 1.3.8 made below test report settings breaking, shall come back to this
 //  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", (target.value / "test-reports" / name.value).toString),
   //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-o"),             // standard test output, a bit verbose
-  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD"),  // summarized test output
+  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD", "-u", (target.value / "test-reports").toString),  // summarized test output
 
   //As part of clustering work, after integrating actor message serializer (kryo-akka in our case)
   // an issue was found related to class loading when we run 'sbt test'
@@ -236,18 +202,20 @@ lazy val packageSettings = Seq (
         -> s"/etc/verity/${packageName.value}"
     )
     val jars = searchForAdditionalJars(
-      (assembly / externalDependencyClasspath).value,
-      additionalJars
+      (Compile / dependencyClasspath).value,
+      agentJars.value
     )
     .map(x => x.copy(_2 = s"/usr/lib/${packageName.value}/${x._2}"))
 
-    println(basePackageMapping)
     packageMapping(basePackageMapping ++ jars: _*)
   },
   linuxPackageMappings += {
-    buildPackageMappings(s"verity/src/main/resources/debian-package-resources",
+    buildPackageMappings(
+      s"verity/src/main/resources/debian-package-resources",
       s"/usr/share/${name.value}/${packageName.value}",
-      includeFiles = confFiles, replaceFilesIfExists = true)
+      includeFiles = Set.empty,
+      replaceFilesIfExists = true
+    )
   },
   Compile / resourceGenerators += SourceGenerator.writeVerityVersionConf(version).taskValue,
   Debian / packageArchitecture := "amd64",
@@ -262,6 +230,37 @@ lazy val packageSettings = Seq (
     "enterprise-agent"
   )
 )
+
+lazy val protoBufSettings = Seq(
+  // Must set deleteTargetDirectory to false. When set to true (the default) other generated sources in the
+  // sourceManaged directory get deleted. For example, version.scala being generated below.
+  PB.deleteTargetDirectory := false,
+
+  //this 'PB.includePaths' is to make import works
+  Compile / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
+  Compile / PB.targets := Seq(
+    scalapb.gen(flatPackage = true) -> (Compile / sourceManaged).value
+  ),
+  Compile / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
+  Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch).taskValue,
+
+  Test / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
+  Test / PB.targets := Seq(
+    scalapb.gen(flatPackage = true) -> (Test / sourceManaged).value
+  ),
+  Test / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test")),
+  //
+) ++ Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings)
+
+val lightbendCommercialSettings = {
+    Lightbend.init ++ Seq (
+      lightbendCinnamonVer := cinnamonVer,
+      resolvers ++= lightbendResolvers.value,
+      libraryDependencies ++= lightbendDeps.value,
+      agentJars ++= lightbendCinnamonAgentJar.value,
+      excludeFilter := lightbendClassFilter.value.map(excludeFilter.value || _).getOrElse(excludeFilter.value)
+    )
+}
 
 lazy val commonLibraryDependencies = {
 
@@ -305,6 +304,13 @@ lazy val commonLibraryDependencies = {
     "ch.qos.logback" % "logback-classic" % "1.2.5",
     akkaGrp %% "akka-slf4j" % akkaVer,
 
+    //kamon monitoring dependencies
+    "io.kamon" % "kanela-agent" % kanelaAgentVer  % "provided",    //a java agent needed to capture akka related metrics
+    "io.kamon" %% "kamon-bundle" % kamonVer,
+    "io.kamon" %% "kamon-prometheus" % kamonVer,
+    "io.kamon" %% "kamon-datadog" % kamonVer,
+    "io.kamon" %% "kamon-jaeger" % kamonVer,
+
     //message codec dependencies (native classes to json and vice versa) [used by JacksonMsgCodec]
     "com.fasterxml.jackson.datatype" % "jackson-datatype-json-org" % jacksonVer,    //JSONObject serialization/deserialization
     "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % jacksonVer,      //Java "time" data type serialization/deserialization
@@ -315,14 +321,6 @@ lazy val commonLibraryDependencies = {
     "org.glassfish.jersey.core" % "jersey-client" % "2.25"                          //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
       excludeAll ExclusionRule(organization = "javax.inject"),                      //TODO: (should fix this) excluded to avoid issue found during 'sbt assembly' after upgrading to sbt 1.3.8
     "com.twilio.sdk" % "twilio-java-sdk" % "6.3.0",                                 //used by "TwilioDispatcher" class
-
-    //kamon monitoring dependencies
-    "io.kamon" % "kanela-agent" % kanelaAgentVer,    //a java agent needed to capture akka related metrics
-
-    "io.kamon" %% "kamon-bundle" % kamonVer,
-    "io.kamon" %% "kamon-prometheus" % kamonVer,
-    "io.kamon" %% "kamon-datadog" % kamonVer,
-    "io.kamon" %% "kamon-jaeger" % kamonVer,
 
     //other dependencies
     "com.github.blemale" %% "scaffeine" % "4.1.0",
@@ -373,57 +371,19 @@ lazy val commonLibraryDependencies = {
   ).map(_ % "test")
 
   coreDeps ++ compileTimeOnlyDeps ++ testDeps
-
 }
 
-lazy val protoBufSettings = Seq(
-  // Must set deleteTargetDirectory to false. When set to true (the default) other generated sources in the
-  // sourceManaged directory get deleted. For example, version.scala being generated below.
-  PB.deleteTargetDirectory := false,
-
-  //this 'PB.includePaths' is to make import works
-  Compile / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
-  Compile / PB.targets := Seq(
-    scalapb.gen(flatPackage = true) -> (Compile / sourceManaged).value
-  ),
-  Compile / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
-  Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch).taskValue,
-
-  Test / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
-  Test / PB.targets := Seq(
-    scalapb.gen(flatPackage = true) -> (Test / sourceManaged).value
-  ),
-  Test / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test")),
-//
-) ++ Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings)
-
-lazy val confFiles = Set (
-  "akka.conf",
-  "dynamodb.conf",
-  "lib-indy.conf",
-  "logback.xml",
-  "salt.conf",
-  "secret.conf",
-  "sms-server.conf",
-  "url-mapper-client.conf",
-  "metrics.conf",
-  "resource-usage-rule.conf",
-  "wallet-storage.conf",
-  "push-notif.conf",
-  "url-mapper-server.conf",
-  "alpakka.s3.conf",
-  "application.conf"
-)
-
 lazy val mergeStrategy: PartialFunction[String, MergeStrategy] = {
-  case PathList("META-INF", "io.netty.versions.properties")     => MergeStrategy.concat
-  case PathList(ps @ _*) if ps.last equals "module-info.class"  => MergeStrategy.concat
-  case PathList("systemd", "systemd.service")                   => MergeStrategy.first
-  case PathList("mime.types")                                   => MergeStrategy.first
-  case PathList(ps @ _*) if ps.last endsWith ".proto"           => MergeStrategy.first
-  case PathList("reference.conf")                               => referenceConfMerge()
-  case s if confFiles.contains(s)                               => MergeStrategy.discard
-  case s                                                        => MergeStrategy.defaultMergeStrategy(s)
+  case PathList("META-INF", "io.netty.versions.properties")         => MergeStrategy.concat
+  case PathList(ps @ _*) if ps.last equals "module-info.class"      => MergeStrategy.concat
+  case PathList("systemd", "systemd.service")                       => MergeStrategy.first
+  case PathList("mime.types")                                       => MergeStrategy.first
+  case PathList(ps @ _*) if ps.last endsWith ".proto"               => MergeStrategy.first
+  case PathList("reference.conf")                                   => referenceConfMerge()
+  case PathList("cinnamon-reference.conf")                          => MergeStrategy.concat
+  case PathList("cinnamon", "instrument", "Instrumentations.class") => MergeStrategy.last
+  case s if s.contains("kanela-agent")                              => MergeStrategy.discard
+  case s                                                            => MergeStrategy.defaultMergeStrategy(s)
 }
 
 /*

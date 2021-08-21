@@ -4,11 +4,11 @@ import java.time.Instant
 
 trait MetricsBackend {
 
-  def gaugeIncrement(name: String, value: Double = 1, tags: TagMap = Map.empty)
+  def gaugeIncrement(name: String, value: Long = 1, tags: TagMap = Map.empty)
 
-  def gaugeDecrement(name: String, value: Double = 1, tags: TagMap = Map.empty)
+  def gaugeDecrement(name: String, value: Long = 1, tags: TagMap = Map.empty)
 
-  def gaugeUpdate(name: String, value: Double, tags: TagMap = Map.empty)
+  def gaugeUpdate(name: String, value: Long, tags: TagMap = Map.empty)
 
   def histogramUpdate(name: String, unit: MetricsUnit, value: Long, tags: TagMap = Map.empty): Unit
 

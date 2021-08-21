@@ -1,4 +1,4 @@
-package com.evernym.verity.integration.outbox.with_sdk.oauth
+package com.evernym.verity.integration.with_basic_sdk
 
 import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, ComMethodAuthentication, UpdateComMethodReqMsg}
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 
-class ComMethodAuthenticationSpec
+class ComMethodUpdateSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
@@ -42,7 +42,7 @@ class ComMethodAuthenticationSpec
     "when tried to update com method with unsupported authentication type" - {
       "should respond with error" in {
         val ex = intercept[IllegalArgumentException] {
-          issuerSDK.registerWebhook(
+          issuerSDK.registerWebhook(authentication=
             Option(
               ComMethodAuthentication(
                 "OAuth1",
@@ -64,7 +64,7 @@ class ComMethodAuthenticationSpec
     "when tried to update com method with unsupported authentication version" - {
       "should respond with error" in {
         val ex = intercept[IllegalArgumentException] {
-          issuerSDK.registerWebhook(
+          issuerSDK.registerWebhook(authentication=
             Option(
               ComMethodAuthentication(
                 "OAuth2",
@@ -93,7 +93,7 @@ class ComMethodAuthenticationSpec
         )
         invalidData.foreach { data =>
           val ex = intercept[IllegalArgumentException] {
-            issuerSDK.registerWebhook(
+            issuerSDK.registerWebhook(authentication=
               Option(
                 ComMethodAuthentication(
                   "OAuth2",
@@ -118,7 +118,7 @@ class ComMethodAuthenticationSpec
         )
         invalidData.foreach { data =>
           val ex = intercept[IllegalArgumentException] {
-            issuerSDK.registerWebhook(
+            issuerSDK.registerWebhook(authentication=
               Option(
                 ComMethodAuthentication(
                   "OAuth2",
@@ -144,6 +144,7 @@ class ComMethodAuthenticationSpec
         invalidData.foreach { data =>
           val ex = intercept[IllegalArgumentException] {
             issuerSDK.registerWebhook(
+              Option("webhook"),
               Option(
                 ComMethodAuthentication(
                   "OAuth2",
@@ -155,6 +156,34 @@ class ComMethodAuthenticationSpec
           }
           ex.getMessage.contains("authentication data required fields missing or invalid") shouldBe true
         }
+      }
+    }
+
+    "when tried to with valid com method (with auth)" - {
+      "should be successful" in {
+        val authData = Map(
+          "url"           -> "auth-url",
+          "grant_type"    -> "client_credentials",
+          "client_id"     -> "client_id",
+          "client_secret" -> "client_secret"
+        )
+
+        issuerSDK.registerWebhook(
+          Option("authwebhook"),
+          Option(
+            ComMethodAuthentication(
+              "OAuth2",
+              "v1",
+              authData
+            )
+          )
+        )
+      }
+    }
+
+    "when tried to with valid com method (no auth)" - {
+      "should be successful" in {
+        issuerSDK.registerWebhook(Option("webhook"))
       }
     }
   }

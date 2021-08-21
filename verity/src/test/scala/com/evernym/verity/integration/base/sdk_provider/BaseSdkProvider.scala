@@ -143,7 +143,9 @@ trait SdkProvider { this: BasicSpec =>
  * a base sdk class for issuer/holder sdk
  * @param param sdk parameters
  */
-abstract class SdkBase(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext) extends Matchers {
+abstract class SdkBase(param: SdkParam,
+                       executionContext: ExecutionContext,
+                       walletExecutionContext: ExecutionContext) extends Matchers {
 
   implicit val ec: ExecutionContext = executionContext
   type ConnId = String

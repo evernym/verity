@@ -118,3 +118,10 @@ data:
     {{- end }}
   custom.conf: |
 {{ .Values.customConfig | default "" | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ledger-genesis-{{ template "verity.fullname" . }}
+data:
+{{ index .Values "ledger-genesis" | toPrettyJson | indent 2 }}

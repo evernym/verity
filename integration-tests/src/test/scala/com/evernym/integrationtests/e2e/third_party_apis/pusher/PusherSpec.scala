@@ -15,7 +15,8 @@ class PusherSpec
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   val asmTestKit = new AppStateManagerTestKit(this, appConfig, ecp.futureExecutionContext)
 
-  lazy val pusher: ActorRef = system.actorOf(Pusher.props(appConfig, ecp.futureExecutionContext), s"pusher-1")
+  lazy val pusher: ActorRef = system.actorOf(
+    Pusher.props("domainId", appConfig, ecp.futureExecutionContext), s"pusher-1")
 
   "Pusher" - {
     "when sent 'SendPushNotif' command with 'InvalidRegistration' token" - {

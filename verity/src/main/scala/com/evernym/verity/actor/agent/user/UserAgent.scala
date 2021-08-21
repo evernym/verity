@@ -33,6 +33,7 @@ import com.evernym.verity.agentmsg.msgfamily.configs._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.FwdReqMsg
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
+import com.evernym.verity.config.ConfigConstants.OUTBOX_OAUTH_RECEIVE_TIMEOUT
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
@@ -64,6 +65,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_t
 import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
 import com.evernym.verity.util2.ActorErrorResp
 
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
@@ -512,6 +514,11 @@ class UserAgent(val agentActorContext: AgentActorContext,
       logger.debug(s"comMethods: ${state.myDidDoc_!.endpoints}")
       state.myDidDoc_!.endpoints_!.filterByTypes(comMethod.`type`)
         .filter (_ => isOnlyOneComMethodAllowed(comMethod.`type`)).foreach { ep =>
+          logger.info(
+            s"com method to be deleted => " +
+              s"id: ${ep.id}, " +
+              s"value: ${ep.value}"
+          )
 	        writeAndApply(
             ComMethodDeleted(
               ep.id,
@@ -541,20 +548,24 @@ class UserAgent(val agentActorContext: AgentActorContext,
         )
       )
       logger.info(
-        s"update com method updated => " +
-          s"id:${comMethod.id}, " +
+        s"com method updated => " +
+          s"id: ${comMethod.id}, " +
           s"type: ${comMethod.`type`}, " +
           s"value: ${comMethod.value}, " +
           s"packaging: ${comMethod.packaging.map(p => s"pkg-type: ${p.pkgType}")}, " +
           s"authentication: ${comMethod.authentication.map(a => s"auth-type: ${a.`type`}[${a.version}]")}"
       )
-      logger.debug(
-        s"update com method => updated (userDID=<${state.myDid}>, id=${comMethod.id}, " +
-          s"old=$existingEndpointOpt): new: $comMethod", (LOG_KEY_SRC_DID, state.myDid))
     } else {
-      logger.debug(
-        s"update com method => update not needed (userDID=<${state.myDid}>, id=${comMethod.id}, " +
-          s"old=$existingEndpointOpt): new: $comMethod",  (LOG_KEY_SRC_DID, state.myDid))
+      logger.info(
+        s"com method NOT updated => " +
+          s"id: ${comMethod.id} (old: ${existingEndpointOpt.map(_.id)}), " +
+          s"type: ${comMethod.`type`} (old: ${existingEndpointOpt.map(_.`type`)}), " +
+          s"value: ${comMethod.value} (old: ${existingEndpointOpt.map(_.value)}), " +
+          s"packaging: ${comMethod.packaging.map(p => s"pkg-type: ${p.pkgType}")} " +
+              s"(old: ${existingEndpointOpt.flatMap(_.packagingContext).map(p => s"pkg-type: ${p.packFormat.toString}")}), " +
+          s"authentication: ${comMethod.authentication.map(a => s"auth-type: ${a.`type`}[${a.version}]")}" +
+              s"(old: ${existingEndpointOpt.flatMap(_.authentication).map(a => s"auth-type: ${a.`type`}[${a.version}]")})"
+      )
     }
   }
 
@@ -841,6 +852,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
 
   updateAgentWalletId(entityId)
 
+  //to be used to send com method updates to associated outbox actors
   var outboxActorRefs: Map[DestId, ActorRef] = Map.empty
 
   /**
@@ -877,9 +889,11 @@ class UserAgent(val agentActorContext: AgentActorContext,
             case Some(child) =>
               child ! UpdateParams(auth.data, OAuthAccessTokenRefresher.getRefresher(auth.version, executionContext))
             case None =>
+              val receiveTimeout = appConfig.getDurationOption(OUTBOX_OAUTH_RECEIVE_TIMEOUT)
+                .getOrElse(FiniteDuration(30, SECONDS))
               context.spawn(
                 OAuthAccessTokenHolder(
-                  appConfig.config,
+                  receiveTimeout,
                   auth.data,
                   agentActorContext.oAuthAccessTokenRefreshers.refreshers(auth.version)
                 ),

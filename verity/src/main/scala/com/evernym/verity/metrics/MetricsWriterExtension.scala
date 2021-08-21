@@ -1,6 +1,6 @@
 package com.evernym.verity.metrics
 
-import akka.actor.{ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
+import akka.actor.{ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
 import com.evernym.verity.config.ConfigConstants.{METRICS_BACKEND, METRICS_ENABLED}
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants.YES
@@ -10,16 +10,25 @@ import com.typesafe.config.Config
 
 import scala.util.matching.Regex
 
-class MetricsWriterExtensionImpl(config: Config) extends Extension {
+class MetricsWriterExtensionImpl(system: ExtendedActorSystem) extends Extension {
 
   private val logger = getLoggerByName("MetricsWriterExtension")
+  private val config = system.settings.config
 
   private val metricsWriter = {
     try {
       val metricsBackend: MetricsBackend = try {
         if (config.getString(METRICS_ENABLED) == YES) {
           val className = config.getString(METRICS_BACKEND)
-          Class.forName(className).getConstructor().newInstance().asInstanceOf[MetricsBackend]
+          try {
+            // Allow backends to be constructed with a reference to the actor system
+            Class.forName(className).getConstructor(classOf[ActorSystem]).newInstance(system).asInstanceOf[MetricsBackend]
+          }
+          catch {
+            case _ : NoSuchMethodException =>
+              // Fall back and use empty constructor to build backend
+              Class.forName(className).getConstructor().newInstance().asInstanceOf[MetricsBackend]
+          }
         } else {
           new NoOpMetricsBackend
         }
@@ -58,5 +67,5 @@ class MetricsWriterExtensionImpl(config: Config) extends Extension {
 object MetricsWriterExtension extends ExtensionId[MetricsWriterExtensionImpl] with ExtensionIdProvider {
   override def lookup = MetricsWriterExtension
 
-  override def createExtension(system: ExtendedActorSystem) = new MetricsWriterExtensionImpl(system.settings.config)
+  override def createExtension(system: ExtendedActorSystem) = new MetricsWriterExtensionImpl(system)
 }

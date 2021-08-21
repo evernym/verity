@@ -10,7 +10,7 @@ import com.evernym.verity.metrics.CustomMetrics.{AS_OUTBOX_MSG_DELIVERY, AS_OUTB
 import com.evernym.verity.msgoutbox.base.BaseMsgOutboxSpec
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies.MsgDeliveryStatus
-import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{AddMsg, GetDeliveryStatus, GetOutboxParam, UpdateOutboxParam}
+import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{AddMsg, GetDeliveryStatus, GetOutboxParam, UpdateConfig, UpdateOutboxParam}
 import com.evernym.verity.msgoutbox.outbox.Outbox.{Commands, Replies, TypeKey}
 import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
@@ -56,15 +56,6 @@ class OutboxSpec
 
 
     "in already started state" - {
-
-      "when sent Stop command" - {
-        "should be stopped" in {
-          val probe = createTestProbe()
-          outboxRegion ! ShardingEnvelope(outboxId, Commands.TimedOut)
-          probe.expectNoMessage()
-          checkRetention(expectedSnapshots = 2, expectedEvents = 1)
-        }
-      }
 
       "when sent GetOutboxParam" - {
         "should respond with proper information" in {
@@ -192,6 +183,13 @@ class OutboxSpec
         checkMsgDeliveryMetrics(6, 0, 0)
       }
     }
+
+    "when receive UpdateConfig" - {
+      "should update its config" in {
+        val outboxConfig = Outbox.prepareOutboxConfig(appConfig.config)
+        outboxRegion ! ShardingEnvelope(outboxId,UpdateConfig(outboxConfig))
+      }
+    }
   }
 
   def checkRetention(expectedSnapshots: Int, expectedEvents: Int): Unit = {
@@ -240,7 +238,7 @@ class OutboxSpec
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
       Outbox(
         entityContext,
-        appConfig.withFallback(SNAPSHOT_CONFIG),
+        appConfig.withFallback(SNAPSHOT_CONFIG).config,
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,

@@ -12,7 +12,9 @@ abstract class BehaviourSpecBase
   extends ScalaTestWithActorTestKit(
     ActorTestKit(
       "TestSystem",
-      TypedTestKit.config.withFallback(TypedTestKit.clusterConfig)
+      TypedTestKit.clusterConfig
+        .withFallback(TypedTestKit.serializationConfig)
+        .withFallback(TypedTestKit.testKitConfig)
     )
   ) {
 
@@ -28,7 +30,7 @@ abstract class EventSourcedBehaviourSpecBase
 
 object TypedTestKit {
 
-  val config: Config = ConfigFactory.empty
+  val testKitConfig: Config = ConfigFactory.empty
     .withFallback(EventSourcedBehaviorTestKit.config)
     .withFallback(PersistenceTestKitSnapshotPlugin.config)
 
@@ -58,4 +60,27 @@ object TypedTestKit {
     }
     """)
   }
+
+  val serializationConfig: Config = ConfigFactory.parseString(
+    """
+      |akka.actor {
+      |  serialize-messages = on    # to make sure commands/reply messages are tested for remote serialization
+      |  allow-java-serialization = off
+      |
+      |  serializers {
+      |    protoser = "com.evernym.verity.actor.serializers.ProtoBufSerializer"
+      |  }
+      |
+      |  serialization-bindings {
+      |    "com.evernym.verity.actor.PersistentMsg" = protoser
+      |    "com.evernym.verity.actor.ActorMessage" = kryo-akka
+      |  }
+      |}
+      |
+      |akka.persistence.testkit {
+      |     events.serialize = on
+      |     snapshots.serialize = on
+      |}
+      |""".stripMargin)
+
 }

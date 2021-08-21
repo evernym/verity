@@ -147,7 +147,7 @@ trait BasePersistentActor
     } catch {
       case e: Exception =>
         val allEventNames = events.map(_.getClass.getSimpleName).mkString(", ")
-        val errorMsg = s"error during persisting actor event $allEventNames: ${Exceptions.getErrorMsg(e)}"
+        val errorMsg = s"[$persistenceId] error during persisting actor event $allEventNames: ${Exceptions.getErrorMsg(e)}"
         trackPersistenceFailure()
         handlePersistenceFailure(e, errorMsg)
     }
@@ -382,7 +382,7 @@ trait BasePersistentActor
       event
     } catch {
       case e: Exception =>
-        val errorMsg = s"error while undoing persisted event transformation (persistence-id: $persistenceId)"
+        val errorMsg = s"[$persistenceId] error while undoing persisted event transformation"
         handleUndoTransformFailure(e, errorMsg)
         logger.error(Exceptions.getStackTraceAsSingleLineString(e))
         throw e
@@ -393,10 +393,10 @@ trait BasePersistentActor
     try {
       receiveEvent(evt)
       postEventHandlerApplied()
-      logger.trace("event recovered", (LOG_KEY_PERSISTENCE_ID, persistenceId), ("event", evt.getClass.getSimpleName))
+      logger.trace(s"[$persistenceId] event recovered", ("event", evt.getClass.getSimpleName))
     } catch {
       case e: Exception =>
-        logger.error(s"[$persistenceId] event not handled by event receiver: ${e.getMessage}", (LOG_KEY_PERSISTENCE_ID, persistenceId), ("event", evt.getClass.getSimpleName))
+        logger.error(s"[$persistenceId] event not handled by event receiver: ${e.getMessage}", ("event", evt.getClass.getSimpleName))
         logger.error(Exceptions.getStackTraceAsSingleLineString(e))
         throw e
     }
@@ -436,40 +436,41 @@ trait BasePersistentActor
 
   override def onPersistFailure(cause: Throwable, event: Any, seqNr: Long): Unit = {
     val errorMsg =
-      s"actor persist event (${event.getClass}) failed (" +
-        "possible-causes: database not reachable/up/responding, required tables are not created etc, " +
-        s"persistence-id: $persistenceId, " +
-        s"error-msg: ${cause.getMessage})"
+      s"[$persistenceId] actor persist event (${event.getClass.getSimpleName}) failed (" +
+        s"error-msg: ${cause.getMessage}, " +
+        s"possible-causes: $JOURNAL_ERROR_POSSIBLE_CAUSE)"
+
     trackPersistenceFailure()
     handlePersistenceFailure(cause, errorMsg)
   }
 
   override def onPersistRejected(cause: Throwable, event: Any, seqNr: Long): Unit = {
     val errorMsg =
-      s"actor persist event (${event.getClass}) rejected (" +
-        "possible-causes: database not reachable/up/responding, required tables are not created etc, " +
-        s"persistence-id: $persistenceId, " +
-        s"error-msg: ${cause.getMessage})"
+      s"[$persistenceId] " +
+        s"actor persist event (${event.getClass.getSimpleName}) rejected (" +
+        s"error-msg: ${cause.getMessage}, " +
+        s"possible-causes: $JOURNAL_ERROR_POSSIBLE_CAUSE)"
+
     trackPersistenceFailure()
     handlePersistenceFailure(cause, errorMsg)
   }
 
-  final override def onRecoveryFailure(cause: Throwable, event: Option[Any]): Unit = {
+  override def onRecoveryFailure(cause: Throwable, event: Option[Any]): Unit = {
     event match {
       case Some(_) =>
-        val errorMsg = "actor not able to start (" +
-          "possible-causes: unknown, "+
-          s"persistence-id: $persistenceId, " +
+        val errorMsg = s"[$persistenceId] actor not able to start (" +
           s"error-msg: ${cause.getMessage})"
         handleRecoveryFailure(cause, errorMsg)
       case None =>
-        val errorMsg = "actor not able to start (" +
-          "possible-causes: database not reachable/up/responding, required tables are not created etc, " +
-          s"persistence-id: $persistenceId, " +
-          s"error-msg: ${cause.getMessage})"
+        val errorMsg = s"[$persistenceId] actor not able to start (" +
+          s"error-msg: ${cause.getMessage}, "+
+          s"possible-causes: $JOURNAL_ERROR_POSSIBLE_CAUSE)"
         handleRecoveryFailure(cause, errorMsg)
     }
   }
+
+  private val JOURNAL_ERROR_POSSIBLE_CAUSE =
+    "database not reachable/responding, required tables are not created, permission issues etc"
 
   def receiveActorInitSpecificCmd: Receive = PartialFunction.empty
 

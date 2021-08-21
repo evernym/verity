@@ -18,8 +18,8 @@ import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
-import java.util.UUID
 
+import java.util.UUID
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
@@ -85,14 +85,6 @@ class MessageMetaSpec
           msg.`type` shouldBe "credOffer"
           msg.legacyData shouldBe None
           msg.payload.isEmpty shouldBe true
-        }
-      }
-
-      "when sent Stop command" - {
-        "should be stopped" in {
-          val probe = createTestProbe()
-          messageMetaRegion ! ShardingEnvelope(msgId, Commands.TimedOut)
-          probe.expectNoMessage()
         }
       }
 
@@ -222,14 +214,6 @@ class MessageMetaSpec
         }
       }
 
-      "when sent Stop command again" - {
-        "should be stopped" in {
-          val probe = createTestProbe()
-          messageMetaRegion ! ShardingEnvelope(msgId, Commands.TimedOut)
-          probe.expectNoMessage()
-        }
-      }
-
       "when send Get command again" - {
         "should still respond with Message" in {
           val probe = createTestProbe[StatusReply[Reply]]()
@@ -262,7 +246,7 @@ class MessageMetaSpec
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
       Outbox(
         entityContext,
-        appConfig.withFallback(SNAPSHOT_CONFIG),
+        appConfig.withFallback(SNAPSHOT_CONFIG).config,
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,

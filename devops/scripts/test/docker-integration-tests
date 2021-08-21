@@ -103,13 +103,6 @@ pushd ${CI_PROJECT_DIR}
 
 testType=${TEST_TYPE:-"Integration"}
 echo "Begin running integration tests... TEST_TYPE=$testType"
-if [[ "$testType" == "Protocols" ]]
-then
-  echo "Running protocol Connecting integration tests..."
-  sbt "verity/multi-jvm:testOnly com.evernym.verity.integration.Connecting"
-  echo "Running protocol TicTacToe integration tests..."
-  sbt "verity/multi-jvm:testOnly com.evernym.verity.integration.TicTacToe"
-fi
 
 if [[ "$testType" == "Legacy" ]]
 then

@@ -8,19 +8,19 @@ class TestMetricsBackend extends MetricsBackend {
   val gaugesMap = new mutable.HashMap[TestMetricHead, Double]()
   val histogramsMap = new mutable.HashMap[TestMetricHead, HistogramEntry]
 
-  override def gaugeIncrement(name: String, value: Double, tags: TagMap): Unit = this.synchronized {
+  override def gaugeIncrement(name: String, value: Long, tags: TagMap): Unit = this.synchronized {
     val key = TestMetricHead(name, tags)
     val cur = gaugesMap.getOrElse(key, 0.0)
     gaugesMap.put(key, cur + value)
   }
 
-  override def gaugeDecrement(name: String, value: Double, tags: TagMap): Unit = this.synchronized {
+  override def gaugeDecrement(name: String, value: Long, tags: TagMap): Unit = this.synchronized {
     val key = TestMetricHead(name, tags)
     val cur = gaugesMap.getOrElse(key, 0.0)
     gaugesMap.put(key, cur - value)
   }
 
-  override def gaugeUpdate(name: String, value: Double, tags: TagMap): Unit = this.synchronized {
+  override def gaugeUpdate(name: String, value: Long, tags: TagMap): Unit = this.synchronized {
     val key = TestMetricHead(name, tags)
     gaugesMap.put(key, value)
   }

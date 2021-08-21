@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.typed.spec
 
 import akka.Done
+import akka.actor.NoSerializationVerificationNeeded
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.cluster.sharding.ShardRegion.EntityId
 import akka.cluster.sharding.typed.ShardingEnvelope
@@ -8,6 +9,7 @@ import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityCont
 import akka.pattern.StatusReply
 import akka.persistence.typed.{PersistenceId, RecoveryCompleted}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.typed.spec.Events._
 import com.evernym.verity.actor.typed.BehaviourSpecBase
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
@@ -20,6 +22,7 @@ import scalapb.GeneratedMessageCompanion
 import java.util.UUID
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 
 import scala.concurrent.duration._
 
@@ -122,7 +125,7 @@ class PersistentBehaviourSpec
 
 object Account {
 
-  trait Cmd
+  trait Cmd extends ActorMessage
   object Commands {
     case class Open(name: String, balance: Double, replyTo: ActorRef[StatusReply[Done]]) extends Cmd
     case class Credit(amount: Double, replyTo: ActorRef[StatusReply[Done]]) extends Cmd
@@ -132,7 +135,7 @@ object Account {
     case class Stop(replyTo: ActorRef[StatusReply[Done]]) extends Cmd
   }
 
-  trait State
+  trait State extends NoSerializationVerificationNeeded
   object States {
     case object Empty extends State
     case class Opened(name: String, balance: Double) extends State
@@ -143,9 +146,10 @@ object Account {
 
   def apply(entityContext: EntityContext[Cmd], appConfig: AppConfig): Behavior[Cmd] = {
     val persistenceId = PersistenceId(TypeKey.name, entityContext.entityId)
+    val salt = appConfig.getStringReq(SALT_EVENT_ENCRYPTION)
     EventSourcedBehavior
       .withEnforcedReplies(persistenceId, States.Empty, commandHandler, eventHandler)
-      .eventAdapter(PersistentEventAdapter(entityContext.entityId, TestObjectCodeMapper, appConfig))
+      .eventAdapter(PersistentEventAdapter(entityContext.entityId, TestObjectCodeMapper, salt))
       .receiveSignal(signalHandler(persistenceId))
   }
 

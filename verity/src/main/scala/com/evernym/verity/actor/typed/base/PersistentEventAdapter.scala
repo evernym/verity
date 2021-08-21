@@ -3,13 +3,12 @@ package com.evernym.verity.actor.typed.base
 import akka.persistence.typed.{EventAdapter, EventSeq}
 import com.evernym.verity.actor.PersistentMsg
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
-import com.evernym.verity.config.AppConfig
 
 //does event transformation (serialization, encryption etc) during persistence
 // and un-transformation during recovery
 case class PersistentEventAdapter[E](encryptionKey: String,
                                      objectCodeMapper: ObjectCodeMapperBase,
-                                     ac: AppConfig)
+                                     eventEncryptionSalt: String)
   extends EventAdapter[E,PersistentMsg]
     with PersistentAdapterBase {
 
@@ -26,6 +25,4 @@ case class PersistentEventAdapter[E](encryptionKey: String,
   }
 
   override def manifest(event: E): String = ""
-
-  override def appConfig: AppConfig = ac
 }

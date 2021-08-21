@@ -54,8 +54,9 @@ class AkkaHttpMsgSendingSvc(config: Config, metricsWriter: MetricsWriter, execut
         entity = HttpEntity(payload),
         headers = headers
       )
-      sendRequestAndHandleResponse(req) { response =>
-        val prp = performResponseParsing[String]
+      val id = UUID.randomUUID().toString
+      sendRequestAndHandleResponse(id, req) { response =>
+        val prp = performResponseParsing[String](id)
         prp(response)
       }
     }
@@ -71,8 +72,9 @@ class AkkaHttpMsgSendingSvc(config: Config, metricsWriter: MetricsWriter, execut
         entity = HttpEntity(MediaTypes.`application/json`, payload),
         headers = headers
       )
-      sendRequestAndHandleResponse(req) { response =>
-        val prp = performResponseParsing[String]
+      val id = UUID.randomUUID().toString
+      sendRequestAndHandleResponse(id, req) { response =>
+        val prp = performResponseParsing[String](id)
         prp(response)
       }
     }
@@ -88,21 +90,26 @@ class AkkaHttpMsgSendingSvc(config: Config, metricsWriter: MetricsWriter, execut
         entity = HttpEntity(HttpCustomTypes.MEDIA_TYPE_SSI_AGENT_WIRE, payload),
         headers = headers
       )
-      sendRequestAndHandleResponse(req) { response =>
+      val id = UUID.randomUUID().toString
+      sendRequestAndHandleResponse(id, req) { response =>
         import akka.http.scaladsl.unmarshalling.PredefinedFromEntityUnmarshallers.byteArrayUnmarshaller
-        val prp = performResponseParsing[Array[Byte]]
+        val prp = performResponseParsing[Array[Byte]](id)
         prp(response).map(_.map(bd => PackedMsg(bd)))
       }
     }
   }
 
-  private def sendRequestAndHandleResponse[T](req: HttpRequest)
+  private def sendRequestAndHandleResponse[T](id: String,
+                                              req: HttpRequest)
                                              (respHandler: HttpResponse => Future[Either[HandledErrorException, T]])
                                              (implicit up: UrlParam):
   Future[Either[HandledErrorException, T]] = {
-    val id = UUID.randomUUID().toString
-    val headerNames = req.headers.map(_.name()).mkString(", ")
-    logger.info(s"[$id] [outgoing request] [${req.method.value}] to uri ${up.host}:${up.port}/${up.path} (with headers: $headerNames)")
+    val headersDetail =
+      if (req.headers.nonEmpty)
+        s"with headers: ${req.headers.map(_.name()).mkString(", ")})"
+      else
+        "without any headers"
+    logger.info(s"[$id] [outgoing request] [${req.method.value}] to uri ${up.host}:${up.port}/${up.path} ($headersDetail)")
     sendRequest(req).flatMap { response =>
       logger.info(s"[$id] [incoming response] [${response.status}]")
       respHandler(response)
@@ -146,30 +153,30 @@ class AkkaHttpMsgSendingSvc(config: Config, metricsWriter: MetricsWriter, execut
   }
   private val superPoolFlow = Http().superPool[NotUsed]()
 
-  protected def performResponseParsing[T](implicit up: UrlParam, um: Unmarshaller[ResponseEntity, T]):
+  protected def performResponseParsing[T](id: String)(implicit up: UrlParam, um: Unmarshaller[ResponseEntity, T]):
   PartialFunction[HttpResponse, Future[Either[HandledErrorException, T]]] = {
     case hr: HttpResponse if List(OK, Accepted).contains(hr.status) =>
-      logger.debug(s"successful response ('${hr.status.value}') received from '${up.url}'")
+      logger.debug(s"[$id] successful response ('${hr.status.value}') received from '${up.url}'")
       Unmarshal(hr.entity).to[T].map(Right(_))
 
     case hr: HttpResponse if hr.status ==  BadRequest =>
       Unmarshal(hr.entity).to[String].map { respMsg =>
         val errorMsg = buildStatusDetail(respMsg).map(_.toString).getOrElse(respMsg)
-        val error = s"error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
+        val error = s"[$id] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
         logger.warn(error)
         Left(buildHandledError(BAD_REQUEST.withMessage(error))) }
 
     case hr: HttpResponse if hr.status ==  Unauthorized =>
       Unmarshal(hr.entity).to[String].map { respMsg =>
         val errorMsg = buildStatusDetail(respMsg).map(_.toString).getOrElse(respMsg)
-        val error = s"error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
+        val error = s"[$id] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
         logger.warn(error)
         Left(buildHandledError(UNAUTHORIZED.withMessage(error))) }
 
     case hr: HttpResponse =>
       Unmarshal(hr.entity).to[String].map { respMsg =>
         val errorMsg = buildStatusDetail(respMsg).map(_.toString).getOrElse(respMsg)
-        val error = s"error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
+        val error = s"[$id] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
         logger.warn(error)
         Left(buildHandledError(UNHANDLED.withMessage(error)))
       }

@@ -25,17 +25,17 @@ class MetricsWriter(_metricsBackend: MetricsBackend, _filters: Set[Regex]=Set.em
     metricsBackend.setup()
   }
 
-  def gaugeIncrement(name: String, value: Double = 1, tags: TagMap = Map.empty): Unit =
+  def gaugeIncrement(name: String, value: Long = 1, tags: TagMap = Map.empty): Unit =
     withFilterCheck(name) {
       metricsBackend.gaugeIncrement(name, value, tags)
     }
 
-  def gaugeDecrement(name: String, value: Double = 1, tags: TagMap = Map.empty): Unit =
+  def gaugeDecrement(name: String, value: Long = 1, tags: TagMap = Map.empty): Unit =
     withFilterCheck(name) {
       metricsBackend.gaugeDecrement(name, value, tags)
     }
 
-  def gaugeUpdate(name: String, value: Double, tags: TagMap = Map.empty): Unit =
+  def gaugeUpdate(name: String, value: Long, tags: TagMap = Map.empty): Unit =
     withFilterCheck(name) {
       metricsBackend.gaugeUpdate(name, value, tags)
     }

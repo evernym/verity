@@ -15,7 +15,8 @@ import com.evernym.verity.actor.agent.user.GetTokenForUrl
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.OUTBOX_OAUTH_RECEIVE_TIMEOUT
+import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.GetTokenSuccess
@@ -26,11 +27,12 @@ import com.evernym.verity.util2.Status.UNAUTHORIZED
 import com.evernym.verity.util2.{ExecutionContextProvider, UrlParam}
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
-import java.util.UUID
 
+import java.util.UUID
 import com.evernym.verity.util.TestExecutionContextProvider
 
 import scala.collection.immutable
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -326,13 +328,17 @@ object MockSelfRelActor {
 class MockSelfRelActor(appConfig: AppConfig)
   extends CoreActorExtended {
 
-  val oAuthAccessTokenHolder: ActorRef[OAuthAccessTokenHolder.Cmd] = context.spawnAnonymous(
-    OAuthAccessTokenHolder(
-      appConfig.config,
-      Map.empty,
-      MockOAuthAccessTokenRefresher()
+  val oAuthAccessTokenHolder: ActorRef[OAuthAccessTokenHolder.Cmd] = {
+    val timeout = appConfig.getDurationOption(OUTBOX_OAUTH_RECEIVE_TIMEOUT)
+      .getOrElse(FiniteDuration(30, SECONDS))
+    context.spawnAnonymous(
+      OAuthAccessTokenHolder(
+        timeout,
+        Map.empty,
+        MockOAuthAccessTokenRefresher()
+      )
     )
-  )
+  }
 
   override def receiveCmd: Receive = {
     case GetTokenForUrl(forUrl, cmd: OAuthAccessTokenHolder.Cmd) => oAuthAccessTokenHolder ! cmd

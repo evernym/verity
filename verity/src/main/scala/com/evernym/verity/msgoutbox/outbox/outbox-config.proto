@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.msgoutbox.outbox;
+
+message RetryPolicy {
+  int32 maxRetries = 1;
+  int64 initialIntervalMs = 2;
+}
+
+message OutboxConfig {
+  int32 batchSize = 1;
+  int64 receiveTimeoutMs = 2;
+  int64 scheduledJobIntervalMs = 3;
+  map<string, RetryPolicy> retryPolicy = 4;
+  int64 oauthReceiveTimeoutMs = 5;
+}

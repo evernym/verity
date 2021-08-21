@@ -70,16 +70,18 @@ trait OutboxRouterSpecBase
     // * a message got stored in external storage (s3)
     // * its message meta actor has its delivery information and
     // * it also got added to given outbox
-    storageAPI.getBlobObjectCount("20", BUCKET_NAME) shouldBe 1
+    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+      storageAPI.getBlobObjectCount("20", BUCKET_NAME) shouldBe 1
 
-    messageMetaRegion ! ShardingEnvelope(ack.msgId, Commands.GetDeliveryStatus(messageMetaProbe.ref))
-    val msgDeliveryStatus = messageMetaProbe.expectMessageType[StatusReply[MsgDeliveryStatus]].getValue
-    msgDeliveryStatus.outboxDeliveryStatus.size shouldBe 1
+      messageMetaRegion ! ShardingEnvelope(ack.msgId, Commands.GetDeliveryStatus(messageMetaProbe.ref))
+      val msgDeliveryStatus = messageMetaProbe.expectMessageType[StatusReply[MsgDeliveryStatus]].getValue
+      msgDeliveryStatus.outboxDeliveryStatus.size shouldBe 1
 
-    ack.targetOutboxIds.foreach { outboxId =>
-      outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(outboxProbe.ref))
-      val messages = outboxProbe.expectMessageType[StatusReply[Replies.DeliveryStatus]].getValue.messages
-      messages.size shouldBe 1
+      ack.targetOutboxIds.foreach { outboxId =>
+        outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(outboxProbe.ref))
+        val messages = outboxProbe.expectMessageType[StatusReply[Replies.DeliveryStatus]].getValue.messages
+        messages.size shouldBe 1
+      }
     }
 
     //checking that

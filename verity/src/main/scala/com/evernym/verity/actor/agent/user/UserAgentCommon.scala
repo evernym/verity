@@ -101,7 +101,7 @@ trait UserAgentCommon
     //internal messages exchanged between actors
     case gmr: GetMsgsReqMsg               => handleGetMsgsInternal(gmr)
     case ums: UpdateMsgStatusReqMsg       => handleUpdateMsgStatusInternal(ums)
-    case GetRelParam                      => sender ! RelParamResp(selfRelDID, state.relationship)
+    case GetRelParam                      => sender ! RelParamResp(domainId, state.relationship)
   }
 
   override val receiveAgentSpecificInitCmd: Receive = LoggingReceive.withLabel("receiveActorInitSpecificCmd") {

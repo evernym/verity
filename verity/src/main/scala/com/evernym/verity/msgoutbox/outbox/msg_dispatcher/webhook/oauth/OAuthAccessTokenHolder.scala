@@ -4,14 +4,12 @@ import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.base.EntityIdentifier
-import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Cmd
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.{AccessTokenRefresherReplyAdapter, GetToken, TimedOut, UpdateParams}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Replies.AuthToken
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.GetTokenSuccess
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.slf4j.event.Level
@@ -43,14 +41,14 @@ object OAuthAccessTokenHolder {
     case class GetTokenFailed(errorMsg: String) extends Reply
   }
 
-  def apply(config: Config,
+  def apply(receiveTimeout: FiniteDuration,
             params: Map[String, String],
             accessTokenRefresher: Behavior[OAuthAccessTokenRefresher.Cmd]): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
       val accessTokenRefresherReplyAdapter = actorContext.messageAdapter(reply => AccessTokenRefresherReplyAdapter(reply))
       Behaviors.withStash(100) { buffer =>
         val setup = Setup(
-          config,
+          receiveTimeout,
           params,
           None,
           accessTokenRefresher,
@@ -102,7 +100,7 @@ object OAuthAccessTokenHolder {
       setup.params,
       setup.prevTokenRefreshResponse,
       setup.tokenRefresherReplyAdapter)
-    setup.actorContext.setReceiveTimeout(receiveTimeout(setup.config), Commands.TimedOut)
+    setup.actorContext.setReceiveTimeout(setup.receiveTimeout, Commands.TimedOut)
     waitingForGetTokenResponse(setup)
   }
 
@@ -134,16 +132,10 @@ object OAuthAccessTokenHolder {
     initialized(None)
   }
 
-  private def receiveTimeout(config: Config): FiniteDuration = {
-    ConfigReadHelper(config)
-      .getDurationOption("verity.outbox.oauth-token-holder.receive-timeout")
-      .getOrElse(FiniteDuration(30, SECONDS))
-  }
-
   private val logger: Logger = getLoggerByClass(getClass)
 }
 
-case class Setup(config: Config,
+case class Setup(receiveTimeout: FiniteDuration,
                  params: Map[String, String],
                  prevTokenRefreshResponse: Option[JSONObject],
                  tokenRefresher: Behavior[OAuthAccessTokenRefresher.Cmd],

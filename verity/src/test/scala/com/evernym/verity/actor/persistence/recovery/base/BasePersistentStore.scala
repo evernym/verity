@@ -12,12 +12,13 @@ import com.evernym.verity.actor.testkit.HasTestActorSystem
 import com.evernym.verity.actor.wallet.{Close, CreateDID, CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, LegacyRouteSet, MappingAdded, PersistentMsg, RouteSet}
 import com.evernym.verity.config.ConfigConstants
+import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.transformations.transformers.v1._
 import com.evernym.verity.transformations.transformers.legacy._
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.testkit.HasTestWalletAPI
 import com.evernym.verity.transformations.transformers.{<=>, legacy, v1}
 import com.evernym.verity.vault.WalletAPIParam
@@ -181,7 +182,7 @@ trait BasePersistentStore
       case (LEGACY_PERSISTENCE_TRANSFORMATION_ID, "state")  =>
         legacy.createLegacyStateTransformer(encKey, appConfig, objectCodeMapper)
       case (PERSISTENCE_TRANSFORMATION_ID_V1, _)            =>
-        v1.createPersistenceTransformerV1(encKey, appConfig, objectCodeMapper)
+        v1.createPersistenceTransformerV1(encKey, appConfig.getStringReq(SALT_EVENT_ENCRYPTION), objectCodeMapper)
       case other                                            =>
         throw new RuntimeException("transformer not supported for: " + other)
     }
@@ -206,7 +207,8 @@ trait BasePersistentStore
     }
   }
 
-  def getTransformer(encrKey: String): Any <=> PersistentMsg = createPersistenceTransformerV1(encrKey, appConfig)
+  def getTransformer(encrKey: String): Any <=> PersistentMsg = createPersistenceTransformerV1(encrKey,
+    appConfig.getStringReq(SALT_EVENT_ENCRYPTION))
 }
 
 /**

@@ -34,7 +34,7 @@ class OutboxRouterSpec
       }
     }
 
-    "when received a request to send an outgoing protocol message to my domain" - {
+    "when received a request to send an incoming protocol message to my domain" - {
       "should process it successfully" in {
         val ack = sendToOutboxRouter(
           VerityCloudAgent.pairwiseRelContext.myPairwiseDID,
@@ -54,7 +54,7 @@ class OutboxRouterSpec
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
       Outbox(
         entityContext,
-        appConfig.withFallback(OVERRIDE_CONFIG),
+        appConfig.withFallback(OVERRIDE_CONFIG).config,
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,

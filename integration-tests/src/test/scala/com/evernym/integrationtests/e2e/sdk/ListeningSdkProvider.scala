@@ -12,12 +12,15 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.Interval
 import org.scalatest.time.{Millis, Span}
 
+import scala.collection.mutable
 import scala.concurrent.duration.Duration
 import scala.language.postfixOps
 
 trait MsgReceiver extends Eventually {
   def shouldExpectMsg(): Boolean = true
   def shouldCheckMsg(): Boolean = true
+
+  val unCheckedMsgs: mutable.Map[String, JSONObject] = mutable.Map()
 
   final def expectMsgOnly(expectedName: String)
                          (implicit scenario: Scenario): Unit = {
@@ -32,54 +35,63 @@ trait MsgReceiver extends Eventually {
                       max: Option[Duration] = None)
                      (check: JSONObject => Unit)
                      (implicit scenario: Scenario): Unit = {
-    checkAndExpectMsg(Some(expectedName), max)(check)
+    assertAndExpectMsg(Some(expectedName), max)(check)
   }
+
   final def checkMsg(max: Option[Duration] = None)
                     (check: JSONObject => Unit)
                     (implicit scenario: Scenario): Unit = {
-    checkAndExpectMsg(None, max)(check)
+    assertAndExpectMsg(None, max)(check)
   }
-  private def checkAndExpectMsg(expectedName: Option[String],
-                                max: Option[Duration] = None)
-                               (check: JSONObject => Unit)
-                               (implicit scenario: Scenario): Unit = {
-    def expecting: String = expectedName.map(x=>s"(expecting: $x) ").getOrElse("")
-    def lastReceived(msg: JSONObject): String = s"(last received: ${msg.getString(`@TYPE`)})"
 
-    if(shouldExpectMsg()){
+  private def assertName(expectedName: String, msg: JSONObject): Boolean = {
+    try {
+      msg.getString(`@TYPE`)
+        .endsWith(expectedName)
+    } catch {
+      case _: Exception =>
+        false
+    }
+  }
+
+  private def assertMsg(expectedName: Option[String], msg: JSONObject, check: JSONObject => Unit): Option[JSONObject] = {
+    if (shouldCheckMsg()) {
+      if (expectedName.forall(assertName(_, msg))) {
+        check(msg)
+        Some(msg)
+      } else None
+    } else Some(msg)
+  }
+
+  private def assertAndExpectMsg(expectedName: Option[String],
+                                 max: Option[Duration] = None)
+                                (check: JSONObject => Unit)
+                                (implicit scenario: Scenario): Unit = {
+    if (shouldExpectMsg()) {
       val waitTimeout = max.getOrElse(scenario.timeout)
 
-      var msg = new JSONObject().put(`@TYPE`, "UnreceivedType")
-
       eventually(timeout(waitTimeout), Interval(Span(200, Millis))) {
-        try {
-          msg = expectMsg(waitTimeout)
-        }
-        catch {
-          case e: Exception =>
+        unCheckedMsgs
+          .find(o => assertMsg(expectedName, o._2, check).isDefined)
+          .map { m =>
+            unCheckedMsgs.remove(m._1)
+            m
+          }
+          .orElse {
+            val m = expectMsg(waitTimeout)
+            val mPair = (m.getString("@id"), m)
+            unCheckedMsgs.put(mPair._1, mPair._2)
+            None
+          }
+          .orElse {
             throw new Exception(
-              s"msg not received $expecting-- ${e.getMessage} ${lastReceived(msg)}"
-            )
-        }
-
-        if(shouldCheckMsg()) {
-          val msgType = try {
-            msg.getString(`@TYPE`)
-          } catch {
-            case e: Exception =>
-              throw new Exception(s"Unable to get message type for $expecting-- ${msg.toString()} ${lastReceived(msg)}")
-          }
-          expectedName.foreach { x =>
-            assert (
-              msgType.endsWith(x),
-              s"Unexpected message name -- $msgType is not $expecting-- ${msg.toString(2)} ${lastReceived(msg)}"
+              s"msg not received yet --  (expecting: $expectedName) -- Know messages ${unCheckedMsgs}"
             )
           }
-          check(msg)
-        }
       }
     }
   }
+
   protected def expectMsg(max: Duration): JSONObject
   def context: Context
 }

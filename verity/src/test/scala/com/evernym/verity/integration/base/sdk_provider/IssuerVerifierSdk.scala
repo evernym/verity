@@ -33,9 +33,13 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.reflect.ClassTag
 
-abstract class VeritySdkBase(param: SdkParam, ec: ExecutionContext, wec: ExecutionContext, oauthParam: Option[OAuthParam]=None) extends SdkBase(param, ec, wec) {
+abstract class VeritySdkBase(param: SdkParam,
+                             ec: ExecutionContext,
+                             wec: ExecutionContext,
+                             oauthParam: Option[OAuthParam]=None)
+  extends SdkBase(param, ec, wec) {
 
-  def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated
+  def registerWebhook(id: Option[String] = None, authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created]
   def sendCreateConnectionInvitation(connId: String, thread: Option[MsgThread]): Invitation
 
@@ -131,18 +135,26 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
   def appConfig: AppConfig = testAppConfig
 
   def registerWebhookWithoutOAuth(): ComMethodUpdated = {
-    registerWebhookBase(None)
+    registerWebhookBase(None, None)
   }
 
-  def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
-    registerWebhookBase(authentication orElse defaultAuthentication)
+  def registerWebhook(id: Option[String] = None,
+                      authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
+    registerWebhookBase(id, authentication orElse defaultAuthentication)
   }
 
-  private def registerWebhookBase(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
+  private def registerWebhookBase(id: Option[String],
+                                  authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
     msgListener.setCheckAuth(authentication.isDefined)
     val packaging = Option(ComMethodPackaging(MPF_INDY_PACK.toString, Option(Set(myLocalAgentVerKey))))
     val updateComMethod = UpdateComMethodReqMsg(
-      ComMethod("1", COM_METHOD_TYPE_HTTP_ENDPOINT, msgListener.webhookEndpoint, packaging, authentication))
+      ComMethod(
+        id.getOrElse("webhook"),
+        COM_METHOD_TYPE_HTTP_ENDPOINT,
+        msgListener.webhookEndpoint,
+        packaging,
+        authentication)
+    )
     val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
     val updateComMethodJson = JsonMsgUtil.createJsonString(typeStr, updateComMethod)
     val routedPackedMsg = packForMyVerityAgent(updateComMethodJson)
@@ -224,33 +236,44 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
 
 }
 
-case class IssuerSdk(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+case class IssuerSdk(param: SdkParam,
+                     executionContext: ExecutionContext,
+                     walletExecutionContext: ExecutionContext,
+                     oauthParam: Option[OAuthParam]=None)
   extends IssuerVerifierSdk(param, executionContext, walletExecutionContext, oauthParam)
 
-case class VerifierSdk(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+case class VerifierSdk(param: SdkParam,
+                       executionContext: ExecutionContext,
+                       walletExecutionContext: ExecutionContext,
+                       oauthParam: Option[OAuthParam]=None)
   extends IssuerVerifierSdk(param, executionContext, walletExecutionContext, oauthParam)
 
-case class IssuerRestSDK(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+case class IssuerRestSDK(param: SdkParam,
+                         executionContext: ExecutionContext,
+                         walletExecutionContext: ExecutionContext,
+                         oauthParam: Option[OAuthParam]=None)
   extends VeritySdkBase(param, executionContext, walletExecutionContext, oauthParam) {
 
   def appConfig: AppConfig = testAppConfig
   import scala.collection.immutable
 
   def registerWebhookWithoutOAuth(): ComMethodUpdated = {
-    registerWebhookBase(None)
+    registerWebhookBase(None, None)
   }
 
-  def registerWebhook(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
-    registerWebhookBase(authentication orElse defaultAuthentication)
+  def registerWebhook(id: Option[String],
+                      authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
+    registerWebhookBase(id, authentication orElse defaultAuthentication)
   }
 
-  private def registerWebhookBase(authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
+  private def registerWebhookBase(id: Option[String],
+                                  authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated = {
     msgListener.setCheckAuth(authentication.isDefined)
     val packaging = Option(ComMethodPackaging(MPF_PLAIN.toString, None))
     val updateComMethodJson = {
       val updateComMethod = UpdateComMethodReqMsg(
         ComMethod(
-          "1",
+          id.getOrElse("webhook"),
           COM_METHOD_TYPE_HTTP_ENDPOINT,
           msgListener.webhookEndpoint,
           packaging,

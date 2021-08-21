@@ -403,4 +403,14 @@ object ConfigConstants {
   val EXPIRE_AFTER_DAYS = "expire-after-days"
   val EXPIRE_AFTER_TERMINAL_STATE = "expire-after-terminal-state"
 
+  val OUTBOX = s"$VERITY.outbox"
+  val OUTBOX_BATCH_SIZE = s"$OUTBOX.batch-size"
+  val OUTBOX_RECEIVE_TIMEOUT = s"$OUTBOX.receive-timeout"
+  val OUTBOX_SCHEDULED_JOB_INTERVAL = s"$OUTBOX.scheduled-job-interval"
+  val OUTBOX_RETENTION = s"$OUTBOX.retention-criteria"
+  val OUTBOX_RETENTION_SNAPSHOT = s"$OUTBOX_RETENTION.snapshot"
+  val OUTBOX_RETENTION_SNAPSHOT_AFTER_EVERY_EVENTS = s"$OUTBOX_RETENTION_SNAPSHOT.after-every-events"
+  val OUTBOX_RETENTION_SNAPSHOT_KEEP_SNAPSHOTS = s"$OUTBOX_RETENTION_SNAPSHOT.keep-snapshots"
+  val OUTBOX_RETENTION_SNAPSHOT_DELETE_EVENTS_ON_SNAPSHOTS = s"$OUTBOX_RETENTION_SNAPSHOT.delete-events-on-snapshots"
+  val OUTBOX_OAUTH_RECEIVE_TIMEOUT = s"$OUTBOX.oauth-token-holder.receive-timeout"
 }

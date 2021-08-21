@@ -1,10 +1,9 @@
 package com.evernym.verity.util2
-import java.util.concurrent.{ExecutorService, Executors}
-
-import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.{VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE, VERITY_WALLET_FUTURE_THREAD_POOL_SIZE}
 import kamon.instrumentation.executor.ExecutorInstrumentation
 
+import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 
 trait HasWalletExecutionContextProvider {

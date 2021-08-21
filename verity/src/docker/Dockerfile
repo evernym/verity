@@ -46,8 +46,12 @@ ADD configuration/* /etc/verity/verity-application/
 
 # Run script that bootstraps Verity
 ADD scripts/bootstrap.sh /usr/local/bin/bootstrap.sh
+
+# set metrics agent value if it isn't already set
+RUN if [ -z "${METRICS_AGENT}" ]; then METRICS_AGENT="kanela-agent"; fi
+
 CMD [ "/usr/bin/java", \
-"-javaagent:/usr/lib/verity-application/kanela-agent.jar", \
+"-javaagent:/usr/lib/verity-application/$METRICS_AGENT.jar", \
 "-Dlogback.statusListenerClass=ch.qos.logback.core.status.OnConsoleStatusListener", \
 "-cp", \
 "/etc/verity/verity-application:/etc/verity/verity-application/config-map:/usr/lib/verity-application/verity-assembly.jar", \

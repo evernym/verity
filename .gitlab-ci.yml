@@ -20,4 +20,8 @@ include:
   - '/cicd/jobs/package.yml'
   - '/cicd/jobs/publish.yml'
   - '/cicd/jobs/deploy.yml'
-  
+  - template: Security/SAST.gitlab-ci.yml 
+ 
+spotbugs-sast:
+  variables:
+    FAIL_NEVER: 1

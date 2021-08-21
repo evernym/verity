@@ -23,7 +23,7 @@ spec:
         vault.hashicorp.com/agent-pre-populate-only : "true"
         vault.hashicorp.com/agent-inject-template-credentials: |
           {{`{{ with secret `}}"kubernetes_secrets/eks-{{ .Values.env }}/{{ .Values.name }}-{{ .Values.service }}"{{` -}}`}}
-          {{`{{ range $k, $v := .Data -}}
+          {{`{{ range $k, $v := .Data.data -}}
             export {{ $k }}={{ $v }}
           {{ end }}
           {{- end }}`}}
@@ -82,7 +82,7 @@ spec:
           name: file-{{ template "verity.fullname" . }}
       - name: ledger-genesis-files
         configMap:
-          name: ledger-genesis-files
+          name: ledger-genesis-{{ template "verity.fullname" . }}
 
 ---
 kind: Role

@@ -181,12 +181,12 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
     batchStatus.candidates.get(did).foreach { itemStatus =>
       val agentActorNotRespondedAtAll =
         ! itemStatus.stateCleaningStarted &&
-          itemStatus.reqSentCount >= 25
+          itemStatus.reqSentCount >= 20
 
       val threadContextNotMigratingAtAll =
         itemStatus.stateCleaningStarted &&
           agentActorCleanupState.get(did).exists(_.successfullyMigratedCount == 0) &&
-          itemStatus.reqSentCount >= 100
+          itemStatus.reqSentCount >= 40
 
       if (agentActorNotRespondedAtAll || threadContextNotMigratingAtAll) {
         self ! ActorNotResponding(did)

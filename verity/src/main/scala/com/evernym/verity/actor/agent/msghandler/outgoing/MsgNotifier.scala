@@ -44,11 +44,13 @@ trait MsgNotifier {
   this: AgentPersistentActor with HasMsgProgressTracker
     with HasLogger =>
 
+  def domainId : DomainId
+
   /**
    * this actor will be created for each actor (UserAgent or UserAgentPairwise) of the logical agent
    */
   private lazy val pusher: ActorRef = {
-    context.actorOf(Pusher.props(appConfig, futureExecutionContext), s"pusher-$persistenceId")
+    context.actorOf(Pusher.props(domainId, appConfig, futureExecutionContext), s"pusher-$persistenceId")
   }
 
   def sendPushNotif(pcms: Set[ComMethodDetail], pnData: PushNotifData, sponsorId: Option[String]): Future[Any] = {
@@ -74,8 +76,6 @@ trait MsgNotifierForStoredMsgs
   def agentMsgRouter: AgentMsgRouter
   def msgSendingSvc: MsgSendingSvc
   def defaultSelfRecipKeys: Set[KeyParam]
-
-  def selfRelDID : DidStr
 
   /**
    * agent key DID belonging to the agent created for the domain DID (self Rel DID)
@@ -280,7 +280,6 @@ trait MsgNotifierForStoredMsgs
     pnds match {
       case pnr: PushNotifResponse =>
         if (pnr.statusCode == MSG_DELIVERY_STATUS_FAILED.statusCode) {
-          logger.warn(s"push notification failed (userDID: $selfRelDID): $pnr")
           val invalidTokenErrorCodes =
             agentActorContext.appConfig.getStringSetOption(PUSH_NOTIF_INVALID_TOKEN_ERROR_CODES).
               getOrElse(errorsForWhichComMethodShouldBeDeleted)
@@ -290,7 +289,7 @@ trait MsgNotifierForStoredMsgs
           }
         }
       case x =>
-        logger.error(s"push notification failed (userDID: $selfRelDID): $x")
+        logger.error(s"push notification failed unexpectedly (domainId: $domainId): $x")
     }
   }
 
@@ -341,9 +340,20 @@ trait MsgNotifierForStoredMsgs
     metricsWriter.runWithSpan("sendPushNotif", "MsgNotifierForStoredMsgs", InternalSpan) {
       logger.debug(s"[${pnData.uid}:${pnData.msgType}] about to get push com methods to send push notification")
       withComMethods(allComMethods).map { comMethods =>
-        val cms = comMethods.filterByTypes(Seq(COM_METHOD_TYPE_PUSH, COM_METHOD_TYPE_SPR_PUSH))
+        val cms =
+          comMethods
+            .filterByTypes(Seq(COM_METHOD_TYPE_PUSH, COM_METHOD_TYPE_SPR_PUSH))
+            //NOTE: vcx/connect.me used below value ('mock_value_just_to_register') to satisfy
+            // old 'get_token' message requirement (Tokenizer protocol), but now that field (pushId) is made optional.
+            // This invalid/test token (mock_value_just_to_register) clutters the logs unnecessary
+            // and gives false positive results during troubleshooting issues,
+            // so until vcx/connect.me fix gets deployed to app/play stores,
+            // below will help avoiding it to be processed unnecessarily
+            // and post deployment we can remove below filter and this comment.
+            .filter(_.value != "mock_value_just_to_register")
+
         if (cms.nonEmpty) {
-          self ! UpdateMsgDeliveryStatus(pnData.uid, selfRelDID, MSG_DELIVERY_STATUS_PENDING.statusCode, None)
+          self ! UpdateMsgDeliveryStatus(pnData.uid, domainId, MSG_DELIVERY_STATUS_PENDING.statusCode, None)
           logger.debug(s"[${pnData.uid}:${pnData.msgType}] received push com methods: " + cms)
           val pushStart = System.currentTimeMillis()
           val fut = sendPushNotif(cms, pnData, comMethods.sponsorId).map { r =>
@@ -352,7 +362,7 @@ trait MsgNotifierForStoredMsgs
             handleErrorIfFailed(r)
             r match {
               case pnds: PushNotifResponse =>
-                val umds = UpdateMsgDeliveryStatus(pnData.uid, selfRelDID, pnds.statusCode, pnds.statusDetail)
+                val umds = UpdateMsgDeliveryStatus(pnData.uid, domainId, pnds.statusCode, pnds.statusDetail)
                 updatePushNotificationDeliveryStatus(umds)
                 if (pnds.statusCode == MSG_DELIVERY_STATUS_SENT.statusCode) {
                   metricsWriter.gaugeIncrement(AS_SERVICE_FIREBASE_SUCCEED_COUNT)
@@ -362,7 +372,7 @@ trait MsgNotifierForStoredMsgs
                   Left(pnds)
                 }
               case x =>
-                val umds = UpdateMsgDeliveryStatus(pnData.uid, selfRelDID, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(x.toString))
+                val umds = UpdateMsgDeliveryStatus(pnData.uid, domainId, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(x.toString))
                 updatePushNotificationDeliveryStatus(umds)
                 metricsWriter.gaugeIncrement(AS_SERVICE_FIREBASE_FAILED_COUNT)
                 Left(x)
@@ -411,7 +421,7 @@ trait MsgNotifierForStoredMsgs
   }
 
   private def newLegacyMsgSender: akka.actor.typed.ActorRef[LegacyMsgSender.Cmd] =
-    context.spawnAnonymous(LegacyMsgSender(selfRelDID, agentMsgRouter, msgSendingSvc, executionContext))
+    context.spawnAnonymous(LegacyMsgSender(domainId, agentMsgRouter, msgSendingSvc, executionContext))
 
   private def updatePushNotificationDeliveryStatus(umds: UpdateMsgDeliveryStatus): Unit =
     self ! umds
@@ -445,9 +455,6 @@ trait MsgNotifierForUserAgentPairwise extends MsgNotifierForUserAgentCommon {
 
   this: UserAgentPairwise with PushNotifMsgBuilder =>
 
-  override def selfRelDID: DidStr = state.mySelfRelDID.getOrElse(
-    throw new RuntimeException("owner's edge agent DID not yet set"))
-
   /**
    * this should be main agent actor's (UserAgent) agent DID
    * @return
@@ -461,8 +468,6 @@ trait MsgNotifierForUserAgentPairwise extends MsgNotifierForUserAgentCommon {
 trait MsgNotifierForUserAgent extends MsgNotifierForUserAgentCommon {
 
   this: UserAgent with PushNotifMsgBuilder =>
-
-  override def selfRelDID: DidStr = state.myDid_!
 
   /**
    * this should be main agent actor's (UserAgent) agent DID

@@ -42,7 +42,7 @@ class OutboxRouterSpec
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
       Outbox(
         entityContext,
-        appConfig.withFallback(OVERRIDE_CONFIG),
+        appConfig.withFallback(OVERRIDE_CONFIG).config,
         testAccessTokenRefreshers,
         testRelResolver,
         testMsgStore,

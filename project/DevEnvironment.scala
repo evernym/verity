@@ -45,6 +45,7 @@ object DevEnvironmentTasks {
   val envNativeLibCheck = taskKey[Boolean]("Check for native libraries")
   val envRepos = taskKey[Seq[DevEnvironment.DebianRepo]]("Repos need for the native libs")
   val jdkExpectedVersion = taskKey[String]("Expected version of JDK (not enforced)")
+  val agentJars = taskKey[Seq[String]]("Agent jars")
 }
 
 //noinspection NameBooleanParameters

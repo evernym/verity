@@ -40,7 +40,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
 
   protected def checkIfRestApiEnabled(): Unit = {
     if (!restApiEnabled) {
-      logger.warn("received request on disabled REST api")
+      logger.info("received request on disabled REST api")
       throw new FeatureNotEnabledException(Status.NOT_IMPLEMENTED.statusCode, Option(Status.NOT_IMPLEMENTED.statusMsg))
     }
   }

@@ -22,8 +22,6 @@ import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.{RetentionPolicy, Status}
 import java.time.ZonedDateTime
 
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.typesafe.scalalogging.Logger
 
 
 object MessageMeta {
@@ -68,7 +66,7 @@ object MessageMeta {
     case class Processed(msgDetail: MsgDetail,
                          deliveryStatus: Map[OutboxId, OutboxDeliveryStatus] = Map.empty) extends State
   }
-  private val logger: Logger = getLoggerByClass(getClass)
+
   //reply messages
   trait Reply extends ActorMessage
   object Replies {

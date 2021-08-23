@@ -59,7 +59,7 @@ val debPkgDepLibIndyMinVersion = libIndyVer
 //dependency versions
 val indyWrapperVer  = "1.15.0-dev-1618"
 
-val akkaVer         = "2.6.15"
+val akkaVer         = "2.6.16"
 val akkaHttpVer     = "10.2.6"
 val akkaMgtVer      = "1.1.1"
 val alpAkkaVer      = "3.0.2"

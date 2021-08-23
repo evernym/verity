@@ -20,9 +20,8 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.msgoutbox.outbox.Outbox
 import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.{RetentionPolicy, Status}
-
 import java.time.ZonedDateTime
-import scala.concurrent.duration._
+
 
 
 object MessageMeta {
@@ -103,7 +102,8 @@ object MessageMeta {
     def apply(lmd: LegacyMsgData): LegacyData = LegacyData(lmd.senderDID, lmd.refMsgId)
   }
   case class LegacyData(senderDID: DidStr, refMsgId: Option[MsgId])
-  case class OutboxDeliveryStatus(status: String = Status.MSG_DELIVERY_STATUS_PENDING.statusCode,
+  case class OutboxDeliveryStatus(isProcessed: Boolean = false,
+                                  status: String = Status.MSG_DELIVERY_STATUS_PENDING.statusCode,
                                   msgActivities: Seq[MsgActivity] = List.empty)
   case class MsgActivity(detail: String, timestamp: Option[ZonedDateTime]=None)
 
@@ -169,26 +169,28 @@ object MessageMeta {
         val msgActivity = rma.msgActivity.map { ma =>
           Events.MsgActivity(ma.detail, Option(TimeZoneUtil.getMillisForCurrentUTCZonedDateTime))
         }
-        Events.MsgActivityRecorded(rma.outboxId, rma.deliveryStatus, msgActivity)
+        Events.MsgActivityRecorded(rma.outboxId, isProcessed = false, rma.deliveryStatus, msgActivity)
       }
       Effect
         .persist(msgActivityRecorded)
         .thenNoReply()
 
-    case (_: States.Initialized, pfo: Commands.ProcessedForOutbox) =>
-      val msgActivityRecorded = {
-        val msgActivity = pfo.msgActivity.map { ma =>
-          Events.MsgActivity(ma.detail, Option(TimeZoneUtil.getMillisForCurrentUTCZonedDateTime))
+    case (st: States.Initialized, pfo: Commands.ProcessedForOutbox) =>
+      if (! st.deliveryStatus.get(pfo.outboxId).exists(_.isProcessed)) {
+        val msgActivityRecorded = {
+          val msgActivity = pfo.msgActivity.map { ma =>
+            Events.MsgActivity(ma.detail, Option(TimeZoneUtil.getMillisForCurrentUTCZonedDateTime))
+          }
+          Events.MsgActivityRecorded(pfo.outboxId, isProcessed = true, pfo.deliveryStatus, msgActivity)
         }
-        Events.MsgActivityRecorded(pfo.outboxId, pfo.deliveryStatus, msgActivity)
-      }
-      Effect
-        .persist(msgActivityRecorded)
-        .thenRun{ (state: State) =>
-          val sentForDeletion = deletePayloadIfRequired(msgId, msgStoreAdapter, state)
-          if (! sentForDeletion) pfo.replyTo ! Replies.RemoveMsg(msgId)
-        }
-        .thenNoReply()
+        Effect
+          .persist(msgActivityRecorded)
+          .thenRun { (state: State) =>
+            val sentForDeletion = deletePayloadIfRequired(msgId, msgStoreAdapter, state)
+            if (!sentForDeletion) pfo.replyTo ! Replies.RemoveMsg(msgId)
+          }
+          .thenNoReply()
+      } else Effect.noReply
 
     case (st: States.Initialized, Commands.MsgStoreReplyAdapter(MsgStore.Replies.PayloadDeleted)) =>
       Effect
@@ -234,6 +236,7 @@ object MessageMeta {
           MsgActivity(a.detail, a.creationTimeInMillis.map(TimeZoneUtil.getUTCZonedDateTimeFromMillis)))
         val outboxDeliveryStatus = st.deliveryStatus.getOrElse(dsa.outboxId, OutboxDeliveryStatus())
         outboxDeliveryStatus.copy(
+          isProcessed = dsa.isProcessed,
           status = dsa.deliveryStatus,
           msgActivities = outboxDeliveryStatus.msgActivities ++ newActivity
         )

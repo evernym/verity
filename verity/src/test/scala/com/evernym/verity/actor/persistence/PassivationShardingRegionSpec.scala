@@ -13,7 +13,7 @@ import com.evernym.verity.testkit.BasicSpec
 
 import scala.concurrent.duration.FiniteDuration
 
-class PassivationPersistentSpec
+class PassivationShardingRegionSpec
   extends BasicSpec
     with TestKitBase
     with HasBasicActorSystem
@@ -37,7 +37,6 @@ class PassivationPersistentSpec
       state.shards.foreach(shard => {
         shard.entityIds.size shouldBe 1
       })
-      Thread.sleep(30000)
       awaitCond({
         shardingRegion ! GetShardRegionState
         val clusterStateAfterTimeout = receiveOne(FiniteDuration(10, TimeUnit.SECONDS))

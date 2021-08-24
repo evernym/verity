@@ -327,7 +327,6 @@ trait BasePersistentActor
   def postRecoveryCompleted(): Unit = {
     postActorRecoveryStarted = LocalDateTime.now
     metricsWriter.runWithSpan("postRecoveryCompleted", "BasePersistentActor", InternalSpan) {
-//      context.setReceiveTimeout(entityReceiveTimeout)
       logger.debug("post actor recovery started", (LOG_KEY_PERSISTENCE_ID, persistenceId))
       basePostActorRecoveryCompleted()
     }
@@ -532,7 +531,8 @@ trait EventPersistenceEncryption {
 
 trait BasePersistentTimeoutActor extends BasePersistentActor {
   override def postActorRecoveryCompleted(): Future[Any] = {
+    val fut = super.postActorRecoveryCompleted()
     context.setReceiveTimeout(this.entityReceiveTimeout)
-    super.postActorRecoveryCompleted()
+    fut
   }
 }

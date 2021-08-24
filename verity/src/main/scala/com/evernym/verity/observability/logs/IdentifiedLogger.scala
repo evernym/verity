@@ -1,13 +1,11 @@
 package com.evernym.verity.observability.logs
 
-import com.evernym.verity.actor.agent.AgentIdentity
 import org.slf4j.{Logger, Marker}
 
-import scala.util.Try
 
-class AgentIdentityLoggerWrapper(val identityProvider: AgentIdentity, wrapped: Logger) extends Logger{
-  import AgentIdentityLoggerWrapper._
-  def idTuple(): (String, String) = (DomainIdFieldName, Try(identityProvider.domainId).getOrElse("unknown"))
+class IdentifiedLogger(idTuplePair: (String, String), wrapped: Logger) extends Logger{
+  def idTuple(): (String, String) = idTuplePair
+
 
   def conditionSeq(s: Seq[Any]): Array[AnyRef] =
     s.filter(_.isInstanceOf[AnyRef]).map(_.asInstanceOf[AnyRef]).toArray :+ idTuple()
@@ -173,9 +171,10 @@ class AgentIdentityLoggerWrapper(val identityProvider: AgentIdentity, wrapped: L
   override def error(marker: Marker, s: String, objects: AnyRef*): Unit = wrapped.error(marker, s, objects :+ idTuple(): _*)
 }
 
-object AgentIdentityLoggerWrapper {
-  val DomainIdFieldName = "domain_did"
+object IdentifiedLogger {
+  def apply(idTuplePair: (String, String), wrapped: Logger): IdentifiedLogger =
+    new IdentifiedLogger(idTuplePair, wrapped)
 
-  def apply(identityProvider: AgentIdentity, wrapped: Logger): AgentIdentityLoggerWrapper =
-    new AgentIdentityLoggerWrapper(identityProvider, wrapped)
+  def apply(logged: LoggerIdentity, wrapped: Logger): IdentifiedLogger =
+    new IdentifiedLogger(logged.idTuplePair, wrapped)
 }

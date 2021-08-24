@@ -14,7 +14,7 @@ object LoggingUtil {
   def getAgentIdentityLoggerByClass[T](identityProvider: AgentIdentity, c: Class[T])(implicit as: ActorSystem): Logger = {
     try {
       Logger(
-        AgentIdentityLoggerWrapper(
+        IdentifiedLogger(
           identityProvider,
           LoggerFactory.getLogger(c)
         )
@@ -30,7 +30,7 @@ object LoggingUtil {
   def getAgentIdentityLoggerByName(identityProvider: AgentIdentity, n: String)(implicit as: ActorSystem): Logger = {
     try {
       Logger(
-        AgentIdentityLoggerWrapper(
+        IdentifiedLogger(
           identityProvider,
           LoggerFactory.getLogger(n)
         )

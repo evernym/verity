@@ -530,9 +530,8 @@ trait EventPersistenceEncryption {
 }
 
 trait BasePersistentTimeoutActor extends BasePersistentActor {
-  override def postActorRecoveryCompleted(): Future[Any] = {
-    val fut = super.postActorRecoveryCompleted()
+  override def postRecoveryCompleted(): Unit = {
+    super.postRecoveryCompleted()
     context.setReceiveTimeout(this.entityReceiveTimeout)
-    fut
   }
 }

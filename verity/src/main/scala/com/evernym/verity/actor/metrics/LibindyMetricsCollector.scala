@@ -2,8 +2,8 @@ package com.evernym.verity.actor.metrics
 
 import akka.actor.{Actor, ActorSystem}
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.util.JsonUtil.deserializeJsonStringToObject
 import com.evernym.verity.util2.Exceptions
 import org.hyperledger.indy.sdk.metrics.Metrics

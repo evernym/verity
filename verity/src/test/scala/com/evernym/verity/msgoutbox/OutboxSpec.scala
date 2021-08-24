@@ -6,7 +6,7 @@ import akka.cluster.sharding.typed.scaladsl.Entity
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpecBase
-import com.evernym.verity.metrics.CustomMetrics.{AS_OUTBOX_MSG_DELIVERY, AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT}
+import com.evernym.verity.observability.metrics.CustomMetrics.{AS_OUTBOX_MSG_DELIVERY, AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT}
 import com.evernym.verity.msgoutbox.base.BaseMsgOutboxSpec
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies.MsgDeliveryStatus

@@ -3,7 +3,7 @@ package com.evernym.verity.http.route_handlers
 import akka.actor.ActorSystem
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.observability.metrics.MetricsWriter
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 

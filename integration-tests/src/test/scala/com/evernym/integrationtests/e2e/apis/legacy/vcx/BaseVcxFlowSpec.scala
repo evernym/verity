@@ -17,7 +17,7 @@ import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.integration.base.sdk_provider.MsgFamilyHelper.buildMsgTypeStr
 import com.evernym.verity.integration.base.sdk_provider.{JsonMsgUtil, MsgFamilyHelper}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.engine.MsgFamily
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.testkit.{BasicSpecWithIndyCleanup, CancelGloballyAfterFailure}

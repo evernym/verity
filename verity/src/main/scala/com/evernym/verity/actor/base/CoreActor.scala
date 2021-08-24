@@ -5,10 +5,10 @@ import akka.actor.{Actor, ActorLogging, ActorRef}
 import com.evernym.verity.actor.appStateManager.{AppStateEvent, AppStateUpdateAPI}
 import com.evernym.verity.constants.ActorNameConstants.DEFAULT_ENTITY_TYPE
 import com.evernym.verity.actor.{ActorMessage, ExceptionHandler}
-import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.metrics.CustomMetrics.{AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX, AS_AKKA_ACTOR_TYPE_PREFIX}
+import com.evernym.verity.observability.metrics.CustomMetrics.{AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX, AS_AKKA_ACTOR_TYPE_PREFIX}
 import com.evernym.verity.util2.Exceptions
-import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
+import com.evernym.verity.observability.logs.LoggingUtil
+import com.evernym.verity.observability.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.typesafe.scalalogging.Logger
 
 /**

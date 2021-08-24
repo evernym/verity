@@ -18,12 +18,12 @@ import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.metrics.CustomMetrics._
+import com.evernym.verity.observability.metrics.CustomMetrics._
 import com.evernym.verity.protocol.engine.MultiEvent
 import com.evernym.verity.util.Util._
 import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
-import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.metrics.InternalSpan
+import com.evernym.verity.observability.logs.LoggingUtil
+import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.transformations.transformers.<=>
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger

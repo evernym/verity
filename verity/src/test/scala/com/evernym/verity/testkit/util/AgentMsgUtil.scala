@@ -15,7 +15,7 @@ import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
-import com.evernym.verity.metrics.NoOpMetricsWriter
+import com.evernym.verity.observability.metrics.NoOpMetricsWriter
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._

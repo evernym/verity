@@ -25,11 +25,11 @@ import com.evernym.verity.config.ConfigConstants.{OUTBOX, OUTBOX_BATCH_SIZE, OUT
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.did.VerKeyStr
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.metrics.CustomMetrics.{AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT}
-import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.metrics.CustomMetrics.{AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.RetryParam
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.AccessTokenRefreshers
+import com.evernym.verity.observability.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.Status
 import com.typesafe.config.Config

@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.util.HashAlgorithm.SHA256_trunc16
 import com.evernym.verity.util.HashUtil.{byteArray2RichBytes, safeMultiHash}
 import com.typesafe.scalalogging.Logger

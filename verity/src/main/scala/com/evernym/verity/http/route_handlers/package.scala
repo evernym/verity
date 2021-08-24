@@ -3,7 +3,7 @@ package com.evernym.verity.http
 import akka.http.scaladsl.model.{HttpMethod, StatusCode}
 import com.evernym.verity.constants.Constants.CLIENT_IP_ADDRESS
 import com.evernym.verity.http.common.HttpRouteBase
-import com.evernym.verity.logging.AgentIdentityLoggerWrapper
+import com.evernym.verity.observability.logs.AgentIdentityLoggerWrapper
 import com.evernym.verity.protocol.engine.DomainId
 import com.evernym.verity.util.ReqMsgContext
 

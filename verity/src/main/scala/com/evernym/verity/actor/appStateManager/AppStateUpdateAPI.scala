@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.appStateManager
 
 import akka.actor.{ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
-import com.evernym.verity.logging.LoggingUtil
+import com.evernym.verity.observability.logs.LoggingUtil
 import com.typesafe.scalalogging.Logger
 
 /**

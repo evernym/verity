@@ -8,7 +8,7 @@ import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.wallet.WalletCommand
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants.WALLET_REGION_ACTOR_NAME
-import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
+import com.evernym.verity.observability.metrics.{MetricsWriter, MetricsWriterExtension}
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.{ExecutionContext, Future}

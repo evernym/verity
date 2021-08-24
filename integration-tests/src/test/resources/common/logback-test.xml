@@ -3,7 +3,7 @@
     <appender name='STDOUT' class='ch.qos.logback.core.ConsoleAppender'>
         <withJansi>false</withJansi>
         <encoder class='ch.qos.logback.core.encoder.LayoutWrappingEncoder'>
-            <layout class='com.evernym.verity.DevLogLayout' />
+            <layout class='com.evernym.verity.observability.logs.DevLogLayout' />
         </encoder>
     </appender>
 
@@ -11,7 +11,7 @@
         <appender-ref ref="STDOUT"/>
     </root>
 
-    <turboFilter class='com.evernym.verity.IgnoreLoggerFilter'>
+    <turboFilter class='com.evernym.verity.observability.logs.IgnoreLoggerFilter'>
         <LoggerNameContains>DynamoDBClient, DynamoDBJournal</LoggerNameContains>
     </turboFilter>
 </configuration>

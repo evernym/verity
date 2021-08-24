@@ -12,14 +12,14 @@
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
-            <layout class="com.evernym.verity.LogLayout" />
+            <layout class="com.evernym.verity.observability.logs.LogLayout" />
         </encoder>
     </appender>
 
     <appender name="MSG-PACK-DATA" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>/tmp/msg-pack-data.log</file>
         <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
-            <layout class="com.evernym.verity.LogLayout" />
+            <layout class="com.evernym.verity.observability.logs.LogLayout" />
         </encoder>
     </appender>
 
@@ -34,7 +34,7 @@
             <totalSizeCap>100MB</totalSizeCap>
         </rollingPolicy>
         <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
-            <layout class="com.evernym.verity.LogLayout" />
+            <layout class="com.evernym.verity.observability.logs.LogLayout" />
         </encoder>
     </appender>
 
@@ -49,7 +49,7 @@
             <totalSizeCap>100MB</totalSizeCap>
         </rollingPolicy>
         <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
-            <layout class="com.evernym.verity.LogLayout" />
+            <layout class="com.evernym.verity.observability.logs.LogLayout" />
         </encoder>
     </appender>
 
@@ -68,7 +68,7 @@
         <appender-ref ref="STDOUT" />
     </root>
 
-    <turboFilter class="com.evernym.verity.IgnoreLoggerFilter">
+    <turboFilter class="com.evernym.verity.observability.logs.IgnoreLoggerFilter">
         <LoggerNameContains>DynamoDBClient, DynamoDBJournal</LoggerNameContains>
     </turboFilter>
 

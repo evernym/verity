@@ -2,7 +2,7 @@ package com.evernym.verity.actor.metrics
 
 import akka.actor.{Actor, ActorSystem}
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.metrics.{CustomMetrics, MetricsWriter, MetricsWriterExtension}
+import com.evernym.verity.observability.metrics.{CustomMetrics, MetricsWriter, MetricsWriterExtension}
 
 import scala.collection.mutable
 

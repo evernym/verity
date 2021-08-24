@@ -5,7 +5,7 @@ import akka.actor.ActorSystem
 import akka.stream.alpakka.s3.BucketAccess.{AccessGranted, NotExists}
 import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.storage_services.aws_s3.S3AlpakkaApi
 import com.evernym.verity.testkit.BasicAsyncSpec

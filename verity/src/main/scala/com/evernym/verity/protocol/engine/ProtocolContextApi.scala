@@ -1,18 +1,16 @@
 package com.evernym.verity.protocol.engine
 
-import java.util.concurrent.TimeUnit
-
-import com.evernym.verity.config.AppConfig
-import com.evernym.verity.util2.ServiceEndpoint
-import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}
+import com.evernym.verity.observability.metrics.CustomMetrics._
+import com.evernym.verity.observability.metrics.{MetricsUnit, MetricsWriter}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContextApi
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
+import com.evernym.verity.util2.ServiceEndpoint
 import com.github.ghik.silencer.silent
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, ExecutionContext, Future}
 

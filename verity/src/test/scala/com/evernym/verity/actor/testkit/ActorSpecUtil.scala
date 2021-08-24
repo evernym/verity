@@ -14,9 +14,9 @@ import org.iq80.leveldb.util.FileUtils
 import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
 
 import java.util.concurrent.TimeUnit
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.util2.ActorErrorResp
-import com.evernym.verity.metrics.{MetricsBackend, MetricsWriterExtension, TestMetricsBackend}
+import com.evernym.verity.observability.metrics.{MetricsBackend, MetricsWriterExtension, TestMetricsBackend}
 
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag

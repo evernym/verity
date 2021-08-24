@@ -4,7 +4,7 @@ import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.base.EntityIdentifier
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Cmd
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.{AccessTokenRefresherReplyAdapter, GetToken, TimedOut, UpdateParams}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Replies.AuthToken

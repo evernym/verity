@@ -12,7 +12,7 @@ import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getAgentIdentityLoggerByClass
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.HasAgentWallet
 import com.evernym.verity.util2.HasWalletExecutionContextProvider
@@ -26,8 +26,8 @@ import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam,
 import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
 import com.evernym.verity.config.ConfigConstants.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VERITY_ENDORSER_DEFAULT_DID}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
-import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
-import com.evernym.verity.metrics.{InternalSpan, MetricsUnit, MetricsWriter}
+import com.evernym.verity.observability.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
+import com.evernym.verity.observability.metrics.{InternalSpan, MetricsUnit, MetricsWriter}
 import com.evernym.verity.protocol.container.actor.ProtocolIdDetail
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.wallet_api.WalletAPI

@@ -4,7 +4,7 @@ import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.node_singleton.MsgProgressTrackerCache
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.util.AssertionUtil.expectMsgType
 import com.evernym.verity.testkit.util.LedgerUtil

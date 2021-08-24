@@ -4,9 +4,9 @@ import java.time.ZonedDateTime
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.resourceusagethrottling.{tracking, _}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.actor.resourceusagethrottling.helper.{BucketRule, ResourceUsageRule, ResourceUsageRuleHelper}
-import com.evernym.verity.metrics.{InternalSpan, MetricsWriter}
+import com.evernym.verity.observability.metrics.{InternalSpan, MetricsWriter}
 import com.evernym.verity.util.TimeZoneUtil._
 import com.typesafe.scalalogging.Logger
 

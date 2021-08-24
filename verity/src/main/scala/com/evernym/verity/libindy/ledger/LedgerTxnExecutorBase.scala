@@ -12,7 +12,7 @@ import com.evernym.verity.config.ConfigUtil.findTAAConfig
 import com.evernym.verity.config.{AppConfig, ConfigConstants, ConfigUtil}
 import com.evernym.verity.ledger._
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.did.{DidStr, DidPair}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.util.?=>

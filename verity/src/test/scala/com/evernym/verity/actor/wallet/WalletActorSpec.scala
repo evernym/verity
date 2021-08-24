@@ -11,7 +11,7 @@ import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.did.{DidPair, VerKeyStr}
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredential

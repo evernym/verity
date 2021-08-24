@@ -20,7 +20,7 @@ import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants.{AGENT_ROUTES_MIGRATOR, _}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger

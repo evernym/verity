@@ -9,7 +9,7 @@ import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersist
 import com.evernym.verity.actor.{ActorMessage, WindowActivityDefined, WindowRules}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
+import com.evernym.verity.observability.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
 import com.evernym.verity.protocol.engine.DomainId
 import com.evernym.verity.util.TimeUtil
 import com.evernym.verity.util.TimeUtil.{IsoDateTime, dateAfterDuration, isDateExpired, toMonth}

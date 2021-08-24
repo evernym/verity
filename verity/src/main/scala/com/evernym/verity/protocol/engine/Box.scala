@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport}
 import com.typesafe.scalalogging.Logger
 

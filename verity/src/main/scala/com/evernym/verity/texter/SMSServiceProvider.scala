@@ -10,8 +10,8 @@ import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.metrics.CustomMetrics._
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.metrics.CustomMetrics._
 import com.evernym.verity.util.Util
 import com.evernym.verity.util.Util._
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, RecoverIfNeeded, SeriousSystemError}

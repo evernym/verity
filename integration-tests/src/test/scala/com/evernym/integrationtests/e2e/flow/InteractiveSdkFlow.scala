@@ -12,8 +12,8 @@ import com.evernym.integrationtests.e2e.util.ProvisionTokenUtil.genTokenOpt
 import com.evernym.sdk.vcx.VcxException
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.protocol.engine.Constants.`@TYPE`
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0

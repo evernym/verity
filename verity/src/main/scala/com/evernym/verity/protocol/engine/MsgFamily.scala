@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.actor.agent.{MsgPackFormat, TypeFormat}
 import com.evernym.verity.agentmsg.msgcodec.{InvalidMsgQualifierException, MsgTypeParsingException, UnrecognizedMsgQualifierException}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
 
 import scala.util.matching.Regex

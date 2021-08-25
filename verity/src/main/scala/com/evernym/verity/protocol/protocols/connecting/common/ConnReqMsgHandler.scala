@@ -14,7 +14,6 @@ import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.protocol.container.actor.ProtoMsg
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.HashAlgorithm.SHA256_trunc4
 import com.evernym.verity.util.HashUtil

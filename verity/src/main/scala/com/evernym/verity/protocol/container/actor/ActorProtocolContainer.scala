@@ -475,16 +475,8 @@ class ActorProtocolContainer[
       .contains("VerityAgent")
 }
 
-trait ProtoMsg extends MsgBase
+//trait ProtoMsg extends MsgBase
 
-/**
- * This message is sent only when protocol is being created/initialized for first time
- * @param params - Set of Parameter (key & value) which protocol needs
- */
-
-case class Init(params: Parameters) extends Control {
-  def parametersStored: Set[ParameterStored] = params.initParams.map(p => ParameterStored(p.name, p.value))
-}
 
 /**
  * This is sent by LaunchesProtocol during protocol initialization process.

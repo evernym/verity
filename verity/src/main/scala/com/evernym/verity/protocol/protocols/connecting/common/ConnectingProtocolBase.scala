@@ -19,11 +19,12 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.cache.base.Cache
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
+import com.evernym.verity.protocol.container.actor.{UpdateMsgDeliveryStatus}
 import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
-import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{ConnectingMsgFamily => ConnectingMsgFamily_0_5}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFamily => ConnectingMsgFamily_0_6}
@@ -527,6 +528,7 @@ case class SendMsgToEdgeAgent(uid: MsgId) extends Control with ActorMessage
 // signal
 case class StatusReport(sourceId: String, status: String)
 
+trait ProtoMsg extends MsgBase
 trait GetInviteDetail extends ProtoMsg with HasMsgType {
   def uid: MsgId
 }

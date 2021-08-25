@@ -2,13 +2,14 @@ package com.evernym.verity.protocol.protocols.connecting.v_0_5
 
 import com.evernym.verity.actor.ConnectionStatusUpdated
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.agentmsg.msgfamily.pairwise._
+import com.evernym.verity.agentmsg.msgfamily.pairwise.{AnswerMsgReqMsg_MFV_0_5, CreateMsgReqMsg_MFV_0_5, RedirectMsgReqMsg_MFV_0_5, RedirectedMsgReqMsg_MFV_0_5}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
+import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.Constants.MFV_0_5
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.protocols.connecting.common._
 import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfully}
 

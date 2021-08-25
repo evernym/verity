@@ -6,9 +6,9 @@ import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.wallet._
+import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AskUserAgentCreator, HasAgentProvWallet}
 import com.evernym.verity.util.{Base58Util, ParticipantUtil}

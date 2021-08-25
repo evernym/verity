@@ -4,7 +4,7 @@ import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.container.actor.Init
+import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException

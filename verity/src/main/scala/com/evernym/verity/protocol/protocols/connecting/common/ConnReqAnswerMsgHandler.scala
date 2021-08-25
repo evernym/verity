@@ -11,7 +11,6 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.CREATE_MSG_TYPE_CONN_
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, PackMsgParam}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
-import com.evernym.verity.protocol.container.actor.ProtoMsg
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 

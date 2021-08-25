@@ -3,12 +3,11 @@ package com.evernym.verity.agentmsg.msgpacker
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.did.VerKeyStr
-import com.evernym.verity.protocol.container.actor.ProtoMsg
-import com.evernym.verity.protocol.engine.{MsgFamilyName, MsgFamilyVersion, MsgName, MsgType}
+import com.evernym.verity.protocol.engine.{MsgBase, MsgFamilyName, MsgFamilyVersion, MsgName, MsgType}
 import com.evernym.verity.protocol.engine.Constants._
 
 case class AgentMsgWrapper(msgPackFormat: MsgPackFormat, agentBundledMsg: AgentBundledMsg)
-  extends ProtoMsg {
+  extends MsgBase {
 
   def senderVerKey: Option[VerKeyStr] = agentBundledMsg.senderVerKey
   def recipVerKey: Option[VerKeyStr] = agentBundledMsg.recipVerKey

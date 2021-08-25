@@ -4,7 +4,7 @@ import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.container.actor.Init
+import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.asyncapi.wallet.VerifiedSigResult

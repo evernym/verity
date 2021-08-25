@@ -8,7 +8,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnReqRedirectedMsgHelper, ConnectingMsgHelper, RedirectConnReqMsgHelper}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
+import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols._
@@ -16,6 +16,7 @@ import com.evernym.verity.protocol.protocols.connecting.common._
 import com.evernym.verity.push_notification.PushNotifMsgBuilder
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.did.{DidStr, VerKeyStr}
+import com.evernym.verity.protocol.engine.msg.Init
 
 import scala.concurrent.ExecutionContext
 

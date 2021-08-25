@@ -9,7 +9,7 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol._
-import com.evernym.verity.protocol.container.actor.Init
+import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccess
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner}
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}

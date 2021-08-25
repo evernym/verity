@@ -12,7 +12,7 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.util.AgentPackMsgUtil.{preparePackedRequestForAgent, preparePackedRequestForRoutes}
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, TestComMethod}
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.mock.agent.MockAgent
 
 import scala.concurrent.ExecutionContext

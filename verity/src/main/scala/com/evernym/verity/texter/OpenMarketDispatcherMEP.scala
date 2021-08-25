@@ -7,7 +7,7 @@ import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.util.Util._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.http.common.ConfigSvc
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider
 

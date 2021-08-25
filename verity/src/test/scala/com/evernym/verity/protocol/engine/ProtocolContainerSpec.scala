@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.util2.ServiceEndpoint
-import com.evernym.verity.metrics.{MetricsWriter, NoOpMetricsWriter}
+import com.evernym.verity.observability.metrics.{MetricsWriter, NoOpMetricsWriter}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess

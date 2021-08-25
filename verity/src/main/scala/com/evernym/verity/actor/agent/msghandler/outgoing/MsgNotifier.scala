@@ -23,8 +23,8 @@ import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.InternalSpan
+import com.evernym.verity.observability.metrics.CustomMetrics._
+import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.MsgFamily.{VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP}
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine._

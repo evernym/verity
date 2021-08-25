@@ -7,7 +7,7 @@ import com.evernym.verity.actor.persistence.transformer_registry.HasTransformati
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
-import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
+import com.evernym.verity.observability.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.transformations.transformers.v1.createPersistenceTransformerV1
 import com.evernym.verity.util.Util

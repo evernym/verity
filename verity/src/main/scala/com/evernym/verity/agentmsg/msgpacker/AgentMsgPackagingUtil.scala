@@ -16,7 +16,7 @@ import com.evernym.verity.protocol.engine.{MsgFamilyQualifier, MsgName}
 import com.evernym.verity.util.MessagePackUtil
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.did.{DidStr, VerKeyStr}
-import com.evernym.verity.metrics.{InternalSpan, MetricsWriter}
+import com.evernym.verity.observability.metrics.{InternalSpan, MetricsWriter}
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 import org.json.JSONObject
 

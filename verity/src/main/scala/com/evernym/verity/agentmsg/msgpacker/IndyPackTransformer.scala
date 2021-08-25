@@ -6,7 +6,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 
 import scala.concurrent.ExecutionContext
 import com.evernym.verity.actor.wallet.{PackMsg, PackedMsg, UnpackMsg, UnpackedMsg}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.typesafe.scalalogging.Logger

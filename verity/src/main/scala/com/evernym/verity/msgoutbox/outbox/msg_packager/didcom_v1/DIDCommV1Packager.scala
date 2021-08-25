@@ -9,7 +9,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.WalletOpExecut
 import com.evernym.verity.msgoutbox.{RecipPackaging, RoutePackaging, WalletId}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer}
 import com.evernym.verity.did.VerKeyStr
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.observability.metrics.MetricsWriter
 import com.evernym.verity.vault.WalletAPIParam
 
 import scala.concurrent.ExecutionContext

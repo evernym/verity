@@ -8,8 +8,8 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.Constants.YES
 import com.evernym.verity.did.didcomm.v1.ThreadBase
-import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}
+import com.evernym.verity.observability.metrics.CustomMetrics._
+import com.evernym.verity.observability.metrics.{MetricsUnit, MetricsWriter}
 import com.evernym.verity.protocol.engine.{MsgId, MsgName, RefMsgId}
 import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException}

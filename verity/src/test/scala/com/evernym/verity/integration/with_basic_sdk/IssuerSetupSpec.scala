@@ -11,6 +11,8 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util.TestExecutionContextProvider
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
+import scala.language.postfixOps
 
 class IssuerSetupSpec
   extends VerityProviderBaseSpec
@@ -85,7 +87,9 @@ class IssuerSetupSpec
     "when tried to sent 'write (write-cred-def 0.6) message" - {
       "should be successful" in {
         issuerSDK.sendMsg(writeCredDef0_6.Write("name", schemaId, None, None))
-        val receivedMsg = issuerSDK.expectMsgOnWebhook[writeCredDef0_6.StatusReport]()
+        val receivedMsg = issuerSDK.expectMsgOnWebhook[writeCredDef0_6.StatusReport](
+          2 minutes
+        )
         receivedMsg.msg.credDefId.nonEmpty shouldBe true
       }
     }

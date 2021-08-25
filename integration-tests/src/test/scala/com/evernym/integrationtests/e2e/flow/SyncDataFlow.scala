@@ -1,7 +1,7 @@
 package com.evernym.integrationtests.e2e.flow
 
 import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.testkit.BasicAsyncSpec
 import com.evernym.verity.util.SyncViaFile
 import com.typesafe.scalalogging.Logger

@@ -4,7 +4,7 @@ import akka.actor.Props
 import akka.pattern.{BackoffOpts, BackoffSupervisor}
 import com.evernym.verity.actor.persistence.SupervisorUtil.BackoffStrategy
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration._

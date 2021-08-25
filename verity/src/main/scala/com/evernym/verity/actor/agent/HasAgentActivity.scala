@@ -3,8 +3,8 @@ package com.evernym.verity.actor.agent
 import com.evernym.verity.actor.{ForIdentifier, ShardRegionCommon}
 import com.evernym.verity.actor.metrics.{ActivityTracking, ActivityWindow, AgentActivity}
 import com.evernym.verity.config.ConfigUtil
-import com.evernym.verity.metrics.CustomMetrics.AS_NEW_USER_AGENT_COUNT
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.observability.metrics.CustomMetrics.AS_NEW_USER_AGENT_COUNT
+import com.evernym.verity.observability.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.DomainId
 import com.evernym.verity.util.TimeUtil
 

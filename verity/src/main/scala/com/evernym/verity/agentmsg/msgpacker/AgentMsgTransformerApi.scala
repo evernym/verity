@@ -2,7 +2,7 @@ package com.evernym.verity.agentmsg.msgpacker
 
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.util.JsonUtil.getDeserializedJson
 
 import scala.concurrent.ExecutionContext

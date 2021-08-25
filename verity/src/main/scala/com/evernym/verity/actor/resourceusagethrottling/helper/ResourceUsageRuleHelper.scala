@@ -5,7 +5,7 @@ import com.evernym.verity.actor.resourceusagethrottling._
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageRuleHelper.isIpAddressInTokenSet
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.{getResourceTypeName, isUserId}
 import com.evernym.verity.config.validator.ResourceUsageRuleConfigValidator
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util._
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger

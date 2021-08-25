@@ -8,8 +8,8 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.user.msgstore.{MsgStateAPIProvider, MsgStore}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.GetMsgsReqMsg
-import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.{MetricsWriter, TestMetricsBackend}
+import com.evernym.verity.observability.metrics.CustomMetrics._
+import com.evernym.verity.observability.metrics.{MetricsWriter, TestMetricsBackend}
 import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.MsgIdProvider

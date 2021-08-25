@@ -6,7 +6,6 @@ import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.msgsender.{MsgDeliveryResult, SendMsgParam}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.{HasLogger, MsgId}
-import com.evernym.verity.actor.wallet.PackedMsg
 
 
 trait MsgDeliveryResultHandler extends HasAgentMsgTransformer { this: HasLogger =>
@@ -25,7 +24,7 @@ trait MsgDeliveryResultHandler extends HasAgentMsgTransformer { this: HasLogger 
     updateMsgDeliveryStatus(uid, to, MSG_DELIVERY_STATUS_SENT.statusCode, statusMsg)
   }
 
-  def handleSuccessfulMsgDelivery(sm: SendMsgParam, pm: PackedMsg): Unit = {
+  def handleSuccessfulMsgDelivery(sm: SendMsgParam): Unit = {
     logger.debug("handle successful msg delivery", (LOG_KEY_UID, sm.uid))
     updateMsgDeliveryStatus(sm.uid, sm.theirRoutingParam.routingTarget, MSG_DELIVERY_STATUS_SENT.statusCode)
     msgSentSuccessfully(MsgSentSuccessfully(sm.uid, sm.msgType))
@@ -52,7 +51,7 @@ trait MsgDeliveryResultHandler extends HasAgentMsgTransformer { this: HasLogger 
   def handleMsgDeliveryResult(mdr: MsgDeliveryResult): Unit = {
     logger.debug("handle msg delivery", (LOG_KEY_UID, mdr.sm.uid))
     mdr.responseMsg match {
-      case Some(pm) => handleSuccessfulMsgDelivery(mdr.sm, pm)
+      case Some(_) => handleSuccessfulMsgDelivery(mdr.sm)
       case None     => handleFailedMsgDelivery(mdr.sm, mdr.statusCode, mdr.statusMsg)
     }
   }

@@ -1,29 +1,27 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
-import com.evernym.verity.actor.wallet.{CredCreated, CredOfferCreated, CredReqCreated}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.ledger.GetCredDefResp
-import com.evernym.verity.protocol.Control
 import com.evernym.verity.did.didcomm.v1.conventions.CredValueEncoderV1_0
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor._
 import com.evernym.verity.did.didcomm.v1.decorators.{AttachmentDescriptor, Base64, PleaseAck}
+import com.evernym.verity.ledger.GetCredDefResp
+import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{CredCreatedResult, CredOfferCreatedResult, CredReqCreatedResult}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentId
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols.{HasAppConfig, ProtocolHelpers}
+import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.ProblemReportCodes._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Role.{Holder, Issuer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.State.{HasMyAndTheirDid, PostInteractionStarted}
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.{State => S}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.legacy.IssueCredentialLegacy
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.{State => S}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
@@ -389,7 +387,7 @@ trait IssueCredentialHelpers
   def sendCredRequest(m: Ctl.Request, myPwDid: DidStr, credOffer: OfferCred, credDefJson: String): Unit = {
     val credOfferJson = extractCredOfferJson(credOffer)
     ctx.wallet.createCredReq(m.cred_def_id, myPwDid, credDefJson, credOfferJson) {
-      case Success(credRequest: CredReqCreated) =>
+      case Success(credRequest: CredReqCreatedResult) =>
         val attachment = buildAttachment(Some("libindy-cred-req-0"), payload=credRequest.credReqJson)
         val attachmentEventObject = toAttachmentObject(attachment)
         val credRequested = CredRequested(Seq(attachmentEventObject), commentReq(m.comment))
@@ -455,7 +453,7 @@ trait IssueCredentialHelpers
     val credReqJson = extractCredReqJson(credRequest)
     val credValuesJson = IssueCredential.buildCredValueJson(credOffer.credential_preview)
     ctx.wallet.createCred(credOfferJson, credReqJson, credValuesJson, revRegistryId.orNull, -1) {
-      case Success(createdCred: CredCreated) =>
+      case Success(createdCred: CredCreatedResult) =>
         val attachment = buildAttachment(Some("libindy-cred-0"), payload=createdCred.cred)
         val attachmentEventObject = toAttachmentObject(attachment)
         val credIssued = CredIssued(Seq(attachmentEventObject), commentReq(comment))
@@ -611,7 +609,7 @@ trait IssueCredentialHelpers
 
   def buildOffer(m: Ctl.Offer)(handler: Try[(CredOffered, OfferCred)] => Unit): Unit = {
     ctx.wallet.createCredOffer(m.cred_def_id) {
-      case Success(coc: CredOfferCreated) =>
+      case Success(coc: CredOfferCreatedResult) =>
         val credPreview = buildCredPreview(m.credential_values)
         val credPreviewEventObject = credPreview.toOption.map(_.toCredPreviewObject)
         val attachment = buildAttachment(Some("libindy-cred-offer-0"), payload = coc.offer)

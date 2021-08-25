@@ -1,20 +1,20 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
-import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.actor.agent.SponsorRel
-import com.evernym.verity.actor.wallet.VerifySigResult
 import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
+import com.evernym.verity.protocol.engine.asyncapi.wallet.VerifiedSigResult
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, _}
+import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily._
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.State.{CloudWaitingOnSponsor, EdgeCreationWaitingOnSponsor, FailedAgentCreation, Initialized, Provisioning, RequestedToProvision, Uninitialized, AgentCreated => AgentCreatedState}
 import com.evernym.verity.util.Base64Util.getBase64Decoded
 import com.evernym.verity.util.TimeUtil._
+import com.evernym.verity.util2.Base64Encoded
 
 import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
@@ -163,7 +163,7 @@ class AgentProvisioning(val ctx: ProtocolContextApi[AgentProvisioning, Role, Msg
     })
   }
 
-  private def isValidSignature(token: ProvisionToken, sponsorVk: VerKeyStr)(handler: Try[VerifySigResult] => Unit): Unit = {
+  private def isValidSignature(token: ProvisionToken, sponsorVk: VerKeyStr)(handler: Try[VerifiedSigResult] => Unit): Unit = {
     val msg = (token.nonce + token.timestamp + token.sponseeId + token.sponsorId).getBytes
     ctx.wallet.verify(msg, getBase64Decoded(token.sig), sponsorVk, SIGN_ED25519_SHA512_SINGLE){handler(_)}
   }

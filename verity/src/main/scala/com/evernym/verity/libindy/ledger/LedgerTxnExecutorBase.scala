@@ -13,8 +13,8 @@ import com.evernym.verity.config.{AppConfig, ConfigConstants, ConfigUtil}
 import com.evernym.verity.ledger._
 import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
-import com.evernym.verity.did.{DidStr, DidPair}
-import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
+import com.evernym.verity.did.{DidPair, DidStr}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{LedgerRequestResult, WalletAccess}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.util.LogUtil.logFutureDuration
 import com.evernym.verity.util.OptionUtil.orNone
@@ -65,6 +65,19 @@ object LedgerTxnExecutorBase {
 
   type LedgerResult = Map[String, Any]
   type RawLedgerResponse = String
+
+  def toLedgerRequest(result: LedgerRequestResult): LedgerRequest = {
+    LedgerRequest(
+      result.req,
+      result.needsSigning,
+      result.taa.map(t => TransactionAuthorAgreement(
+        t.version,
+        t.digest,
+        t.mechanism,
+        t.timeOfAcceptance
+      ))
+    )
+  }
 }
 
 trait SubmitToLedger {
@@ -365,9 +378,13 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
       val schemaReq = LedgerRequest(req, needsSigning=false, taa=None)
       appendTAAToRequest(schemaReq, currentTAA) flatMap { reqWithOptTAA =>
         toFuture(appendRequestEndorser(reqWithOptTAA.req, endorserDID)) flatMap { reqWithEndorser =>
-          val promise = Promise[LedgerRequest]()
-          walletAccess.multiSignRequest(submitterDID, reqWithEndorser)(promise.complete)
-          promise.future
+          val promise = Promise[LedgerRequestResult]()
+          // TODO LedgerTxn should not need to know about walletAccess
+          walletAccess.multiSignRequest(submitterDID, reqWithEndorser){
+            promise.complete
+
+          }
+          promise.future.map(toLedgerRequest)
         }
       }
     }
@@ -400,9 +417,9 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
       val credDefReq = LedgerRequest(req, needsSigning=false, taa=None)
       appendTAAToRequest(credDefReq, currentTAA) flatMap { reqWithOptTAA =>
         toFuture(appendRequestEndorser(reqWithOptTAA.req, endorserDID)) flatMap{ reqWithEndorser =>
-          val promise = Promise[LedgerRequest]()
+          val promise = Promise[LedgerRequestResult]()
           walletAccess.multiSignRequest(submitterDID, reqWithEndorser)(promise.complete)
-          promise.future
+          promise.future.map(toLedgerRequest)
         }
       }
     }

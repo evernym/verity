@@ -1,10 +1,10 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.common
 
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.wallet.AgentWalletSetupCompleted
 import com.evernym.verity.did.DidPair
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.ProtocolContextApi
+import com.evernym.verity.protocol.engine.asyncapi.wallet.DeprecatedWalletSetupResult
 
 import scala.util.Try
 
@@ -17,7 +17,7 @@ trait HasAgentProvWallet {
 
   protected def prepareNewAgentWalletData(forDIDPair: DidPair,
                                           walletId: String)
-                                         (postNewAgentWallet: Try[AgentWalletSetupCompleted] => Unit): Unit = {
+                                         (postNewAgentWallet: Try[DeprecatedWalletSetupResult] => Unit): Unit = {
     ctx.wallet.DEPRECATED_setupNewWallet(walletId, forDIDPair) { resp =>
       postNewAgentWallet(resp)
     }

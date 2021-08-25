@@ -1,8 +1,9 @@
 package com.evernym.verity.protocol.protocols.connecting.common
 
+import com.evernym.verity.actor.{AgentKeyDlgProofSet, ConnectionStatusUpdated, Evt,
+  MsgAnswered, MsgCreated, MsgPayloadStored, TheirDidDocDetail}
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status.{INVALID_VALUE, MISSING_REQ_FIELD, MSG_STATUS_ACCEPTED, MSG_STATUS_REDIRECTED, MSG_STATUS_REJECTED, PAIRWISE_KEYS_ALREADY_IN_WALLET}
-import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.user.MsgHelper
 import com.evernym.verity.actor.wallet.{GetVerKeyOpt, GetVerKeyOptResp, PackedMsg, StoreTheirKey, TheirKeyStored}

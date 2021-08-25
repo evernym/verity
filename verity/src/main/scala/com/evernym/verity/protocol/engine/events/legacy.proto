@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.protocol.engine;
+
+message ParameterStored {
+    string name = 1;
+    string value = 2;
+}
+
+message ProtocolInitialized {
+    repeated ParameterStored parameters = 1;
+}

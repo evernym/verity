@@ -22,6 +22,7 @@ import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema_v
 import com.evernym.verity.protocol.protocols.{deaddrop, walletBackup, tictactoe => tictactoe_v0_5, tokenizer => tk}
 import com.evernym.verity.protocol.protocols.walletBackup.{legacy => walletBackupLegacy}
 import com.evernym.verity.protocol._
+import com.evernym.verity.protocol.engine.ProtocolInitialized
 import com.evernym.verity.urlmapper.UrlAdded
 import scalapb.GeneratedMessageCompanion
 

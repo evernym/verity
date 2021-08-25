@@ -1,6 +1,5 @@
 package com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6
 
-import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.did.DidStr

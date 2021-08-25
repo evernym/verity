@@ -1,16 +1,15 @@
 package com.evernym.verity.protocol.protocols.connecting.v_0_6
 
+import com.evernym.verity.actor.{ActorMessage, AgentDetailSet, KeyCreated}
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status.KEY_ALREADY_CREATED
-import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.actor.agent.msgsender.AgentMsgSender
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.agentmsg.msgfamily.pairwise
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{AcceptConnReqMsgHelper, ConnReqAcceptedMsgHelper, ConnReqDeclinedMsgHelper, ConnReqMsgHelper, ConnReqRedirectedMsgHelper, CreateConnectionReqMsg_MFV_0_6, CreateKeyMsgHelper, CreateKeyReqMsg, DeclineConnReqMsgHelper, GetStatusReqMsg_MFV_0_6, RedirectConnReqMsgHelper}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper

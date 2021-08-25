@@ -96,6 +96,7 @@ abstract class ActorDriver(cp: ActorDriverGenParam, ec: ExecutionContext)
 case class ActorDriverGenParam(system: ActorSystem,
                                config: AppConfig,
                                protocolRegistry: ProtocolRegistry[ActorDriverGenParam],
-                               generalCache: Cache, agentMsgRouter: AgentMsgRouter,
+                               generalCache: Cache,
+                               agentMsgRouter: AgentMsgRouter,
                                msgForwarder: MsgForwarder)
 

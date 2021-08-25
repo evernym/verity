@@ -1,11 +1,11 @@
 package com.evernym.verity.protocol.protocols.tokenizer
 
-import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{AskForToken, GetToken, Msg, ProblemReport, PushToken, Requester, Role, SigningTokenErr, Tokenizer, Token => TokenMsg}
+import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{AskForToken, GetToken, Msg, ProblemReport,
+  Requester, Role, SigningTokenErr, Tokenizer, Token => TokenMsg}
 import com.evernym.verity.protocol.protocols.tokenizer.{Token => TokenEvt}
 import com.evernym.verity.util.TimeUtil
 import com.evernym.verity.util.Util.getNewEntityId
@@ -93,10 +93,6 @@ class Tokenizer(val ctx: ProtocolContextApi[Tokenizer, Role, Msg, Any, Tokenizer
 
         /** This will be sent synchronously in the http response*/
         ctx.send(token)
-
-        //NOTE: This optional push notification feature is going away sooner.
-        /** Optionally will be sent via push notification */
-        m.pushId.foreach(pid => ctx.send(PushToken(token, pid)))
 
       case Failure(ex) =>
         ctx.logger.error(ex.toString)

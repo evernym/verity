@@ -4,6 +4,7 @@ import com.evernym.verity.actor.wallet._
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
+import com.evernym.verity.protocol.container.asyncapis.BaseAsyncOpExecutorImpl
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.AsyncResultHandler
 import com.evernym.verity.protocol.engine.asyncapi.wallet._

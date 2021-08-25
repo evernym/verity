@@ -41,7 +41,6 @@ import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.AgentCreated
 import com.evernym.verity.protocol.protocols.connecting.common.GetInviteDetail
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}
-import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.PushToken
 import com.evernym.verity.push_notification.PushNotifData
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
@@ -119,10 +118,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   def outgoingCmdReceiver: Receive = {
     //[LEGACY] pinst -> actor protocol container (sendRespToCaller method) -> this actor
     case psrp: ProtocolSyncRespMsg    => handleProtocolSyncRespMsg(psrp)
-
-    //pinst -> actor protocol container (send method) -> this actor
-    case ProtocolOutgoingMsg(sd: ServiceDecorator, _, _, rmId, _, pDef, tcd) =>
-      handleProtocolServiceDecorator(sd, rmId, pDef, tcd)
 
     //pinst -> actor protocol container (send method) -> this actor
     case pom: ProtocolOutgoingMsg     => handleProtocolOutgoingMsg(pom)
@@ -374,22 +369,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           msg.getClass.getSimpleName + extraDetail.map(ed => s" ($ed)").getOrElse(""),
           s"SENT [to $NEXT_HOP_MY_EDGE_AGENT_SYNC]")
       )
-    }
-  }
-
-  def handleProtocolServiceDecorator(sd: ServiceDecorator,
-                                     requestMsgId: MsgId,
-                                     protoDef: ProtoDef,
-                                     tcd: ThreadContextDetail): Unit = {
-    val agentMsg: AgentJsonMsg = createAgentMsg(sd.msg, protoDef,
-      tcd, Option(TypeFormat.STANDARD_TYPE_FORMAT))
-
-    sd match {
-      case pushToken: PushToken =>
-        val pnd = PushNotifData(requestMsgId, agentMsg.msgType.msgName, sendAsAlertPushNotif = true, Map.empty,
-          Map("type" -> agentMsg.msgType.msgName, "msg" -> agentMsg.jsonStr))
-        sendToAgentActor(SendPushNotif(Set(sd.deliveryMethod), pnd, Some(pushToken.msg.sponsorId)))
-      case x => throw new RuntimeException("unsupported Service Decorator: " + x)
     }
   }
 

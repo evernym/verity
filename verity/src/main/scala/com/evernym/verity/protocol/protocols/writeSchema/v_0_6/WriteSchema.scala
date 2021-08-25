@@ -1,14 +1,12 @@
 package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
-import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.msg.Init
-import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SchemaCreatedResult
+import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Role.Writer

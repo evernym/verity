@@ -1,6 +1,5 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_6
 
-import com.evernym.verity.actor._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.did.DidPair

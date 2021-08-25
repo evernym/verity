@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5
 
-import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.AgentDetail
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}

@@ -1,11 +1,12 @@
 package com.evernym.verity.protocol.protocols.connecting.common
 
 import akka.actor.Actor.Receive
+import com.evernym.verity.actor.{ActorMessage, AgentKeyDlgProofSet, ConnectionStatusUpdated, Evt, MsgCreated,
+  MsgDeliveryStatusUpdated, MsgExpirationTimeUpdated, MsgPayloadStored, ProtocolObserverAdded}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidValueException}
 import com.evernym.verity.util2.Status.{getStatusMsgFromCode, _}
-import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
 import com.evernym.verity.did.didcomm.v1.Thread
@@ -20,7 +21,7 @@ import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
-import com.evernym.verity.protocol.container.actor.{UpdateMsgDeliveryStatus}
+import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._

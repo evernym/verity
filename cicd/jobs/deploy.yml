@@ -25,7 +25,7 @@
     - docker-machine
   needs: ["package" ,"publish-deb", "publish-docker"]
 
-.deploy-k8s:
+deploy-k8s:
   stage: deploy
   script:
     - ls verity/target/verity-application*.deb

@@ -39,7 +39,7 @@ class ComMethodUpdateSpec
       }
     }
 
-    "when tried to update com method with unsupported authentication type" - {
+    "when tried to add com method with unsupported authentication type" - {
       "should respond with error" in {
         val ex = intercept[IllegalArgumentException] {
           issuerSDK.registerWebhook(authentication=
@@ -61,7 +61,7 @@ class ComMethodUpdateSpec
       }
     }
 
-    "when tried to update com method with unsupported authentication version" - {
+    "when tried to add com method with unsupported authentication version" - {
       "should respond with error" in {
         val ex = intercept[IllegalArgumentException] {
           issuerSDK.registerWebhook(authentication=
@@ -83,7 +83,7 @@ class ComMethodUpdateSpec
       }
     }
 
-    "when tried to update com method without sufficient data" - {
+    "when tried to add com method without sufficient data" - {
       "should respond with error" in {
         val invalidData = Seq(
           Map("grant_type" -> "client_credentials", "client_id" -> "client_id", "client_secret" -> "client_secret"),
@@ -108,7 +108,7 @@ class ComMethodUpdateSpec
       }
     }
 
-    "when tried to update com method with empty data for required fields" - {
+    "when tried to add com method with empty data for required fields" - {
       "should respond with error" in {
         val invalidData = Seq(
           Map("url" -> "", "grant_type" -> "client_credentials", "client_id" -> "client_id", "client_secret" -> "client_secret"),
@@ -133,7 +133,7 @@ class ComMethodUpdateSpec
       }
     }
 
-    "when tried to update com method with null data for required fields" - {
+    "when tried to add com method with null data for required fields" - {
       "should respond with error" in {
         val invalidData = Seq(
           Map("url" -> null, "grant_type" -> "client_credentials", "client_id" -> "client_id", "client_secret" -> "client_secret"),
@@ -159,7 +159,13 @@ class ComMethodUpdateSpec
       }
     }
 
-    "when tried to with valid com method (with auth)" - {
+    "when tried to add valid com method (without auth)" - {
+      "should be successful" in {
+        issuerSDK.registerWebhookWithoutOAuth(Option("webhook"))
+      }
+    }
+
+    "when tried to add valid com method (with auth)" - {
       "should be successful" in {
         val authData = Map(
           "url"           -> "auth-url",
@@ -181,9 +187,11 @@ class ComMethodUpdateSpec
       }
     }
 
-    "when tried to with valid com method (no auth)" - {
+    "when tried to update com method (from oauth to no-auth)" - {
       "should be successful" in {
-        issuerSDK.registerWebhook(Option("webhook"))
+        issuerSDK.registerWebhook(
+          Option("authwebhook")
+        )
       }
     }
   }
@@ -198,7 +206,7 @@ class ComMethodUpdateSpec
     }
 
     //as this authentication feature is only valid for VAS for now
-    "when tried to update com method with authentication data" - {
+    "when tried to add com method with authentication data" - {
       "should fail with appropriate error" in {
         val authentication =
           ComMethodAuthentication(

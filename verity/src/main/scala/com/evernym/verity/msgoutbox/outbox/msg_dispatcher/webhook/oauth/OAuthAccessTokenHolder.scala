@@ -76,6 +76,7 @@ object OAuthAccessTokenHolder {
 
     case cmd @ GetToken(refreshed, replyTo) =>
       if (refreshed) {
+        logger.info(s"[${setup.identifier}][OAuth] access token will be refreshed")
         setup.buffer.stash(GetToken(refreshed = false, replyTo))
         refreshToken(setup)
       } else {
@@ -106,21 +107,24 @@ object OAuthAccessTokenHolder {
 
   private def waitingForGetTokenResponse(implicit setup: Setup): Behavior[Cmd] = Behaviors.receiveMessage {
     case AccessTokenRefresherReplyAdapter(reply: GetTokenSuccess) =>
-      setup.actorContext.cancelReceiveTimeout()
       logger.info(s"[${setup.identifier}][OAuth] refreshed access token received (expires in seconds: ${reply.expiresInSeconds})")
+      setup.actorContext.cancelReceiveTimeout()
       setup.buffer.unstashAll(initialized(Option(AuthTokenParam(reply.value, reply.expiresInSeconds)))
       (setup.copy(prevTokenRefreshResponse = reply.respJSONObject)))
 
     case AccessTokenRefresherReplyAdapter(reply: OAuthAccessTokenRefresher.Replies.GetTokenFailed) =>
+      logger.warn(s"[${setup.identifier}][OAuth] refresh access token failed: " + reply.errorMsg)
       setup.actorContext.cancelReceiveTimeout()
-      logger.error(s"[${setup.identifier}][OAuth] refresh access token failed: " + reply.errorMsg)
       handleError(reply.errorMsg)
 
     case TimedOut =>
+      logger.warn(s"[${setup.identifier}][OAuth] get access token timed out")
       setup.actorContext.cancelReceiveTimeout()
-      handleError("get token timed out")(setup)
+      handleError("get new access token timed out")(setup)
 
     case other =>
+      //while this actor is waiting for new access token, if it receives other commands (mostly it should be GetToken)
+      // stash it
       setup.buffer.stash(other)
       Behaviors.same
   }
@@ -129,7 +133,7 @@ object OAuthAccessTokenHolder {
     setup.buffer.foreach {
       case GetToken(_, replyTo)   => replyTo ! Replies.GetTokenFailed(errorMsg)
     }
-    initialized(None)
+    setup.buffer.unstashAll(initialized(None))
   }
 
   private val logger: Logger = getLoggerByClass(getClass)

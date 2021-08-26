@@ -2,7 +2,17 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ template "verity.fullname" . }}
+  annotations:
+    app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
+    app.gitlab.com/env: {{ .Values.env }}
 spec:
+  strategy:
+    type: "Recreate"
+  # strategy:
+  #   type: RollingUpdate
+  #   rollingUpdate:
+  #     maxSurge: 1
+  #     maxUnavailable: 0
   selector:
     matchLabels:
       app: {{ template "verity.fullname" . }}
@@ -13,6 +23,8 @@ spec:
         app: {{ template "verity.fullname" . }}
         actorSystemName: verity
       annotations:
+        app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
+        app.gitlab.com/env: {{ .Values.env }}
         {{- if .Values.deployment.vault.enable }}
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "k8s-eks-{{ .Values.env }}"
@@ -84,24 +96,3 @@ spec:
         configMap:
           name: ledger-genesis-{{ template "verity.fullname" . }}
 
----
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: pod-reader-{{ template "verity.fullname" . }}
-rules:
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "watch", "list"]
----
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: read-pods-{{ template "verity.fullname" . }}
-subjects:
-  - kind: User
-    name: system:serviceaccount:default:default
-roleRef:
-  kind: Role
-  name: pod-reader-{{ template "verity.fullname" . }}
-  apiGroup: rbac.authorization.k8s.io

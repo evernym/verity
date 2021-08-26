@@ -135,10 +135,10 @@ trait BaseMsgOutboxSpec extends HasExecutionContextProvider with HasWalletExecut
     )
     Await.result(storePayload, 5.seconds)
 
-    val probe = createTestProbe[StatusReply[AddMsgReply]]()
+    val probe = createTestProbe[AddMsgReply]()
     messageMetaRegion ! ShardingEnvelope(msgId,
       MessageMeta.Commands.Add(msgType, retentionPolicy.configString, outboxIds, None, None, probe.ref))
-    probe.expectMessage(StatusReply.success(MsgAdded))
+    probe.expectMessage(MsgAdded)
 
     storedMsgs = storedMsgs :+ msgId
     msgId

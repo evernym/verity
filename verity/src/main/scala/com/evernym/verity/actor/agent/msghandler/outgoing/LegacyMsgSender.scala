@@ -6,7 +6,7 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.http.scaladsl.model.HttpHeader
 import akka.http.scaladsl.model.headers.RawHeader
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.agent.msghandler.outgoing.LegacyMsgSender.Commands.{OAuthAccessTokenHolderReplyAdapter, SendBinaryMsg, SendCmdBase, SendJsonMsg}
+import com.evernym.verity.actor.agent.msghandler.outgoing.LegacyMsgSender.Commands.{OAuthAccessTokenHolderReplyAdapter, SendBinaryMsg, SendCmdBase, SendJsonMsg, TimedOut}
 import com.evernym.verity.actor.agent.msghandler.outgoing.LegacyMsgSender.Replies.SendMsgResp
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.user.GetTokenForUrl
@@ -21,7 +21,9 @@ import com.evernym.verity.util2.UrlParam
 import com.typesafe.scalalogging.Logger
 
 import scala.collection.immutable
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+
 
 //this actor gets created for each new outgoing message and responsible to send
 // that message (with or without oauth) to given endpoint
@@ -51,6 +53,7 @@ object LegacyMsgSender {
     case class OAuthAccessTokenHolderReplyAdapter(reply: OAuthAccessTokenHolder.Reply) extends Cmd
 
     case object Stop extends Cmd
+    case object TimedOut extends Cmd
   }
 
   trait Reply extends ActorMessage
@@ -61,9 +64,10 @@ object LegacyMsgSender {
   def apply(selfRelId: String,
             agentMsgRouter: AgentMsgRouter,
             msgSendingSvc: MsgSendingSvc,
+            receiveTimeout: FiniteDuration,
             executionContext: ExecutionContext): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
-      val setup = Setup(selfRelId, agentMsgRouter, msgSendingSvc, withRefreshedToken = false)
+      val setup = Setup(selfRelId, agentMsgRouter, msgSendingSvc, withRefreshedToken = false, receiveTimeout)
       initialized(setup)(actorContext, executionContext)
     }
   }
@@ -92,6 +96,7 @@ object LegacyMsgSender {
     setup.agentMsgRouter.forward(InternalMsgRouteParam(setup.selfRelId,
       GetTokenForUrl(cmd.toUrl, GetToken(cmd.withRefreshedToken, oAuthAccessTokenHolderReplyAdapter))),
       actorContext.self.toClassic)
+    actorContext.setReceiveTimeout(setup.receiveTimeout, TimedOut)
     waitingForOAuthAccessToken(setup, cmd: SendCmdBase)
   }
 
@@ -103,13 +108,20 @@ object LegacyMsgSender {
 
     case OAuthAccessTokenHolderReplyAdapter(reply: AuthToken) =>
       logger.info(s"[${setup.selfRelId}][OAuth] access token received from self relationship (for webhook url: ${cmd.toUrl})")
+      actorContext.cancelReceiveTimeout()
       val headers = immutable.Seq(RawHeader("Authorization", s"Bearer ${reply.value}"))
       actorContext.self ! cmd
       sendingMsg(setup, headers)
 
     case OAuthAccessTokenHolderReplyAdapter(reply: GetTokenFailed) =>
-      cmd.replyTo ! SendMsgResp(Left(HandledErrorException(UNHANDLED.statusCode,
-        Option(s"[${setup.selfRelId}][OAuth] error while getting access token:" + reply.errorMsg))))
+      val errorMsg = s"[${setup.selfRelId}][OAuth] error while getting access token:" + reply.errorMsg
+      logger.warn(errorMsg)
+      actorContext.cancelReceiveTimeout()
+      cmd.replyTo ! SendMsgResp(Left(HandledErrorException(UNHANDLED.statusCode, Option(errorMsg))))
+      Behaviors.stopped
+
+    case TimedOut =>
+      logger.warn(s"[${setup.selfRelId}][OAuth] get access token timed out")
       Behaviors.stopped
   }
 
@@ -150,4 +162,5 @@ object LegacyMsgSender {
 case class Setup(selfRelId: String,
                  agentMsgRouter: AgentMsgRouter,
                  msgSendingSvc: MsgSendingSvc,
-                 withRefreshedToken: Boolean)
+                 withRefreshedToken: Boolean,
+                 receiveTimeout: FiniteDuration)

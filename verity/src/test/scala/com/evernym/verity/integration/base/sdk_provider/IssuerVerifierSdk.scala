@@ -134,8 +134,8 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
 
   def appConfig: AppConfig = testAppConfig
 
-  def registerWebhookWithoutOAuth(): ComMethodUpdated = {
-    registerWebhookBase(None, None)
+  def registerWebhookWithoutOAuth(id: Option[String] = None): ComMethodUpdated = {
+    registerWebhookBase(id, None)
   }
 
   def registerWebhook(id: Option[String] = None,

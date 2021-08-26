@@ -38,6 +38,7 @@ import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.util2.Exceptions.HandledErrorException
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 
 
 trait MsgNotifier {
@@ -350,7 +351,7 @@ trait MsgNotifierForStoredMsgs
             // so until vcx/connect.me fix gets deployed to app/play stores,
             // below will help avoiding it to be processed unnecessarily
             // and post deployment we can remove below filter and this comment.
-            .filter(_.value != "mock_value_just_to_register")
+            .filter(_.value != "FCM:mock_value_just_to_register")
 
         if (cms.nonEmpty) {
           self ! UpdateMsgDeliveryStatus(pnData.uid, domainId, MSG_DELIVERY_STATUS_PENDING.statusCode, None)
@@ -408,20 +409,24 @@ trait MsgNotifierForStoredMsgs
 
   private def sendBinaryMsg(msg: Array[Byte], toUrl: String, withAuthHeader: Boolean)
   : Future[Either[HandledErrorException, Any]] = {
-    newLegacyMsgSender.ask(ref => SendBinaryMsg(msg, toUrl, withAuthHeader, withRefreshedToken = false, ref))
+    newLegacyMsgSender()
+      .ask(ref => SendBinaryMsg(msg, toUrl, withAuthHeader, withRefreshedToken = false, ref))
       .mapTo[SendMsgResp]
       .map(_.resp)
   }
 
   private def sendJsonMsg(msg: String, toUrl: String, withAuthHeader: Boolean)
   : Future[Either[HandledErrorException, Any]] = {
-    newLegacyMsgSender.ask(ref => SendJsonMsg(msg, toUrl, withAuthHeader, withRefreshedToken = false, ref))
+    newLegacyMsgSender()
+      .ask(ref => SendJsonMsg(msg, toUrl, withAuthHeader, withRefreshedToken = false, ref))
       .mapTo[SendMsgResp]
       .map(_.resp)
   }
 
-  private def newLegacyMsgSender: akka.actor.typed.ActorRef[LegacyMsgSender.Cmd] =
-    context.spawnAnonymous(LegacyMsgSender(domainId, agentMsgRouter, msgSendingSvc, executionContext))
+  private def newLegacyMsgSender(): akka.actor.typed.ActorRef[LegacyMsgSender.Cmd] = {
+    val receiveTimeout = 30.seconds
+    context.spawnAnonymous(LegacyMsgSender(domainId, agentMsgRouter, msgSendingSvc, receiveTimeout, executionContext))
+  }
 
   private def updatePushNotificationDeliveryStatus(umds: UpdateMsgDeliveryStatus): Unit =
     self ! umds

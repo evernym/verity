@@ -3,7 +3,6 @@ package com.evernym.verity.msgoutbox.message_meta
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, Signal}
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityContext, EntityTypeKey}
-import akka.pattern.StatusReply
 import akka.persistence.typed.{PersistenceId, RecoveryCompleted}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
 import com.evernym.verity.msgoutbox.message_meta.Events.LegacyMsgData
@@ -29,13 +28,13 @@ object MessageMeta {
   //commands
   trait Cmd extends ActorMessage
   object Commands {
-    case class Get(replyTo: ActorRef[StatusReply[Replies.GetMsgReply]]) extends Cmd
+    case class Get(replyTo: ActorRef[Replies.GetMsgReply]) extends Cmd
     case class Add(`type`: String,
                    retentionPolicy: String, //TODO: finalize format etc
                    targetOutboxIds: Set[String],
                    legacyMsgData: Option[LegacyMsgData]=None, //TODO: needs to finalize need of this
                    recipPackaging: Option[RecipPackaging], //TODO: needs to finalize need of this
-                   replyTo: ActorRef[StatusReply[Replies.AddMsgReply]]) extends Cmd
+                   replyTo: ActorRef[Replies.AddMsgReply]) extends Cmd
 
     case class RecordMsgActivity(outboxId: String,
                                  deliveryStatus: String,
@@ -46,7 +45,7 @@ object MessageMeta {
                                   msgActivity: Option[MsgActivity],
                                   replyTo: ActorRef[Reply]) extends Cmd
 
-    case class GetDeliveryStatus(replyTo: ActorRef[StatusReply[Replies.MsgDeliveryStatus]]) extends Cmd
+    case class GetDeliveryStatus(replyTo: ActorRef[Replies.MsgDeliveryStatus]) extends Cmd
 
     case class MsgStoreReplyAdapter(reply: MsgStore.Reply) extends Cmd
   }
@@ -137,7 +136,7 @@ object MessageMeta {
 
     case (States.Uninitialized, Commands.Get(replyTo)) =>
       Effect
-        .reply(replyTo)(StatusReply.success(Replies.MsgNotYetAdded))
+        .reply(replyTo)(Replies.MsgNotYetAdded)
 
     case (States.Uninitialized, c: Commands.Add) =>
       Effect
@@ -150,19 +149,19 @@ object MessageMeta {
             c.recipPackaging,
             c.legacyMsgData
           ))
-        .thenReply(c.replyTo)(_ => StatusReply.success(Replies.MsgAdded))
+        .thenReply(c.replyTo)(_ => Replies.MsgAdded)
 
     case (_: States.Initialized, c: Commands.Add) =>
       Effect
-        .reply(c.replyTo)(StatusReply.success(Replies.MsgAlreadyAdded))
+        .reply(c.replyTo)(Replies.MsgAlreadyAdded)
 
     case (st: States.Initialized, Commands.Get(replyTo)) =>
       Effect
-        .reply(replyTo)(StatusReply.success(st.msgDetail.buildMsg(msgId)))
+        .reply(replyTo)(st.msgDetail.buildMsg(msgId))
 
     case (st: States.Initialized, Commands.GetDeliveryStatus(replyTo)) =>
       Effect
-        .reply(replyTo)(StatusReply.success(Replies.MsgDeliveryStatus(isProcessed = false, st.deliveryStatus)))
+        .reply(replyTo)(Replies.MsgDeliveryStatus(isProcessed = false, st.deliveryStatus))
 
     case (_: States.Initialized, rma: Commands.RecordMsgActivity) =>
       val msgActivityRecorded = {
@@ -209,11 +208,11 @@ object MessageMeta {
 
     case (st: States.Processed, Commands.GetDeliveryStatus(replyTo)) =>
       Effect
-        .reply(replyTo)(StatusReply.success(Replies.MsgDeliveryStatus(isProcessed = true, st.deliveryStatus)))
+        .reply(replyTo)(Replies.MsgDeliveryStatus(isProcessed = true, st.deliveryStatus))
 
     case (st: States.Processed, Commands.Get(replyTo)) =>
       Effect
-        .reply(replyTo)(StatusReply.success(st.msgDetail.buildMsg(msgId)))
+        .reply(replyTo)(st.msgDetail.buildMsg(msgId))
   }
 
   private val eventHandler: (State, Event) => State = {

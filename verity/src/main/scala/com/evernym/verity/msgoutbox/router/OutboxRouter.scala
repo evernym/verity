@@ -3,8 +3,6 @@ package com.evernym.verity.msgoutbox.router
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
-import akka.pattern.StatusReply
-import akka.pattern.StatusReply.Success
 import com.evernym.verity.util2.RetentionPolicy
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
@@ -26,8 +24,8 @@ object OutboxRouter {
     case object SendMsg extends Cmd
     case class RelResolverReplyAdapter(reply: RelationshipResolver.Reply) extends Cmd
     case class MsgStoreReplyAdapter(reply: MsgStore.Reply) extends Cmd
-    case class MessageMetaReplyAdapter(reply: StatusReply[MessageMeta.Reply]) extends Cmd
-    case class OutboxReplyAdapter(reply: StatusReply[Outbox.Reply]) extends Cmd
+    case class MessageMetaReplyAdapter(reply: MessageMeta.Reply) extends Cmd
+    case class OutboxReplyAdapter(reply: Outbox.Reply) extends Cmd
   }
 
   trait Reply extends ActorMessage
@@ -135,7 +133,7 @@ object OutboxRouter {
                           outboxIdParams: Seq[OutboxIdParam],
                           replyTo:Option[ActorRef[Reply]])
                          (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] = Behaviors.receiveMessage {
-    case MessageMetaReplyAdapter(Success(MessageMeta.Replies.MsgAdded)) =>
+    case MessageMetaReplyAdapter(MessageMeta.Replies.MsgAdded) =>
       //TODO: finalize below logic
       val clusterSharding = ClusterSharding(actorContext.system)
       val outboxReplyAdapter = actorContext.messageAdapter(reply => OutboxReplyAdapter(reply))
@@ -151,7 +149,7 @@ object OutboxRouter {
                             ackReceivedCount: Int,
                             replyTo:Option[ActorRef[Reply]])
                            (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] = Behaviors.receiveMessage {
-    case OutboxReplyAdapter(Success(Outbox.Replies.MsgAdded)) =>
+    case OutboxReplyAdapter(Outbox.Replies.MsgAdded) =>
       val totalAckReceived = ackReceivedCount + 1
       if (totalAckReceived == targetOutboxIds.size) {
         replyTo.foreach(_ ! Replies.Ack(msgId, targetOutboxIds.map(_.entityId.toString)))
@@ -159,7 +157,7 @@ object OutboxRouter {
       } else {
         waitingForOutboxReply(msgId, targetOutboxIds, totalAckReceived, replyTo)
       }
-    case OutboxReplyAdapter(Success(Outbox.Replies.NotInitialized(entityId))) =>
+    case OutboxReplyAdapter(Outbox.Replies.NotInitialized(entityId)) =>
       val clusterSharding = ClusterSharding(actorContext.system)
       val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, entityId)
       targetOutboxIds

@@ -13,9 +13,9 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_t
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.slf4j.event.Level
-
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
+
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
@@ -45,27 +45,27 @@ object OAuthAccessTokenHolder {
             params: Map[String, String],
             accessTokenRefresher: Behavior[OAuthAccessTokenRefresher.Cmd]): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
-      val accessTokenRefresherReplyAdapter = actorContext.messageAdapter(reply => AccessTokenRefresherReplyAdapter(reply))
-      Behaviors.withStash(100) { buffer =>
-        val setup = Setup(
-          receiveTimeout,
-          params,
-          None,
-          accessTokenRefresher,
-          accessTokenRefresherReplyAdapter,
-          actorContext,
-          buffer
-        )
-        Behaviors
-          .supervise(initialized(None)(setup))
-          .onFailure[RuntimeException](
-            SupervisorStrategy
-              .restart
-              .withLogLevel(Level.WARN)
-              .withLoggingEnabled(enabled = true)
-              .withLimit(maxNrOfRetries = 10, withinTimeRange = 10.seconds)
+      Behaviors.supervise(
+        Behaviors.withStash(100) { buffer: StashBuffer[Cmd] =>
+          val accessTokenRefresherReplyAdapter = actorContext.messageAdapter(reply => AccessTokenRefresherReplyAdapter(reply))
+          val setup = Setup(
+            receiveTimeout,
+            params,
+            None,
+            accessTokenRefresher,
+            accessTokenRefresherReplyAdapter,
+            actorContext,
+            buffer
           )
-      }
+          initialized(None)(setup)
+        }
+        ).onFailure[RuntimeException](
+          SupervisorStrategy
+            .restart
+            .withLogLevel(Level.WARN)
+            .withLoggingEnabled(enabled = true)
+            .withLimit(maxNrOfRetries = 10, withinTimeRange = 10.seconds)
+        )
     }
   }
 

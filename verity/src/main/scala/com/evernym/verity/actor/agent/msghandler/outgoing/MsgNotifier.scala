@@ -144,7 +144,7 @@ trait MsgNotifierForStoredMsgs
     }
   }
 
-  private def getPushNotifTextTemplate(msgType: String): String = {
+  private def getPushNotifTextTemplate(msgType: String, sponsorId: Option[String]): String = {
 
     val formattedMsgType = {
       msgType match {
@@ -155,7 +155,16 @@ trait MsgNotifierForStoredMsgs
       }
     }
     val msgTypeBasedTemplateConfigName = s"$formattedMsgType-new-msg-body-template"
-    val msgTypeBasedTemplate = appConfig.getStringOption(msgTypeBasedTemplateConfigName)
+
+    // check if override exist
+    val msgTypeBasedTemplateOverride = sponsorId.flatMap { sponsorId =>
+      appConfig.getStringOption(s"sponsor-overrides.$sponsorId.$msgTypeBasedTemplateConfigName")
+    }
+
+    // if no override use default
+    val msgTypeBasedTemplate = msgTypeBasedTemplateOverride.orElse(
+      appConfig.getStringOption(msgTypeBasedTemplateConfigName)
+    )
 
     msgTypeBasedTemplate match {
       case Some(t: String) => t
@@ -246,7 +255,9 @@ trait MsgNotifierForStoredMsgs
         val logoUrl = mds.get(LOGO_URL_KEY).map(v => Map(LOGO_URL_KEY -> v)).getOrElse(Map.empty)
         val extraData = title ++ detail ++ name ++ logoUrl
 
-        val msgBodyTemplateToUse = getPushNotifTextTemplate(msg.getType)
+        val sponsorId: Option[String] = allComMethods.flatMap(_.sponsorId)
+
+        val msgBodyTemplateToUse = getPushNotifTextTemplate(msg.getType, sponsorId)
         val newExtraData = extraData ++ Map(PUSH_NOTIF_BODY_TEMPLATE -> msgBodyTemplateToUse)
 
         logger.debug(s"[${notifMsgDtl.uid}:${notifMsgDtl.msgType}] new messages notification: " + notifMsgDtl)

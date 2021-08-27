@@ -158,12 +158,12 @@ trait MsgNotifierForStoredMsgs
 
     // check if override exist
     val msgTypeBasedTemplateOverride = sponsorId.flatMap { sponsorId =>
-      appConfig.getStringOption(s"sponsor-overrides.$sponsorId.$msgTypeBasedTemplateConfigName")
+      appConfig.getStringOption(s"$PUSH_NOTIF.sponsor-overrides.$sponsorId.$msgTypeBasedTemplateConfigName")
     }
 
     // if no override use default
     val msgTypeBasedTemplate = msgTypeBasedTemplateOverride.orElse(
-      appConfig.getStringOption(msgTypeBasedTemplateConfigName)
+      appConfig.getStringOption(s"$PUSH_NOTIF.$msgTypeBasedTemplateConfigName")
     )
 
     msgTypeBasedTemplate match {

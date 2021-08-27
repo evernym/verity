@@ -158,10 +158,12 @@ object Outbox {
   }
 
   private def commandHandler(setup: SetupOutbox)(st: State, cmd: Cmd): ReplyEffect[Event, State] = {
-    (uninitializedStateHandler(setup) orElse
+    (
+      genericStateHandler() orElse
+      uninitializedStateHandler(setup) orElse
       metadataReceivedStateHandler(setup) orElse
-      initializedStateHandler(setup) orElse
-      genericStateHandler())(st, cmd)
+      initializedStateHandler(setup)
+    )(st, cmd)
   }
 
   private def genericStateHandler(): PartialFunction[(State, Cmd), ReplyEffect[Event, State]] = {
@@ -171,46 +173,58 @@ object Outbox {
         .thenNoReply()
   }
 
-  private def uninitializedStateHandler(implicit setup: SetupOutbox): PartialFunction[(State, Cmd), ReplyEffect[Event, State]] = {
-    case (_: States.Uninitialized, cmd @ Commands.AddMsg(_, _, replyTo)) =>
-      setup.buffer.stash(cmd)
-      Effect
-        .reply(replyTo)(Replies.NotInitialized(setup.entityContext.entityId))
+  private def uninitializedStateHandler(setup: SetupOutbox): PartialFunction[(State, Cmd), ReplyEffect[Event, State]] = {
+    def _uninitializedStateHandler(implicit setup: SetupOutbox): PartialFunction[(States.Uninitialized, Cmd), ReplyEffect[Event, State]] = {
+      case (_, cmd @ Commands.AddMsg(_, _, replyTo)) =>
+        setup.buffer.stash(cmd)
+        Effect
+          .reply(replyTo)(Replies.NotInitialized(setup.entityContext.entityId))
 
-    case (_: States.Uninitialized, Commands.Init(relId, recipId, destId)) =>
-      Effect
-        .persist(MetadataStored(relId = relId, recipId = recipId, destId = destId))
-        .thenRun((_: State) => fetchOutboxParam(Metadata(relId, recipId, destId)))
-        .thenNoReply()
+      case (_, Commands.Init(relId, recipId, destId)) =>
+        Effect
+          .persist(MetadataStored(relId = relId, recipId = recipId, destId = destId))
+          .thenRun((_: State) => fetchOutboxParam(Metadata(relId, recipId, destId)))
+          .thenNoReply()
 
-    case (_: States.Uninitialized, cmd) =>
-      setup.buffer.stash(cmd)
-      Effect
-        .noReply
+      case (_, cmd) =>
+        setup.buffer.stash(cmd)
+        Effect
+          .noReply
+    }
+
+    _uninitializedStateHandler(setup).asInstanceOf[PartialFunction[(State, Cmd), ReplyEffect[Event, State]]]
   }
 
   private def metadataReceivedStateHandler(setup: SetupOutbox): PartialFunction[(State, Cmd), ReplyEffect[Event, State]] = {
-    case (_: States.MetadataReceived, RelResolverReplyAdapter(reply: RelationshipResolver.Replies.OutboxParam)) =>
-      Effect
-        .persist(OutboxParamUpdated(reply.walletId, reply.senderVerKey, reply.comMethods))
-        .thenRun((_: State) => setup.buffer.unstashAll(Behaviors.same))
-        .thenNoReply()
+    def _metadataReceivedStateHandler(setup: SetupOutbox): PartialFunction[(States.MetadataReceived, Cmd), ReplyEffect[Event, State]] = {
+      case (_, RelResolverReplyAdapter(reply: RelationshipResolver.Replies.OutboxParam)) =>
+        Effect
+          .persist(OutboxParamUpdated(reply.walletId, reply.senderVerKey, reply.comMethods))
+          .thenRun((_: State) => setup.buffer.unstashAll(Behaviors.same))
+          .thenNoReply()
 
-    case (_: States.MetadataReceived, cmd) =>
-      setup.buffer.stash(cmd)
-      Effect
-        .noReply
+      case (_, cmd) =>
+        setup.buffer.stash(cmd)
+        Effect
+          .noReply
+    }
+
+    _metadataReceivedStateHandler(setup).asInstanceOf[PartialFunction[(State, Cmd), ReplyEffect[Event, State]]]
   }
 
   private def initializedStateHandler(implicit setup: SetupOutbox): PartialFunction[(State, Cmd), ReplyEffect[Event, State]] = {
-    messageHandlingCommandHandler orElse
-      messageResendCommandHandler orElse
-      timeoutCommandHandler orElse
-      updateConfigCommandHandler orElse
-      readCommandHandler
+    def _initializedStateHandler(implicit setup: SetupOutbox): PartialFunction[(States.Initialized, Cmd), ReplyEffect[Event, State]] = {
+      messageHandlingCommandHandler orElse
+        messageResendCommandHandler orElse
+        timeoutCommandHandler orElse
+        updateConfigCommandHandler orElse
+        readCommandHandler
+    }
+
+    _initializedStateHandler.asInstanceOf[PartialFunction[(State, Cmd), ReplyEffect[Event, State]]]
   }
 
-  private def messageResendCommandHandler(implicit setup: SetupOutbox): PartialFunction[(State, Cmd), ReplyEffect[Event, State]] = {
+  private def messageResendCommandHandler(implicit setup: SetupOutbox): PartialFunction[(States.Initialized, Cmd), ReplyEffect[Event, State]] = {
     case (st: States.Initialized, rsa: Commands.RecordSuccessfulAttempt) =>
       val isDelivered = isMsgDelivered(rsa.comMethodId, rsa.isItANotification, st)
       Effect
@@ -238,7 +252,7 @@ object Outbox {
         .thenNoReply()
   }
 
-  private def messageHandlingCommandHandler(implicit setup: SetupOutbox): PartialFunction[(State, Cmd), ReplyEffect[Event, State]] = {
+  private def messageHandlingCommandHandler(implicit setup: SetupOutbox): PartialFunction[(States.Initialized, Cmd), ReplyEffect[Event, State]] = {
     case (st: States.Initialized, Commands.AddMsg(msgId, expiryDuration, replyTo)) =>
       if (st.messages.contains(msgId)) {
         Effect
@@ -266,14 +280,14 @@ object Outbox {
       } else Effect.noReply
   }
 
-  private def timeoutCommandHandler(implicit setup: SetupOutbox): PartialFunction[(State, Cmd), ReplyEffect[Event, State]] = {
+  private def timeoutCommandHandler(implicit setup: SetupOutbox): PartialFunction[(States.Initialized, Cmd), ReplyEffect[Event, State]] = {
     case (st: States.Initialized, Commands.ProcessDelivery) =>
       processDelivery(st)
       Effect
         .noReply
   }
 
-  private def updateConfigCommandHandler(implicit setup: SetupOutbox): PartialFunction[(State, Cmd), ReplyEffect[Event, State]] = {
+  private def updateConfigCommandHandler(implicit setup: SetupOutbox): PartialFunction[(States.Initialized, Cmd), ReplyEffect[Event, State]] = {
     case (st: States.Initialized, RelResolverReplyAdapter(reply: RelationshipResolver.Replies.OutboxParam)) =>
       if (st.senderVerKey != reply.senderVerKey || st.comMethods != reply.comMethods) {
         Effect
@@ -295,7 +309,7 @@ object Outbox {
       }
   }
 
-  private def readCommandHandler(implicit setup: SetupOutbox): PartialFunction[(State, Cmd), ReplyEffect[Event, State]] = {
+  private def readCommandHandler(implicit setup: SetupOutbox): PartialFunction[(States.Initialized, Cmd), ReplyEffect[Event, State]] = {
     case (st: States.Initialized, GetOutboxParam(replyTo)) =>
       Effect
         .reply(replyTo)(RelationshipResolver.Replies.OutboxParam(st.walletId, st.senderVerKey, st.comMethods))

@@ -275,9 +275,7 @@ trait AgentStateCleanupHelper {
   }
 
   def migrateThreadContextsByScheduledJob(): Unit = {
-    if (routeSetStatus.isEmpty) {   //this means the actor state clean up is not interacting with this agent actor
-      migrateThreadContexts()
-    }
+    migrateThreadContexts()
   }
 
   def getTotalThreadContextSize: Int = getMigratedThreadContextSize + getPendingThreadContextSize

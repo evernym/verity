@@ -6,8 +6,8 @@ import com.evernym.verity.actor.agent._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.getNewMsgUniqueId
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.metrics.InternalSpan
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.container.actor.Init
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccess

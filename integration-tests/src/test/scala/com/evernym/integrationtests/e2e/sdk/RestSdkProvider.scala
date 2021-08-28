@@ -10,7 +10,7 @@ import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.integrationtests.e2e.sdk.process.SdkProviderException
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{MsgFamily, ProtoRef}
 import com.evernym.verity.sdk.exceptions.WalletException

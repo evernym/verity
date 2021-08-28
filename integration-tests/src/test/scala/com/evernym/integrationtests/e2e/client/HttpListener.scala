@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.Directives.{as, complete, entity, extractReques
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.HttpServerUtil
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util2.UrlParam
 import com.typesafe.scalalogging.Logger
 

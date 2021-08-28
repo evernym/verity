@@ -14,8 +14,8 @@ import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.util2.Status.{BAD_REQUEST, StatusDetail, UNAUTHORIZED, UNHANDLED}
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.http.common.HttpCustomTypes
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.metrics.{ClientSpan, MetricsWriter}
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.metrics.{ClientSpan, MetricsWriter}
 import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util.Util.buildHandledError
 import com.evernym.verity.util2.{Exceptions, UrlParam}

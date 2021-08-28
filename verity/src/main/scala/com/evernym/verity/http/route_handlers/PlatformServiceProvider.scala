@@ -9,7 +9,7 @@ import com.evernym.verity.actor.appStateManager.{AppStateEvent, AppStateRequest,
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.DidPair
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.scalalogging.Logger

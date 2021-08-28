@@ -59,10 +59,10 @@ val debPkgDepLibIndyMinVersion = libIndyVer
 //dependency versions
 val indyWrapperVer  = "1.15.0-dev-1618"
 
-val akkaVer         = "2.6.15"
+val akkaVer         = "2.6.16"
 val akkaHttpVer     = "10.2.6"
 val akkaMgtVer      = "1.1.1"
-val alpAkkaVer      = "3.0.2"
+val alpAkkaVer      = "3.0.3"
 val kamonVer        = "2.2.3"
 val kanelaAgentVer  = "1.0.10"
 val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
@@ -170,7 +170,7 @@ lazy val settings = Seq(
   ivyConfigurations += CompileOnly.hide,
   // appending everything from 'compileonly' to unmanagedClasspath
   Compile / unmanagedClasspath ++= update.value.select(configurationFilter(COMPILE_TIME_ONLY)),
-  ThisBuild / scapegoatVersion := "1.3.9",
+  ThisBuild / scapegoatVersion := "1.3.11",
 ) ++ Defaults.itSettings
 
 lazy val testSettings = Seq (

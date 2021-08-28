@@ -5,7 +5,7 @@ import akka.testkit.{ImplicitSender, TestKitBase}
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
-import com.evernym.verity.metrics.CustomMetrics
+import com.evernym.verity.observability.metrics.CustomMetrics
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 

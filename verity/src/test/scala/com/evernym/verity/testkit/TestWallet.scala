@@ -8,7 +8,7 @@ import com.evernym.verity.actor.wallet.{CreateWallet, WalletCommand, WalletCreat
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.util2.HasWalletExecutionContextProvider
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.metrics.NoOpMetricsWriter
+import com.evernym.verity.observability.metrics.NoOpMetricsWriter
 import com.evernym.verity.vault.{AgentWalletAPI, WalletAPIParam}
 import com.evernym.verity.vault.service.ActorWalletService
 import com.evernym.verity.vault.wallet_api.StandardWalletAPI

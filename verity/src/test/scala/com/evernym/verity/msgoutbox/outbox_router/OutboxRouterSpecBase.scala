@@ -2,7 +2,6 @@ package com.evernym.verity.msgoutbox.outbox_router
 
 import akka.actor.typed.ActorRef
 import akka.cluster.sharding.typed.ShardingEnvelope
-import akka.pattern.StatusReply
 import com.evernym.verity.actor.agent.relationship.KeyId
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpecBase
 import com.evernym.verity.did.DidStr
@@ -63,8 +62,8 @@ trait OutboxRouterSpecBase
                                       expectedTargetOutboxIds: Seq[OutboxId]): Unit = {
     ack.targetOutboxIds shouldBe expectedTargetOutboxIds
 
-    val outboxProbe = createTestProbe[StatusReply[Outbox.Replies.DeliveryStatus]]()
-    val messageMetaProbe = createTestProbe[StatusReply[MessageMeta.Replies.MsgDeliveryStatus]]()
+    val outboxProbe = createTestProbe[Outbox.Replies.DeliveryStatus]()
+    val messageMetaProbe = createTestProbe[MessageMeta.Replies.MsgDeliveryStatus]()
 
     //below code block checks that:
     // * a message got stored in external storage (s3)
@@ -74,12 +73,12 @@ trait OutboxRouterSpecBase
       storageAPI.getBlobObjectCount("20", BUCKET_NAME) shouldBe 1
 
       messageMetaRegion ! ShardingEnvelope(ack.msgId, Commands.GetDeliveryStatus(messageMetaProbe.ref))
-      val msgDeliveryStatus = messageMetaProbe.expectMessageType[StatusReply[MsgDeliveryStatus]].getValue
+      val msgDeliveryStatus = messageMetaProbe.expectMessageType[MsgDeliveryStatus]
       msgDeliveryStatus.outboxDeliveryStatus.size shouldBe 1
 
       ack.targetOutboxIds.foreach { outboxId =>
         outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(outboxProbe.ref))
-        val messages = outboxProbe.expectMessageType[StatusReply[Replies.DeliveryStatus]].getValue.messages
+        val messages = outboxProbe.expectMessageType[Replies.DeliveryStatus].messages
         messages.size shouldBe 1
       }
     }
@@ -92,13 +91,13 @@ trait OutboxRouterSpecBase
       storageAPI.getBlobObjectCount("20", BUCKET_NAME) shouldBe 0
 
       messageMetaRegion ! ShardingEnvelope(ack.msgId, Commands.GetDeliveryStatus(messageMetaProbe.ref))
-      val msgDeliveryStatus = messageMetaProbe.expectMessageType[StatusReply[MsgDeliveryStatus]].getValue
+      val msgDeliveryStatus = messageMetaProbe.expectMessageType[MsgDeliveryStatus]
       msgDeliveryStatus.outboxDeliveryStatus.size shouldBe 1
       msgDeliveryStatus.outboxDeliveryStatus.values.forall(_.status == Status.MSG_DELIVERY_STATUS_SENT.statusCode) shouldBe true
 
       ack.targetOutboxIds.foreach { outboxId =>
         outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(outboxProbe.ref))
-        val messages = outboxProbe.expectMessageType[StatusReply[Replies.DeliveryStatus]].getValue.messages
+        val messages = outboxProbe.expectMessageType[Replies.DeliveryStatus].messages
         messages.size shouldBe 0
       }
     }

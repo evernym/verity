@@ -9,7 +9,7 @@ import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.logging.ThrottledLogger
+import com.evernym.verity.observability.logs.ThrottledLogger
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.{PinstId, PinstIdResolution, ProtoRef}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageDefinition
@@ -275,9 +275,7 @@ trait AgentStateCleanupHelper {
   }
 
   def migrateThreadContextsByScheduledJob(): Unit = {
-    if (routeSetStatus.isEmpty) {   //this means the actor state clean up is not interacting with this agent actor
-      migrateThreadContexts()
-    }
+    migrateThreadContexts()
   }
 
   def getTotalThreadContextSize: Int = getMigratedThreadContextSize + getPendingThreadContextSize

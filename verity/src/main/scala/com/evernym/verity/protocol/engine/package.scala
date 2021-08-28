@@ -26,6 +26,8 @@ package object engine {
   type RefMsgId = String
   type SafeThreadId = String
 
+  val DomainIdFieldName = "domain_did"
+
   type Nonce = String
 
   sealed trait MsgFamilyQualifier

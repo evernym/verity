@@ -4,6 +4,7 @@ variables:
   MASTER_PROJECT_ID: "327"
   indyNodeVersion: "1.12.4"
   sovtokenVersion: "1.0.9"
+  TRIGGERAPI_URL_VERITY_K8S_RELEASE: "https://gitlab.com/api/v4/projects/28139975/trigger/pipeline"
   TRIGGERAPI_URL_VERITY_RELEASE: "https://gitlab.corp.evernym.com/api/v4/projects/688/trigger/pipeline"
   # TRIGGERAPI_REF_VERITY_RELEASE: "auto-deploy"
 

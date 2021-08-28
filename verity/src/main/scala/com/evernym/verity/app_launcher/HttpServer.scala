@@ -10,9 +10,9 @@ import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.{HttpServerBindResult, HttpServerUtil}
-import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.metrics.CustomMetrics.{AS_START_TIME, initGaugeMetrics}
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.observability.metrics.CustomMetrics.{AS_START_TIME, initGaugeMetrics}
+import com.evernym.verity.observability.logs.LoggingUtil
+import com.evernym.verity.observability.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.util.UnableToCreateLogger
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger

@@ -4,11 +4,11 @@ import com.evernym.verity.actor.wallet.CredForProofReqCreated
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
-import com.evernym.verity.metrics.InternalSpan
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.did.didcomm.v1.conventions.CredValueEncoderV1_0
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.{buildAttachment, buildProtocolMsgAttachment}
+import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.?=>

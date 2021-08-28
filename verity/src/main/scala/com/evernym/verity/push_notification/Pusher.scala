@@ -15,7 +15,7 @@ import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.{DomainId, MsgId}
 import com.evernym.verity.util.StrUtil.camelToCapitalize
 import com.evernym.verity.util.Util.getOptionalField

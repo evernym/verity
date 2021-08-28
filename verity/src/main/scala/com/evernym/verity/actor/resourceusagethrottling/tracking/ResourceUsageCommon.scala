@@ -6,7 +6,7 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.actor.resourceusagethrottling._
 import com.evernym.verity.http.route_handlers.restricted.{ResourceUsageCounterDetail, UpdateResourcesUsageCounter}
 import com.evernym.verity.actor.resourceusagethrottling.helper.{ResourceUsageRuleHelper, ResourceUsageRuleHelperExtension}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 
 trait ResourceUsageCommon {
 

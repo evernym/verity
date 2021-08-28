@@ -25,6 +25,30 @@
     - docker-machine
   needs: ["package" ,"publish-deb", "publish-docker"]
 
+deploy-k8s:
+  stage: deploy
+  script:
+    - ls verity/target/verity-application*.deb
+    - export debianPackage=`ls verity/target/verity-application*.deb`
+    - >
+      if [ ! -z "${debianPackage}" ]; then
+        export VERITY_VERSION=`echo "$debianPackage" | cut -d'_' -f2`
+      else
+        /bin/false
+      fi
+    - curl
+      --request POST
+      --form token=$TRIGGER_API_K8S_TOKEN
+      --form ref=master
+      --form "variables[VERITY_PACKAGE_VERSION]=$VERITY_VERSION"
+      $TRIGGERAPI_URL_VERITY_K8S_RELEASE
+  tags:
+    - docker-machine
+  needs: ["package" ,"publish-deb", "publish-docker"]
+  only:
+    refs:
+      - main@evernym/verity/verity
+
 deploy-manually-team1:
   extends: .deploy-common
   variables:

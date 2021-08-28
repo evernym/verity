@@ -7,7 +7,7 @@ import com.evernym.verity.actor.testkit.actor.{MockLedgerSvc, MockLedgerTxnExecu
 import com.evernym.verity.cache.base.Cache
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.ledger._
-import com.evernym.verity.metrics.NoOpMetricsWriter
+import com.evernym.verity.observability.metrics.NoOpMetricsWriter
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess

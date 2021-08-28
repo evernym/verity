@@ -8,12 +8,12 @@ import com.evernym.verity.util2.Status.{INVALID_VALUE, StatusDetail, UNHANDLED}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.actor.base.CoreActor
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.metrics.InternalSpan
+import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.operation_executor.DidOpExecutor.buildErrorDetail

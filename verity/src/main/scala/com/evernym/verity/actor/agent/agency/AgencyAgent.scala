@@ -22,7 +22,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.ledger.Submitter
-import com.evernym.verity.metrics.InternalSpan
+import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.PackedMsgWrapper
 import com.evernym.verity.util.Util._

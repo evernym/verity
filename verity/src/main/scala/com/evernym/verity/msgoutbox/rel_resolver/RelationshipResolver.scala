@@ -11,13 +11,15 @@ import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Replies.{O
 import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, DestId, RelId, WalletId}
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
+import com.typesafe.scalalogging.Logger
 
 //ephemeral actor (sharded)
 object RelationshipResolver {
 
-  trait Cmd extends ActorMessage
+  sealed trait Cmd extends ActorMessage
   object Commands {
-    case class SendOutboxParam(relId: RelId, destId: DestId, replyTo: ActorRef[Reply]) extends Cmd
+    case class SendOutboxParam(relId: RelId, destId: DestId, replyTo: ActorRef[OutboxReply]) extends Cmd
     case class GetRelParam(relId: RelId, replyTo: ActorRef[Reply]) extends Cmd
 
     case class OutboxParamResp(walletId: WalletId,
@@ -32,10 +34,11 @@ object RelationshipResolver {
   }
 
   trait Reply extends ActorMessage
+  sealed trait OutboxReply extends ActorMessage
   object Replies {
     case class OutboxParam(walletId: WalletId,
                            senderVerKey: VerKeyStr,
-                           comMethods: Map[ComMethodId, ComMethod]) extends Reply {
+                           comMethods: Map[ComMethodId, ComMethod]) extends OutboxReply {
       if (comMethods.count(_._2.typ == COM_METHOD_TYPE_HTTP_ENDPOINT) > 1) {
         throw new RuntimeException("one outbox can have max one http com method")
       }
@@ -43,6 +46,8 @@ object RelationshipResolver {
 
     case class RelParam(selfRelId: RelId, relationship: Option[Relationship]) extends Reply
   }
+
+  private val logger: Logger = getLoggerByClass(getClass)
 
   def apply(agentMsgRouter: AgentMsgRouter): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
@@ -55,25 +60,34 @@ object RelationshipResolver {
   private def initialized(implicit actorContext: ActorContext[Cmd],
                           buffer: StashBuffer[Cmd],
                           agentMsgRouter: AgentMsgRouter): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
-    case Commands.SendOutboxParam(relId, destId, replyTo: ActorRef[Reply]) =>
+    case Commands.SendOutboxParam(relId, destId, replyTo: ActorRef[OutboxReply]) =>
       agentMsgRouter.forward((InternalMsgRouteParam(relId, GetOutboxParam(destId)), actorContext.self.toClassic))
       waitingForGetOutboxParam(replyTo)
 
     case Commands.GetRelParam(relId, replyTo: ActorRef[Reply]) =>
       agentMsgRouter.forward((InternalMsgRouteParam(relId, GetRelParam), actorContext.self.toClassic))
       waitingForGetRelParam(replyTo)
+    case cmd =>
+      logger.error(s"Unexpected message received in WaitingForOutboxReply ${cmd}")
+      Behaviors.same
   }
 
-  private def waitingForGetOutboxParam(replyTo: ActorRef[Reply]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
+  private def waitingForGetOutboxParam(replyTo: ActorRef[OutboxReply]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
     case OutboxParamResp(walletId, senderVerKey, comMethods) =>
       replyTo ! OutboxParam(walletId, senderVerKey, comMethods)
       Behaviors.stopped
+    case cmd =>
+      logger.error(s"Unexpected message received in WaitingForOutboxReply ${cmd}")
+      Behaviors.same
   }
 
   private def waitingForGetRelParam(replyTo: ActorRef[Reply]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
     case RelParamResp(selfRelId, relationship) =>
       replyTo ! RelParam(selfRelId, relationship)
       Behaviors.stopped
+    case cmd =>
+      logger.error(s"Unexpected message received in WaitingForOutboxReply ${cmd}")
+      Behaviors.same
   }
 }
 

@@ -17,7 +17,7 @@ import scala.concurrent.duration.DurationInt
 
 object DIDCommV1Packager {
 
-  trait Cmd extends ActorMessage
+  sealed trait Cmd extends ActorMessage
 
   object Commands {
     case class PackMsg(msgType: String,

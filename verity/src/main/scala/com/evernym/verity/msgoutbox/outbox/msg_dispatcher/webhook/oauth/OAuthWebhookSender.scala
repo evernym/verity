@@ -15,7 +15,9 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.{DispatchParam, RetryP
 import com.evernym.verity.msgoutbox.outbox.msg_packager.Packager
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter.Replies.SendResponse
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util2.Status.StatusDetail
+import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration.DurationInt
 import scala.collection.immutable
@@ -28,7 +30,7 @@ import scala.collection.immutable
 // stop when message is delivered or can't be delivered after attempting given retries
 object OAuthWebhookSender {
 
-  trait Cmd extends ActorMessage
+  sealed trait Cmd extends ActorMessage
   object Commands {
     case object Send extends Cmd
     trait PackedMsg extends Cmd
@@ -42,6 +44,8 @@ object OAuthWebhookSender {
 
     case object TimedOut extends Cmd
   }
+
+  private val logger: Logger = getLoggerByClass(getClass)
 
   def apply[P](oAuthAccessTokenHolder: ActorRef[OAuthAccessTokenHolder.Cmd],
                dispatchParam: DispatchParam,
@@ -85,6 +89,9 @@ object OAuthWebhookSender {
         )
         oAuthAccessTokenHolder ! GetToken(refreshed = false, oAuthAccessTokenHolderReplyAdapter)
         waitingForOAuthAccessToken(pm, sendMsgParam)
+      case cmd =>
+        logger.error(s"Received unexpected message ${cmd}")
+        Behaviors.same
     }
   }
 
@@ -116,6 +123,9 @@ object OAuthWebhookSender {
         } else {
           msgSendingFinished
         }
+      case cmd =>
+        logger.error(s"Received unexpected message ${cmd}")
+        Behaviors.same
     }
   }
 
@@ -170,11 +180,17 @@ object OAuthWebhookSender {
           sendMsgParam.withFailureAttemptIncremented
         )
       }
+    case cmd =>
+      logger.error(s"Received unexpected message ${cmd}")
+      Behaviors.same
   }
 
   private def msgSendingFinished: Behavior[Cmd] = Behaviors.receiveMessage {
     case Commands.Ack       => Behaviors.stopped
     case Commands.TimedOut  => Behaviors.stopped
+    case cmd =>
+      logger.error(s"Received unexpected message ${cmd}")
+      Behaviors.same
   }
 }
 

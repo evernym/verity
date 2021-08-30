@@ -14,12 +14,14 @@ import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Replies.RelParam
 import com.evernym.verity.msgoutbox.router.OutboxRouter.Commands.{MessageMetaReplyAdapter, MsgStoreReplyAdapter, OutboxReplyAdapter, RelResolverReplyAdapter, SendMsg}
-
 import java.util.UUID
+
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
+import com.typesafe.scalalogging.Logger
 
 object OutboxRouter {
 
-  trait Cmd extends ActorMessage
+  sealed trait Cmd extends ActorMessage
   object Commands {
     case object SendMsg extends Cmd
     case class RelResolverReplyAdapter(reply: RelationshipResolver.Reply) extends Cmd
@@ -32,6 +34,8 @@ object OutboxRouter {
   object Replies {
     case class Ack(msgId: MsgId, targetOutboxIds: Seq[OutboxId]) extends Reply
   }
+
+  private val logger: Logger = getLoggerByClass(getClass)
 
   def apply(relId: RelId,
             recipId: RecipId,
@@ -81,6 +85,9 @@ object OutboxRouter {
       val msgStoreReplyAdapter = actorContext.messageAdapter(reply => MsgStoreReplyAdapter(reply))
       msgStore ! StorePayload(msgId, msg.getBytes, retentionPolicy, msgStoreReplyAdapter)
       handleMsgPayloadStored(msgId, msgType, retentionPolicy, relId, recipId, relParam, replyTo)
+    case cmd =>
+      logger.error(s"Unexpected message received in WaitingForOutboxReply ${cmd}")
+      Behaviors.same
   }
 
   def handleMsgPayloadStored(msgId: MsgId,
@@ -126,6 +133,9 @@ object OutboxRouter {
         msgMetaReplyAdapter
       )
       handleMsgMetaStored(msgId, retentionPolicy, outboxIdParams, replyTo)
+    case cmd =>
+      logger.error(s"Unexpected message received in WaitingForOutboxReply ${cmd}")
+      Behaviors.same
   }
 
   def handleMsgMetaStored(msgId: MsgId,
@@ -142,6 +152,9 @@ object OutboxRouter {
         outboxEntityRef ! Outbox.Commands.AddMsg(msgId, retentionPolicy.elements.expiryDuration, outboxReplyAdapter)
       }
       waitingForOutboxReply(msgId, outboxIdParams, 0, replyTo)
+    case cmd =>
+      logger.error(s"Unexpected message received in WaitingForOutboxReply ${cmd}")
+      Behaviors.same
   }
 
   def waitingForOutboxReply(msgId: MsgId,
@@ -165,6 +178,9 @@ object OutboxRouter {
         .foreach(outboxParam => outboxEntityRef ! Outbox.Commands.Init(outboxParam.relId, outboxParam.recipId, outboxParam.destId))
 
       waitingForOutboxReply(msgId, targetOutboxIds, ackReceivedCount, replyTo)
+    case cmd =>
+      logger.error(s"Unexpected message received in WaitingForOutboxReply ${cmd}")
+      Behaviors.same
   }
 
   final val DESTINATION_ID_DEFAULT = "default"

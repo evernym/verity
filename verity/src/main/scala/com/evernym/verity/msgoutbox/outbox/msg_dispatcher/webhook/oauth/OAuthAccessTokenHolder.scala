@@ -22,7 +22,7 @@ import scala.util.{Failure, Success, Try}
 
 object OAuthAccessTokenHolder {
 
-  trait Cmd extends ActorMessage
+  sealed trait Cmd extends ActorMessage
   object Commands {
     case class UpdateParams(params: Map[String, String],
                             tokenRefresher: Behavior[OAuthAccessTokenRefresher.Cmd]) extends Cmd
@@ -92,6 +92,10 @@ object OAuthAccessTokenHolder {
             refreshToken(setup)
         }
       }
+
+    case cmd =>
+      logger.error(s"Received unexpected message ${cmd}")
+      Behaviors.same
   }
 
   private def refreshToken(implicit setup: Setup): Behavior[Cmd] = {
@@ -132,6 +136,7 @@ object OAuthAccessTokenHolder {
   private def handleError(errorMsg: String)(implicit setup: Setup): Behavior[Cmd] = {
     setup.buffer.foreach {
       case GetToken(_, replyTo)   => replyTo ! Replies.GetTokenFailed(errorMsg)
+      case cmd => logger.error(s"Received unexpected message ${cmd}")
     }
     setup.buffer.unstashAll(initialized(None))
   }

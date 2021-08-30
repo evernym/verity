@@ -29,6 +29,26 @@ unit-test:
 #      junit: verity/target/test-reports/TEST-*.xml
 #      cobertura:
 
+coverage:
+  extends: .test
+  when: manual
+  only:
+    refs:
+      - master
+      - main
+      - tags
+      - merge_requests
+  script:
+    - sbt coverage test coverageReport
+  allow_failure: true
+  artifacts:
+    when: always
+    paths:
+      - verity/verity/target/scala-2.12/scoverage-report/*
+    cobertura:
+      - verity/verity/target/scala-2.12/coverage-report/cobertura.xml
+
+
 .static-analysis: # This test don't work and is currently not providing value
   extends: .test
   only:

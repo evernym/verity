@@ -5,7 +5,6 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
-import akka.pattern.StatusReply
 import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider, PolicyElements, RetentionPolicy, Status}
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
@@ -15,7 +14,6 @@ import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter.Comma
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter.Replies.SendResponse
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.SendOutboxParam
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Replies.OutboxParam
-import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Reply
 import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.WalletOpExecutor.Replies.PackagedPayload
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
@@ -40,8 +38,10 @@ import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.config.{Config, ConfigFactory}
 import org.json.JSONObject
-
 import java.util.UUID
+
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
+
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
@@ -154,7 +154,7 @@ trait BaseMsgOutboxSpec extends HasExecutionContextProvider with HasWalletExecut
 
 
 object TestWalletOpExecutor {
-
+  private val logger = getLoggerByClass(getClass)
   def apply(walletAPI: WalletAPI, executionContext: ExecutionContext): Behavior[WalletOpExecutor.Cmd] = {
     Behaviors.setup { actorContext =>
       initialized(walletAPI)(actorContext, executionContext)
@@ -175,10 +175,16 @@ object TestWalletOpExecutor {
       val fut = walletApi.executeAsync[PackedMsg](PackMsg(payload, recipKeysParam, Option(senderKeyParam)))
       fut.map { pm => replyTo ! PackagedPayload(pm.msg) }
       Behaviors.stopped
+
+    case cmd =>
+      logger.warn(s"Received unexpected command ${cmd}")
+      Behaviors.same
   }
 }
 
 object TestRelResolver {
+  private val logger = getLoggerByClass(getClass)
+
   def apply(destParams: Map[DestId, DestParam]): Behavior[RelationshipResolver.Cmd] = {
     Behaviors.setup { actorContext =>
       initialized(destParams)(actorContext)
@@ -188,10 +194,13 @@ object TestRelResolver {
   def initialized(destParams: Map[DestId, DestParam])
                  (implicit actorContext: ActorContext[RelationshipResolver.Cmd]): Behavior[RelationshipResolver.Cmd] = {
     Behaviors.receiveMessage[RelationshipResolver.Cmd] {
-      case SendOutboxParam(relId, destId, replyTo: ActorRef[Reply]) =>
+      case SendOutboxParam(relId, destId, replyTo: ActorRef[RelationshipResolver.OutboxReply]) =>
         destParams.get(destId).foreach { destParam =>
           replyTo ! OutboxParam(destParam.walletId, destParam.myVerKey, destParam.comMethods)
         }
+        Behaviors.same
+      case cmd =>
+        logger.warn(s"Received unexpected command ${cmd}")
         Behaviors.same
     }
   }

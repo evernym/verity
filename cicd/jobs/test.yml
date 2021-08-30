@@ -44,7 +44,7 @@ coverage:
   artifacts:
     when: always
     paths:
-      - verity/verity/target/scala-2.12/scoverage-report/*
+      - verity/target/scala-2.12/scoverage-report/*
     reports:
       cobertura:
         - verity/verity/target/scala-2.12/coverage-report/cobertura.xml

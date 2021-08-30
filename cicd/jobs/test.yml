@@ -47,7 +47,7 @@ coverage:
       - verity/target/scala-2.12/scoverage-report/*
     reports:
       cobertura:
-        - verity/verity/target/scala-2.12/coverage-report/cobertura.xml
+        - verity/target/scala-2.12/coverage-report/cobertura.xml
 
 
 .static-analysis: # This test don't work and is currently not providing value

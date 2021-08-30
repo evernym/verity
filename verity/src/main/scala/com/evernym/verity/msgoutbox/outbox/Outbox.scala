@@ -170,64 +170,64 @@ object Outbox {
   }
 
   private def commandHandler(setup: SetupOutbox): (State, Cmd) => ReplyEffect[Event, State] = {
-    case (st: States.Uninitialized, cmd: UninitializedCmd) => uninitializedStateHandler (setup)(st, cmd)
-    case (st: States.MetadataReceived, cmd: MetadataReceivedCmd) =>  metadataReceivedStateHandler (setup)(st, cmd)
-    case (st: States.Initialized, cmd: InitializedCmd) => initializedStateHandler (setup)(st, cmd)
-    case (st, cmd: GenericCmd) => genericStateHandler()(st, cmd)
+    case (_: States.Uninitialized, cmd: UninitializedCmd) => uninitializedStateHandler (setup)(cmd)
+    case (_: States.MetadataReceived, cmd: MetadataReceivedCmd) =>  metadataReceivedStateHandler (setup)(cmd)
+    case (st: States.Initialized, cmd: InitializedCmd) => initializedStateHandler (st)(setup)(cmd)
+    case (_, cmd: GenericCmd) => genericStateHandler()(cmd)
     //this case just prevents exception from being thrown. this match is not covered by exhaustive matching check!
     case (st, cmd) =>
       logger.error(s"Unexpected message received. state: ${st}, cmd: ${cmd}")
       Effect.noReply
   }
 
-  private def genericStateHandler(): (State, GenericCmd) => ReplyEffect[Event, State] = {
-    case (_, Commands.UpdateConfig(cfg)) =>
+  private def genericStateHandler(): GenericCmd => ReplyEffect[Event, State] = {
+    case Commands.UpdateConfig(cfg) =>
       Effect
         .persist(Events.ConfigUpdated(cfg))
         .thenNoReply()
   }
 
-  private def uninitializedStateHandler(implicit setup: SetupOutbox): (States.Uninitialized, UninitializedCmd) => ReplyEffect[Event, State] = {
-    case (_, cmd @ Commands.AddMsg(_, _, replyTo)) =>
+  private def uninitializedStateHandler(implicit setup: SetupOutbox): UninitializedCmd => ReplyEffect[Event, State] = {
+    case cmd @ Commands.AddMsg(_, _, replyTo) =>
       setup.buffer.stash(cmd)
       Effect
         .reply(replyTo)(Replies.NotInitialized(setup.entityContext.entityId))
 
-    case (_, Commands.Init(relId, recipId, destId)) =>
+    case Commands.Init(relId, recipId, destId) =>
       Effect
         .persist(MetadataStored(relId = relId, recipId = recipId, destId = destId))
         .thenRun((_: State) => fetchOutboxParam(Metadata(relId, recipId, destId)))
         .thenNoReply()
 
-    case (_, cmd) =>
+    case cmd =>
       setup.buffer.stash(cmd)
       Effect
         .noReply
   }
 
-  private def metadataReceivedStateHandler(setup: SetupOutbox): (States.MetadataReceived, MetadataReceivedCmd) => ReplyEffect[Event, State] = {
-    case (_, RelResolverReplyAdapter(reply: RelationshipResolver.Replies.OutboxParam)) =>
+  private def metadataReceivedStateHandler(setup: SetupOutbox): MetadataReceivedCmd => ReplyEffect[Event, State] = {
+    case RelResolverReplyAdapter(reply: RelationshipResolver.Replies.OutboxParam) =>
       Effect
         .persist(OutboxParamUpdated(reply.walletId, reply.senderVerKey, reply.comMethods))
         .thenRun((_: State) => setup.buffer.unstashAll(Behaviors.same))
         .thenNoReply()
 
-    case (_, cmd) =>
+    case cmd =>
       setup.buffer.stash(cmd)
       Effect
         .noReply
   }
 
-  private def initializedStateHandler(implicit setup: SetupOutbox): (States.Initialized, InitializedCmd) => ReplyEffect[Event, State] = {
-    case (st, cmd: MessageResendCmd) => messageResendCommandHandler(setup)(st, cmd)
-    case (st, cmd: MessageHandlingCmd) => messageHandlingCommandHandler(setup)(st, cmd)
-    case (st, cmd: TimeoutCmd) => timeoutCommandHandler(setup)(st, cmd)
-    case (st, cmd: UpdateOutboxCmd) => updateConfigCommandHandler(setup)(st, cmd)
-    case (st, cmd: ReadCmd) => readCommandHandler(setup)(st, cmd)
+  private def initializedStateHandler(st: States.Initialized)(implicit setup: SetupOutbox): InitializedCmd => ReplyEffect[Event, State] = {
+    case cmd: MessageResendCmd => messageResendCommandHandler(st)(setup)(cmd)
+    case cmd: MessageHandlingCmd => messageHandlingCommandHandler(st)(setup)(cmd)
+    case cmd: TimeoutCmd => timeoutCommandHandler(st)(setup)(cmd)
+    case cmd: UpdateOutboxCmd => updateConfigCommandHandler(st)(setup)(cmd)
+    case cmd: ReadCmd => readCommandHandler(st)(setup)(cmd)
   }
 
-  private def messageResendCommandHandler(implicit setup: SetupOutbox): (States.Initialized, MessageResendCmd) => ReplyEffect[Event, State] = {
-    case (st: States.Initialized, rsa: Commands.RecordSuccessfulAttempt) =>
+  private def messageResendCommandHandler(st: States.Initialized)(implicit setup: SetupOutbox): MessageResendCmd => ReplyEffect[Event, State] = {
+    case rsa: Commands.RecordSuccessfulAttempt =>
       val isDelivered = isMsgDelivered(rsa.comMethodId, rsa.isItANotification, st)
       Effect
         .persist(MsgSentSuccessfully(rsa.msgId, rsa.comMethodId, isDelivered))
@@ -239,7 +239,7 @@ object Outbox {
         .thenRun((st: State) => sendMsgActivityToMessageMeta(st, rsa.msgId, rsa.comMethodId, None))
         .thenNoReply()
 
-    case (st: States.Initialized, rfa: Commands.RecordFailedAttempt) =>
+    case rfa: Commands.RecordFailedAttempt =>
       val isDeliveryFailed = isMsgDeliveryFailed(rfa.comMethodId,
         rfa.isItANotification, rfa.isAnyRetryAttemptsLeft, st)
       Effect
@@ -254,8 +254,8 @@ object Outbox {
         .thenNoReply()
   }
 
-  private def messageHandlingCommandHandler(implicit setup: SetupOutbox): (States.Initialized, MessageHandlingCmd) => ReplyEffect[Event, State] = {
-    case (st: States.Initialized, Commands.AddMsg(msgId, expiryDuration, replyTo)) =>
+  private def messageHandlingCommandHandler(st: States.Initialized)(implicit setup: SetupOutbox): MessageHandlingCmd => ReplyEffect[Event, State] = {
+    case Commands.AddMsg(msgId, expiryDuration, replyTo) =>
       if (st.messages.contains(msgId)) {
         Effect
           .reply(replyTo)(Replies.MsgAlreadyAdded)
@@ -267,14 +267,14 @@ object Outbox {
           .thenReply(replyTo)((_: State) => Replies.MsgAdded)
       }
 
-    case (st: States.Initialized, MessageMetaReplyAdapter(reply: MessageMeta.Replies.RemoveMsg)) =>
+    case MessageMetaReplyAdapter(reply: MessageMeta.Replies.RemoveMsg) =>
       if (st.messages.contains(reply.msgId)) {
         Effect
           .persist(Events.MsgRemoved(reply.msgId))
           .thenNoReply()
       } else Effect.noReply
 
-    case (st: States.Initialized, Commands.RemoveMsg(msgId)) =>
+    case Commands.RemoveMsg(msgId) =>
       if (st.messages.contains(msgId)) {
         Effect
           .persist(Events.MsgRemoved(msgId))
@@ -282,15 +282,15 @@ object Outbox {
       } else Effect.noReply
   }
 
-  private def timeoutCommandHandler(implicit setup: SetupOutbox): (States.Initialized, TimeoutCmd) => ReplyEffect[Event, State] = {
-    case (st: States.Initialized, Commands.ProcessDelivery) =>
+  private def timeoutCommandHandler(st: States.Initialized)(implicit setup: SetupOutbox): TimeoutCmd => ReplyEffect[Event, State] = {
+    case Commands.ProcessDelivery =>
       processDelivery(st)
       Effect
         .noReply
   }
 
-  private def updateConfigCommandHandler(implicit setup: SetupOutbox): (States.Initialized, UpdateOutboxCmd) => ReplyEffect[Event, State] = {
-    case (st: States.Initialized, RelResolverReplyAdapter(reply: RelationshipResolver.Replies.OutboxParam)) =>
+  private def updateConfigCommandHandler(st: States.Initialized)(implicit setup: SetupOutbox): UpdateOutboxCmd => ReplyEffect[Event, State] = {
+    case RelResolverReplyAdapter(reply: RelationshipResolver.Replies.OutboxParam) =>
       if (st.senderVerKey != reply.senderVerKey || st.comMethods != reply.comMethods) {
         Effect
           .persist(OutboxParamUpdated(reply.walletId, reply.senderVerKey, reply.comMethods))
@@ -300,7 +300,7 @@ object Outbox {
           .noReply
       }
 
-    case (st: States.Initialized, Commands.UpdateOutboxParam(walletId, senderVerKey, comMethods)) =>
+    case Commands.UpdateOutboxParam(walletId, senderVerKey, comMethods) =>
       if (st.senderVerKey != senderVerKey || st.comMethods != comMethods) {
         Effect
           .persist(OutboxParamUpdated(walletId, senderVerKey, comMethods))
@@ -311,12 +311,12 @@ object Outbox {
       }
   }
 
-  private def readCommandHandler(implicit setup: SetupOutbox): (States.Initialized, ReadCmd) => ReplyEffect[Event, State] = {
-    case (st: States.Initialized, GetOutboxParam(replyTo)) =>
+  private def readCommandHandler(st: States.Initialized)(implicit setup: SetupOutbox): ReadCmd => ReplyEffect[Event, State] = {
+    case GetOutboxParam(replyTo) =>
       Effect
         .reply(replyTo)(RelationshipResolver.Replies.OutboxParam(st.walletId, st.senderVerKey, st.comMethods))
 
-    case (st: States.Initialized, Commands.GetDeliveryStatus(replyTo)) =>
+    case Commands.GetDeliveryStatus(replyTo) =>
       Effect
         .reply(replyTo)(Replies.DeliveryStatus(st.messages))
   }

@@ -143,8 +143,8 @@ object MessageMeta {
                              msgStoreReplyAdapter: ActorRef[MsgStore.MessageMetaReply]): (State, Cmd) => ReplyEffect[Event, State] = {
 
     case (States.Uninitialized, cmd: UninitializedStateCmd) => uninitializedStateHandler(cmd)
-    case (st: States.Initialized, cmd: InitializedStateCmd) => initializedStateHandler(msgId, msgStoreAdapter)(context, msgStoreReplyAdapter)(st, cmd)
-    case (st: States.Processed, cmd: ProcessedStateCmd) => processedStateHandler(msgId)(st, cmd)
+    case (st: States.Initialized, cmd: InitializedStateCmd) => initializedStateHandler(msgId, msgStoreAdapter, st)(context, msgStoreReplyAdapter)(cmd)
+    case (st: States.Processed, cmd: ProcessedStateCmd) => processedStateHandler(msgId, st)(cmd)
     case (st, cmd) =>
       logger.warn(s"Received unexpected message ${cmd} in state ${st}")
       Effect.noReply
@@ -171,24 +171,25 @@ object MessageMeta {
 
   private def initializedStateHandler(
                                        msgId: MsgId,
-                                       msgStoreAdapter: ActorRef[MsgStore.Cmd]
+                                       msgStoreAdapter: ActorRef[MsgStore.Cmd],
+                                       st: States.Initialized
                                      )(
                                        implicit context: ActorContext[Cmd],
                                        msgStoreReplyAdapter: ActorRef[MsgStore.MessageMetaReply]
-                                     ): (States.Initialized, InitializedStateCmd) => ReplyEffect[Event, State] = {
-    case (_, c: Commands.Add) =>
+                                     ): InitializedStateCmd => ReplyEffect[Event, State] = {
+    case c: Commands.Add =>
       Effect
         .reply(c.replyTo)(Replies.MsgAlreadyAdded)
 
-    case (st, Commands.Get(replyTo)) =>
+    case Commands.Get(replyTo) =>
       Effect
         .reply(replyTo)(st.msgDetail.buildMsg(msgId))
 
-    case (st, Commands.GetDeliveryStatus(replyTo)) =>
+    case Commands.GetDeliveryStatus(replyTo) =>
       Effect
         .reply(replyTo)(Replies.MsgDeliveryStatus(isProcessed = false, st.deliveryStatus))
 
-    case (_, rma: Commands.RecordMsgActivity) =>
+    case rma: Commands.RecordMsgActivity =>
       val msgActivityRecorded = {
         val msgActivity = rma.msgActivity.map { ma =>
           Events.MsgActivity(ma.detail, Option(TimeZoneUtil.getMillisForCurrentUTCZonedDateTime))
@@ -199,7 +200,7 @@ object MessageMeta {
         .persist(msgActivityRecorded)
         .thenNoReply()
 
-    case (st, pfo: Commands.ProcessedForOutbox) =>
+    case pfo: Commands.ProcessedForOutbox =>
       if (! st.deliveryStatus.get(pfo.outboxId).exists(_.isProcessed)) {
         val msgActivityRecorded = {
           val msgActivity = pfo.msgActivity.map { ma =>
@@ -216,7 +217,7 @@ object MessageMeta {
           .thenNoReply()
       } else Effect.noReply
 
-    case (st, Commands.MsgStoreReplyAdapter(MsgStore.Replies.PayloadDeleted)) =>
+    case Commands.MsgStoreReplyAdapter(MsgStore.Replies.PayloadDeleted) =>
       Effect
         .persist(Events.PayloadDeleted())
         .thenRun{ (_: State) =>
@@ -228,16 +229,16 @@ object MessageMeta {
         .thenNoReply()
   }
 
-  private def processedStateHandler(msgId: MsgId): (States.Processed, ProcessedStateCmd) => ReplyEffect[Event, State] = {
-    case (_: States.Processed, pfo: Commands.ProcessedForOutbox) =>
+  private def processedStateHandler(msgId: MsgId, st: States.Processed): ProcessedStateCmd => ReplyEffect[Event, State] = {
+    case pfo: Commands.ProcessedForOutbox =>
       Effect
         .reply(pfo.replyTo)(Replies.RemoveMsg(msgId))
 
-    case (st: States.Processed, Commands.GetDeliveryStatus(replyTo)) =>
+    case Commands.GetDeliveryStatus(replyTo) =>
       Effect
         .reply(replyTo)(Replies.MsgDeliveryStatus(isProcessed = true, st.deliveryStatus))
 
-    case (st: States.Processed, Commands.Get(replyTo)) =>
+    case Commands.Get(replyTo) =>
       Effect
         .reply(replyTo)(st.msgDetail.buildMsg(msgId))
   }

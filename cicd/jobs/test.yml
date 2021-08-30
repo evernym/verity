@@ -45,8 +45,9 @@ coverage:
     when: always
     paths:
       - verity/verity/target/scala-2.12/scoverage-report/*
-    cobertura:
-      - verity/verity/target/scala-2.12/coverage-report/cobertura.xml
+    reports:
+      cobertura:
+        - verity/verity/target/scala-2.12/coverage-report/cobertura.xml
 
 
 .static-analysis: # This test don't work and is currently not providing value

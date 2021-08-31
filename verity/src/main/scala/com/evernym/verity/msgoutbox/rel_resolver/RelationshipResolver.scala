@@ -17,7 +17,7 @@ import com.typesafe.scalalogging.Logger
 //ephemeral actor (sharded)
 object RelationshipResolver {
 
-  sealed trait Cmd extends ActorMessage
+  trait Cmd extends ActorMessage
   object Commands {
     case class SendOutboxParam(relId: RelId, destId: DestId, replyTo: ActorRef[OutboxReply]) extends Cmd
     case class GetRelParam(relId: RelId, replyTo: ActorRef[Reply]) extends Cmd
@@ -67,27 +67,18 @@ object RelationshipResolver {
     case Commands.GetRelParam(relId, replyTo: ActorRef[Reply]) =>
       agentMsgRouter.forward((InternalMsgRouteParam(relId, GetRelParam), actorContext.self.toClassic))
       waitingForGetRelParam(replyTo)
-    case cmd =>
-      logger.error(s"Unexpected message received in WaitingForOutboxReply ${cmd}")
-      Behaviors.same
   }
 
   private def waitingForGetOutboxParam(replyTo: ActorRef[OutboxReply]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
     case OutboxParamResp(walletId, senderVerKey, comMethods) =>
       replyTo ! OutboxParam(walletId, senderVerKey, comMethods)
       Behaviors.stopped
-    case cmd =>
-      logger.error(s"Unexpected message received in WaitingForOutboxReply ${cmd}")
-      Behaviors.same
   }
 
   private def waitingForGetRelParam(replyTo: ActorRef[Reply]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
     case RelParamResp(selfRelId, relationship) =>
       replyTo ! RelParam(selfRelId, relationship)
       Behaviors.stopped
-    case cmd =>
-      logger.error(s"Unexpected message received in WaitingForOutboxReply ${cmd}")
-      Behaviors.same
   }
 }
 

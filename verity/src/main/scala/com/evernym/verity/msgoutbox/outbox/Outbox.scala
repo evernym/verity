@@ -45,6 +45,8 @@ import scala.concurrent.duration._
 object Outbox {
 
   //commands
+  //this trait is not sealed purposefully. It is way too hard to track all errors for scalac and it without any useful description
+  //if the match is not exhaustive.
   trait Cmd extends ActorMessage
   sealed trait UninitializedCmd extends Cmd
   sealed trait MetadataReceivedCmd extends Cmd

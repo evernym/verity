@@ -8,13 +8,11 @@ import com.evernym.verity.actor.agent.relationship.{AuthorizedKey, AuthorizedKey
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.msgoutbox.{DestId, RelId}
 import com.evernym.verity.msgoutbox.base.DestParam
-import com.evernym.verity.msgoutbox.base.TestRelResolver.logger
 import com.evernym.verity.msgoutbox.outbox_router.cloud_agent.with_aries_connection.{CloudAgentOutboxRouterBaseSpec, VerityCloudAgent}
 import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.{GetRelParam, SendOutboxParam}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Replies.{OutboxParam, RelParam}
-import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util2.ExecutionContextProvider
 
 import scala.concurrent.ExecutionContext
@@ -72,8 +70,6 @@ class OutboxRouterSpec
 }
 
 object TestAgentRelResolver {
-  private val logger = getLoggerByClass(getClass)
-
   def apply(destParams: Map[DestId, DestParam]): Behavior[RelationshipResolver.Cmd] = {
     Behaviors.setup { actorContext =>
       initialized(destParams)(actorContext)
@@ -83,7 +79,7 @@ object TestAgentRelResolver {
   def initialized(destParams: Map[DestId, DestParam])
                  (implicit actorContext: ActorContext[RelationshipResolver.Cmd]): Behavior[RelationshipResolver.Cmd] = {
     Behaviors.receiveMessage[RelationshipResolver.Cmd] {
-      case SendOutboxParam(relId, destId, replyTo: ActorRef[RelationshipResolver.OutboxReply]) =>
+      case SendOutboxParam(relId, destId, replyTo: ActorRef[RelationshipResolver.Reply]) =>
         destParams.get(destId).foreach { destParam =>
           replyTo ! OutboxParam(destParam.walletId, destParam.myVerKey, destParam.comMethods)
         }
@@ -113,10 +109,6 @@ object TestAgentRelResolver {
             )
           )
         )
-        Behaviors.same
-
-      case cmd =>
-        logger.warn(s"Received unexpected command ${cmd}")
         Behaviors.same
     }
   }

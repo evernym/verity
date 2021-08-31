@@ -11,14 +11,12 @@ import com.evernym.verity.msgoutbox.outbox.msg_packager.Packager.Replies.{DIDCom
 import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.DIDCommV1Packager
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgLoader
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgLoader.Msg
-import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
-import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.duration._
 
 object Packager {
 
-  sealed trait Cmd extends ActorMessage
+  trait Cmd extends ActorMessage
 
   object Commands {
     case class PackMsg(msgId: MsgId, replyTo: ActorRef[Reply]) extends Cmd
@@ -34,8 +32,6 @@ object Packager {
     case class UnPackedMsg(msg: String) extends Reply
     case class DIDCommV1PackedMsg(msg: Array[Byte]) extends Reply
   }
-
-  private val logger: Logger = getLoggerByClass(getClass)
 
   def apply(msgPackagingParam: MsgPackagingParam,
             msgStoreParam: MsgStoreParam,
@@ -55,10 +51,6 @@ object Packager {
         val msgLoaderReplyAdapter = actorContext.messageAdapter(reply => MsgLoaderReplyAdapter(reply))
         actorContext.spawnAnonymous(MsgLoader(msgId, msgStoreParam.msgStore, msgLoaderReplyAdapter, eventEncryptionSalt))
         handlePostPayloadRetrieval(msgId, msgPackagingParam, replyTo)(actorContext)
-
-      case cmd =>
-        logger.error(s"Received unexpected message ${cmd}")
-        Behaviors.same
     }
 
   private def handlePostPayloadRetrieval(msgId: MsgId,
@@ -68,10 +60,6 @@ object Packager {
     Behaviors.receiveMessage {
       case MsgLoaderReplyAdapter(reply: MsgLoader.Replies.MessageMeta) =>
         packageMsg(msgId, msgPackagingParam, replyTo, reply.msg)
-
-      case cmd =>
-        logger.error(s"Received unexpected message ${cmd}")
-        Behaviors.same
     }
 
   private def packageMsg(msgId: MsgId,
@@ -119,9 +107,5 @@ object Packager {
 
       case TimedOut =>
         Behaviors.stopped   //TODO: finalize this
-
-      case cmd =>
-        logger.error(s"Received unexpected message ${cmd}")
-        Behaviors.same
     }
 }

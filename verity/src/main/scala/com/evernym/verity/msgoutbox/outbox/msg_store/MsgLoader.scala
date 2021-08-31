@@ -12,14 +12,12 @@ import com.evernym.verity.msgoutbox.outbox.msg_store.MsgLoader.Commands.MsgStore
 import com.evernym.verity.msgoutbox.{MsgId, RecipPackaging}
 import com.evernym.verity.actor.typed.base.PersistentEventAdapter
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
-import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
-import com.typesafe.scalalogging.Logger
 
 //responsible for loading message meta event from event journal
 // and then go to external storage and download the message payload
 object MsgLoader {
 
-  sealed trait Cmd extends ActorMessage
+  trait Cmd extends ActorMessage
 
   object Commands {
     case class MsgStoreReplyAdapter(reply: MsgStore.Reply) extends Cmd
@@ -44,8 +42,6 @@ object MsgLoader {
     case class Initialized(msg: Msg) extends State
   }
 
-  private val logger: Logger = getLoggerByClass(getClass)
-
   def apply(msgId: MsgId,
             msgStore: ActorRef[MsgStore.Cmd],
             replyTo: ActorRef[Reply],
@@ -67,9 +63,6 @@ object MsgLoader {
     case (st: States.Initialized, MsgStoreReplyAdapter(reply: MsgStore.Replies.PayloadRetrieved)) =>
       replyTo ! Replies.MessageMeta(st.msg.copy(payload = reply.payload))
       Effect.stop()
-    case (st, cmd) =>
-      logger.error(s"Received unexpected command ${cmd} in state ${st}")
-      Effect.none
   }
 
   private val eventHandler: (State, Any) => State = {

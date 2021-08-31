@@ -11,8 +11,6 @@ import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Replies.{O
 import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, DestId, RelId, WalletId}
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.did.VerKeyStr
-import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
-import com.typesafe.scalalogging.Logger
 
 //ephemeral actor (sharded)
 object RelationshipResolver {
@@ -46,8 +44,6 @@ object RelationshipResolver {
 
     case class RelParam(selfRelId: RelId, relationship: Option[Relationship]) extends Reply
   }
-
-  private val logger: Logger = getLoggerByClass(getClass)
 
   def apply(agentMsgRouter: AgentMsgRouter): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>

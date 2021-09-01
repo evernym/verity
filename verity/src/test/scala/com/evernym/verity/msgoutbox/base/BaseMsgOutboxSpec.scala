@@ -5,7 +5,6 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
-import akka.pattern.StatusReply
 import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider, PolicyElements, RetentionPolicy, Status}
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
@@ -15,7 +14,6 @@ import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter.Comma
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter.Replies.SendResponse
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.SendOutboxParam
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Replies.OutboxParam
-import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Reply
 import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.WalletOpExecutor.Replies.PackagedPayload
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
@@ -188,7 +186,7 @@ object TestRelResolver {
   def initialized(destParams: Map[DestId, DestParam])
                  (implicit actorContext: ActorContext[RelationshipResolver.Cmd]): Behavior[RelationshipResolver.Cmd] = {
     Behaviors.receiveMessage[RelationshipResolver.Cmd] {
-      case SendOutboxParam(relId, destId, replyTo: ActorRef[Reply]) =>
+      case SendOutboxParam(relId, destId, replyTo: ActorRef[RelationshipResolver.SendOutboxParamReply]) =>
         destParams.get(destId).foreach { destParam =>
           replyTo ! OutboxParam(destParam.walletId, destParam.myVerKey, destParam.comMethods)
         }

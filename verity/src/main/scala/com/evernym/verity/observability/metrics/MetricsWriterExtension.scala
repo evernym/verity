@@ -20,15 +20,7 @@ class MetricsWriterExtensionImpl(system: ExtendedActorSystem) extends Extension 
       val metricsBackend: MetricsBackend = try {
         if (config.getString(METRICS_ENABLED) == YES) {
           val className = config.getString(METRICS_BACKEND)
-          try {
-            // Allow backends to be constructed with a reference to the actor system
-            Class.forName(className).getConstructor(classOf[ActorSystem]).newInstance(system).asInstanceOf[MetricsBackend]
-          }
-          catch {
-            case _ : NoSuchMethodException =>
-              // Fall back and use empty constructor to build backend
-              Class.forName(className).getConstructor().newInstance().asInstanceOf[MetricsBackend]
-          }
+          Class.forName(className).getConstructor(classOf[ActorSystem]).newInstance(system).asInstanceOf[MetricsBackend]
         } else {
           new NoOpMetricsBackend
         }

@@ -8,7 +8,7 @@ import scala.concurrent.ExecutionContext
 
 //interface for different version of oauth access token refresher
 object OAuthAccessTokenRefresher {
-  trait Cmd extends ActorMessage
+  sealed trait Cmd extends ActorMessage
   object Commands {
     case object GetToken {
       def apply(params: Map[String, String],

@@ -30,7 +30,7 @@ import scala.concurrent.duration.FiniteDuration
 // all user typed actors should be children of this one
 object UserGuardian {
 
-  trait Cmd extends ActorMessage
+  sealed trait Cmd extends ActorMessage
   val defaultMessageMetaPassivationTimeoutInSeconds: Int = 60
   val defaultOutboxPassivationTimeoutInSeconds: Int = 300
 

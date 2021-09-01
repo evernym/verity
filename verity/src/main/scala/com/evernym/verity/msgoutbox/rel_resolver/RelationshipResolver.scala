@@ -17,7 +17,7 @@ object RelationshipResolver {
 
   trait Cmd extends ActorMessage
   object Commands {
-    case class SendOutboxParam(relId: RelId, destId: DestId, replyTo: ActorRef[OutboxReply]) extends Cmd
+    case class SendOutboxParam(relId: RelId, destId: DestId, replyTo: ActorRef[SendOutboxParamReply]) extends Cmd
     case class GetRelParam(relId: RelId, replyTo: ActorRef[Reply]) extends Cmd
 
     case class OutboxParamResp(walletId: WalletId,
@@ -32,11 +32,11 @@ object RelationshipResolver {
   }
 
   trait Reply extends ActorMessage
-  sealed trait OutboxReply extends ActorMessage
+  sealed trait SendOutboxParamReply extends ActorMessage
   object Replies {
     case class OutboxParam(walletId: WalletId,
                            senderVerKey: VerKeyStr,
-                           comMethods: Map[ComMethodId, ComMethod]) extends OutboxReply {
+                           comMethods: Map[ComMethodId, ComMethod]) extends SendOutboxParamReply {
       if (comMethods.count(_._2.typ == COM_METHOD_TYPE_HTTP_ENDPOINT) > 1) {
         throw new RuntimeException("one outbox can have max one http com method")
       }
@@ -56,7 +56,7 @@ object RelationshipResolver {
   private def initialized(implicit actorContext: ActorContext[Cmd],
                           buffer: StashBuffer[Cmd],
                           agentMsgRouter: AgentMsgRouter): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
-    case Commands.SendOutboxParam(relId, destId, replyTo: ActorRef[OutboxReply]) =>
+    case Commands.SendOutboxParam(relId, destId, replyTo: ActorRef[SendOutboxParamReply]) =>
       agentMsgRouter.forward((InternalMsgRouteParam(relId, GetOutboxParam(destId)), actorContext.self.toClassic))
       waitingForGetOutboxParam(replyTo)
 
@@ -65,7 +65,7 @@ object RelationshipResolver {
       waitingForGetRelParam(replyTo)
   }
 
-  private def waitingForGetOutboxParam(replyTo: ActorRef[OutboxReply]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
+  private def waitingForGetOutboxParam(replyTo: ActorRef[SendOutboxParamReply]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
     case OutboxParamResp(walletId, senderVerKey, comMethods) =>
       replyTo ! OutboxParam(walletId, senderVerKey, comMethods)
       Behaviors.stopped

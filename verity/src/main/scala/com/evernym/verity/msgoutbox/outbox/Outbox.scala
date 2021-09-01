@@ -73,7 +73,7 @@ object Outbox {
                                    statusDetail: StatusDetail) extends MessageResendCmd with UninitializedCmd with MetadataReceivedCmd
 
     case class UpdateOutboxParam(walletId: String, senderVerKey: VerKeyStr, comMethods: Map[ComMethodId, ComMethod]) extends UpdateOutboxCmd with UninitializedCmd with MetadataReceivedCmd
-    case class RelResolverReplyAdapter(reply: RelationshipResolver.OutboxReply) extends UpdateOutboxCmd with UninitializedCmd with MetadataReceivedCmd
+    case class RelResolverReplyAdapter(reply: RelationshipResolver.SendOutboxParamReply) extends UpdateOutboxCmd with UninitializedCmd with MetadataReceivedCmd
 
     case class AddMsg(msgId: MsgId, expiryDuration: FiniteDuration, replyTo: ActorRef[Replies.MsgAddedReply]) extends MessageHandlingCmd with UninitializedCmd with MetadataReceivedCmd
     case class MessageMetaReplyAdapter(reply: MessageMeta.ProcessedForOutboxReply) extends MessageHandlingCmd with MetadataReceivedCmd
@@ -707,7 +707,7 @@ case class SetupOutbox(actorContext: ActorContext[Cmd],
                        buffer: StashBuffer[Cmd],
                        dispatcher: Dispatcher,
                        relResolver: Behavior[RelationshipResolver.Cmd],
-                       relResolverReplyAdapter: ActorRef[RelationshipResolver.OutboxReply],
+                       relResolverReplyAdapter: ActorRef[RelationshipResolver.SendOutboxParamReply],
                        messageMetaReplyAdapter: ActorRef[MessageMeta.ProcessedForOutboxReply],
                        itemManagerEntityHelper: ItemManagerEntityHelper,
                        timer: TimerScheduler[Cmd])

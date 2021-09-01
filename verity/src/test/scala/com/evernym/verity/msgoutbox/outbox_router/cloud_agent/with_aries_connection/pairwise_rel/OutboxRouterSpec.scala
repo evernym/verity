@@ -79,7 +79,7 @@ object TestAgentRelResolver {
   def initialized(destParams: Map[DestId, DestParam])
                  (implicit actorContext: ActorContext[RelationshipResolver.Cmd]): Behavior[RelationshipResolver.Cmd] = {
     Behaviors.receiveMessage[RelationshipResolver.Cmd] {
-      case SendOutboxParam(relId, destId, replyTo: ActorRef[RelationshipResolver.OutboxReply]) =>
+      case SendOutboxParam(relId, destId, replyTo: ActorRef[RelationshipResolver.SendOutboxParamReply]) =>
         destParams.get(destId).foreach { destParam =>
           replyTo ! OutboxParam(destParam.walletId, destParam.myVerKey, destParam.comMethods)
         }

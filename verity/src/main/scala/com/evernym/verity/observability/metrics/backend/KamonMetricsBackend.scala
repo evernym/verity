@@ -39,7 +39,9 @@ class KamonMetricsBackend(system: ActorSystem) extends MetricsBackend {
     )(fn)
   }
 
-  override def setup(): Unit = Kamon.init(system.settings.config.getConfig("kamon"))
+  override def setup(): Unit = {
+    Kamon.init(system.settings.config.withOnlyPath("kamon"))
+  }
 
   override def shutdown(): Unit = Kamon.stop()
 

@@ -34,11 +34,11 @@ object MsgStore {
   }
 
   trait Reply extends ActorMessage
-  sealed trait MessageMetaReply extends Reply
+  sealed trait GetPayloadReply extends Reply
 
   object Replies {
     object PayloadStored extends Reply
-    object PayloadDeleted extends MessageMetaReply
+    object PayloadDeleted extends GetPayloadReply
     case class PayloadRetrieved(payload: Option[Array[Byte]]) extends Reply
   }
 

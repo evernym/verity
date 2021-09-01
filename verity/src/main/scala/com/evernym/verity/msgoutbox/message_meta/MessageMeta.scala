@@ -49,11 +49,11 @@ object MessageMeta {
     case class ProcessedForOutbox(outboxId: String,
                                   deliveryStatus: String,
                                   msgActivity: Option[MsgActivity],
-                                  replyTo: ActorRef[OutboxReply]) extends ProcessedStateCmd with InitializedStateCmd
+                                  replyTo: ActorRef[ProcessedForOutboxReply]) extends ProcessedStateCmd with InitializedStateCmd
 
     case class GetDeliveryStatus(replyTo: ActorRef[Replies.MsgDeliveryStatus]) extends ProcessedStateCmd with InitializedStateCmd
 
-    case class MsgStoreReplyAdapter(reply: MsgStore.MessageMetaReply) extends InitializedStateCmd
+    case class MsgStoreReplyAdapter(reply: MsgStore.GetPayloadReply) extends InitializedStateCmd
   }
 
   //events
@@ -74,7 +74,7 @@ object MessageMeta {
 
   //reply messages
   trait Reply extends ActorMessage
-  sealed trait OutboxReply extends Reply
+  sealed trait ProcessedForOutboxReply extends Reply
   object Replies {
     trait AddMsgReply extends Reply
     case object MsgAdded extends AddMsgReply
@@ -90,7 +90,7 @@ object MessageMeta {
     case class MsgDeliveryStatus(isProcessed: Boolean,
                                  outboxDeliveryStatus: Map[OutboxId, OutboxDeliveryStatus] = Map.empty) extends Reply
 
-    case class RemoveMsg(msgId: MsgId) extends OutboxReply
+    case class RemoveMsg(msgId: MsgId) extends ProcessedForOutboxReply
   }
 
   //common objects used by state and replies
@@ -140,7 +140,7 @@ object MessageMeta {
   private def commandHandler(msgId: MsgId,
                              msgStoreAdapter: ActorRef[MsgStore.Cmd])
                             (implicit context: ActorContext[Cmd],
-                             msgStoreReplyAdapter: ActorRef[MsgStore.MessageMetaReply]): (State, Cmd) => ReplyEffect[Event, State] = {
+                             msgStoreReplyAdapter: ActorRef[MsgStore.GetPayloadReply]): (State, Cmd) => ReplyEffect[Event, State] = {
 
     case (States.Uninitialized, cmd: UninitializedStateCmd) => uninitializedStateHandler(cmd)
     case (st: States.Initialized, cmd: InitializedStateCmd) => initializedStateHandler(msgId, msgStoreAdapter, st)(context, msgStoreReplyAdapter)(cmd)
@@ -175,7 +175,7 @@ object MessageMeta {
                                        st: States.Initialized
                                      )(
                                        implicit context: ActorContext[Cmd],
-                                       msgStoreReplyAdapter: ActorRef[MsgStore.MessageMetaReply]
+                                       msgStoreReplyAdapter: ActorRef[MsgStore.GetPayloadReply]
                                      ): InitializedStateCmd => ReplyEffect[Event, State] = {
     case c: Commands.Add =>
       Effect
@@ -279,7 +279,7 @@ object MessageMeta {
   private def signalHandler(msgId: MsgId,
                             msgStoreAdapter: ActorRef[MsgStore.Cmd])
                            (implicit actorContext: ActorContext[Cmd],
-                            msgStoreReplyAdapter: ActorRef[MsgStore.MessageMetaReply]): PartialFunction[(State, Signal), Unit] = {
+                            msgStoreReplyAdapter: ActorRef[MsgStore.GetPayloadReply]): PartialFunction[(State, Signal), Unit] = {
     case (st: States.Initialized, RecoveryCompleted) =>
       deletePayloadIfRequired(msgId, msgStoreAdapter, st)
   }
@@ -288,7 +288,7 @@ object MessageMeta {
                                       msgStore: ActorRef[MsgStore.Cmd],
                                       st: State)
                                      (implicit actorContext: ActorContext[Cmd],
-                                      msgStoreReplyAdapter: ActorRef[MsgStore.MessageMetaReply]): Boolean = {
+                                      msgStoreReplyAdapter: ActorRef[MsgStore.GetPayloadReply]): Boolean = {
     st match {
       case i: Initialized =>
         //if message delivery status is one of the 'terminal state'

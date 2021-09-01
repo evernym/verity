@@ -76,7 +76,7 @@ object Outbox {
     case class RelResolverReplyAdapter(reply: RelationshipResolver.OutboxReply) extends UpdateOutboxCmd with UninitializedCmd with MetadataReceivedCmd
 
     case class AddMsg(msgId: MsgId, expiryDuration: FiniteDuration, replyTo: ActorRef[Replies.MsgAddedReply]) extends MessageHandlingCmd with UninitializedCmd with MetadataReceivedCmd
-    case class MessageMetaReplyAdapter(reply: MessageMeta.OutboxReply) extends MessageHandlingCmd with MetadataReceivedCmd
+    case class MessageMetaReplyAdapter(reply: MessageMeta.ProcessedForOutboxReply) extends MessageHandlingCmd with MetadataReceivedCmd
     case class RemoveMsg(msgId: MsgId) extends MessageHandlingCmd with UninitializedCmd with MetadataReceivedCmd
 
     //sent by scheduled job
@@ -708,6 +708,6 @@ case class SetupOutbox(actorContext: ActorContext[Cmd],
                        dispatcher: Dispatcher,
                        relResolver: Behavior[RelationshipResolver.Cmd],
                        relResolverReplyAdapter: ActorRef[RelationshipResolver.OutboxReply],
-                       messageMetaReplyAdapter: ActorRef[MessageMeta.OutboxReply],
+                       messageMetaReplyAdapter: ActorRef[MessageMeta.ProcessedForOutboxReply],
                        itemManagerEntityHelper: ItemManagerEntityHelper,
                        timer: TimerScheduler[Cmd])

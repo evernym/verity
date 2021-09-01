@@ -1,17 +1,17 @@
-package com.evernym.verity.protocol.protocols
+package com.evernym.verity.protocol.protocols.connecting.common
 
-import java.time.ZoneId
 import akka.actor.Actor.Receive
-import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.Status._
-import com.evernym.verity.did.didcomm.v1.Thread
-import com.evernym.verity.actor.agent.{Msg, MsgDeliveryDetail, PayloadMetadata, PayloadWrapper}
 import com.evernym.verity.actor.agent.user.MsgHelper
-import com.evernym.verity.actor.agent.{AttrName, AttrValue}
-import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated, MsgDeliveryStatusUpdated, MsgDetailAdded, MsgExpirationTimeUpdated, MsgPayloadStored, MsgStatusUpdated}
+import com.evernym.verity.actor.agent.{AttrName, AttrValue, Msg, MsgDeliveryDetail, PayloadMetadata, PayloadWrapper}
+import com.evernym.verity.actor._
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.protocol.engine.{MsgId, MsgName, RefMsgId}
 import com.evernym.verity.util.TimeZoneUtil._
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status._
+
+import java.time.ZoneId
 
 
 class ConnectionMsgState {

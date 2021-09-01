@@ -3,13 +3,13 @@ package com.evernym.verity.actor.agent.msghandler
 import akka.actor.{ActorRef, Props}
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.actor.agent.{MsgSendingFailed, MsgSentSuccessfully}
 import com.evernym.verity.actor.agent.msghandler.outgoing.{HasOutgoingMsgSender, JsonMsg, OutgoingMsgParam, ProcessSendMsgToMyDomain, ProcessSendMsgToTheirDomain}
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.AKKA_SHARDING_REGION_NAME_USER_AGENT
 import com.evernym.verity.protocol.engine.MsgId
-import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfully}
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}

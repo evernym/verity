@@ -1,26 +1,27 @@
-package com.evernym.verity.protocol.protocols
+package com.evernym.verity.actor.agent
 
-import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.msgsender.{MsgDeliveryResult, SendMsgParam}
+import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_UID
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.{HasLogger, MsgId}
+import com.evernym.verity.util2.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT, UNHANDLED}
 
+trait MsgDeliveryResultHandler {
+  this: HasLogger =>
 
-trait MsgDeliveryResultHandler extends HasAgentMsgTransformer { this: HasLogger =>
-
-  def updateMsgDeliveryStatus(uid: MsgId, to: String, statusCode: String, statusMsg: Option[String]=None): Unit
+  def updateMsgDeliveryStatus(uid: MsgId, to: String, statusCode: String, statusMsg: Option[String] = None): Unit
 
   def msgSentSuccessfully(mss: MsgSentSuccessfully): Unit
 
   def msgSendingFailed(msf: MsgSendingFailed): Unit
 
-  def updateLocalMsgDeliveryStatusAsFailed(uid: MsgId, to: String, statusMsg: Option[String]=None): Unit = {
+  def updateLocalMsgDeliveryStatusAsFailed(uid: MsgId, to: String, statusMsg: Option[String] = None): Unit = {
     updateMsgDeliveryStatus(uid, to, MSG_DELIVERY_STATUS_FAILED.statusCode, statusMsg)
   }
 
-  def updateLocalMsgDeliveryStatusAsSent(uid: MsgId, to: String, statusMsg: Option[String]=None): Unit = {
+  def updateLocalMsgDeliveryStatusAsSent(uid: MsgId, to: String, statusMsg: Option[String] = None): Unit = {
     updateMsgDeliveryStatus(uid, to, MSG_DELIVERY_STATUS_SENT.statusCode, statusMsg)
   }
 
@@ -32,7 +33,7 @@ trait MsgDeliveryResultHandler extends HasAgentMsgTransformer { this: HasLogger 
 
   def handleFailedMsgDelivery(sm: SendMsgParam, statusCode: String, statusMsg: Option[String]): Unit = {
     logger.info("handle failed msg delivery", (LOG_KEY_UID, sm.uid))
-    if (! sm.isItARetryAttempt && statusCode == UNHANDLED.statusCode) {
+    if (!sm.isItARetryAttempt && statusCode == UNHANDLED.statusCode) {
       //if this is a first attempt and failure is unknown, record it as failed (it should be retried)
       logger.debug(s"first condition, isItARetryAttempt: ${sm.isItARetryAttempt} and statusCode: $statusCode")
       updateMsgDeliveryStatus(sm.uid, sm.theirRoutingParam.routingTarget, statusCode, statusMsg)
@@ -51,7 +52,7 @@ trait MsgDeliveryResultHandler extends HasAgentMsgTransformer { this: HasLogger 
   def handleMsgDeliveryResult(mdr: MsgDeliveryResult): Unit = {
     logger.debug("handle msg delivery", (LOG_KEY_UID, mdr.sm.uid))
     mdr.responseMsg match {
-      case Some(_) => handleSuccessfulMsgDelivery(mdr.sm)
+      case Some(_)  => handleSuccessfulMsgDelivery(mdr.sm)
       case None     => handleFailedMsgDelivery(mdr.sm, mdr.statusCode, mdr.statusMsg)
     }
   }

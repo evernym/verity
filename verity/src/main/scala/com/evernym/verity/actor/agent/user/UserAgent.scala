@@ -17,6 +17,7 @@ import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_A
 import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, SelfRelationship, _}
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
 import com.evernym.verity.actor.agent.user.UserAgent._
+import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.ChildEvent
@@ -46,7 +47,6 @@ import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.CreateKeyEndpointDetail
-import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.protocol.protocols.connecting.common.{ConnReqReceived, SendMsgToRegisteredEndpoint}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.PublicIdentifierCreated
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl

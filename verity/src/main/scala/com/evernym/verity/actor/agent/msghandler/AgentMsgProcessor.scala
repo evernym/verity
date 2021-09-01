@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import akka.actor.ActorRef
-import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.actor.{ActorMessage, HasAppConfig}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.actor.agent.msghandler.AgentMsgProcessor.{PACKED_MSG_LIMIT, PAYLOAD_ERROR, REST_LIMIT}
@@ -37,7 +37,6 @@ import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, InitPro
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols
-import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.AgentCreated
 import com.evernym.verity.protocol.protocols.connecting.common.GetInviteDetail
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}

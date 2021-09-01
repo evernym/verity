@@ -1,12 +1,12 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
+import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgBase
-import com.evernym.verity.protocol.protocols.MsgDetail
 
 
 case class GetMsgsByConnsReqMsg_MFV_0_5(pairwiseDIDs: Option[List[DidStr]] = None,

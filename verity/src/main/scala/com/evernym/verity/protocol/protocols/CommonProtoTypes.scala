@@ -5,7 +5,6 @@ import com.evernym.verity.protocol.engine.{MsgFamily, MsgTypeStr}
 import com.evernym.verity.util2.Base64Encoded
 
 object CommonProtoTypes {
-  case class Thread(thid: String, seqnum: Int)
 
   case class Timing(expires_time: Option[String] = None,
                     in_time: Option[String] = None,

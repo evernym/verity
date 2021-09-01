@@ -14,7 +14,6 @@ import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.observability.logs.LoggingUtil.getAgentIdentityLoggerByClass
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols.HasAgentWallet
 import com.evernym.verity.util2.HasWalletExecutionContextProvider
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.actor.base.Done

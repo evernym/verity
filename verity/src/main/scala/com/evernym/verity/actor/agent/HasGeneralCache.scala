@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.protocols
+package com.evernym.verity.actor.agent
 
 import com.evernym.verity.cache.base.Cache
 

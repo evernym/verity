@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.connecting.v_0_6
 
 import com.evernym.verity.actor.ConnectionStatusUpdated
+import com.evernym.verity.actor.agent.{MsgSendingFailed, MsgSentSuccessfully}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
@@ -12,7 +13,6 @@ import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
 import com.evernym.verity.protocol.engine.{MsgName, _}
 import com.evernym.verity.protocol.protocols.connecting.common._
-import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfully}
 import com.evernym.verity.util.Util._
 
 

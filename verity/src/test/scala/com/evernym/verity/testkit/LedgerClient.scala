@@ -1,11 +1,11 @@
 package com.evernym.verity.testkit
 
-import java.util.UUID
+import com.evernym.verity.actor.HasAppConfig
 
+import java.util.UUID
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.testkit.util.LedgerUtil
 
 import scala.concurrent.ExecutionContext

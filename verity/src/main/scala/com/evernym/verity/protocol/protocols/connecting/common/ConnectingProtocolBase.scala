@@ -1,8 +1,7 @@
 package com.evernym.verity.protocol.protocols.connecting.common
 
 import akka.actor.Actor.Receive
-import com.evernym.verity.actor.{ActorMessage, AgentKeyDlgProofSet, ConnectionStatusUpdated, Evt, MsgCreated,
-  MsgDeliveryStatusUpdated, MsgExpirationTimeUpdated, MsgPayloadStored, ProtocolObserverAdded}
+import com.evernym.verity.actor.{ActorMessage, AgentKeyDlgProofSet, ConnectionStatusUpdated, Evt, HasAppConfig, MsgCreated, MsgDeliveryStatusUpdated, MsgExpirationTimeUpdated, MsgPayloadStored, ProtocolObserverAdded}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InvalidValueException}
@@ -10,7 +9,7 @@ import com.evernym.verity.util2.Status.{getStatusMsgFromCode, _}
 import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
 import com.evernym.verity.did.didcomm.v1.Thread
-import com.evernym.verity.actor.agent.{AttrName, AttrValue, EncryptionParamBuilder, MsgPackFormat, PayloadMetadata}
+import com.evernym.verity.actor.agent.{AttrName, AttrValue, EncryptionParamBuilder, MsgDeliveryResultHandler, MsgPackFormat, MsgSendingFailed, MsgSentSuccessfully, PayloadMetadata}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -26,7 +25,6 @@ import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigB
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.msg.Init
-import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{ConnectingMsgFamily => ConnectingMsgFamily_0_5}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFamily => ConnectingMsgFamily_0_6}
 import com.evernym.verity.protocol.{Control, HasMsgType}
@@ -62,6 +60,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     extends HasAppConfig
     with AgentMsgSender
     with MsgDeliveryResultHandler
+    with HasAgentMsgTransformer
     with PushNotifMsgBuilder
     with ConnReqAnswerMsgHandler[S]
     with ConnReqMsgHandler[S]

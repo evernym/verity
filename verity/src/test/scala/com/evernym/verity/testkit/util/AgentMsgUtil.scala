@@ -4,6 +4,7 @@ import java.util.UUID
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
+import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.agentmsg.msgfamily.pairwise.PairwiseMsgUids
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.ComMethodPackaging
@@ -11,10 +12,9 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTra
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, RequesterKeys}
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, InviteDetail, SenderAgencyDetail, SenderDetail}
-import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.observability.metrics.NoOpMetricsWriter
 
 import scala.concurrent.{Await, ExecutionContext, Future}

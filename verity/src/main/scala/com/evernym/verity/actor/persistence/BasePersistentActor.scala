@@ -426,10 +426,6 @@ trait BasePersistentActor
     handleErrorEventParam(ErrorEvent(SeriousSystemError, CONTEXT_EVENT_PERSIST, cause, Option(errorMsg)))
   }
 
-  def handleRecoveryFailure(cause: Throwable, errorMsg: String): Unit = {
-    handleErrorEventParam(ErrorEvent(SeriousSystemError, CONTEXT_EVENT_RECOVERY, cause, Option(errorMsg)))
-  }
-
   def handleUndoTransformFailure(cause: Throwable, errorMsg: String): Unit = {
     handleErrorEventParam(ErrorEvent(SeriousSystemError, CONTEXT_EVENT_TRANSFORMATION_UNDO, cause, Option(errorMsg)))
   }
@@ -457,15 +453,13 @@ trait BasePersistentActor
 
   override def onRecoveryFailure(cause: Throwable, event: Option[Any]): Unit = {
     event match {
-      case Some(_) =>
-        val errorMsg = s"[$persistenceId] actor not able to start (" +
-          s"error-msg: ${cause.getMessage})"
-        handleRecoveryFailure(cause, errorMsg)
+      case Some(event) =>
+        logger.error(s"[$persistenceId] error while applying event ${event.getClass.getSimpleName}: ${Exceptions.getStackTraceAsSingleLineString(cause)}")
       case None =>
-        val errorMsg = s"[$persistenceId] actor not able to start (" +
-          s"error-msg: ${cause.getMessage}, "+
-          s"possible-causes: $JOURNAL_ERROR_POSSIBLE_CAUSE)"
-        handleRecoveryFailure(cause, errorMsg)
+        logger.error(s"[$persistenceId] error while actor recovery, " +
+          s"possible-causes: $JOURNAL_ERROR_POSSIBLE_CAUSE" +
+          s"(error message: ${Exceptions.getStackTraceAsSingleLineString(cause)})"
+        )
     }
   }
 

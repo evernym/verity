@@ -57,7 +57,7 @@ val sharedLibDeps = Seq(
 val debPkgDepLibIndyMinVersion = libIndyVer
 
 //dependency versions
-val indyWrapperVer  = "1.15.0-dev-1618"
+val indyWrapperVer  = "1.15.0-dev-1629"
 
 val akkaVer         = "2.6.16"
 val akkaHttpVer     = "10.2.6"

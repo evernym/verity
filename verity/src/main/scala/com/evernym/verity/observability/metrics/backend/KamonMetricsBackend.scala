@@ -1,5 +1,6 @@
 package com.evernym.verity.observability.metrics.backend
 
+import akka.actor.ActorSystem
 import com.evernym.verity.observability.metrics.TagMap
 import com.evernym.verity.observability.metrics.{ClientSpan, DefaultSpan, InternalSpan, MetricsBackend, MetricsUnit, SpanType}
 import kamon.Kamon
@@ -7,7 +8,7 @@ import kamon.tag.TagSet
 
 import java.time.Instant
 
-class KamonMetricsBackend extends MetricsBackend {
+class KamonMetricsBackend(system: ActorSystem) extends MetricsBackend {
 
   override def gaugeIncrement(name: String, value: Long, tags: TagMap): Unit = {
     Kamon.gauge(name).withTags(TagSet.from(tags)).increment(value)
@@ -38,7 +39,7 @@ class KamonMetricsBackend extends MetricsBackend {
     )(fn)
   }
 
-  override def setup(): Unit = Kamon.init()
+  override def setup(): Unit = Kamon.init(system.settings.config)
 
   override def shutdown(): Unit = Kamon.stop()
 

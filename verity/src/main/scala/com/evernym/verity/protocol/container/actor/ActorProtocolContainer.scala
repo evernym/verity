@@ -5,7 +5,7 @@ import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.RelationshipLike
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
-import com.evernym.verity.actor.agent.{SponsorRel, _}
+import com.evernym.verity.actor.agent.{HasWallet, SponsorRel, _}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.{ActorMessage, ParameterStored}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
@@ -16,7 +16,6 @@ import com.evernym.verity.observability.metrics.CustomMetrics.AS_NEW_PROTOCOL_CO
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.msg.{SetDataRetentionPolicy, SetDomainId, SetSponsorRel, SetStorageId}
 import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
-import com.evernym.verity.protocol.protocols.HasWallet
 import com.evernym.verity.protocol.{Control, CtlEnvelope, PairwiseRelIdsChanged}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util

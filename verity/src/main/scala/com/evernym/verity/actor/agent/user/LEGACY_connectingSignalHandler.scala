@@ -7,7 +7,6 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.MsgId
-import com.evernym.verity.protocol.protocols.StorePayloadParam
 import com.evernym.verity.protocol.protocols.connecting.common.{AddMsg, UpdateDeliveryStatus, UpdateMsg}
 
 import scala.concurrent.Future

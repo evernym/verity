@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.protocols
+package com.evernym.verity.protocol.protocols.connecting.common
 
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 

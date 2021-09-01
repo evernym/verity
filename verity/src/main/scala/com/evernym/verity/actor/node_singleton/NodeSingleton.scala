@@ -3,7 +3,7 @@ package com.evernym.verity.actor.node_singleton
 import akka.actor.typed.eventstream.EventStream.Subscribe
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import com.evernym.verity.actor._
+import com.evernym.verity.actor.{HasAppConfig, _}
 import com.evernym.verity.actor.agent.HasSingletonParentProxy
 import com.evernym.verity.actor.appStateManager.StartDraining
 import com.evernym.verity.actor.base.{CoreActorExtended, Done}
@@ -15,7 +15,6 @@ import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.observability.metrics.MetricsWriterExtension
-import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext

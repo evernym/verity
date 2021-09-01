@@ -17,7 +17,7 @@ import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentId
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols.{HasAppConfig, ProtocolHelpers}
+import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.ProblemReportCodes._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Role.{Holder, Issuer}

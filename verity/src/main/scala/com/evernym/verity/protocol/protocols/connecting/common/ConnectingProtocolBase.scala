@@ -9,7 +9,7 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.actor.agent.msgsender.{AgentMsgSender, SendMsgParam}
 import com.evernym.verity.did.didcomm.v1.Thread
-import com.evernym.verity.actor.agent.{AttrName, AttrValue, EncryptionParamBuilder, MsgPackFormat, PayloadMetadata}
+import com.evernym.verity.actor.agent.{AttrName, AttrValue, EncryptionParamBuilder, MsgDeliveryResultHandler, MsgPackFormat, MsgSendingFailed, MsgSentSuccessfully, PayloadMetadata}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
@@ -19,12 +19,11 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.cache.base.Cache
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.protocol.container.actor._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{ConnectingMsgFamily => ConnectingMsgFamily_0_5}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFamily => ConnectingMsgFamily_0_6}
 import com.evernym.verity.protocol.{Control, HasMsgType}
@@ -60,6 +59,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     extends HasAppConfig
     with AgentMsgSender
     with MsgDeliveryResultHandler
+    with HasAgentMsgTransformer
     with PushNotifMsgBuilder
     with ConnReqAnswerMsgHandler[S]
     with ConnReqMsgHandler[S]

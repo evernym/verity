@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.connecting.v_0_5
 
 import com.evernym.verity.actor.ConnectionStatusUpdated
+import com.evernym.verity.actor.agent.{MsgSendingFailed, MsgSentSuccessfully}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
@@ -10,7 +11,6 @@ import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg, UpdateMsgDel
 import com.evernym.verity.protocol.engine.Constants.MFV_0_5
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.connecting.common._
-import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfully}
 
 
 object ConnectingMsgFamily extends MsgFamily {

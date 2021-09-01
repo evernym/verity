@@ -22,7 +22,6 @@ import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common.{NotifyUserViaPushNotif, SendMsgToRegisteredEndpoint}
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Config
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{Sig => UpdateConfigsSig}

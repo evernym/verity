@@ -1,12 +1,11 @@
 package com.evernym.verity.actor.msg_tracer.progress_tracker
 
 import java.time.LocalDateTime
-
 import akka.actor.{Actor, ActorRef}
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.util2.ReqId
 import com.evernym.verity.actor.agent.HasSingletonParentProxy
-import com.evernym.verity.actor.ForIdentifier
+import com.evernym.verity.actor.{ForIdentifier, HasAppConfig}
 import com.evernym.verity.actor.node_singleton.MsgProgressTrackerCache
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants.MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME
@@ -14,7 +13,6 @@ import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.actor.msg_tracer.progress_tracker.RoutingEvent._
 import com.evernym.verity.actor.node_singleton.MsgProgressTrackerCache.GLOBAL_TRACKING_ID
 import com.evernym.verity.protocol.engine.{MsgId, MsgType, ProtoDef, ProtoRef, ProtocolRegistry, TypedMsgLike}
-import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.util.HashAlgorithm.SHA256_trunc16
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.HashUtil

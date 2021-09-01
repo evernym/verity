@@ -10,7 +10,6 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgpacker.PackMsgParam
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, ThreadId}
-import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.push_notification.MockPusher
 import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
@@ -20,6 +19,7 @@ import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util._
 import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
+import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.did.DidStr

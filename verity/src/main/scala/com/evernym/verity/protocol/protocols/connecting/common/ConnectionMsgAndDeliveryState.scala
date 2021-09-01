@@ -1,13 +1,11 @@
-package com.evernym.verity.protocol.protocols
+package com.evernym.verity.protocol.protocols.connecting.common
 
-import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.Status._
-import com.evernym.verity.actor.agent.{Msg, PayloadMetadata}
+import com.evernym.verity.actor.agent.user.MsgHelper._
+import com.evernym.verity.actor.agent.Msg
 import com.evernym.verity.agentmsg.msgfamily.pairwise.UpdateMsgStatusReqMsg
 import com.evernym.verity.protocol.engine.MsgId
-import com.evernym.verity.did.didcomm.v1.Thread
-import com.evernym.verity.actor.agent.user.MsgHelper._
-import com.evernym.verity.did.DidStr
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status._
 
 //this is to store legacy connection related messages
 trait ConnectionMsgAndDeliveryState {
@@ -48,14 +46,4 @@ trait ConnectionMsgAndDeliveryState {
 
 }
 
-case class DeliveryStatus(to: String, statusCode: String, statusDetail: Option[String], lastUpdatedDateTime: String)
 
-case class MsgDetail(uid: MsgId, `type`: String, senderDID: DidStr, statusCode: String,
-                     refMsgId: Option[String], thread: Option[Thread],
-                     payload: Option[Array[Byte]], deliveryDetails: Set[DeliveryStatus]) {
-
-  override def toString: String = s"uid=$uid, type=${`type`}, senderDID=$senderDID, " +
-    s"statusCode=$statusCode, thread=$thread, refMsgId=$refMsgId"
-}
-
-case class StorePayloadParam(message: Array[Byte], metadata: Option[PayloadMetadata])

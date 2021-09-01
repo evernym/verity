@@ -1,6 +1,6 @@
 package com.evernym.verity.http.base
 
-import com.evernym.verity.protocol.protocols.MsgDetail
+import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 
 /**
  * utility to store messages (used by specs)

@@ -2,12 +2,12 @@ package com.evernym.verity.actor.agent.msghandler.outgoing
 
 import akka.actor.{Actor, Props}
 import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.actor.agent.{MsgSendingFailed, MsgSentSuccessfully}
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.agent.msghandler.{SendMsgToMyDomain, SendMsgToTheirDomain}
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.{MsgId, MsgName}
-import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfully}
 
 import scala.concurrent.duration._
 

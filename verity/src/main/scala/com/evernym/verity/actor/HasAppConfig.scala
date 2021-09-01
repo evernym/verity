@@ -1,7 +1,7 @@
-package com.evernym.verity.protocol.protocols
+package com.evernym.verity.actor
 
-import com.evernym.verity.config.ConfigConstants.MESSAGES
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.MESSAGES
 import com.evernym.verity.util.StrUtil.camelToKebab
 
 trait HasAppConfig {

@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent.msgsender
 
+import com.evernym.verity.actor.agent.HasGeneralCache
 import com.evernym.verity.util2.Exceptions._
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status._
@@ -8,7 +9,6 @@ import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.ledger.LedgerSvcException
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols.HasGeneralCache
 import com.evernym.verity.protocol.protocols.connecting.common.TheirRoutingParam
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.cache.AGENCY_IDENTITY_CACHE_FETCHER

@@ -19,8 +19,12 @@ object CommonProtoTypes {
   case class SigBlock(signature: Base64Encoded,
                       sig_data: Base64Encoded,
                       signers: Seq[VerKeyStr],
-                      `@type`: Option[MsgTypeStr]
-                              = Some(MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, "signature", "1.0", "ed25519Sha512_single")) //"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/signature/1.0/ed25519Sha512_single")
+                      `@type`: Option[MsgTypeStr] = Some(MsgFamily.typeStrFromMsgType(
+                        MsgFamily.COMMUNITY_QUALIFIER,
+                        "signature",
+                        "1.0",
+                        "ed25519Sha512_single")
+                        )
                       )
 
   // Aries RFC has replaced `signers` with `signer` and now only 1 verkey is contained.
@@ -28,7 +32,11 @@ object CommonProtoTypes {
   case class SigBlockCommunity(signature: Base64Encoded,
                                sig_data: Base64Encoded,
                                signer: VerKeyStr,
-                               `@type`: Option[MsgTypeStr]
-                      = Some(MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, "signature", "1.0", "ed25519Sha512_single"))
-                     )
+                               `@type`: Option[MsgTypeStr] = Some(MsgFamily.typeStrFromMsgType(
+                                 MsgFamily.COMMUNITY_QUALIFIER,
+                                 "signature",
+                                 "1.0",
+                                 "ed25519Sha512_single")
+                               )
+                              )
 }

@@ -124,3 +124,9 @@ trait HasMsgType {
   final def msgType: MsgType = msgFamily.msgType(msgName)
   final def typedMsg = TypedMsg(this, msgType)
 }
+
+//marker trait to be used by protocol states to mark it as a terminal state (completed or error etc)
+// the moment protocol engine observes state change to 'TerminalState'
+// it checks data retention policy and accordingly it may
+// remove all previously stored segmented states.
+trait TerminalState

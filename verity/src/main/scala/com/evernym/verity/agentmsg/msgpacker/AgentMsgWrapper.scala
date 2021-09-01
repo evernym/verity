@@ -5,9 +5,12 @@ import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.engine.{MsgBase, MsgFamilyName, MsgFamilyVersion, MsgName, MsgType}
 import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.protocol.protocols.connecting.common.ProtoMsg
 
 case class AgentMsgWrapper(msgPackFormat: MsgPackFormat, agentBundledMsg: AgentBundledMsg)
-  extends MsgBase {
+  extends MsgBase
+    with ProtoMsg { // this is an artifact of how connection 0.5 and 0.6 work, they need this class to have this
+  // marker trait
 
   def senderVerKey: Option[VerKeyStr] = agentBundledMsg.senderVerKey
   def recipVerKey: Option[VerKeyStr] = agentBundledMsg.recipVerKey

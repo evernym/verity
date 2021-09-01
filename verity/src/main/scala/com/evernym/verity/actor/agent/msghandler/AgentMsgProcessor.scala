@@ -165,8 +165,17 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    */
   def handleProtocolOutgoingMsg(pom: ProtocolOutgoingMsg): Unit = {
     logger.trace(s"sending protocol outgoing message: $pom")
-    handleOutgoingMsg(OutgoingMsg(pom.msg, pom.to, pom.from, pom.pinstId,
-      pom.protoDef, pom.threadContextDetail, Option(pom.requestMsgId)))
+    handleOutgoingMsg(
+      OutgoingMsg(
+        pom.msg,
+        pom.to,
+        pom.from,
+        pom.pinstId,
+        pom.protoDef,
+        pom.threadContextDetail,
+        Option(pom.requestMsgId)
+      )
+    )
   }
 
   def handleOutgoingMsg[A](om: OutgoingMsg[A], isSignalMsg: Boolean=false): Unit = {

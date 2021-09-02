@@ -1,11 +1,8 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.did.DidStr
-import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgType}
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyVersion}
-import com.evernym.verity.protocol.engine.asyncapi.AccessRight
+import com.evernym.verity.did.didcomm.v1.messages.MsgType
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateProtoDef
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.{Control, SystemMsg}
 import com.evernym.verity.util.HashAlgorithm.SHA256

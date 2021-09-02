@@ -1,28 +1,27 @@
 package com.evernym.verity.actor.persistence.object_code_mapper
 
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
 import com.evernym.verity.actor.agent.agency.{AgencyAgentPairwiseState, AgencyAgentState}
 import com.evernym.verity.actor.agent.user.{UserAgentPairwiseState, UserAgentState}
+import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
+import com.evernym.verity.protocol.engine.events._
 import com.evernym.verity.protocol.protocols.agentprovisioning.{v_0_5 => ap5, v_0_6 => ap6, v_0_7 => ap7}
-import com.evernym.verity.protocol.protocols.basicMessage.{v_1_0 => basicMessage_v10}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.{legacy => basicMessage_legacy}
+import com.evernym.verity.protocol.protocols.basicMessage.{v_1_0 => basicMessage_v10}
 import com.evernym.verity.protocol.protocols.committedAnswer.{v_1_0 => committedAnswer_v10}
 import com.evernym.verity.protocol.protocols.connections.{v_1_0 => connections_10}
-import com.evernym.verity.protocol.protocols.issueCredential.{v_1_0 => issueCredential_v10}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.{legacy => issueCredential_legacy}
+import com.evernym.verity.protocol.protocols.issueCredential.{v_1_0 => issueCredential_v10}
 import com.evernym.verity.protocol.protocols.issuersetup.{v_0_6 => issuerSetup_v06}
 import com.evernym.verity.protocol.protocols.outofband.{v_1_0 => outOfBand_v10}
 import com.evernym.verity.protocol.protocols.presentproof.{v_1_0 => presentProof_v10}
 import com.evernym.verity.protocol.protocols.questionAnswer.{v_1_0 => questionAnswer_v10}
 import com.evernym.verity.protocol.protocols.relationship.{v_1_0 => relationship_10}
 import com.evernym.verity.protocol.protocols.trustping.{v_1_0 => trustping_v10}
+import com.evernym.verity.protocol.protocols.walletBackup.{legacy => walletBackupLegacy}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef_v06}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema_v06}
 import com.evernym.verity.protocol.protocols.{deaddrop, walletBackup, tictactoe => tictactoe_v0_5, tokenizer => tk}
-import com.evernym.verity.protocol.protocols.walletBackup.{legacy => walletBackupLegacy}
-import com.evernym.verity.protocol._
-import com.evernym.verity.protocol.engine.ProtocolInitialized
 import com.evernym.verity.urlmapper.UrlAdded
 import scalapb.GeneratedMessageCompanion
 

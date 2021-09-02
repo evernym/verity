@@ -1,7 +1,8 @@
 package com.evernym.verity.protocol.engine.msg
 
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.{ParameterStored, Parameters}
+import com.evernym.verity.protocol.engine.Parameters
+import com.evernym.verity.protocol.engine.events.ParameterStored
 
 /**
  * This message is sent only when protocol is being created/initialized for first time

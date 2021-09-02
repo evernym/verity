@@ -16,7 +16,7 @@ import com.evernym.verity.observability.metrics.CustomMetrics.AS_NEW_PROTOCOL_CO
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.msg.{SetDataRetentionPolicy, SetDomainId, SetSponsorRel, SetStorageId}
 import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
-import com.evernym.verity.protocol.{Control, CtlEnvelope, PairwiseRelIdsChanged}
+import com.evernym.verity.protocol.{Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
 import com.evernym.verity.util2.{ActorResponse, Exceptions, ServiceEndpoint}
@@ -40,6 +40,7 @@ import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAc
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
 import com.evernym.verity.protocol.engine.container.{ProtocolContainer, RecordsEvents}
+import com.evernym.verity.protocol.engine.events.PairwiseRelIdsChanged
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 

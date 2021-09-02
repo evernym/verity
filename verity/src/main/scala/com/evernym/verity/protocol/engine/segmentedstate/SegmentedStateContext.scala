@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine.segmentedstate
 
-import com.evernym.verity.protocol.{SegmentRemoved, SegmentStored}
+import com.evernym.verity.protocol.engine.events.{SegmentRemoved, SegmentStored}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment

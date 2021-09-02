@@ -3,7 +3,7 @@ syntax = "proto3";
 // Brought in from scalapb-runtime
 import "scalapb/scalapb.proto";
 
-package com.evernym.verity.protocol.engine;
+package com.evernym.verity.protocol.engine.events;
 
 message ParameterStored {
     string name = 1;

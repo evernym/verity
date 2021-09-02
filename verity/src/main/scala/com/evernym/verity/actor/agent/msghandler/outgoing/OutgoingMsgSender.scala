@@ -19,18 +19,19 @@ class OutgoingMsgSender(maxRetryAttempt: Int, initialDelayInSeconds: Int)
 
   override def receiveCmd: Receive = {
     case smd: SendMsgToMyDomain     =>
-      sendCmdToParent(ProcessSendMsgToMyDomain(smd))
-      stopActor()
+      val cmd = ProcessSendMsgToMyDomain(smd)
+      sendCmdToParent(cmd)
+      setNewReceiveBehaviour(retryIfFailed(cmd))
 
     case std: SendMsgToTheirDomain  =>
       val cmd = ProcessSendMsgToTheirDomain(std)
       sendCmdToParent(cmd)
-      setNewReceiveBehaviour(theirDomainNotifier(cmd))
+      setNewReceiveBehaviour(retryIfFailed(cmd))
   }
 
-  def theirDomainNotifier(cmd: ProcessSendMsgToTheirDomain): Receive = {
-    case _: MsgSendingFailed     => handleMsgSendingFailed()
+  def retryIfFailed(cmd: Any): Receive = {
     case _: MsgSentSuccessfully  => stopActor()
+    case _: MsgSendingFailed     => handleMsgSendingFailed()
     case Retry                   => sendCmdToParent(cmd)
   }
 

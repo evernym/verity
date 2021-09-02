@@ -14,6 +14,8 @@ import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
+import scala.reflect.ClassTag
+
 
 class OutgoingMsgSenderSpec
   extends BasicSpec
@@ -51,6 +53,10 @@ class OutgoingMsgSenderSpec
             "senderDID",
             None)
           expectMsgType[ProcessSendMsgToMyDomain]
+          checkOutgoingMsgSenderActor("msgId2", shallExists = true)
+          (1 to 3).foreach { _ =>
+            checkRetryAttempt[ProcessSendMsgToMyDomain]()
+          }
           checkOutgoingMsgSenderActor("msgId2", shallExists = false)
         }
       }
@@ -87,7 +93,7 @@ class OutgoingMsgSenderSpec
 
           checkOutgoingMsgSenderActor("msgId4", shallExists = true)
           (1 to 3).foreach { _ =>
-            checkRetryAttempt()
+            checkRetryAttempt[ProcessSendMsgToTheirDomain]()
           }
           checkOutgoingMsgSenderActor("msgId4", shallExists = false)
         }
@@ -95,9 +101,9 @@ class OutgoingMsgSenderSpec
     }
   }
 
-  def checkRetryAttempt(): Unit = {
+  def checkRetryAttempt[T: ClassTag](): Unit = {
     eventually(timeout(Span(20, Seconds)), interval(Span(200, Millis))) {
-      expectMsgType[ProcessSendMsgToTheirDomain]
+      expectMsgType[T]
     }
   }
 
@@ -130,6 +136,11 @@ class MockAgentActor(appConfig: AppConfig, caller: ActorRef)
 
     case psm: ProcessSendMsgToMyDomain      =>
       caller ! psm    //for assertion purposes
+      if (failNextDeliveryAttempt) {
+        forwardToOutgoingMsgSenderIfExists(psm.msgId, MsgSendingFailed(psm.msgId, psm.msgName))
+      } else {
+        forwardToOutgoingMsgSenderIfExists(psm.msgId, MsgSentSuccessfully(psm.msgId, psm.msgName))
+      }
 
     case pst: ProcessSendMsgToTheirDomain   =>
       caller ! pst    //for assertion purposes

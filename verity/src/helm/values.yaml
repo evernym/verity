@@ -11,7 +11,7 @@ k8sService:
   targetPort: 9000
 # List of sponsors for Verity
 sponsors:
-# List configuration for for TAA.
+# List configuration for TAA.
 taa:
 # Custom and Adhoc Configuration for Verity in HOCON Notation
 # Intended to allow quick injection of config that is

@@ -6,13 +6,13 @@ metadata:
     app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
     app.gitlab.com/env: {{ .Values.env }}
 spec:
+  #strategy:
+  #  type: "Recreate"
   strategy:
-    type: "Recreate"
-  # strategy:
-  #   type: RollingUpdate
-  #   rollingUpdate:
-  #     maxSurge: 1
-  #     maxUnavailable: 0
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: {{ template "verity.fullname" . }}
@@ -77,15 +77,16 @@ spec:
           containerPort: 8558
           protocol: TCP
         {{- if .Values.deployment.vault.enable }}
-        command: ['/bin/sh', '-c']
-        args:
-          - >-
-            . /vault/secrets/credentials;
-            /usr/bin/java
+        command: [
+          '/bin/sh',
+          '-c',
+          . /vault/secrets/credentials;
+          exec /usr/bin/java
             -javaagent:/usr/lib/verity-application/kanela-agent.jar
             -Dlogback.statusListenerClass=ch.qos.logback.core.status.OnConsoleStatusListener
             -cp /etc/verity/verity-application:/etc/verity/verity-application/config-map:/usr/lib/verity-application/verity-assembly.jar
             com.evernym.verity.Main
+        ]
         {{- end }}
         imagePullPolicy: {{ .Values.deployment.imagePullPolicy }}
       volumes:

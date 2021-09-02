@@ -23,9 +23,11 @@ import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP}
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
+import com.evernym.verity.observability.logs.HasLogger
 import com.evernym.verity.observability.metrics.CustomMetrics._
 import com.evernym.verity.observability.metrics.InternalSpan
-import com.evernym.verity.protocol.engine.MsgFamily.{VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP}
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.push_notification._

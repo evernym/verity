@@ -3,6 +3,8 @@ package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_AGENT_CREATED
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_7, MSG_FAMILY_AGENT_PROVISIONING, MSG_TYPE_CREATE_AGENT}

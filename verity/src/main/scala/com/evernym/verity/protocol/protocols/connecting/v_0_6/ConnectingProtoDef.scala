@@ -6,12 +6,15 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, TypedMsgLike}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
-import com.evernym.verity.protocol.engine.{MsgName, _}
+import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.connecting.common._
 import com.evernym.verity.util.Util._
 

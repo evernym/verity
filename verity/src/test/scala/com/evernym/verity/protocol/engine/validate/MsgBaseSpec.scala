@@ -1,10 +1,12 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.validate
 
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkRequired, checkValidDID}
+import com.evernym.verity.protocol.engine.{InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, MsgBase, ProtocolEngineException}
 import com.evernym.verity.testkit.BasicSpec
 
 class MsgBaseSpec extends BasicSpec {
 
-  class MsgBaseTestException(statusMsg: String)
+  class TestException(statusMsg: String)
     extends ProtocolEngineException(statusMsg)
 
   object MsgBaseTest extends MsgBase {
@@ -14,7 +16,7 @@ class MsgBaseSpec extends BasicSpec {
   class MsgBaseTest(pass: Boolean = true) extends MsgBase {
     override def validate(): Unit = {
       if (!pass)
-        throw new MsgBaseTestException("failed")
+        throw new TestException("failed")
     }
   }
 
@@ -25,24 +27,24 @@ class MsgBaseSpec extends BasicSpec {
   val nullMap: Map[String, String] = null
   val nullOther: TestClass = null
 
-  "MsgBase" - {
+  "ValidateHelper" - {
     "checkRequired string" - {
       "allowEmpty = false" - {
         val allowEmpty = false
 
         "valid should pass" in {
-          MsgBaseTest.checkRequired("attrName1", "value", allowEmpty)
+          checkRequired("attrName1", "value", allowEmpty)
         }
 
         "empty string should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", "", allowEmpty)
+            checkRequired("attrName1", "", allowEmpty)
           }
         }
 
         "null string should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", nullString, allowEmpty)
+            checkRequired("attrName1", nullString, allowEmpty)
           }
         }
       }
@@ -51,16 +53,16 @@ class MsgBaseSpec extends BasicSpec {
         val allowEmpty = true
 
         "valid should pass" in {
-          MsgBaseTest.checkRequired("attrName1", "value", allowEmpty)
+          checkRequired("attrName1", "value", allowEmpty)
         }
 
         "empty string should pass" in {
-          MsgBaseTest.checkRequired("attrName1", "value", allowEmpty)
+          checkRequired("attrName1", "value", allowEmpty)
         }
 
         "null string should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", nullString, allowEmpty)
+            checkRequired("attrName1", nullString, allowEmpty)
           }
         }
       }
@@ -71,30 +73,30 @@ class MsgBaseSpec extends BasicSpec {
         val allowEmpty = false
 
         "valid should pass" in {
-          MsgBaseTest.checkRequired("attrName1", List("a", "b"), allowEmpty)
+          checkRequired("attrName1", List("a", "b"), allowEmpty)
         }
 
         "empty list should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", List(), allowEmpty)
+            checkRequired("attrName1", List(), allowEmpty)
           }
         }
 
         "null list should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", nullList, allowEmpty)
+            checkRequired("attrName1", nullList, allowEmpty)
           }
         }
 
         "list with null value should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", List("a", nullString), allowEmpty)
+            checkRequired("attrName1", List("a", nullString), allowEmpty)
           }
         }
 
         "list with empty value should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", List("a", ""), allowEmpty)
+            checkRequired("attrName1", List("a", ""), allowEmpty)
           }
         }
       }
@@ -102,28 +104,28 @@ class MsgBaseSpec extends BasicSpec {
         val allowEmpty = true
 
         "valid should pass" in {
-          MsgBaseTest.checkRequired("attrName1", List("a", "b"), allowEmpty)
+          checkRequired("attrName1", List("a", "b"), allowEmpty)
         }
 
         "empty list should pass" in {
-          MsgBaseTest.checkRequired("attrName1", List(), allowEmpty)
+          checkRequired("attrName1", List(), allowEmpty)
         }
 
         "null list should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", nullList, allowEmpty)
+            checkRequired("attrName1", nullList, allowEmpty)
           }
         }
 
         "list with null value should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", List("a", nullString), allowEmpty)
+            checkRequired("attrName1", List("a", nullString), allowEmpty)
           }
         }
 
         "list with empty value should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", List("a", ""), allowEmpty)
+            checkRequired("attrName1", List("a", ""), allowEmpty)
           }
         }
       }
@@ -134,40 +136,40 @@ class MsgBaseSpec extends BasicSpec {
         val allowEmpty = false
 
         "valid should pass" in {
-          MsgBaseTest.checkRequired("attrName1", Map("a" -> "va", "b" -> "vb"), allowEmpty)
+          checkRequired("attrName1", Map("a" -> "va", "b" -> "vb"), allowEmpty)
         }
 
         "empty map should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", Map(), allowEmpty)
+            checkRequired("attrName1", Map(), allowEmpty)
           }
         }
 
         "null map should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", nullMap, allowEmpty)
+            checkRequired("attrName1", nullMap, allowEmpty)
           }
         }
 
         "map with empty key should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", Map("a" -> "va", "" -> "vb"), allowEmpty)
+            checkRequired("attrName1", Map("a" -> "va", "" -> "vb"), allowEmpty)
           }
         }
 
         "map with null key should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", Map("a" -> "va", nullString -> "vb"), allowEmpty)
+            checkRequired("attrName1", Map("a" -> "va", nullString -> "vb"), allowEmpty)
           }
         }
 
         "map with empty value should pass" in {
-          MsgBaseTest.checkRequired("attrName1", Map("a" -> "va", "b" -> ""), allowEmpty)
+          checkRequired("attrName1", Map("a" -> "va", "b" -> ""), allowEmpty)
         }
 
         "map with null value should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", Map("a" -> "va", "b" -> nullString), allowEmpty)
+            checkRequired("attrName1", Map("a" -> "va", "b" -> nullString), allowEmpty)
           }
         }
       }
@@ -176,38 +178,38 @@ class MsgBaseSpec extends BasicSpec {
         val allowEmpty = true
 
         "valid should pass" in {
-          MsgBaseTest.checkRequired("attrName1", Map("a" -> "va", "b" -> "vb"), allowEmpty)
+          checkRequired("attrName1", Map("a" -> "va", "b" -> "vb"), allowEmpty)
         }
 
         "empty map should pass" in {
-          MsgBaseTest.checkRequired("attrName1", Map(), allowEmpty)
+          checkRequired("attrName1", Map(), allowEmpty)
         }
 
         "null map should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", nullMap, allowEmpty)
+            checkRequired("attrName1", nullMap, allowEmpty)
           }
         }
 
         "map with empty key should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", Map("a" -> "va", "" -> "vb"), allowEmpty)
+            checkRequired("attrName1", Map("a" -> "va", "" -> "vb"), allowEmpty)
           }
         }
 
         "map with null key should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", Map("a" -> "va", nullString -> "vb"), allowEmpty)
+            checkRequired("attrName1", Map("a" -> "va", nullString -> "vb"), allowEmpty)
           }
         }
 
         "map with empty value should pass" in {
-          MsgBaseTest.checkRequired("attrName1", Map("a" -> "va", "b" -> ""), allowEmpty)
+          checkRequired("attrName1", Map("a" -> "va", "b" -> ""), allowEmpty)
         }
 
         "map with null value should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", Map("a" -> "va", "b" -> nullString), allowEmpty)
+            checkRequired("attrName1", Map("a" -> "va", "b" -> nullString), allowEmpty)
           }
         }
       }
@@ -218,12 +220,12 @@ class MsgBaseSpec extends BasicSpec {
         val allowEmpty = false
 
         "if validation of inner object passes should pass" in {
-          MsgBaseTest.checkRequired("attrName1", MsgBaseTest(true), allowEmpty)
+          checkRequired("attrName1", MsgBaseTest(true), allowEmpty)
         }
 
         "if validation of inner object fails should throw its exception" in {
-          assertThrows[MsgBaseTestException] {
-            MsgBaseTest.checkRequired("attrName1", MsgBaseTest(false), allowEmpty)
+          assertThrows[TestException] {
+            checkRequired("attrName1", MsgBaseTest(false), allowEmpty)
           }
         }
       }
@@ -231,12 +233,12 @@ class MsgBaseSpec extends BasicSpec {
         val allowEmpty = true
 
         "if validation of inner object passes should pass" in {
-          MsgBaseTest.checkRequired("attrName1", MsgBaseTest(true), allowEmpty)
+          checkRequired("attrName1", MsgBaseTest(true), allowEmpty)
         }
 
         "if validation of inner object fails should throw its exception" in {
-          assertThrows[MsgBaseTestException] {
-            MsgBaseTest.checkRequired("attrName1", MsgBaseTest(false), allowEmpty)
+          assertThrows[TestException] {
+            checkRequired("attrName1", MsgBaseTest(false), allowEmpty)
           }
         }
       }
@@ -247,12 +249,12 @@ class MsgBaseSpec extends BasicSpec {
         val allowEmpty = false
 
         "valid should pass" in {
-          MsgBaseTest.checkRequired("attrName1", new TestClass, allowEmpty)
+          checkRequired("attrName1", new TestClass, allowEmpty)
         }
 
         "null should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", nullOther, allowEmpty)
+            checkRequired("attrName1", nullOther, allowEmpty)
           }
         }
       }
@@ -261,12 +263,12 @@ class MsgBaseSpec extends BasicSpec {
         val allowEmpty = true
 
         "valid should pass" in {
-          MsgBaseTest.checkRequired("attrName1", new TestClass, allowEmpty)
+          checkRequired("attrName1", new TestClass, allowEmpty)
         }
 
         "null should throw MissingReqFieldProtocolEngineException" in {
           assertThrows[MissingReqFieldProtocolEngineException] {
-            MsgBaseTest.checkRequired("attrName1", nullOther, allowEmpty)
+            checkRequired("attrName1", nullOther, allowEmpty)
           }
         }
       }
@@ -274,12 +276,12 @@ class MsgBaseSpec extends BasicSpec {
 
     "checkValidDID" - {
       "valid should pass" in {
-        MsgBaseTest.checkValidDID("attrName", "V4SGRU86Z58d6TV7PBUe6f")
+        checkValidDID("attrName", "V4SGRU86Z58d6TV7PBUe6f")
       }
 
       "too long string should fail" in {
         assertThrows[InvalidFieldValueProtocolEngineException] {
-          MsgBaseTest.checkValidDID(
+          checkValidDID(
             "attrName",
             "dsafa923ed8nfgsafddsafa923ed8nfgsafddsafa923ed8nfgsafddsafa923ed8nfgsafddsafa923ed8nfgsafddsafa923ed8nfgsafddsafa923ed8nfgsafddsafa923ed8nfgsafd"
           )
@@ -288,13 +290,13 @@ class MsgBaseSpec extends BasicSpec {
 
       "if not base58 should fail" in {
         assertThrows[InvalidFieldValueProtocolEngineException] {
-          MsgBaseTest.checkValidDID("attrName", "V4SGRU86Z58d6_V7PBUe6f")
+          checkValidDID("attrName", "V4SGRU86Z58d6_V7PBUe6f")
         }
       }
 
       "too long decoded base58 should fail" in {
         assertThrows[InvalidFieldValueProtocolEngineException] {
-          MsgBaseTest.checkValidDID("attrName", "V4SGRU86Z58d6TV7PBUe6fA")
+          checkValidDID("attrName", "V4SGRU86Z58d6TV7PBUe6fA")
         }
       }
     }

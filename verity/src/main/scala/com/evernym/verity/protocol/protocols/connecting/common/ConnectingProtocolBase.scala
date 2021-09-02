@@ -19,11 +19,14 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored, WalletCreated}
 import com.evernym.verity.cache.base.Cache
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgName}
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{ConnectingMsgFamily => ConnectingMsgFamily_0_5}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFamily => ConnectingMsgFamily_0_6}
@@ -66,8 +69,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     with ConnReqMsgHandler[S]
     with ConnReqRedirectMsgHandler[S]
     with DEPRECATED_HasWallet
-    with HasExecutionContextProvider
-    with HasLogger { this: Protocol[P,R,ProtoMsg,Any,S,I] =>
+    with HasExecutionContextProvider { this: Protocol[P,R,ProtoMsg,Any,S,I] =>
 
   private implicit def executionContext: ExecutionContext = futureExecutionContext
 
@@ -222,7 +224,7 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   lazy val msgPackFormat: MsgPackFormat =
-    if (definition.msgFamily.protoRef.msgFamilyVersion == MFV_0_5) MPF_MSG_PACK else MPF_INDY_PACK
+    if (definition.protoRef.msgFamilyVersion == MFV_0_5) MPF_MSG_PACK else MPF_INDY_PACK
 
   protected def sendMsgToRemoteCloudAgent(uid: MsgId, msgPackFormat: MsgPackFormat): Unit = {
     val answeredMsg = ctx.getState.connectingMsgState.getMsgReq(uid)

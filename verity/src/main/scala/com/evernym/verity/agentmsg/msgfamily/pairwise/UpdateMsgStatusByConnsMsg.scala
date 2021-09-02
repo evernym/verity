@@ -7,6 +7,7 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgBase
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 import com.evernym.verity.util2.Status
 
 

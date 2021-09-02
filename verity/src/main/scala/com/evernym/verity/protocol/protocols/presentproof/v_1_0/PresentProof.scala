@@ -8,9 +8,10 @@ import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite
 import com.evernym.verity.protocol.engine.asyncapi.wallet.CredForProofResult
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi}
+import com.evernym.verity.protocol.engine.{ProtoRef, Protocol}
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
@@ -327,7 +328,7 @@ class PresentProof(implicit val ctx: PresentProofContext)
   }
 
   def sendInvite(presentationRequest: Msg.RequestPresentation, stateData: StateData): Unit = {
-    buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData) {
+    buildOobInvite(definition.protoRef, presentationRequest, stateData) {
       case Success(invite) =>
         ctx.urlShortening.shorten(invite.inviteURL) {
           case Success(us: UrlShortened) =>

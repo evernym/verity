@@ -8,6 +8,7 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.asyncapi.wallet.VerifiedSigResult
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily._
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.State.{CloudWaitingOnSponsor, EdgeCreationWaitingOnSponsor, FailedAgentCreation, Initialized, Provisioning, RequestedToProvision, Uninitialized, AgentCreated => AgentCreatedState}

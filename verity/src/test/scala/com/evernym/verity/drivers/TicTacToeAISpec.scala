@@ -4,7 +4,7 @@ import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.protocols.tictactoe.Board.{CellValue, O, X}
-import com.evernym.verity.protocol.engine.ProtocolRegistry._
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry._
 import com.evernym.verity.protocol.protocols.tictactoe.{Board, State, TicTacToeProtoDef}
 import com.evernym.verity.util.{TestExecutionContextProvider, intTimes}
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeMsgFamily.{MakeMove, MakeOffer}

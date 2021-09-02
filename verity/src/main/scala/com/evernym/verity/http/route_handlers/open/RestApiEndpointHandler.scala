@@ -15,10 +15,11 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.config.ConfigConstants.REST_API_ENABLED
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgType}
 import com.evernym.verity.http.LoggingRouteUtil.{incomingLogMsg, outgoingLogMsg}
 import com.evernym.verity.http.common.{ActorResponseHandler, StatusDetailResp}
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
-import com.evernym.verity.protocol.engine.{MsgFamily, MsgType, ProtoRef}
+import com.evernym.verity.protocol.engine.ProtoRef
 import com.evernym.verity.util.{ReqMsgContext, RestAuthContext, RestMsgContext}
 import com.evernym.verity.util2.{ActorErrorResp, Status}
 import org.json.JSONObject
@@ -212,7 +213,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   protected def checkMsgFamily(msgType: MsgType, protoRef: ProtoRef): Unit = {
-    if (msgType.protoRef != protoRef)
+    if (protoRef.isInFamily(msgType))
       throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option("Invalid protocol family and/or version"))
   }
 

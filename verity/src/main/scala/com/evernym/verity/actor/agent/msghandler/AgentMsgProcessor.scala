@@ -30,12 +30,15 @@ import com.evernym.verity.config.ConfigConstants.MSG_LIMITS
 import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.did.didcomm.v1.Thread
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId, MsgType, TypedMsgLike}
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
-import com.evernym.verity.observability.logs.LoggingUtil
+import com.evernym.verity.observability.logs.{HasLogger, LoggingUtil}
 import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, InitProtocolReq, MsgEnvelope, ServiceDecorator}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.registry.{PinstIdPair, ProtocolRegistry, UnsupportedMessageType}
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.AgentCreated
 import com.evernym.verity.protocol.protocols.connecting.common.GetInviteDetail
@@ -872,7 +875,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   var msgRespContext: Option[MsgRespContext] = None
 
   override def getPinstId(protoDef: ProtoDef): Option[PinstId] =
-    param.protoInstances.flatMap(_.instances.get(protoDef.msgFamily.protoRef.toString))
+    param.protoInstances.flatMap(_.instances.get(protoDef.protoRef.toString))
   override def contextualId: Option[String] = Option(param.thisAgentAuthKey.keyId)
   override def domainId: DomainId = param.domainId
 

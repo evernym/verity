@@ -3,7 +3,9 @@ package com.evernym.verity.agentmsg.msgpacker
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.did.VerKeyStr
-import com.evernym.verity.protocol.engine.{MsgBase, MsgFamilyName, MsgFamilyVersion, MsgName, MsgType}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyVersion, MsgName}
+import com.evernym.verity.did.didcomm.v1.messages.MsgType
+import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.protocols.connecting.common.ProtoMsg
 

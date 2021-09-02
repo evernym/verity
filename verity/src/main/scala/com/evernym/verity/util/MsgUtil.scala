@@ -1,8 +1,9 @@
 package com.evernym.verity.util
 
-import java.util.UUID
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 
-import com.evernym.verity.protocol.engine.{MsgId, ThreadId}
+import java.util.UUID
+import com.evernym.verity.protocol.engine.ThreadId
 import com.evernym.verity.protocol.{Control, CtlEnvelope}
 
 object MsgUtil {

@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.protocols.issuersetup.v_0_6
 import java.util.UUID
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.State.StateData

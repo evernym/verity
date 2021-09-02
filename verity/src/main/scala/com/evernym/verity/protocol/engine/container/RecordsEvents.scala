@@ -1,4 +1,6 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.container
+
+import com.evernym.verity.protocol.engine.PinstId
 
 /**
   * Services that records state transitioning events

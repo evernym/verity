@@ -11,8 +11,9 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.SendSignalMsg
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.{Driver, PinstId, ProtoRef, ProtocolRegistry, SignalEnvelope}
+import com.evernym.verity.protocol.engine.{Driver, PinstId, ProtoRef, SignalEnvelope}
 import com.evernym.verity.cache.base.Cache
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry
 
 import scala.concurrent.ExecutionContext
 

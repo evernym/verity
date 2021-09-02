@@ -7,7 +7,8 @@ import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.agent.msghandler.{SendMsgToMyDomain, SendMsgToTheirDomain}
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.protocol.engine.{MsgId, MsgName}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 
 import scala.concurrent.duration._
 

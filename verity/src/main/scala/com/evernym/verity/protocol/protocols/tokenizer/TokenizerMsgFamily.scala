@@ -1,6 +1,8 @@
 package com.evernym.verity.protocol.protocols.tokenizer
 
 import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Constants.MFV_0_1
 import com.evernym.verity.protocol.engine._

@@ -1,10 +1,12 @@
 package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AnonCreds, LedgerReadAccess, LedgerWriteAccess}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.State.Undefined
 
 object WriteSchemaDefinition extends WriteSchemaDefTrait

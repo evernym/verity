@@ -6,7 +6,7 @@ import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces.UndefinedIssueCr
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider.Interaction
 import com.evernym.sdk.vcx.credential.CredentialApi
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.protocol.engine.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredMsgFamily
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.utils.Context

@@ -61,10 +61,13 @@ import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.config.ConfigUtil
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.msgoutbox
 import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
 import com.evernym.verity.observability.metrics.InternalSpan
+import com.evernym.verity.protocol.engine.registry.PinstIdPair
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
 import com.evernym.verity.util2.{Exceptions, Status}
 import org.json.JSONObject

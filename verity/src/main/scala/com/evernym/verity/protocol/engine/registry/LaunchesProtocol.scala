@@ -1,6 +1,8 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.registry
 
-import com.evernym.verity.protocol.engine.ProtocolRegistry.Entry
+import com.evernym.verity.did.didcomm.v1.messages.{MsgType, TypedMsgLike}
+import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry.Entry
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 
 /**
@@ -62,13 +64,13 @@ trait LaunchesProtocol {
   protected def pinstIdForMsg(msg: TypedMsgLike, relationshipId: Option[RelationshipId],
                                  threadId: ThreadId): Option[PinstIdPair] = {
     protocolRegistry.entryForMsg(msg)
-      .map(e => PinstIdPair(pinstIdForProtoDef(msg, relationshipId, threadId, e.protoDef, e.pinstIdResol), e.protoDef))
+      .map(e => registry.PinstIdPair(pinstIdForProtoDef(msg, relationshipId, threadId, e.protoDef, e.pinstIdResol), e.protoDef))
   }
 
   protected def pinstIdForMsg_!(tms: TypedMsgLike, relationshipId: Option[RelationshipId],
                                    threadId: ThreadId): PinstIdPair = {
     val entry = protocolRegistry.entryForMsg_!(tms)
-    PinstIdPair(pinstIdForProtoDef(tms, relationshipId, threadId, entry.protoDef, entry.pinstIdResol), entry.protoDef)
+    registry.PinstIdPair(pinstIdForProtoDef(tms, relationshipId, threadId, entry.protoDef, entry.pinstIdResol), entry.protoDef)
   }
 
   private def typedMsgPair(m: Any): TypedMsgPair = {
@@ -81,13 +83,13 @@ trait LaunchesProtocol {
         //TODO: this is for those protocols whose msg family is not fully defined
         TypedMsg(m, MsgType(msgFamily.qualifier, msgFamily.name, msgFamily.version, m.getClass.getSimpleName))
     }
-    TypedMsgPair(typedMsg, entry)
+    registry.TypedMsgPair(typedMsg, entry)
   }
 
   protected def pinstIdForUntypedMsg_![A](m: A, relationshipId: Option[RelationshipId],
                                    threadId: ThreadId): PinstIdPair = {
     val tmsgPair = typedMsgPair(m)
-    PinstIdPair(pinstIdForProtoDef(tmsgPair.typedMsg, relationshipId, threadId,
+    registry.PinstIdPair(pinstIdForProtoDef(tmsgPair.typedMsg, relationshipId, threadId,
       tmsgPair.entry.protoDef, tmsgPair.entry.pinstIdResol), tmsgPair.entry.protoDef)
   }
 

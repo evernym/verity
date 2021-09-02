@@ -2,10 +2,10 @@ package com.evernym.verity.actor.agent
 
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.msgsender.{MsgDeliveryResult, SendMsgParam}
-import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_UID
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
+import com.evernym.verity.observability.logs.HasLogger
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.{HasLogger, MsgId}
 import com.evernym.verity.util2.Status.{MSG_DELIVERY_STATUS_FAILED, MSG_DELIVERY_STATUS_SENT, UNHANDLED}
 
 trait MsgDeliveryResultHandler {

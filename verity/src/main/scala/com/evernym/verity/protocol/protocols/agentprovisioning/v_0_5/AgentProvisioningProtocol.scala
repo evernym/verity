@@ -8,6 +8,7 @@ import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.wallet._
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AskUserAgentCreator, HasAgentProvWallet}
@@ -28,7 +29,6 @@ trait AgentProvisioningEvt
 
 class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String])
     extends Protocol[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String](AgentProvisioningProtoDef)
-      with HasLogger
       with HasAgentProvWallet {
 
   val logger: Logger = ctx.logger

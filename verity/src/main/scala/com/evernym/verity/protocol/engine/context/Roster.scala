@@ -1,4 +1,6 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.context
+
+import com.evernym.verity.protocol.engine.{ParticipantId, ParticipantIndex}
 
 trait RosterLike[R] {
   /**

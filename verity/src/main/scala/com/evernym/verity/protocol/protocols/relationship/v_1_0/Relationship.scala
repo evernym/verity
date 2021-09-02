@@ -2,14 +2,13 @@ package com.evernym.verity.protocol.protocols.relationship.v_1_0
 
 import akka.http.scaladsl.model.Uri
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
-import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.QUALIFIER_FORMAT_HTTP
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.MsgFamily.QUALIFIER_FORMAT_HTTP
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.util.?=>
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
+import com.evernym.verity.protocol.engine.util.{?=>, DIDDoc, ServiceFormatter}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Create
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Msg.{Invitation, OutOfBandInvitation}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.ProblemReportCodes._

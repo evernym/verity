@@ -9,10 +9,11 @@ import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.evernym.verity.actor.{AgencyPublicDid, ForIdentifier, agentRegion}
 import com.evernym.verity.protocol.container.actor.ActorProtocol
-import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, PinstIdResolution}
+import com.evernym.verity.protocol.engine.DEFAULT_THREAD_ID
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5.AgentProvisioningProtoDef
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.protocol.engine.registry.PinstIdResolution
 
 import scala.concurrent.ExecutionContext
 

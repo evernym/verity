@@ -1,8 +1,11 @@
 package com.evernym.verity.protocol.protocols.connections.v_1_0
 
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.util.DIDDocFormatted
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.SigBlockCommunity
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.Init
 import com.evernym.verity.util2.ServiceEndpoint

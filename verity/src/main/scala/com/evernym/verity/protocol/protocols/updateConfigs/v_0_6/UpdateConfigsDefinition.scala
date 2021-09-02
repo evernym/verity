@@ -1,7 +1,9 @@
 package com.evernym.verity.protocol.protocols.updateConfigs.v_0_6
 
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, ProtoReceive, ProtocolContextApi, ProtocolDefinition, Scope}
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
+import com.evernym.verity.protocol.engine.{ParameterName, Parameters, ProtoReceive, ProtocolDefinition, Scope}
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.InitMsg
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.State.Initial
 

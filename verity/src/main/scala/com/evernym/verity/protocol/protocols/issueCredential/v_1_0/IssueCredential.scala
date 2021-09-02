@@ -7,12 +7,14 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.did.didcomm.v1.conventions.CredValueEncoderV1_0
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor._
 import com.evernym.verity.did.didcomm.v1.decorators.{AttachmentDescriptor, Base64, PleaseAck}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.ledger.GetCredDefResp
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite
 import com.evernym.verity.protocol.engine.asyncapi.wallet.{CredCreatedResult, CredOfferCreatedResult, CredReqCreatedResult}
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentId
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
@@ -691,7 +693,7 @@ trait IssueCredentialHelpers
         )
 
         val invite = InviteUtil.buildInviteWithThreadedId(
-          definition.msgFamily.protoRef,
+          definition.protoRef,
           ctx.getRoster.selfId_!,
           ctx.`threadId_!`,
           s.agentName,

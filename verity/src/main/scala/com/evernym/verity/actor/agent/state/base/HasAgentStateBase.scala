@@ -28,7 +28,7 @@ trait AgentStateImplBase extends AgentStateInterface {
 
   def protoInstances: Option[ProtocolRunningInstances]
   def getPinstId(protoDef: ProtoDef): Option[PinstId] =
-    protoInstances.flatMap(_.instances.get(protoDef.msgFamily.protoRef.toString))
+    protoInstances.flatMap(_.instances.get(protoDef.protoRef.toString))
 
   def relWithEndpointRemoved(endpointId: EndpointId): Option[Relationship] = {
     relationship.map(_.copy(myDidDoc = relationship.flatMap(_.myDidDoc.map(_.updatedWithRemovedEndpointById(endpointId)))))

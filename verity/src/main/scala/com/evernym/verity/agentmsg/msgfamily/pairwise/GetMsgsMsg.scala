@@ -5,9 +5,12 @@ import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_GET_MSGS, _}
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
 import com.evernym.verity.protocol.HasMsgType
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{MsgBase, MsgFamily, MsgName}
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkOptionalNotEmpty
+import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{ConnectingMsgFamily => ConnectingMsgFamily_0_5}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFamily => ConnectingMsgFamily_0_6}
 

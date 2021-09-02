@@ -3,8 +3,8 @@ package com.evernym.verity.protocol.protocols.agentprovisioning.common
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.did.DidPair
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.ProtocolContextApi
 import com.evernym.verity.protocol.engine.asyncapi.wallet.DeprecatedWalletSetupResult
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 
 import scala.util.Try
 

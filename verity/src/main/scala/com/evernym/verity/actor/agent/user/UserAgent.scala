@@ -40,6 +40,7 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager

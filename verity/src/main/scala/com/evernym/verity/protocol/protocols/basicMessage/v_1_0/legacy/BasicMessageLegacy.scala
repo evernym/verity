@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.basicMessage.v_1_0.legacy
 
-import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi}
+import com.evernym.verity.protocol.engine.Protocol
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessage.attachmentObjectsToAttachments
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.{BasicMessage, Event, Msg, Role, State}
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n}

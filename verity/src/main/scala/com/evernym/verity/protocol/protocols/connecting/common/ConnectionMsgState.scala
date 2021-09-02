@@ -6,7 +6,9 @@ import com.evernym.verity.actor.agent.{AttrName, AttrValue, Msg, MsgDeliveryDeta
 import com.evernym.verity.actor._
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.did.didcomm.v1.Thread
-import com.evernym.verity.protocol.engine.{MsgId, MsgName, RefMsgId}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
+import com.evernym.verity.protocol.engine.RefMsgId
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status._

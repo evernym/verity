@@ -1,20 +1,22 @@
 package com.evernym.verity.protocol.protocols.connecting.v_0_6
 
-import com.evernym.verity.actor.agent.AgentDetail
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
+import com.evernym.verity.actor.agent.{AgentDetail, MsgSendingFailed, MsgSentSuccessfully}
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.actor.{ActorMessage, AgentDetailSet, KeyCreated}
-import com.evernym.verity.actor.agent.{AgentDetail, MsgSendingFailed, MsgSentSuccessfully}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.connecting.common._

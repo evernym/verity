@@ -1,12 +1,15 @@
 package com.evernym.verity.protocol.protocols.deaddrop
 
-import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.protocol._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_DEAD_DROP_STORE_DATA
+import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.protocol._
+import com.evernym.verity.protocol.engine.Scope
 import com.evernym.verity.protocol.engine.Scope.ProtocolScope
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
 import com.evernym.verity.util2.{Base64Encoded, Signature}

@@ -8,10 +8,12 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.Constants.YES
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.did.didcomm.v1.{Thread, ThreadBase}
 import com.evernym.verity.observability.metrics.CustomMetrics._
 import com.evernym.verity.observability.metrics.{MetricsUnit, MetricsWriter}
-import com.evernym.verity.protocol.engine.{MsgId, MsgName, RefMsgId}
+import com.evernym.verity.protocol.engine.RefMsgId
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException}
 import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, MSG_DELIVERY_STATUS_SENT, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED, MSG_STATUS_REVIEWED, MSG_STATUS_SENT}
 import org.slf4j.LoggerFactory

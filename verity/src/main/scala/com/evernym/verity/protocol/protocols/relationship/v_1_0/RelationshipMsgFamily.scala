@@ -1,11 +1,14 @@
 package com.evernym.verity.protocol.protocols.relationship.v_1_0
 
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.did.didcomm.v1.messages.ProblemDescription
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, ProblemDescription}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.InviteShortened
+import com.evernym.verity.protocol.engine.util.ServiceFormatted
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkRequired, throwInvalidFieldProtocolEngineException}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandMsgFamily
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Init
 import com.evernym.verity.util.Util.isPhoneNumberInValidFormat

@@ -12,7 +12,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.protocol.engine.{MsgFamily, _}
+import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.AgentCreated
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg.ConnResponse
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
@@ -27,11 +27,13 @@ import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId}
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.LedgerTxnExecutor
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.observability.metrics.NoOpMetricsWriter
+import com.evernym.verity.protocol.engine.util.DIDDoc
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import com.typesafe.scalalogging.Logger

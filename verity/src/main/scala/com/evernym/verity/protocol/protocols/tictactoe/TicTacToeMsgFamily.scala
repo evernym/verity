@@ -1,14 +1,15 @@
 package com.evernym.verity.protocol.protocols.tictactoe
 
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.Constants.MFV_0_5
-import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.{MsgBase, Parameters, ParticipantIndex}
 import com.evernym.verity.protocol.protocols.tictactoe.Board.{CellValue, O, X, empty}
 
 object TicTacToeMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.EVERNYM_QUALIFIER
   val name = "TicTacToe"
-  val version: MsgFamilyVersion = MFV_0_5
+  val version: MsgFamilyVersion = "0.5"
 
   case class Offer() extends MsgBase
   case class OfferAccept() extends MsgBase

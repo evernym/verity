@@ -6,9 +6,9 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgFamilyVersion
 import com.evernym.verity.vault._
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgFamilyVersion
 import com.evernym.verity.testkit.util.{Connect_MFV_0_5, Connect_MFV_0_6}
 
 import scala.concurrent.ExecutionContext

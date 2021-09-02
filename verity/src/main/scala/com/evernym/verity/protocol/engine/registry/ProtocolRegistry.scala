@@ -1,8 +1,10 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.registry
 
 import com.evernym.verity.protocol.CtlEnvelope
-import com.evernym.verity.protocol.engine.PinstIdResolution.DEPRECATED_V0_1
-import com.evernym.verity.protocol.engine.ProtocolRegistry.Entry
+import PinstIdResolution.DEPRECATED_V0_1
+import com.evernym.verity.did.didcomm.v1.messages.{MsgType, TypedMsgLike}
+import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry.Entry
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.util.?=>
 
@@ -32,11 +34,11 @@ case class ProtocolRegistry[-A](entries: Entry[A]*) {
   // https://github.com/hyperledger/aries-rfcs/tree/master/concepts/0003-protocols#controllers?
   // TODO: update to use community terminology.
   def generateDriver(definition: ProtocolDefinition[_,_,_,_,_,_], parameter: A, executionContext: ExecutionContext): Option[Driver] = {
-    find_!(definition.msgFamily.protoRef).driverGen map { _(parameter, executionContext) }
+    find_!(definition.protoRef).driverGen map { _(parameter, executionContext) }
   }
 
   def getNativeClassType(amt: MsgType): Class[_] = {
-    find_!(amt.protoRef).protoDef.msgFamily.lookupClassOrElse(amt.msgName, {
+    find_!(ProtoRef(amt.familyName, amt.familyVersion)).protoDef.msgFamily.lookupClassOrElse(amt.msgName, {
       throw new UnsupportedMessageType(amt.toString, registeredProtocols.keys)
     })
   }
@@ -48,7 +50,7 @@ case class ProtocolRegistry[-A](entries: Entry[A]*) {
   }
 
   private val registeredProtocols: Map[ProtoRef, Entry[A]] =
-    entries.map(e => e.protoDef.msgFamily.protoRef -> e).toMap
+    entries.map(e => e.protoDef.protoRef -> e).toMap
 
   def supportedMsg_DEPRECATED: Any ?=> Entry[A] = entries.map(e => e.protoDef.supportedMsgs.andThen(_ => e)).reduce(_ orElse _)
   lazy val inputs: Map[MsgType, Entry[A]] = entries.flatMap { e =>

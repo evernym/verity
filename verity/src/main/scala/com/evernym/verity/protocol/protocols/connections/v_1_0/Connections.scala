@@ -7,8 +7,8 @@ import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
-import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi, _}
+import com.evernym.verity.protocol.engine.util.{?=>, DIDDoc}
+import com.evernym.verity.protocol.engine.{Protocol, _}
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.SigBlockCommunity
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Connections.InvalidSigException
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.TheirDidDocUpdated
@@ -16,6 +16,7 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.Role.{Invitee, In
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.SetupTheirDidDoc
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.util2.UrlParam
 
 import scala.util.{Failure, Success, Try}

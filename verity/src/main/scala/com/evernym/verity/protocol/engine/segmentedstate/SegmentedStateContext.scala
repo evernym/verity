@@ -4,6 +4,7 @@ import com.evernym.verity.protocol.{SegmentRemoved, SegmentStored}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
+import com.evernym.verity.protocol.engine.context.ProtocolContext
 import com.evernym.verity.util.ParticipantUtil
 import com.evernym.verity.util2.Exceptions
 
@@ -19,7 +20,7 @@ trait SegmentedStateContext[P,R,M,E,S,I]
 
   def getDomainId: DomainId = getBackState.domainId getOrElse ParticipantUtil.DID(getRoster.selfId_!)
 
-  def getProtoRef: ProtoRef = definition.msgFamily.protoRef
+  def getProtoRef: ProtoRef = definition.protoRef
 
   /**
    * This cache should only live in memory. No long-term persistence because of sensitive Data Retention Policy data.

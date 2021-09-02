@@ -8,8 +8,8 @@ import com.evernym.verity.actor.cluster_singleton.watcher.CheckWatchedItem
 import com.evernym.verity.actor.itemmanager.ItemManagerEntityHelper
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.config.ConfigConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
-import com.evernym.verity.protocol.engine.MsgId
 
 import scala.concurrent.Future
 

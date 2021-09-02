@@ -4,6 +4,8 @@ import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.wallet.VerKeyResult
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
+import com.evernym.verity.protocol.engine.util.{DIDDoc, ServiceFormatted, ServiceFormatter}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvitation
 import com.evernym.verity.util.Base58Util
 

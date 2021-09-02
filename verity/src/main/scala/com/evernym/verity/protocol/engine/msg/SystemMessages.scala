@@ -1,7 +1,8 @@
 package com.evernym.verity.protocol.engine.msg
 
 import com.evernym.verity.actor.agent.SponsorRel
-import com.evernym.verity.protocol.engine.{DomainId, PackagingContext, StorageId}
+import com.evernym.verity.protocol.engine.context.PackagingContext
+import com.evernym.verity.protocol.engine.{DomainId, StorageId}
 import com.evernym.verity.protocol.{InternalSystemMsg, SystemMsg}
 
 /**

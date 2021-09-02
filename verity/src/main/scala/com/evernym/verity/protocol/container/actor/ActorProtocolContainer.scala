@@ -28,6 +28,8 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.typed.base.UserGuardian.Commands.SendMsgToOutbox
 import com.evernym.verity.agentmsg.AgentMsgBuilder.createAgentMsg
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
+import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType, TypedMsgLike}
+import com.evernym.verity.observability.logs.HasLogger
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentStoreAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.urlshortener.UrlShorteningAPI
@@ -37,6 +39,7 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessController
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessController
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
+import com.evernym.verity.protocol.engine.container.{ProtocolContainer, RecordsEvents}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 
@@ -456,7 +459,7 @@ class ActorProtocolContainer[
     if (isVAS && ! pom.msg.isInstanceOf[AgentProvisioningMsgFamily.AgentCreated]) {
       val agentMsg = createAgentMsg(pom.msg, definition, pom.threadContextDetail)
       val retPolicy = ConfigUtil.getOutboxStateRetentionPolicyForInterDomain(
-        appConfig, domainId, definition.msgFamily.protoRef.toString)
+        appConfig, domainId, definition.protoRef.toString)
       //TODO: will below approach become choke point?
       userGuardian ! SendMsgToOutbox(
         pom.from,

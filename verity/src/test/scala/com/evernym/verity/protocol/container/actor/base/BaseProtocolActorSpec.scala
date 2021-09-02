@@ -8,7 +8,8 @@ import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.{ForIdentifier, ShardUtil}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.{PinstIdPair, ThreadId}
+import com.evernym.verity.protocol.engine.ThreadId
+import com.evernym.verity.protocol.engine.registry.PinstIdPair
 import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.BeforeAndAfterAll

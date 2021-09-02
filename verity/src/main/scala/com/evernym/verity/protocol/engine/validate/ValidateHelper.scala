@@ -1,21 +1,11 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.validate
 
 import com.evernym.verity.did.validateDID
+import com.evernym.verity.protocol.engine.{EmptyValueForOptionalFieldProtocolEngineException, InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, MsgBase}
 
 import scala.util.Try
 
-class EmptyValueForOptionalFieldProtocolEngineException(statusMsg: String)
-  extends ProtocolEngineException(statusMsg)
-
-class MissingReqFieldProtocolEngineException(statusMsg: String)
-  extends ProtocolEngineException(statusMsg)
-
-class InvalidFieldValueProtocolEngineException(statusMsg: String)
-  extends ProtocolEngineException(statusMsg)
-
-trait MsgBase {
-
-  def validate(): Unit = {}
+object ValidateHelper {
 
   def throwMissingReqFieldException(fieldName: String): Unit = {
     throw new MissingReqFieldProtocolEngineException(s"required attribute not found (missing/empty/null): '$fieldName'")
@@ -81,4 +71,5 @@ trait MsgBase {
         throwInvalidFieldProtocolEngineException(fieldName, Some("Invalid DID"))
     }
   }
+
 }

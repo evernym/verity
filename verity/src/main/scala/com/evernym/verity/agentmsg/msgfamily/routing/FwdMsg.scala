@@ -4,6 +4,7 @@ import com.evernym.verity.util2.Exceptions.MissingReqFieldException
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 import com.evernym.verity.protocol.engine.{MissingReqFieldProtocolEngineException, MsgBase}
 import org.json.JSONObject
 

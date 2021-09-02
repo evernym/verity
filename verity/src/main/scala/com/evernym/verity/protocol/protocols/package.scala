@@ -2,9 +2,10 @@ package com.evernym.verity.protocol
 
 import com.evernym.verity.drivers.{AgentProvisioningDriver, TicTacToeAI, WalletBackupDriver, _}
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
-import com.evernym.verity.protocol.engine.PinstIdResolution.{DEPRECATED_V0_1, V0_2}
-import com.evernym.verity.protocol.engine.{ProtoDef, ProtoRef, ProtocolRegistry}
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5.{AgentProvisioningProtoDef => AgentProvisioningProtoDef_v_0_5}
+import com.evernym.verity.protocol.engine.registry.PinstIdResolution.{DEPRECATED_V0_1, V0_2}
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry
+import com.evernym.verity.protocol.engine.{ProtoDef, ProtoRef}
+import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_5.{AgentProvisioningMsgFamily, AgentProvisioningProtoDef => AgentProvisioningProtoDef_v_0_5}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_6.{AgentProvisioningProtoDef => AgentProvisioningProtoDef_v_0_6}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.{AgentProvisioningDefinition => AgentProvisioningProtoDef_v_0_7}
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.CommittedAnswerDefinition
@@ -73,7 +74,7 @@ package object protocols {
   def protoDef(protoRef: ProtoRef): ProtoDef = {
     protocolRegistry
       .entries
-      .find(_.protoDef.msgFamily.protoRef == protoRef)
+      .find(_.protoDef.protoRef == protoRef)
       .getOrElse { throw new NoSuchElementException("protocol def not found for proto ref: " + protoRef) }
       .protoDef
   }

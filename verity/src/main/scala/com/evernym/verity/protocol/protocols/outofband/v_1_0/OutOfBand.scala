@@ -4,6 +4,7 @@ import akka.http.scaladsl.model.Uri
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Ctl.Reuse
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil.{isThreadedInviteId, parseThreadedInviteId}

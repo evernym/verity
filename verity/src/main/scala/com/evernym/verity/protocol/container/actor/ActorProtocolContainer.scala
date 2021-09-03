@@ -5,7 +5,7 @@ import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.RelationshipLike
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
-import com.evernym.verity.actor.agent.{HasWallet, SponsorRel, _}
+import com.evernym.verity.actor.agent.{AgentActorContext, AgentIdentity, HasWallet, ProtocolEngineExceptionHandler, SponsorRel, ThreadContextDetail}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
@@ -96,7 +96,6 @@ class ActorProtocolContainer[
   lazy val pinstId: PinstId = entityId
   var senderActorRef: Option[ActorRef] = None
   var agentWalletId: Option[String] = None
-  def sponsorRel: Option[SponsorRel] = backState.sponsorRel
 
   override def domainId: DomainId = backState.domainId.getOrElse(throw new RuntimeException("DomainId not available"))
 
@@ -209,7 +208,7 @@ class ActorProtocolContainer[
   }
 
   def handleSponsorRel(s: SponsorRel): Unit = {
-    if (!s.equals(SponsorRel.empty)) submit(SetSponsorRel(s))
+    if (!s.equals(SponsorRel.empty)) submit(SetSponsorRel(s.sponsorId, s.sponseeId))
     val tags = ConfigUtil.getSponsorRelTag(appConfig, s) ++ Map("proto-ref" -> getProtoRef.toString)
     metricsWriter.gaugeIncrement(AS_NEW_PROTOCOL_COUNT, tags = tags)
   }

@@ -4,7 +4,6 @@ import com.evernym.verity.agentmsg.msgcodec.{InvalidMsgQualifierException, MsgTy
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.TypedMsg
-//import com.evernym.verity.protocol.engine._
 import com.typesafe.scalalogging.Logger
 
 import scala.util.matching.Regex

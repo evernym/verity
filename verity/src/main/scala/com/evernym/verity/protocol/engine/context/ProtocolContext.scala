@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine.context
 
-import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat, SponsorRel, ThreadContextDetail, TypeFormat}
+import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat, ThreadContextDetail, TypeFormat}
+import com.evernym.verity.actor.agent.{SponsorRel => SponsorRelEvt}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.getNewMsgUniqueId
@@ -287,8 +288,8 @@ trait ProtocolContext[P,R,M,E,S,I]
       val newRoster = s.roster.changeSelfId(self).changeOtherId(other)
       s.copy(roster = newRoster)
 
-    case s: SponsorRel => BackState()
-      shadowBackState.getOrElse(BackState()).copy(sponsorRel = Option(s))
+    case s: SponsorRelEvt => BackState()
+      shadowBackState.getOrElse(BackState()).copy(sponsorRel = Option(SponsorRel(s.sponsorId, s.sponseeId)))
 
     case p: DataRetentionPolicySet => BackState()
       val retentionPolicy = ConfigUtil.getPolicyFromConfigStr(p.configStr)
@@ -341,8 +342,8 @@ trait ProtocolContext[P,R,M,E,S,I]
         if (backState.domainId.isEmpty) apply(DomainIdSet(id))
       case SetStorageId(id)             =>
         if (backState.storageId.isEmpty) apply(StorageIdSet(id))
-      case SetSponsorRel(s)             =>
-        if (backState.sponsorRel.isEmpty) apply(s)
+      case SetSponsorRel(sponsorId, sponseeId)             =>
+        if (backState.sponsorRel.isEmpty) apply(SponsorRelEvt(sponsorId, sponseeId))
       case SetDataRetentionPolicy(p)    =>
         if (backState.dataRetentionPolicy.isEmpty) p.map(x => apply(DataRetentionPolicySet(x)))
 

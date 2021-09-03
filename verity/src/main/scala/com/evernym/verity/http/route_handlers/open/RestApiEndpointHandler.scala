@@ -213,7 +213,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   protected def checkMsgFamily(msgType: MsgType, protoRef: ProtoRef): Unit = {
-    if (protoRef.isInFamily(msgType))
+    if (!protoRef.isInFamily(msgType))
       throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option("Invalid protocol family and/or version"))
   }
 

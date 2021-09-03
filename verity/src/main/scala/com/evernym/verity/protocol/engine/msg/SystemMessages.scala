@@ -1,6 +1,5 @@
 package com.evernym.verity.protocol.engine.msg
 
-import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.protocol.engine.context.PackagingContext
 import com.evernym.verity.protocol.engine.{DomainId, StorageId}
 import com.evernym.verity.protocol.{InternalSystemMsg, SystemMsg}
@@ -17,7 +16,7 @@ case class SetDomainId(id: DomainId) extends InternalSystemMsg
  *
  * @param sponsorRel
  */
-case class SetSponsorRel(sponsorRel: SponsorRel) extends InternalSystemMsg
+case class SetSponsorRel(sponsorId: String, sponseeId: String) extends InternalSystemMsg
 
 /**
  * The sponsorRel given to the protocol

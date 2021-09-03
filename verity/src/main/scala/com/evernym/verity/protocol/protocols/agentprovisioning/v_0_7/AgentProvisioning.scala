@@ -1,8 +1,7 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
-import com.evernym.verity.actor.agent.SponsorRel
 import com.evernym.verity.did.VerKeyStr
-import com.evernym.verity.protocol.Control
+import com.evernym.verity.protocol.{Control, SponsorRel}
 import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment

@@ -2,7 +2,6 @@ package com.evernym.verity.msgoutbox.dispatchers.webhook.oauth
 
 import akka.actor.typed.ActorRef
 import com.evernym.verity.actor.typed.BehaviourSpecBase
-import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.config.ConfigConstants.OUTBOX_OAUTH_RECEIVE_TIMEOUT
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.msgoutbox.base.MockOAuthAccessTokenRefresher
@@ -13,7 +12,7 @@ import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 
-import scala.concurrent.duration.{Duration, FiniteDuration, SECONDS}
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
 
 
 class OAuthAccessTokenHolderSpec

@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.box
 
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport}

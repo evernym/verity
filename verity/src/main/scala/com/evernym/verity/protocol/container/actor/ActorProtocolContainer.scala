@@ -5,9 +5,9 @@ import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.RelationshipLike
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
-import com.evernym.verity.actor.agent.{HasWallet, SponsorRel, _}
+import com.evernym.verity.actor.agent.{AgentActorContext, AgentIdentity, HasWallet, ProtocolEngineExceptionHandler, SponsorRel, ThreadContextDetail}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.{ActorMessage, ParameterStored}
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
@@ -16,7 +16,7 @@ import com.evernym.verity.observability.metrics.CustomMetrics.AS_NEW_PROTOCOL_CO
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.msg.{SetDataRetentionPolicy, SetDomainId, SetSponsorRel, SetStorageId}
 import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
-import com.evernym.verity.protocol.{Control, CtlEnvelope, PairwiseRelIdsChanged}
+import com.evernym.verity.protocol.{Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
 import com.evernym.verity.util2.{ActorResponse, Exceptions, ServiceEndpoint}
@@ -28,6 +28,8 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.typed.base.UserGuardian.Commands.SendMsgToOutbox
 import com.evernym.verity.agentmsg.AgentMsgBuilder.createAgentMsg
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
+import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType, TypedMsgLike}
+import com.evernym.verity.observability.logs.HasLogger
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentStoreAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.urlshortener.UrlShorteningAPI
@@ -37,6 +39,8 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessController
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessController
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
+import com.evernym.verity.protocol.engine.container.{ProtocolContainer, RecordsEvents}
+import com.evernym.verity.protocol.engine.events.PairwiseRelIdsChanged
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 
@@ -92,7 +96,6 @@ class ActorProtocolContainer[
   lazy val pinstId: PinstId = entityId
   var senderActorRef: Option[ActorRef] = None
   var agentWalletId: Option[String] = None
-  def sponsorRel: Option[SponsorRel] = backState.sponsorRel
 
   override def domainId: DomainId = backState.domainId.getOrElse(throw new RuntimeException("DomainId not available"))
 
@@ -205,7 +208,7 @@ class ActorProtocolContainer[
   }
 
   def handleSponsorRel(s: SponsorRel): Unit = {
-    if (!s.equals(SponsorRel.empty)) submit(SetSponsorRel(s))
+    if (!s.equals(SponsorRel.empty)) submit(SetSponsorRel(s.sponsorId, s.sponseeId))
     val tags = ConfigUtil.getSponsorRelTag(appConfig, s) ++ Map("proto-ref" -> getProtoRef.toString)
     metricsWriter.gaugeIncrement(AS_NEW_PROTOCOL_COUNT, tags = tags)
   }
@@ -456,7 +459,7 @@ class ActorProtocolContainer[
     if (isVAS && ! pom.msg.isInstanceOf[AgentProvisioningMsgFamily.AgentCreated]) {
       val agentMsg = createAgentMsg(pom.msg, definition, pom.threadContextDetail)
       val retPolicy = ConfigUtil.getOutboxStateRetentionPolicyForInterDomain(
-        appConfig, domainId, definition.msgFamily.protoRef.toString)
+        appConfig, domainId, definition.protoRef.toString)
       //TODO: will below approach become choke point?
       userGuardian ! SendMsgToOutbox(
         pom.from,
@@ -474,16 +477,8 @@ class ActorProtocolContainer[
       .contains("VerityAgent")
 }
 
-trait ProtoMsg extends MsgBase
+//trait ProtoMsg extends MsgBase
 
-/**
- * This message is sent only when protocol is being created/initialized for first time
- * @param params - Set of Parameter (key & value) which protocol needs
- */
-
-case class Init(params: Parameters) extends Control {
-  def parametersStored: Set[ParameterStored] = params.initParams.map(p => ParameterStored(p.name, p.value))
-}
 
 /**
  * This is sent by LaunchesProtocol during protocol initialization process.

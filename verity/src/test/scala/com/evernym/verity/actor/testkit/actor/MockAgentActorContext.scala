@@ -11,7 +11,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc}
 import com.evernym.verity.protocol
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
-import com.evernym.verity.protocol.engine.{PinstIdResolution, ProtocolRegistry}
+import com.evernym.verity.protocol.engine.registry.{PinstIdResolution, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeProtoDef
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager

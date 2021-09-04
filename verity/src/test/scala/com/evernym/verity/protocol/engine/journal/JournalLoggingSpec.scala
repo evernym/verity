@@ -1,9 +1,8 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.journal
 
 import ch.qos.logback.classic.Level
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
-import com.evernym.verity.protocol.engine.journal.{Journal, JournalContext, JournalLogging}
 import com.evernym.verity.testkit.{BasicSpec, runWithLogLevel}
 import com.typesafe.scalalogging.Logger
 import org.scalatest.TestSuite

@@ -1,8 +1,8 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.util
 
-import com.evernym.verity.util2.ServiceEndpoint
-import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.did.methods.DIDKey
+import com.evernym.verity.did.{DidStr, VerKeyStr}
+import com.evernym.verity.util2.ServiceEndpoint
 
 
 //TODO: this should be reconciled with existing DidDoc in Relationship

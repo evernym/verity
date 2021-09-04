@@ -6,6 +6,7 @@ import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.actor.agent.{PayloadMetadata, ThreadContextDetail}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.push_notification.PushNotifData
 
 import scala.concurrent.Future

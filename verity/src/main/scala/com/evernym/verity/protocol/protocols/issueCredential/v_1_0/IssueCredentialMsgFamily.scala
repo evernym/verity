@@ -2,9 +2,11 @@ package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.did.didcomm.v1.decorators.{AttachmentDescriptor, PleaseAck}
-import com.evernym.verity.did.didcomm.v1.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
+import com.evernym.verity.did.didcomm.v1.messages.{AdoptableAck, AdoptableProblemReport, MsgFamily, ProblemDescription}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.InviteShortened
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkIfValidBooleanData, checkRequired}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Init
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg._
 

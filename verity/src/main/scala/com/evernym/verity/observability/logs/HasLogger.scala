@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.observability.logs
 
 import com.typesafe.scalalogging.Logger
 

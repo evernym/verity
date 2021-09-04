@@ -1,4 +1,7 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.testkit
+
+import com.evernym.verity.protocol.engine.PinstId
+import com.evernym.verity.protocol.engine.container.RecordsEvents
 
 class SimpleEventRecorder(initialState: Any) extends RecordsEvents {
 

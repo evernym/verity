@@ -20,11 +20,11 @@ import com.evernym.verity.agentmsg.tokenizer.SendToken
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.observability.metrics.{MetricDetail, PrometheusMetricsParser}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.RequesterKeys
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
@@ -37,9 +37,9 @@ import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
+
 import java.net.InetAddress
 import java.util.UUID
-
 import scala.concurrent.duration.{Duration, _}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Left

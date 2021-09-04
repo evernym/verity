@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.protocols
 import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.util.OptionUtil
 import com.typesafe.scalalogging.Logger

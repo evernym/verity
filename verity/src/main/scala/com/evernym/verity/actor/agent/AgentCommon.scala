@@ -24,10 +24,12 @@ import com.evernym.verity.cache.{AGENCY_IDENTITY_CACHE_FETCHER, AGENT_ACTOR_CONF
 import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
 import com.evernym.verity.config.ConfigConstants.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VERITY_ENDORSER_DEFAULT_DID}
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgType, TypedMsgLike}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.observability.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
 import com.evernym.verity.observability.metrics.{InternalSpan, MetricsUnit, MetricsWriter}
 import com.evernym.verity.protocol.container.actor.ProtocolIdDetail
+import com.evernym.verity.protocol.engine.registry.PinstIdResolver
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.google.protobuf.ByteString

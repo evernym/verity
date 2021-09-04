@@ -2,8 +2,8 @@ package com.evernym.verity.agentmsg
 
 import com.evernym.verity.actor.agent.msghandler.incoming.{IncomingMsgParam, STOP_GAP_MsgTypeMapper}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
-import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
-import com.evernym.verity.protocol.engine.MsgType
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.EVERNYM_QUALIFIER
+import com.evernym.verity.did.didcomm.v1.messages.MsgType
 import com.evernym.verity.testkit.agentmsg.AgentMsgWrapperBuilder
 import com.evernym.verity.testkit.BasicSpec
 

@@ -7,9 +7,9 @@ import com.evernym.verity.cache.fetchers.{GetCredDef, GetSchema}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
+import com.evernym.verity.protocol.container.asyncapis.BaseAsyncOpExecutorImpl
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccessException, LedgerAsyncOps}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.protocol.engine.BaseAsyncOpExecutorImpl
 
 import scala.concurrent.{ExecutionContext, Future}
 

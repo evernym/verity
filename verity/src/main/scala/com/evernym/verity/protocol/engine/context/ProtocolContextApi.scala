@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.context
 
 import com.evernym.verity.observability.metrics.CustomMetrics._
 import com.evernym.verity.observability.metrics.{MetricsUnit, MetricsWriter}
@@ -6,9 +6,11 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContextApi
+import com.evernym.verity.protocol.engine.{InitParamBase, PROTOCOL_ENCAPSULATION_FIX_DATE, ProtoSystemEvent, ThreadId}
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.evernym.verity.util2.ServiceEndpoint
 import com.github.ghik.silencer.silent
+import com.typesafe.scalalogging.Logger
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
@@ -21,10 +23,11 @@ import scala.concurrent.{Await, ExecutionContext, Future}
   *
   */
 trait ProtocolContextApi[P,R,M,E,S,I]
-  extends SegmentedStateContextApi
-   with HasLogger { this: ProtocolContext[P,R,M,E,S,I] =>
+  extends SegmentedStateContextApi { this: ProtocolContext[P,R,M,E,S,I] =>
 
   def apply[A >: E with ProtoSystemEvent](event: A): Unit
+
+  def logger: Logger
 
   def signal(signalMsg: Any): Unit
 
@@ -72,7 +75,7 @@ trait ProtocolContextApi[P,R,M,E,S,I]
     * implementation needs access to it's name and version.
     */
   @deprecated("Use of this member is suspicious. Why do we need to know the protocol version inside of a protocol?.", PROTOCOL_ENCAPSULATION_FIX_DATE)
-  def version_WARNING_SUSPICIOUS_USAGE: String = definition.msgFamily.protoRef.msgFamilyVersion
+  def version_WARNING_SUSPICIOUS_USAGE: String = definition.protoRef.msgFamilyVersion
 
 
   //TODO: no new protocols are supposed to use services
@@ -88,7 +91,7 @@ trait ProtocolContextApi[P,R,M,E,S,I]
       AS_BLOCKING_WALLET_API_CALL_COUNT,
       MetricsUnit.None,
       1,
-      Map("protocol" -> definition.msgFamily.protoRef.toString),
+      Map("protocol" -> definition.protoRef.toString),
     )
     Await.result(fut, FiniteDuration(60, TimeUnit.SECONDS))
   }

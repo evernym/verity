@@ -5,6 +5,7 @@ import com.evernym.verity.agentmsg.msgfamily.{AgentMsgContext, ConfigDetail, Typ
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgBase
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
 case class GetConfigsReqMsg_MFV_0_5(configs: Set[String]) extends MsgBase {
   override def validate(): Unit = {

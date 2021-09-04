@@ -1,19 +1,24 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.context
 
+import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat, ThreadContextDetail, TypeFormat}
+import com.evernym.verity.actor.agent.{SponsorRel => SponsorRelEvt}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
-import com.evernym.verity.actor.agent._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.getNewMsgUniqueId
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol._
-import com.evernym.verity.protocol.container.actor.Init
+import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.events._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccess
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner}
+import com.evernym.verity.protocol.engine.box.{Box, BoxLike, SignalOutbox}
+import com.evernym.verity.protocol.engine.container.RecordsEvents
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
-import com.evernym.verity.protocol.engine.msg.{PersistenceFailure, SetDataRetentionPolicy, SetDomainId, SetSponsorRel, SetStorageId, UpdateThreadContext}
+import com.evernym.verity.protocol.engine.msg._
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContext
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.{?=>, marker}
@@ -49,7 +54,7 @@ trait ProtocolContext[P,R,M,E,S,I]
   def _storageId: Option[StorageId] = getBackState.storageId
   def _storageId_! : StorageId = _storageId getOrElse { throw new RuntimeException("storage id is required") }
 
-  lazy val logger: Logger = getLoggerByName(s"${definition.msgFamily.protoRef.toString}")
+  lazy val logger: Logger = getLoggerByName(s"$definition")
   lazy val journalContext: JournalContext = JournalContext(pinstId.take(5))
 
   override lazy val logMarker: Option[Marker] = Some(marker.protocol)
@@ -283,8 +288,8 @@ trait ProtocolContext[P,R,M,E,S,I]
       val newRoster = s.roster.changeSelfId(self).changeOtherId(other)
       s.copy(roster = newRoster)
 
-    case s: SponsorRel => BackState()
-      shadowBackState.getOrElse(BackState()).copy(sponsorRel = Option(s))
+    case s: SponsorRelEvt => BackState()
+      shadowBackState.getOrElse(BackState()).copy(sponsorRel = Option(SponsorRel(s.sponsorId, s.sponseeId)))
 
     case p: DataRetentionPolicySet => BackState()
       val retentionPolicy = ConfigUtil.getPolicyFromConfigStr(p.configStr)
@@ -337,8 +342,8 @@ trait ProtocolContext[P,R,M,E,S,I]
         if (backState.domainId.isEmpty) apply(DomainIdSet(id))
       case SetStorageId(id)             =>
         if (backState.storageId.isEmpty) apply(StorageIdSet(id))
-      case SetSponsorRel(s)             =>
-        if (backState.sponsorRel.isEmpty) apply(s)
+      case SetSponsorRel(sponsorId, sponseeId)             =>
+        if (backState.sponsorRel.isEmpty) apply(SponsorRelEvt(sponsorId, sponseeId))
       case SetDataRetentionPolicy(p)    =>
         if (backState.dataRetentionPolicy.isEmpty) p.map(x => apply(DataRetentionPolicySet(x)))
 
@@ -545,7 +550,7 @@ trait ProtocolContext[P,R,M,E,S,I]
   def signal(signal: Any): Unit = {
     checkIfSignalMsg(signal)
     if (driver.isDefined) {
-      val sm = SignalEnvelope(signal, definition.msgFamily.protoRef,
+      val sm = SignalEnvelope(signal, definition.protoRef,
         pinstId, threadContextDetailReq, inFlight.flatMap(_.msgId))
       signalOutbox.add(sm)
     }
@@ -631,7 +636,7 @@ trait ProtocolContext[P,R,M,E,S,I]
       case "protocol" => definition.msgFamily.isProtocolMsg(msg)
     }
     if (! result) {
-      throw new RuntimeException(s"'${msg.getClass.getSimpleName}' not registered as a '$msgCategory' message in ${definition.msgFamily.protoRef}")
+      throw new RuntimeException(s"'${msg.getClass.getSimpleName}' not registered as a '$msgCategory' message in ${definition.protoRef}")
     }
   }
 

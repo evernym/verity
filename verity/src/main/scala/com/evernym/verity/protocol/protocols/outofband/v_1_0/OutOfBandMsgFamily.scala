@@ -5,9 +5,10 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor
-import com.evernym.verity.did.didcomm.v1.messages.{AdoptableProblemReport, ProblemDescription}
-import com.evernym.verity.protocol.engine.MsgFamily.QUALIFIER_FORMAT_HTTP
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName, QUALIFIER_FORMAT_HTTP}
+import com.evernym.verity.did.didcomm.v1.messages.{AdoptableProblemReport, MsgFamily, ProblemDescription}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.util.ServiceFormatted
 import com.evernym.verity.util.{Base64Util, MsgIdProvider}
 
 object OutOfBandMsgFamily extends MsgFamily {

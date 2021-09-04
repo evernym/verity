@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.protocols.connecting.common
 import com.evernym.verity.actor.agent.user.MsgHelper._
 import com.evernym.verity.actor.agent.Msg
 import com.evernym.verity.agentmsg.msgfamily.pairwise.UpdateMsgStatusReqMsg
-import com.evernym.verity.protocol.engine.MsgId
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status._
 

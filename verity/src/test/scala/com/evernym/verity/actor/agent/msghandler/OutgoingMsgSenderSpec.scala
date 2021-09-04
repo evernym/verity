@@ -9,7 +9,7 @@ import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.AKKA_SHARDING_REGION_NAME_USER_AGENT
-import com.evernym.verity.protocol.engine.MsgId
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.testkit.BasicSpec
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}

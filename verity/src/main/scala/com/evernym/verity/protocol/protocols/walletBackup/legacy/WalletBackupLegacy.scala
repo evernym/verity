@@ -3,7 +3,8 @@ package com.evernym.verity.protocol.protocols.walletBackup.legacy
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi}
+import com.evernym.verity.protocol.engine.Protocol
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily.{BackupMsg, _}
 import com.evernym.verity.protocol.protocols.walletBackup.{BackupState, State => S, _}
@@ -36,7 +37,7 @@ trait WalletBackupLegacy extends Protocol[WalletBackup, Role, BackupMsg, BackupE
       // As of today this protocol is not used, but a scheduled job was trying to spin up this older protocol
       // and it was causing unhandled error which was changing app state to Sick unnecessarily.
       // This block is to handle those older events which is no more backward compatible with new code
-      logger.warn(s"[${definition.msgFamily.protoRef.toString}] unhandled event '${e.getClass.getSimpleName}' in state: '${s.getClass.getSimpleName}' " +
+      logger.warn(s"[${definition.protoRef.toString}] unhandled event '${e.getClass.getSimpleName}' in state: '${s.getClass.getSimpleName}' " +
         s"(this is known issue for very old non-backward compatible 'wallet-backup' protocol events)")
       s
   }

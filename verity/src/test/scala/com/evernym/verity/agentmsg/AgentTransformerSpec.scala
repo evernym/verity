@@ -6,7 +6,7 @@ import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapper}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.protocol.engine.MsgFamilyVersion
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgFamilyVersion
 import com.evernym.verity.testkit.{AwaitResult, BasicSpecWithIndyCleanup, HasTestWalletAPI}
 import com.evernym.verity.vault._
 import com.evernym.verity.protocol.engine.Constants._

@@ -1,13 +1,25 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.did.didcomm.v1.messages
 
-import com.evernym.verity.actor.agent.{MsgPackFormat, TypeFormat}
 import com.evernym.verity.agentmsg.msgcodec.{InvalidMsgQualifierException, MsgTypeParsingException, UnrecognizedMsgQualifierException}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
+import com.evernym.verity.protocol.engine.TypedMsg
 import com.typesafe.scalalogging.Logger
 
 import scala.util.matching.Regex
 
 object MsgFamily {
+  type MsgFamilyName = String
+  type MsgFamilyVersion = String
+  type MsgName = String
+  type MsgTypeStr = String  //refactor this name to something better (we have a case class called MsgType and this was colliding with it)
+
+  sealed trait MsgFamilyQualifier
+
+  case object EvernymQualifier extends MsgFamilyQualifier
+
+  case object CommunityQualifier extends MsgFamilyQualifier
+
 
   //TODO: Evernym qualifier given below is just a test string,
   // we'll have to decide what it should be?
@@ -89,7 +101,7 @@ trait MsgFamily {
   protected val controlMsgs: Map[MsgName, Class[_]] = Map.empty
   protected val signalMsgs: Map[Class[_], MsgName] = Map.empty
 
-  lazy val protoRef = ProtoRef(name, version)
+//  lazy val protoRef = ProtoRef(name, version)
   lazy val logger: Logger = getLoggerByClass(getClass)
 
   private lazy val protocolMsgsReversed: Map[Class[_], MsgName] = protocolMsgs map (_.swap)
@@ -130,28 +142,6 @@ trait MsgFamily {
     else if (signalMsgs.map(_.swap).contains(msgName)) Option("Sig")
     else None
   }
-}
 
-/** Provides information which is needed during outgoing message flow (during packaging of the message)
-  *
-  * @param msgPackFormat         msg pack format (messagepack vs indypack) to use for message packaging
-  *
-  * @param msgTypeFormat          msg type format (legacy '@type' json object vs latest '@type' string), for example:
-  *                               legacy: "@type":{"name":"MESSAGE","ver":"1.0","fmt":"json"}
-  *                               latest: "@type":"did:sov:123456789abcdefghi1234;spec/TicTacToe/0.5/OFFER"
-  *
-  * @param useLegacyGenMsgWrapper puts a wrapper around the original json message, for example
-  *                               {
-  *                               "@type":{"name":"MESSAGE","ver":"1.0","fmt":"json"},
-  *                               "@msg":"{"@type":"did:sov:123456789abcdefghi1234;spec/TicTacToe/0.5/OFFER","@id":"ac6cb167-ab1a-4d60-ac8f-059b3088e408", <original-msg-attributes>}"
-  *                               }
-  * @param useLegacyBundledMsgWrapper puts message into a bundled wrapper message, for example:
-  *                                   {
-  *                                     "bundled": [<packed-msg-1>, <packed-msg-2>]
-  *                                   }
-  *
-  */
-case class MsgPackagingContext(msgPackFormat: Option[MsgPackFormat]=None,
-                               msgTypeFormat: Option[TypeFormat]=None,
-                               useLegacyGenMsgWrapper: Boolean=false,
-                               useLegacyBundledMsgWrapper: Boolean=false)
+  override def toString: MsgFamilyName = s"$name[$version]"
+}

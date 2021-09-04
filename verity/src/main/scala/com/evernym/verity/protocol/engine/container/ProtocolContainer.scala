@@ -1,5 +1,7 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.container
 
+import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.ProtocolContext
 import com.evernym.verity.protocol.legacy.services.ProtocolServices
 import com.evernym.verity.util2.Exceptions
 
@@ -32,7 +34,7 @@ trait ProtocolContainer[P,R,M,E,S,I]
 
   lazy val protocol: Protocol[P,R,M,E,S,I] = definition.create(this)
 
-  def protoRef: ProtoRef = definition.msgFamily.protoRef
+  def protoRef: ProtoRef = definition.protoRef
 
   /**
     * Recovers if events exist in recorder, otherwise initializes.
@@ -61,5 +63,5 @@ trait ProtocolContainer[P,R,M,E,S,I]
     }
   }
 
-  def protocolIdForLog: String = s"[${definition.msgFamily.protoRef}-$pinstId]"
+  def protocolIdForLog: String = s"[${definition.protoRef}-$pinstId]"
 }

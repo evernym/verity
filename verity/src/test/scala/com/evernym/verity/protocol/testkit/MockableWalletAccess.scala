@@ -3,13 +3,13 @@ package com.evernym.verity.protocol.testkit
 import akka.actor.ActorRef
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, GetVerKeyOptResp, GetVerKeyResp, NewKeyCreated, ProofCreated, ProofVerifResult, SignedMsg, TheirKeyStored, VerifySigResult}
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.{SchemaCreated, WalletAccessAPI}
 import com.evernym.verity.protocol.engine.WalletAccessTest.testWalletAPI
 import com.evernym.verity.protocol.engine.{ParticipantId, ParticipantIndex}
-import com.evernym.verity.protocol.engine.asyncapi.wallet.{AnonCredRequests, WalletAccess}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{AnonCredRequests, CredCreatedResult, CredDefCreatedResult, CredForProofResult, CredOfferCreatedResult, CredReqCreatedResult, CredStoredResult, DeprecatedWalletSetupResult, LedgerRequestResult, NewKeyResult, ProofCreatedResult, ProofVerificationResult, SchemaCreatedResult, SignedMsgResult, TheirKeyStoredResult, VerKeyOptResult, VerKeyResult, VerifiedSigResult, WalletAccess}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.{KeyType, SignType}
 import com.evernym.verity.protocol.testkit.MockableWalletAccess._
 import com.evernym.verity.testkit.TestWallet
@@ -23,7 +23,7 @@ import scala.util.{Random, Try}
 object MockableWalletAccess {
   def apply(): MockableWalletAccess = new MockableWalletAccess
 
-  def apply(mockVerify: () => Try[VerifySigResult], mockSign: () => Try[SignedMsg]=randomSig _): MockableWalletAccess = {
+  def apply(mockVerify: () => Try[VerifiedSigResult], mockSign: () => Try[SignedMsgResult]=randomSig _): MockableWalletAccess = {
     new MockableWalletAccess(mockVerify=mockVerify, mockSign=mockSign)
   }
 
@@ -31,90 +31,90 @@ object MockableWalletAccess {
 
   def walletAccess(): MockableWalletAccess = new MockableWalletAccess
   def alwaysVerifyAs(as: Boolean): MockableWalletAccess =
-    MockableWalletAccess(mockVerify = ()=>Try(VerifySigResult(as)))
+    MockableWalletAccess(mockVerify = ()=>Try(VerifiedSigResult(as)))
 
-  def alwaysSignAs(as: Try[SignedMsg]=randomSig()): MockableWalletAccess =
+  def alwaysSignAs(as: Try[SignedMsgResult]=randomSig()): MockableWalletAccess =
     MockableWalletAccess(mockVerify=trueVerify _, mockSign = {()=>as})
 
-  def newKey(): NewKeyCreated = {
+  def newKey(): NewKeyResult = {
     val randomDid = new Array[Byte](16)
     Random.nextBytes(randomDid)
     val randomKey = new Array[Byte](32)
     Random.nextBytes(randomKey)
-    NewKeyCreated(Base58Util.encode(randomDid), Base58Util.encode(randomKey))
+    NewKeyResult(Base58Util.encode(randomDid), Base58Util.encode(randomKey))
   }
 
-  def randomDid(): Try[NewKeyCreated] = {
+  def randomDid(): Try[NewKeyResult] = {
     Try(newKey())
   }
 
-  def randomVerKey(forDID: String): Try[GetVerKeyResp] = {
+  def randomVerKey(forDID: String): Try[VerKeyResult] = {
     val randomKey = new Array[Byte](32)
     Random.nextBytes(randomKey)
-    Try(GetVerKeyResp(Base58Util.encode(randomKey)))
+    Try(VerKeyResult(Base58Util.encode(randomKey)))
   }
 
-  def randomVerKeyOpt(forDID: String): Try[GetVerKeyOptResp] = {
+  def randomVerKeyOpt(forDID: String): Try[VerKeyOptResult] = {
     val randomKey = new Array[Byte](32)
     Random.nextBytes(randomKey)
-    Try(GetVerKeyOptResp(Option(Base58Util.encode(randomKey))))
+    Try(VerKeyOptResult(Option(Base58Util.encode(randomKey))))
   }
 
-  def randomSig(): Try[SignedMsg] = {
+  def randomSig(): Try[SignedMsgResult] = {
     val randomSig = new Array[Byte](64)
     Random.nextBytes(randomSig)
-    Try(SignedMsg(randomSig, "V1"))
+    Try(SignedMsgResult(randomSig, "V1"))
   }
-  def trueVerify(): Try[VerifySigResult] = Try(VerifySigResult(true))
+  def trueVerify(): Try[VerifiedSigResult] = Try(VerifiedSigResult(true))
 
 }
 
 
-class MockableWalletAccess(mockNewDid: () => Try[NewKeyCreated] = randomDid  _,
-                           mockVerKey: DidStr => Try[GetVerKeyResp] =  randomVerKey,
-                           mockVerKeyOpt: DidStr => Try[GetVerKeyOptResp] = randomVerKeyOpt,
-                           mockSign:   () => Try[SignedMsg]  = randomSig  _,
-                           mockVerify: () => Try[VerifySigResult]  = trueVerify _,
+class MockableWalletAccess(mockNewDid: () => Try[NewKeyResult] = randomDid  _,
+                           mockVerKey: DidStr => Try[VerKeyResult] =  randomVerKey,
+                           mockVerKeyOpt: DidStr => Try[VerKeyOptResult] = randomVerKeyOpt,
+                           mockSign:   () => Try[SignedMsgResult]  = randomSig  _,
+                           mockVerify: () => Try[VerifiedSigResult]  = trueVerify _,
                            anonCreds: AnonCredRequests = MockableAnonCredRequests.basic
                           ) extends WalletAccess {
 
-  override def DEPRECATED_setupNewWallet(walletId: String, ownerDidPair: DidPair)(handler: Try[AgentWalletSetupCompleted] => Unit): Unit =
-    handler(Try(AgentWalletSetupCompleted(ownerDidPair, newKey())))
+  override def DEPRECATED_setupNewWallet(walletId: String, ownerDidPair: DidPair)(handler: Try[DeprecatedWalletSetupResult] => Unit): Unit =
+    handler(Try(DeprecatedWalletSetupResult(ownerDidPair, newKey())))
 
-  override def newDid(keyType: KeyType)(handler: Try[NewKeyCreated] => Unit): Unit = handler(mockNewDid())
+  override def newDid(keyType: KeyType)(handler: Try[NewKeyResult] => Unit): Unit = handler(mockNewDid())
 
-  override def verKey(forDID: DidStr)(handler: Try[GetVerKeyResp] => Unit): Unit = handler(mockVerKey(forDID))
+  override def verKey(forDID: DidStr)(handler: Try[VerKeyResult] => Unit): Unit = handler(mockVerKey(forDID))
 
-  override def verKeyOpt(forDID: DidStr)(handler: Try[GetVerKeyOptResp] => Unit): Unit = handler(mockVerKeyOpt(forDID))
+  override def verKeyOpt(forDID: DidStr)(handler: Try[VerKeyOptResult] => Unit): Unit = handler(mockVerKeyOpt(forDID))
 
-  override def sign(msg: Array[Byte], signType: SignType)(handler: Try[SignedMsg] => Unit): Unit = handler(mockSign())
+  override def sign(msg: Array[Byte], signType: SignType)(handler: Try[SignedMsgResult] => Unit): Unit = handler(mockSign())
 
-  override def signRequest(submitterDID: DidStr, request: String)(handler: Try[LedgerRequest] => Unit): Unit = handler(Try(LedgerRequest(request)))
+  override def signRequest(submitterDID: DidStr, request: String)(handler: Try[LedgerRequestResult] => Unit): Unit = handler(Try(LedgerRequestResult(request)))
 
-  override def multiSignRequest(submitterDID: DidStr, request:  String)(handler: Try[LedgerRequest] => Unit): Unit = handler(Try(LedgerRequest(request)))
+  override def multiSignRequest(submitterDID: DidStr, request:  String)(handler: Try[LedgerRequestResult] => Unit): Unit = handler(Try(LedgerRequestResult(request)))
 
   override def verify(signer: ParticipantId,
                       msg: Array[Byte],
                       sig: Array[Byte],
                       verKeyUsed: Option[VerKeyStr] = None,
                       signType: SignType)
-                     (handler: Try[VerifySigResult] => Unit): Unit = handler(mockVerify())
+                     (handler: Try[VerifiedSigResult] => Unit): Unit = handler(mockVerify())
 
   override def verify(msg: Array[Byte],
                       sig: Array[Byte],
                       verKeyUsed: VerKeyStr,
                       signType: SignType)
-                     (handler: Try[VerifySigResult] => Unit): Unit = handler(mockVerify())
+                     (handler: Try[VerifiedSigResult] => Unit): Unit = handler(mockVerify())
 
   // Other party's DID is not needed for routing in tests. Secondly, tests don't have a wallet.
-  override def storeTheirDid(did: DidStr, verKey: VerKeyStr, ignoreIfAlreadyExists: Boolean = false)(handler: Try[TheirKeyStored] => Unit): Unit =
-    handler(Try(TheirKeyStored(did, verKey)))
+  override def storeTheirDid(did: DidStr, verKey: VerKeyStr, ignoreIfAlreadyExists: Boolean = false)(handler: Try[TheirKeyStoredResult] => Unit): Unit =
+    handler(Try(TheirKeyStoredResult(did, verKey)))
 
   override def createSchema(issuerDID:  DidStr,
                             name:  String,
                             version:  String,
                             data:  String)
-                           (handler: Try[SchemaCreated] => Unit): Unit =
+                           (handler: Try[SchemaCreatedResult] => Unit): Unit =
     anonCreds.createSchema(issuerDID, name, version, data)(handler)
 
   override def createCredDef(issuerDID:  DidStr,
@@ -122,17 +122,17 @@ class MockableWalletAccess(mockNewDid: () => Try[NewKeyCreated] = randomDid  _,
                              tag:  String,
                              sigType:  Option[String],
                              revocationDetails:  Option[String])
-                            (handler: Try[CredDefCreated] => Unit): Unit =
+                            (handler: Try[CredDefCreatedResult] => Unit): Unit =
     anonCreds.createCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails)(handler)
 
-  override def createCredOffer(credDefId: String)(handler: Try[CredOfferCreated] => Unit): Unit =
+  override def createCredOffer(credDefId: String)(handler: Try[CredOfferCreatedResult] => Unit): Unit =
     anonCreds.createCredOffer(credDefId)(handler)
 
   override def createCredReq(credDefId: String,
                              proverDID: DidStr,
                              credDefJson: String,
                              credOfferJson: String)
-                            (handler: Try[CredReqCreated] => Unit): Unit =
+                            (handler: Try[CredReqCreatedResult] => Unit): Unit =
     anonCreds.createCredReq(credDefId, proverDID, credDefJson, credOfferJson)(handler)
 
   override def createCred(credOfferJson: String,
@@ -140,7 +140,7 @@ class MockableWalletAccess(mockNewDid: () => Try[NewKeyCreated] = randomDid  _,
                           credValuesJson: String,
                           revRegistryId: String,
                           blobStorageReaderHandle: ParticipantIndex)
-                         (handler: Try[CredCreated] => Unit): Unit =
+                         (handler: Try[CredCreatedResult] => Unit): Unit =
     anonCreds.createCred(credOfferJson, credReqJson, credValuesJson, revRegistryId, blobStorageReaderHandle)(handler)
 
   override def storeCred(credId: String,
@@ -148,11 +148,11 @@ class MockableWalletAccess(mockNewDid: () => Try[NewKeyCreated] = randomDid  _,
                          credReqMetadataJson: String,
                          credJson: String,
                          revRegDefJson: String)
-                        (handler: Try[CredStored] => Unit): Unit =
+                        (handler: Try[CredStoredResult] => Unit): Unit =
   anonCreds.storeCred(credId, credDefJson, credReqMetadataJson, credJson, revRegDefJson)(handler)
 
   override def credentialsForProofReq(proofRequest: String)
-                                     (handler: Try[CredForProofReqCreated] => Unit): Unit =
+                                     (handler: Try[CredForProofResult] => Unit): Unit =
     anonCreds.credentialsForProofReq(proofRequest)(handler)
 
   override def createProof(proofRequest: String,
@@ -160,7 +160,7 @@ class MockableWalletAccess(mockNewDid: () => Try[NewKeyCreated] = randomDid  _,
                            schemas: String,
                            credentialDefs: String,
                            revStates: String)
-                          (handler: Try[ProofCreated] => Unit): Unit =
+                          (handler: Try[ProofCreatedResult] => Unit): Unit =
     anonCreds.createProof(proofRequest, usedCredentials, schemas, credentialDefs, revStates)(handler)
 
   override def verifyProof(proofRequest: String,
@@ -169,6 +169,6 @@ class MockableWalletAccess(mockNewDid: () => Try[NewKeyCreated] = randomDid  _,
                            credentialDefs: String,
                            revocRegDefs: String,
                            revocRegs: String)
-                          (handler: Try[ProofVerifResult] => Unit): Unit =
+                          (handler: Try[ProofVerificationResult] => Unit): Unit =
     anonCreds.verifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)(handler)
 }

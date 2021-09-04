@@ -14,16 +14,14 @@ import DevEnvironmentTasks.{agentJars, envRepos, jdkExpectedVersion}
 import Lightbend.{lightbendCinnamonAgentJar, lightbendCinnamonVer, lightbendClassFilter, lightbendDeps, lightbendResolvers}
 import SharedLibrary.{NonMatchingDistLib, NonMatchingLib}
 import SharedLibraryTasks.{sharedLibraries, updateSharedLibraries}
-import Util.{buildPackageMappings, dirsContaining, referenceConfMerge, searchForAdditionalJars}
+import Util._
 import Version._
 import sbt.Keys.{libraryDependencies, organization, update}
 import sbtassembly.AssemblyKeys.assemblyMergeStrategy
 import sbtassembly.MergeStrategy
 
-import java.io.BufferedReader
-import java.io.FileReader
 import scala.language.postfixOps
-import scala.util.Try
+
 
 enablePlugins(JavaAppPackaging)
 
@@ -116,6 +114,7 @@ lazy val verity = (project in file("verity"))
     testSettings,
     packageSettings,
     protoBufSettings,
+    coverageSettings,
     lightbendCommercialSettings,
     libraryDependencies ++= commonLibraryDependencies,
     // Conditionally download an unpack shared libraries
@@ -251,6 +250,13 @@ lazy val protoBufSettings = Seq(
   Test / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test")),
   //
 ) ++ Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings)
+
+val coverageSettings = Seq(
+  coverageExcludedFiles := scoverageFilterProtobufPattern(
+    (Compile / classDirectory).value,
+    (Test / classDirectory).value
+  )
+)
 
 val lightbendCommercialSettings = {
     Lightbend.init ++ Seq (

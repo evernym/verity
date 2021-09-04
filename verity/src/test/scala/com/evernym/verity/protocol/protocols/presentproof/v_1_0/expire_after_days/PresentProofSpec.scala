@@ -131,7 +131,7 @@ class PresentProofSpec
         val threadedInviteId = InviteUtil.parseThreadedInviteId(
           inviteObj.getString("@id")
         ).get
-        threadedInviteId.protoRefStr shouldBe protoDef.msgFamily.protoRef.toString
+        threadedInviteId.protoRefStr shouldBe protoDef.protoRef.toString
         threadedInviteId.relationshipId shouldBe verifier.did_!
         threadedInviteId.threadId shouldBe verifier.currentInteraction.get.threadId.get
 
@@ -234,7 +234,7 @@ class PresentProofSpec
         val threadedInviteId = InviteUtil.parseThreadedInviteId(
           inviteObj.getString("@id")
         ).get
-        threadedInviteId.protoRefStr shouldBe protoDef.msgFamily.protoRef.toString
+        threadedInviteId.protoRefStr shouldBe protoDef.protoRef.toString
         threadedInviteId.relationshipId shouldBe verifier.did_!
         threadedInviteId.threadId shouldBe verifier.currentInteraction.get.threadId.get
 

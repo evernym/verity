@@ -4,6 +4,8 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.did.didcomm.v1.decorators.{AttachmentDescriptor => Attachment}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n}
 
 object BasicMessageMsgFamily extends MsgFamily {

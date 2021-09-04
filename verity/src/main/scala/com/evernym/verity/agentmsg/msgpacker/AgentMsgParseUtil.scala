@@ -9,8 +9,9 @@ import com.evernym.verity.agentmsg.msgcodec.MsgCodecException
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.CreateMsgReqMsg_MFV_0_5
 import com.evernym.verity.agentmsg.msgfamily.{BundledMsg_MFV_0_5, LegacyTypedMsg}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, msgQualifierFromQualifierStr}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP, msgQualifierFromQualifierStr}
 import com.evernym.verity.protocol.engine.{MissingReqFieldProtocolEngineException, MsgBase}
 import com.evernym.verity.util.MessagePackUtil
 import org.json.JSONObject

@@ -1,6 +1,8 @@
-package com.evernym.verity.protocol.engine
+package com.evernym.verity.protocol.engine.registry
 
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
+import com.evernym.verity.protocol.engine.Scope
+import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.HashAlgorithm.SHA256_trunc16
 import com.evernym.verity.util.HashUtil.{byteArray2RichBytes, safeMultiHash}
 import com.typesafe.scalalogging.Logger
@@ -105,7 +107,6 @@ object PinstIdResolution {
 
       val protoHash = Option(protoDef)
           .getOrElse(throw new RuntimeException(unknownProtoRef))
-          .msgFamily
           .protoRef
           .toHash
 

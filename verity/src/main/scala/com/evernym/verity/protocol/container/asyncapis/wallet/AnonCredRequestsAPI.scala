@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.container.asyncapis.wallet
 
-import com.evernym.verity.actor.wallet._
+import com.evernym.verity.actor.wallet.{CreateCred, CreateCredDef, CreateCredOffer, CreateCredReq, CreateMasterSecret,
+  CreateProof, CredForProofReq, MasterSecretCreated, StoreCred}
 import com.evernym.verity.config.ConfigConstants.SALT_WALLET_NAME
 import com.evernym.verity.vault.operation_executor.{AnoncredsWalletOpExecutor, FutureConverter}
 import com.evernym.verity.did.DidStr
@@ -32,7 +33,10 @@ trait AnonCredRequestsAPI
     }
   }
 
-  def runCreateSchema(issuerDID: DidStr, name:String, version: String, data: String): Unit = {
+  def runCreateSchema(issuerDID: DidStr,
+                      name:String,
+                      version: String,
+                      data: String): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec =>
         issuerCreateSchema(issuerDID, name, version, data).map { result =>

@@ -14,6 +14,7 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, InviteDetail, SenderAgencyDetail, SenderDetail}
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.observability.metrics.NoOpMetricsWriter
 

@@ -101,17 +101,3 @@ case class StartProgressTracking(trackingId: TrackingParam) extends ActorMessage
 case class StopProgressTracking(trackingId: String) extends ActorMessage
 case object NodeMetricsResetDone extends ActorMessage
 case object AllNodeMetricsResetDone extends ActorMessage
-
-trait Bad {
-  def statusCode: String
-  def statusMsg: Option[String]
-  def detail: Option[Any]
-
-  def getStatusMsg: String = {
-    statusMsg.getOrElse(getStatusMsgFromCode(statusCode))
-  }
-
-  def isAlreadyExists: Boolean = statusCode == ALREADY_EXISTS.statusCode
-
-  Status.getFromCode(statusCode)
-}

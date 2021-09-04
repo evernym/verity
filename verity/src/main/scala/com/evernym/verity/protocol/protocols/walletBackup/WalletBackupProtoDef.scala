@@ -5,6 +5,8 @@ import com.evernym.verity.protocol.engine.Scope.ProtocolScope
 import com.evernym.verity.protocol.engine._
 import State.Uninitialized
 import WalletBackupMsgFamily.{BackupMsg, Init}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
 

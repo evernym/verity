@@ -6,7 +6,6 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_DETAIL_CREATE_AGENT
 import com.evernym.verity.agentmsg.msgpacker.{AgentMessageWrapper, AgentMsgWrapper}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.protocol.container.actor.ProtoMsg
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 
 trait AgentMsgWrapperBuilder extends CommonSpecUtil {
@@ -14,7 +13,7 @@ trait AgentMsgWrapperBuilder extends CommonSpecUtil {
   val testAppConfig: AppConfig = new TestAppConfig()
   override def appConfig: AppConfig = testAppConfig
 
-  case class CreateAgentReqMsg_MFV_0_6(`@type`: String, fromDID: String, fromDIDVerKey: String) extends ProtoMsg
+  case class CreateAgentReqMsg_MFV_0_6(`@type`: String, fromDID: String, fromDIDVerKey: String)
 
   def buildCreateAgentMsgWrapper_MFV_0_6: AgentMsgWrapper = {
     val newDID = generateNewDid()

@@ -1,7 +1,7 @@
 package com.evernym.verity.agentmsg.msgfamily
 
-import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER, QUALIFIER_FORMAT_HTTP, VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP, msgQualifierFromQualifierStr, qualifierStrFromMsgQualifier, typeStrFromMsgType}
-import com.evernym.verity.protocol.engine.MsgType
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER, QUALIFIER_FORMAT_HTTP, VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP, msgQualifierFromQualifierStr, qualifierStrFromMsgQualifier, typeStrFromMsgType}
+import com.evernym.verity.did.didcomm.v1.messages.MsgType
 import com.evernym.verity.testkit.BasicSpec
 
 

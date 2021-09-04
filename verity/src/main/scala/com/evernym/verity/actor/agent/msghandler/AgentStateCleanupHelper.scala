@@ -11,7 +11,8 @@ import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.observability.logs.ThrottledLogger
 import com.evernym.verity.protocol.container.actor._
-import com.evernym.verity.protocol.engine.{PinstId, PinstIdResolution, ProtoRef}
+import com.evernym.verity.protocol.engine.registry.PinstIdResolution
+import com.evernym.verity.protocol.engine.{PinstId, ProtoRef}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageDefinition
 import com.evernym.verity.util2.Exceptions
 
@@ -81,7 +82,7 @@ trait AgentStateCleanupHelper {
     } else {
       val calcPinstId = calcPinstIdOpt.getOrElse(getCalcPinstIdForBasicMsgProtoDef(pinstId))
       if (pinstId == calcPinstId) protoRefSet
-      else protoRefSet - BasicMessageDefinition.msgFamily.protoRef
+      else protoRefSet - BasicMessageDefinition.protoRef
     }
   }
 
@@ -159,8 +160,8 @@ trait AgentStateCleanupHelper {
               val successResp = migrationStatus.map(_.successResponseFromProtoActors).getOrElse(Set.empty)
               val nonSuccessResp = migrationStatus.map(_.nonSuccessResponseFromProtoActors).getOrElse(Set.empty)
               val respReceivedFromProtoActors = successResp ++ nonSuccessResp
-              if (!respReceivedFromProtoActors.contains(e.protoDef.msgFamily.protoRef)) {
-                val pinstProtoRefStr = pinstId + e.protoDef.msgFamily.protoRef.toString
+              if (!respReceivedFromProtoActors.contains(e.protoDef.protoRef)) {
+                val pinstProtoRefStr = pinstId + e.protoDef.msgFamily
                 val currAttempt = threadContextMigrationAttempt.getOrElse(pinstProtoRefStr, 0)
                 if (currAttempt < migrateThreadContextMaxAttemptPerPinstProtoRef) {
                   throttledLogger.info(
@@ -179,7 +180,7 @@ trait AgentStateCleanupHelper {
                   throttledLogger.info(
                     MigrateThreadContextsReceived(s"$persistenceId-2b"),
                     s"ASC [$persistenceId] [ASCH->ASCH] max attempt reached: " + pinstProtoRefStr)
-                  handleThreadContextMigrationAttemptExceeded(currAttempt, pinstId, e.protoDef.msgFamily.protoRef)
+                  handleThreadContextMigrationAttemptExceeded(currAttempt, pinstId, e.protoDef.protoRef)
                   e -> None
                 }
               } else e -> None
@@ -191,7 +192,7 @@ trait AgentStateCleanupHelper {
               throttledLogger.info(
                 MigrateThreadContextsReceived(s"$persistenceId-3"),
                 s"[$persistenceId] thread context migration candidates for pinst $pinstId => total: ${candidateProtoActors.size} (DEPRECATED_V01: $deprecatedV01Count, V02: $v02Count)")
-              val event = ThreadContextMigrationStarted(pinstId, candidateProtoActors.map(_._1.protoDef.msgFamily.protoRef.toString))
+              val event = ThreadContextMigrationStarted(pinstId, candidateProtoActors.map(_._1.protoDef.protoRef.toString))
               cleanupEventReceiver(event)
               writeWithoutApply(event)
             }
@@ -200,7 +201,7 @@ trait AgentStateCleanupHelper {
               MigrateThreadContextsReceived(s"$persistenceId-4"),
               s"ASC [$persistenceId] [ASCH->ASCH] candidateProtoActors: " + candidateProtoActors.size)
             candidateProtoActors.zipWithIndex.foreach { case (entry, index) =>
-              val key = entry._1.protoDef.msgFamily.protoRef.toString + entry._2.id
+              val key = entry._1.protoDef.protoRef.toString + entry._2.id
               val toActor = ActorProtocol(entry._1.protoDef).region(context.system)
               val timeout = Duration(migrateThreadContextBatchItemSleepInterval * index, MILLISECONDS)
               timers.startSingleTimer(key, SendCmd(toActor, entry._2), timeout)

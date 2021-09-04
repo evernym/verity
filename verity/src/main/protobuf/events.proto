@@ -403,15 +403,6 @@ message MsgExpirationTimeUpdated {
     int32 timeInSeconds = 2;
 }
 
-message ParameterStored {
-    string name = 1;
-    string value = 2;
-}
-
-message ProtocolInitialized {
-    repeated ParameterStored parameters = 1;
-}
-
 message ProtocolObserverAdded {
     int32 typeId = 1;
     string jsonDetail = 2;

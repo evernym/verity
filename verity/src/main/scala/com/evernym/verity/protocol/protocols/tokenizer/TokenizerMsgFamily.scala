@@ -1,16 +1,16 @@
 package com.evernym.verity.protocol.protocols.tokenizer
 
-import com.evernym.verity.util2.Base64Encoded
-import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.container.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine.Constants.MFV_0_1
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.DbcUtil.requireNotNull
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.ProvisioningToken
 import com.evernym.verity.protocol.protocols.tokenizer.{Token => TokenEvt}
 import com.evernym.verity.util.TimeUtil.IsoDateTime
+import com.evernym.verity.util2.Base64Encoded
 
 object TokenizerMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.EVERNYM_QUALIFIER
@@ -21,13 +21,13 @@ object TokenizerMsgFamily extends MsgFamily {
     "get-token"       -> classOf[GetToken],
     "send-token"      -> classOf[Token],
     "problem-report"  -> classOf[ProblemReport],
-    "push-token"      -> classOf[PushToken]
   )
+
   override val controlMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map (
     "ask-for-token"   -> classOf[AskForToken],
   )
-  override protected val signalMsgs: Map[Class[_], MsgName] = Map(
-  )
+
+  override protected val signalMsgs: Map[Class[_], MsgName] = Map()
 
   sealed trait Role
   object Requester extends Role
@@ -42,12 +42,8 @@ object TokenizerMsgFamily extends MsgFamily {
     * Types of messages are from the perspective of the 'sender' of the message
     */
   sealed trait Msg extends MsgBase
-  //TODO: when the service decorator functionality is actually implemented,
-  // the PushToken will be abstracted from the Token Protocol
-  // somewhere in the engine or in the container the decorator will be handled - probably engine
-  case class PushToken(msg: Token, deliveryMethod: ComMethodDetail) extends ServiceDecorator with Msg
 
-  case class GetToken(sponseeId: String, sponsorId: String, pushId: Option[ComMethodDetail]=None) extends Msg
+  case class GetToken(sponseeId: String, sponsorId: String, pushId: Option[Any]=None) extends Msg
 
   case class Token(sponseeId: String,
                    sponsorId: String,
@@ -71,7 +67,7 @@ object TokenizerMsgFamily extends MsgFamily {
     * Control messages
     */
   sealed trait Ctl extends Control with MsgBase
-  case class AskForToken(sponseeId: String, sponsorId: String, pushId: Option[ComMethodDetail]=None) extends Ctl {
+  case class AskForToken(sponseeId: String, sponsorId: String, pushId: Option[Any]=None) extends Ctl {
     def asGetToken(): GetToken = GetToken(sponseeId, sponsorId, pushId)
   }
 

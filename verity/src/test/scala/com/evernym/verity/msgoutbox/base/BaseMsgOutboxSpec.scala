@@ -26,11 +26,11 @@ import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackMsg, Pa
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.GetTokenSuccess
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.OAUTH2_VERSION_1
 import com.evernym.verity.observability.metrics.{MetricsWriter, MetricsWriterExtension}
-import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
 import com.evernym.verity.testkit.TestWallet
 import com.evernym.verity.testkit.mock.blob_store.MockBlobStore

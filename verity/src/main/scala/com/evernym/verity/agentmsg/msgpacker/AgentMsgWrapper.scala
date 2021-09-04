@@ -3,12 +3,16 @@ package com.evernym.verity.agentmsg.msgpacker
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.did.VerKeyStr
-import com.evernym.verity.protocol.container.actor.ProtoMsg
-import com.evernym.verity.protocol.engine.{MsgFamilyName, MsgFamilyVersion, MsgName, MsgType}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyVersion, MsgName}
+import com.evernym.verity.did.didcomm.v1.messages.MsgType
+import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.protocol.protocols.connecting.common.ProtoMsg
 
 case class AgentMsgWrapper(msgPackFormat: MsgPackFormat, agentBundledMsg: AgentBundledMsg)
-  extends ProtoMsg {
+  extends MsgBase
+    with ProtoMsg { // this is an artifact of how connection 0.5 and 0.6 work, they need this class to have this
+  // marker trait
 
   def senderVerKey: Option[VerKeyStr] = agentBundledMsg.senderVerKey
   def recipVerKey: Option[VerKeyStr] = agentBundledMsg.recipVerKey

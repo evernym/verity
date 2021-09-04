@@ -1,13 +1,13 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
-import com.evernym.verity.actor.wallet.GetVerKeyResp
-import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncapi.wallet.VerKeyResult
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
+import com.evernym.verity.protocol.engine.util.{DIDDoc, ServiceFormatted, ServiceFormatter}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvitation
 import com.evernym.verity.util.Base58Util
-import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.did.{DidStr, VerKeyStr}
 
 import scala.util.{Failure, Success, Try}
 
@@ -17,7 +17,7 @@ object InviteUtil {
     (agencyVerKey, ctx.getRoster.selfId) match {
       case (Some(agencyVerKey), Some(did)) =>
         ctx.wallet.verKey(did) {
-          case Success(GetVerKeyResp(verKey: VerKeyStr)) =>
+          case Success(VerKeyResult(verKey: VerKeyStr)) =>
             handler(Success(
               DIDDoc(
                 did,

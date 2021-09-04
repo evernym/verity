@@ -32,6 +32,7 @@ import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyServic
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.typed.base.UserGuardian
 import com.evernym.verity.libindy.Libraries
+import com.evernym.verity.protocol.engine.ProtoRef
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -270,7 +271,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
   val segmentedStateRegions: Map[String, ActorRef] = agentActorContext.protocolRegistry
     .entries.filter(_.protoDef.segmentStoreStrategy.isDefined)
     .map { e =>
-      val typeName = SegmentedStateStore.buildTypeName(e.protoDef.msgFamily.protoRef)
+      val typeName = SegmentedStateStore.buildTypeName(e.protoDef.protoRef)
       val region = createPersistentRegion(
         typeName,
         SegmentedStateStore.props(agentActorContext.appConfig, executionContextProvider.futureExecutionContext))

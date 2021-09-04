@@ -1,6 +1,5 @@
 package com.evernym.integrationtests.e2e.sdk.vcx
 
-import com.evernym.verity.protocol.engine.MsgFamily
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageMsgFamily
 import com.evernym.integrationtests.e2e.msg.VcxGetMsg.vcxPayloadObject
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces.UndefinedBasicMessage_1_0
@@ -8,6 +7,7 @@ import com.evernym.integrationtests.e2e.sdk.vcx.VcxBasicMessage.HolderBasicMessa
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider.Interaction
 import com.evernym.sdk.vcx.connection.ConnectionApi
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.utils.Context
 import org.json.JSONObject

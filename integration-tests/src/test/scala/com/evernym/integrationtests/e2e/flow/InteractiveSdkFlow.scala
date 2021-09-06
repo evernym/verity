@@ -29,6 +29,7 @@ import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
@@ -290,7 +291,9 @@ trait InteractiveSdkFlow extends MetricsFlow {
       }
       s"[$issuerName] check schema is on ledger" in {
         val (issuerDID, _): (DidStr, VerKeyStr) = currentIssuerId(issuerSdk, msgReceiverSdk)
-        ledgerUtil.checkSchemaOnLedger(issuerDID, schemaName, schemaVersion)
+        eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+          ledgerUtil.checkSchemaOnLedger(issuerDID, schemaName, schemaVersion)
+        }
       }
     }
   }

@@ -2,8 +2,9 @@ package com.evernym.verity.integration.base.sdk_provider.msg_listener
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.StatusCodes.{OK, Unauthorized}
 import akka.http.scaladsl.model.headers.HttpCredentials
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, StatusCode}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
@@ -36,6 +37,9 @@ trait MsgListenerBase[T]
   def msgRoute: Route
 
   protected var checkAuthToken: Boolean = false
+  protected var responseStatus: StatusCode = OK
+  protected var responseStatusCount: Map[StatusCode, Int] = Map.empty
+
   lazy val logger: Logger = getLoggerByName("MsgListener")
 
   lazy val webhookEndpoint = s"http://localhost:$port/$webhookEndpointPath"
@@ -55,6 +59,14 @@ trait MsgListenerBase[T]
     checkAuthToken = value
   }
 
+  def setResponseCode(value: StatusCode): Unit = {
+    responseStatus = value
+  }
+
+  def getResponseCodeCount(value: StatusCode): Int = {
+    responseStatusCount.getOrElse(value, 0)
+  }
+
   def resetPlainMsgsCounter: ReceivedMsgCounter = {
     val curCount = _plainMsgsSinceLastReset
     _plainMsgsSinceLastReset = 0
@@ -71,6 +83,18 @@ trait MsgListenerBase[T]
     val curCount = _failedAuthedMsgSinceLastReset
     _failedAuthedMsgSinceLastReset = 0
     ReceivedMsgCounter(_plainMsgsSinceLastReset, _authedMsgSinceLastReset, curCount)
+  }
+
+  def handleIncomingMsg(data: T, cred: Option[HttpCredentials]): StatusCode = {
+    if (checkAuthToken && ! hasValidToken(cred)) {
+      Unauthorized
+    } else {
+      if (! checkAuthToken) _plainMsgsSinceLastReset = _plainMsgsSinceLastReset + 1
+      if (responseStatus == OK) addToQueue(data)
+      val curCount = responseStatusCount.getOrElse(responseStatus, 0)
+      responseStatusCount += responseStatus -> (curCount + 1)
+      responseStatus
+    }
   }
 
   protected var _plainMsgsSinceLastReset: Int = 0
@@ -105,7 +129,6 @@ trait HasOAuthSupport {
         }
       }
     }
-
 
   protected def hasValidToken(cred: Option[HttpCredentials]): Boolean = {
     val isAuthed = cred match {

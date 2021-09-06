@@ -1,6 +1,5 @@
 package com.evernym.verity.config.validator
 
-import akka.actor.ActorSystem
 import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.util2.Status.VALIDATION_FAILED
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.{getResourceUniqueName, isUserIdOrPattern}

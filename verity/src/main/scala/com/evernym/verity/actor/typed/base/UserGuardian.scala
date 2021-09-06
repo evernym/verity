@@ -9,7 +9,6 @@ import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import com.evernym.verity.util2.RetentionPolicy
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.actor.base.EntityIdentifier
 import com.evernym.verity.config.ConfigConstants.PERSISTENT_ACTOR_BASE
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.outbox.Outbox

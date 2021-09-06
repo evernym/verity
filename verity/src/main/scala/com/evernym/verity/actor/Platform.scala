@@ -32,7 +32,6 @@ import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyServic
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.typed.base.UserGuardian
 import com.evernym.verity.libindy.Libraries
-import com.evernym.verity.protocol.engine.ProtoRef
 
 import scala.concurrent.Future
 import scala.concurrent.duration._

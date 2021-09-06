@@ -8,7 +8,7 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgTransformer, AgentMsgWrapp
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.didcomm.v1.messages.MsgType
 import com.evernym.verity.protocol.engine.registry.ProtocolRegistry
-import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID => _, _}
+import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID => _}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{EncryptParam, KeyParam, WalletAPIParam}
 

@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.engine.asyncapi.wallet
 
 import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
-import com.evernym.verity.ledger.LedgerRequest
 import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessRight, AccessSign, AccessStoreTheirDiD,
   AccessVerKey, AccessVerify, AnonCreds, AsyncOpRunner, BaseAccessController, DEPRECATED_AccessSetupNewWallet}
 import com.evernym.verity.protocol.engine.ParticipantId

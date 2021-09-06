@@ -3,7 +3,7 @@ package com.evernym.verity.app_launcher
 import akka.actor.ActorSystem
 import com.evernym.verity.actor.{Platform, PlatformServices}
 import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.util2.ExecutionContextProvider
 
 import scala.concurrent.ExecutionContext

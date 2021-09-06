@@ -8,7 +8,6 @@ import com.evernym.verity.actor.agent.user.AgentConfigs
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.did.DidStr
 
 trait CacheResponseUtil {
 

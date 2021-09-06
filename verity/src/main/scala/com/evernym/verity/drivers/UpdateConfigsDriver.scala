@@ -1,8 +1,5 @@
 package com.evernym.verity.drivers
 
-
-import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
-import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigs
 import com.evernym.verity.protocol.container.actor.{ActorDriver, ActorDriverGenParam}
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.SignalEnvelope

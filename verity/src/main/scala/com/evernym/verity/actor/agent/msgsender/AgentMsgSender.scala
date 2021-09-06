@@ -8,7 +8,6 @@ import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
 import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.ledger.LedgerSvcException
-import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.connecting.common.TheirRoutingParam
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.cache.AGENCY_IDENTITY_CACHE_FETCHER

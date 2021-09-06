@@ -7,7 +7,6 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.did.didcomm.v1.messages.MsgType
-import com.evernym.verity.protocol.engine._
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
 

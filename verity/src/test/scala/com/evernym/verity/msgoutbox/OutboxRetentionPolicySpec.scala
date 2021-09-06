@@ -147,5 +147,4 @@ class OutboxRetentionPolicySpec
 
   lazy val ecp = new ExecutionContextProvider(appConfig)
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

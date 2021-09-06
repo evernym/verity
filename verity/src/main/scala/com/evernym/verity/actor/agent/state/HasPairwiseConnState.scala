@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.state
 import akka.actor.Actor.Receive
 import com.evernym.verity.util2.Exceptions.InvalidValueException
 import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
-import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship._
@@ -28,8 +28,7 @@ import scala.util.Left
  * for example: updating connection status, their did doc etc
  */
 trait PairwiseConnStateBase
-  extends HasExecutionContextProvider
-    with HasWalletExecutionContextProvider {
+  extends HasExecutionContextProvider {
   private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   type StateType <: AgentStatePairwiseInterface
@@ -61,7 +60,7 @@ trait PairwiseConnStateBase
                                     relScopeDIDVerKey: VerKeyStr,
                                     lrd: LegacyRoutingDetail): Unit = {
     val theirDidDoc =
-      DidDocBuilder(futureWalletExecutionContext)
+      DidDocBuilder(futureExecutionContext)
         .withDid(relScopeDID)
         .withAuthKey(relScopeDID, relScopeDIDVerKey, Set(EDGE_AGENT_KEY))
         .withAuthKeyAndEndpointDetail(lrd.agentKeyDID, lrd.agentVerKey, Set(AGENT_KEY_TAG), Left(lrd))
@@ -79,7 +78,7 @@ trait PairwiseConnStateBase
                               relScopeDIDVerKey: VerKeyStr,
                               rd: RoutingDetail): Unit = {
     val theirDidDoc =
-      DidDocBuilder(futureWalletExecutionContext)
+      DidDocBuilder(futureExecutionContext)
         .withDid(relScopeDID)
         .withAuthKeyAndEndpointDetail(relScopeDID, relScopeDIDVerKey, Set(AGENT_KEY_TAG), Right(rd))
         .didDoc

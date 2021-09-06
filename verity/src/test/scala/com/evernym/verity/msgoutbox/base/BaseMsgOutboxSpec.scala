@@ -5,7 +5,7 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
-import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider, PolicyElements, RetentionPolicy, Status}
+import com.evernym.verity.util2.{HasExecutionContextProvider, PolicyElements, RetentionPolicy, Status}
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies.{AddMsgReply, MsgAdded}
@@ -44,7 +44,7 @@ import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
 
-trait BaseMsgOutboxSpec extends HasExecutionContextProvider with HasWalletExecutionContextProvider { this: BehaviourSpecBase =>
+trait BaseMsgOutboxSpec extends HasExecutionContextProvider { this: BehaviourSpecBase =>
   implicit val executionContext: ExecutionContext = futureExecutionContext
 
   lazy val BUCKET_NAME = "bucket-name"
@@ -66,7 +66,7 @@ trait BaseMsgOutboxSpec extends HasExecutionContextProvider with HasWalletExecut
   lazy val sharding: ClusterSharding = ClusterSharding(system)
   lazy val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()
 
-  lazy val testWallet = new TestWallet(futureWalletExecutionContext, createWallet = true)
+  lazy val testWallet = new TestWallet(futureExecutionContext, createWallet = true)
   lazy val myKey1: NewKeyCreated = testWallet.executeSync[NewKeyCreated](CreateNewKey())
   lazy val recipKey1: NewKeyCreated = testWallet.executeSync[NewKeyCreated](CreateNewKey())
   lazy val routingKey1: NewKeyCreated = testWallet.executeSync[NewKeyCreated](CreateNewKey())

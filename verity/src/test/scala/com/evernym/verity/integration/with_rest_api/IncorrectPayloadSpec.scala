@@ -27,8 +27,8 @@ class IncorrectPayloadSpec
   lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(VAS_OVERRIDE_CONFIG).build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
+  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, executionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
 
   val issuerHolderConn = "connId1"
   var schemaId: SchemaId = _

@@ -23,22 +23,22 @@ case class MockEnv(name: String,
 
 object MockEnvUtil {
 
-  def buildMockCloudAgent(mockAgencyEdgeAgent: MockEdgeAgent, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext): MockCloudAgent = {
-    val mcea = new MockCloudAgent(executionContext, walletExecutionContext, mockAgencyEdgeAgent.agencyEndpoint, mockAgencyEdgeAgent.appConfig)
+  def buildMockCloudAgent(mockAgencyEdgeAgent: MockEdgeAgent, executionContext: ExecutionContext): MockCloudAgent = {
+    val mcea = new MockCloudAgent(executionContext, mockAgencyEdgeAgent.agencyEndpoint, mockAgencyEdgeAgent.appConfig)
     mcea.agencyPublicDid = Option(mockAgencyEdgeAgent.myDIDDetail.prepareAgencyIdentity)
     mcea
   }
 
-  def buildMockEdgeAgent(mockAgencyEdgeAgent: MockEdgeAgent, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext): MockEdgeAgent = {
-    val mcea = new MockEdgeAgent(mockAgencyEdgeAgent.agencyEndpoint, mockAgencyEdgeAgent.appConfig, executionContext, walletExecutionContext)
+  def buildMockEdgeAgent(mockAgencyEdgeAgent: MockEdgeAgent, executionContext: ExecutionContext): MockEdgeAgent = {
+    val mcea = new MockEdgeAgent(mockAgencyEdgeAgent.agencyEndpoint, mockAgencyEdgeAgent.appConfig, executionContext)
     mcea.agencyPublicDid = Option(mockAgencyEdgeAgent.myDIDDetail.prepareAgencyIdentity)
     mcea
   }
 
-  def buildNewEnv(name: String, appConfig: AppConfig, cloudAgentUrl: String, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext): MockEnv = {
-    val mockAgencyAdmin = new MockEdgeAgent(UrlParam(cloudAgentUrl), appConfig, executionContext, walletExecutionContext)
-    val mockCloudAgent: MockCloudAgent = MockEnvUtil.buildMockCloudAgent(mockAgencyAdmin, executionContext, walletExecutionContext)
-    val mockEdgeAgent: MockEdgeAgent = MockEnvUtil.buildMockEdgeAgent(mockAgencyAdmin, executionContext, walletExecutionContext)
+  def buildNewEnv(name: String, appConfig: AppConfig, cloudAgentUrl: String, executionContext: ExecutionContext): MockEnv = {
+    val mockAgencyAdmin = new MockEdgeAgent(UrlParam(cloudAgentUrl), appConfig, executionContext)
+    val mockCloudAgent: MockCloudAgent = MockEnvUtil.buildMockCloudAgent(mockAgencyAdmin, executionContext)
+    val mockEdgeAgent: MockEdgeAgent = MockEnvUtil.buildMockEdgeAgent(mockAgencyAdmin, executionContext)
     MockEnv(name, mockEdgeAgent, mockCloudAgent, mockAgencyAdmin)
   }
 }

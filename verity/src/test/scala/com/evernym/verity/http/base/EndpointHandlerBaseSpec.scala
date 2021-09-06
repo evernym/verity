@@ -5,7 +5,6 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
-import com.evernym.verity.util2.HasWalletExecutionContextProvider
 import com.evernym.verity.constants.Constants.URL
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -37,12 +36,11 @@ trait EdgeEndpointBaseSpec
     with MockPushNotifListener
     with MockMsgSendingSvcListener
     with AriesInvitationDecodingSpec
-    with AppStatusHealthCheckSpec
-    with HasWalletExecutionContextProvider {
+    with AppStatusHealthCheckSpec {
 
   lazy val (mockEntEdgeEnv, mockUserEdgeEnv) = {
-    val edge1 = MockEnvUtil.buildNewEnv("edge1", appConfig, "localhost:9001/agency/msg", futureExecutionContext, futureWalletExecutionContext)
-    val edge2 = MockEnvUtil.buildNewEnv("edge2", appConfig, "localhost:9002/agency/msg", futureExecutionContext, futureWalletExecutionContext)
+    val edge1 = MockEnvUtil.buildNewEnv("edge1", appConfig, "localhost:9001/agency/msg", futureExecutionContext)
+    val edge2 = MockEnvUtil.buildNewEnv("edge2", appConfig, "localhost:9002/agency/msg", futureExecutionContext)
     (edge1.withOthersMockEnvSet(edge2), edge2.withOthersMockEnvSet(edge1))
   }
 

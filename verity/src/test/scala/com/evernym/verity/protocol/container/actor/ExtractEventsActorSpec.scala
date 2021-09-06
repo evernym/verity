@@ -28,7 +28,7 @@ class ExtractEventsActorSpec
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   lazy implicit val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+    override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
   override def executionContextProvider: ExecutionContextProvider = ecp
 
   "ExtractEventsActor" - {

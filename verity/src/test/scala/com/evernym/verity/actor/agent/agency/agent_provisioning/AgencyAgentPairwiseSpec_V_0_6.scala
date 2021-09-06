@@ -15,6 +15,7 @@ import scala.concurrent.ExecutionContext
 
 
 class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eventually {
+
   import mockEdgeAgent.v_0_6_req._
   import mockEdgeAgent.v_0_6_resp._
 
@@ -82,7 +83,7 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
 
       "when sent create agent msg after connecting" - {
         "should respond with error agent already created" taggedAs (UNSAFE_IgnoreAkkaEvents) in {
-          eventually (timeout(Span(5, Seconds))) {
+          eventually(timeout(Span(5, Seconds))) {
             val fromDID = mockEdgeAgent.myDIDDetail.did
             val fromDIDVerKey = mockEdgeAgent.getVerKeyFromWallet(fromDID)
             val msg = prepareCreateAgentMsg(
@@ -95,7 +96,7 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
       }
 
       "when tried to restart actor" - {
-        "should be successful and respond" taggedAs (UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
+        "should be successful and respond" taggedAs(UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
           restartPersistentActor(aap)
         }
       }
@@ -103,15 +104,11 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
   }
 
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+
   /**
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

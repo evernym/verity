@@ -292,7 +292,6 @@ class ActivityTrackerSpec
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 case class MetricWithTags(name: String, totalValue: Double, tags: Map[Map[String, String], Double]) {

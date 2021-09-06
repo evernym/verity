@@ -98,9 +98,4 @@ class AgencyAgentSnapshotSpec
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

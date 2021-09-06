@@ -68,11 +68,6 @@ class MockAgentActorContext(val system: ActorSystem,
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 case class MockAgentActorContextParam(actorTypeToRegions: Map[Int, ActorRef]=Map.empty)

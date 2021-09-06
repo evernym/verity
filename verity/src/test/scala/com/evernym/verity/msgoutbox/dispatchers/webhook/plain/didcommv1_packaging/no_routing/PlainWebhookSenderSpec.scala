@@ -170,5 +170,4 @@ class PlainWebhookSenderSpec
   }
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

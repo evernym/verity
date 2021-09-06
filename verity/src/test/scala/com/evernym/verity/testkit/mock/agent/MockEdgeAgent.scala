@@ -18,7 +18,6 @@ object MockEdgeAgent {
 class MockEdgeAgent(override val agencyEndpoint: UrlParam,
                     override val appConfig: AppConfig,
                     executionContextParam: ExecutionContext,
-                    walletExecutionContextParam: ExecutionContext,
                     override val myDIDDetail: AgentDIDDetail = CommonSpecUtil.generateNewAgentDIDDetail()
                    ) extends AgentWithMsgHelper {
 
@@ -34,9 +33,4 @@ class MockEdgeAgent(override val agencyEndpoint: UrlParam,
 
   def inviteUrl: String = get[String](INVITE_URL)
   def inviteJsonObject: JSONObject = get[JSONObject](INVITE_JSON_OBJECT)
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContextParam
 }

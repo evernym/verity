@@ -41,11 +41,6 @@ class ConsumerAgentPairwiseBaseSpec_V_0_7 extends UserAgentPairwiseSpec_V_0_7 {
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 trait UserAgentPairwiseSpec_V_0_7

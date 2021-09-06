@@ -78,8 +78,7 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
     new MockEdgeAgent(
       UrlParam(localAgencyEndpoint),
       platform.agentActorContext.appConfig,
-      executionContextProvider.futureExecutionContext,
-      executionContextProvider.walletFutureExecutionContext
+      executionContextProvider.futureExecutionContext
     )
 
   def getTotalAgentMsgsSentByCloudAgentToRemoteAgent: Int = {

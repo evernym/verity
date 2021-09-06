@@ -14,7 +14,7 @@ import scala.concurrent.{ExecutionContext, Future}
 case class DidDocBuilder(executionContext: ExecutionContext, didDoc: DidDoc = DidDoc())
                         (implicit didDocBuilderParam: DidDocBuilderParam) {
 
-  private implicit def futureWalletExecutionContext: ExecutionContext = executionContext
+  private implicit def futureExecutionContext: ExecutionContext = executionContext
 
 
   def withDid(did: DidStr): DidDocBuilder = {

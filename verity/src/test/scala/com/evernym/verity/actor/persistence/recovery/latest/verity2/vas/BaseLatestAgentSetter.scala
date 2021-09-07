@@ -167,3 +167,17 @@ trait UserAgentPairwiseEventSetter extends UserAgentCommon with BasePersistentSt
     MsgDeliveryStatusUpdated(respMsgId,"http://localhost:9001/agency/msg","MDS-102","",1615697701620l,0)
   )
 }
+
+trait ProtocolActorEventSetter extends BasePersistentStore { this: ProvidesMockPlatform =>
+
+  def protoName: String
+  def protoEntityId: String
+
+  def paRegion: agentRegion = agentRegion(protoEntityId, platform.protocolRegions(protoName))
+
+  private def storeProtocolActorEvents(): Unit = {
+  }
+
+  protected lazy val basicProtocolActorEvents = scala.collection.immutable.Seq(
+  )
+}

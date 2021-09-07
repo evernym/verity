@@ -457,10 +457,11 @@ trait BasePersistentActor
         logger.error(s"[$persistenceId] error while applying event ${event.getClass.getSimpleName}: ${Exceptions.getStackTraceAsSingleLineString(cause)}")
       case None =>
         logger.error(s"[$persistenceId] error while actor recovery, " +
-          s"possible-causes: $JOURNAL_ERROR_POSSIBLE_CAUSE" +
+          s"possible-causes: $JOURNAL_ERROR_POSSIBLE_CAUSE " +
           s"(error message: ${Exceptions.getStackTraceAsSingleLineString(cause)})"
         )
     }
+    throw cause
   }
 
   private val JOURNAL_ERROR_POSSIBLE_CAUSE =

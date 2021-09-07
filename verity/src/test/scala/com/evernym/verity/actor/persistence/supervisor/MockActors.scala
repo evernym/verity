@@ -2,7 +2,6 @@ package com.evernym.verity.actor.persistence.supervisor
 
 import akka.actor.Props
 import akka.persistence.AtomicWrite
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SupervisorUtil}
 import com.evernym.verity.actor.{ActorMessage, KeyCreated, TestJournal}
 import com.evernym.verity.config.AppConfig
@@ -27,6 +26,7 @@ class MockActorCreationFailure(val appConfig: AppConfig, ec: ExecutionContext)
 
   override def receiveEvent: Receive = ???
 
+  //to mimic failure during actor creation
   throw new RuntimeException("purposefully throwing exception during construction of Actor")
 
   /**

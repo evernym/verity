@@ -88,12 +88,13 @@ object Outbox {
   }
 
   trait Reply extends ActorMessage
+  sealed trait GetDeliveryStatusReply extends Reply
   object Replies {
     trait MsgAddedReply extends Reply
     case object MsgAlreadyAdded extends MsgAddedReply
     case object MsgAdded extends MsgAddedReply
     case class NotInitialized(entityId: String) extends MsgAddedReply
-    case class DeliveryStatus(messages: Map[MsgId, Message]) extends Reply
+    case class DeliveryStatus(messages: Map[MsgId, Message]) extends GetDeliveryStatusReply
   }
 
   trait Event   //all events would be defined in outbox-events.proto file

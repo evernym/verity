@@ -8,6 +8,7 @@ import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 
+//This test will test the `Stop` strategy: https://github.com/akka/akka/blob/622d8af0ef9f685ee1e91b04177926ca938376ac/akka-actor/src/main/scala/akka/actor/FaultHandling.scala#L208
 
 class ActorMsgHandlerFailureSpec
   extends ActorSpec
@@ -36,12 +37,10 @@ class ActorMsgHandlerFailureSpec
     """
        verity.persistent-actor.base.supervisor {
           enabled = true
-          backoff {
-            strategy = onStop
-            min-seconds = 3
-            max-seconds = 20
-            random-factor = 0
-          }
+          strategy = OnStop
+          min-seconds = 3
+          max-seconds = 20
+          random-factor = 0
       }
       akka.test.filter-leeway = 5s   # to make the event filter run for sufficient time
       """

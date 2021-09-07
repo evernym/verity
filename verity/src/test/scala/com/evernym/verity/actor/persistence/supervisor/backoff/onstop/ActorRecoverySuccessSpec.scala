@@ -11,6 +11,8 @@ import org.scalatest.concurrent.Eventually
 
 import scala.language.postfixOps
 
+//This test will test the `Stop` strategy: https://github.com/akka/akka/blob/622d8af0ef9f685ee1e91b04177926ca938376ac/akka-actor/src/main/scala/akka/actor/FaultHandling.scala#L208
+// (shouldn't change anything as it is not changing any behavior for 'Stop' strategy)
 
 class ActorRecoverySuccessSpec
   extends ActorSpec
@@ -37,12 +39,10 @@ class ActorRecoverySuccessSpec
     """
        verity.persistent-actor.base.supervisor {
           enabled = true
-          backoff {
-            strategy = onStop
-            min-seconds = 3
-            max-seconds = 20
-            random-factor = 0
-          }
+          strategy = OnStop
+          min-seconds = 3
+          max-seconds = 20
+          random-factor = 0
       }
       """
   )}

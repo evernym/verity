@@ -39,8 +39,8 @@ object SupervisorUtil {
     getBackoffConfig(appConfig, entityCategory, typeName)
     .map { config =>
       config.strategy match {
-        case OnFailure => onFailureSupervisorProps(config, childProps)
-        case OnStop => onStopSupervisorProps(config, childProps)
+        case OnFailure  => onFailureSupervisorProps(config, childProps)
+        case OnStop     => onStopSupervisorProps(config, childProps)
       }
     }
   }
@@ -55,6 +55,7 @@ object SupervisorUtil {
 
   private def onFailureSupervisorProps(conf: BackoffConfig,
                                        childProps: Props): Props = {
+
     BackoffSupervisor.props(
       BackoffOpts
         .onFailure(
@@ -91,8 +92,8 @@ object SupervisorUtil {
 
   private def getBackoffConfig(appConfig: AppConfig, entityCategory: String, typeName: String): Option[BackoffConfig] = {
     val supervisedEnabled =
-      PersistentActorConfigUtil
-        .getSupervisedEnabled(appConfig, defaultValue = false, entityCategory, typeName)
+      PersistentActorConfigUtil.getSupervisedEnabled(appConfig, entityCategory, Option(typeName))
+        .getOrElse(PersistentActorConfigUtil.getSupervisedEnabled(appConfig, entityCategory, None).getOrElse(false))
     if (supervisedEnabled) {
       val strategy = {
         val confVal = PersistentActorConfigUtil.getBackoffStrategy(

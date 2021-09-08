@@ -1,0 +1,32 @@
+@startuml
+skinparam monochrome reverse
+
+== Send Message ==
+Client -> "OutboxService (interface)": sendMessage
+"OutboxService (interface)" -> "RelResolver (interface)": resolveOutbox
+"RelResolver (interface)" -> "OutboxService (interface)": resolved outbox data
+"OutboxService (interface)" -> "MessageRepository (interface)": storeMessage
+"OutboxService (interface)" -> "MessageMeta (actor)": Add
+"MessageMeta (actor)" -> "OutboxService (interface)": MsgAdded
+"OutboxService (interface)" -> "Outbox (actor)": add
+alt outbox is initialized
+	"Outbox (actor)" -> "OutboxService (interface)": MsgAdded
+else outbox not initialized
+	"Outbox (actor)" -> "OutboxService (interface)": Not Initialized
+	"OutboxService (interface)" -> "Outbox (actor)": Init
+	"Outbox (actor)" -> "OutboxService (interface)": MsgAdded
+end
+"OutboxService (interface)" -> Client: msgId
+
+== Get Messages ==
+Client -> "OutboxService (interface)": getMessages
+"OutboxService (interface)" -> "RelResolver (interface)": resolveOutbox
+"RelResolver (interface)" -> "OutboxService (interface)": resolved outbox data
+"OutboxService (interface)" -> "Outbox (actor)": GetDeliveryStatus
+"Outbox (actor)" -> "OutboxService (interface)": map msgId -> message
+"OutboxService (interface)" -> "MessageMeta (actor)": Get (for each msgId from previous response)
+"MessageMeta (actor)" -> "OutboxService (interface)": Msg
+"OutboxService (interface)" -> Client: composed response
+
+
+@enduml

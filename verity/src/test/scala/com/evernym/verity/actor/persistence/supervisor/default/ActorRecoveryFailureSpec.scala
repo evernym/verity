@@ -21,8 +21,8 @@ class ActorRecoveryFailureSpec
   "Unsupervised actor" - {
     "when throws an unhandled exception during actor recovery" - {
       "should restart actor as per DEFAULT strategy" in {
-        //5 from 'handleFailure' in 'akka.actor.FaultHandling' (the default handler) and
-        // 5 from overridden 'preRestart' method in CoreActor
+        //5 errors from 'handleFailure' in 'akka.actor.FaultHandling' (the default handler) and
+        //5 errors from overridden 'preRestart' method in CoreActor
         val expectedLogEntries = 10
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = expectedLogEntries) intercept {
           mockUnsupervised ! GenerateRecoveryFailure

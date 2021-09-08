@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.persistence.supervisor.backoff.onstop
 
+import akka.pattern.BackoffSupervisor.{CurrentChild, GetCurrentChild, GetRestartCount, RestartCount}
 import akka.testkit.EventFilter
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.base.Ping
@@ -9,7 +10,9 @@ import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 
-//This test will exercise the `Stop` strategy: https://github.com/akka/akka/blob/622d8af0ef9f685ee1e91b04177926ca938376ac/akka-actor/src/main/scala/akka/actor/FaultHandling.scala#L208
+//This test confirms that if any exception occurs during actor creation itself
+// it will be stopped by the default supervisor strategy
+// and 'onStop' supervisor strategy will make sure to restart it as per the backoff strategy
 
 class ActorCreationFailureSpec
   extends ActorSpec
@@ -27,6 +30,14 @@ class ActorCreationFailureSpec
           mockSupervised ! Ping(sendAck = true)
           expectNoMessage()
         }
+
+        //because 'max-nr-of-retries' is defined as 3
+        mockSupervised ! GetRestartCount
+        expectMsgType[RestartCount].count shouldBe 3
+
+        // supervisor should stop restarting child once crossed 'max-nr-of-retries'
+        mockSupervised ! GetCurrentChild
+        expectMsgType[CurrentChild].ref shouldBe None
       }
     }
   }
@@ -35,11 +46,13 @@ class ActorCreationFailureSpec
     """
        verity.persistent-actor.base.supervisor {
           enabled = true
-          strategy = OnStop
-          min-seconds = 1
-          max-seconds = 2
-          random-factor = 0
-          max-nr-of-retries = 3
+          backoff {
+            strategy = OnStop
+            min-seconds = 1
+            max-seconds = 2
+            random-factor = 0
+            max-nr-of-retries = 3
+          }
       }
       akka.test.filter-leeway = 25s   # to make the event filter run for 25 seconds
       """

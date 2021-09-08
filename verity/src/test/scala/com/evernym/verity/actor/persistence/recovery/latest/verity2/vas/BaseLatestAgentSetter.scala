@@ -174,10 +174,4 @@ trait ProtocolActorEventSetter extends BasePersistentStore { this: ProvidesMockP
   def protoEntityId: String
 
   def paRegion: agentRegion = agentRegion(protoEntityId, platform.protocolRegions(protoName))
-
-  private def storeProtocolActorEvents(): Unit = {
-  }
-
-  protected lazy val basicProtocolActorEvents = scala.collection.immutable.Seq(
-  )
 }

@@ -8,8 +8,9 @@ import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 
-//This test will test the `Stop` strategy: https://github.com/akka/akka/blob/622d8af0ef9f685ee1e91b04177926ca938376ac/akka-actor/src/main/scala/akka/actor/FaultHandling.scala#L208
-// (shouldn't change anything as it is not changing any behavior for 'Stop' strategy)
+//This test confirms that if any `RuntimeException` occurs during message handling
+// it will be restarted as per back off supervisor strategy
+// and 'onStop' won't change anything
 
 class ActorRecoveryFailureSpec
   extends ActorSpec
@@ -22,8 +23,8 @@ class ActorRecoveryFailureSpec
   "OnStop BackoffSupervised actor" - {
     "when throws an unhandled exception during recovery" - {
       "should keep restarting as per DEFAULT strategy" in {
-        //5 from 'handleFailure' in 'akka.actor.FaultHandling' (the default handler) and
-        // 5 from overridden 'preRestart' method in CoreActor
+        //5 errors from 'handleFailure' in 'akka.actor.FaultHandling' (the default handler) and
+        //5 errors from overridden 'preRestart' method in CoreActor
         val expectedLogEntries = 10
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = expectedLogEntries) intercept {
           mockSupervised ! GenerateRecoveryFailure
@@ -37,10 +38,12 @@ class ActorRecoveryFailureSpec
     """
        verity.persistent-actor.base.supervisor {
           enabled = true
-          strategy = OnStop
-          min-seconds = 3
-          max-seconds = 20
-          random-factor = 0
+          backoff {
+            strategy = OnStop
+            min-seconds = 3
+            max-seconds = 20
+            random-factor = 0
+          }
       }
       akka.test.filter-leeway = 6s   # to make the event filter run for 25 seconds
       akka.mock.actor.exceptionSleepTimeInMillis = 1000

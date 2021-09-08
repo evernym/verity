@@ -11,8 +11,9 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
-//This test will exercise the `Restart` strategy: https://github.com/akka/akka/blob/622d8af0ef9f685ee1e91b04177926ca938376ac/akka-actor/src/main/scala/akka/actor/FaultHandling.scala#L208
-// with handling `Restart` strategy as this: https://github.com/akka/akka/blob/031886a7b32530228f34176cd41bba9d344f43bd/akka-actor/src/main/scala/akka/pattern/internal/BackoffOnRestartSupervisor.scala#L45
+//This test confirms that if any `RuntimeException` occurs during message handling
+// it will be restarted as per default supervisor strategy
+// and restarting will be controlled by Backoff.onFailure supervisor
 
 class ActorMsgHandlerFailureSpec
   extends ActorSpec
@@ -38,7 +39,7 @@ class ActorMsgHandlerFailureSpec
 
         eventually (timeoutVal, intervalVal) {
           mockSupervised ! GetCurrentChild
-          expectMsgType[CurrentChild].ref.value
+          expectMsgType[CurrentChild].ref.isDefined shouldBe true
         }
 
         mockSupervised ! GetRestartCount
@@ -54,10 +55,12 @@ class ActorMsgHandlerFailureSpec
     """
        verity.persistent-actor.base.supervisor {
           enabled = true
-          strategy = OnFailure
-          min-seconds = 1
-          max-seconds = 2
-          random-factor = 0
+          backoff {
+            strategy = OnFailure
+            min-seconds = 1
+            max-seconds = 2
+            random-factor = 0
+          }
       }
       akka.test.filter-leeway = 25s   # to make the event filter run for 25 seconds
       """

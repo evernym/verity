@@ -419,7 +419,7 @@ trait BasePersistentActor
 
   def handleErrorEventParam(errorEventParam: ErrorEvent): Unit = {
     publishAppStateEvent(errorEventParam)
-    throw errorEventParam.cause
+    log.error(errorEventParam.cause.getMessage)
   }
 
   def handlePersistenceFailure(cause: Throwable, errorMsg: String): Unit = {
@@ -461,7 +461,6 @@ trait BasePersistentActor
           s"(error message: ${Exceptions.getStackTraceAsSingleLineString(cause)})"
         )
     }
-    throw cause
   }
 
   private val JOURNAL_ERROR_POSSIBLE_CAUSE =

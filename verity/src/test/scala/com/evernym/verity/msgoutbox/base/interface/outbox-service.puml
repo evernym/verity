@@ -5,9 +5,12 @@ skinparam monochrome reverse
 Client -> "OutboxService (interface)": sendMessage
 "OutboxService (interface)" -> "RelResolver (interface)": resolveOutbox
 "RelResolver (interface)" -> "OutboxService (interface)": resolved outbox data
-"OutboxService (interface)" -> "MessageRepository (interface)": storeMessage
-"OutboxService (interface)" -> "MessageMeta (actor)": Add
-"MessageMeta (actor)" -> "OutboxService (interface)": MsgAdded
+"OutboxService (interface)" -> "MessageRepository (interface)": createMessage
+"MessageRepository (interface)" -> "MsgStore (actor)": StorePayload
+"MsgStore (actor)" -> "MessageRepository (interface)": PayloadStored
+"MessageRepository (interface)" -> "MessageMeta (actor)": Add
+"MessageMeta (actor)" -> "MessageRepository (interface)": MsgAdded
+"MessageRepository (interface)" -> "OutboxService (interface)": msgId
 "OutboxService (interface)" -> "Outbox (actor)": add
 alt outbox is initialized
 	"Outbox (actor)" -> "OutboxService (interface)": MsgAdded

@@ -22,6 +22,7 @@ include:
   - '/cicd/jobs/publish.yml'
   - '/cicd/jobs/deploy.yml'
   - template: Security/SAST.gitlab-ci.yml 
+  - template: Security/Secret-Detection.gitlab-ci.yml
  
 spotbugs-sast:
   variables:

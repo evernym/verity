@@ -7,7 +7,8 @@ import scala.util.Try
 object Lightbend {
   //noinspection TypeAnnotation
   def init() = {
-    Seq(lightbendHasCred := lightbendCred.value.isDefined,
+    Seq(
+      lightbendHasCred := lightbendCred.value.isDefined,
       lightbendCredFilePath := Path.apply(System.getenv("HOME")) / ".sbt" / "lightbend_cred.txt",
       lightbendCred := {
         val credTokenFile = sys.env.get("LIGHTBEND_CRED_TOKEN_FILE")

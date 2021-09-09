@@ -33,7 +33,6 @@ class ActorPersistenceFailureSpec
 
     "when throws an exception during persistence" - {
       "should stop and start actor as per BACKOFF strategy" in {
-        //will test this Restart strategy: https://github.com/akka/akka/blob/622d8af0ef9f685ee1e91b04177926ca938376ac/akka-actor/src/main/scala/akka/actor/FaultHandling.scala#L211
 
         mockSupervised ! GetRestartCount
         expectMsgType[RestartCount].count shouldBe 0

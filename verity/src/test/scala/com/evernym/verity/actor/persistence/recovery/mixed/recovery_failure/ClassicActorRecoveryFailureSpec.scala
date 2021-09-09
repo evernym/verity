@@ -3,7 +3,7 @@ package com.evernym.verity.actor.persistence.recovery.mixed.recovery_failure
 import com.evernym.verity.actor.TestJournal
 import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.persistence.recovery.latest.verity2.vas.ProtocolActorEventSetter
-import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
+import com.evernym.verity.actor.persistence.GetPersistentActorDetail
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory}
@@ -11,14 +11,10 @@ import com.typesafe.config.{Config, ConfigFactory}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
-
 class ClassicActorRecoveryFailureSpec
   extends BaseRecoveryActorSpec
   with ProtocolActorEventSetter {
 
-  override def beforeAll(): Unit = {
-    platform.agentActorContext.metricsWriter
-  }
   override def protoName: String = "connections-1.0-protocol"
   override def protoEntityId: String = "123"
 
@@ -26,7 +22,8 @@ class ClassicActorRecoveryFailureSpec
     "when started" - {
       "should handle recovery failure" in {
         paRegion ! GetPersistentActorDetail
-        expectNoMessage()   //confirms that classic actors looses the message if actor recovery fails
+        //confirms that classic actors looses the message (GetPersistentActorDetail) if actor recovery fails
+        expectNoMessage(5.seconds)
       }
     }
   }
@@ -47,10 +44,6 @@ class ClassicActorRecoveryFailureSpec
           |  random-factor = 0.2
           |  max-nr-of-retries = 10
         |  }
-        |}
-        |verity.metrics {
-        |  enabled = Y
-        |  backend = "com.evernym.verity.observability.metrics.backend.KamonMetricsBackend"
         |}
         |""".stripMargin)
       .withFallback(configForReplayEventFailure)

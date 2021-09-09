@@ -35,7 +35,7 @@ class ActorCreationFailureSpec
         mockSupervised ! GetRestartCount
         expectMsgType[RestartCount].count shouldBe 3
 
-        // supervisor should stop restarting child once crossed 'max-nr-of-retries'
+        //supervisor should stop restarting child once crossed 'max-nr-of-retries'
         mockSupervised ! GetCurrentChild
         expectMsgType[CurrentChild].ref shouldBe None
       }

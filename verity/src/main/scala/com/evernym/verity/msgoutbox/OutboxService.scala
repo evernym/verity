@@ -1,29 +1,25 @@
-package com.evernym.verity.msgoutbox.api.future
+package com.evernym.verity.msgoutbox
 
 import java.util.UUID
 
 import akka.actor.ActorContext
-import akka.actor.typed.{ActorRef, ActorSystem, Scheduler}
-import akka.actor.typed.scaladsl.adapter._
-import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityRef}
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.actor.typed.scaladsl.adapter._
+import akka.actor.typed.{ActorRef, ActorSystem, Scheduler}
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityRef}
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
-import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
-import com.evernym.verity.msgoutbox.{DestId, MsgId, RecipId, RelId}
-import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.GetDeliveryStatus
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam}
-import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
-import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
 import com.evernym.verity.util2.RetentionPolicy
 import com.evernym.verity.util2.Status.StatusDetail
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class IOutbox(val msgStore: ActorRef[MsgStore.Cmd])(implicit ec: ExecutionContext, actorContext: ActorContext, agentMsgRouter: AgentMsgRouter) {
+class OutboxService(val msgStore: ActorRef[MsgStore.Cmd], relResolver: IRelResolver, msgRepository: IMessageRepository)
+                   (implicit ec: ExecutionContext, actorContext: ActorContext, agentMsgRouter: AgentMsgRouter) {
   val system: ActorSystem[_] = actorContext.system.toTyped
   val clusterSharding: ClusterSharding = ClusterSharding(system)
   implicit val timeout: Timeout = ???
@@ -36,9 +32,9 @@ class IOutbox(val msgStore: ActorRef[MsgStore.Cmd])(implicit ec: ExecutionContex
                    msgType: String,
                    retentionPolicy: RetentionPolicy
                  ): Future[MsgId] = {
-    val outboxRefFuture = resolveOutbox(relId, recipId)
+    val outboxRefFuture = relResolver.resolveOutboxParam(relId, recipId)
     val msgId = UUID.randomUUID().toString
-    val storeMsgData = storeMsg(msgId, msg, retentionPolicy)
+    val storeMsgData = msgRepository.createMessage(msgId, msg, retentionPolicy)
     for {
       outboxIdParam <- outboxRefFuture
       _ <- storeMsgData
@@ -47,23 +43,7 @@ class IOutbox(val msgStore: ActorRef[MsgStore.Cmd])(implicit ec: ExecutionContex
     } yield msgId
   }
 
-  private def resolveOutbox(relId: RelId, recipId: RecipId): Future[OutboxIdParam] = {
-    val relationshipResolver = RelationshipResolver(agentMsgRouter)
-    val relationshipResolverRef: ActorRef[RelationshipResolver.Cmd] = actorContext.spawnAnonymous(relationshipResolver)
-    for {
-      RelationshipResolver.Replies.RelParam(selfRelId, relationship) <- relationshipResolverRef.ask(ref => RelationshipResolver.Commands.GetRelParam(relId, ref))
-    } yield {
-      val (relIdToBeUsed, recipIdToBeUsed) =
-        if (relationship.exists(_.relationshipType == PAIRWISE_RELATIONSHIP) &&
-          relationship.exists(_.theirDidDoc.exists(_.did == recipId))) {
-          (relId, recipId)
-        } else {
-          (selfRelId, selfRelId)
-        }
-      OutboxIdParam(relIdToBeUsed, recipIdToBeUsed, DESTINATION_ID_DEFAULT)
-    }
-  }
-
+  // TODO: move to MessageRepository implementation
   private def storeMsg(msgId: MsgId, msg: String, retentionPolicy: RetentionPolicy): Future[Unit] = {
     for {
       _ <- msgStore.ask(ref => MsgStore.Commands.StorePayload(msgId, msg.getBytes, retentionPolicy, ref))
@@ -107,7 +87,7 @@ class IOutbox(val msgStore: ActorRef[MsgStore.Cmd])(implicit ec: ExecutionContex
                    excludePayload: Boolean
                  ): Future[Seq[MsgDetail]] = {
     for {
-      outboxIdParam <- resolveOutbox(relId, recipId)
+      outboxIdParam <- relResolver.resolveOutboxParam(relId, recipId)
       Outbox.Replies.DeliveryStatus(messages)
         <- clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.entityId.toString).ask(ref => Outbox.Commands.GetDeliveryStatus(ref))
       //TODO: do we need partial results?

@@ -13,6 +13,6 @@ trait IRelResolver {
 
 object RelResolver {
   def apply(executionContext: ExecutionContext, agentMsgRouter: AgentMsgRouter, actorContext: ActorContext): IRelResolver = {
-    new RelResolver(executionContext, agentMsgRouter, actorContext)
+    new RelResolver()(executionContext, agentMsgRouter, actorContext)
   }
 }

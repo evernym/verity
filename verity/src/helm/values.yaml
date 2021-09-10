@@ -3,6 +3,8 @@ deployment:
   tag: "latest"
   imagePullPolicy: "Always"
   containerPort: 9000
+  vault:
+    enable: true
 k8sService:
   type: NodePort
   port: 80

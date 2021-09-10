@@ -1,0 +1,50 @@
+build-test-harness:
+  stage: build-test-harness
+  only:
+    refs:
+      - master@dev/verity/verity
+      - main@evernym/verity/verity
+  variables:
+    DOCKER_REGISTRY: "https://index.docker.io/v1/"
+    DOCKER_REPOSITORY: "verity-test-harness-image"
+  image:
+    name: docker:19.03.12
+  services:
+    - docker:19.03.12-dind
+  script:
+    - TAG="$CI_COMMIT_SHORT_SHA"
+    - cp verity/target/scala-2.12/verity-assembly-*.jar cicd/test-harness/verity/.
+    - mv cicd/test-harness/verity/verity-assembly-*.jar cicd/test-harness/verity/verity-assembly-0.4.0-SNAPSHOT.jar
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE/$DOCKER_REPOSITORY:$TAG test-harness/verity/
+    - docker push $CI_REGISTRY_IMAGE/$DOCKER_REPOSITORY:$TAG
+
+interop:
+  stage: acceptance
+  only:
+    refs:
+      - master@dev/verity/verity
+      - main@evernym/verity/verity
+  needs: ["build-test-harness"]
+  artifacts:
+    paths:
+      - $CI_PROJECT_DIR/verity_log.txt
+      - $CI_PROJECT_DIR/verity_backchannel_log.txt
+      - $CI_PROJECT_DIR/acapy_log.txt
+  variables:
+    LEDGER_URL_CONFIG: "http://dev.bcovrin.vonx.io"
+    RUNNING_IN_GITLAB: 'true'
+  image: python:3.7-buster
+  services:
+    - name: $CI_REGISTRY_IMAGE/verity-test-harness-image:$CI_COMMIT_SHORT_SHA
+      alias: Acme
+      entrypoint: ["bash", "run_and_listen.sh", "Acme", "9020"]
+    - name: registry.gitlab.com/evernym/containers/acapy-test-image:latest
+      alias: Bob
+      command: ["Bob", "9020"]
+    - name: registry.gitlab.com/evernym/containers/acapy-test-image:latest
+      alias: Faber
+      command: ["Faber", "9020"]
+  script:
+    - cicd/scripts/run-test-harness
+  allow_failure: true

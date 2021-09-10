@@ -6,5 +6,5 @@ import com.evernym.integrationtests.e2e.tag.annotation.Integration
 @Integration
 class PythonSdkFlowSpec extends SdkFlowSpec {
   override def specifySdkType(env: IntegrationTestEnv): IntegrationTestEnv =
-    SdkFlowSpec.specifySdkForType("python", "0.4.9+8f90a920", env)
+    SdkFlowSpec.specifySdkForType("python", "0.4.10+b1ecd34a", env)
 }

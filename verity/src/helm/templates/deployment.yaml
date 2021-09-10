@@ -76,18 +76,6 @@ spec:
         - name: management
           containerPort: 8558
           protocol: TCP
-        {{- if .Values.deployment.vault.enable }}
-        command: [
-          '/bin/sh',
-          '-c',
-          . /vault/secrets/credentials;
-          exec /usr/bin/java
-            -javaagent:/usr/lib/verity-application/kanela-agent.jar
-            -Dlogback.statusListenerClass=ch.qos.logback.core.status.OnConsoleStatusListener
-            -cp /etc/verity/verity-application:/etc/verity/verity-application/config-map:/usr/lib/verity-application/verity-assembly.jar
-            com.evernym.verity.Main
-        ]
-        {{- end }}
         imagePullPolicy: {{ .Values.deployment.imagePullPolicy }}
       volumes:
       - name: config-files

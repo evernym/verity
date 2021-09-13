@@ -659,7 +659,10 @@ trait InteractiveSdkFlow extends MetricsFlow {
                      (implicit scenario: Scenario): Unit = {
     val issuerSdk = issuer.sdks.head
     val holderSdk = holder.sdks.head
+    val tstart = System.currentTimeMillis()
     issueCredential_1_0(issuerSdk, issuerSdk, holderSdk, holderSdk, relationshipId, credValues, credDefName, credTag)
+    val tend = System.currentTimeMillis()
+    logger.error(s"~~ISSUE: '$credDefName' taken ${tend-tstart} ms");
   }
 
   def issueCredential_1_0(issuerSdk: VeritySdkProvider,
@@ -678,7 +681,10 @@ trait InteractiveSdkFlow extends MetricsFlow {
       val holderMsgReceiver = receivingSdk(Option(holderMsgReceiverSdkProvider))
       var tid = ""
 
+      var tstart = 0L
+
       s"[$issuerName] send a credential offer" in {
+        tstart = System.currentTimeMillis()
         val forRel = issuerSdk.relationship_!(relationshipId).owningDID
         val credDefId = issuerSdk.data_!(credDefIdKey(credDefName, credTag))
 
@@ -715,6 +721,9 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$holderName] receive credential" taggedAs UNSAFE_IgnoreLog in {
         holderMsgReceiver.expectMsgOnly("cred-received")
         holderSdk.issueCredentialComplete_1_0()
+
+        val tend = System.currentTimeMillis()
+        logger.error(s"ISSUE: '$credDefName' taken ${tend-tstart} ms")
       }
 
       def checkStatus(fromReceiver: VeritySdkProvider with MsgReceiver, expectedStatus: String): Unit = {

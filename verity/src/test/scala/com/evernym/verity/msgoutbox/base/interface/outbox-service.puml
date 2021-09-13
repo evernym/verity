@@ -27,8 +27,10 @@ Client -> "OutboxService (interface)": getMessages
 "RelResolver (interface)" -> "OutboxService (interface)": resolved outbox data
 "OutboxService (interface)" -> "Outbox (actor)": GetDeliveryStatus
 "Outbox (actor)" -> "OutboxService (interface)": map msgId -> message
-"OutboxService (interface)" -> "MessageMeta (actor)": Get (for each msgId from previous response)
-"MessageMeta (actor)" -> "OutboxService (interface)": Msg
+"OutboxService (interface)" -> "MessageRepository (interface)": getMessage (for each msgId from previous response)
+"MessageRepository (interface)" -> "MessageMeta (actor)": Get
+"MessageMeta (actor)" -> "MessageRepository (interface)" : Msg
+"MessageRepository (interface)" -> "OutboxService (interface)": Msg
 "OutboxService (interface)" -> Client: composed response
 
 

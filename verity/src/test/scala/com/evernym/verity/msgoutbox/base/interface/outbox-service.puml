@@ -26,11 +26,11 @@ Client -> "OutboxService (interface)": getMessages
 "OutboxService (interface)" -> "RelResolver (interface)": resolveOutbox
 "RelResolver (interface)" -> "OutboxService (interface)": resolved outbox data
 "OutboxService (interface)" -> "Outbox (actor)": GetDeliveryStatus
+"Outbox (actor)" -> "MessageRepository (interface)": get(ids)
+"MessageRepository (interface)" -> "Outbox (actor)": messages with metadata
+"Outbox (actor)" -> "Wallet (actor)": encrypt(msgs)
+"Wallet (actor)" -> "Outbox (actor)": encrypted messages
 "Outbox (actor)" -> "OutboxService (interface)": map msgId -> message
-"OutboxService (interface)" -> "MessageRepository (interface)": getMessage (for each msgId from previous response)
-"MessageRepository (interface)" -> "MessageMeta (actor)": Get
-"MessageMeta (actor)" -> "MessageRepository (interface)" : Msg
-"MessageRepository (interface)" -> "OutboxService (interface)": Msg
 "OutboxService (interface)" -> Client: composed response
 
 

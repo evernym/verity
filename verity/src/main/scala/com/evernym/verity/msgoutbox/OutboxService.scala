@@ -1,5 +1,7 @@
 package com.evernym.verity.msgoutbox
 
+import java.util.concurrent.TimeUnit
+
 import akka.actor.ActorContext
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.adapter._
@@ -13,13 +15,12 @@ import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam}
 import com.evernym.verity.util2.RetentionPolicy
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 
-class OutboxService(val msgStore: ActorRef[MsgStore.Cmd], relResolver: IRelResolver, msgRepository: IMessageRepository)
+class OutboxService(val msgStore: ActorRef[MsgStore.Cmd], relResolver: RelResolver, msgRepository: MessageRepository, timeout: Option[Timeout] = None)
                    (implicit ec: ExecutionContext, actorContext: ActorContext, agentMsgRouter: AgentMsgRouter) {
   val system: ActorSystem[_] = actorContext.system.toTyped
   val clusterSharding: ClusterSharding = ClusterSharding(system)
-  implicit val timeout: Timeout = ???
+  implicit val tmt: Timeout = timeout.getOrElse(Timeout(5, TimeUnit.SECONDS))
   implicit val scheduler: Scheduler = ???
 
   def sendMessage(
@@ -30,7 +31,7 @@ class OutboxService(val msgStore: ActorRef[MsgStore.Cmd], relResolver: IRelResol
                  ): Future[MsgId] = {
     for {
       outboxIdParams <- Future.sequence(relRecipId.map(rr => relResolver.resolveOutboxParam(rr._1, rr._2)).toSet)
-      msgId <- msgRepository.createMessage(msgType, msg, retentionPolicy, outboxIdParams)
+      msgId <- msgRepository.insert(msgType, msg, retentionPolicy, outboxIdParams)
       _ <- outboxAddMsgs(outboxIdParams, msgId, retentionPolicy)
     } yield msgId
   }
@@ -42,7 +43,7 @@ class OutboxService(val msgStore: ActorRef[MsgStore.Cmd], relResolver: IRelResol
                    msgIds: List[MsgId],
                    statuses: List[String],
                    excludePayload: Boolean
-                 ): Future[Seq[Try[MsgDetail]]] = {
+                 ): Future[Seq[MsgDetail]] = {
     for {
       outboxIdParam <- relResolver.resolveOutboxParam(relId, recipId)
       Outbox.Replies.DeliveryStatus(messages)
@@ -53,7 +54,7 @@ class OutboxService(val msgStore: ActorRef[MsgStore.Cmd], relResolver: IRelResol
           p => (msgIds.isEmpty || msgIds.contains(p._1)) && (statuses.isEmpty || statuses.contains(p._2.deliveryStatus))
         }
         .map {
-          case (id, msgDetail) => msgRepository.getMessage(id, msgDetail.deliveryStatus, excludePayload)
+          case (id, msgDetail) => msgRepository.read(id, msgDetail.deliveryStatus, excludePayload)
         }.toSeq)
     } yield result
   }

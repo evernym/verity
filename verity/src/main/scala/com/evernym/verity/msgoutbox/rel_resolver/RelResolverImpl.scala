@@ -1,5 +1,7 @@
 package com.evernym.verity.msgoutbox.rel_resolver
 
+import java.util.concurrent.TimeUnit
+
 import akka.actor.ActorContext
 import akka.actor.typed.{ActorRef, Scheduler}
 import akka.actor.typed.scaladsl.adapter._
@@ -9,13 +11,13 @@ import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.msgoutbox.outbox.OutboxIdParam
 import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
-import com.evernym.verity.msgoutbox.{IRelResolver, RecipId, RelId}
+import com.evernym.verity.msgoutbox.{RecipId, RelId, RelResolver}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class RelResolver(implicit val executionContext: ExecutionContext, agentMsgRouter: AgentMsgRouter, actorContext: ActorContext) extends IRelResolver {
-  implicit val timeout: Timeout = ???
-  implicit val scheduler: Scheduler = ???
+class RelResolverImpl(timeout: Option[Timeout] = None)(implicit val executionContext: ExecutionContext, agentMsgRouter: AgentMsgRouter, actorContext: ActorContext) extends RelResolver {
+  implicit val tmt: Timeout = timeout.getOrElse(Timeout(5, TimeUnit.SECONDS))
+  implicit val scheduler: Scheduler = actorContext.system.toTyped.scheduler
   override def resolveOutboxParam(relId: RelId, recipId: RecipId): Future[OutboxIdParam] = {
     val relationshipResolver = RelationshipResolver(agentMsgRouter)
     val relationshipResolverRef: ActorRef[RelationshipResolver.Cmd] = actorContext.spawnAnonymous(relationshipResolver)

@@ -36,8 +36,12 @@ import com.typesafe.scalalogging.Logger
 import java.time.ZonedDateTime
 import java.util.UUID
 
+import akka.pattern.StatusReply
+import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 
 //persistent entity, holds undelivered messages
 // orchestrates the delivery flow (which com method to use, retry policy etc)
@@ -59,7 +63,8 @@ object Outbox {
   sealed trait ReadCmd extends InitializedCmd
   object Commands {
     case class GetOutboxParam(replyTo: ActorRef[RelationshipResolver.Replies.OutboxParam]) extends ReadCmd with UninitializedCmd with MetadataReceivedCmd
-    case class GetDeliveryStatus(replyTo: ActorRef[Replies.DeliveryStatus]) extends ReadCmd with UninitializedCmd with MetadataReceivedCmd
+    case class GetDeliveryStatus(msgIds: List[MsgId], statuses: List[String], excludePayload: Boolean, replyTo: ActorRef[StatusReply[Replies.DeliveryStatus]]) extends ReadCmd with UninitializedCmd with MetadataReceivedCmd
+    case class DeliveryStatusCollected(result: StatusReply[Replies.DeliveryStatus], replyTo: ActorRef[StatusReply[Replies.DeliveryStatus]]) extends ReadCmd
 
     case class RecordSuccessfulAttempt(msgId: MsgId,
                                        comMethodId: String,
@@ -94,7 +99,7 @@ object Outbox {
     case object MsgAlreadyAdded extends MsgAddedReply
     case object MsgAdded extends MsgAddedReply
     case class NotInitialized(entityId: String) extends MsgAddedReply
-    case class DeliveryStatus(messages: Map[MsgId, Message]) extends GetDeliveryStatusReply
+    case class DeliveryStatus(messages: List[MsgDetail]) extends GetDeliveryStatusReply
   }
 
   trait Event   //all events would be defined in outbox-events.proto file
@@ -127,7 +132,8 @@ object Outbox {
             msgStore: ActorRef[MsgStore.Cmd],
             msgPackagers: MsgPackagers,
             msgTransports: MsgTransports,
-            executionContext: ExecutionContext): Behavior[Cmd] = {
+            executionContext: ExecutionContext,
+            msgRepository: MessageRepository): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
       val config = prepareOutboxConfig(configuration)
       val eventEncryptionSalt = prepareEventEncryptionSalt(configuration)
@@ -155,7 +161,8 @@ object Outbox {
             relResolverReplyAdapter,
             messageMetaReplyAdapter,
             new ItemManagerEntityHelper(entityContext.entityId, TypeKey.name, actorContext.system),
-            timer
+            timer,
+            msgRepository
           )
           EventSourcedBehavior
             .withEnforcedReplies(
@@ -319,9 +326,31 @@ object Outbox {
       Effect
         .reply(replyTo)(RelationshipResolver.Replies.OutboxParam(st.walletId, st.senderVerKey, st.comMethods))
 
-    case Commands.GetDeliveryStatus(replyTo) =>
+    case Commands.GetDeliveryStatus(msgIds, statuses, excludePayload, replyTo) =>
+
+      val readFuture = setup.msgRepository.read(st.messages.filter{
+        p => (msgIds.isEmpty || msgIds.contains(p._1)) && (statuses.isEmpty || statuses.contains(p._2.deliveryStatus))
+      }.keys.toList, excludePayload)
+
+      setup.actorContext.pipeToSelf(readFuture){
+        case Success(value) =>  Commands.DeliveryStatusCollected(StatusReply.Success(Replies.DeliveryStatus(value.map(msg => MsgDetail(
+          msg.id,
+          msg.`type`,
+          msg.legacyPayload.map(_.senderDID).get,
+          st.messages.get(msg.id).map(_.deliveryStatus).get,
+          msg.legacyPayload.flatMap(_.refMsgId),
+          None, // it is None for now, Rajesh will clarify the need for the thread
+          msg.payload,
+          Set()
+        )))), replyTo)
+        case Failure(ex)    =>  Commands.DeliveryStatusCollected(StatusReply.Error(ex), replyTo)
+      }
+
       Effect
-        .reply(replyTo)(Replies.DeliveryStatus(st.messages))
+        .noReply
+
+    case Commands.DeliveryStatusCollected(resp, replyTo) =>
+      Effect.reply(replyTo)(resp)
   }
 
   private def eventHandler(dispatcher: Dispatcher, timer: TimerScheduler[Cmd]): (State, Event) => State = {
@@ -711,4 +740,5 @@ case class SetupOutbox(actorContext: ActorContext[Cmd],
                        relResolverReplyAdapter: ActorRef[RelationshipResolver.SendOutboxParamReply],
                        messageMetaReplyAdapter: ActorRef[MessageMeta.ProcessedForOutboxReply],
                        itemManagerEntityHelper: ItemManagerEntityHelper,
-                       timer: TimerScheduler[Cmd])
+                       timer: TimerScheduler[Cmd],
+                       msgRepository: MessageRepository)

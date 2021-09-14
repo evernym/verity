@@ -7,6 +7,7 @@ import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.{ActorRef, ActorSystem, Scheduler}
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityRef}
+import akka.pattern.StatusReply
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
@@ -21,7 +22,7 @@ class OutboxService(val msgStore: ActorRef[MsgStore.Cmd], relResolver: RelResolv
   val system: ActorSystem[_] = actorContext.system.toTyped
   val clusterSharding: ClusterSharding = ClusterSharding(system)
   implicit val tmt: Timeout = timeout.getOrElse(Timeout(5, TimeUnit.SECONDS))
-  implicit val scheduler: Scheduler = ???
+  implicit val scheduler: Scheduler = system.scheduler
 
   def sendMessage(
                    relRecipId: Map[RelId, RecipId],
@@ -46,17 +47,13 @@ class OutboxService(val msgStore: ActorRef[MsgStore.Cmd], relResolver: RelResolv
                  ): Future[Seq[MsgDetail]] = {
     for {
       outboxIdParam <- relResolver.resolveOutboxParam(relId, recipId)
-      Outbox.Replies.DeliveryStatus(messages)
-        <- clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.entityId.toString).ask(ref => Outbox.Commands.GetDeliveryStatus(ref))
-      //TODO: do we need partial results?
-      result <- Future.sequence(messages
-        .filter{
-          p => (msgIds.isEmpty || msgIds.contains(p._1)) && (statuses.isEmpty || statuses.contains(p._2.deliveryStatus))
-        }
-        .map {
-          case (id, msgDetail) => msgRepository.read(id, msgDetail.deliveryStatus, excludePayload)
-        }.toSeq)
-    } yield result
+      reply <- clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.entityId.toString)
+            .ask(ref => Outbox.Commands.GetDeliveryStatus(msgIds, statuses, excludePayload, ref))
+      messages <- reply match {
+        case StatusReply.Success(Outbox.Replies.DeliveryStatus(messages)) => Future.successful(messages)
+        case StatusReply.Error(ex) => Future.failed(ex)
+      }
+    } yield messages.toSeq
   }
 
   private def outboxAddMsgs(outboxIdParams: Set[OutboxIdParam], msgId: MsgId, retentionPolicy: RetentionPolicy): Future[Unit] = {

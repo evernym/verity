@@ -35,6 +35,8 @@ class MessageRepositoryImpl(val msgStore: ActorRef[MsgStore.Cmd], timeout: Optio
           clusterSharding.entityRefFor(MessageMeta.TypeKey, id).ask(ref => MessageMeta.Commands.Get(ref))
         )
       )
+      //TODO: this can be resolved in a more nice way
+      // Such code reveals the need in StatusReply and no second message will be needed
       msgDetails <- Future.sequence(replies.map {
         case MessageMeta.Replies.MsgNotYetAdded =>
           Future.failed(new Exception("Message not found"))

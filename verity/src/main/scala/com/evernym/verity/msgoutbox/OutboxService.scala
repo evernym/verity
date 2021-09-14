@@ -47,13 +47,9 @@ class OutboxService(val msgStore: ActorRef[MsgStore.Cmd], relResolver: RelResolv
                  ): Future[Seq[MsgDetail]] = {
     for {
       outboxIdParam <- relResolver.resolveOutboxParam(relId, recipId)
-      reply <- clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.entityId.toString)
-            .ask(ref => Outbox.Commands.GetDeliveryStatus(msgIds, statuses, excludePayload, ref))
-      messages <- reply match {
-        case StatusReply.Success(Outbox.Replies.DeliveryStatus(messages)) => Future.successful(messages)
-        case StatusReply.Error(ex) => Future.failed(ex)
-      }
-    } yield messages.toSeq
+      Outbox.Replies.DeliveryStatus(messages) <- clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.entityId.toString)
+            .askWithStatus(ref => Outbox.Commands.GetDeliveryStatus(msgIds, statuses, excludePayload, ref))
+    } yield messages
   }
 
   private def outboxAddMsgs(outboxIdParams: Set[OutboxIdParam], msgId: MsgId, retentionPolicy: RetentionPolicy): Future[Unit] = {

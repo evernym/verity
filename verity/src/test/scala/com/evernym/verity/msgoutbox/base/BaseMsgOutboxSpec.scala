@@ -27,6 +27,7 @@ import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
+import com.evernym.verity.msgoutbox.MessageRepository
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.GetTokenSuccess
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.OAUTH2_VERSION_1
@@ -119,6 +120,8 @@ trait BaseMsgOutboxSpec extends HasExecutionContextProvider with HasWalletExecut
   )
 
   val testMsgStore: ActorRef[MsgStore.Cmd] = spawn(MsgStore(BUCKET_NAME, storageAPI, executionContext))
+
+  val testMsgRepository: MessageRepository = MessageRepository(testMsgStore, executionContext, system)
 
   def storeAndAddToMsgMetadataActor(msgType: String,
                                     outboxIds: Set[OutboxId]): MsgId = {

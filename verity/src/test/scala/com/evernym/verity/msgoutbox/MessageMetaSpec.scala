@@ -80,7 +80,7 @@ class MessageMetaSpec
         "should respond with Message with payload" in {
           val probe = createTestProbe[GetMsgReply]()
           messageMetaRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
-          val msg = probe.expectMessageType[Msg]
+          val msg = probe.expectMessageType[Replies.Msg]
           msg.`type` shouldBe "credOffer"
           msg.legacyData shouldBe None
           msg.payload.isEmpty shouldBe true
@@ -91,7 +91,7 @@ class MessageMetaSpec
         "should respond with Message" in {
           val probe = createTestProbe[GetMsgReply]()
           messageMetaRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
-          val msg = probe.expectMessageType[Msg]
+          val msg = probe.expectMessageType[Replies.Msg]
           msg.`type` shouldBe "credOffer"
           msg.legacyData shouldBe None
           msg.payload.isEmpty shouldBe true
@@ -196,7 +196,7 @@ class MessageMetaSpec
         "should still respond with Message" in {
           val probe = createTestProbe[Reply]()
           messageMetaRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
-          val msg = probe.expectMessageType[Msg]
+          val msg = probe.expectMessageType[Replies.Msg]
           msg.`type` shouldBe "credOffer"
           msg.legacyData shouldBe None
           msg.payload.isEmpty shouldBe true
@@ -217,7 +217,7 @@ class MessageMetaSpec
         "should still respond with Message" in {
           val probe = createTestProbe[Reply]()
           messageMetaRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
-          val msg = probe.expectMessageType[Msg]
+          val msg = probe.expectMessageType[Replies.Msg]
           msg.`type` shouldBe "credOffer"
           msg.legacyData shouldBe None
           msg.payload.isEmpty shouldBe true
@@ -251,7 +251,8 @@ class MessageMetaSpec
         testMsgStore,
         testMsgPackagers,
         testMsgTransports,
-        executionContext
+        executionContext,
+        testMsgRepository
       )
     })
 

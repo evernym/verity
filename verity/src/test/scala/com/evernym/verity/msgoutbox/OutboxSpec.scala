@@ -3,6 +3,7 @@ package com.evernym.verity.msgoutbox
 import akka.actor.typed.ActorRef
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.Entity
+import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpecBase
 import com.evernym.verity.observability.metrics.CustomMetrics.{AS_OUTBOX_MSG_DELIVERY, AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT}
@@ -107,10 +108,12 @@ class OutboxSpec
 
       "when periodically checking outbox status" - {
         "eventually those messages should disappear" in {
-          val probe = createTestProbe[Replies.DeliveryStatus]()
+          val probe = createTestProbe[StatusReply[Replies.DeliveryStatus]]()
           eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
-            outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(probe.ref))
-            val messages = probe.expectMessageType[Replies.DeliveryStatus].messages
+            outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(List(), List(), false, probe.ref))
+            val status = probe.expectMessageType[StatusReply[Replies.DeliveryStatus]]
+            status.isSuccess shouldBe true
+            val messages = status.getValue.messages
             messages.size shouldBe 0
             checkRetention(expectedSnapshots = 2, expectedEvents = 1)
             checkMsgDeliveryMetrics(3, 0, 0)
@@ -172,10 +175,12 @@ class OutboxSpec
 
     "when periodically checking outbox status" - {
       "eventually those messages should disappear" in {
-        val probe = createTestProbe[Replies.DeliveryStatus]()
+        val probe = createTestProbe[StatusReply[Replies.DeliveryStatus]]()
         eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
-          outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(probe.ref))
-          val messages = probe.expectMessageType[Replies.DeliveryStatus].messages
+          outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(List(), List(), false, probe.ref))
+          val status = probe.expectMessageType[StatusReply[Replies.DeliveryStatus]]
+          status.isSuccess shouldBe true
+          val messages = status.getValue.messages
           messages.size shouldBe 0
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
         }
@@ -243,7 +248,8 @@ class OutboxSpec
         testMsgStore,
         testMsgPackagers,
         testMsgTransports,
-        futureExecutionContext
+        futureExecutionContext,
+        testMsgRepository
       )
     })
 

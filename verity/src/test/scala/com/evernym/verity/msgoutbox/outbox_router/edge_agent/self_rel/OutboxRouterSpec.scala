@@ -48,7 +48,8 @@ class OutboxRouterSpec
         testMsgStore,
         testMsgPackagers,
         testMsgTransports,
-        executionContext
+        executionContext,
+        testMsgRepository
       )
     })
 
@@ -73,7 +74,7 @@ object TestAgentRelResolver {
         }
         Behaviors.same
 
-      case GetRelParam(relId: RelId, replyTo: ActorRef[RelationshipResolver.Reply]) =>
+      case GetRelParam(relId: RelId, replyTo: ActorRef[RelationshipResolver.GetRelParamReply]) =>
           replyTo ! RelParam(
             VerityEdgeAgent.selfRelContext.myDID,
             Option(

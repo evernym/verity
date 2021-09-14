@@ -51,8 +51,8 @@ class LimitsFlowSpec
   private val credDef10x20 = "cred_def_10x20_attrs"
   private val credDef125x20 = "cred_def_10x22K_attrs"
   private val credDef125x200 = "cred_def_125x20_attrs"
-  private val credDef125x1200 = "cred_def_125x200_attrs"
-  private val credDef10x22K = "cred_def_10x22k_attrs"
+  private val credDef125x1300 = "cred_def_125x1300_attrs"
+  private val credDef10x17K = "cred_def_10x17k_attrs"
   private val credDef125x1400 = "cred_def_125x1400_attrs"
   private def attr20(i: Int): String = f"attr567890123456_$i%03d"
 
@@ -210,7 +210,7 @@ class LimitsFlowSpec
     )
     writeCredDef(
       sdk,
-      credDef10x22K,
+      credDef10x17K,
       "tag",
       WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
       schemaName10attrs,
@@ -249,7 +249,7 @@ class LimitsFlowSpec
 
     writeCredDef(
       sdk,
-      credDef125x1200,
+      credDef125x1300,
       "tag",
       WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
       schemaName125attrs,
@@ -341,6 +341,10 @@ class LimitsFlowSpec
       )
     }
 
+    // Note: Count of cred offer attributes has non-linear growth of payload on CAS, e.g.
+    //       for 10 attrs of 22k-char values (payload ~220k) there are no problem on CAS side,
+    //       meanwhile 125 attrs of 1400k values (payload ~ 175k) cause DynamoDB issues.
+    //       This tests are intended to work against 175k credential offer limits as worst-case scenario
     "issue credential limits" - {
       val connectionId = UUID.randomUUID().toString
 
@@ -349,15 +353,15 @@ class LimitsFlowSpec
 
       val str20char = "1234567890abcdefghij"
       val str200char = str20char*10
-      val str1200char = str20char*60
+      val str1300char = str20char*65
       val str1400char = str20char*70
-      val str22Kchar = str20char*1100
+      val str17Kchar = str20char*850
 
       issueCredential_1_0(
         apps(verity1),
         apps(cas1),
         connectionId,
-        (1 to 10).map { i => attr20(i) -> str20char*1100 }.toMap,
+        (1 to 10).map { i => attr20(i) -> str20char }.toMap,
         credDef10x20,
         "tag"
       )
@@ -366,8 +370,8 @@ class LimitsFlowSpec
         apps(verity1),
         apps(cas1),
         connectionId,
-        (1 to 10).map { i => attr20(i) -> str22Kchar }.toMap,
-        credDef10x22K,
+        (1 to 10).map { i => attr20(i) -> str17Kchar }.toMap,
+        credDef10x17K,
         "tag"
       )
 
@@ -393,8 +397,8 @@ class LimitsFlowSpec
         apps(verity1),
         apps(cas1),
         connectionId,
-        (1 to numOfAttrs).map { i => attr20(i) -> str1200char }.toMap,
-        credDef125x1200,
+        (1 to numOfAttrs).map { i => attr20(i) -> str1300char }.toMap,
+        credDef125x1300,
         "tag"
       )
       val issuerSdk = apps(verity1).sdks.head

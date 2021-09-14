@@ -326,24 +326,28 @@ object Outbox {
       Effect
         .reply(replyTo)(RelationshipResolver.Replies.OutboxParam(st.walletId, st.senderVerKey, st.comMethods))
 
-    case Commands.GetDeliveryStatus(msgIds, statuses, excludePayload, replyTo) =>
-
-      val readFuture = setup.msgRepository.read(st.messages.filter{
-        p => (msgIds.isEmpty || msgIds.contains(p._1)) && (statuses.isEmpty || statuses.contains(p._2.deliveryStatus))
-      }.keys.toList, excludePayload)
+    case Commands.GetDeliveryStatus(filterMsgIds, statuses, excludePayload, replyTo) =>
+      val requestIds = st.messages.filter{
+        p => (filterMsgIds.isEmpty || filterMsgIds.contains(p._1)) && (statuses.isEmpty || statuses.contains(p._2.deliveryStatus))
+      }.keys.toList
+      val statusesByIds = st.messages.map{p => p._1 -> p._2.deliveryStatus}
+      val readFuture = setup.msgRepository.read(requestIds, excludePayload)
 
       setup.actorContext.pipeToSelf(readFuture){
-        case Success(value) =>  Commands.DeliveryStatusCollected(StatusReply.Success(Replies.DeliveryStatus(value.map(msg => MsgDetail(
-          msg.id,
-          msg.`type`,
-          msg.legacyPayload.map(_.senderDID).get,
-          st.messages.get(msg.id).map(_.deliveryStatus).get,
-          msg.legacyPayload.flatMap(_.refMsgId),
-          None, // it is None for now, Rajesh will clarify the need for the thread
-          msg.payload,
-          Set()
-        )))), replyTo)
-        case Failure(ex)    =>  Commands.DeliveryStatusCollected(StatusReply.Error(ex), replyTo)
+        case Success(value) => {
+          val result = value.map(msg => MsgDetail(
+            msg.id,
+            msg.`type`,
+            msg.legacyPayload.map(_.senderDID).getOrElse(""), //TODO fix this case of DID that has no values
+            statusesByIds(msg.id),
+            msg.legacyPayload.flatMap(_.refMsgId),
+            None, // it is None for now, Rajesh will clarify the need for the thread
+            msg.payload,
+            Set()
+          ))
+          Commands.DeliveryStatusCollected(StatusReply.Success(Replies.DeliveryStatus(result)), replyTo)
+        }
+        case Failure(ex)    => Commands.DeliveryStatusCollected(StatusReply.Error(ex), replyTo)
       }
 
       Effect

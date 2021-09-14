@@ -63,7 +63,7 @@ class OutboxRetentionPolicySpec
           eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
             outboxIds.foreach { outboxId =>
               outboxRegion ! ShardingEnvelope(outboxId.entityId.toString, GetDeliveryStatus(List(), List(), false, probe.ref))
-              val status =  probe.expectMessageType[StatusReply[Replies.DeliveryStatus]]
+              val status = probe.expectMessageType[StatusReply[Replies.DeliveryStatus]]
               status.isSuccess shouldBe true
               val messages = status.getValue.messages
               messages.size shouldBe totalMsgs

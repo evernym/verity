@@ -20,7 +20,6 @@ import com.evernym.verity.util2.ExecutionContextProvider
 
 import scala.concurrent.duration.DurationInt
 
-
 class LimitsFlowSpec
   extends BasicSpec
     with TempDir
@@ -49,10 +48,12 @@ class LimitsFlowSpec
   val longCredDef = "cred_name1"
 
   private val numOfAttrs = 125
-  private val credDefName1 = "cred_def_1"
-  private val credDefName2 = "cred_def_2"
-  private val credDefName3 = "cred_def_3"
-  private val credDefName4 = "cred_def_4"
+  private val credDef10x20 = "cred_def_10x20_attrs"
+  private val credDef125x20 = "cred_def_10x22K_attrs"
+  private val credDef125x200 = "cred_def_125x20_attrs"
+  private val credDef125x1200 = "cred_def_125x200_attrs"
+  private val credDef10x22K = "cred_def_10x22k_attrs"
+  private val credDef125x1400 = "cred_def_125x1400_attrs"
   private def attr20(i: Int): String = f"attr567890123456_$i%03d"
 
   runScenario("sdkFlow")( Scenario(
@@ -91,14 +92,6 @@ class LimitsFlowSpec
         sdkIssuerSetupInteraction(apps, ledgerUtil)
       }
 
-      "issuer setup for cred defs" - {
-        sdkIssuerSetupInteractionCredDefs(apps, ledgerUtil)
-      }
-
-      "basic interaction for cred defs" - {
-        sdkBasicInteractionsCredDefs(apps, ledgerUtil)
-      }
-
       "basic interaction" - {
         sdkBasicInteractions(apps, ledgerUtil)
       }
@@ -106,7 +99,6 @@ class LimitsFlowSpec
       "inbox limit interaction" - {
         sdkMobileAppReadInteraction(apps, ledgerUtil)
       }
-
 
       //todo implement other cases
       "oob interaction" - {
@@ -146,7 +138,6 @@ class LimitsFlowSpec
 
     setupIssuer(sdk, ledgerUtil)
 
-    val schemaName1 = "multipleAttrs" + UUID.randomUUID().toString.substring(0, 8)
 
     writeIssuerToLedger(sdk, ledgerUtil)
 
@@ -158,10 +149,11 @@ class LimitsFlowSpec
     )
 
 
+    val schemaName = "multipleAttrs" + UUID.randomUUID().toString.substring(0, 8)
     writeSchema(
       sdk,
       ledgerUtil,
-      schemaName1,
+      schemaName,
       "0.1",
       longAttrList: _*
     )
@@ -171,30 +163,8 @@ class LimitsFlowSpec
       longCredDef,
       "tag",
       WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
-      schemaName1,
+      schemaName,
       "0.1",
-      ledgerUtil
-    )
-
-    val schemaName2 = "largeAttrs" + UUID.randomUUID().toString.substring(0, 8)
-    val longString = "0123456789" * 24
-    val attrList2 = (1 to 10).map(i => s"attrib$i")
-
-    writeSchema(
-      sdk,
-      ledgerUtil,
-      schemaName2,
-      "0.2",
-      attrList2: _*
-    )
-
-    writeCredDef(
-      sdk,
-      "cred_name2",
-      "tag",
-      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
-      schemaName2,
-      "0.2",
       ledgerUtil
     )
 
@@ -218,9 +188,87 @@ class LimitsFlowSpec
       ledgerUtil
     )
 
+    val schemaName10attrs = "attrs10_" + UUID.randomUUID().toString.substring(0, 8)
+    val schemaName125attrs = "attrs125_" + UUID.randomUUID().toString.substring(0, 8)
+
+    val attrsList0 = (1 to 10).map(i => attr20(i))
+    writeSchema(
+      sdk,
+      ledgerUtil,
+      schemaName10attrs,
+      "0.1",
+      attrsList0: _*
+    )
+    writeCredDef(
+      sdk,
+      credDef10x20,
+      "tag",
+      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
+      schemaName10attrs,
+      "0.1",
+      ledgerUtil
+    )
+    writeCredDef(
+      sdk,
+      credDef10x22K,
+      "tag",
+      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
+      schemaName10attrs,
+      "0.1",
+      ledgerUtil
+    )
+
+    val attrsList = (1 to numOfAttrs).map(i => attr20(i))
+    writeSchema(
+      sdk,
+      ledgerUtil,
+      schemaName125attrs,
+      "0.1",
+      attrsList: _*
+    )
+
+    writeCredDef(
+      sdk,
+      credDef125x20,
+      "tag",
+      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
+      schemaName125attrs,
+      "0.1",
+      ledgerUtil
+    )
+
+    writeCredDef(
+      sdk,
+      credDef125x200,
+      "tag",
+      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
+      schemaName125attrs,
+      "0.1",
+      ledgerUtil
+    )
+
+    writeCredDef(
+      sdk,
+      credDef125x1200,
+      "tag",
+      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
+      schemaName125attrs,
+      "0.1",
+      ledgerUtil
+    )
+    writeCredDef(
+      sdk,
+      credDef125x1400,
+      "tag",
+      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
+      schemaName125attrs,
+      "0.1",
+      ledgerUtil
+    )
+
     // todo this is error cases
     val schemaName3 = "tooMayAttrs" + UUID.randomUUID().toString.substring(0, 8)
-    val attrList3 = (1 to 1000).map(i => s"attrib$i")
+    val attrList3 = (1 to 126).map(i => s"attrib$i") // max amount of attributes is 125 for Indy
 
     writeFailingSchema(
       sdk,
@@ -234,7 +282,7 @@ class LimitsFlowSpec
 
 
     val schemaName4 = "tooLongAttrs" + UUID.randomUUID().toString.substring(0, 8)
-    val longString4 = "0123456789" * 1000
+    val longString4 = "0123456789" * 50 // max length of the attribute name is 256 for Indy
     val attrList4 = (1 to 3).map(i => s"$longString4$i")
 
     writeFailingSchema(
@@ -246,8 +294,6 @@ class LimitsFlowSpec
       "longer than 256 symbols",
       attrList4: _*
     )
-
-
   }
 
   def sdkBasicInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
@@ -299,33 +345,72 @@ class LimitsFlowSpec
       val connectionId = UUID.randomUUID().toString
 
       connect_1_0(apps(verity1), apps(cas1), connectionId, "label")
-      val strBelowLimit = "1234567890" * 2200
-      val strAboveLimit = "1234567890" * 3500
+
+
+      val str20char = "1234567890abcdefghij"
+      val str200char = str20char*10
+      val str1200char = str20char*60
+      val str1400char = str20char*70
+      val str22Kchar = str20char*1100
 
       issueCredential_1_0(
         apps(verity1),
         apps(cas1),
         connectionId,
-        (0 to 9).map { i => s"attr$i" -> strBelowLimit }.toMap,
-        limitsCredDefName,
+        (1 to 10).map { i => attr20(i) -> str20char*1100 }.toMap,
+        credDef10x20,
         "tag"
       )
 
+      issueCredential_1_0(
+        apps(verity1),
+        apps(cas1),
+        connectionId,
+        (1 to 10).map { i => attr20(i) -> str22Kchar }.toMap,
+        credDef10x22K,
+        "tag"
+      )
+
+      issueCredential_1_0(
+        apps(verity1),
+        apps(cas1),
+        connectionId,
+        (1 to numOfAttrs).map { i => attr20(i) -> str20char }.toMap,
+        credDef125x20,
+        "tag"
+      )
+
+      issueCredential_1_0(
+        apps(verity1),
+        apps(cas1),
+        connectionId,
+        (1 to numOfAttrs).map { i => attr20(i) -> str200char }.toMap,
+        credDef125x200,
+        "tag"
+      )
+
+      issueCredential_1_0(
+        apps(verity1),
+        apps(cas1),
+        connectionId,
+        (1 to numOfAttrs).map { i => attr20(i) -> str1200char }.toMap,
+        credDef125x1200,
+        "tag"
+      )
       val issuerSdk = apps(verity1).sdks.head
       val holderSdk = apps(cas1).sdks.head
       issueCredential_1_0_expectingError(
         issuerSdk,
         holderSdk,
         connectionId,
-        (0 to 9).map { i => s"attr$i" -> strAboveLimit }.toMap,
-        limitsCredDefName,
+        (1 to numOfAttrs).map { i => s"attr$i" -> str1400char }.toMap,
+        credDef125x1400,
         "tag",
         "Payload size is too big"
       )
     }
 
-
-    "issue credential limits" - {
+    "ask committed answers" - {
       val connectionId = UUID.randomUUID().toString
 
       connect_1_0(apps(verity1), apps(cas1), connectionId, "label")
@@ -449,116 +534,5 @@ class LimitsFlowSpec
       "tag",
       "Payload size is too big"
     )
-  }
-
-  def sdkIssuerSetupInteractionCredDefs(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
-    val sdk = apps(verity1).sdk.get
-
-    val schemaName1 = "multipleAttrs_" + UUID.randomUUID().toString.substring(0, 8)
-    val schemaName2 = "multipleAttrs_" + UUID.randomUUID().toString.substring(0, 8)
-
-    val attrsList0 = (1 to 10).map(i => attr20(i))
-    writeSchema(
-      sdk,
-      ledgerUtil,
-      schemaName1,
-      "0.1",
-      attrsList0: _*
-    )
-    writeCredDef(
-      sdk,
-      credDefName1,
-      "tag",
-      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
-      schemaName1,
-      "0.1",
-      ledgerUtil
-    )
-
-    val attrsList = (1 to numOfAttrs).map(i => attr20(i))
-    writeSchema(
-      sdk,
-      ledgerUtil,
-      schemaName2,
-      "0.1",
-      attrsList: _*
-    )
-
-    writeCredDef(
-      sdk,
-      credDefName2,
-      "tag",
-      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
-      schemaName2,
-      "0.1",
-      ledgerUtil
-    )
-
-    writeCredDef(
-      sdk,
-      credDefName3,
-      "tag",
-      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
-      schemaName2,
-      "0.1",
-      ledgerUtil
-    )
-
-    writeCredDef(
-      sdk,
-      credDefName4,
-      "tag",
-      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
-      schemaName2,
-      "0.1",
-      ledgerUtil
-    )
-  }
-
-  def sdkBasicInteractionsCredDefs(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
-    "issue credential limits" - {
-      val connectionId = UUID.randomUUID().toString
-
-      connect_1_0(apps(verity1), apps(cas1), connectionId, "label")
-      val str20char = "1234567890abcdefghij"
-      val str200char = str20char*10
-      val str1200char = str20char*60
-
-      issueCredential_1_0(
-        apps(verity1),
-        apps(cas1),
-        connectionId,
-        (1 to 10).map { i => attr20(i) -> str20char }.toMap,
-        credDefName1,
-        "tag"
-      )
-
-      issueCredential_1_0(
-        apps(verity1),
-        apps(cas1),
-        connectionId,
-        (1 to numOfAttrs).map { i => attr20(i) -> str20char }.toMap,
-        credDefName2,
-        "tag"
-      )
-
-      issueCredential_1_0(
-        apps(verity1),
-        apps(cas1),
-        connectionId,
-        (1 to numOfAttrs).map { i => attr20(i) -> str200char }.toMap,
-        credDefName3,
-        "tag"
-      )
-
-      issueCredential_1_0(
-        apps(verity1),
-        apps(cas1),
-        connectionId,
-        (1 to numOfAttrs).map { i => attr20(i) -> str1200char }.toMap,
-        credDefName4,
-        "tag"
-      )
-    }
   }
 }

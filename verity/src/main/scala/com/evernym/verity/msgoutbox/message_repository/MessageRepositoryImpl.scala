@@ -3,7 +3,7 @@ package com.evernym.verity.msgoutbox.message_repository
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-import akka.actor.typed.{ActorRef, ActorSystem, Scheduler}
+import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.util.Timeout

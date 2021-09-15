@@ -60,7 +60,7 @@ class OutboxRouterSpec
     }
   }
 
-  override val testRelResolver: Behavior[RelationshipResolver.Cmd] =
+  override val testRelationshipResolver: Behavior[RelationshipResolver.Cmd] =
     TestAgentRelResolver(Map("default" -> DestParam(testWallet.walletId, myKey1.verKey, defaultDestComMethods)))
 
   val outboxRegion: ActorRef[ShardingEnvelope[Outbox.Cmd]] =

@@ -50,7 +50,7 @@ trait OutboxRouterSpecBase
         msg,
         msgType,
         retentionPolicy,
-        testRelResolver,
+        testRelationshipResolver,
         testMsgStore,
         Option(testProbe.ref)
       )

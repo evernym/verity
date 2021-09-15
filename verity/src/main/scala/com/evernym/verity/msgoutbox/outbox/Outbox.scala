@@ -13,7 +13,7 @@ import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.MsgActivity
 import com.evernym.verity.msgoutbox.outbox.Events.{MetadataStored, MsgSendingFailed, MsgSentSuccessfully, OutboxParamUpdated}
 import com.evernym.verity.msgoutbox.outbox.Outbox.Cmd
-import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{GetOutboxParam, MessageMetaReplyAdapter, ProcessDelivery, RelResolverReplyAdapter}
+import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{GetOutboxParam, MessageMetaReplyAdapter, ProcessDelivery}
 import com.evernym.verity.msgoutbox.outbox.States.{Message, Metadata, MsgDeliveryAttempt}
 import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
@@ -77,8 +77,7 @@ object Outbox {
                                    isAnyRetryAttemptsLeft: Boolean,
                                    statusDetail: StatusDetail) extends MessageResendCmd with UninitializedCmd with MetadataReceivedCmd
 
-    case class UpdateOutboxParam(walletId: String, senderVerKey: VerKeyStr, comMethods: Map[ComMethodId, ComMethod]) extends UpdateOutboxCmd with UninitializedCmd with MetadataReceivedCmd
-    case class RelResolverReplyAdapter(reply: RelationshipResolver.SendOutboxParamReply) extends UpdateOutboxCmd with UninitializedCmd with MetadataReceivedCmd
+    case class UpdateOutboxParam(result: StatusReply[WalletUpdateParam]) extends UpdateOutboxCmd with UninitializedCmd with MetadataReceivedCmd
 
     case class AddMsg(msgId: MsgId, expiryDuration: FiniteDuration, replyTo: ActorRef[Replies.MsgAddedReply]) extends MessageHandlingCmd with UninitializedCmd with MetadataReceivedCmd
     case class MessageMetaReplyAdapter(reply: MessageMeta.ProcessedForOutboxReply) extends MessageHandlingCmd with MetadataReceivedCmd
@@ -128,7 +127,7 @@ object Outbox {
   def apply(entityContext: EntityContext[Cmd],
             configuration: Config,
             accessTokenRefreshers: AccessTokenRefreshers,
-            relResolver: Behavior[RelationshipResolver.Cmd],
+            relResolver: RelResolver,
             msgStore: ActorRef[MsgStore.Cmd],
             msgPackagers: MsgPackagers,
             msgTransports: MsgTransports,
@@ -140,7 +139,6 @@ object Outbox {
       val retentionCriteria = prepareRetentionCriteria(configuration)
       Behaviors.withTimers { timer =>
         Behaviors.withStash(100) { buffer =>                     //TODO: finalize this
-          val relResolverReplyAdapter = actorContext.messageAdapter(reply => RelResolverReplyAdapter(reply))
           val messageMetaReplyAdapter = actorContext.messageAdapter(reply => MessageMetaReplyAdapter(reply))
           val dispatcher = new Dispatcher(
             actorContext,
@@ -158,7 +156,6 @@ object Outbox {
             buffer,
             dispatcher,
             relResolver,
-            relResolverReplyAdapter,
             messageMetaReplyAdapter,
             new ItemManagerEntityHelper(entityContext.entityId, TypeKey.name, actorContext.system),
             timer,
@@ -216,11 +213,15 @@ object Outbox {
   }
 
   private def metadataReceivedStateHandler(setup: SetupOutbox): MetadataReceivedCmd => ReplyEffect[Event, State] = {
-    case RelResolverReplyAdapter(reply: RelationshipResolver.Replies.OutboxParam) =>
+    case Commands.UpdateOutboxParam(StatusReply.Success(WalletUpdateParam(walletId, senderVerKey, comMethods))) =>
       Effect
-        .persist(OutboxParamUpdated(reply.walletId, reply.senderVerKey, reply.comMethods))
+        .persist(OutboxParamUpdated(walletId, senderVerKey, comMethods))
         .thenRun((_: State) => setup.buffer.unstashAll(Behaviors.same))
         .thenNoReply()
+
+    case Commands.UpdateOutboxParam(StatusReply.Error(e)) =>
+      logger.warn(s"Exception occured ${e}")
+      Effect.noReply
 
     case cmd =>
       setup.buffer.stash(cmd)
@@ -300,17 +301,7 @@ object Outbox {
   }
 
   private def updateConfigCommandHandler(st: States.Initialized)(implicit setup: SetupOutbox): UpdateOutboxCmd => ReplyEffect[Event, State] = {
-    case RelResolverReplyAdapter(reply: RelationshipResolver.Replies.OutboxParam) =>
-      if (st.senderVerKey != reply.senderVerKey || st.comMethods != reply.comMethods) {
-        Effect
-          .persist(OutboxParamUpdated(reply.walletId, reply.senderVerKey, reply.comMethods))
-          .thenNoReply()
-      } else {
-        Effect
-          .noReply
-      }
-
-    case Commands.UpdateOutboxParam(walletId, senderVerKey, comMethods) =>
+    case Commands.UpdateOutboxParam(StatusReply.Success(WalletUpdateParam(walletId, senderVerKey, comMethods))) =>
       if (st.senderVerKey != senderVerKey || st.comMethods != comMethods) {
         Effect
           .persist(OutboxParamUpdated(walletId, senderVerKey, comMethods))
@@ -319,6 +310,10 @@ object Outbox {
         Effect
           .noReply
       }
+
+    case Commands.UpdateOutboxParam(StatusReply.Error(e)) =>
+      logger.warn(s"Exception occured ${e}")
+      Effect.noReply
   }
 
   private def readCommandHandler(st: States.Initialized)(implicit setup: SetupOutbox): ReadCmd => ReplyEffect[Event, State] = {
@@ -622,9 +617,12 @@ object Outbox {
 
   private def fetchOutboxParam(metadata: Metadata)
                               (implicit setup: SetupOutbox): Unit =  {
-    val relResolverRef = setup.actorContext.spawnAnonymous(setup.relResolver)
-    relResolverRef ! RelationshipResolver.Commands.SendOutboxParam(
-      metadata.relId, metadata.destId, setup.relResolverReplyAdapter)
+    setup.actorContext.pipeToSelf(
+      setup.relResolver.getWalletParam(metadata.relId, metadata.destId)
+    ) {
+      case Success(value) => Commands.UpdateOutboxParam(StatusReply.Success(WalletUpdateParam(value._1, value._2, value._3)))
+      case Failure(e) => Commands.UpdateOutboxParam(StatusReply.Error(e))
+    }
   }
 
   private val logger: Logger = getLoggerByClass(getClass)
@@ -735,13 +733,14 @@ case class OutboxIdParam(relId: RelId, recipId: RecipId, destId: DestId) {
   def entityId: UUID = UUID.nameUUIDFromBytes((relId+recipId+destId).getBytes())
 }
 
+case class WalletUpdateParam(walletId: String, senderVerKey: VerKeyStr, comMethods: Map[ComMethodId, ComMethod])
+
 case class SetupOutbox(actorContext: ActorContext[Cmd],
                        entityContext: EntityContext[Cmd],
                        metricsWriter: MetricsWriter,
                        buffer: StashBuffer[Cmd],
                        dispatcher: Dispatcher,
-                       relResolver: Behavior[RelationshipResolver.Cmd],
-                       relResolverReplyAdapter: ActorRef[RelationshipResolver.SendOutboxParamReply],
+                       relResolver: RelResolver,
                        messageMetaReplyAdapter: ActorRef[MessageMeta.ProcessedForOutboxReply],
                        itemManagerEntityHelper: ItemManagerEntityHelper,
                        timer: TimerScheduler[Cmd],

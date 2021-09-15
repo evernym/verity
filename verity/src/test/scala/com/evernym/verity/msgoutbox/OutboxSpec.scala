@@ -12,7 +12,7 @@ import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies.MsgDeliveryStatus
 import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{AddMsg, GetDeliveryStatus, GetOutboxParam, UpdateConfig, UpdateOutboxParam}
 import com.evernym.verity.msgoutbox.outbox.Outbox.{Commands, Replies, TypeKey}
-import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam}
+import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam, WalletUpdateParam}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.storage_services.BucketLifeCycleUtil
 import com.evernym.verity.testkit.BasicSpec
@@ -156,7 +156,7 @@ class OutboxSpec
     "when received UpdateOutboxParam" - {
       "should update its details" in {
         outboxRegion ! ShardingEnvelope(outboxId,
-          UpdateOutboxParam(testWallet.walletId, myKey1.verKey, Map("1" -> oAuthIndyWebhookComMethod))
+          UpdateOutboxParam(StatusReply.Success(WalletUpdateParam(testWallet.walletId, myKey1.verKey, Map("1" -> oAuthIndyWebhookComMethod))))
         )
       }
     }

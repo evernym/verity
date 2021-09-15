@@ -19,7 +19,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_transporter.{HttpTransporter, Msg
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.msgoutbox.router.OutboxRouter
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
-import com.evernym.verity.msgoutbox.MessageRepository
+import com.evernym.verity.msgoutbox.{MessageRepository, RelResolver}
 import com.evernym.verity.protocol.engine.ParticipantId
 
 import scala.concurrent.ExecutionContext
@@ -57,7 +57,7 @@ object UserGuardian {
         actorContext.spawn(MsgStore(blobStoreBucket, agentActorContext.storageAPI, executionContext), "msg-store")
       }
 
-      val relResolver: Behavior[RelationshipResolver.Cmd] = RelationshipResolver(agentActorContext.agentMsgRouter)
+      val relationshipResolver: Behavior[RelationshipResolver.Cmd] = RelationshipResolver(agentActorContext.agentMsgRouter)
 
       val msgPackagers: MsgPackagers = new MsgPackagers {
         override val didCommV1Packager: Behavior[DIDCommV1Packager.Cmd] = {
@@ -67,6 +67,7 @@ object UserGuardian {
       }
 
       val msgRepository = MessageRepository(msgStore, executionContext, actorContext.system)
+      val relResolver = RelResolver(executionContext, agentActorContext.agentMsgRouter, actorContext.system)
 
       sharding.init(Entity(MessageMeta.TypeKey) { entityContext =>
         MessageMeta(
@@ -112,7 +113,7 @@ object UserGuardian {
             ).toSeconds, TimeUnit.SECONDS)
           )))
 
-      initialized(relResolver, msgStore)(actorContext)
+      initialized(relationshipResolver, msgStore)(actorContext)
     }
   }
 

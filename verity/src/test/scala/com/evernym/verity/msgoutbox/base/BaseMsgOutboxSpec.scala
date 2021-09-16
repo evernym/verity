@@ -132,7 +132,7 @@ trait BaseMsgOutboxSpec extends HasExecutionContextProvider with HasWalletExecut
     }
 
     override def getWalletParam(relId: RelId, destId: DestId): Future[(WalletId, VerKeyStr, Map[ComMethodId, ComMethod])] = {
-      Future.successful(testWallet.walletId, myKey1.verKey, Map("1" -> oAuthIndyWebhookComMethod))
+      Future.successful(testWallet.walletId, myKey1.verKey, Map("1" -> plainIndyWebhookComMethod))
     }
   }
 

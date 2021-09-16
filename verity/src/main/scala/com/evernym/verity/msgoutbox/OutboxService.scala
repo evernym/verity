@@ -112,6 +112,8 @@ class OutboxService(val msgStore: ActorRef[MsgStore.Cmd],
           .filter(_.entityId.toString == entityId)
           .map(p => outboxRef.tell(Outbox.Commands.Init(p.relId, p.recipId, p.destId)))
       }
+      case Outbox.Replies.MsgAdded => () //do nothing, everything is good
+      case Outbox.Replies.MsgAlreadyAdded => () //do nothing, everything is good
     }
   }
 }

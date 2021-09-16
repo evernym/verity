@@ -3,6 +3,7 @@ package com.evernym.verity.msgoutbox
 import com.evernym.verity.actor.typed.BehaviourSpecBase
 import com.evernym.verity.app_launcher.DefaultAgentActorContext
 import com.evernym.verity.msgoutbox.base.BaseMsgOutboxSpec
+import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TestExecutionContextProvider
 import org.scalatest.concurrent.Eventually
@@ -37,12 +38,82 @@ class OutboxServiceSpec
         sendFuture.value match {
           case Some(Success(id)) => id.nonEmpty shouldBe true
           case Some(Failure(e)) => fail(e)
-          case None => fail("not complemeted")
+          case None => fail("not completed")
         }
       }
     }
 
-    "it should be read successfully" in {
+    "it should be read successfully" - {
+      "without payload" in {
+        val getFuture: Future[Seq[MsgDetail]] = outboxService.getMessages("id1", "id1", List(), List(), true)
+        eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
+          getFuture.value match {
+            case Some(Success(messages)) =>
+              messages.size shouldBe 1
+              val msg = messages.head
+              msg.payload.nonEmpty shouldBe false
+            case Some(Failure(e)) => fail(e)
+            case None => fail("not completed")
+          }
+        }
+      }
+
+      "with payload" in {
+        val getFuture: Future[Seq[MsgDetail]] = outboxService.getMessages("id1", "id1", List(), List(), false)
+        eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
+          getFuture.value match {
+            case Some(Success(messages)) =>
+              messages.size shouldBe 1
+              val msg = messages.head
+              msg.payload.nonEmpty shouldBe true
+            case Some(Failure(e)) => fail(e)
+            case None => fail("not completed")
+          }
+        }
+      }
+
+      "with id filter" in {
+        val sendFuture: Future[String] = outboxService.sendMessage(
+          Map("id1" -> "id1"),
+          "test message-2",
+          "test-message-2",
+          retentionPolicy
+        )
+
+        val getIdFilterFuture = sendFuture.flatMap(id => outboxService.getMessages("id1", "id1", List(id), List(), true).map(res => (res, id)))
+        eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
+          getIdFilterFuture.value match {
+            case Some(Success((messages, id))) =>
+              messages.size shouldBe 1
+              val msg = messages.head
+              msg.uid shouldBe id
+            case Some(Failure(e)) => fail(e)
+            case None => fail("not completed")
+          }
+        }
+      }
+
+      "with status filter" in {
+
+        val getAllFuture = outboxService.getMessages("id1", "id1", List(), List("MDS-101"), true)
+        eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
+          getAllFuture.value match {
+            case Some(Success(messages)) =>
+              messages.size shouldBe 2
+            case Some(Failure(e)) => fail(e)
+            case None => fail("not completed")
+          }
+        }
+        val getNoneFuture = outboxService.getMessages("id1", "id1", List(), List("MDS-1012"), true)
+        eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
+          getNoneFuture.value match {
+            case Some(Success(messages)) =>
+              messages.size shouldBe 0
+            case Some(Failure(e)) => fail(e)
+            case None => fail("not completed")
+          }
+        }
+      }
     }
   }
 

@@ -36,7 +36,7 @@ class OutboxServiceSpec
       )
       eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
         sendFuture.value match {
-          case Some(Success(id)) => id.nonEmpty shouldBe true
+          case Some(Success(id)) => id should not be empty
           case Some(Failure(e)) => fail(e)
           case None => fail("not completed")
         }
@@ -51,7 +51,7 @@ class OutboxServiceSpec
             case Some(Success(messages)) =>
               messages.size shouldBe 1
               val msg = messages.head
-              msg.payload.nonEmpty shouldBe false
+              msg.payload shouldBe empty
             case Some(Failure(e)) => fail(e)
             case None => fail("not completed")
           }
@@ -65,7 +65,7 @@ class OutboxServiceSpec
             case Some(Success(messages)) =>
               messages.size shouldBe 1
               val msg = messages.head
-              msg.payload.nonEmpty shouldBe true
+              msg.payload should not be empty
             case Some(Failure(e)) => fail(e)
             case None => fail("not completed")
           }

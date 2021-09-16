@@ -49,13 +49,11 @@ class MessageRepositorySpec
         case None => fail("not completed")
       }
     }
-  }
 
-  "can read message with payload" in {
-    val readNoPayloadFuture: Future[List[Msg]] = testMsgRepository.read(List(id), false)
+    val readPayloadFuture: Future[List[Msg]] = testMsgRepository.read(List(id), false)
 
     eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
-      readNoPayloadFuture.value match {
+      readPayloadFuture.value match {
         case Some(Success(list)) =>
           list.size shouldBe 1
           val msg = list.head
@@ -66,6 +64,7 @@ class MessageRepositorySpec
       }
     }
   }
+
   override def futureExecutionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
 
   override def futureWalletExecutionContext: ExecutionContext = TestExecutionContextProvider.ecp.walletFutureExecutionContext

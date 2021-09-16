@@ -22,14 +22,31 @@ import com.evernym.verity.util2.RetentionPolicy
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
-class OutboxService(val msgStore: ActorRef[MsgStore.Cmd],
-                    relResolver: RelResolver,
-                    msgRepository: MessageRepository,
-                    msgPackagers: MsgPackagers,
-                    agentActorContext: AgentActorContext,
-                    appConfig: AppConfig,
-                    timeout: Option[Timeout] = None)
-                   (implicit val ec: ExecutionContext, system: ActorSystem[Nothing]) {
+trait OutboxService {
+  def sendMessage(
+                   relRecipId: Map[RelId, RecipId],
+                   msg: String,
+                   msgType: String,
+                   retentionPolicy: RetentionPolicy
+                 ): Future[MsgId]
+
+  def getMessages(
+                   relId: RelId,
+                   recipId: RecipId,
+                   msgIds: List[MsgId],
+                   statuses: List[String],
+                   excludePayload: Boolean
+                 ): Future[Seq[MsgDetail]]
+}
+
+class OutboxServiceImpl(val msgStore: ActorRef[MsgStore.Cmd],
+                        relResolver: RelResolver,
+                        msgRepository: MessageRepository,
+                        msgPackagers: MsgPackagers,
+                        agentActorContext: AgentActorContext,
+                        appConfig: AppConfig,
+                        timeout: Option[Timeout] = None)
+                       (implicit val ec: ExecutionContext, system: ActorSystem[Nothing]) extends OutboxService {
 
   val clusterSharding: ClusterSharding = ClusterSharding(system)
   val defaultOutboxPassivationTimeoutInSeconds: Int = 300
@@ -62,27 +79,27 @@ class OutboxService(val msgStore: ActorRef[MsgStore.Cmd],
 
   implicit val tmt: Timeout = timeout.getOrElse(Timeout(5, TimeUnit.SECONDS))
 
-  def sendMessage(
-                   relRecipId: Map[RelId, RecipId],
-                   msg: String,
-                   msgType: String,
-                   retentionPolicy: RetentionPolicy
-                 ): Future[MsgId] = {
+  override def sendMessage(
+                           relRecipId: Map[RelId, RecipId],
+                           msg: String,
+                           msgType: String,
+                           retentionPolicy: RetentionPolicy
+                         ): Future[MsgId] = {
     for {
       outboxIdParams <- Future.sequence(relRecipId.map(rr => relResolver.resolveOutboxParam(rr._1, rr._2)).toSet)
       msgId <- msgRepository.insert(msgType, msg, retentionPolicy, outboxIdParams)
-      _ <- outboxAddMsgs(outboxIdParams, msgId, retentionPolicy)
+      _ <- Future.sequence(outboxIdParams.map{param => outboxAddMessage(param, msgId, retentionPolicy)})
     } yield msgId
   }
 
   //FIRST IMPLEMENTATION OF GET_MSGS
-  def getMessages(
-                   relId: RelId,
-                   recipId: RecipId,
-                   msgIds: List[MsgId],
-                   statuses: List[String],
-                   excludePayload: Boolean
-                 ): Future[Seq[MsgDetail]] = {
+  override def getMessages(
+                           relId: RelId,
+                           recipId: RecipId,
+                           msgIds: List[MsgId],
+                           statuses: List[String],
+                           excludePayload: Boolean
+                         ): Future[Seq[MsgDetail]] = {
     for {
       outboxIdParam <- relResolver.resolveOutboxParam(relId, recipId)
       Outbox.Replies.DeliveryStatus(messages) <- clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.entityId.toString)
@@ -90,27 +107,17 @@ class OutboxService(val msgStore: ActorRef[MsgStore.Cmd],
     } yield messages
   }
 
-  private def outboxAddMsgs(outboxIdParams: Set[OutboxIdParam], msgId: MsgId, retentionPolicy: RetentionPolicy): Future[Unit] = {
+  private def outboxAddMessage(outboxIdParam: OutboxIdParam, msgId: MsgId, retentionPolicy: RetentionPolicy): Future[Unit] = {
     //for now we are not collecting AddMsg
     //we need to refactor interaction on Init message and collect replies from it as well (and make it askable)
     for {
-      outboxResponses <- {
-        val futures = outboxIdParams.map{
-          param => {
-            val ref = clusterSharding.entityRefFor(Outbox.TypeKey, param.entityId.toString)
-            val f = ref.ask(ref => Outbox.Commands.AddMsg(msgId, retentionPolicy.elements.expiryDuration, ref))
-            f
-          }
-        }.toSeq
-        Future.sequence(futures)
-      }
-    } yield outboxResponses.map {
+      outboxResponse <- clusterSharding
+        .entityRefFor(Outbox.TypeKey, outboxIdParam.entityId.toString)
+        .ask(ref => Outbox.Commands.AddMsg(msgId, retentionPolicy.elements.expiryDuration, ref))
+    } yield outboxResponse match {
       case Outbox.Replies.NotInitialized(entityId) => {
         val outboxRef: EntityRef[Outbox.Cmd] = clusterSharding.entityRefFor(Outbox.TypeKey, entityId)
-        //TODO: this looks bad. we have an OutboxIdParam on the previous step, we should be able to save it along with the future.
-        outboxIdParams
-          .filter(_.entityId.toString == entityId)
-          .map(p => outboxRef.tell(Outbox.Commands.Init(p.relId, p.recipId, p.destId)))
+        outboxRef.tell(Outbox.Commands.Init(outboxIdParam.relId, outboxIdParam.recipId, outboxIdParam.destId))
       }
       case Outbox.Replies.MsgAdded => () //do nothing, everything is good
       case Outbox.Replies.MsgAlreadyAdded => () //do nothing, everything is good
@@ -127,6 +134,6 @@ object OutboxService {
             appConfig: AppConfig,
             timeout: Option[Timeout] = None)
            (implicit ec: ExecutionContext, actorSystem: ActorSystem[Nothing]): OutboxService = {
-    new OutboxService(msgStore, relResolver, msgRepository, msgPackagers, agentActorContext, appConfig, timeout)(ec, actorSystem)
+    new OutboxServiceImpl(msgStore, relResolver, msgRepository, msgPackagers, agentActorContext, appConfig, timeout)(ec, actorSystem)
   }
 }

@@ -17,7 +17,7 @@ class OutboxServiceSpec
     with BaseMsgOutboxSpec
     with BasicSpec
     with Eventually {
-  val outboxService = new OutboxService(
+  val outboxService = OutboxService(
     testMsgStore,
     testRelResolver,
     testMsgRepository,

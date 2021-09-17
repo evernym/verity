@@ -154,47 +154,43 @@ class ActivityTracker(override val appConfig: AppConfig,
         )
     }
 
-  /**
-   * actor persistent state object
-   */
-  class State(_activities: Map[StateKey, AgentActivity] = Map.empty,
-              _activityWindow: ActivityWindow = ActivityWindow(Set()),
-              _sponsorRel: Option[SponsorRel] = None,
-              _attemptedSponsorRetrieval: Boolean = false) {
-
-    def copy(activities: Map[StateKey, AgentActivity]=_activities,
-             activityWindow: ActivityWindow=_activityWindow,
-             sponsorRel: Option[SponsorRel]=None,
-             attemptedSponsorRetrieval: Boolean=_attemptedSponsorRetrieval): State =
-      new State(activities, activityWindow, sponsorRel, attemptedSponsorRetrieval)
-
-    def sponsorRel: Option[SponsorRel] = _sponsorRel
-    def withSponsorRel(sponsorRel: SponsorRel): State =
-      copy(sponsorRel=Some(sponsorRel))
-    /**
-     * A sponsor can be undefined (If activity occurs and there is no sponsor)
-     */
-    def sponsorReady(): Boolean = sponsorRel.isDefined || _attemptedSponsorRetrieval
-    def withAttemptedSponsorRetrieval(): State =
-      copy(attemptedSponsorRetrieval=true)
-
-    def activityWindow: ActivityWindow = _activityWindow
-    def withActivityWindow(activityWindow: ActivityWindow): State = copy(activityWindow=activityWindow)
-
-    def activity(window: ActivityWindowRule, id: Option[String]): Option[AgentActivity] = _activities.get(key(window, id))
-    def withAgentActivity(key: StateKey, activity: AgentActivity): State =
-      copy(activities=_activities + (key -> activity))
-
-    def key(window: ActivityWindowRule, id: Option[String]=None): StateKey =
-      s"${window.activityType.metricName}-${window.frequencyType.toString}-${id.getOrElse("")}"
-  }
-
   override def futureExecutionContext: ExecutionContext = executionContext
-
-  type StateKey = String
-  type StateType = State
 }
 
+/**
+ * actor persistent state object
+ */
+class State(_activities: Map[ActivityKey, AgentActivity] = Map.empty,
+            _activityWindow: ActivityWindow = ActivityWindow(Set()),
+            _sponsorRel: Option[SponsorRel] = None,
+            _attemptedSponsorRetrieval: Boolean = false) {
+
+  def copy(activities: Map[ActivityKey, AgentActivity]=_activities,
+           activityWindow: ActivityWindow=_activityWindow,
+           sponsorRel: Option[SponsorRel]=None,
+           attemptedSponsorRetrieval: Boolean=_attemptedSponsorRetrieval): State =
+    new State(activities, activityWindow, sponsorRel, attemptedSponsorRetrieval)
+
+  def sponsorRel: Option[SponsorRel] = _sponsorRel
+  def withSponsorRel(sponsorRel: SponsorRel): State =
+    copy(sponsorRel=Some(sponsorRel))
+  /**
+   * A sponsor can be undefined (If activity occurs and there is no sponsor)
+   */
+  def sponsorReady(): Boolean = sponsorRel.isDefined || _attemptedSponsorRetrieval
+  def withAttemptedSponsorRetrieval(): State =
+    copy(attemptedSponsorRetrieval=true)
+
+  def activityWindow: ActivityWindow = _activityWindow
+  def withActivityWindow(activityWindow: ActivityWindow): State = copy(activityWindow=activityWindow)
+
+  def activity(window: ActivityWindowRule, id: Option[String]): Option[AgentActivity] = _activities.get(key(window, id))
+  def withAgentActivity(key: ActivityKey, activity: AgentActivity): State =
+    copy(activities=_activities + (key -> activity))
+
+  def key(window: ActivityWindowRule, id: Option[String]=None): ActivityKey =
+    s"${window.activityType.metricName}-${window.frequencyType.toString}-${id.getOrElse("")}"
+}
 
 object ActivityTracker {
  def props(implicit config: AppConfig, agentMsgRouter: AgentMsgRouter, executionContext: ExecutionContext): Props = {

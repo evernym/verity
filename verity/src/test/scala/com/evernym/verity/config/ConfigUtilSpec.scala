@@ -1,7 +1,7 @@
 package com.evernym.verity.config
 
 import com.evernym.verity.actor.agent.SponsorRel
-import com.evernym.verity.actor.metrics.{ActiveRelationships, ActiveUsers, ActiveWindowRules, CalendarMonth, VariableDuration}
+import com.evernym.verity.actor.metrics.{ActiveRelationships, ActiveUsers, ActivityWindowRule, CalendarMonth, VariableDuration}
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.typesafe.config.{ConfigException, ConfigFactory}
 import com.evernym.verity.testkit.BasicSpec
@@ -102,10 +102,10 @@ class ConfigUtilSpec extends BasicSpec {
         val windows = ConfigUtil.findActivityWindow(testConfig)
         assert(windows.windows.size == 4)
         val expectedWindows = Set(
-          ActiveWindowRules(VariableDuration("3 d"), ActiveUsers),
-          ActiveWindowRules(VariableDuration("30 day"), ActiveUsers),
-          ActiveWindowRules(VariableDuration("20 min"), ActiveUsers),
-          ActiveWindowRules(CalendarMonth, ActiveRelationships),
+          ActivityWindowRule(VariableDuration("3 d"), ActiveUsers),
+          ActivityWindowRule(VariableDuration("30 day"), ActiveUsers),
+          ActivityWindowRule(VariableDuration("20 min"), ActiveUsers),
+          ActivityWindowRule(CalendarMonth, ActiveRelationships),
         )
         assert(windows.windows == expectedWindows)
       }

@@ -140,13 +140,13 @@ object ConfigUtil {
     }
   }
 
-  private def _activity(config: AppConfig, key: String, behavior: Behavior): Set[ActiveWindowRules] = {
+  private def _activity(config: AppConfig, key: String, behavior: ActivityType): Set[ActivityWindowRule] = {
     if (config.getBooleanReq(s"$key.enabled")) {
       val windows = config.getStringListReq(s"$key.time-windows")
-        .map(x => ActiveWindowRules(VariableDuration(x), behavior))
+        .map(x => ActivityWindowRule(VariableDuration(x), behavior))
 
       val monthly =
-        if (config.getBooleanReq(s"$key.monthly-window")) Seq(ActiveWindowRules(CalendarMonth, behavior))
+        if (config.getBooleanReq(s"$key.monthly-window")) Seq(ActivityWindowRule(CalendarMonth, behavior))
         else Set.empty
 
       (windows ++ monthly).toSet

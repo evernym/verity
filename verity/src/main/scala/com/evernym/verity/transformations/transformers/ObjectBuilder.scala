@@ -1,6 +1,6 @@
 package com.evernym.verity.transformations.transformers
 
-import com.evernym.verity.actor.persistence.customDeserializer.record_agent_activity.RecordingAgentActivityDeserializer
+import com.evernym.verity.actor.persistence.customDeserializer.record_agent_activity.AgentActivityRecordedEventDeserializer
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
 
 object ObjectBuilder {
@@ -21,7 +21,7 @@ object ObjectBuilder {
              objectCodeMapper: ObjectCodeMapperBase): Any = {
     typeCode match {
       //RecordingAgentActivity
-      case 201  => RecordingAgentActivityDeserializer.deserialize(msgBytes)
+      case 201  => AgentActivityRecordedEventDeserializer.deserialize(msgBytes)
       case _    => objectCodeMapper.objectFromCode(typeCode, msgBytes)
     }
   }

@@ -3,7 +3,7 @@ package com.evernym.verity.actor.persistence.object_code_mapper
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.agency.{AgencyAgentPairwiseState, AgencyAgentState}
 import com.evernym.verity.actor.agent.user.{UserAgentPairwiseState, UserAgentState}
-import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
+import com.evernym.verity.actor.agent.{AgentActivityRecorded, SponsorRel}
 import com.evernym.verity.protocol.engine.events._
 import com.evernym.verity.protocol.protocols.agentprovisioning.{v_0_5 => ap5, v_0_6 => ap6, v_0_7 => ap7}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.{legacy => basicMessage_legacy}
@@ -246,7 +246,7 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     199 -> StatusUpdated,
     200 -> ActorStateCleaned,
 
-    201 -> RecordingAgentActivity,
+    201 -> AgentActivityRecorded,
 
     202 -> ResourceUsageState,
     203 -> ItemManagerState,

@@ -4,9 +4,9 @@ import akka.actor.Props
 import akka.event.LoggingReceive
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.user.GetSponsorRel
-import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
+import com.evernym.verity.actor.agent.{AgentActivityRecorded, SponsorRel}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.{ActorMessage, WindowActivityDefined, WindowRules}
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.observability.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
@@ -22,169 +22,179 @@ import scala.concurrent.duration.Duration
   1. activity within a specified window
   2. active relationships within a specified window
  */
-class ActivityTracker(override val appConfig: AppConfig, agentMsgRouter: AgentMsgRouter, executionContext: ExecutionContext)
+class ActivityTracker(override val appConfig: AppConfig,
+                      agentMsgRouter: AgentMsgRouter,
+                      executionContext: ExecutionContext)
   extends BasePersistentActor
     with DefaultPersistenceEncryption {
-  type StateKey = String
-  type StateType = State
-  var state = new State
 
-  override def futureExecutionContext: ExecutionContext = executionContext
+  var state: State = (new State).withActivityWindow(ConfigUtil.findActivityWindow(appConfig))
+  logger.info(s"[$persistenceId] started activity tracker with windows: ${state.activityWindows}")
 
- /**
-  * actor persistent state object
-  */
-  class State(_activity: Map[StateKey, AgentActivity]=Map.empty,
-             _activityWindow: ActivityWindow=ActivityWindow(Set()),
-             _sponsorRel: Option[SponsorRel]=None,
-             _attemptedSponsorRetrieval: Boolean=false) {
+  /**
+   * command handler
+   */
+  val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
+    case activity: AgentActivity if state.sponsorReady() => recordAgentActivity(activity)
+    case activity: AgentActivity                         => needsSponsor(activity)
 
-    def copy(activity: Map[StateKey, AgentActivity]=_activity,
-            activityWindow: ActivityWindow=_activityWindow,
-            sponsorRel: Option[SponsorRel]=None,
-            attemptedSponsorRetrieval: Boolean=_attemptedSponsorRetrieval): State =
-     new State(activity, activityWindow, sponsorRel, attemptedSponsorRetrieval)
-
-    def sponsorRel: Option[SponsorRel] = _sponsorRel
-    def withSponsorRel(sponsorRel: SponsorRel): State =
-      copy(sponsorRel=Some(sponsorRel))
-    /**
-     * A sponsor can be undefined. If activity occurs and there is no sponsor
-     */
-    def sponsorReady(): Boolean = sponsorRel.isDefined || _attemptedSponsorRetrieval
-    def withAttemptedSponsorRetrieval(): State =
-      copy(attemptedSponsorRetrieval=true)
-
-     def activityWindows: ActivityWindow = _activityWindow
-     def withActivityWindow(activityWindow: ActivityWindow): State = copy(activityWindow=activityWindow)
-
-    def activity(window: ActiveWindowRules, id: Option[String]): Option[AgentActivity] = _activity.get(key(window, id))
-    def withAgentActivity(key: StateKey, activity: AgentActivity): State =
-      copy(activity=_activity + (key -> activity))
-
-    def key(window: ActiveWindowRules, id: Option[String]=None): StateKey =
-      s"${window.activityType.metricBase}-${window.activityFrequency.toString}-${id.getOrElse("")}"
+    //TODO: only used by test, should find better way to handle the need
+    case activityWindow: ActivityWindow                  => updateActivityWindows(activityWindow)
   }
-
-  override def beforeStart(): Unit = {
-    super.beforeStart()
-    applyEvent(ConfigUtil.findActivityWindow(appConfig).asEvt)
-    logger.info(s"started activity tracker with windows: ${state.activityWindows}")
-  }
-
- /**
-  * internal command handler
-  */
- val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
-  case activity: AgentActivity if state.sponsorReady() => handleAgentActivity(activity)
-  case activity: AgentActivity => needsSponsor(activity)
-  case updateActivityWindows: ActivityWindow => applyEvent(updateActivityWindows.asEvt)
- }
 
   val waitingForSponsor: Receive = LoggingReceive.withLabel("waitingForSponsor") {
     case sponsorRel: SponsorRel =>
-      applyEvent(sponsorRel)
+      updateSponsorRel(sponsorRel)
       setNewReceiveBehaviour(receiveCmd)
       unstashAll()
+
     case msg =>
-      logger.debug(s"stashing $msg")
+      logger.debug(s"[$persistenceId] stashing $msg")
       stash()
   }
 
- val receiveEvent: Receive = {
-  case r: RecordingAgentActivity =>
-    state = state.withAgentActivity(r.stateKey, AgentActivity(r))
-  case w: WindowActivityDefined =>
-    state = state.withActivityWindow(ActivityWindow.fromEvt(w))
-  case s: SponsorRel =>
-    if (s.equals(SponsorRel.empty)) state = state.withAttemptedSponsorRetrieval()
-    else state = state.withSponsorRel(s)
+  //event handler
+  val receiveEvent: Receive = {
+    case aar: AgentActivityRecorded =>
+      state = state.withAgentActivity(aar.stateKey, AgentActivity(aar))
+  }
 
- }
+  private def updateActivityWindows(activityWindow: ActivityWindow): Unit = {
+    state = state.withActivityWindow(activityWindow)
+  }
+
+  private def updateSponsorRel(sponsorRel: SponsorRel): Unit = {
+    if (sponsorRel.equals(SponsorRel.empty)) state = state.withAttemptedSponsorRetrieval()
+    else state = state.withSponsorRel(sponsorRel)
+  }
 
   /**
    * Sponsor details not set, go to agent and retrieve
    */
   def needsSponsor(activity: AgentActivity): Unit = {
-    logger.trace(s"getting sponsor info, activity: $activity")
+    logger.trace(s"[$persistenceId] getting sponsor info, activity: $activity")
     stash()
     setNewReceiveBehaviour(waitingForSponsor)
     agentMsgRouter.forward(InternalMsgRouteParam(activity.domainId, GetSponsorRel), self)
   }
 
   /**
-   * 1. Process each defined window
-   * 2. Check if new activity within window
-   * 3. check activity type (AU, AR)
+   * 1. Filter available windows if activity needs to be recorded for it
+   *    a. check if new activity within window
+   *    b. validate relationship
+   * 2. check activity type (AU, AR)
    * 4. Record accordingly
    */
-  def handleAgentActivity(activity: AgentActivity): Unit = {
-   logger.debug(s"request to record activity: $activity, windows: ${state.activityWindows}")
-   state.activityWindows
+  def recordAgentActivity(activity: AgentActivity): Unit = {
+   logger.debug(s"[$persistenceId] request to record activity: $activity, windows: ${state.activityWindows}")
+   state
+     .activityWindows
      .windows
      .filter(window => isUntrackedMetric(window, activity))
      .filter(window => relationshipValidation(window, activity))
-     .foreach(window => recordAgentMetric(window, activity))
+     .foreach(window => recordActivity(window, activity))
  }
 
-  def isUntrackedMetric(window: ActiveWindowRules, newActivity: AgentActivity): Boolean = {
-    val lastActivity = state.activity(window, newActivity.id(window.activityType))
-    lastActivity.forall(activity => {
-      window.activityFrequency match {
+  //decides if the given activity needs to be recorded for the given window rule if:
+  //  a. it was never recorded or
+  //  b. "not recorded for the month" or "expired"
+  def isUntrackedMetric(windowRule: ActivityWindowRule, newActivity: AgentActivity): Boolean = {
+    val lastWindowActivity = state.activity(windowRule, newActivity.id(windowRule.activityType))
+    lastWindowActivity.forall { lastActivity =>
+      windowRule.frequencyType match {
         case CalendarMonth =>
           //If timestamps are not in the same month, record new activity
-          !toMonth(activity.timestamp).equals(toMonth(newActivity.timestamp))
+          !toMonth(lastActivity.timestamp).equals(toMonth(newActivity.timestamp))
+
         case VariableDuration(duration) =>
-          //If newActivity is >= then the expiredDate, record new activity
-          val expiredDate = dateAfterDuration(activity.timestamp, duration)
+          //If newActivity is >= the expiredDate, record new activity
+          val expiredDate = dateAfterDuration(lastActivity.timestamp, duration)
           isDateExpired(newActivity.timestamp, expiredDate)
       }
-    })
+    }
   }
 
-  def relationshipValidation(window: ActiveWindowRules, activity: AgentActivity): Boolean =
-    window.activityType match {
+  def relationshipValidation(windowRule: ActivityWindowRule, activity: AgentActivity): Boolean =
+    windowRule.activityType match {
       case ActiveRelationships if activity.relId.isEmpty => false
       case _ => true
     }
 
   /*
-    1. There will be two metrics, active users, active relationships
-    2. Each entry will be tagged with either a domainId or sponsorId
-    3. The entry will only be written if it hasn't already been written in that timeframe
-      // Means I have to change how I'm keeping track in the state
-    4.
+    1. Possible metrics to be recorded: "active users", "active relationships"
+    2. Each metrics will be tagged with either a "domainId" or "sponsorId"
    */
-  def recordAgentMetric(window: ActiveWindowRules, activity: AgentActivity): Unit = {
-    logger.info(s"track activity: $activity, window: $window, tags: ${agentTags(window, activity.domainId)}")
-    metricsWriter.gaugeIncrement(window.activityType.metricBase, tags = agentTags(window, activity.domainId))
-    val recording = RecordingAgentActivity(
+  def recordActivity(windowRule: ActivityWindowRule, activity: AgentActivity): Unit = {
+    logger.info(s"track activity: $activity, window: $windowRule, tags: ${agentTags(windowRule, activity.domainId)}")
+    metricsWriter.gaugeIncrement(windowRule.activityType.metricName, tags = agentTags(windowRule, activity.domainId))
+    val event = AgentActivityRecorded(
       activity.domainId,
       activity.timestamp,
       state.sponsorRel,
       activity.activityType,
       activity.relId.getOrElse(""),
-      state.key(window, activity.id(window.activityType)),
+      state.key(windowRule, activity.id(windowRule.activityType)),
     )
 
-    writeAndApply(recording)
+    writeAndApply(event)
   }
 
-  private def agentTags(behavior: ActiveWindowRules, domainId: DomainId): Map[String, String] =
-    behavior.activityType match {
+  private def agentTags(windowRule: ActivityWindowRule, domainId: DomainId): Map[String, String] =
+    windowRule.activityType match {
       case ActiveUsers =>
         ActiveUsers.tags(
           state.sponsorRel.getOrElse(SponsorRel.empty).sponsorId,
-          behavior.activityFrequency
+          windowRule.frequencyType
         )
       case ActiveRelationships =>
         ActiveRelationships.tags(
           domainId,
-          behavior.activityFrequency,
+          windowRule.frequencyType,
           state.sponsorRel.getOrElse(SponsorRel.empty).sponseeId
         )
     }
+
+  /**
+   * actor persistent state object
+   */
+  class State(_activities: Map[StateKey, AgentActivity] = Map.empty,
+              _activityWindow: ActivityWindow = ActivityWindow(Set()),
+              _sponsorRel: Option[SponsorRel] = None,
+              _attemptedSponsorRetrieval: Boolean = false) {
+
+    def copy(activities: Map[StateKey, AgentActivity]=_activities,
+             activityWindow: ActivityWindow=_activityWindow,
+             sponsorRel: Option[SponsorRel]=None,
+             attemptedSponsorRetrieval: Boolean=_attemptedSponsorRetrieval): State =
+      new State(activities, activityWindow, sponsorRel, attemptedSponsorRetrieval)
+
+    def sponsorRel: Option[SponsorRel] = _sponsorRel
+    def withSponsorRel(sponsorRel: SponsorRel): State =
+      copy(sponsorRel=Some(sponsorRel))
+    /**
+     * A sponsor can be undefined (If activity occurs and there is no sponsor)
+     */
+    def sponsorReady(): Boolean = sponsorRel.isDefined || _attemptedSponsorRetrieval
+    def withAttemptedSponsorRetrieval(): State =
+      copy(attemptedSponsorRetrieval=true)
+
+    def activityWindows: ActivityWindow = _activityWindow
+    def withActivityWindow(activityWindow: ActivityWindow): State = copy(activityWindow=activityWindow)
+
+    def activity(window: ActivityWindowRule, id: Option[String]): Option[AgentActivity] = _activities.get(key(window, id))
+    def withAgentActivity(key: StateKey, activity: AgentActivity): State =
+      copy(activities=_activities + (key -> activity))
+
+    def key(window: ActivityWindowRule, id: Option[String]=None): StateKey =
+      s"${window.activityType.metricName}-${window.frequencyType.toString}-${id.getOrElse("")}"
+  }
+
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  type StateKey = String
+  type StateType = State
 }
+
 
 object ActivityTracker {
  def props(implicit config: AppConfig, agentMsgRouter: AgentMsgRouter, executionContext: ExecutionContext): Props = {
@@ -196,22 +206,24 @@ object ActivityTracker {
  *  ActiveUsers: Manages number of active users within a defined time window
  *  ActiveRelationships: Manages number of relationships a specific Agent (domainId) has within a defined window
  * */
-trait Behavior {
-  def metricBase: String
+trait ActivityType {
+  def metricName: String
   def idType: String
+
   def tags(id: String, frequency: FrequencyType): Map[String, String] =
     Map(
       idType -> id,
       "frequency" -> frequency.toString
     )
 }
-trait AgentBehavior extends Behavior
-case object ActiveUsers extends AgentBehavior {
-  def metricBase: String = AS_ACTIVE_USER_AGENT_COUNT
+trait AgentActivityType extends ActivityType
+
+case object ActiveUsers extends AgentActivityType {
+  def metricName: String = AS_ACTIVE_USER_AGENT_COUNT
   def idType: String = "sponsorId"
 }
-case object ActiveRelationships extends AgentBehavior {
-  def metricBase: String = AS_USER_AGENT_ACTIVE_RELATIONSHIPS
+case object ActiveRelationships extends AgentActivityType {
+  def metricName: String = AS_USER_AGENT_ACTIVE_RELATIONSHIPS
   def idType: String = "domainId"
   def tags(id: String, frequencyType: FrequencyType, sponseeId: String): Map[String, String] =
     super.tags(id, frequencyType) + ("sponseeId" -> sponseeId)
@@ -234,48 +246,31 @@ object VariableDuration {
 
 /** ActivityTracker Commands */
 trait ActivityTracking extends ActorMessage
-final case class ActivityWindow(windows: Set[ActiveWindowRules]) extends ActivityTracking {
-  def asEvt: WindowActivityDefined =
-    WindowActivityDefined(windows.map(x => WindowRules(x.activityFrequency.toString, x.activityType.toString)).toSeq)
-}
-object ActivityWindow {
-  def fromEvt(e: WindowActivityDefined): ActivityWindow = new ActivityWindow(e.windows.map(x => {
-    val frequency: FrequencyType = x.frequency match {
-      case f if f == CalendarMonth.toString => CalendarMonth
-      case f => VariableDuration(f)
-    }
+final case class ActivityWindow(windows: Set[ActivityWindowRule]) extends ActivityTracking
 
-    val behavior: Behavior = x.behavior match {
-      case b if b == ActiveUsers.toString => ActiveUsers
-      case b if b == ActiveRelationships.toString => ActiveRelationships
-    }
-    ActiveWindowRules(frequency, behavior)
-  }).toSet)
-
-}
 final case class AgentActivity(domainId: DidStr,
                                timestamp: IsoDateTime,
                                activityType: String,
                                relId: Option[String]=None) extends ActivityTracking {
-  def id(behavior: Behavior): Option[String] =
+  def id(behavior: ActivityType): Option[String] =
     behavior match {
-      case ActiveUsers => Some(domainId)
-      case ActiveRelationships => relId
+      case ActiveUsers          => Some(domainId)
+      case ActiveRelationships  => relId
       case _ => None
     }
 }
 
 object AgentActivity {
-  def apply(r: RecordingAgentActivity): AgentActivity =
+  def apply(aar: AgentActivityRecorded): AgentActivity =
     new AgentActivity(
-      r.domainId,
-      r.timestamp,
-      r.activityType,
-      if (r.relId == "") None else Some(r.relId)
+      aar.domainId,
+      aar.timestamp,
+      aar.activityType,
+      if (aar.relId == "") None else Some(aar.relId)
     )
 }
 
-final case class ActiveWindowRules(activityFrequency: FrequencyType, activityType: Behavior)
+final case class ActivityWindowRule(frequencyType: FrequencyType, activityType: ActivityType)
 
 /** ActivityTracker Event Base Type */
 trait Active extends ActorMessage

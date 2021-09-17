@@ -2,11 +2,11 @@ package com.evernym.verity.actor.persistence.recovery.mixed
 
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
+import com.evernym.verity.actor.agent.{AgentActivityRecorded, SponsorRel}
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
 import com.evernym.verity.actor.persistence.recovery.base.{BaseRecoveryActorSpec, PersistParam, PersistenceIdParam}
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}
-import com.evernym.verity.actor.persistent.event_adapters.record_agent_activity.RecordingAgentActivityV0
+import com.evernym.verity.actor.persistent.event_adapters.record_agent_activity.AgentActivityRecordedV0
 import com.evernym.verity.constants.ActorNameConstants._
 import scalapb.GeneratedMessageCompanion
 import scala.concurrent.ExecutionContext
@@ -41,19 +41,19 @@ class ActivityTrackerRecoverySpec
   lazy val persistenceId = PersistenceIdParam(ACTIVITY_TRACKER_REGION_ACTOR_NAME, entityId)
 
   lazy val legacyEvents = scala.collection.immutable.Seq(
-    RecordingAgentActivityV0("domainId", "2021-01-02",
+    AgentActivityRecordedV0("domainId", "2021-01-02",
       "sponsorId", "activityType", "relId", "stateKey", "sponseeId"),
   )
 
   lazy val newEvents = scala.collection.immutable.Seq(
-    RecordingAgentActivity("domainId", "2021-01-02",
+    AgentActivityRecorded("domainId", "2021-01-02",
       Option(SponsorRel("sponsorId", "sponseeId")), "activityType", "relId", "stateKey")
   )
 
   //this mapping is used to store legacy event which is no more in the current 'DefaultObjectCodeMapper'
   lazy val legacyObjectCodeMapper = new ObjectCodeMapperBase {
     lazy val objectCodeMapping: Map[Int, GeneratedMessageCompanion[_]] = Map (
-      201 -> RecordingAgentActivityV0
+      201 -> AgentActivityRecordedV0
     )
   }
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)

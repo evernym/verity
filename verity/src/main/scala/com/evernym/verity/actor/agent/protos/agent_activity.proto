@@ -6,7 +6,7 @@ import "sponsor_rel.proto";
 
 package com.evernym.verity.actor.agent;
 
-message RecordingAgentActivity {
+message AgentActivityRecorded {
     option (scalapb.message).extends = "com.evernym.verity.actor.metrics.Active";
     string domainId = 1;
     string timestamp = 2;

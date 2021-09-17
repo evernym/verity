@@ -44,6 +44,13 @@ spec:
       containers:
       - name: {{ template "verity.fullname" . }}
         image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag }}
+        resources:
+          requests:
+            memory: {{ .Values.deployment.resources.requests.memory }}
+            cpu: {{ .Values.deployment.resources.requests.cpu }}
+          limits:
+            memory: {{ .Values.deployment.resources.limits.memory }}
+            cpu: {{ .Values.deployment.resources.limits.cpu }}
         startupProbe:
           httpGet:
             path: /agency/heartbeat

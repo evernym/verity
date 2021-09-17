@@ -100,14 +100,14 @@ class ConfigUtilSpec extends BasicSpec {
       "should find activity window" in {
         val testConfig = new TestAppConfig(Some(activityConfig), true)
         val windows = ConfigUtil.findActivityWindow(testConfig)
-        assert(windows.windows.size == 4)
+        assert(windows.rules.size == 4)
         val expectedWindows = Set(
           ActivityWindowRule(VariableDuration("3 d"), ActiveUsers),
           ActivityWindowRule(VariableDuration("30 day"), ActiveUsers),
           ActivityWindowRule(VariableDuration("20 min"), ActiveUsers),
           ActivityWindowRule(CalendarMonth, ActiveRelationships),
         )
-        assert(windows.windows == expectedWindows)
+        assert(windows.rules == expectedWindows)
       }
     }
 

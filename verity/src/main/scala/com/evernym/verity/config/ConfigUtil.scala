@@ -140,7 +140,7 @@ object ConfigUtil {
     }
   }
 
-  private def _activity(config: AppConfig, key: String, behavior: ActivityType): Set[ActivityWindowRule] = {
+  private def _activityRule(config: AppConfig, key: String, behavior: ActivityType): Set[ActivityWindowRule] = {
     if (config.getBooleanReq(s"$key.enabled")) {
       val windows = config.getStringListReq(s"$key.time-windows")
         .map(x => ActivityWindowRule(VariableDuration(x), behavior))
@@ -154,8 +154,8 @@ object ConfigUtil {
   }
 
   def findActivityWindow(config: AppConfig): ActivityWindow = {
-    val au = _activity(config, ACTIVE_USER_METRIC, ActiveUsers)
-    val ar = _activity(config, ACTIVE_RELATIONSHIP_METRIC, ActiveRelationships)
+    val au = _activityRule(config, ACTIVE_USER_METRIC, ActiveUsers)
+    val ar = _activityRule(config, ACTIVE_RELATIONSHIP_METRIC, ActiveRelationships)
 
     ActivityWindow(au ++ ar)
   }

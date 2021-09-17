@@ -141,7 +141,6 @@ class OutboxRetentionPolicySpec
         appConfig.withFallback(OVERRIDE_CONFIG).config,
         testAccessTokenRefreshers,
         testRelResolver,
-        testMsgStore,
         testMsgPackagers,
         testMsgTransports,
         executionContext,

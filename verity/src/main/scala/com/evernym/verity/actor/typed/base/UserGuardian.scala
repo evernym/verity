@@ -95,7 +95,6 @@ object UserGuardian {
           appConfig.config,
           agentActorContext.oAuthAccessTokenRefreshers,
           relResolver,
-          msgStore,
           msgPackagers,
           msgTransports,
           executionContext,

@@ -15,7 +15,14 @@ trait MessageRepository {
   def read(ids: List[MsgId], excludePayload: Boolean): Future[List[Msg]]
 }
 
-case class Msg(id: MsgId, `type`: String, legacyPayload: Option[LegacyData], payload: Option[Array[Byte]])
+case class Msg(
+                id: MsgId,
+                `type`: String,
+                legacyPayload: Option[LegacyData],
+                payload: Option[Array[Byte]],
+                retentionPolicy: RetentionPolicy,
+                recipPackaging: Option[RecipPackaging]
+              )
 
 object MessageRepository {
   def apply(msgStore: ActorRef[MsgStore.Cmd], executionContext: ExecutionContext, actorSystem: ActorSystem[Nothing], timeout: Option[Timeout] = None): MessageRepository = {

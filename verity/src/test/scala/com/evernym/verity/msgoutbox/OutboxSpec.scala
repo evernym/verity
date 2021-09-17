@@ -245,7 +245,6 @@ class OutboxSpec
         appConfig.withFallback(SNAPSHOT_CONFIG).config,
         testAccessTokenRefreshers,
         testRelResolver,
-        testMsgStore,
         testMsgPackagers,
         testMsgTransports,
         futureExecutionContext,

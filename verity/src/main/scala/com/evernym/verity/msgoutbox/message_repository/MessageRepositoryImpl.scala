@@ -31,13 +31,13 @@ class MessageRepositoryImpl(val msgStore: ActorRef[MsgStore.Cmd], timeout: Optio
   override def read(ids: List[MsgId], excludePayload: Boolean): Future[List[Msg]] = {
     Future.sequence( ids.map( id =>
       for {
-        MessageMeta.Replies.Msg(id, typ, legacy, retentionPolicy, _) <- clusterSharding
+        MessageMeta.Replies.Msg(id, typ, legacy, retentionPolicy, recipPackaging, _) <- clusterSharding
           .entityRefFor(MessageMeta.TypeKey, id)
           .ask(ref => MessageMeta.Commands.Get(ref))
         payload <- if (excludePayload) Future.successful(None) else msgStore
           .ask(ref => MsgStore.Commands.GetPayload(id, retentionPolicy, ref))
           .map(res => res.payload)
-      } yield Msg(id, typ, legacy, payload)
+      } yield Msg(id, typ, legacy, payload, retentionPolicy, recipPackaging)
     ))
   }
 

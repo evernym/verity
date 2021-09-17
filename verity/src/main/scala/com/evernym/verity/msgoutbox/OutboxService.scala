@@ -39,8 +39,7 @@ trait OutboxService {
                  ): Future[Seq[MsgDetail]]
 }
 
-class OutboxServiceImpl(val msgStore: ActorRef[MsgStore.Cmd],
-                        relResolver: RelResolver,
+class OutboxServiceImpl(val relResolver: RelResolver,
                         msgRepository: MessageRepository,
                         msgPackagers: MsgPackagers,
                         agentActorContext: AgentActorContext,
@@ -59,7 +58,6 @@ class OutboxServiceImpl(val msgStore: ActorRef[MsgStore.Cmd],
       appConfig.config,
       agentActorContext.oAuthAccessTokenRefreshers,
       relResolver,
-      msgStore,
       msgPackagers,
       msgTransports,
       ec,
@@ -126,14 +124,13 @@ class OutboxServiceImpl(val msgStore: ActorRef[MsgStore.Cmd],
 }
 
 object OutboxService {
-  def apply(msgStore: ActorRef[MsgStore.Cmd],
-            relResolver: RelResolver,
+  def apply(relResolver: RelResolver,
             msgRepository: MessageRepository,
             msgPackagers: MsgPackagers,
             agentActorContext: AgentActorContext,
             appConfig: AppConfig,
             timeout: Option[Timeout] = None)
            (implicit ec: ExecutionContext, actorSystem: ActorSystem[Nothing]): OutboxService = {
-    new OutboxServiceImpl(msgStore, relResolver, msgRepository, msgPackagers, agentActorContext, appConfig, timeout)(ec, actorSystem)
+    new OutboxServiceImpl(relResolver, msgRepository, msgPackagers, agentActorContext, appConfig, timeout)(ec, actorSystem)
   }
 }

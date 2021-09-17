@@ -128,7 +128,6 @@ object Outbox {
             configuration: Config,
             accessTokenRefreshers: AccessTokenRefreshers,
             relResolver: RelResolver,
-            msgStore: ActorRef[MsgStore.Cmd],
             msgPackagers: MsgPackagers,
             msgTransports: MsgTransports,
             executionContext: ExecutionContext,
@@ -144,7 +143,7 @@ object Outbox {
             actorContext,
             accessTokenRefreshers,
             eventEncryptionSalt,
-            msgStore,
+            msgRepository,
             msgPackagers,
             msgTransports,
             executionContext

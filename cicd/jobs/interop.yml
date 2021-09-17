@@ -13,11 +13,11 @@ build-test-harness:
     - docker:19.03.12-dind
   script:
     - TAG="$CI_COMMIT_SHORT_SHA"
-    - cp verity/target/scala-2.12/verity-assembly-*.jar cicd/test-harness/verity/.
-    - mv cicd/test-harness/verity/verity-assembly-*.jar cicd/test-harness/verity/verity-assembly-0.4.0-SNAPSHOT.jar
+    - cp verity/target/scala-2.12/verity-assembly-*.jar cicd/test-harness/verity/verity-assembly-0.4.0-SNAPSHOT.jar
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build -t $CI_REGISTRY_IMAGE/$DOCKER_REPOSITORY:$TAG test-harness/verity/
+    - docker build -t $CI_REGISTRY_IMAGE/$DOCKER_REPOSITORY:$TAG cicd/test-harness/verity/
     - docker push $CI_REGISTRY_IMAGE/$DOCKER_REPOSITORY:$TAG
+  allow_failure: true
 
 interop:
   stage: acceptance

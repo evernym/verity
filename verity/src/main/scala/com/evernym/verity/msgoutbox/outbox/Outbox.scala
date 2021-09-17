@@ -86,7 +86,7 @@ object Outbox {
     //sent by scheduled job
     case object ProcessDelivery extends TimeoutCmd with UninitializedCmd with MetadataReceivedCmd
 
-    case class Init(relId: RelId, recipId: RecipId, destId: DestId) extends UninitializedCmd
+    case class Init(relId: RelId, recipId: RecipId, destId: DestId, replyTo: ActorRef[Replies.Initialized]) extends UninitializedCmd
 
     case class UpdateConfig(config: OutboxConfig) extends GenericCmd
   }
@@ -98,6 +98,8 @@ object Outbox {
     case object MsgAlreadyAdded extends MsgAddedReply
     case object MsgAdded extends MsgAddedReply
     case class NotInitialized(entityId: String) extends MsgAddedReply
+    // we should get rid of the entityId there as soon as we deprecate the OutboxRouter
+    case class Initialized(entityId: String) extends Reply
     case class DeliveryStatus(messages: List[MsgDetail]) extends GetDeliveryStatusReply
   }
 
@@ -195,15 +197,15 @@ object Outbox {
 
   private def uninitializedStateHandler(implicit setup: SetupOutbox): UninitializedCmd => ReplyEffect[Event, State] = {
     case cmd @ Commands.AddMsg(_, _, replyTo) =>
-      setup.buffer.stash(cmd)
+//      setup.buffer.stash(cmd)
       Effect
         .reply(replyTo)(Replies.NotInitialized(setup.entityContext.entityId))
 
-    case Commands.Init(relId, recipId, destId) =>
+    case Commands.Init(relId, recipId, destId, replyTo) =>
       Effect
         .persist(MetadataStored(relId = relId, recipId = recipId, destId = destId))
         .thenRun((_: State) => fetchOutboxParam(Metadata(relId, recipId, destId)))
-        .thenNoReply()
+        .thenReply(replyTo)(_ => Replies.Initialized(setup.entityContext.entityId))
 
     case cmd =>
       setup.buffer.stash(cmd)

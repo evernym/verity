@@ -108,18 +108,21 @@ class OutboxServiceImpl(val relResolver: RelResolver,
   private def outboxAddMessage(outboxIdParam: OutboxIdParam, msgId: MsgId, retentionPolicy: RetentionPolicy): Future[Unit] = {
     //for now we are not collecting AddMsg
     //we need to refactor interaction on Init message and collect replies from it as well (and make it askable)
+    val outboxRef = clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.entityId.toString)
     for {
-      outboxResponse <- clusterSharding
-        .entityRefFor(Outbox.TypeKey, outboxIdParam.entityId.toString)
+      outboxResponse <- outboxRef
         .ask(ref => Outbox.Commands.AddMsg(msgId, retentionPolicy.elements.expiryDuration, ref))
-    } yield outboxResponse match {
-      case Outbox.Replies.NotInitialized(entityId) => {
-        val outboxRef: EntityRef[Outbox.Cmd] = clusterSharding.entityRefFor(Outbox.TypeKey, entityId)
-        outboxRef.tell(Outbox.Commands.Init(outboxIdParam.relId, outboxIdParam.recipId, outboxIdParam.destId))
+      resend <- outboxResponse match {
+        case Outbox.Replies.NotInitialized(_) =>
+          outboxRef.ask(ref => Outbox.Commands.Init(outboxIdParam.relId, outboxIdParam.recipId, outboxIdParam.destId, ref)).map(_ => true)
+        case _ => Future.successful(false)
       }
-      case Outbox.Replies.MsgAdded => () //do nothing, everything is good
-      case Outbox.Replies.MsgAlreadyAdded => () //do nothing, everything is good
-    }
+      _ <- if (resend) {
+        outboxRef.ask(ref => Outbox.Commands.AddMsg(msgId, retentionPolicy.elements.expiryDuration, ref))
+      } else {
+        Future.successful(())
+      }
+    } yield ()
   }
 }
 

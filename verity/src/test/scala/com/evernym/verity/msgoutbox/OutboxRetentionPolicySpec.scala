@@ -37,7 +37,8 @@ class OutboxRetentionPolicySpec
         outboxIds.foreach { outboxIdParam =>
           val probe = createTestProbe[RelationshipResolver.Replies.OutboxParam]()
           outboxRegion ! ShardingEnvelope(outboxIdParam.entityId.toString, GetOutboxParam(probe.ref))
-          outboxRegion ! ShardingEnvelope(outboxIdParam.entityId.toString, Commands.Init(outboxIdParam.relId, outboxIdParam.recipId, outboxIdParam.destId))
+          val secondProbe = createTestProbe[Outbox.Replies.Initialized]()
+          outboxRegion ! ShardingEnvelope(outboxIdParam.entityId.toString, Commands.Init(outboxIdParam.relId, outboxIdParam.recipId, outboxIdParam.destId, secondProbe.ref))
           val outboxParam = probe.expectMessageType[RelationshipResolver.Replies.OutboxParam]
           outboxParam.walletId shouldBe testWallet.walletId
           outboxParam.comMethods shouldBe defaultDestComMethods

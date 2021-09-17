@@ -46,7 +46,8 @@ class OutboxSpec
       "should fetch required information from relationship actor" in {
         val probe = createTestProbe[RelationshipResolver.Replies.OutboxParam]()
         outboxRegion ! ShardingEnvelope(outboxId, GetOutboxParam(probe.ref))
-        outboxRegion ! ShardingEnvelope(outboxId, Commands.Init(relId, recipId, destId))
+        val secondProbe = createTestProbe[Outbox.Replies.Initialized]()
+        outboxRegion ! ShardingEnvelope(outboxId, Commands.Init(relId, recipId, destId, secondProbe.ref))
         val outboxParam = probe.expectMessageType[RelationshipResolver.Replies.OutboxParam]
         outboxParam.walletId shouldBe testWallet.walletId
         outboxParam.comMethods shouldBe defaultDestComMethods

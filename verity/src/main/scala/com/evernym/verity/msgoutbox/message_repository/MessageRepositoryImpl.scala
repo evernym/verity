@@ -29,23 +29,16 @@ class MessageRepositoryImpl(val msgStore: ActorRef[MsgStore.Cmd], timeout: Optio
   }
 
   override def read(ids: List[MsgId], excludePayload: Boolean): Future[List[Msg]] = {
-    for {
-      replies <- Future.sequence(
-        ids.map( id =>
-          clusterSharding.entityRefFor(MessageMeta.TypeKey, id).ask(ref => MessageMeta.Commands.Get(ref))
-        )
-      )
-      //TODO: this can be resolved in a more nice way
-      // Such code reveals the need in StatusReply and no second message will be needed
-      msgDetails <- Future.sequence(replies.map {
-        case MessageMeta.Replies.MsgNotYetAdded =>
-          Future.failed(new Exception("Message not found"))
-        case MessageMeta.Replies.Msg(id, typ, legacy, retentionPolicy, _) =>
-          msgStore
-            .ask(ref => MsgStore.Commands.GetPayload(id, retentionPolicy, ref))
-            .map(res => Msg(id, typ, legacy, if (excludePayload) None else res.payload))
-      })
-
-    } yield msgDetails
+    Future.sequence( ids.map( id =>
+      for {
+        MessageMeta.Replies.Msg(id, typ, legacy, retentionPolicy, _) <- clusterSharding
+          .entityRefFor(MessageMeta.TypeKey, id)
+          .ask(ref => MessageMeta.Commands.Get(ref))
+        payload <- if (excludePayload) Future.successful(None) else msgStore
+          .ask(ref => MsgStore.Commands.GetPayload(id, retentionPolicy, ref))
+          .map(res => res.payload)
+      } yield Msg(id, typ, legacy, payload)
+    ))
   }
+
 }

@@ -67,7 +67,7 @@ object UserGuardian {
       }
 
       val msgRepository = MessageRepository(msgStore, executionContext, actorContext.system)
-      val relResolver = RelResolver(executionContext, agentActorContext.agentMsgRouter, actorContext.system)
+      val relResolver = RelResolver(executionContext, agentActorContext.agentMsgRouter)
 
       sharding.init(Entity(MessageMeta.TypeKey) { entityContext =>
         MessageMeta(

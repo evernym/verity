@@ -1,6 +1,5 @@
 package com.evernym.verity.msgoutbox
 
-import akka.actor.typed.ActorSystem
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.did.VerKeyStr
@@ -15,7 +14,7 @@ trait RelResolver {
 }
 
 object RelResolver {
-  def apply(executionContext: ExecutionContext, agentMsgRouter: AgentMsgRouter, actorSystem: ActorSystem[Nothing], timeout: Option[Timeout] = None): RelResolver = {
-    new RelResolverImpl(timeout)(executionContext, agentMsgRouter, actorSystem)
+  def apply(executionContext: ExecutionContext, agentMsgRouter: AgentMsgRouter, timeout: Option[Timeout] = None): RelResolver = {
+    new RelResolverImpl(timeout)(executionContext, agentMsgRouter)
   }
 }

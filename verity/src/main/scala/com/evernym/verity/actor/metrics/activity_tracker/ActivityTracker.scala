@@ -1,12 +1,12 @@
-package com.evernym.verity.actor.metrics
+package com.evernym.verity.actor.metrics.activity_tracker
 
 import akka.actor.Props
 import akka.event.LoggingReceive
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.user.GetSponsorRel
-import com.evernym.verity.actor.agent.{AgentActivityRecorded, SponsorRel}
-import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.actor.agent.{ActivityState, AgentActivity, AgentActivityRecorded, AgentDetailRecorded, AgentParam, LegacyAgentActivityRecorded, SponsorRel}
+import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SnapshotterExt}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.observability.metrics.CustomMetrics.{AS_ACTIVE_USER_AGENT_COUNT, AS_USER_AGENT_ACTIVE_RELATIONSHIPS}
@@ -26,25 +26,27 @@ class ActivityTracker(override val appConfig: AppConfig,
                       agentMsgRouter: AgentMsgRouter,
                       executionContext: ExecutionContext)
   extends BasePersistentActor
-    with DefaultPersistenceEncryption {
+    with DefaultPersistenceEncryption
+    with SnapshotterExt[ActivityState]{
 
-  var state: State = (new State).withActivityWindow(ConfigUtil.findActivityWindow(appConfig))
-  logger.info(s"[$persistenceId] started activity tracker with windows: ${state.activityWindow}")
+  var state: ActivityState = new ActivityState
+  var activityWindow: ActivityWindow = ConfigUtil.findActivityWindow(appConfig)
+  logger.info(s"[$persistenceId] started activity tracker with window: $activityWindow")
 
   /**
    * command handler
    */
   val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
-    case activity: AgentActivity if state.sponsorReady() => handleRecordAgentActivity(activity)
-    case activity: AgentActivity                         => needsSponsor(activity)
+    case raa: RecordAgentActivity if isAgentDetailRecorded => handleRecordAgentActivity(raa)
+    case raa: RecordAgentActivity                          => needsSponsor(raa)
 
     //TODO: only used by test, should find better way to handle the need
-    case activityWindow: ActivityWindow                  => updateActivityWindows(activityWindow)
+    case activityWindow: ActivityWindow                    => updateActivityWindows(activityWindow)
   }
 
-  val waitingForSponsor: Receive = LoggingReceive.withLabel("waitingForSponsor") {
+  def waitingForSponsor(domainId: DomainId): Receive = LoggingReceive.withLabel("waitingForSponsor") {
     case sponsorRel: SponsorRel =>
-      updateSponsorRel(sponsorRel)
+      writeAndApply(AgentDetailRecorded(domainId, Option(sponsorRel)))
       setNewReceiveBehaviour(receiveCmd)
       unstashAll()
 
@@ -54,31 +56,40 @@ class ActivityTracker(override val appConfig: AppConfig,
   }
 
   //event handler
-  val receiveEvent: Receive = {
+  val eventReceiver: Receive = {
+    case adr: AgentDetailRecorded =>
+      state = state.withAgentParam(AgentParam(adr.domainId, adr.sponsorRel))
+
     case aar: AgentActivityRecorded =>
-      state = state.withAgentActivity(aar.stateKey, AgentActivity(aar))
-
-    case other => //only kept to handle any legacy events if at all persisted
-      logger.info("unhandled activity tracker event found: " + other.getClass.getSimpleName)
+      state = state.addActivities((aar.stateKey, AgentActivity(aar.timestamp, aar.activityType, Option(aar.relId))))
   }
 
-  private def updateActivityWindows(activityWindow: ActivityWindow): Unit = {
-    state = state.withActivityWindow(activityWindow)
+  val legacyEventReceiver: Receive = {
+    case laar: LegacyAgentActivityRecorded =>
+      state = state
+        .withAgentParam(AgentParam(laar.domainId, laar.sponsorRel))
+        .addActivities((laar.stateKey, AgentActivity(laar.timestamp, laar.activityType, Option(laar.relId))))
+
+    //only kept to handle any legacy events if at all persisted
+    case other =>
+      logger.info(s"[$persistenceId] unhandled activity tracker event found: " + other.getClass.getSimpleName)
   }
 
-  private def updateSponsorRel(sponsorRel: SponsorRel): Unit = {
-    if (sponsorRel.equals(SponsorRel.empty)) state = state.withSponsorRetrievalAttempted()
-    else state = state.withSponsorRel(sponsorRel)
+  val receiveEvent: Receive = eventReceiver orElse legacyEventReceiver
+
+  //TODO: only used by test (should fix it)
+  private def updateActivityWindows(aw: ActivityWindow): Unit = {
+    activityWindow = aw
   }
 
   /**
    * Sponsor details not set, go to agent and retrieve
    */
-  private def needsSponsor(activity: AgentActivity): Unit = {
-    logger.trace(s"[$persistenceId] getting sponsor info, activity: $activity")
+  private def needsSponsor(raa: RecordAgentActivity): Unit = {
+    logger.trace(s"[$persistenceId] getting sponsor info, activity: $raa")
     stash()
-    setNewReceiveBehaviour(waitingForSponsor)
-    agentMsgRouter.forward(InternalMsgRouteParam(activity.domainId, GetSponsorRel), self)
+    setNewReceiveBehaviour(waitingForSponsor(raa.domainId))
+    agentMsgRouter.forward(InternalMsgRouteParam(raa.domainId, GetSponsorRel), self)
   }
 
   /**
@@ -88,21 +99,25 @@ class ActivityTracker(override val appConfig: AppConfig,
    * 2. check activity type (AU, AR)
    * 4. Record accordingly
    */
-  private def handleRecordAgentActivity(activity: AgentActivity): Unit = {
-    logger.debug(s"[$persistenceId] request to record activity: $activity, windows: ${state.activityWindow}")
-    state
-     .activityWindow
-     .rules
-     .filter(rule => isUntrackedMetric(rule, activity))
-     .filter(rule => isValidRelationship(rule, activity))
-     .foreach(rule => recordActivity(rule, activity))
+  private def handleRecordAgentActivity(activity: RecordAgentActivity): Unit = {
+    if (state.agentParam.map(_.domainId).contains(activity.domainId)) {
+      logger.debug(s"[$persistenceId] request to record activity: $activity, windows: $activityWindow")
+      activityWindow
+        .rules
+        .filter(rule => isUntrackedMetric(rule, activity))
+        .filter(rule => isValidRelationship(rule, activity))
+        .foreach(rule => recordActivity(rule, activity))
+    } else {
+      logger.warn(s"[$persistenceId] request received for domain ${activity.domainId} " +
+        s"not matched with pre-set domain ${state.agentParam.map(_.domainId)}" )
+    }
  }
 
   //decides if the given 'newActivity' needs to be recorded for the given window rule if:
   //  a. it was never recorded or
-  //  b. "not recorded for the month" or "expired"
-  private def isUntrackedMetric(rule: ActivityWindowRule, newActivity: AgentActivity): Boolean = {
-    val lastWindowActivity = state.activity(rule, newActivity.id(rule.activityType))
+  //  b. "not recorded for the month" or "for the given window rule"
+  private def isUntrackedMetric(rule: ActivityWindowRule, newActivity: RecordAgentActivity): Boolean = {
+    val lastWindowActivity = activity(rule, newActivity.id(rule.trackActivityType))
     lastWindowActivity.forall { lastActivity =>
       rule.frequencyType match {
         case CalendarMonth =>
@@ -117,8 +132,8 @@ class ActivityTracker(override val appConfig: AppConfig,
     }
   }
 
-  private def isValidRelationship(rule: ActivityWindowRule, activity: AgentActivity): Boolean = {
-    rule.activityType match {
+  private def isValidRelationship(rule: ActivityWindowRule, activity: RecordAgentActivity): Boolean = {
+    rule.trackActivityType match {
       case ActiveRelationships if activity.relId.isEmpty => false
       case _ => true
     }
@@ -128,75 +143,58 @@ class ActivityTracker(override val appConfig: AppConfig,
     1. Possible metrics to be recorded: "active users", "active relationships"
     2. Each metrics will be tagged with either a "domainId" or "sponsorId"
    */
-  private def recordActivity(rule: ActivityWindowRule, activity: AgentActivity): Unit = {
+  private def recordActivity(rule: ActivityWindowRule, activity: RecordAgentActivity): Unit = {
     logger.info(s"[$persistenceId] track activity: $activity, window: $rule, tags: ${agentTags(rule, activity.domainId)}")
-    metricsWriter.gaugeIncrement(rule.activityType.metricName, tags = agentTags(rule, activity.domainId))
+    metricsWriter.gaugeIncrement(rule.trackActivityType.metricName, tags = agentTags(rule, activity.domainId))
     val event = AgentActivityRecorded(
-      activity.domainId,
+      key(rule, activity.id(rule.trackActivityType)),
       activity.timestamp,
-      state.sponsorRel,
       activity.activityType,
-      activity.relId.getOrElse(""),
-      state.key(rule, activity.id(rule.activityType)),
+      activity.relId.getOrElse("")
     )
 
     writeAndApply(event)
   }
 
   private def agentTags(rule: ActivityWindowRule, domainId: DomainId): Map[String, String] = {
-    //TODO: not sure about why the "actual activity type" (like 'MSGS', all possible outgoing messages)
-    // doesn't matter in the tags determination
-    rule.activityType match {
+    rule.trackActivityType match {
       case ActiveUsers =>
         ActiveUsers.tags(
-          state.sponsorRel.getOrElse(SponsorRel.empty).sponsorId,
+          sponsorRel.getOrElse(SponsorRel.empty).sponsorId,
           rule.frequencyType
         )
       case ActiveRelationships =>
         ActiveRelationships.tags(
           domainId,
           rule.frequencyType,
-          state.sponsorRel.getOrElse(SponsorRel.empty).sponseeId
+          sponsorRel.getOrElse(SponsorRel.empty).sponseeId
         )
     }
   }
 
-  override def futureExecutionContext: ExecutionContext = executionContext
-}
-
-/**
- * actor persistent state object
- * (should be replaced by proto message when we switch to use snapshotting)
- */
-class State(_activities: Map[ActivityKey, AgentActivity] = Map.empty,
-            _activityWindow: ActivityWindow = ActivityWindow(Set()),
-            _sponsorRel: Option[SponsorRel] = None,
-            _isSponsorRetrievalAttempted: Boolean = false) {
-
-  def copy(activities: Map[ActivityKey, AgentActivity] = _activities,
-           activityWindow: ActivityWindow = _activityWindow,
-           sponsorRel: Option[SponsorRel] = None,
-           isSponsorRetrievalAttempted: Boolean = _isSponsorRetrievalAttempted): State =
-    new State(activities, activityWindow, sponsorRel, isSponsorRetrievalAttempted)
-
-  def sponsorRel: Option[SponsorRel] = _sponsorRel
-  def withSponsorRel(sponsorRel: SponsorRel): State =
-    copy(sponsorRel=Some(sponsorRel))
+  def sponsorRel: Option[SponsorRel] = state.agentParam.flatMap(_.sponsorRel)
   /**
    * A sponsor can be undefined (If activity occurs and there is no sponsor)
    */
-  def sponsorReady(): Boolean = sponsorRel.isDefined || _isSponsorRetrievalAttempted
-  def withSponsorRetrievalAttempted(): State = copy(isSponsorRetrievalAttempted = true)
+  def isAgentDetailRecorded: Boolean = state.agentParam.isDefined
 
-  def activityWindow: ActivityWindow = _activityWindow
-  def withActivityWindow(activityWindow: ActivityWindow): State = copy(activityWindow=activityWindow)
+  def activity(rule: ActivityWindowRule, id: Option[String]): Option[AgentActivity] =
+    state.activities.get(key(rule, id))
 
-  def activity(window: ActivityWindowRule, id: Option[String]): Option[AgentActivity] = _activities.get(key(window, id))
-  def withAgentActivity(key: ActivityKey, activity: AgentActivity): State = copy(activities=_activities + (key -> activity))
+  def key(rule: ActivityWindowRule, id: Option[String]=None): ActivityKey =
+    s"${rule.trackActivityType.metricName}-${rule.frequencyType.toString}-${id.getOrElse("")}"
 
-  def key(window: ActivityWindowRule, id: Option[String]=None): ActivityKey =
-    s"${window.activityType.metricName}-${window.frequencyType.toString}-${id.getOrElse("")}"
+  override def futureExecutionContext: ExecutionContext = executionContext
+
+  override def receiveSnapshot: PartialFunction[Any, Unit] = {
+    case s: ActivityState => state = s
+  }
+
+  override def snapshotState: Option[ActivityState] = {
+    Option(state)
+  }
 }
+
 
 object ActivityTracker {
  def props(implicit config: AppConfig, agentMsgRouter: AgentMsgRouter, executionContext: ExecutionContext): Props = {
@@ -249,28 +247,18 @@ object VariableDuration {
 /** ActivityTracker Commands */
 trait ActivityTrackingCommand extends ActorMessage
 final case class ActivityWindow(rules: Set[ActivityWindowRule]) extends ActivityTrackingCommand
-final case class ActivityWindowRule(frequencyType: FrequencyType, activityType: ActivityType)
+final case class ActivityWindowRule(frequencyType: FrequencyType, trackActivityType: ActivityType)
 
-final case class AgentActivity(domainId: DidStr,
-                               timestamp: IsoDateTime,
-                               activityType: String,
-                               relId: Option[String]=None) extends ActivityTrackingCommand {
+final case class RecordAgentActivity(domainId: DidStr,
+                                     timestamp: IsoDateTime,
+                                     activityType: String,
+                                     relId: Option[String]=None) extends ActivityTrackingCommand {
   def id(activityType: ActivityType): Option[String] =
     activityType match {
       case ActiveUsers          => Some(domainId)
       case ActiveRelationships  => relId
       case _                    => None
     }
-}
-
-object AgentActivity {
-  def apply(aar: AgentActivityRecorded): AgentActivity =
-    new AgentActivity(
-      aar.domainId,
-      aar.timestamp,
-      aar.activityType,
-      if (aar.relId == "") None else Some(aar.relId)
-    )
 }
 
 /** ActivityTracker Event Base Type */

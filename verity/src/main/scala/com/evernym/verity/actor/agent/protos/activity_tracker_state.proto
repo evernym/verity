@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+import "google/protobuf/wrappers.proto";
+import "sponsor_rel.proto";
+
+package com.evernym.verity.actor.agent;
+
+message AgentParam {
+    string domainId = 1;
+    SponsorRel sponsorRel = 2;
+}
+
+message AgentActivity {
+    string timestamp = 1;
+    string activityType = 2;
+    google.protobuf.StringValue relId = 3;
+}
+
+message ActivityState {
+    option (scalapb.message).extends = "com.evernym.verity.actor.State";
+    AgentParam agentParam = 1;
+    map<string, AgentActivity> activities = 2;
+}

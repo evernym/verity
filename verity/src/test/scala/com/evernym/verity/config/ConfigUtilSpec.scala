@@ -1,7 +1,7 @@
 package com.evernym.verity.config
 
 import com.evernym.verity.actor.agent.SponsorRel
-import com.evernym.verity.actor.metrics.{ActiveRelationships, ActiveUsers, ActivityWindowRule, CalendarMonth, VariableDuration}
+import com.evernym.verity.actor.metrics.activity_tracker.{ActiveRelationships, ActiveUsers, ActivityWindowRule, CalendarMonth, VariableDuration}
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.typesafe.config.{ConfigException, ConfigFactory}
 import com.evernym.verity.testkit.BasicSpec

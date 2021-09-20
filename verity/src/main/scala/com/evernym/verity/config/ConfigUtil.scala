@@ -2,7 +2,7 @@ package com.evernym.verity.config
 
 import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.actor.agent.SponsorRel
-import com.evernym.verity.actor.metrics._
+import com.evernym.verity.actor.metrics.activity_tracker.{ActiveRelationships, ActiveUsers, ActivityType, ActivityWindow, ActivityWindowRule, CalendarMonth, VariableDuration}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.validator.base.ConfigReadHelper
@@ -142,6 +142,7 @@ object ConfigUtil {
 
   private def _activityRule(config: AppConfig, key: String, behavior: ActivityType): Set[ActivityWindowRule] = {
     if (config.getBooleanReq(s"$key.enabled")) {
+
       val windows = config.getStringListReq(s"$key.time-windows")
         .map(x => ActivityWindowRule(VariableDuration(x), behavior))
 

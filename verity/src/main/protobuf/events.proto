@@ -493,17 +493,6 @@ message SponsorAssigned {
     string sponsee = 2;
 }
 
-message WindowRules {
-    string frequency = 1;
-    string behavior = 2;
-}
-
-//this is no longer used (and probably never used), but kept in case it was ever used
-message LegacyWindowActivityDefined {
-    option (scalapb.message).extends = "com.evernym.verity.actor.metrics.ActivityEvent";
-    repeated WindowRules windows = 1;
-}
-
 message ThreadContextMigrationStarted {
     string pinstId = 1;
     repeated string candidateProtoActors = 2;

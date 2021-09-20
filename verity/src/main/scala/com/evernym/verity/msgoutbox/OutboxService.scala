@@ -115,12 +115,17 @@ class OutboxServiceImpl(val relResolver: RelResolver,
       resend <- outboxResponse match {
         case Outbox.Replies.NotInitialized(_) =>
           outboxRef.ask(ref => Outbox.Commands.Init(outboxIdParam.relId, outboxIdParam.recipId, outboxIdParam.destId, ref)).map(_ => true)
-        case _ => Future.successful(false)
+        case Outbox.Replies.MsgAdded | Outbox.Replies.MsgAlreadyAdded => Future.successful(false)
+        case x => Future.failed(new RuntimeException(s"Message sending failed: unknown reply received: $x"))
       }
-      _ <- if (resend) {
+      resendResult <- if (resend) {
         outboxRef.ask(ref => Outbox.Commands.AddMsg(msgId, retentionPolicy.elements.expiryDuration, ref))
       } else {
         Future.successful(())
+      }
+      _ <- resendResult match {
+        case Outbox.Replies.MsgAdded | Outbox.Replies.MsgAlreadyAdded | () => Future.successful(())
+        case x => Future.failed(new RuntimeException(s"Message resending failed: unknown reply received: $x"))
       }
     } yield ()
   }

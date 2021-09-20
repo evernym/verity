@@ -498,8 +498,9 @@ message WindowRules {
     string behavior = 2;
 }
 
-message WindowActivityDefined {
-    option (scalapb.message).extends = "com.evernym.verity.actor.metrics.Active";
+//this is no longer used (and probably never used), but kept in case it was ever used
+message LegacyWindowActivityDefined {
+    option (scalapb.message).extends = "com.evernym.verity.actor.metrics.ActivityEvent";
     repeated WindowRules windows = 1;
 }
 

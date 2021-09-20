@@ -57,6 +57,9 @@ class ActivityTracker(override val appConfig: AppConfig,
   val receiveEvent: Receive = {
     case aar: AgentActivityRecorded =>
       state = state.withAgentActivity(aar.stateKey, AgentActivity(aar))
+
+    case other => //only kept to handle any legacy events if at all persisted
+      logger.info("unhandled activity tracker event found: " + other.getClass.getSimpleName)
   }
 
   private def updateActivityWindows(activityWindow: ActivityWindow): Unit = {
@@ -64,7 +67,7 @@ class ActivityTracker(override val appConfig: AppConfig,
   }
 
   private def updateSponsorRel(sponsorRel: SponsorRel): Unit = {
-    if (sponsorRel.equals(SponsorRel.empty)) state = state.withAttemptedSponsorRetrieval()
+    if (sponsorRel.equals(SponsorRel.empty)) state = state.withSponsorRetrievalAttempted()
     else state = state.withSponsorRel(sponsorRel)
   }
 
@@ -86,8 +89,8 @@ class ActivityTracker(override val appConfig: AppConfig,
    * 4. Record accordingly
    */
   private def handleRecordAgentActivity(activity: AgentActivity): Unit = {
-   logger.debug(s"[$persistenceId] request to record activity: $activity, windows: ${state.activityWindow}")
-   state
+    logger.debug(s"[$persistenceId] request to record activity: $activity, windows: ${state.activityWindow}")
+    state
      .activityWindow
      .rules
      .filter(rule => isUntrackedMetric(rule, activity))
@@ -114,11 +117,12 @@ class ActivityTracker(override val appConfig: AppConfig,
     }
   }
 
-  private def isValidRelationship(rule: ActivityWindowRule, activity: AgentActivity): Boolean =
+  private def isValidRelationship(rule: ActivityWindowRule, activity: AgentActivity): Boolean = {
     rule.activityType match {
       case ActiveRelationships if activity.relId.isEmpty => false
       case _ => true
     }
+  }
 
   /*
     1. Possible metrics to be recorded: "active users", "active relationships"
@@ -139,7 +143,9 @@ class ActivityTracker(override val appConfig: AppConfig,
     writeAndApply(event)
   }
 
-  private def agentTags(rule: ActivityWindowRule, domainId: DomainId): Map[String, String] =
+  private def agentTags(rule: ActivityWindowRule, domainId: DomainId): Map[String, String] = {
+    //TODO: not sure about why the "actual activity type" (like )
+    // doesn't matter in the tags determination
     rule.activityType match {
       case ActiveUsers =>
         ActiveUsers.tags(
@@ -153,23 +159,25 @@ class ActivityTracker(override val appConfig: AppConfig,
           state.sponsorRel.getOrElse(SponsorRel.empty).sponseeId
         )
     }
+  }
 
   override def futureExecutionContext: ExecutionContext = executionContext
 }
 
 /**
  * actor persistent state object
+ * (should be replaced by proto message when we switch to use snapshotting)
  */
 class State(_activities: Map[ActivityKey, AgentActivity] = Map.empty,
             _activityWindow: ActivityWindow = ActivityWindow(Set()),
             _sponsorRel: Option[SponsorRel] = None,
-            _attemptedSponsorRetrieval: Boolean = false) {
+            _isSponsorRetrievalAttempted: Boolean = false) {
 
-  def copy(activities: Map[ActivityKey, AgentActivity]=_activities,
-           activityWindow: ActivityWindow=_activityWindow,
-           sponsorRel: Option[SponsorRel]=None,
-           attemptedSponsorRetrieval: Boolean=_attemptedSponsorRetrieval): State =
-    new State(activities, activityWindow, sponsorRel, attemptedSponsorRetrieval)
+  def copy(activities: Map[ActivityKey, AgentActivity] = _activities,
+           activityWindow: ActivityWindow = _activityWindow,
+           sponsorRel: Option[SponsorRel] = None,
+           isSponsorRetrievalAttempted: Boolean = _isSponsorRetrievalAttempted): State =
+    new State(activities, activityWindow, sponsorRel, isSponsorRetrievalAttempted)
 
   def sponsorRel: Option[SponsorRel] = _sponsorRel
   def withSponsorRel(sponsorRel: SponsorRel): State =
@@ -177,16 +185,14 @@ class State(_activities: Map[ActivityKey, AgentActivity] = Map.empty,
   /**
    * A sponsor can be undefined (If activity occurs and there is no sponsor)
    */
-  def sponsorReady(): Boolean = sponsorRel.isDefined || _attemptedSponsorRetrieval
-  def withAttemptedSponsorRetrieval(): State =
-    copy(attemptedSponsorRetrieval=true)
+  def sponsorReady(): Boolean = sponsorRel.isDefined || _isSponsorRetrievalAttempted
+  def withSponsorRetrievalAttempted(): State = copy(isSponsorRetrievalAttempted = true)
 
   def activityWindow: ActivityWindow = _activityWindow
   def withActivityWindow(activityWindow: ActivityWindow): State = copy(activityWindow=activityWindow)
 
   def activity(window: ActivityWindowRule, id: Option[String]): Option[AgentActivity] = _activities.get(key(window, id))
-  def withAgentActivity(key: ActivityKey, activity: AgentActivity): State =
-    copy(activities=_activities + (key -> activity))
+  def withAgentActivity(key: ActivityKey, activity: AgentActivity): State = copy(activities=_activities + (key -> activity))
 
   def key(window: ActivityWindowRule, id: Option[String]=None): ActivityKey =
     s"${window.activityType.metricName}-${window.frequencyType.toString}-${id.getOrElse("")}"
@@ -226,7 +232,7 @@ case object ActiveRelationships extends AgentActivityType {
 }
 
 /** How often an "activity type" is recorded
- *  CalendarMonth: January, February, ..., December
+ *  CalendarMonth   : January, February, ..., December
  *  VariableDuration: Any datetime range
  * */
 trait FrequencyType
@@ -241,19 +247,19 @@ object VariableDuration {
 }
 
 /** ActivityTracker Commands */
-trait ActivityTracking extends ActorMessage
-final case class ActivityWindow(rules: Set[ActivityWindowRule]) extends ActivityTracking
+trait ActivityTrackingCommand extends ActorMessage
+final case class ActivityWindow(rules: Set[ActivityWindowRule]) extends ActivityTrackingCommand
 final case class ActivityWindowRule(frequencyType: FrequencyType, activityType: ActivityType)
 
 final case class AgentActivity(domainId: DidStr,
                                timestamp: IsoDateTime,
                                activityType: String,
-                               relId: Option[String]=None) extends ActivityTracking {
-  def id(behavior: ActivityType): Option[String] =
-    behavior match {
+                               relId: Option[String]=None) extends ActivityTrackingCommand {
+  def id(activityType: ActivityType): Option[String] =
+    activityType match {
       case ActiveUsers          => Some(domainId)
       case ActiveRelationships  => relId
-      case _ => None
+      case _                    => None
     }
 }
 
@@ -268,5 +274,5 @@ object AgentActivity {
 }
 
 /** ActivityTracker Event Base Type */
-trait Active extends ActorMessage
+trait ActivityEvent
 

@@ -251,7 +251,7 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     202 -> ResourceUsageState,
     203 -> ItemManagerState,
     
-    204 -> WindowActivityDefined,
+    204 -> LegacyWindowActivityDefined,
     205 -> AgencyAgentState,
 
     206 -> basicMessage_v10.Initialized,

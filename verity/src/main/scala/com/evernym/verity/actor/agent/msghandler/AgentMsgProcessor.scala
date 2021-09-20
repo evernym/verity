@@ -35,7 +35,7 @@ import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId, MsgType, Ty
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
 import com.evernym.verity.observability.logs.{HasLogger, LoggingUtil}
-import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, InitProtocolReq, MsgEnvelope, ServiceDecorator}
+import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, InitProtocolReq, MsgEnvelope}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.registry.{PinstIdPair, ProtocolRegistry, UnsupportedMessageType}
@@ -893,7 +893,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
 }
 
 /**
- * a parameter whose value depend's on individual agent actor's type/state
+ * a parameter whose value depends on individual agent actor's type/state
  */
 case class StateParam(agentActorRef: ActorRef,
                       domainId: DomainId,

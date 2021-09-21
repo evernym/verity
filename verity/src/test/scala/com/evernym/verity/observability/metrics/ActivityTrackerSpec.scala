@@ -2,7 +2,7 @@ package com.evernym.verity.observability.metrics
 
 import akka.testkit.TestKit
 import com.evernym.verity.actor.agent.{AgentProvHelper, HasAgentActivity, SponsorRel}
-import com.evernym.verity.actor.metrics.activity_tracker.{ActiveRelationships, ActiveUsers, ActivityWindow, ActivityWindowRule, CalendarMonth, VariableDuration}
+import com.evernym.verity.actor.metrics.activity_tracker.{ActiveRelationships, ActiveUsers, ActivityWindowRule, CalendarMonth, VariableDuration}
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.observability.metrics.MetricHelpers._
@@ -131,15 +131,27 @@ class ActivityTrackerSpec
         assert(extractTagCount(metrics, window, sponsorRel4.sponsorId) == 1.0)
 
         val updatedWindow = ActivityWindowRule(VariableDuration("1 d"), ActiveUsers)
-        AgentActivityTracker.setWindows(activityTracker, ActivityWindow(Set(updatedWindow)))
-        AgentActivityTracker.track(DEFAULT_ACTIVITY_TYPE, activityTracker, None)
+        val updatedWindowConfig = s"""
+            verity.metrics {
+              activity-tracking {
+                active-user {
+                  time-windows = ["1 d"]
+                  monthly-window = false
+                  enabled = true
+                }
+              }
+            }"""
 
-        Thread.sleep(500)
-        //Show that once the window is updated, an activity will be recorded
-        metrics = getMetricWithTags(Set(updatedWindow.trackActivityType.metricName), testMetricsBackend)
-        assert(extractTagCount(metrics, updatedWindow, sponsorRel4.sponsorId) == 1.0)
-        //Show that old metric window is still available
-        assert(extractTagCount(metrics, window, sponsorRel4.sponsorId) == 1.0)
+        withUpdateWindowConfig(updatedWindowConfig) {
+          AgentActivityTracker.track(DEFAULT_ACTIVITY_TYPE, activityTracker, None)
+
+          Thread.sleep(500)
+          //Show that once the window is updated, an activity will be recorded
+          metrics = getMetricWithTags(Set(updatedWindow.trackActivityType.metricName), testMetricsBackend)
+          assert(extractTagCount(metrics, updatedWindow, sponsorRel4.sponsorId) == 1.0)
+          //Show that old metric window is still available
+          assert(extractTagCount(metrics, window, sponsorRel4.sponsorId) == 1.0)
+        }
       }
     }
 
@@ -265,6 +277,17 @@ class ActivityTrackerSpec
                       relId: Option[String] = None): Double =
     Try(metrics(window.trackActivityType.metricName)).map(_.tag(window, id, relId)).getOrElse(Some(0.0)).getOrElse(0.0)
 
+  def withUpdateWindowConfig(newConfigStr: String)(f: => Unit): Unit = {
+    val currentConfig = appConfig.config
+    try {
+      val newConfig = ConfigFactory.parseString(newConfigStr)
+      appConfig.DEPRECATED_setConfigWithoutValidation(newConfig.withFallback(appConfig.config))
+      f
+    } finally {
+      appConfig.DEPRECATED_setConfigWithoutValidation(currentConfig)
+    }
+
+  }
 
   override def overrideSpecificConfig: Option[Config] = Option {
     ConfigFactory parseString {

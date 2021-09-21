@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent
 import akka.actor.{ActorRef, ActorSystem}
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.actor.ForIdentifier
-import com.evernym.verity.actor.metrics.activity_tracker.{ActivityTrackingCommand, ActivityWindow, RecordAgentActivity}
+import com.evernym.verity.actor.metrics.activity_tracker.{ActivityTrackingCommand, RecordAgentActivity}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.constants.ActorNameConstants.ACTIVITY_TRACKER_REGION_ACTOR_NAME
 import com.evernym.verity.observability.metrics.CustomMetrics.AS_NEW_USER_AGENT_COUNT
@@ -39,10 +39,6 @@ trait HasAgentActivity {
       val tags = sponsorRel.map(s => ConfigUtil.getSponsorRelTag(appConfig, s)).getOrElse(Map())
       metricsWriter.gaugeIncrement(AS_NEW_USER_AGENT_COUNT, tags = tags)
     }
-
-    //TODO: only used by test, should find better way to handle it
-    def setWindows(domainId: DomainId, windows: ActivityWindow): Unit =
-      sendToRegion(domainId, windows)
   }
 
 }

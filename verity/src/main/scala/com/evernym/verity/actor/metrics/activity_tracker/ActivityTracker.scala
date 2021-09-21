@@ -30,7 +30,7 @@ class ActivityTracker(override val appConfig: AppConfig,
     with SnapshotterExt[ActivityState]{
 
   var state: ActivityState = new ActivityState
-  var activityWindow: ActivityWindow = ConfigUtil.findActivityWindow(appConfig)
+  val activityWindow: ActivityWindow = ConfigUtil.findActivityWindow(appConfig)
   logger.info(s"[$persistenceId] started activity tracker with window: $activityWindow")
 
   /**
@@ -39,9 +39,6 @@ class ActivityTracker(override val appConfig: AppConfig,
   val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case raa: RecordAgentActivity if isAgentDetailRecorded => handleRecordAgentActivity(raa)
     case raa: RecordAgentActivity                          => needsSponsor(raa)
-
-    //TODO: only used by test, should find better way to handle the need
-    case activityWindow: ActivityWindow                    => updateActivityWindows(activityWindow)
   }
 
   def waitingForSponsor(domainId: DomainId): Receive = LoggingReceive.withLabel("waitingForSponsor") {
@@ -76,11 +73,6 @@ class ActivityTracker(override val appConfig: AppConfig,
   }
 
   val receiveEvent: Receive = eventReceiver orElse legacyEventReceiver
-
-  //TODO: only used by test (should fix it)
-  private def updateActivityWindows(aw: ActivityWindow): Unit = {
-    activityWindow = aw
-  }
 
   /**
    * Sponsor details not set, go to agent and retrieve
@@ -244,11 +236,11 @@ object VariableDuration {
   def apply(duration: String): VariableDuration = new VariableDuration(Duration(duration))
 }
 
-/** ActivityTracker Commands */
-trait ActivityTrackingCommand extends ActorMessage
-final case class ActivityWindow(rules: Set[ActivityWindowRule]) extends ActivityTrackingCommand
+final case class ActivityWindow(rules: Set[ActivityWindowRule])
 final case class ActivityWindowRule(frequencyType: FrequencyType, trackActivityType: ActivityType)
 
+/** ActivityTracker Commands */
+trait ActivityTrackingCommand extends ActorMessage
 final case class RecordAgentActivity(domainId: DidStr,
                                      timestamp: IsoDateTime,
                                      activityType: String,

@@ -18,7 +18,7 @@ object RelationshipResolver {
   trait Cmd extends ActorMessage
   object Commands {
     case class SendOutboxParam(relId: RelId, destId: DestId, replyTo: ActorRef[SendOutboxParamReply]) extends Cmd
-    case class GetRelParam(relId: RelId, replyTo: ActorRef[Reply]) extends Cmd
+    case class GetRelParam(relId: RelId, replyTo: ActorRef[GetRelParamReply]) extends Cmd
 
     case class OutboxParamResp(walletId: WalletId,
                                senderVerKey: VerKeyStr,
@@ -32,7 +32,8 @@ object RelationshipResolver {
   }
 
   trait Reply extends ActorMessage
-  sealed trait SendOutboxParamReply extends ActorMessage
+  sealed trait SendOutboxParamReply extends Reply
+  sealed trait GetRelParamReply extends Reply
   object Replies {
     case class OutboxParam(walletId: WalletId,
                            senderVerKey: VerKeyStr,
@@ -42,7 +43,7 @@ object RelationshipResolver {
       }
     }
 
-    case class RelParam(selfRelId: RelId, relationship: Option[Relationship]) extends Reply
+    case class RelParam(selfRelId: RelId, relationship: Option[Relationship]) extends GetRelParamReply
   }
 
   def apply(agentMsgRouter: AgentMsgRouter): Behavior[Cmd] = {
@@ -60,7 +61,7 @@ object RelationshipResolver {
       agentMsgRouter.forward((InternalMsgRouteParam(relId, GetOutboxParam(destId)), actorContext.self.toClassic))
       waitingForGetOutboxParam(replyTo)
 
-    case Commands.GetRelParam(relId, replyTo: ActorRef[Reply]) =>
+    case Commands.GetRelParam(relId, replyTo: ActorRef[GetRelParamReply]) =>
       agentMsgRouter.forward((InternalMsgRouteParam(relId, GetRelParam), actorContext.self.toClassic))
       waitingForGetRelParam(replyTo)
   }
@@ -71,7 +72,7 @@ object RelationshipResolver {
       Behaviors.stopped
   }
 
-  private def waitingForGetRelParam(replyTo: ActorRef[Reply]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
+  private def waitingForGetRelParam(replyTo: ActorRef[GetRelParamReply]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
     case RelParamResp(selfRelId, relationship) =>
       replyTo ! RelParam(selfRelId, relationship)
       Behaviors.stopped

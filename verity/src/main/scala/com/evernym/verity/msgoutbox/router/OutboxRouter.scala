@@ -14,11 +14,14 @@ import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Replies.RelParam
 import com.evernym.verity.msgoutbox.router.OutboxRouter.Commands.{MessageMetaReplyAdapter, MsgStoreReplyAdapter, OutboxReplyAdapter, RelResolverReplyAdapter, SendMsg}
-
 import java.util.UUID
+import java.util.concurrent.TimeUnit
+
+import akka.util.Timeout
 
 object OutboxRouter {
 
+  implicit val tmt: Timeout = Timeout(5, TimeUnit.SECONDS)
   trait Cmd extends ActorMessage
   object Commands {
     case object SendMsg extends Cmd
@@ -141,12 +144,13 @@ object OutboxRouter {
         val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, outboxIdParam.entityId.toString)
         outboxEntityRef ! Outbox.Commands.AddMsg(msgId, retentionPolicy.elements.expiryDuration, outboxReplyAdapter)
       }
-      waitingForOutboxReply(msgId, outboxIdParams, 0, replyTo)
+      waitingForOutboxReply(msgId, outboxIdParams, 0, retentionPolicy, replyTo)
   }
 
   def waitingForOutboxReply(msgId: MsgId,
                             targetOutboxIds: Seq[OutboxIdParam],
                             ackReceivedCount: Int,
+                            retentionPolicy: RetentionPolicy,
                             replyTo:Option[ActorRef[Reply]])
                            (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] = Behaviors.receiveMessage {
     case OutboxReplyAdapter(Outbox.Replies.MsgAdded) =>
@@ -155,16 +159,25 @@ object OutboxRouter {
         replyTo.foreach(_ ! Replies.Ack(msgId, targetOutboxIds.map(_.entityId.toString)))
         Behaviors.stopped
       } else {
-        waitingForOutboxReply(msgId, targetOutboxIds, totalAckReceived, replyTo)
+        waitingForOutboxReply(msgId, targetOutboxIds, totalAckReceived, retentionPolicy, replyTo)
       }
     case OutboxReplyAdapter(Outbox.Replies.NotInitialized(entityId)) =>
+      val outboxReplyAdapter = actorContext.messageAdapter(reply => OutboxReplyAdapter(reply))
       val clusterSharding = ClusterSharding(actorContext.system)
       val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, entityId)
       targetOutboxIds
         .filter(_.entityId.toString == entityId)
-        .foreach(outboxParam => outboxEntityRef ! Outbox.Commands.Init(outboxParam.relId, outboxParam.recipId, outboxParam.destId))
+        .foreach(outboxParam => outboxEntityRef ! Outbox.Commands.Init(outboxParam.relId, outboxParam.recipId, outboxParam.destId, outboxReplyAdapter))
 
-      waitingForOutboxReply(msgId, targetOutboxIds, ackReceivedCount, replyTo)
+      waitingForOutboxReply(msgId, targetOutboxIds, ackReceivedCount, retentionPolicy, replyTo)
+
+    case OutboxReplyAdapter(Outbox.Replies.Initialized(entityId)) =>
+      val outboxReplyAdapter = actorContext.messageAdapter(reply => OutboxReplyAdapter(reply))
+      val clusterSharding = ClusterSharding(actorContext.system)
+      val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, entityId)
+      outboxEntityRef ! Outbox.Commands.AddMsg(msgId, retentionPolicy.elements.expiryDuration, outboxReplyAdapter)
+      waitingForOutboxReply(msgId, targetOutboxIds, ackReceivedCount, retentionPolicy,  replyTo)
+
   }
 
   final val DESTINATION_ID_DEFAULT = "default"

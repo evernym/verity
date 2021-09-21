@@ -24,7 +24,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait OutboxService {
   def sendMessage(
-                   relRecipId: Map[RelId, RecipId],
+                   relId: RelId,
+                   recipId: RecipId,
                    msg: String,
                    msgType: String,
                    retentionPolicy: RetentionPolicy
@@ -78,15 +79,16 @@ class OutboxServiceImpl(val relResolver: RelResolver,
   implicit val tmt: Timeout = timeout.getOrElse(Timeout(5, TimeUnit.SECONDS))
 
   override def sendMessage(
-                           relRecipId: Map[RelId, RecipId],
+                           relId: RelId,
+                           recipId: RecipId,
                            msg: String,
                            msgType: String,
                            retentionPolicy: RetentionPolicy
                          ): Future[MsgId] = {
     for {
-      outboxIdParams <- Future.sequence(relRecipId.map(rr => relResolver.resolveOutboxParam(rr._1, rr._2)).toSet)
-      msgId <- msgRepository.insert(msgType, msg, retentionPolicy, outboxIdParams)
-      _ <- Future.sequence(outboxIdParams.map{param => outboxAddMessage(param, msgId, retentionPolicy)})
+      outboxIdParam <- relResolver.resolveOutboxParam(relId, recipId)
+      msgId <- msgRepository.insert(msgType, msg, retentionPolicy, Set(outboxIdParam))
+      _ <- outboxAddMessage(outboxIdParam, msgId, retentionPolicy)
     } yield msgId
   }
 

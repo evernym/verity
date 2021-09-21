@@ -58,7 +58,8 @@ class OutboxServiceSpec
     "it should be sent and read successfully" in {
       var msgId = "";
       val sendFuture: Future[String] = outboxService.sendMessage(
-        Map("id1" -> "id1"),
+        "id1",
+        "id1",
         "test message",
         "test-message",
         retentionPolicy
@@ -100,7 +101,8 @@ class OutboxServiceSpec
       }
 
       val sendSecondFuture: Future[String] = outboxService.sendMessage(
-        Map("id1" -> "id1"),
+        "id1",
+        "id1",
         "test message-2",
         "test-message-2",
         retentionPolicy

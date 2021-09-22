@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.did.exception.DIDException
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
 import com.evernym.verity.protocol.testkit.DSL.signal
@@ -38,6 +39,7 @@ class WriteSchemaSpec
 
   val defaultEndorser = "8XFh8yBzrpJQmNyZzgoTqB"
   val userEndorser = "Vr9eqqnUJpJkBwcRV4cHnV"
+  val sovrinEndorser = "did:sov:2wJPyULfLLnYTEFYzByfUR"
 
   override val defaultInitParams = Map(
     DEFAULT_ENDORSER_DID -> defaultEndorser
@@ -63,9 +65,19 @@ class WriteSchemaSpec
       Write(schemaName, schemaVersion, schemaAttrsJson, Some(userEndorser)).validate()
     }
 
+    "If valid sovrin endorser did provided, validation should pass" in { _ =>
+      Write(schemaName, schemaVersion, schemaAttrsJson, Some(sovrinEndorser)).validate()
+    }
+
     "If invalid endorser did provided, validation should fail" in { _ =>
       assertThrows[InvalidFieldValueProtocolEngineException] {
         Write(schemaName, schemaVersion, schemaAttrsJson, Some("invalid did")).validate()
+      }
+    }
+
+    "If invalid sovrin endorser did provided, validation should fail" in { _ =>
+      assertThrows[DIDException] {
+        Write(schemaName, schemaVersion, schemaAttrsJson, Some("did:sov:invalid did")).validate()
       }
     }
   }

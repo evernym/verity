@@ -5,7 +5,7 @@ import akka.actor.typed.ActorRef
 import akka.actor.typed.scaladsl.ActorContext
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.did.VerKeyStr
-import com.evernym.verity.msgoutbox.{Authentication, ComMethod, ComMethodId, MsgId, WalletId}
+import com.evernym.verity.msgoutbox.{Authentication, ComMethod, ComMethodId, MessageRepository, MsgId, WalletId}
 import com.evernym.verity.msgoutbox.outbox.States.MsgDeliveryAttempt
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.AUTH_TYPE_OAUTH2
@@ -13,7 +13,6 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.{OAuthAc
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.{DispatcherType, MsgPackagingParam, MsgStoreParam, MsgTransportParam}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.plain.PlainWebhookDispatcher
 import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
-import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.MsgTransports
 
 import scala.concurrent.ExecutionContext
@@ -28,7 +27,7 @@ import scala.concurrent.duration.{FiniteDuration, MILLISECONDS}
 class Dispatcher(val outboxActorContext: ActorContext[Outbox.Cmd],
                  accessTokenRefreshers: AccessTokenRefreshers,
                  eventEncryptionSalt: String,
-                 msgStore: ActorRef[MsgStore.Cmd],
+                 msgRepository: MessageRepository,
                  msgPackagers: MsgPackagers,
                  msgTransports: MsgTransports,
                  executionContext: ExecutionContext) {
@@ -71,7 +70,7 @@ class Dispatcher(val outboxActorContext: ActorContext[Outbox.Cmd],
       eventEncryptionSalt,
       comMethodId,
       comMethod,
-      MsgStoreParam(msgStore),
+      msgRepository,
       MsgPackagingParam(
         walletId,
         senderVerKey,
@@ -115,7 +114,7 @@ class Dispatcher(val outboxActorContext: ActorContext[Outbox.Cmd],
       eventEncryptionSalt,
       comMethodId,
       comMethod,
-      MsgStoreParam(msgStore),
+      msgRepository,
       MsgPackagingParam(
         walletId,
         senderVerKey,

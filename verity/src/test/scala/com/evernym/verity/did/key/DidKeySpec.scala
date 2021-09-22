@@ -1,4 +1,4 @@
-package com.evernym.verity.did.Key
+package com.evernym.verity.did.key
 
 import com.evernym.verity.did.methods.DIDKey
 import com.evernym.verity.did.exception.InvalidDidKeyFormatException

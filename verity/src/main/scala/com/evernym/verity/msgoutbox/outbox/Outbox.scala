@@ -15,7 +15,6 @@ import com.evernym.verity.msgoutbox.outbox.Events.{MetadataStored, MsgSendingFai
 import com.evernym.verity.msgoutbox.outbox.Outbox.Cmd
 import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{GetOutboxParam, MessageMetaReplyAdapter, ProcessDelivery}
 import com.evernym.verity.msgoutbox.outbox.States.{Message, Metadata, MsgDeliveryAttempt}
-import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.MsgTransports
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
@@ -722,6 +721,7 @@ object Outbox {
     )
   }
 
+  final val DESTINATION_ID_DEFAULT = "default"
 }
 
 /**

@@ -25,10 +25,10 @@ import com.typesafe.scalalogging.Logger
 import java.util.UUID
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
-import com.evernym.verity.actor.typed.base.UserGuardian.Commands.SendMsgToOutbox
 import com.evernym.verity.agentmsg.AgentMsgBuilder.createAgentMsg
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType, TypedMsgLike}
+import com.evernym.verity.msgoutbox.OutboxService
 import com.evernym.verity.observability.logs.HasLogger
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentStoreAccessAPI
@@ -66,7 +66,8 @@ class ActorProtocolContainer[
 (
   val agentActorContext: AgentActorContext,
   val definition: PD,
-  val executionContext: ExecutionContext
+  val executionContext: ExecutionContext,
+  val outboxService: OutboxService
 )
   extends ProtocolContainer[P,R,M,E,S,I]
     with HasLegacyProtocolContainerServices[M,E,I]
@@ -455,22 +456,23 @@ class ActorProtocolContainer[
   }
 
   //TODO: below function is preparation for outbox integration (not yet integrated though)
-  def sendToOutboxRouter(pom: ProtocolOutgoingMsg): Unit = {
+  def sendToOutbox(pom: ProtocolOutgoingMsg) : Future[Option[MsgId]] = {
     if (isVAS && ! pom.msg.isInstanceOf[AgentProvisioningMsgFamily.AgentCreated]) {
       val agentMsg = createAgentMsg(pom.msg, definition, pom.threadContextDetail)
       val retPolicy = ConfigUtil.getOutboxStateRetentionPolicyForInterDomain(
         appConfig, domainId, definition.protoRef.toString)
-      //TODO: will below approach become choke point?
-      userGuardian ! SendMsgToOutbox(
-        pom.from,
-        pom.to,
-        agentMsg.jsonStr,
-        agentMsg.msgType.toString,
-        retPolicy)
+      outboxService.sendMessage(
+          pom.from,
+          pom.to,
+          agentMsg.jsonStr,
+          agentMsg.msgType.toString,
+          retPolicy
+      ).map(Some(_))
+    } else {
+      Future.successful(None)
     }
   }
 
-  lazy val userGuardian: ActorRef = Util.getActorRefFromSelection("/user/guardian", context.system)(appConfig)
   lazy val isVAS: Boolean =
     appConfig
       .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)

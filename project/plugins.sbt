@@ -7,3 +7,5 @@ addSbtPlugin("com.typesafe.sbt"       % "sbt-git" % "1.0.1")
 addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.1.1")
 
 addSbtPlugin("org.scoverage"          %  "sbt-scoverage" % "1.8.2")
+
+addDependencyTreePlugin

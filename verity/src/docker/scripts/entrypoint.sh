@@ -16,7 +16,7 @@ VAULT_SECRETS=("/vault/secrets/credentials")
 for f in "${VAULT_SECRETS[@]}" ; do
     if [ -f $f ]; then
         source $f
-        rm $f
+        # rm $f
     fi
 done 
 

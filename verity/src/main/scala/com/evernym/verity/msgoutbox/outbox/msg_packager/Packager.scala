@@ -4,15 +4,16 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_PLAIN}
-import com.evernym.verity.msgoutbox.MsgId
-import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.{MsgPackagingParam, MsgStoreParam}
-import com.evernym.verity.msgoutbox.outbox.msg_packager.Packager.Commands.{DIDCommV1PackagerReplyAdapter, MsgLoaderReplyAdapter, PackMsg, TimedOut}
+import com.evernym.verity.msgoutbox.message_meta.MessageMeta.LegacyData
+import com.evernym.verity.msgoutbox.{MessageRepository, MsgId, RecipPackaging}
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.MsgPackagingParam
+import com.evernym.verity.msgoutbox.outbox.msg_packager.Packager.Commands.{DIDCommV1PackagerReplyAdapter, Failed, PackMsg, PayloadReceived, TimedOut}
 import com.evernym.verity.msgoutbox.outbox.msg_packager.Packager.Replies.{DIDCommV1PackedMsg, UnPackedMsg}
 import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.DIDCommV1Packager
-import com.evernym.verity.msgoutbox.outbox.msg_store.MsgLoader
-import com.evernym.verity.msgoutbox.outbox.msg_store.MsgLoader.Msg
+import com.evernym.verity.util2.RetentionPolicy
 
 import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 
 object Packager {
 
@@ -20,10 +21,11 @@ object Packager {
 
   object Commands {
     case class PackMsg(msgId: MsgId, replyTo: ActorRef[Reply]) extends Cmd
-    case class MsgLoaderReplyAdapter(reply: MsgLoader.Reply) extends Cmd
+    case class PayloadReceived(msg: Msg) extends Cmd
     case class DIDCommV1PackagerReplyAdapter(reply: DIDCommV1Packager.Reply) extends Cmd
 
     case object TimedOut extends Cmd
+    case class Failed(e: Throwable) extends Cmd
   }
 
   trait Reply extends ActorMessage
@@ -34,22 +36,35 @@ object Packager {
   }
 
   def apply(msgPackagingParam: MsgPackagingParam,
-            msgStoreParam: MsgStoreParam,
+            msgRepository: MessageRepository,
             eventEncryptionSalt: String): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
       actorContext.setReceiveTimeout(10.seconds, Commands.TimedOut) //TODO: finalize this
-      initialized(msgPackagingParam, msgStoreParam, eventEncryptionSalt)(actorContext)
+      initialized(msgPackagingParam, msgRepository, eventEncryptionSalt)(actorContext)
     }
   }
 
   private def initialized(msgPackagingParam: MsgPackagingParam,
-                          msgStoreParam: MsgStoreParam,
+                          msgRepository: MessageRepository,
                           eventEncryptionSalt: String)
                          (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] =
     Behaviors.receiveMessage {
       case PackMsg(msgId, replyTo) =>
-        val msgLoaderReplyAdapter = actorContext.messageAdapter(reply => MsgLoaderReplyAdapter(reply))
-        actorContext.spawnAnonymous(MsgLoader(msgId, msgStoreParam.msgStore, msgLoaderReplyAdapter, eventEncryptionSalt))
+        actorContext.pipeToSelf(msgRepository.read(List(msgId), excludePayload = false)) {
+          case Success(value) =>
+            val msgReceived = value.head
+            Commands.PayloadReceived(
+              Msg(
+                msgReceived.`type`,
+                msgReceived.retentionPolicy,
+                msgReceived.legacyPayload,
+                msgReceived.recipPackaging,
+                msgReceived.payload
+              )
+            )
+          case Failure(exception) =>
+            Commands.Failed(exception)
+        }
         handlePostPayloadRetrieval(msgId, msgPackagingParam, replyTo)(actorContext)
     }
 
@@ -58,8 +73,10 @@ object Packager {
                                          replyTo: ActorRef[Reply])
                                         (implicit actorContext: ActorContext[Cmd]): Behavior[Cmd] =
     Behaviors.receiveMessage {
-      case MsgLoaderReplyAdapter(reply: MsgLoader.Replies.MessageMeta) =>
-        packageMsg(msgId, msgPackagingParam, replyTo, reply.msg)
+      case PayloadReceived(msg) =>
+        packageMsg(msgId, msgPackagingParam, replyTo, msg)
+      case Failed(e) =>
+        throw e
     }
 
   private def packageMsg(msgId: MsgId,
@@ -108,4 +125,10 @@ object Packager {
       case TimedOut =>
         Behaviors.stopped   //TODO: finalize this
     }
+
+  case class Msg(`type`: String,
+                 policy: RetentionPolicy,
+                 legacyData: Option[LegacyData],
+                 recipPackaging: Option[RecipPackaging],
+                 payload: Option[Array[Byte]] = None)
 }

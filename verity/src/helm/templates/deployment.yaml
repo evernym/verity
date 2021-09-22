@@ -44,6 +44,13 @@ spec:
       containers:
       - name: {{ template "verity.fullname" . }}
         image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag }}
+        resources:
+          requests:
+            memory: {{ .Values.deployment.resources.requests.memory }}
+            cpu: {{ .Values.deployment.resources.requests.cpu }}
+          limits:
+            memory: {{ .Values.deployment.resources.limits.memory }}
+            cpu: {{ .Values.deployment.resources.limits.cpu }}
         startupProbe:
           httpGet:
             path: /agency/heartbeat
@@ -76,18 +83,6 @@ spec:
         - name: management
           containerPort: 8558
           protocol: TCP
-        {{- if .Values.deployment.vault.enable }}
-        command: [
-          '/bin/sh',
-          '-c',
-          . /vault/secrets/credentials;
-          exec /usr/bin/java
-            -javaagent:/usr/lib/verity-application/kanela-agent.jar
-            -Dlogback.statusListenerClass=ch.qos.logback.core.status.OnConsoleStatusListener
-            -cp /etc/verity/verity-application:/etc/verity/verity-application/config-map:/usr/lib/verity-application/verity-assembly.jar
-            com.evernym.verity.Main
-        ]
-        {{- end }}
         imagePullPolicy: {{ .Values.deployment.imagePullPolicy }}
       volumes:
       - name: config-files

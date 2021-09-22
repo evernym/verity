@@ -158,6 +158,8 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     new UndefinedWriteSchema_0_6 {
       override def write(ctx: Context): Unit =
         executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq))
+      override def write(ctx: Context, endorserDid: String): Unit =
+        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq), Seq(endorserDid))
     }
   }
 
@@ -168,6 +170,8 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     new UndefinedWriteCredentialDefinition_0_6 {
       override def write(ctx: Context): Unit =
         executeCmd(ctx, "WriteCredentialDefinition", this.version, "write", Seq(name, schemaId, tag, revocationDetails.orNull))
+      override def write(ctx: Context, endorserDid: String): Unit =
+        executeCmd(ctx, "WriteCredentialDefinition", this.version, "write", Seq(name, schemaId, tag, revocationDetails.orNull), Seq(endorserDid))
     }
   }
 

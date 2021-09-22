@@ -85,6 +85,8 @@ object MessageMeta {
     case class Msg(msgId: MsgId,
                    `type`: String,
                    legacyData: Option[LegacyData],
+                   retentionPolicy: RetentionPolicy,
+                   recipPackaging: Option[RecipPackaging],
                    payload: Option[Array[Byte]] = None) extends GetMsgReply
 
     case class MsgDeliveryStatus(isProcessed: Boolean,
@@ -102,7 +104,7 @@ object MessageMeta {
                        legacyData: Option[LegacyData],
                        payload: Option[Array[Byte]] = None) {
 
-    def buildMsg(msgId: MsgId): Msg = Msg(msgId, `type`, legacyData, payload)
+    def buildMsg(msgId: MsgId): Msg = Msg(msgId, `type`, legacyData, retentionPolicy, recipPackaging, payload)
   }
   case object LegacyData {
     def apply(lmd: LegacyMsgData): LegacyData = LegacyData(lmd.senderDID, lmd.refMsgId)

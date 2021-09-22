@@ -256,6 +256,42 @@ trait InteractiveSdkFlow extends MetricsFlow {
     response.getHeader("Location").get.value
   }
 
+  def writeSchemaWithEndorserDid(sdk: VeritySdkProvider,
+                                 ledgerUtil: LedgerUtil,
+                                 schemaName: String,
+                                 endorserDid: String,
+                                 schemaVersion: String,
+                                 schemaAttrs: String*)
+                                (implicit scenario: Scenario): Unit = {
+    writeSchemaWithEndorserDid(sdk, sdk, ledgerUtil, schemaName, endorserDid, schemaVersion, schemaAttrs: _*)
+  }
+
+  def writeSchemaWithEndorserDid(issuerSdk: VeritySdkProvider,
+                                 msgReceiverSdkProvider: VeritySdkProvider,
+                                 ledgerUtil: LedgerUtil,
+                                 schemaName: String,
+                                 endorserDid: String,
+                                 schemaVersion: String,
+                                 schemaAttrs: String*)
+                                (implicit scenario: Scenario): Unit = {
+    val issuerName = issuerSdk.sdkConfig.name
+    s"get write schema $schemaName transaction for $issuerName" - {
+
+      val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
+
+      s"[$issuerName] use write-schema protocol" in {
+        val schema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
+        schema.write(issuerSdk.context, endorserDid)
+
+        var schemaId = ""
+        msgReceiverSdk.expectMsg("status-report") {resp =>
+          resp shouldBe an[JSONObject]
+        }
+      }
+    }
+  }
+
+
   def writeSchema(sdk: VeritySdkProvider,
                   ledgerUtil: LedgerUtil,
                   schemaName: String,
@@ -428,6 +464,49 @@ trait InteractiveSdkFlow extends MetricsFlow {
         //        resp shouldBe an [JSONObject]
         //        val errorMessage = resp.get("message").asInstanceOf[String]
         //        logger.error(s"response error message: $errorMessage")
+      }
+    }
+  }
+
+  def writeCredDefWithEndorserDid(sdk: VeritySdkProvider,
+                                  credDefName: String,
+                                  credTag: String,
+                                  revocation: RevocationRegistryConfig,
+                                  schemaName: String,
+                                  endorserDid: String,
+                                  schemaVersion: String,
+                                  ledgerUtil: LedgerUtil
+                                 )
+                                 (implicit scenario: Scenario): Unit = {
+    writeCredDefWithEndorserDid(sdk, sdk, credDefName, credTag, revocation, schemaName, endorserDid, schemaVersion, ledgerUtil)
+  }
+
+  def writeCredDefWithEndorserDid(issuerSdk: VeritySdkProvider,
+                                  msgReceiverSdkProvider: VeritySdkProvider,
+                                  credDefName: String,
+                                  credTag: String,
+                                  revocation: RevocationRegistryConfig,
+                                  schemaName: String,
+                                  endorserDid: String,
+                                  schemaVersion: String,
+                                  ledgerUtil: LedgerUtil
+                                 )
+                                 (implicit scenario: Scenario): Unit = {
+
+    val issuerName = issuerSdk.sdkConfig.name
+
+    val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
+
+    s"get credential def ($credDefName) transaction for $issuerName" - {
+      s"[$issuerName] use write-cred-def protocol" taggedAs UNSAFE_IgnoreLog in {
+        val schemaId = issuerSdk.data_!(s"$schemaName-$schemaVersion-id")
+        issuerSdk.writeCredDef_0_6(credDefName, schemaId, Some(credTag), Some(revocation))
+          .write(issuerSdk.context, endorserDid)
+
+        var credDefId = ""
+        msgReceiverSdk.expectMsg("status-report", Some(credDefTimeout.max(scenario.timeout))) { resp =>
+          resp shouldBe an[JSONObject]
+        }
       }
     }
   }

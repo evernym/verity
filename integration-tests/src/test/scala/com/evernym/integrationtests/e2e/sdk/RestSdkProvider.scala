@@ -239,6 +239,11 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
         logger.debug(s"write schema json: ${writeSchemaJson.toString}")
         sendHttpPostReq(context, writeSchemaJson.toString, ProtoRef("write-schema", "0.6"), Option(UUID.randomUUID.toString))
       }
+      override def write(ctx: Context, endorserDid: String): Unit = {
+        writeSchemaJson.put("endorserDid", endorserDid)
+        logger.debug(s"write schema json: ${writeSchemaJson.toString}")
+        sendHttpPostReq(context, writeSchemaJson.toString, ProtoRef("write-schema", "0.6"), Option(UUID.randomUUID.toString))
+      }
     }
   }
 
@@ -259,6 +264,11 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
 
     new UndefinedWriteCredentialDefinition_0_6 {
       override def write(ctx: Context): Unit = {
+        logger.debug(s"write cred def json: ${writeCredDefJson.toString}")
+        sendHttpPostReq(context, writeCredDefJson.toString, ProtoRef("write-cred-def", "0.6"), Option(UUID.randomUUID.toString))
+      }
+      override def write(ctx: Context, endorserDid: String): Unit = {
+        writeCredDefJson.put("endorserDid", endorserDid)
         logger.debug(s"write cred def json: ${writeCredDefJson.toString}")
         sendHttpPostReq(context, writeCredDefJson.toString, ProtoRef("write-cred-def", "0.6"), Option(UUID.randomUUID.toString))
       }

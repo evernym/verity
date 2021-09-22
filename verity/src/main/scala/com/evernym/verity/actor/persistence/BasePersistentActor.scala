@@ -313,7 +313,7 @@ trait BasePersistentActor
         s"totalRecoveredEvents: $totalRecoveredEvents, " +
         s"timeTakenInMillis: $millis)"
       if (millis > warnRecoveryTime) logger.warn(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
-      else logger.debug(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
+      else logger.info(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
 
       publishAppStateEvent(RecoverIfNeeded(CONTEXT_EVENT_RECOVERY))
       postRecoveryCompleted()

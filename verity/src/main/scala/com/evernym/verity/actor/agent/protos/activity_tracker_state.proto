@@ -20,5 +20,7 @@ message AgentActivity {
 message ActivityState {
     option (scalapb.message).extends = "com.evernym.verity.actor.State";
     AgentParam agentParam = 1;
+    //the key of below map is the 'stateKey' (recorded as part of the 'AgentActivityRecorded' event)
+    // so it will only have last activity per unique 'stateKey'
     map<string, AgentActivity> activities = 2;
 }

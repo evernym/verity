@@ -63,13 +63,20 @@ class ActivityTracker(override val appConfig: AppConfig,
 
   val legacyEventReceiver: Receive = {
     case laar: LegacyAgentActivityRecorded =>
+      val newAgentParam = AgentParam(laar.domainId, laar.sponsorRel)
+      state.agentParam.foreach { oldAgentParam =>
+        if (oldAgentParam != newAgentParam) {
+          logger.warn(s"[$persistenceId] found different agent params (old: $oldAgentParam, new: $newAgentParam)")
+        }
+      }
       state = state
-        .withAgentParam(AgentParam(laar.domainId, laar.sponsorRel))
+        .withAgentParam(newAgentParam)
         .addActivities((laar.stateKey, AgentActivity(laar.timestamp, laar.activityType, Option(laar.relId))))
+
 
     //only kept to handle any legacy events if at all persisted
     case other =>
-      logger.info(s"[$persistenceId] unhandled activity tracker event found: " + other.getClass.getSimpleName)
+      logger.warn(s"[$persistenceId] unhandled activity tracker event found: " + other.getClass.getSimpleName)
   }
 
   val receiveEvent: Receive = eventReceiver orElse legacyEventReceiver

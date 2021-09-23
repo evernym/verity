@@ -69,7 +69,7 @@ val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0
 val sdnotifyVer     = "1.3"
 
 //test dependency versions
-val scalatestVer    = "3.2.9"
+val scalatestVer    = "3.2.10"
 val mockitoVer      = "1.16.37"
 val veritySdkVer    = "0.4.10-b1ecd34a"
 val vcxWrapperVer   = "0.12.0.1738"

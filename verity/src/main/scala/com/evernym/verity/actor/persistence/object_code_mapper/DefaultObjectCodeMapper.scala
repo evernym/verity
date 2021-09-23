@@ -3,7 +3,7 @@ package com.evernym.verity.actor.persistence.object_code_mapper
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.agency.{AgencyAgentPairwiseState, AgencyAgentState}
 import com.evernym.verity.actor.agent.user.{UserAgentPairwiseState, UserAgentState}
-import com.evernym.verity.actor.agent.{RecordingAgentActivity, SponsorRel}
+import com.evernym.verity.actor.agent.{ActivityState, AgentActivityRecorded, AgentDetailRecorded, LegacyAgentActivityRecorded, LegacyWindowActivityDefined, SponsorRel}
 import com.evernym.verity.protocol.engine.events._
 import com.evernym.verity.protocol.protocols.agentprovisioning.{v_0_5 => ap5, v_0_6 => ap6, v_0_7 => ap7}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.{legacy => basicMessage_legacy}
@@ -246,12 +246,12 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     199 -> StatusUpdated,
     200 -> ActorStateCleaned,
 
-    201 -> RecordingAgentActivity,
+    201 -> LegacyAgentActivityRecorded,
 
     202 -> ResourceUsageState,
     203 -> ItemManagerState,
     
-    204 -> WindowActivityDefined,
+    204 -> LegacyWindowActivityDefined,
     205 -> AgencyAgentState,
 
     206 -> basicMessage_v10.Initialized,
@@ -321,7 +321,11 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     263 -> SegmentedStateRemoved,
 
     264 -> SegmentStored,
-    265 -> SegmentRemoved
+    265 -> SegmentRemoved,
+
+    266 -> AgentDetailRecorded,
+    267 -> AgentActivityRecorded,
+    268 -> ActivityState
   )
 
 }

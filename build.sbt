@@ -69,9 +69,9 @@ val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0
 val sdnotifyVer     = "1.3"
 
 //test dependency versions
-val scalatestVer    = "3.2.9"
-val mockitoVer      = "1.16.37"
-val veritySdkVer    = "0.4.9-1024e509"
+val scalatestVer    = "3.2.10"
+val mockitoVer      = "1.16.42"
+val veritySdkVer    = "0.4.10-b1ecd34a"
 val vcxWrapperVer   = "0.12.0.1738"
 
 // compiler plugin versions
@@ -251,6 +251,9 @@ lazy val protoBufSettings = Seq(
   //
 ) ++ Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings)
 
+// For this really to do its job correctly, it needs the class files from compiling. But since
+// coverageExcludedFiles is a SettingKey, requiring compile would annoying. So compile for
+// accurate results.
 val coverageSettings = Seq(
   coverageExcludedFiles := scoverageFilterProtobufPattern(
     (Compile / classDirectory).value,

@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent.msgrouter.Route
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
 import com.evernym.verity.actor.itemmanager.{ItemContainer, ItemManager}
-import com.evernym.verity.actor.metrics.{ActivityTracker, CollectionsMetricCollector, LibindyMetricsCollector}
+import com.evernym.verity.actor.metrics.{CollectionsMetricCollector, LibindyMetricsCollector}
 import com.evernym.verity.actor.msg_tracer.MsgTracingRegionActors
 import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
@@ -29,6 +29,7 @@ import com.evernym.verity.util.Util._
 
 import java.time.ZoneId
 import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyService, SysServiceNotifier, SysShutdownProvider, SysShutdownService}
+import com.evernym.verity.actor.metrics.activity_tracker.ActivityTracker
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.libindy.Libraries
 import com.evernym.verity.msgoutbox.outbox.msg_packager.{MsgPackagers, didcom_v1}

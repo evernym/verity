@@ -19,7 +19,7 @@ trait OutboxEndpointHandler { this: HttpRouteWithPlatform =>
   private def getOutboxDeliveryStatus(outboxId: String): Future[Any] = {
     val clusterSharding = ClusterSharding(system.toTyped)
     val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, outboxId)
-    outboxEntityRef.ask(ref => Outbox.Commands.GetDeliveryStatus(ref))
+    outboxEntityRef.ask(ref => Outbox.Commands.GetDeliveryStatus(List(), List(), false, ref))
   }
 
   private def getMsgDeliveryStatus(msgId: String): Future[Any] = {

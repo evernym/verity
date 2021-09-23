@@ -28,13 +28,13 @@ spec:
         {{- if .Values.deployment.vault.enable }}
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "k8s-eks-{{ .Values.env }}"
-        vault.hashicorp.com/auth-path: "auth/k8s/eks-{{ .Values.env }}"
-        vault.hashicorp.com/agent-inject-secret-credentials: "kubernetes_secrets/eks-{{ .Values.env }}/{{ .Values.name }}-{{ .Values.service }}"
+        vault.hashicorp.com/auth-path: "auth/k8s/eks-{{ .Values.gitlab_env }}"
+        vault.hashicorp.com/agent-inject-secret-credentials: "kubernetes_secrets/eks-{{ .Values.gitlab_env }}/{{ .Values.name }}-{{ .Values.service }}"
         vault.hashicorp.com/tls-secret: vault-tls-secret
         vault.hashicorp.com/ca-cert: /vault/tls/evernym-root-ca.crt
         vault.hashicorp.com/agent-pre-populate-only : "true"
         vault.hashicorp.com/agent-inject-template-credentials: |
-          {{`{{ with secret `}}"kubernetes_secrets/eks-{{ .Values.env }}/{{ .Values.name }}-{{ .Values.service }}"{{` -}}`}}
+          {{`{{ with secret `}}"kubernetes_secrets/eks-{{ .Values.gitlab_env }}/{{ .Values.name }}-{{ .Values.service }}"{{` -}}`}}
           {{`{{ range $k, $v := .Data.data -}}
             export {{ $k }}={{ $v }}
           {{ end }}

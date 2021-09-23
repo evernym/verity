@@ -151,6 +151,8 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     new UndefinedWriteSchema_0_6 {
       override def write(ctx: Context): Unit =
         executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq, None))
+      override def write(ctx: Context, endorserDid: String): Unit =
+        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq, None), Seq(endorserDid))
     }
 
   override def writeCredDef_0_6(name: String,
@@ -165,6 +167,8 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           this.version,
           "write",
           Seq(name, schemaId, tag, revocationDetails.orNull, None))
+      override def write(ctx: Context, endorserDid: String): Unit =
+        executeCmd(ctx, "WriteCredentialDefinition", this.version, "write", Seq(name, schemaId, tag, revocationDetails.orNull, None), Seq(endorserDid))
     }
 
   override def basicMessage_1_0(forRelationship: DidStr,

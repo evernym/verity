@@ -35,7 +35,7 @@ class OutboxRouterSpec
     }
   }
 
-  override val testRelResolver: Behavior[RelationshipResolver.Cmd] =
+  override val testRelationshipResolver: Behavior[RelationshipResolver.Cmd] =
     TestAgentRelResolver(Map("default" -> DestParam(testWallet.walletId, myKey1.verKey, defaultDestComMethods)))
 
   val outboxRegion: ActorRef[ShardingEnvelope[Outbox.Cmd]] =
@@ -45,10 +45,10 @@ class OutboxRouterSpec
         appConfig.withFallback(OVERRIDE_CONFIG).config,
         testAccessTokenRefreshers,
         testRelResolver,
-        testMsgStore,
         testMsgPackagers,
         testMsgTransports,
-        executionContext
+        executionContext,
+        testMsgRepository
       )
     })
 
@@ -73,7 +73,7 @@ object TestAgentRelResolver {
         }
         Behaviors.same
 
-      case GetRelParam(relId: RelId, replyTo: ActorRef[RelationshipResolver.Reply]) =>
+      case GetRelParam(relId: RelId, replyTo: ActorRef[RelationshipResolver.GetRelParamReply]) =>
           replyTo ! RelParam(
             VerityCloudAgent.selfRelContext.myDID,
             Option(

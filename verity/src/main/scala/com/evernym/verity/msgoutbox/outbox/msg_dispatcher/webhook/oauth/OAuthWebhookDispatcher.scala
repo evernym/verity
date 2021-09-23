@@ -6,7 +6,7 @@ import akka.actor.typed.scaladsl.adapter._
 import com.evernym.verity.msgoutbox.outbox.States.MsgDeliveryAttempt
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher._
 import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxConfig, msg_packager}
-import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, MsgId}
+import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, MessageRepository, MsgId}
 
 
 //responsible to create sender with appropriate input for each new message dispatch
@@ -15,7 +15,7 @@ class OAuthWebhookDispatcher(parentActorContext: ActorContext[Outbox.Cmd],
                              eventEncryptionSalt: String,
                              comMethodId: ComMethodId,
                              comMethod: ComMethod,
-                             msgStoreParam: MsgStoreParam,
+                             msgRepository: MessageRepository,
                              msgPackagingParam: MsgPackagingParam,
                              msgTransportParam: MsgTransportParam) extends DispatcherType {
 
@@ -29,7 +29,7 @@ class OAuthWebhookDispatcher(parentActorContext: ActorContext[Outbox.Cmd],
     val existingSender = parentActorContext.child(uniqueSenderId)
     existingSender match {
       case None =>
-        val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, eventEncryptionSalt)
+        val packager = msg_packager.Packager(msgPackagingParam, msgRepository, eventEncryptionSalt)
         parentActorContext.spawn(
           OAuthWebhookSender(
             oAuthAccessTokenHolder,

@@ -47,7 +47,7 @@ object Lightbend {
             "com.lightbend.cinnamon" %% "cinnamon-opentracing" % lightbendCinnamonVer.value,
             "com.lightbend.cinnamon" % "cinnamon-opentracing-datadog" % lightbendCinnamonVer.value,
             "com.lightbend.cinnamon" %% "cinnamon-slf4j-mdc" % lightbendCinnamonVer.value,
-            "com.lightbend.cinnamon" % "cinnamon-jvm-metrics-producer" % lightbendCinnamonVer.value,
+            "com.lightbend.cinnamon" % "cinnamon-jvm-metrics-producer" % lightbendCinnamonVer.value
 
           )
         } else Seq.empty

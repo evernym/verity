@@ -54,6 +54,7 @@ class DefaultURLShortener(val config: AppConfig, executionContext: ExecutionCont
           logger.warn(s"Tried to user url shortening, but no url shortener configured")
           sender ! UrlShorteningFailed("no shortener", "URL shortener not configured")
       }
+      context.stop(self) // this actor is used only for one message at the time, so stop it after this.
   }
 
   def shortenerSvc(): Option[URLShortenerAPI] = {

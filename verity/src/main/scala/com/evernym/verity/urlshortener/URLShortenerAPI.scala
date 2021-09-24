@@ -9,7 +9,6 @@ import com.evernym.verity.constants.Constants.{TYPE, URL}
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.Util.getJsonStringFromMap
 import com.evernym.verity.util2.Exceptions.HandledErrorException
-import com.evernym.verity.util2.Status.URL_SHORTENING_FAILED
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -39,11 +38,12 @@ class DefaultURLShortener(val config: AppConfig, executionContext: ExecutionCont
       shortenerSvc() match {
         case Some(shortener) =>
           try {
+            val snd = sender // save sender variable to be used in futures code bellow.
             shortener.shortenURL(urlInfo) map { value =>
-              sender ! UrlShortened(value)
+              snd ! UrlShortened(value)
             } recover {
-              case he: HandledErrorException => sender ! UrlShorteningFailed("Exception", he.getErrorMsg)
-              case e: Throwable => sender ! UrlShorteningFailed("Exception", e.getMessage)
+              case he: HandledErrorException => snd ! UrlShorteningFailed("Exception", he.getErrorMsg)
+              case e: Throwable => snd ! UrlShorteningFailed("Exception", e.getMessage)
             }
           } catch {
             case e: Throwable =>

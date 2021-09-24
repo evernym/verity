@@ -2,7 +2,7 @@ package com.evernym.verity.observability.metrics
 
 import akka.testkit.TestKit
 import com.evernym.verity.actor.agent.{AgentProvHelper, HasAgentActivity, SponsorRel}
-import com.evernym.verity.actor.metrics._
+import com.evernym.verity.actor.metrics.activity_tracker.{ActiveRelationships, ActiveUsers, ActivityWindowRule, CalendarMonth, VariableDuration}
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.observability.metrics.MetricHelpers._
@@ -36,7 +36,7 @@ class ActivityTrackerSpec
         val user2: DidStr = createCloudAgent(sponsorRel1, sponsorKeys().verKey, getNonce)
         val user3: DidStr = createCloudAgent(sponsorRel1, sponsorKeys().verKey, getNonce)
 
-        val window15Day = ActiveWindowRules(VariableDuration("15 d"), ActiveUsers)
+        val window15Day = ActivityWindowRule(VariableDuration("15 d"), ActiveUsers)
         val windows = Set(window15Day)
 
         //Will not increase count for SPONSOR_ID even though the relationship is different because "new" depends on domain id
@@ -46,7 +46,7 @@ class ActivityTrackerSpec
         val differentSponsor = createCloudAgent(sponsorRel2, sponsorKeys().verKey, getNonce)
         Thread.sleep(500)
         // Tags for relationships
-        val metricKeys = windows.map(_.activityType.metricBase)
+        val metricKeys = windows.map(_.trackActivityType.metricName)
         val metrics = getMetricWithTags(metricKeys, testMetricsBackend)
         assert(extractTagCount(metrics, window15Day, sponsorRel1.sponsorId) == 3.0)
         assert(extractTagCount(metrics, window15Day, sponsorRel2.sponsorId) == 1.0)
@@ -57,9 +57,9 @@ class ActivityTrackerSpec
         val sponsorRel3: SponsorRel = SponsorRel(SPONSOR_ID3, SPONSEE_ID)
         val activityTracker: DidStr = createCloudAgent(sponsorRel3, sponsorKeys().verKey, getNonce)
         val baseTimeStamp = TimeUtil.nowDateString
-        val windowMonth = ActiveWindowRules(CalendarMonth, ActiveUsers)
-        val window30Day = ActiveWindowRules(VariableDuration("30 d"), ActiveUsers)
-        val window7Day = ActiveWindowRules(VariableDuration("7 d"), ActiveUsers)
+        val windowMonth = ActivityWindowRule(CalendarMonth, ActiveUsers)
+        val window30Day = ActivityWindowRule(VariableDuration("30 d"), ActiveUsers)
+        val window7Day = ActivityWindowRule(VariableDuration("7 d"), ActiveUsers)
         val windows = Set(windowMonth, window30Day, window7Day)
 
         AgentActivityTracker.track(DEFAULT_ACTIVITY_TYPE, activityTracker, None)
@@ -70,7 +70,7 @@ class ActivityTrackerSpec
            Two Activity messages but only one is recorded (per window).
            The second one is discarded because it doesn't increase any window.
          */
-        val metricKeys = windows.map(_.activityType.metricBase)
+        val metricKeys = windows.map(_.trackActivityType.metricName)
         var metrics = getMetricWithTags(metricKeys, testMetricsBackend)
         assert(extractTagCount(metrics, windowMonth, sponsorRel3.sponsorId) == 1.0)
         assert(extractTagCount(metrics, window30Day, sponsorRel3.sponsorId) == 1.0)
@@ -125,21 +125,33 @@ class ActivityTrackerSpec
       "should be able to update window" in {
         val sponsorRel4: SponsorRel = SponsorRel(SPONSOR_ID4, SPONSEE_ID)
         val activityTracker: DidStr = createCloudAgent(sponsorRel4, sponsorKeys().verKey, getNonce)
-        val window = ActiveWindowRules(VariableDuration("9 min"), ActiveUsers)
+        val window = ActivityWindowRule(VariableDuration("9 min"), ActiveUsers)
         Thread.sleep(500)
-        var metrics = getMetricWithTags(Set(window.activityType.metricBase), testMetricsBackend)
+        var metrics = getMetricWithTags(Set(window.trackActivityType.metricName), testMetricsBackend)
         assert(extractTagCount(metrics, window, sponsorRel4.sponsorId) == 1.0)
 
-        val updatedWindow = ActiveWindowRules(VariableDuration("1 d"), ActiveUsers)
-        AgentActivityTracker.setWindows(activityTracker, ActivityWindow(Set(updatedWindow)))
-        AgentActivityTracker.track(DEFAULT_ACTIVITY_TYPE, activityTracker, None)
+        val updatedWindow = ActivityWindowRule(VariableDuration("1 d"), ActiveUsers)
+        val updatedWindowConfig = s"""
+            verity.metrics {
+              activity-tracking {
+                active-user {
+                  time-windows = ["1 d"]
+                  monthly-window = false
+                  enabled = true
+                }
+              }
+            }"""
 
-        Thread.sleep(500)
-        //Show that once the window is updated, an activity will be recorded
-        metrics = getMetricWithTags(Set(updatedWindow.activityType.metricBase), testMetricsBackend)
-        assert(extractTagCount(metrics, updatedWindow, sponsorRel4.sponsorId) == 1.0)
-        //Show that old metric window is still available
-        assert(extractTagCount(metrics, window, sponsorRel4.sponsorId) == 1.0)
+        withUpdateWindowConfig(updatedWindowConfig) {
+          AgentActivityTracker.track(DEFAULT_ACTIVITY_TYPE, activityTracker, None)
+
+          Thread.sleep(500)
+          //Show that once the window is updated, an activity will be recorded
+          metrics = getMetricWithTags(Set(updatedWindow.trackActivityType.metricName), testMetricsBackend)
+          assert(extractTagCount(metrics, updatedWindow, sponsorRel4.sponsorId) == 1.0)
+          //Show that old metric window is still available
+          assert(extractTagCount(metrics, window, sponsorRel4.sponsorId) == 1.0)
+        }
       }
     }
 
@@ -147,9 +159,9 @@ class ActivityTrackerSpec
       "should filter windows when relationship is missing" in {
         val sponsorRel5: SponsorRel = SponsorRel(SPONSOR_ID5, SPONSEE_ID)
         val activityTracker: DidStr = createCloudAgent(sponsorRel5, sponsorKeys().verKey, getNonce)
-        val windowMonthRel = ActiveWindowRules(CalendarMonth, ActiveRelationships)
-        val window7DayRel = ActiveWindowRules(VariableDuration("7 d"), ActiveRelationships)
-        val window2DayUser = ActiveWindowRules(VariableDuration("2 d"), ActiveUsers)
+        val windowMonthRel = ActivityWindowRule(CalendarMonth, ActiveRelationships)
+        val window7DayRel = ActivityWindowRule(VariableDuration("7 d"), ActiveRelationships)
+        val window2DayUser = ActivityWindowRule(VariableDuration("2 d"), ActiveUsers)
         val windows = Set(windowMonthRel, window7DayRel, window2DayUser)
         val missingRelId: Option[String] = None
         AgentActivityTracker.track(DEFAULT_ACTIVITY_TYPE, activityTracker, missingRelId)
@@ -159,7 +171,7 @@ class ActivityTrackerSpec
         /*
           1. Should only record for Active Users because relId is missing
          */
-        val metricKeys = windows.map(_.activityType.metricBase)
+        val metricKeys = windows.map(_.trackActivityType.metricName)
         val metrics = getMetricWithTags(metricKeys, testMetricsBackend)
         assert(extractTagCount(metrics, windowMonthRel, activityTracker, missingRelId) == 0.0)
         assert(extractTagCount(metrics, window7DayRel, activityTracker, missingRelId) == 0.0)
@@ -170,12 +182,12 @@ class ActivityTrackerSpec
         val sponsorRel6: SponsorRel = SponsorRel(SPONSOR_ID6, SPONSEE_ID)
         val activityTracker: DidStr = createCloudAgent(sponsorRel6, sponsorKeys().verKey, getNonce)
         val baseTimeStamp = TimeUtil.nowDateString
-        val windowMonthRel = ActiveWindowRules(CalendarMonth, ActiveRelationships)
+        val windowMonthRel = ActivityWindowRule(CalendarMonth, ActiveRelationships)
         val windows = Set(windowMonthRel)
         AgentActivityTracker.track(DEFAULT_ACTIVITY_TYPE, activityTracker, Some(REL_ID1), timestamp = baseTimeStamp)
         AgentActivityTracker.track(DEFAULT_ACTIVITY_TYPE, activityTracker, Some(REL_ID2), timestamp = baseTimeStamp)
         AgentActivityTracker.track(DEFAULT_ACTIVITY_TYPE, activityTracker, Some(REL_ID3), timestamp = baseTimeStamp)
-        var metricKeys = windows.map(_.activityType.metricBase)
+        var metricKeys = windows.map(_.trackActivityType.metricName)
         Thread.sleep(500) // todo
         var metrics = getMetricWithTags(metricKeys, testMetricsBackend)
         assert(extractTagCount(metrics, windowMonthRel, activityTracker, Some(sponsorRel6.sponseeId)) == 4.0)
@@ -183,7 +195,7 @@ class ActivityTrackerSpec
         //doesn't add duplicate, same metric number
         AgentActivityTracker.track(DEFAULT_ACTIVITY_TYPE, activityTracker, Some(REL_ID3), timestamp = baseTimeStamp)
         Thread.sleep(500)
-        metricKeys = windows.map(_.activityType.metricBase)
+        metricKeys = windows.map(_.trackActivityType.metricName)
         metrics = getMetricWithTags(metricKeys, testMetricsBackend)
         assert(extractTagCount(metrics, windowMonthRel, activityTracker, Some(sponsorRel6.sponseeId)) == 4.0)
       }
@@ -196,9 +208,9 @@ class ActivityTrackerSpec
         val activityTracker2 = createCloudAgent(sponsorRel8, sponsorKeys().verKey, getNonce)
 
         val baseTimeStamp = TimeUtil.nowDateString
-        val windowMonthRel = ActiveWindowRules(CalendarMonth, ActiveRelationships)
-        val window7DayRel = ActiveWindowRules(VariableDuration("7 d"), ActiveRelationships)
-        val window3DayUser = ActiveWindowRules(VariableDuration("3 d"), ActiveUsers)
+        val windowMonthRel = ActivityWindowRule(CalendarMonth, ActiveRelationships)
+        val window7DayRel = ActivityWindowRule(VariableDuration("7 d"), ActiveRelationships)
+        val window3DayUser = ActivityWindowRule(VariableDuration("3 d"), ActiveUsers)
         val windows = Set(windowMonthRel, window7DayRel, window3DayUser)
 
 
@@ -212,7 +224,7 @@ class ActivityTrackerSpec
           The second one is discarded because it doesn't increase any window.
          */
         // Tags for relationships
-        val metricKeys = windows.map(_.activityType.metricBase)
+        val metricKeys = windows.map(_.trackActivityType.metricName)
         var metrics = getMetricWithTags(metricKeys, testMetricsBackend)
         assert(extractTagCount(metrics, windowMonthRel, activityTracker, Some(sponsorRel7.sponseeId)) == 2.0)
         assert(extractTagCount(metrics, window7DayRel, activityTracker, Some(sponsorRel7.sponseeId)) == 2.0)
@@ -260,11 +272,22 @@ class ActivityTrackerSpec
   }
 
   def extractTagCount(metrics: Map[String, MetricWithTags],
-                      window: ActiveWindowRules,
+                      window: ActivityWindowRule,
                       id: String,
                       relId: Option[String] = None): Double =
-    Try(metrics(window.activityType.metricBase)).map(_.tag(window, id, relId)).getOrElse(Some(0.0)).getOrElse(0.0)
+    Try(metrics(window.trackActivityType.metricName)).map(_.tag(window, id, relId)).getOrElse(Some(0.0)).getOrElse(0.0)
 
+  def withUpdateWindowConfig(newConfigStr: String)(f: => Unit): Unit = {
+    val currentConfig = appConfig.config
+    try {
+      val newConfig = ConfigFactory.parseString(newConfigStr)
+      appConfig.DEPRECATED_setConfigWithoutValidation(newConfig.withFallback(appConfig.config))
+      f
+    } finally {
+      appConfig.DEPRECATED_setConfigWithoutValidation(currentConfig)
+    }
+
+  }
 
   override def overrideSpecificConfig: Option[Config] = Option {
     ConfigFactory parseString {
@@ -296,8 +319,8 @@ class ActivityTrackerSpec
 }
 
 case class MetricWithTags(name: String, totalValue: Double, tags: Map[Map[String, String], Double]) {
-  def tag(window: ActiveWindowRules, id: String, relId: Option[String] = None): Option[Double] = {
-    val baseMap = Map("frequency" -> window.activityFrequency.toString, window.activityType.idType -> id)
+  def tag(window: ActivityWindowRule, id: String, relId: Option[String] = None): Option[Double] = {
+    val baseMap = Map("frequency" -> window.frequencyType.toString, window.trackActivityType.idType -> id)
     val optRelMap = relId.map(x => Map("sponseeId" -> x)).getOrElse(Map.empty) ++ baseMap
     tags.find( _._1.toSet == optRelMap.toSet).map(_._2)
   }

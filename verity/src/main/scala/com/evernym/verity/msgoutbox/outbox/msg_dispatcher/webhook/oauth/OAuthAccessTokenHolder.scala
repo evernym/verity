@@ -115,12 +115,12 @@ object OAuthAccessTokenHolder {
     case AccessTokenRefresherReplyAdapter(reply: OAuthAccessTokenRefresher.Replies.GetTokenFailed) =>
       logger.warn(s"[${setup.identifier}][OAuth] refresh access token failed: " + reply.errorMsg)
       setup.actorContext.cancelReceiveTimeout()
-      handleError(reply.errorMsg)
+      handleErrorDuringGetToken(reply.errorMsg)
 
     case TimedOut =>
       logger.warn(s"[${setup.identifier}][OAuth] get access token timed out")
       setup.actorContext.cancelReceiveTimeout()
-      handleError("get new access token timed out")(setup)
+      handleErrorDuringGetToken("get new access token timed out")(setup)
 
     case other =>
       //while this actor is waiting for new access token, if it receives other commands (mostly it should be GetToken)
@@ -129,11 +129,14 @@ object OAuthAccessTokenHolder {
       Behaviors.same
   }
 
-  private def handleError(errorMsg: String)(implicit setup: Setup): Behavior[Cmd] = {
+  private def handleErrorDuringGetToken(errorMsg: String)(implicit setup: Setup): Behavior[Cmd] = {
+    //handle/reply to stashed commands
     setup.buffer.foreach {
-      case GetToken(_, replyTo)   => replyTo ! Replies.GetTokenFailed(errorMsg)
+      case GetToken(_, replyTo)  => replyTo ! Replies.GetTokenFailed(errorMsg)
+      case other                 => setup.actorContext.self ! other
     }
-    setup.buffer.unstashAll(initialized(None))
+    setup.buffer.clear()
+    initialized(None)
   }
 
   private val logger: Logger = getLoggerByClass(getClass)

@@ -12,6 +12,9 @@
 
 unit-test:
   extends: .test
+  variables:
+    DD_ENV: "ci"
+    DD_SERVICE: "verity"
   only:
     refs:
       - master
@@ -20,14 +23,14 @@ unit-test:
       - merge_requests
   script:
     - sbt test
+  after_script:
+    - datadog-ci junit upload verity/target/test-reports
   artifacts:
     when: always
     paths:
       - verity/target/test-reports
-#      - verity/target/scala-2.12/jacoco
     reports:
 #      junit: verity/target/test-reports/TEST-*.xml
-#      cobertura:
 
 coverage:
   extends: .test
@@ -39,7 +42,10 @@ coverage:
       - tags
       - merge_requests
   script:
-    - sbt coverage test coverageReport
+    - sbt compile # Must compile before running converge, so we can detect and ignore protobuf classes
+    - sbt coverage test
+  after_script:
+    - sbt coverageReport
   allow_failure: true
   artifacts:
     when: always

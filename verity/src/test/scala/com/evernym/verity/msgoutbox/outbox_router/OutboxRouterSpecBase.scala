@@ -2,6 +2,7 @@ package com.evernym.verity.msgoutbox.outbox_router
 
 import akka.actor.typed.ActorRef
 import akka.cluster.sharding.typed.ShardingEnvelope
+import akka.pattern.StatusReply
 import com.evernym.verity.actor.agent.relationship.KeyId
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpecBase
 import com.evernym.verity.did.DidStr
@@ -49,7 +50,7 @@ trait OutboxRouterSpecBase
         msg,
         msgType,
         retentionPolicy,
-        testRelResolver,
+        testRelationshipResolver,
         testMsgStore,
         Option(testProbe.ref)
       )
@@ -62,7 +63,7 @@ trait OutboxRouterSpecBase
                                       expectedTargetOutboxIds: Seq[OutboxId]): Unit = {
     ack.targetOutboxIds shouldBe expectedTargetOutboxIds
 
-    val outboxProbe = createTestProbe[Outbox.Replies.DeliveryStatus]()
+    val outboxProbe = createTestProbe[StatusReply[Outbox.Replies.DeliveryStatus]]()
     val messageMetaProbe = createTestProbe[MessageMeta.Replies.MsgDeliveryStatus]()
 
     //below code block checks that:
@@ -77,8 +78,10 @@ trait OutboxRouterSpecBase
       msgDeliveryStatus.outboxDeliveryStatus.size shouldBe 1
 
       ack.targetOutboxIds.foreach { outboxId =>
-        outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(outboxProbe.ref))
-        val messages = outboxProbe.expectMessageType[Replies.DeliveryStatus].messages
+        outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(List(), List(), false, outboxProbe.ref))
+        val reply = outboxProbe.expectMessageType[StatusReply[Replies.DeliveryStatus]]
+        reply.isSuccess shouldBe true
+        val messages = reply.getValue.messages
         messages.size shouldBe 1
       }
     }
@@ -96,8 +99,10 @@ trait OutboxRouterSpecBase
       msgDeliveryStatus.outboxDeliveryStatus.values.forall(_.status == Status.MSG_DELIVERY_STATUS_SENT.statusCode) shouldBe true
 
       ack.targetOutboxIds.foreach { outboxId =>
-        outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(outboxProbe.ref))
-        val messages = outboxProbe.expectMessageType[Replies.DeliveryStatus].messages
+        outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(List(), List(), false, outboxProbe.ref))
+        val reply = outboxProbe.expectMessageType[StatusReply[Replies.DeliveryStatus]]
+        reply.isSuccess shouldBe true
+        val messages = reply.getValue.messages
         messages.size shouldBe 0
       }
     }

@@ -1,7 +1,6 @@
 package com.evernym.verity.urlshortener
 
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
-import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.SHORTEN_URL
 import com.evernym.verity.config.AppConfig
@@ -9,8 +8,10 @@ import com.evernym.verity.config.ConfigConstants.URL_SHORTENER_SVC_SELECTED
 import com.evernym.verity.constants.Constants.{TYPE, URL}
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.Util.getJsonStringFromMap
+import com.evernym.verity.util2.Exceptions.HandledErrorException
+import com.evernym.verity.util2.Status.URL_SHORTENING_FAILED
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 
 trait UrlShorteningResponse extends ActorMessage
@@ -25,21 +26,24 @@ trait URLShortenerAPI {
   def providerId: String
   def appConfig: AppConfig
 
-  def shortenURL(urlInfo: UrlInfo)(implicit actorSystem: ActorSystem): Either[HandledErrorException, String]
+  def shortenURL(urlInfo: UrlInfo)(implicit actorSystem: ActorSystem): Future[String]
 }
 
 class DefaultURLShortener(val config: AppConfig, executionContext: ExecutionContext) extends Actor with ActorLogging {
   implicit val system: ActorSystem = context.system
   private val logger = getLoggerByClass(getClass)
+  private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   override def receive: Receive = {
     case urlInfo: UrlInfo =>
       shortenerSvc() match {
         case Some(shortener) =>
           try {
-            shortener.shortenURL(urlInfo) match {
-              case Left(exception) => sender ! UrlShorteningFailed("Exception", exception.getErrorMsg)
-              case Right(value) => sender ! UrlShortened(value)
+            shortener.shortenURL(urlInfo) map { value =>
+              sender ! UrlShortened(value)
+            } recover {
+              case he: HandledErrorException => sender ! UrlShorteningFailed("Exception", he.getErrorMsg)
+              case e: Throwable => sender ! UrlShorteningFailed("Exception", e.getMessage)
             }
           } catch {
             case e: Throwable =>

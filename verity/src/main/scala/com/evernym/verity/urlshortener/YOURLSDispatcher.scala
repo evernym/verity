@@ -5,19 +5,17 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model.{FormData, HttpMethods, HttpRequest, HttpResponse}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.evernym.verity.util2.Exceptions.HandledErrorException
-import com.evernym.verity.util2.Status.URL_SHORTENING_FAILED
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.ConfigConstants.{YOURLS_API_PASSWORD, YOURLS_API_SIGNATURE, YOURLS_API_TIMEOUT_SECONDS, YOURLS_API_URL, YOURLS_API_USERNAME}
+import com.evernym.verity.config.ConfigConstants.{YOURLS_API_PASSWORD, YOURLS_API_SIGNATURE, YOURLS_API_URL, YOURLS_API_USERNAME}
 import com.evernym.verity.constants.Constants.URL_SHORTENER_PROVIDER_ID_YOURLS
 import com.evernym.verity.http.common.ConfigSvc
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.util.OptionUtil
 import com.evernym.verity.util.Util.buildHandledError
+import com.evernym.verity.util2.Status.URL_SHORTENING_FAILED
 import org.json.JSONObject
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 
 class YOURLSSvc(val appConfig: AppConfig, executionContext: ExecutionContext) extends URLShortenerAPI with ConfigSvc {
@@ -26,8 +24,6 @@ class YOURLSSvc(val appConfig: AppConfig, executionContext: ExecutionContext) ex
   private val logger = getLoggerByName("YOURLSDispatcher")
 
   val providerId: String = URL_SHORTENER_PROVIDER_ID_YOURLS
-
-  lazy val timeout: Duration = appConfig.getIntOption(YOURLS_API_TIMEOUT_SECONDS).getOrElse(10).seconds
 
   lazy val apiUrl: String = appConfig.getStringReq(YOURLS_API_URL)
   lazy val apiSignature: Option[String] = OptionUtil.blankFlattenOption(appConfig.getStringOption(YOURLS_API_SIGNATURE))
@@ -53,43 +49,30 @@ class YOURLSSvc(val appConfig: AppConfig, executionContext: ExecutionContext) ex
                 (implicit actorSystem: ActorSystem): Future[HttpResponse] = Http().singleRequest(request)
 
   override def shortenURL(urlInfo: UrlInfo)
-                         (implicit actorSystem: ActorSystem): Either[HandledErrorException, String] = {
-    try {
-      val fut: Future[Either[HandledErrorException, String]] = {
-        httpClient(
-          HttpRequest(
-            method = HttpMethods.POST,
-            uri = apiUrl,
-            entity = FormData(formData + ("url" -> urlInfo.url)).toEntity,
-          )
-        ) flatMap { response =>
-          if (response.status == OK) {
-            Unmarshal(response.entity).to[String] map {responseContent =>
-              val responseJson = new JSONObject(responseContent)
-              if (responseJson.getString("status") == "success") {
-                Right(responseJson.getString("shorturl"))
-              } else {
-                logger.warn(s"Url shortener failed, wrong result: $responseJson")
-                Left(buildHandledError(URL_SHORTENING_FAILED))
-              }
-            }
+                         (implicit actorSystem: ActorSystem): Future[String] = {
+    httpClient(
+      HttpRequest(
+        method = HttpMethods.POST,
+        uri = apiUrl,
+        entity = FormData(formData + ("url" -> urlInfo.url)).toEntity,
+      )
+    ) flatMap { response =>
+      if (response.status == OK) {
+        Unmarshal(response.entity).to[String] map {responseContent =>
+          val responseJson = new JSONObject(responseContent)
+          if (responseJson.getString("status") == "success") {
+            responseJson.getString("shorturl")
           } else {
-            logger.warn(s"Url shortening failed, wrong status: ${response.status}")
-            Future(Left(buildHandledError(URL_SHORTENING_FAILED)))
+            throw new RuntimeException(s"Received invalid response: $responseJson")
           }
-        } recover {
-          case e =>
-            logger.warn(s"Url shortening failed: $e")
-            Left(buildHandledError(URL_SHORTENING_FAILED))
         }
+      } else {
+        throw new RuntimeException(s"Received HTTP status: ${response.status}")
       }
-
-      Await.result(fut, timeout)
-    }
-    catch {
+    } recover {
       case e: Throwable =>
-        logger.warn(s"Url shortening failed with exception: ${e.getMessage}", e)
-        Left(buildHandledError(URL_SHORTENING_FAILED))
+        logger.warn(s"Url shortening failed: ${e.getMessage}")
+        throw buildHandledError(URL_SHORTENING_FAILED)
     }
   }
 }

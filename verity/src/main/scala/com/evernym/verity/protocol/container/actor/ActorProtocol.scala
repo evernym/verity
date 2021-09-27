@@ -3,7 +3,6 @@ package com.evernym.verity.protocol.container.actor
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.msgoutbox.OutboxService
 import com.evernym.verity.protocol.engine.{ProtoDef, ProtoRef}
 
 import scala.concurrent.ExecutionContext
@@ -30,8 +29,8 @@ class ActorProtocol(val protoDef: ProtoDef) {
   def typeName: String = ActorProtocol.buildTypeName(protoDef)
   def region(implicit system: ActorSystem): ActorRef = ClusterSharding(system).shardRegion(typeName)
 
-  def props(agentActorContext: AgentActorContext, executionContext: ExecutionContext, outboxService: OutboxService): Props = {
-    Props(classOf[ActorProtocolContainer[_, _, _, _, _, _, _]], agentActorContext, protoDef, executionContext, outboxService)
+  def props(agentActorContext: AgentActorContext, executionContext: ExecutionContext): Props = {
+    Props(classOf[ActorProtocolContainer[_, _, _, _, _, _, _]], agentActorContext, protoDef, executionContext)
   }
 
 }

@@ -31,11 +31,8 @@ import java.time.ZoneId
 import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyService, SysServiceNotifier, SysShutdownProvider, SysShutdownService}
 import com.evernym.verity.actor.metrics.activity_tracker.ActivityTracker
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
+import com.evernym.verity.actor.typed.base.UserGuardian
 import com.evernym.verity.libindy.Libraries
-import com.evernym.verity.msgoutbox.outbox.msg_packager.{MsgPackagers, didcom_v1}
-import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.{DIDCommV1Packager, WalletOpExecutor}
-import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
-import com.evernym.verity.msgoutbox.{MessageRepository, OutboxService, RelResolver}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -258,31 +255,6 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       ItemContainer.props(executionContextProvider.futureExecutionContext)
     )
 
-
-  import akka.actor.typed.scaladsl.adapter._
-  val msgStore: akka.actor.typed.ActorRef[MsgStore.Cmd] = {
-    val blobStoreBucket: String = appConfig
-      .config
-      .getConfig("verity.blob-store")
-      .getString("bucket-name")
-    actorSystem.spawn(MsgStore(blobStoreBucket, agentActorContext.storageAPI, executionContextProvider.futureExecutionContext), "msg-store")
-  }
-
-  val msgPackagers: MsgPackagers = new MsgPackagers {
-    override val didCommV1Packager: akka.actor.typed.Behavior[DIDCommV1Packager.Cmd] = {
-      val walletOpExecutor: akka.actor.typed.Behavior[WalletOpExecutor.Cmd] = didcom_v1.WalletOpExecutor(agentActorContext.walletAPI)
-      DIDCommV1Packager(agentActorContext.agentMsgTransformer, walletOpExecutor, agentActorContext.metricsWriter,
-        executionContextProvider.walletFutureExecutionContext)
-    }
-  }
-  val outboxService: OutboxService = OutboxService(
-    RelResolver(executionContextProvider.futureExecutionContext, aac.agentMsgRouter),
-    MessageRepository(msgStore, executionContextProvider.futureExecutionContext, actorSystem.toTyped),
-    msgPackagers,
-    agentActorContext,
-    appConfig
-  )(executionContextProvider.futureExecutionContext,actorSystem.toTyped)
-
   // protocol region actors
   val protocolRegions: Map[String, ActorRef] = agentActorContext.protocolRegistry
     .entries
@@ -290,7 +262,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       val ap = ActorProtocol(e.protoDef)
       val region = createProtoActorRegion(
         ap.typeName,
-        ap.props(agentActorContext, executionContextProvider.futureExecutionContext, outboxService))
+        ap.props(agentActorContext, executionContextProvider.futureExecutionContext))
       ap.typeName -> region
     }.toMap
 
@@ -323,6 +295,9 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
 
   val singletonParentProxy: ActorRef =
     createClusterSingletonProxyActor(s"/user/$CLUSTER_SINGLETON_MANAGER")
+
+  import akka.actor.typed.scaladsl.adapter._
+  actorSystem.spawn(UserGuardian(agentActorContext, executionContextProvider.futureExecutionContext), "guardian")
 
   def createCusterSingletonManagerActor(singletonProps: Props): ActorRef = {
     agentActorContext.system.actorOf(

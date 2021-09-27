@@ -25,10 +25,8 @@ import com.typesafe.scalalogging.Logger
 import java.util.UUID
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
-import com.evernym.verity.agentmsg.AgentMsgBuilder.createAgentMsg
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType, TypedMsgLike}
-import com.evernym.verity.msgoutbox.OutboxService
 import com.evernym.verity.observability.logs.HasLogger
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentStoreAccessAPI
@@ -41,7 +39,6 @@ import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAcces
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
 import com.evernym.verity.protocol.engine.container.{ProtocolContainer, RecordsEvents}
 import com.evernym.verity.protocol.engine.events.PairwiseRelIdsChanged
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 
 import scala.concurrent.duration._
@@ -66,8 +63,7 @@ class ActorProtocolContainer[
 (
   val agentActorContext: AgentActorContext,
   val definition: PD,
-  val executionContext: ExecutionContext,
-  val outboxService: OutboxService
+  val executionContext: ExecutionContext
 )
   extends ProtocolContainer[P,R,M,E,S,I]
     with HasLegacyProtocolContainerServices[M,E,I]
@@ -454,29 +450,6 @@ class ActorProtocolContainer[
       }
     }
   }
-
-  //TODO: below function is preparation for outbox integration (not yet integrated though)
-  def sendToOutbox(pom: ProtocolOutgoingMsg) : Future[Option[MsgId]] = {
-    if (isVAS && ! pom.msg.isInstanceOf[AgentProvisioningMsgFamily.AgentCreated]) {
-      val agentMsg = createAgentMsg(pom.msg, definition, pom.threadContextDetail)
-      val retPolicy = ConfigUtil.getOutboxStateRetentionPolicyForInterDomain(
-        appConfig, domainId, definition.protoRef.toString)
-      outboxService.sendMessage(
-          pom.from,
-          pom.to,
-          agentMsg.jsonStr,
-          agentMsg.msgType.toString,
-          retPolicy
-      ).map(Some(_))
-    } else {
-      Future.successful(None)
-    }
-  }
-
-  lazy val isVAS: Boolean =
-    appConfig
-      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
-      .contains("VerityAgent")
 }
 
 //trait ProtoMsg extends MsgBase

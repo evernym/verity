@@ -319,6 +319,7 @@ object Outbox {
 
   private def readCommandHandler(st: States.Initialized)(implicit setup: SetupOutbox): ReadCmd => ReplyEffect[Event, State] = {
     case GetOutboxParam(replyTo) =>
+      //TODO: do not use other actor's commands as reply message
       Effect
         .reply(replyTo)(RelationshipResolver.Replies.OutboxParam(st.walletId, st.senderVerKey, st.comMethods))
 

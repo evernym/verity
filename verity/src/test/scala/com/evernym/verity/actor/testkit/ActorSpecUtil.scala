@@ -37,7 +37,7 @@ object AkkaTestBasic extends ActorSystemConfig
  */
 case class AgentDIDDetail(name: String, DIDSeed: String, did: DidStr, verKey: VerKeyStr) {
   def prepareAgencyIdentity: AgencyPublicDid = AgencyPublicDid(did, verKey)
-  def didPair = DidPair(did, verKey)
+  def didPair: DidPair = DidPair(did, verKey)
 }
 
 
@@ -112,9 +112,8 @@ trait HasBasicActorSystem extends OverrideConfig with MockAppConfig {
   lazy val (as, conf) = AkkaTestBasic.systemWithConfig(
     overrideConfig
   )
-  lazy val metricsBackend: MetricsBackend = new TestMetricsBackend
   implicit lazy val system: classic.ActorSystem = {
-    MetricsWriterExtension(as).updateMetricsBackend(metricsBackend)
+    MetricsWriterExtension(as).updateMetricsBackend(new TestMetricsBackend)
     as
   }
   implicit override lazy val appConfig: AppConfig = new TestAppConfig(Option(conf), baseAsFallback = false)

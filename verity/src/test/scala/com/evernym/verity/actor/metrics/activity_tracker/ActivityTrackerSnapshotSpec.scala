@@ -50,7 +50,7 @@ class ActivityTrackerSnapshotSpec
 
   lazy val DUMMY_ACTOR_TYPE_ID: Int = 1
 
-  override val actorTypeToRegions: Map[Int, ActorRef] = {
+  override val typeToRegions: Map[Int, ActorRef] = {
     Map(
       DUMMY_ACTOR_TYPE_ID -> {
         createPersistentRegion("DummyActor", DummyAgentActor.props)

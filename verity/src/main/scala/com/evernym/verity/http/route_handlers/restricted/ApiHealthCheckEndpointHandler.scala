@@ -25,7 +25,7 @@ trait ApiHealthCheckEndpointHandler {
                   }
                 }
               } ~
-                path("healthy") {
+                path("liveness") {
                   (get & pathEnd) {
                     complete {
                       OK

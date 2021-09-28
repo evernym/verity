@@ -13,9 +13,9 @@ trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
       }
     }
 
-    "when sent req to /verity/node/healthy" - {
+    "when sent req to /verity/node/liveness" - {
       "should be return 200 OK" in {
-        buildGetReq("/verity/node/healthy") ~> epRoutes ~> check {
+        buildGetReq("/verity/node/liveness") ~> epRoutes ~> check {
           status shouldBe OK
         }
       }

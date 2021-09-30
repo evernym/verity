@@ -9,17 +9,30 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 
 abstract class BehaviourSpecBase
-  extends ScalaTestWithActorTestKit(
-    ActorTestKit(
-      "TestSystem",
+  extends ScalaTestWithActorTestKit{
+
+  override val testKit: ActorTestKit = {
+    val baseConfig =
       TypedTestKit.clusterConfig
         .withFallback(TypedTestKit.serializationConfig)
         .withFallback(TypedTestKit.testKitConfig)
-    )
-  ) {
 
+    ActorTestKit(
+      "TestSystem",
+      overrideConfig match {
+        case Some(oc) =>oc.withFallback(baseConfig)
+        case None => baseConfig
+      }
+    )
+  }
+
+  import akka.actor.typed.scaladsl.adapter._
+  implicit def classicActorSystem: akka.actor.ActorSystem = system.toClassic
   val testMetricsBackend: TestMetricsBackend = new TestMetricsBackend
   MetricsWriterExtension(system).updateMetricsBackend(testMetricsBackend)
+
+  def overrideConfig: Option[Config] = None
+
 }
 
 abstract class EventSourcedBehaviourSpecBase

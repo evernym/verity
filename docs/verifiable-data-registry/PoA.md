@@ -42,6 +42,8 @@ verity {
 
 2. Create `VDRActorAdapter` (implements `VDRAdapter` interface) in Platform
    * Constructor parameters
+     * vdrCreator: CreateVDR
+     * vdrToolsConfig: VDRToolsConfig
      * actorSystem: supplied from Platform
    * Implementation detail
      * creates instance of VDRActor as part of its initialization
@@ -95,7 +97,7 @@ verity {
 
 2. Create `VDRActorAdapter`
    ```
-   class VDRActorAdapter(system: ActorSystem) 
+   class VDRActorAdapter(vdrCreator: CreateVDR, vdrToolsConfig: VDRToolsConfig, system: ActorSystem) 
      extends VDRAdapter {
       val vdrActorRef = <spawn actor here>
    }

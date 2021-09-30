@@ -16,7 +16,7 @@ import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
 import java.util.concurrent.TimeUnit
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.util2.ActorErrorResp
-import com.evernym.verity.observability.metrics.{MetricsBackend, MetricsWriterExtension, TestMetricsBackend}
+import com.evernym.verity.observability.metrics.{MetricsWriterExtension, TestMetricsBackend}
 
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
@@ -41,11 +41,14 @@ case class AgentDIDDetail(name: String, DIDSeed: String, did: DidStr, verKey: Ve
 }
 
 
-class TestAppConfig(newConfig: Option[Config] = None, clearValidators: Boolean = false, baseAsFallback: Boolean = true) extends AppConfig {
+class TestAppConfig(newConfig: Option[Config] = None,
+                    clearValidators: Boolean = false,
+                    baseAsFallback: Boolean = true)
+  extends AppConfig {
   if(clearValidators) {
     validatorCreators = List.empty
   }
-  val baseConfig = getLoadedConfig
+  val baseConfig: Config = getLoadedConfig
   if (baseAsFallback) {
     setConfig(newConfig.map(cfg => cfg.withFallback(baseConfig)).getOrElse(baseConfig))
   } else {

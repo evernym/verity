@@ -1,7 +1,7 @@
 package com.evernym.verity.vdr
 
 package object service {
-  type CreateVDR = CreateVDRParam => VDR
+  type VDRToolsFactory = VDRFactoryParam => VDRTools
 }
 
-case class CreateVDRParam(libDirLocation: String)
+case class VDRFactoryParam(libDirLocation: String)

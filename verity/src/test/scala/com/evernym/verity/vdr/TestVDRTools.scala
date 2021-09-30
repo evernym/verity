@@ -1,13 +1,13 @@
 package com.evernym.verity.vdr
 
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.vdr.service.{LedgerRegistered, TAAConfig, VDR}
+import com.evernym.verity.vdr.service.{LedgerRegistered, TAAConfig, VDRTools}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
-class TestVDR(implicit ec: ExecutionContext)
-  extends VDR {
+//in-memory version of VDRTools to be used in tests (unit/integration)
+class TestVDRTools(implicit ec: ExecutionContext)
+  extends VDRTools {
 
   //TODO: as we add/integrate actual VDR apis and their tests,
   // this class should evolve to reflect the same for its test implementation

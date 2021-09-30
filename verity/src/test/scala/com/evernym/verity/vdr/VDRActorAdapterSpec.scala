@@ -38,19 +38,19 @@ class VDRActorAdapterSpec
       "should be successful" in {
         createVDRActorAdapter(List(defaultIndyLedger))
         eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
-          testVDR.ledgerRegistry.ledgers.size shouldBe 1
+          testVDRTools.ledgerRegistry.ledgers.size shouldBe 1
         }
       }
     }
   }
 
   def createVDRActorAdapter(ledgers: List[Ledger]): VDRActorAdapter = {
-    val testVDRCreator = { _: CreateVDRParam => testVDR }
+    val testVDRToolsFactory = { _: VDRFactoryParam => testVDRTools }
     val vdrToolsConfig = VDRToolsConfig("/usr/lib", ledgers)
-    new VDRActorAdapter(testVDRCreator, vdrToolsConfig, None)(ec, system)
+    new VDRActorAdapter(testVDRToolsFactory, vdrToolsConfig, None)(ec, system)
   }
 
-  lazy val testVDR = new TestVDR
+  lazy val testVDRTools = new TestVDRTools
   lazy val defaultIndyLedger: IndyLedger = IndyLedger(List("indy:sovrin", "sov"), "genesis1-path", None)
   lazy val anotherIndyLedger: IndyLedger = IndyLedger(List("indy:sovrin", "sov"), "genesis2-path", None)
 

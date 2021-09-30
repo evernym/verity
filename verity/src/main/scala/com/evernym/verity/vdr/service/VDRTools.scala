@@ -4,7 +4,7 @@ import com.evernym.verity.vdr.Namespace
 
 import scala.concurrent.Future
 
-trait VDR {
+trait VDRTools {
   def registerIndyLedger(namespaces: List[Namespace],
                          genesisTxnFilePath: String,
                          taaConfig: Option[TAAConfig]): Future[LedgerRegistered]

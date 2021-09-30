@@ -6,6 +6,7 @@ import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vdr.service.{IndyLedger, Ledger, VDRToolsConfig}
 import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.ExecutionContext
 
@@ -36,7 +37,9 @@ class VDRActorAdapterSpec
     "when created with valid configuration" - {
       "should be successful" in {
         createVDRActorAdapter(List(defaultIndyLedger))
-        testVDR.ledgerRegistry.ledgers.size shouldBe 1
+        eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+          testVDR.ledgerRegistry.ledgers.size shouldBe 1
+        }
       }
     }
   }

@@ -4,9 +4,9 @@
 # VDRAdapter interfaces
   * to be used by verity code to interact with VDR Tools API
   * works with only fully qualified DIDs
-  * input/output may change until finalized on VDR side
+  * all the input/output parameter would be verity specific (should **NOT depend** on VDR wrapper api objects at the interface level) 
   * see more detail about input/output parameter at the end of this file(Input/Output param details)
-  * all the input/output parameter would be verity specific (should not depend on VDR wrapper api objects at the interface level)
+  * input/output **may change** until finalized on VDR side
 
 
 ### Read APIs (To be finalized once corresponding api in VDRTools is finalized)

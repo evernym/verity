@@ -40,8 +40,12 @@ verity {
 ### High level changes
 1. Create `VDRAdapter` interface as defined in [vdr-interface.md](vdr-interface.md) file.
 
+<br/>
+
 2. Create `VDRActorAdapter` (implements `VDRAdapter` interface) in Platform
    * Constructor parameters
+     * vdrToolsFactory: VDRToolsFactory
+     * vdrToolsConfig: VDRToolsConfig
      * actorSystem: supplied from Platform
    * Implementation detail
      * creates instance of VDRActor as part of its initialization
@@ -53,7 +57,7 @@ verity {
 
 3. Create `VDRActor`, which
    * as part of initialization
-     * uses the provided `vdrCreator: CreateVDR` and `vdrToolsConfig: VDRToolsConfig` to initialize VDR library 
+     * uses the provided `vdrToolsFactory: VDRToolsFactory` and `vdrToolsConfig: VDRToolsConfig` to initialize VDRTools library 
      * registers all required ledgers
    * post initialization
      * it should be ready to serve all read/write commands
@@ -95,13 +99,15 @@ verity {
 
 2. Create `VDRActorAdapter`
    ```
-   class VDRActorAdapter(system: ActorSystem) 
+   class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory, 
+                         vdrToolsConfig: VDRToolsConfig)
+                        (implicit ec: ExecutionContext, system: ActorSystem) 
      extends VDRAdapter {
       val vdrActorRef = <spawn actor here>
    }
    
-   type CreateVDR = CreateVDRParam => VDR
-   case class CreateVDRParam(libDirLocation: String)
+   type VDRToolsFactory = VDRToolsFactoryParam => VDRTools
+   case class VDRToolsFactoryParam(libDirLocation: String)
    
    # below VDR trait will have two implementations:
    #   a. Really thin wrapper around VDRTools API for production code

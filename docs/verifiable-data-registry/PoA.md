@@ -44,7 +44,7 @@ verity {
 
 2. Create `VDRActorAdapter` (implements `VDRAdapter` interface) in Platform
    * Constructor parameters
-     * vdrCreator: CreateVDR
+     * vdrToolsFactory: VDRToolsFactory
      * vdrToolsConfig: VDRToolsConfig
      * actorSystem: supplied from Platform
    * Implementation detail
@@ -106,8 +106,8 @@ verity {
       val vdrActorRef = <spawn actor here>
    }
    
-   type VDRToolsFactory = VDRFactoryParam => VDRTools
-   case class VDRFactoryParam(libDirLocation: String)
+   type VDRToolsFactory = VDRToolsFactoryParam => VDRTools
+   case class VDRToolsFactoryParam(libDirLocation: String)
    
    # below VDR trait will have two implementations:
    #   a. Really thin wrapper around VDRTools API for production code

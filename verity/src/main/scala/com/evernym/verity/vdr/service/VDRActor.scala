@@ -4,7 +4,7 @@ import akka.actor.ActorInitializationException
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import akka.actor.typed.{Behavior, SupervisorStrategy}
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.vdr.VDRFactoryParam
+import com.evernym.verity.vdr.VDRToolsFactoryParam
 import com.evernym.verity.vdr.service.VDRActor.Commands.Initialized
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,7 +37,7 @@ object VDRActor {
                   (implicit buffer: StashBuffer[Cmd],
                    actorContext: ActorContext[Cmd],
                    executionContext: ExecutionContext): Behavior[Cmd] = {
-    val vdrTools = vdrToolsFactory(VDRFactoryParam(vdrToolsConfig.libraryDirLocation))
+    val vdrTools = vdrToolsFactory(VDRToolsFactoryParam(vdrToolsConfig.libraryDirLocation))
     registerLedgers(vdrTools, vdrToolsConfig)
     initialing(vdrTools)
   }
@@ -47,7 +47,7 @@ object VDRActor {
                   actorContext: ActorContext[Cmd],
                   executionContext: ExecutionContext): Behavior[Cmd] = Behaviors.receiveMessage {
     case Initialized =>
-      initialized(vdrTools)
+      buffer.unstashAll(initialized(vdrTools))
 
     case other       =>
       buffer.stash(other)

@@ -59,7 +59,7 @@ Create the name of the service account to use
 Vault injection template
 */}}
 {{- define "verity.vaultInjectTemplate" -}}
-{{`{{ with secret `}}{{ .Secret }}{{` -}}`}}
+{{`{{ with secret "`}}{{ .Secret }}{{`" -}}`}}
 {{`{{ range $k, $v := .Data.data -}}
   export {{ $k }}={{ $v }}
 {{ end }}

@@ -9,6 +9,8 @@ k8sService:
   type: NodePort
   port: 80
   targetPort: 9000
+ingress:
+  force_ssl: false
 # List of sponsors for Verity
 sponsors:
 # List configuration for TAA.

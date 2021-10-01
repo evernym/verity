@@ -18,10 +18,11 @@ trait VDRTools {
   def submitTxn(preparedTxn: VDR_PreparedTxn,
                 signature: Array[Byte],
                 endorsement: Array[Byte]): Future[VDR_SubmittedTxn]
+
+  def resolveSchema(schemaId: FQSchemaId): Future[VDR_Schema]
 }
 
 //TODO: most of the below parameters will be removed once corresponding library objects are available to use
-
 case class VDR_LedgerRegistered()
 
 case class VDR_PreparedTxn(context: String,
@@ -31,12 +32,14 @@ case class VDR_PreparedTxn(context: String,
 
 case class VDR_SubmittedTxn()
 
+case class VDR_Schema(schemaId: FQSchemaId, payload: Array[Byte])
+
 trait VDR_SignatureSpec
 case object VDR_NoSignature extends VDR_SignatureSpec
 
 trait VDR_EndorsementSpec
 case object VDR_NoEndorsement extends VDR_EndorsementSpec
-case class VDR_IndyEndorsement(endorserDID: DidStr) extends VDR_EndorsementSpec
+case object VDR_IndyEndorsement extends VDR_EndorsementSpec
 
 
 

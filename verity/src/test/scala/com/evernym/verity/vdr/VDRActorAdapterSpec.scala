@@ -97,7 +97,7 @@ class VDRActorAdapterSpec
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val preparedTxn = Await.result(
           vdrAdapter.prepareSchemaTxn(
-            "schemaJson",
+            """{"field1":"value"1}""",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
@@ -114,20 +114,65 @@ class VDRActorAdapterSpec
         )
       }
     }
+
+    "when asked to resolve schema for invalid schema id" - {
+      "it should fail" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val ex = intercept[RuntimeException] {
+          Await.result(
+            vdrAdapter.resolveSchema("did1"),
+            apiTimeout
+          )
+        }
+        ex.getMessage shouldBe "invalid fq did: did1"
+      }
+    }
+
+    "when asked to resolve schema for schema id" - {
+      "it should fail" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val preparedTxn = Await.result(
+          vdrAdapter.prepareSchemaTxn(
+            """{"field1":"value"1}""",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
+            None
+          ),
+          apiTimeout
+        )
+        Await.result(
+          vdrAdapter.submitTxn(
+            preparedTxn,
+            "signature".getBytes,
+            Array.empty
+          ),
+          apiTimeout
+        )
+
+        val schema = Await.result(
+          vdrAdapter.resolveSchema("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"),
+          apiTimeout
+        )
+        schema.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+        schema.json shouldBe """{"field1":"value"1}"""
+      }
+    }
   }
 
   def createVDRActorAdapter(ledgers: List[Ledger]): VDRActorAdapter = {
+    testVDRTools = new TestVDRTools
     val testVDRToolsFactory = { _: VDRToolsFactoryParam => testVDRTools }
     val vdrToolsConfig = VDRToolsConfig("/usr/lib", ledgers)
     new VDRActorAdapter(testVDRToolsFactory, vdrToolsConfig, None)(ec, system.toTyped)
   }
 
-  lazy val apiTimeout = 5.seconds
+  lazy val apiTimeout: FiniteDuration = 5.seconds
 
-  lazy val testVDRTools = new TestVDRTools
   lazy val defaultIndyLedger: IndyLedger = IndyLedger(List("indy:sovrin", "sov"), "genesis1-path", None)
   lazy val anotherIndyLedger: IndyLedger = IndyLedger(List("indy:sovrin", "sov"), "genesis2-path", None)
 
   implicit lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   implicit val ec: ExecutionContext = ecp.futureExecutionContext
+
+  var testVDRTools = new TestVDRTools
 }

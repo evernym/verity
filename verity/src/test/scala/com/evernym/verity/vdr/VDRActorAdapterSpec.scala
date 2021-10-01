@@ -8,7 +8,7 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vdr.service.{IndyLedger, Ledger, VDRToolsConfig}
 import org.scalatest.concurrent.Eventually
 
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
 
@@ -45,12 +45,14 @@ class VDRActorAdapterSpec
       "should result in failure" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val ex = intercept[RuntimeException] {
-          awaitFut[PreparedTxn](
+          Await.result(
             vdrAdapter.prepareSchemaTxn(
               "schemaJson",
               "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
               "did1",
-              None)
+              None
+            ),
+            apiTimeout
           )
         }
         ex.getMessage shouldBe "invalid fq did: did1"
@@ -61,12 +63,14 @@ class VDRActorAdapterSpec
       "should result in failure" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val ex = intercept[RuntimeException] {
-          awaitFut[PreparedTxn](
+          Await.result(
             vdrAdapter.prepareSchemaTxn(
               "schemaJson",
               "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
               "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
-              None)
+              None
+            ),
+            apiTimeout
           )
         }
         ex.getMessage shouldBe "invalid identifier: F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
@@ -76,13 +80,14 @@ class VDRActorAdapterSpec
     "when asked to prepare schema txn with valid data" - {
       "should result in failure" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
-        awaitFut[PreparedTxn](
+        Await.result(
           vdrAdapter.prepareSchemaTxn(
             "schemaJson",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
-          )
+          ),
+          apiTimeout
         )
       }
     }
@@ -90,27 +95,25 @@ class VDRActorAdapterSpec
     "when asked to submit schema txn with valid data" - {
       "should result in failure" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
-        val preparedTxn = awaitFut[PreparedTxn](
+        val preparedTxn = Await.result(
           vdrAdapter.prepareSchemaTxn(
             "schemaJson",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
-          )
+          ),
+          apiTimeout
         )
-        awaitFut[SubmittedTxn](
+        Await.result(
           vdrAdapter.submitTxn(
             preparedTxn,
             "signature".getBytes,
             Array.empty
-          )
+          ),
+          apiTimeout
         )
       }
     }
-  }
-
-  def awaitFut[T](fut: Future[T]): T = {
-    Await.result(fut, 5.seconds)
   }
 
   def createVDRActorAdapter(ledgers: List[Ledger]): VDRActorAdapter = {
@@ -118,6 +121,8 @@ class VDRActorAdapterSpec
     val vdrToolsConfig = VDRToolsConfig("/usr/lib", ledgers)
     new VDRActorAdapter(testVDRToolsFactory, vdrToolsConfig, None)(ec, system.toTyped)
   }
+
+  lazy val apiTimeout = 5.seconds
 
   lazy val testVDRTools = new TestVDRTools
   lazy val defaultIndyLedger: IndyLedger = IndyLedger(List("indy:sovrin", "sov"), "genesis1-path", None)

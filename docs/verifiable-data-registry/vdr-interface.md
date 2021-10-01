@@ -115,9 +115,8 @@
 
 <br/>
 
-* **Schema**(fqname: String, type: String, payload: Array[Byte])
+* **Schema**(fqname: String, payload: Array[Byte])
   * fqname: Fully qualified schema name (for example: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:npdb:4.3.4)
-  * type: type of the schema (for example: Indy, W3C etc.?)
   * payload: schema bytes
   
 <br/>

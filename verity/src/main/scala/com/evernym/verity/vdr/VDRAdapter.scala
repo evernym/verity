@@ -23,6 +23,7 @@ case class PreparedTxn(context: String,
 
 case class SubmittedTxn()
 
+//below will change to some constants/enums when we have actual VDRTools library available for integration
 trait SignatureSpec
 case object NoSignature extends SignatureSpec
 

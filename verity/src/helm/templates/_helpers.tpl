@@ -54,3 +54,14 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Vault injection template
+*/}}
+{{- define "verity.vaultInjectTemplate" -}}
+{{`{{ with secret `}}{{ .Secret }}{{` -}}`}}
+{{`{{ range $k, $v := .Data.data -}}
+  export {{ $k }}={{ $v }}
+{{ end }}
+{{- end }}`}}
+{{- end }}

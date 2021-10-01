@@ -9,7 +9,7 @@ import akka.pattern.ask
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.cluster_singleton.{GetValue, KeyValueMapper}
 import com.evernym.verity.http.common.CustomExceptionHandler._
-import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
+import com.evernym.verity.http.route_handlers.{HttpRouteWithPlatform, PlatformServiceProvider}
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.vault.WalletDoesNotExist
 import com.evernym.verity.vault.WalletUtil.generateWalletParamSync
@@ -17,31 +17,24 @@ import com.evernym.verity.vault.WalletUtil.generateWalletParamSync
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 
 /**
  * Logic for this object based on com.evernym.verity.app_launcher.LaunchPreCheck methods
  */
-object ExternalDependenciesHeathCheck {
-
-
-}
-
 trait AbstractApiHealthCheck{
   def checkAkkaEventStorageReadiness: Future[(Boolean, String)]
   def checkWalletStorageReadiness: Future[(Boolean, String)]
 }
 
-trait ApiHeathCheck extends AbstractApiHealthCheck{
+trait ApiHeathCheck extends AbstractApiHealthCheck {
   this: HttpRouteWithPlatform =>
-  implicit val ac: ActorSystem = platform.actorSystem
-  override def checkAkkaEventStorageReadiness: Future[(Boolean, String)] = checkAkkaEventStorageReadiness_(platform.aac)
-  override def checkWalletStorageReadiness: Future[(Boolean, String)] = checkWalletStorageReadiness_(platform.aac)
+  override def checkAkkaEventStorageReadiness: Future[(Boolean, String)] = checkAkkaEventStorageReadiness_(platform.aac, platform.actorSystem)
+  override def checkWalletStorageReadiness: Future[(Boolean, String)] = checkWalletStorageReadiness_(platform.aac, platform.actorSystem)
 
 
-  private def checkAkkaEventStorageReadiness_(aac: AgentActorContext)
-                                            (implicit as: ActorSystem): Future[(Boolean, String)] = {
+  private def checkAkkaEventStorageReadiness_(aac: AgentActorContext, as: ActorSystem): Future[(Boolean, String)] = {
     val actorId = "dummy-actor-" + UUID.randomUUID().toString
     val keyValueMapper = aac.system.actorOf(KeyValueMapper.props(futureExecutionContext)(aac), actorId)
     val fut = {
@@ -55,8 +48,7 @@ trait ApiHeathCheck extends AbstractApiHealthCheck{
     fut
   }
 
-  private def checkWalletStorageReadiness_(aac: AgentActorContext)
-                                         (implicit as: ActorSystem): Future[(Boolean, String)] = {
+  private def checkWalletStorageReadiness_(aac: AgentActorContext, as: ActorSystem): Future[(Boolean, String)] = {
     val walletId = "dummy-wallet-" + UUID.randomUUID().toString
     val wap = generateWalletParamSync(walletId, aac.appConfig, LibIndyWalletProvider)
     val fLibIndy = LibIndyWalletProvider.openAsync(wap.walletName, wap.encryptionKey, wap.walletConfig)
@@ -71,9 +63,8 @@ trait ApiHeathCheck extends AbstractApiHealthCheck{
 }
 
 //TODO: need inject AbstractApiHealthCheck implementation
-trait ApiHealthCheckEndpointHandler extends ApiHeathCheck {
-  this: HttpRouteWithPlatform =>
-
+trait ApiHealthCheckEndpointHandler {
+  this: HttpRouteWithPlatform with ApiHeathCheck =>
   protected val apiHealthCheckRoute: Route =
     handleExceptions(exceptionHandler) {
       logRequestResult("agency-service") {

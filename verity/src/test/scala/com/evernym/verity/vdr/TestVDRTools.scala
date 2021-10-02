@@ -2,7 +2,7 @@ package com.evernym.verity.vdr
 
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.vdr.service.{TAAConfig, VDRTools, VDR_LedgerRegistered, VDR_NoEndorsement, VDR_NoSignature, VDR_PreparedTxn, VDR_SubmittedTxn}
+import com.evernym.verity.vdr.service._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,6 +36,14 @@ class TestVDRTools(implicit ec: ExecutionContext)
       ledger.submitTxn(preparedTxn, signature, endorsement)
     }
   }
+
+  override def resolveSchema(schemaId: FQSchemaId): Future[VDR_Schema] = {
+    forLedger(schemaId) { ledger: InMemLedger =>
+      ledger.resolveSchema(schemaId)
+    }
+  }
+
+  //--helper functions
 
   private def forLedger[T](fqDidStr: DidStr)(f: InMemLedger => T): Future[T] = {
     try {
@@ -95,17 +103,21 @@ trait InMemLedger {
                        submitterDid: DidStr,
                        endorser: Option[String]): VDR_PreparedTxn = {
     TestFQIdentifier(fqSchemaId, namespaces)
-    val schemaPayload = TestSchemaPayload(fqSchemaId, schemaJson)
-    val jsonPayload = JacksonMsgCodec.toJson(schemaPayload)
+    val schema = TestVDRSchema(fqSchemaId, schemaJson)
+    val jsonPayload = JacksonMsgCodec.toJson(schema)
     VDR_PreparedTxn(id, VDR_NoSignature, jsonPayload.getBytes, VDR_NoEndorsement)
   }
 
   def submitTxn(preparedTxn: VDR_PreparedTxn,
                 signature: Array[Byte],
                 endorsement: Array[Byte]): VDR_SubmittedTxn = {
-    val schemaPayload = JacksonMsgCodec.fromJson[TestSchemaPayload](new String(preparedTxn.bytesToSign))
-    schemas = schemas + (schemaPayload.schemaId -> schemaPayload.json.getBytes)
+    val schema = JacksonMsgCodec.fromJson[TestVDRSchema](new String(preparedTxn.bytesToSign))
+    schemas = schemas + (schema.schemaId -> schema.json.getBytes)
     VDR_SubmittedTxn()
+  }
+
+  def resolveSchema(schemaId: FQSchemaId): VDR_Schema = {
+    VDR_Schema(schemaId, schemas(schemaId))
   }
 
   private var schemas: Map[FQSchemaId, Payload] = Map.empty
@@ -120,4 +132,4 @@ case class TestIndyLedger(namespaces: List[Namespace],
   override def id: String = namespaces.mkString("-")
 }
 
-case class TestSchemaPayload(schemaId: String, json: String)
+case class TestVDRSchema(schemaId: String, json: String)

@@ -14,6 +14,8 @@ trait VDRAdapter {
   def submitTxn(preparedTxn: PreparedTxn,
                 signature: Array[Byte],
                 endorsement: Array[Byte]): Future[SubmittedTxn]
+
+  def resolveSchema(schemaId: FQSchemaId): Future[Schema]
 }
 
 case class PreparedTxn(context: String,
@@ -23,9 +25,13 @@ case class PreparedTxn(context: String,
 
 case class SubmittedTxn()
 
+case class Schema(fqId: FQSchemaId, json: String)
+
+//below will change to some constants/enums when we have actual VDRTools library available for integration
 trait SignatureSpec
 case object NoSignature extends SignatureSpec
 
 trait EndorsementSpec
 case object NoEndorsement extends EndorsementSpec
-case class IndyEndorsement(endorserDID: DidStr) extends EndorsementSpec
+case object IndyEndorsement extends EndorsementSpec
+

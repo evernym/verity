@@ -115,14 +115,13 @@
 
 <br/>
 
-* **Schema**(fqname: String, type: String, payload: Array[Byte])
+* **Schema**(fqname: String, json: String)
   * fqname: Fully qualified schema name (for example: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:npdb:4.3.4)
-  * type: type of the schema (for example: Indy, W3C etc.?)
   * payload: schema bytes
   
 <br/>
 
-* **CredDef**(fqname: String, payload: Array[Byte], fqschema: String)
+* **CredDef**(fqname: String, json: String, fqschema: String)
   * fqname: Fully qualified cred def name (for example: did:indy:sovrin:5nDyJVP1NrcPAttP3xwMB9:3:CL:56495:npdb)
   * payload: cred def bytes
   * fqschema: Fully qualified schema name (for example: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:npdb:4.3.4) 

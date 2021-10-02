@@ -33,4 +33,9 @@ class VDRToolsImpl(libDirLocation: String)
     //TODO: replace this mock implementation with actual VDR wrapper apis calls once it is available
     Future.successful(VDR_SubmittedTxn())
   }
+
+  override def resolveSchema(schemaId: FQSchemaId): Future[VDR_Schema] = {
+    //TODO: replace this mock implementation with actual VDR wrapper apis calls once it is available
+    Future.successful(VDR_Schema("schema-id", "payload".getBytes))
+  }
 }

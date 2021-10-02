@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.vdr.service.VDRAdapterUtil._
 import com.evernym.verity.vdr.service.{VDRActor, VDRToolsConfig, VDRToolsFactory}
-import com.evernym.verity.vdr.service.VDRActor.Replies.{PrepareTxnResp, SubmitTxnResp}
+import com.evernym.verity.vdr.service.VDRActor.Replies.{PrepareTxnResp, ResolveSchemaResp, SubmitTxnResp}
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.{ExecutionContext, Future}
@@ -38,12 +38,23 @@ class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory,
       }
   }
 
-  override def submitTxn(preparedTxn: PreparedTxn, signature: Array[Byte], endorsement: Array[Byte]): Future[SubmittedTxn] = {
+  override def submitTxn(preparedTxn: PreparedTxn,
+                         signature: Array[Byte],
+                         endorsement: Array[Byte]): Future[SubmittedTxn] = {
     vdrActorRef
       .ask(ref => VDRActor.Commands.SubmitTxn(buildVDRPreparedTxn(preparedTxn), signature, endorsement, ref))
       .map {
         case SubmitTxnResp(Success(_)) => SubmittedTxn()
         case SubmitTxnResp(Failure(e)) => throw e
+      }
+  }
+
+  override def resolveSchema(schemaId: FQSchemaId): Future[Schema] = {
+    vdrActorRef
+      .ask(ref => VDRActor.Commands.ResolveSchema(schemaId, ref))
+      .map {
+        case ResolveSchemaResp(Success(resp)) => buildSchema(resp)
+        case ResolveSchemaResp(Failure(e))    => throw e
       }
   }
 }

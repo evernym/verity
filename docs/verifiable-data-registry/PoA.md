@@ -101,7 +101,7 @@ verity {
    ```
    class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory, 
                          vdrToolsConfig: VDRToolsConfig)
-                        (implicit ec: ExecutionContext, system: ActorSystem) 
+                        (implicit ec: ExecutionContext, system: ActorSystem[Nothing]) 
      extends VDRAdapter {
       val vdrActorRef = <spawn actor here>
    }

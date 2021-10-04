@@ -25,6 +25,8 @@ trait VDRAdapter {
 
   def resolveSchema(schemaId: FQSchemaId): Future[Schema]
 
+  def resolveCredDef(credDefId: FQCredDefId): Future[CredDef]
+
   def resolveDID(fqDid: FQDid): Future[DidDoc]
 }
 
@@ -40,6 +42,7 @@ case class PreparedTxn(context: String,
 case class SubmittedTxn()
 
 case class Schema(fqId: FQSchemaId, json: String)
+case class CredDef(fqId: FQCredDefId, schemaId: FQSchemaId, json: String)
 case class DidDoc(fqId: FQDid, verKey: VerKeyStr, endpoint: Option[String])
 
 //below will change to some constants/enums when we have actual VDRTools library available for integration

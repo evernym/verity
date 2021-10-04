@@ -1,7 +1,7 @@
 package com.evernym.verity.vdr.service
 
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.vdr.{FQDid, FQSchemaId, Namespace}
+import com.evernym.verity.vdr.{FQDid, FQCredDefId, FQSchemaId, Namespace}
 
 import scala.concurrent.Future
 
@@ -50,6 +50,11 @@ class VDRToolsImpl(libDirLocation: String)
   override def resolveSchema(schemaId: FQSchemaId): Future[VDR_Schema] = {
     //TODO: replace this mock implementation with actual VDR wrapper apis calls once it is available
     Future.successful(VDR_Schema("schema-id", "payload".getBytes))
+  }
+
+  override def resolveCredDef(credDefId: FQCredDefId): Future[VDR_CredDef] = {
+    //TODO: replace this mock implementation with actual VDR wrapper apis calls once it is available
+    Future.successful(VDR_CredDef("cred-def-id", "schema-id", s"""{"schemaId":"schema-id}""".getBytes))
   }
 
   override def resolveDID(fqDid: FQDid): Future[VDR_DidDoc] = {

@@ -6,8 +6,8 @@ import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.vdr.{FQCredDefId, FQDid, FQSchemaId, Namespace, VDRToolsFactoryParam}
-import com.evernym.verity.vdr.service.VDRActor.Commands.{LedgersRegistered, Ping, PrepareCredDefTxn, PrepareSchemaTxn, ResolveDID, ResolveSchema, SubmitTxn}
-import com.evernym.verity.vdr.service.VDRActor.Replies.{PingResp, PrepareTxnResp, ResolveDIDResp, ResolveSchemaResp, SubmitTxnResp}
+import com.evernym.verity.vdr.service.VDRActor.Commands.{LedgersRegistered, Ping, PrepareCredDefTxn, PrepareSchemaTxn, ResolveCredDef, ResolveDID, ResolveSchema, SubmitTxn}
+import com.evernym.verity.vdr.service.VDRActor.Replies.{PingResp, PrepareTxnResp, ResolveCredDefResp, ResolveDIDResp, ResolveSchemaResp, SubmitTxnResp}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -28,6 +28,12 @@ object VDRActor {
                                 endorser: Option[String],
                                 replyTo: ActorRef[Replies.PrepareTxnResp]) extends Cmd
 
+    case class PrepareCredDefTxn(credDefJson: String,
+                                 fqCredDefId: FQCredDefId,
+                                 submitterDID: DidStr,
+                                 endorser: Option[String],
+                                 replyTo: ActorRef[Replies.PrepareTxnResp]) extends Cmd
+
     case class SubmitTxn(preparedTxn: VDR_PreparedTxn,
                          signature: Array[Byte],
                          endorsement: Array[Byte],
@@ -36,23 +42,22 @@ object VDRActor {
     case class ResolveSchema(schemaId: FQSchemaId,
                              replyTo: ActorRef[Replies.ResolveSchemaResp]) extends Cmd
 
+    case class ResolveCredDef(credDefId: FQCredDefId,
+                              replyTo: ActorRef[Replies.ResolveCredDefResp]) extends Cmd
+
     case class ResolveDID(fqDid: FQDid,
                           replyTo: ActorRef[Replies.ResolveDIDResp]) extends Cmd
 
-    case class PrepareCredDefTxn(credDefJson: String,
-                                 fqCredDefId: FQCredDefId,
-                                 submitterDID: DidStr,
-                                 endorser: Option[String],
-                                 replyTo: ActorRef[Replies.PrepareTxnResp]) extends Cmd
   }
 
   trait Reply extends ActorMessage
   object Replies {
+    case class PingResp(resp: Try[VDR_PingResult]) extends Reply
     case class PrepareTxnResp(preparedTxn: Try[VDR_PreparedTxn]) extends Reply
     case class SubmitTxnResp(preparedTxn: Try[VDR_SubmittedTxn]) extends Reply
     case class ResolveSchemaResp(resp: Try[VDR_Schema]) extends Reply
+    case class ResolveCredDefResp(resp: Try[VDR_CredDef]) extends Reply
     case class ResolveDIDResp(resp: Try[VDR_DidDoc]) extends Reply
-    case class PingResp(resp: Try[VDR_PingResult]) extends Reply
   }
 
   //implementation of above typed interface
@@ -99,6 +104,7 @@ object VDRActor {
       case st: SubmitTxn            => handleSubmitTxn(vdrTools, st)
 
       case rs: ResolveSchema        => handleResolveSchema(vdrTools, rs)
+      case rcd: ResolveCredDef      => handleResolveCredDef(vdrTools, rcd)
       case rd: ResolveDID           => handleResolveDID(vdrTools, rd)
     }
 
@@ -145,6 +151,15 @@ object VDRActor {
     vdrTools
       .resolveSchema(rs.schemaId)
       .onComplete(resp => rs.replyTo ! ResolveSchemaResp(resp))
+    Behaviors.same
+  }
+
+  private def handleResolveCredDef(vdrTools: VDRTools,
+                                   rcd: ResolveCredDef)
+                                  (implicit executionContext: ExecutionContext): Behavior[Cmd]= {
+    vdrTools
+      .resolveCredDef(rcd.credDefId)
+      .onComplete(resp => rcd.replyTo ! ResolveCredDefResp(resp))
     Behaviors.same
   }
 

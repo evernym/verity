@@ -28,6 +28,8 @@ trait VDRTools {
 
   def resolveSchema(schemaId: FQSchemaId): Future[VDR_Schema]
 
+  def resolveCredDef(credDefId: FQCredDefId): Future[VDR_CredDef]
+
   def resolveDID(fqDid: FQDid): Future[VDR_DidDoc]
 
 }
@@ -43,6 +45,7 @@ case class VDR_PreparedTxn(context: String,
 case class VDR_SubmittedTxn()
 
 case class VDR_Schema(schemaId: FQSchemaId, payload: Array[Byte])
+case class VDR_CredDef(credDefID: FQCredDefId, schemaId: FQSchemaId, payload: Array[Byte])
 case class VDR_DidDoc(id: FQSchemaId, verKeyStr: VerKeyStr, endpoint: Option[String])
 
 case class PingStatus(reachable: Boolean)

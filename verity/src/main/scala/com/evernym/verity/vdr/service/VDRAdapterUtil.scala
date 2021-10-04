@@ -23,6 +23,14 @@ object VDRAdapterUtil {
     )
   }
 
+  def buildCredDef(vdrCredDef: VDR_CredDef) : CredDef = {
+    CredDef(
+      vdrCredDef.credDefID,
+      vdrCredDef.schemaId,
+      new String(vdrCredDef.payload)
+    )
+  }
+
   def buildDidDoc(vdrDidDoc: VDR_DidDoc): DidDoc = {
     DidDoc(
       vdrDidDoc.id,

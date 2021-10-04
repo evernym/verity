@@ -69,6 +69,13 @@ class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory,
 
   }
 
+  override def resolveCredDef(credDefId: FQCredDefId): Future[CredDef] = {
+    vdrActorRef
+      .ask(ref=> VDRActor.Commands.ResolveCredDef(credDefId, ref))
+      .flatMap(reply => Future.fromTry(reply.resp))
+      .map(resp => buildCredDef(resp))
+  }
+
   override def resolveDID(fqDid: FQDid): Future[DidDoc] = {
     vdrActorRef
       .ask(ref => VDRActor.Commands.ResolveDID(fqDid, ref))

@@ -175,7 +175,7 @@ class VDRActorAdapterSpec
         val ex = intercept[RuntimeException] {
           Await.result(
             vdrAdapter.prepareCredDefTxn(
-              "credDefJson",
+              """{"schemaId":"schema-id"}""",
               "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
               "did1",
               None
@@ -193,7 +193,7 @@ class VDRActorAdapterSpec
         val ex = intercept[RuntimeException] {
           Await.result(
             vdrAdapter.prepareCredDefTxn(
-              "credDefJson",
+              """{"schemaId":"schema-id"}""",
               "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
               "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
               None
@@ -210,7 +210,7 @@ class VDRActorAdapterSpec
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         Await.result(
           vdrAdapter.prepareCredDefTxn(
-            "credDefJson",
+            """{"schemaId":"schema-id"}""",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
@@ -225,7 +225,7 @@ class VDRActorAdapterSpec
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val result = for {
           preparedTxn <- vdrAdapter.prepareCredDefTxn(
-            """{"field1":"value"1}""",
+            """{"schemaId":"schema-id"}""",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
@@ -233,6 +233,40 @@ class VDRActorAdapterSpec
           _ <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
         } yield {
           //nothing to validate
+        }
+        Await.result(result, apiTimeout)
+      }
+    }
+
+    "when asked to resolve cred def for invalid cred def id" - {
+      "it should fail" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val ex = intercept[RuntimeException] {
+          Await.result(
+            vdrAdapter.resolveCredDef("did1"),
+            apiTimeout
+          )
+        }
+        ex.getMessage shouldBe "invalid fq did: did1"
+      }
+    }
+
+    "when asked to resolve cred def for valid schema id" - {
+      "it should be successful" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val result = for {
+          preparedTxn <- vdrAdapter.prepareCredDefTxn(
+            """{"schemaId":"schema-id"}""",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
+            None
+          )
+          _ <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
+          credDef <- vdrAdapter.resolveCredDef("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1")
+        } yield {
+          credDef.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+          credDef.json shouldBe """{"schemaId":"schema-id"}"""
+          credDef.schemaId shouldBe "schema-id"
         }
         Await.result(result, apiTimeout)
       }

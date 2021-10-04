@@ -44,7 +44,7 @@ case class VDR_SubmittedTxn()
 case class VDR_Schema(schemaId: FQSchemaId, payload: Array[Byte])
 case class VDR_CredDef(credDefID: FQCredDefId, schemaId: FQSchemaId, payload: Array[Byte])
 
-case class PingStatus(running: Boolean)
+case class PingStatus(reachable: Boolean)
 case class VDR_PingResult(status: Map[Namespace, PingStatus])
 
 trait VDR_SignatureSpec

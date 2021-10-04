@@ -29,7 +29,7 @@ trait VDRAdapter {
 }
 
 
-case class LedgerStatus(running: Boolean)
+case class LedgerStatus(reachable: Boolean)
 case class PingResult(status: Map[Namespace, LedgerStatus])
 
 case class PreparedTxn(context: String,

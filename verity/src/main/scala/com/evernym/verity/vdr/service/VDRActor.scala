@@ -5,9 +5,9 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.vdr.{FQSchemaId, VDRToolsFactoryParam}
-import com.evernym.verity.vdr.service.VDRActor.Commands.{LedgersRegistered, PrepareSchemaTxn, ResolveSchema, SubmitTxn}
-import com.evernym.verity.vdr.service.VDRActor.Replies.{PrepareTxnResp, ResolveSchemaResp, SubmitTxnResp}
+import com.evernym.verity.vdr.{FQSchemaId, Namespace, VDRToolsFactoryParam}
+import com.evernym.verity.vdr.service.VDRActor.Commands.{LedgersRegistered, Ping, PrepareSchemaTxn, ResolveSchema, SubmitTxn}
+import com.evernym.verity.vdr.service.VDRActor.Replies.{PingResp, PrepareTxnResp, ResolveSchemaResp, SubmitTxnResp}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -18,6 +18,9 @@ object VDRActor {
   sealed trait Cmd extends ActorMessage
   object Commands {
     case object LedgersRegistered extends Cmd
+
+    case class Ping(namespaces: List[Namespace],
+                    replyTo: ActorRef[Replies.PingResp]) extends Cmd
 
     case class PrepareSchemaTxn(schemaJson: String,
                                 fqSchemaId: FQSchemaId,
@@ -39,6 +42,7 @@ object VDRActor {
     case class PrepareTxnResp(preparedTxn: Try[VDR_PreparedTxn]) extends Reply
     case class SubmitTxnResp(preparedTxn: Try[VDR_SubmittedTxn]) extends Reply
     case class ResolveSchemaResp(resp: Try[VDR_Schema]) extends Reply
+    case class PingResp(resp: Try[VDR_PingResult]) extends Reply
   }
 
   //implementation of above typed interface
@@ -79,49 +83,46 @@ object VDRActor {
 
   def ready(vdrTools: VDRTools)(implicit executionContext: ExecutionContext): Behavior[Cmd] =
     Behaviors.receiveMessagePartial {
+      case p: Ping                => handlePing(vdrTools, p)
       case pst: PrepareSchemaTxn  => handlePrepareSchemaTxn(vdrTools, pst)
       case st: SubmitTxn          => handleSubmitTxn(vdrTools, st)
       case rs: ResolveSchema      => handleResolveSchema(vdrTools, rs)
     }
 
-  private def handlePrepareSchemaTxn(vdrTools: VDRTools,
-                                     pst: PrepareSchemaTxn)
-                                    (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
-    handlePrepareTxnResp(
-      vdrTools.prepareSchemaTxn(pst.schemaJson, pst.fqSchemaId, pst.submitterDID, pst.endorser),
-      pst.replyTo
-    )
+  private def handlePing(vdrTools: VDRTools,
+                         p: Ping)
+                        (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
+    vdrTools
+      .ping(p.namespaces)
+      .onComplete(resp => p.replyTo ! PingResp(resp))
     Behaviors.same
   }
 
-  private def handlePrepareTxnResp(fut: Future[VDR_PreparedTxn],
-                                   replyTo: ActorRef[PrepareTxnResp])
-                                  (implicit executionContext: ExecutionContext): Unit = {
-    fut.onComplete {
-      case Success(resp) => replyTo ! PrepareTxnResp(Success(resp))
-      case Failure(ex)   => replyTo ! PrepareTxnResp(Failure(ex))
-    }
+  private def handlePrepareSchemaTxn(vdrTools: VDRTools,
+                                     pst: PrepareSchemaTxn)
+                                    (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
+
+    vdrTools
+      .prepareSchemaTxn(pst.schemaJson, pst.fqSchemaId, pst.submitterDID, pst.endorser)
+      .onComplete(resp => pst.replyTo ! PrepareTxnResp(resp))
+    Behaviors.same
   }
 
   private def handleSubmitTxn(vdrTools: VDRTools,
                               st: SubmitTxn)
                              (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
-    vdrTools.submitTxn(st.preparedTxn, st.signature, st.endorsement)
-      .onComplete {
-        case Success(resp) => st.replyTo ! SubmitTxnResp(Success(resp))
-        case Failure(ex)   => st.replyTo ! SubmitTxnResp(Failure(ex))
-      }
+    vdrTools
+      .submitTxn(st.preparedTxn, st.signature, st.endorsement)
+      .onComplete(resp => st.replyTo ! SubmitTxnResp(resp))
     Behaviors.same
   }
 
   private def handleResolveSchema(vdrTools: VDRTools,
                                   rs: ResolveSchema)
                                  (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
-    vdrTools.resolveSchema(rs.schemaId)
-      .onComplete {
-        case Success(resp) => rs.replyTo ! ResolveSchemaResp(Success(resp))
-        case Failure(ex)   => rs.replyTo ! ResolveSchemaResp(Failure(ex))
-      }
+    vdrTools
+      .resolveSchema(rs.schemaId)
+      .onComplete(resp => rs.replyTo ! ResolveSchemaResp(resp))
     Behaviors.same
   }
 

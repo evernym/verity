@@ -41,6 +41,31 @@ class VDRActorAdapterSpec
       }
     }
 
+    "when pinged with empty namespaces" - {
+      "should be successful" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val result = Await.result(vdrAdapter.ping(List.empty), apiTimeout)
+        result shouldBe PingResult(
+          Map(
+            "indy:sovrin" -> LedgerStatus(running = true),
+            "sov"         -> LedgerStatus(running = true)
+          )
+        )
+      }
+    }
+
+    "when pinged with specific namespaces" - {
+      "should be successful" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val result = Await.result(vdrAdapter.ping(List("indy:sovrin")), apiTimeout)
+        result shouldBe PingResult(
+          Map(
+            "indy:sovrin" -> LedgerStatus(running = true)
+          )
+        )
+      }
+    }
+
     "when asked to prepare schema txn with non fqdid" - {
       "should result in failure" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))

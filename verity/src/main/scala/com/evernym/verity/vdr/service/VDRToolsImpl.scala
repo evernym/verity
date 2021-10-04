@@ -11,6 +11,11 @@ class VDRToolsImpl(libDirLocation: String)
 
   private val wrapperVDR: Any = null //replace `null` with actual VDR object creation call
 
+  override def ping(namespaces: List[Namespace]): Future[VDR_PingResult] = {
+    //TODO: replace this mock implementation with actual VDR wrapper apis calls once it is available
+    Future.successful(VDR_PingResult(Map.empty))
+  }
+
   override def registerIndyLedger(namespaces: List[Namespace],
                                   genesisTxnFilePath: String,
                                   taaConfig: Option[TAAConfig]): Future[VDR_LedgerRegistered] = {

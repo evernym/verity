@@ -19,7 +19,9 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
 import com.evernym.verity.testkit.mock.msgsendingsvc.MockMsgSendingSvcListener
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.http.route_handlers.restricted.{AbstractApiHealthCheck, MockApiHealthCheck}
 import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent, MockEnvUtil}
+import org.mockito.MockitoSugar.mock
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.Await
@@ -97,6 +99,8 @@ trait EdgeEndpointBaseSpec
     val fut = platform.appStateManager ? cmd
     Await.result(fut, 5.seconds).asInstanceOf[T]
   }
+
+  override val apiHealthCheck: AbstractApiHealthCheck = mock[MockApiHealthCheck]
 }
 
 trait EndpointHandlerBaseSpec

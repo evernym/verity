@@ -3,6 +3,7 @@ package com.evernym.verity.vdr
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.vdr.service._
+import com.fasterxml.jackson.annotation.{JsonSubTypes, JsonTypeInfo}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -53,9 +54,16 @@ class TestVDRTools(implicit ec: ExecutionContext)
                                  submitterDID: DidStr,
                                  endorser: Option[String]): Future[VDR_PreparedTxn] = {
     forLedger(submitterDID) { ledger: InMemLedger =>
-      ledger.prepareCredDefTxn(credDefJson,fqCredDefId,submitterDID, endorser)
+      ledger.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser)
     }
   }
+
+  override def resolveCredDef(credDefId: FQCredDefId): Future[VDR_CredDef] = {
+    forLedger(credDefId) { ledger: InMemLedger =>
+      ledger.resolveCredDef(credDefId)
+    }
+  }
+
 
   //--helper functions
 
@@ -125,8 +133,14 @@ trait InMemLedger {
   def submitTxn(preparedTxn: VDR_PreparedTxn,
                 signature: Array[Byte],
                 endorsement: Array[Byte]): VDR_SubmittedTxn = {
-    val schema = JacksonMsgCodec.fromJson[TestVDRSchema](new String(preparedTxn.bytesToSign))
-    schemas = schemas + (schema.schemaId -> schema.json.getBytes)
+    val node = JacksonMsgCodec.docFromStrUnchecked(new String(preparedTxn.bytesToSign))
+    if (node.has("credDefId")) {
+      val cd = JacksonMsgCodec.fromJson[TestVDRCredDef](new String(preparedTxn.bytesToSign))
+      credDefs = credDefs + (cd.credDefId -> CredDefData(cd.schemaId, cd.json.getBytes))
+    } else {
+      val s = JacksonMsgCodec.fromJson[TestVDRSchema](new String(preparedTxn.bytesToSign))
+      schemas = schemas + (s.schemaId -> s.json.getBytes)
+    }
     VDR_SubmittedTxn()
   }
 
@@ -139,14 +153,27 @@ trait InMemLedger {
                         submitterDID: DidStr,
                         endorser: Option[String]): VDR_PreparedTxn = {
     TestFQIdentifier(fQCredDefId, namespaces)
-    val credDef = TestVDRCredDef(fQCredDefId, credDefJson)
+    val credDef = TestVDRCredDef(fQCredDefId, extractSchemaId(credDefJson), credDefJson)
     val jsonPayload = JacksonMsgCodec.toJson(credDef)
     VDR_PreparedTxn(id, VDR_NoSignature, jsonPayload.getBytes, VDR_NoEndorsement)
+  }
+
+  def resolveCredDef(credDefId: FQCredDefId): VDR_CredDef = {
+    val data = credDefs(credDefId)
+    VDR_CredDef(credDefId, data.schemaId, data.payload)
   }
 
   private var schemas: Map[FQSchemaId, Payload] = Map.empty
 
   type Payload = Array[Byte]
+
+  case class CredDefData(schemaId: FQSchemaId, payload: Payload)
+  private var credDefs: Map[FQCredDefId, CredDefData] = Map.empty
+
+  private def extractSchemaId(json: String): String = {
+    val node = JacksonMsgCodec.docFromStrUnchecked(json)
+    node.get("schemaId").asText()
+  }
 }
 
 case class TestIndyLedger(namespaces: List[Namespace],
@@ -157,4 +184,4 @@ case class TestIndyLedger(namespaces: List[Namespace],
 }
 
 case class TestVDRSchema(schemaId: String, json: String)
-case class TestVDRCredDef(credDefId: String, json: String)
+case class TestVDRCredDef(credDefId: String, schemaId: String, json: String)

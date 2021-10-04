@@ -27,6 +27,8 @@ trait VDRTools {
                         fqCredDefId: FQCredDefId,
                         submitterDID: DidStr,
                         endorser: Option[String]) : Future[VDR_PreparedTxn]
+
+  def resolveCredDef(credDefId: FQCredDefId): Future[VDR_CredDef]
 }
 
 //TODO: most of the below parameters will be removed once corresponding library objects are available to use
@@ -40,6 +42,7 @@ case class VDR_PreparedTxn(context: String,
 case class VDR_SubmittedTxn()
 
 case class VDR_Schema(schemaId: FQSchemaId, payload: Array[Byte])
+case class VDR_CredDef(credDefID: FQCredDefId, schemaId: FQSchemaId, payload: Array[Byte])
 
 case class PingStatus(reachable: Boolean)
 case class VDR_PingResult(status: Map[Namespace, PingStatus])

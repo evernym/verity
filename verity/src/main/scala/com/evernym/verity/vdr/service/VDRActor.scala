@@ -6,8 +6,8 @@ import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.vdr.{FQCredDefId, FQSchemaId, Namespace, VDRToolsFactoryParam}
-import com.evernym.verity.vdr.service.VDRActor.Commands.{LedgersRegistered, Ping, PrepareCredDefTxn, PrepareSchemaTxn, ResolveSchema, SubmitTxn}
-import com.evernym.verity.vdr.service.VDRActor.Replies.{PingResp, PrepareTxnResp, ResolveSchemaResp, SubmitTxnResp}
+import com.evernym.verity.vdr.service.VDRActor.Commands.{LedgersRegistered, Ping, PrepareCredDefTxn, PrepareSchemaTxn, ResolveCredDef, ResolveSchema, SubmitTxn}
+import com.evernym.verity.vdr.service.VDRActor.Replies.{PingResp, PrepareTxnResp, ResolveCredDefResp, ResolveSchemaResp, SubmitTxnResp}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -41,6 +41,9 @@ object VDRActor {
                                  submitterDID: DidStr,
                                  endorser: Option[String],
                                  replyTo: ActorRef[Replies.PrepareTxnResp]) extends Cmd
+
+    case class ResolveCredDef(credDefId: FQCredDefId,
+                              replyTo: ActorRef[Replies.ResolveCredDefResp]) extends Cmd
   }
 
   trait Reply extends ActorMessage
@@ -48,6 +51,7 @@ object VDRActor {
     case class PrepareTxnResp(preparedTxn: Try[VDR_PreparedTxn]) extends Reply
     case class SubmitTxnResp(preparedTxn: Try[VDR_SubmittedTxn]) extends Reply
     case class ResolveSchemaResp(resp: Try[VDR_Schema]) extends Reply
+    case class ResolveCredDefResp(resp: Try[VDR_CredDef]) extends Reply
     case class PingResp(resp: Try[VDR_PingResult]) extends Reply
   }
 
@@ -94,6 +98,7 @@ object VDRActor {
       case st: SubmitTxn            => handleSubmitTxn(vdrTools, st)
       case rs: ResolveSchema        => handleResolveSchema(vdrTools, rs)
       case pcdt: PrepareCredDefTxn  => handlePrepareCredDefTxn(vdrTools, pcdt)
+      case rcd: ResolveCredDef      => handleResolveCredDef(vdrTools, rcd)
     }
 
   private def handlePing(vdrTools: VDRTools,
@@ -139,6 +144,15 @@ object VDRActor {
     vdrTools
       .resolveSchema(rs.schemaId)
       .onComplete(resp => rs.replyTo ! ResolveSchemaResp(resp))
+    Behaviors.same
+  }
+
+  private def handleResolveCredDef(vdrTools: VDRTools,
+                                   rcd: ResolveCredDef)
+                                  (implicit executionContext: ExecutionContext): Behavior[Cmd]= {
+    vdrTools
+      .resolveCredDef(rcd.credDefId)
+      .onComplete(resp => rcd.replyTo ! ResolveCredDefResp(resp))
     Behaviors.same
   }
 

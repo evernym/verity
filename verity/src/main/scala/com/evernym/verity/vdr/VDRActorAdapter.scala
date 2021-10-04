@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.vdr.service.VDRAdapterUtil._
 import com.evernym.verity.vdr.service.{VDRActor, VDRToolsConfig, VDRToolsFactory}
-import com.evernym.verity.vdr.service.VDRActor.Replies.{PingResp, PrepareTxnResp, ResolveSchemaResp, SubmitTxnResp}
+import com.evernym.verity.vdr.service.VDRActor.Replies.{PingResp, PrepareTxnResp, ResolveCredDefResp, ResolveSchemaResp, SubmitTxnResp}
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.{ExecutionContext, Future}
@@ -76,6 +76,15 @@ class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory,
       .map {
         case PrepareTxnResp(Success(txn)) => buildPreparedTxn(txn)
         case PrepareTxnResp(Failure(e))   => throw e
+      }
+  }
+
+  override def resolveCredDef(credDefId: FQCredDefId): Future[CredDef] = {
+    vdrActorRef
+      .ask(ref=> VDRActor.Commands.ResolveCredDef(credDefId, ref))
+      .map{
+        case ResolveCredDefResp(Success(resp)) => buildCredDef(resp)
+        case ResolveCredDefResp(Failure(e))    => throw e
       }
   }
 }

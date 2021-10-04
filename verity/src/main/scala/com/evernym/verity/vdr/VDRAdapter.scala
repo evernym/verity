@@ -24,6 +24,8 @@ trait VDRAdapter {
                        fqCredDefId: FQCredDefId,
                        submitterDID: DidStr,
                        endorser: Option[String]): Future[PreparedTxn]
+
+  def resolveCredDef(credDefId: FQCredDefId): Future[CredDef]
 }
 
 
@@ -38,6 +40,8 @@ case class PreparedTxn(context: String,
 case class SubmittedTxn()
 
 case class Schema(fqId: FQSchemaId, json: String)
+
+case class CredDef(fqId: FQCredDefId, schemaId: FQSchemaId, json: String)
 
 //below will change to some constants/enums when we have actual VDRTools library available for integration
 trait SignatureSpec

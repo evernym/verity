@@ -1,6 +1,6 @@
 package com.evernym.verity.vdr.service
 
-import com.evernym.verity.vdr.{EndorsementSpec, IndyEndorsement, LedgerStatus, NoEndorsement, NoSignature, PingResult, PreparedTxn, Schema, SignatureSpec}
+import com.evernym.verity.vdr.{CredDef, EndorsementSpec, IndyEndorsement, LedgerStatus, NoEndorsement, NoSignature, PingResult, PreparedTxn, Schema, SignatureSpec}
 
 //currently only contains data transformation related functions
 object VDRAdapterUtil {
@@ -20,6 +20,14 @@ object VDRAdapterUtil {
     Schema(
       vdrSchema.schemaId,
       new String(vdrSchema.payload)
+    )
+  }
+
+  def buildCredDef(vdrCredDef: VDR_CredDef) : CredDef = {
+    CredDef(
+      vdrCredDef.credDefID,
+      vdrCredDef.schemaId,
+      new String(vdrCredDef.payload)
     )
   }
 

@@ -47,8 +47,8 @@ class VDRActorAdapterSpec
         val result = Await.result(vdrAdapter.ping(List.empty), apiTimeout)
         result shouldBe PingResult(
           Map(
-            "indy:sovrin" -> LedgerStatus(running = true),
-            "sov"         -> LedgerStatus(running = true)
+            "indy:sovrin" -> LedgerStatus(reachable = true),
+            "sov"         -> LedgerStatus(reachable = true)
           )
         )
       }
@@ -60,7 +60,7 @@ class VDRActorAdapterSpec
         val result = Await.result(vdrAdapter.ping(List("indy:sovrin")), apiTimeout)
         result shouldBe PingResult(
           Map(
-            "indy:sovrin" -> LedgerStatus(running = true)
+            "indy:sovrin" -> LedgerStatus(reachable = true)
           )
         )
       }

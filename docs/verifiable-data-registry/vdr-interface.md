@@ -9,6 +9,16 @@
   * input/output **may change** until finalized on VDR side
 
 
+### Lifecycle APIs
+* **ping**(namespaces: List[Namespace]): **Future[PingResult]**
+  * Purpose
+    * To check ledger's reachability/availability
+  * Input
+    * namespaces: list of namespaces (if empty, it will use registered ledger's namespace)
+  * Output
+    * **PingResult**
+
+
 ### Read APIs (To be finalized once corresponding api in VDRTools is finalized)
 * **resolveDID**(fqdid: DidStr, cacheOpts: CacheOpt): **Future[DIDDoc]**
   * Purpose
@@ -97,6 +107,7 @@
 
 
 #### Input/Output param details
+
 * **DidStr**: Fully qualified DID string
 
 
@@ -104,6 +115,11 @@
 
 * **DIDDoc** (To be finalized)
 
+
+<br/>
+
+* **PingResult**(status: Map[Namespace, LedgerStatus])
+  * status: map of namespace and corresponding ledger status
 
 <br/>
 
@@ -141,3 +157,4 @@
 * **Endorsement**
   * Indy: just endorser signature
   * Cheqd: payment parameters and account signature
+  

@@ -7,7 +7,7 @@ import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRout
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.msgoutbox.outbox.OutboxIdParam
-import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
+import com.evernym.verity.msgoutbox.outbox.Outbox.DESTINATION_ID_DEFAULT
 import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, DestId, RecipId, RelId, RelResolver, WalletId}
 
 import scala.concurrent.{ExecutionContext, Future}

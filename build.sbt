@@ -62,7 +62,7 @@ val akkaHttpVer     = "10.2.6"
 val akkaMgtVer      = "1.1.1"
 val alpAkkaVer      = "3.0.3"
 val kamonVer        = "2.2.3"
-val kanelaAgentVer  = "1.0.10"
+val kanelaAgentVer  = "1.0.13"
 val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
 val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
                                   // around base64 decoding etc, should look into it.
@@ -368,7 +368,7 @@ lazy val commonLibraryDependencies = {
       exclude ("org.hyperledger", "indy"),
 
     "net.glxn" % "qrgen" % "1.4", // QR code generator
-    "com.google.guava" % "guava" % "30.1.1-jre",
+    "com.google.guava" % "guava" % "31.0-jre",
 
     "com.evernym" % "vcx" % vcxWrapperVer,
 

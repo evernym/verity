@@ -10,7 +10,7 @@ function stop_sig {
     fi
 }
 
-VAULT_SECRETS=("/vault/secrets/credentials")
+VAULT_SECRETS=("/vault/secrets/credentials-tf" "/vault/secrets/credentials")
 
 # Source secret files injected from Vault (if they exist)
 for f in "${VAULT_SECRETS[@]}" ; do

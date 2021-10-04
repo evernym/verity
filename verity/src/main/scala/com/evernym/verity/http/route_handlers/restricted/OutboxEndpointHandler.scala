@@ -12,6 +12,7 @@ import com.evernym.verity.msgoutbox.outbox.Outbox
 
 import scala.concurrent.Future
 
+// todo: should be switched to OutboxService usage after Outbox work finalization
 trait OutboxEndpointHandler { this: HttpRouteWithPlatform =>
 
   import akka.actor.typed.scaladsl.adapter._

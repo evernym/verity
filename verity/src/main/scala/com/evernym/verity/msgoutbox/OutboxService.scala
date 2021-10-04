@@ -2,19 +2,15 @@ package com.evernym.verity.msgoutbox
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.typed.scaladsl.AskPattern._
-import akka.actor.typed.scaladsl.adapter._
-import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
+import akka.actor.typed.{ActorSystem, Behavior}
 import akka.cluster.sharding.typed.ClusterShardingSettings
-import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityRef}
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
-import com.evernym.verity.actor.typed.base.UserGuardian.defaultOutboxPassivationTimeoutInSeconds
 import com.evernym.verity.config.ConfigConstants.PERSISTENT_ACTOR_BASE
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
-import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.{HttpTransporter, MsgTransports}
 import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam}
 import com.evernym.verity.util2.RetentionPolicy

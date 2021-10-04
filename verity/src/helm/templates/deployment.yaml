@@ -26,19 +26,20 @@ spec:
         app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
         app.gitlab.com/env: {{ .Values.env }}
         {{- if .Values.deployment.vault.enable }}
+        {{- $credentials := printf "kubernetes_secrets/eks-%s/%s-%s" .Values.gitlab_env .Values.name .Values.service }}
+        {{- $credentials_tf := printf "kubernetes_secrets/eks-%s/%s-%s-tf" .Values.gitlab_env .Values.name .Values.service }}
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "k8s-eks-{{ .Values.env }}"
         vault.hashicorp.com/auth-path: "auth/k8s/eks-{{ .Values.gitlab_env }}"
-        vault.hashicorp.com/agent-inject-secret-credentials: "kubernetes_secrets/eks-{{ .Values.gitlab_env }}/{{ .Values.name }}-{{ .Values.service }}"
+        vault.hashicorp.com/agent-inject-secret-credentials: "{{ $credentials }}"
+        vault.hashicorp.com/agent-inject-secret-credentials-tf: "{{ $credentials_tf }}"
         vault.hashicorp.com/tls-secret: vault-tls-secret
         vault.hashicorp.com/ca-cert: /vault/tls/evernym-root-ca.crt
         vault.hashicorp.com/agent-pre-populate-only : "true"
         vault.hashicorp.com/agent-inject-template-credentials: |
-          {{`{{ with secret `}}"kubernetes_secrets/eks-{{ .Values.gitlab_env }}/{{ .Values.name }}-{{ .Values.service }}"{{` -}}`}}
-          {{`{{ range $k, $v := .Data.data -}}
-            export {{ $k }}={{ $v }}
-          {{ end }}
-          {{- end }}`}}
+{{ include "verity.vaultInjectTemplate" (dict "Secret" $credentials) | indent 10 }}
+        vault.hashicorp.com/agent-inject-template-credentials-tf: |
+{{ include "verity.vaultInjectTemplate" (dict "Secret" $credentials_tf) | indent 10 }}
         {{- end }}
     spec:
       containers:
@@ -70,6 +71,11 @@ spec:
         envFrom:
         - configMapRef:
             name: vars-{{ template "verity.fullname" . }}
+        env:
+        - name: CINNAMON__CHMETRICS__DATADOG_REPORTER__HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         volumeMounts:
         - name: config-files
           mountPath: /etc/verity/verity-application/config-map

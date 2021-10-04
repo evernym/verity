@@ -202,7 +202,7 @@ trait BasePersistentStore
         .withFallback(EventSourcedBehaviorTestKit.config)
         .withFallback(PersistenceTestKitSnapshotPlugin.config)
     overrideSpecificConfig match {
-      case Some(sc) => baseConfig.withFallback(sc)
+      case Some(sc) => sc.withFallback(baseConfig)
       case None     => baseConfig
     }
   }

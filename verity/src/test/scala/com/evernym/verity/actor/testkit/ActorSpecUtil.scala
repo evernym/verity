@@ -16,7 +16,7 @@ import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
 import java.util.concurrent.TimeUnit
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.util2.ActorErrorResp
-import com.evernym.verity.observability.metrics.{MetricsBackend, MetricsWriterExtension, TestMetricsBackend}
+import com.evernym.verity.observability.metrics.{MetricsWriterExtension, TestMetricsBackend}
 
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
@@ -37,15 +37,18 @@ object AkkaTestBasic extends ActorSystemConfig
  */
 case class AgentDIDDetail(name: String, DIDSeed: String, did: DidStr, verKey: VerKeyStr) {
   def prepareAgencyIdentity: AgencyPublicDid = AgencyPublicDid(did, verKey)
-  def didPair = DidPair(did, verKey)
+  def didPair: DidPair = DidPair(did, verKey)
 }
 
 
-class TestAppConfig(newConfig: Option[Config] = None, clearValidators: Boolean = false, baseAsFallback: Boolean = true) extends AppConfig {
+class TestAppConfig(newConfig: Option[Config] = None,
+                    clearValidators: Boolean = false,
+                    baseAsFallback: Boolean = true)
+  extends AppConfig {
   if(clearValidators) {
     validatorCreators = List.empty
   }
-  val baseConfig = getLoadedConfig
+  val baseConfig: Config = getLoadedConfig
   if (baseAsFallback) {
     setConfig(newConfig.map(cfg => cfg.withFallback(baseConfig)).getOrElse(baseConfig))
   } else {
@@ -112,9 +115,8 @@ trait HasBasicActorSystem extends OverrideConfig with MockAppConfig {
   lazy val (as, conf) = AkkaTestBasic.systemWithConfig(
     overrideConfig
   )
-  lazy val metricsBackend: MetricsBackend = new TestMetricsBackend
   implicit lazy val system: classic.ActorSystem = {
-    MetricsWriterExtension(as).updateMetricsBackend(metricsBackend)
+    MetricsWriterExtension(as).updateMetricsBackend(new TestMetricsBackend)
     as
   }
   implicit override lazy val appConfig: AppConfig = new TestAppConfig(Option(conf), baseAsFallback = false)

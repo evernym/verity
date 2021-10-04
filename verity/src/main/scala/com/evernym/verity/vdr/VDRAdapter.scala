@@ -6,6 +6,9 @@ import scala.concurrent.Future
 
 //interface to be used by verity code to interact with VDR/Ledger services
 trait VDRAdapter {
+
+  def ping(namespaces: List[Namespace]): Future[PingResult]
+
   def prepareSchemaTxn(schemaJson: String,
                        fqSchemaId: FQSchemaId,
                        submitterDID: DidStr,
@@ -22,6 +25,10 @@ trait VDRAdapter {
                        submitterDID: DidStr,
                        endorser: Option[String]): Future[PreparedTxn]
 }
+
+
+case class LedgerStatus(reachable: Boolean)
+case class PingResult(status: Map[Namespace, LedgerStatus])
 
 case class PreparedTxn(context: String,
                        signatureSpec: SignatureSpec,

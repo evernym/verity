@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.vdr.service.VDRAdapterUtil._
 import com.evernym.verity.vdr.service.{VDRActor, VDRToolsConfig, VDRToolsFactory}
-import com.evernym.verity.vdr.service.VDRActor.Replies.{PrepareTxnResp, ResolveSchemaResp, SubmitTxnResp}
+import com.evernym.verity.vdr.service.VDRActor.Replies.{PingResp, PrepareTxnResp, ResolveSchemaResp, SubmitTxnResp}
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.{ExecutionContext, Future}
@@ -25,6 +25,15 @@ class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory,
   val vdrActorRef: ActorRef[VDRActor.Cmd] = system.toClassic.spawnAnonymous(VDRActor(vdrToolsFactory, vdrToolsConfig, ec))
 
   private implicit val defaultTimeout: Timeout = apiTimeout.getOrElse(Timeout(5, TimeUnit.SECONDS))
+
+  override def ping(namespaces: List[Namespace]): Future[PingResult] = {
+    vdrActorRef
+      .ask(ref => VDRActor.Commands.Ping(namespaces, ref))
+      .map {
+        case PingResp(Success(resp)) => buildPingResult(resp)
+        case PingResp(Failure(e))    => throw e
+      }
+  }
 
   override def prepareSchemaTxn(schemaJson: String,
                                 fqSchemaId: FQSchemaId,

@@ -20,6 +20,11 @@ class TestVDRTools(implicit ec: ExecutionContext)
     Future.successful(VDR_LedgerRegistered())
   }
 
+  override def ping(namespaces: List[Namespace]): Future[VDR_PingResult] = {
+    val allNamespaces = if (namespaces.isEmpty) ledgerRegistry.ledgers.flatMap(_.namespaces) else namespaces
+    Future.successful(VDR_PingResult(allNamespaces.map(n => n -> PingStatus(reachable = true)).toMap))
+  }
+
   override def prepareSchemaTxn(schemaJson: String,
                                 fqSchemaId: String,
                                 submitterDid: DidStr,

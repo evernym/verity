@@ -10,6 +10,8 @@ trait VDRTools {
                          genesisTxnFilePath: String,
                          taaConfig: Option[TAAConfig]): Future[VDR_LedgerRegistered]
 
+  def ping(namespaces: List[Namespace]): Future[VDR_PingResult]
+
   def prepareSchemaTxn(schemaJson: String,
                        fqSchemaId: FQSchemaId,
                        submitterDid: DidStr,
@@ -38,6 +40,9 @@ case class VDR_PreparedTxn(context: String,
 case class VDR_SubmittedTxn()
 
 case class VDR_Schema(schemaId: FQSchemaId, payload: Array[Byte])
+
+case class PingStatus(reachable: Boolean)
+case class VDR_PingResult(status: Map[Namespace, PingStatus])
 
 trait VDR_SignatureSpec
 case object VDR_NoSignature extends VDR_SignatureSpec

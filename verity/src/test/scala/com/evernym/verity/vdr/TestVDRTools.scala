@@ -43,6 +43,15 @@ class TestVDRTools(implicit ec: ExecutionContext)
     }
   }
 
+  override def prepareCredDefTxn(credDefJson: String,
+                                 fqCredDefId: String,
+                                 submitterDID: DidStr,
+                                 endorser: Option[String]): Future[VDR_PreparedTxn] = {
+    forLedger(submitterDID) { ledger: InMemLedger =>
+      ledger.prepareCredDefTxn(credDefJson,fqCredDefId,submitterDID, endorser)
+    }
+  }
+
   //--helper functions
 
   private def forLedger[T](fqDidStr: DidStr)(f: InMemLedger => T): Future[T] = {
@@ -120,6 +129,16 @@ trait InMemLedger {
     VDR_Schema(schemaId, schemas(schemaId))
   }
 
+  def prepareCredDefTxn(credDefJson: String,
+                        fQCredDefId: FQCredDefId,
+                        submitterDID: DidStr,
+                        endorser: Option[String]): VDR_PreparedTxn = {
+    TestFQIdentifier(fQCredDefId, namespaces)
+    val credDef = TestVDRCredDef(fQCredDefId, credDefJson)
+    val jsonPayload = JacksonMsgCodec.toJson(credDef)
+    VDR_PreparedTxn(id, VDR_NoSignature, jsonPayload.getBytes, VDR_NoEndorsement)
+  }
+
   private var schemas: Map[FQSchemaId, Payload] = Map.empty
 
   type Payload = Array[Byte]
@@ -133,3 +152,4 @@ case class TestIndyLedger(namespaces: List[Namespace],
 }
 
 case class TestVDRSchema(schemaId: String, json: String)
+case class TestVDRCredDef(credDefId: String, json: String)

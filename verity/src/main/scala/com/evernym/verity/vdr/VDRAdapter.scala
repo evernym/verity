@@ -16,6 +16,11 @@ trait VDRAdapter {
                 endorsement: Array[Byte]): Future[SubmittedTxn]
 
   def resolveSchema(schemaId: FQSchemaId): Future[Schema]
+
+  def prepareCredDefTxn(credDefJson: String,
+                       fqCredDefId: FQCredDefId,
+                       submitterDID: DidStr,
+                       endorser: Option[String]): Future[PreparedTxn]
 }
 
 case class PreparedTxn(context: String,

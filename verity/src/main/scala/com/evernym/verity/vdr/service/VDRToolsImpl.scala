@@ -38,4 +38,12 @@ class VDRToolsImpl(libDirLocation: String)
     //TODO: replace this mock implementation with actual VDR wrapper apis calls once it is available
     Future.successful(VDR_Schema("schema-id", "payload".getBytes))
   }
+
+  override def prepareCredDefTxn(credDefJson: String,
+                                 fqCredDefId: String,
+                                 submitterDID: DidStr,
+                                 endorser: Option[String]): Future[VDR_PreparedTxn] = {
+    //TODO: replace this mock implementation with actual VDR wrapper apis calls once it is available
+    Future.successful(VDR_PreparedTxn("", VDR_NoSignature, Array.empty, VDR_NoEndorsement))
+  }
 }

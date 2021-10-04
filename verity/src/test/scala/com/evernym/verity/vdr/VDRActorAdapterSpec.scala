@@ -157,6 +157,81 @@ class VDRActorAdapterSpec
         schema.json shouldBe """{"field1":"value"1}"""
       }
     }
+
+    "when asked to prepare cred def txn with non fqdid" - {
+      "should result in failure" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val ex = intercept[RuntimeException] {
+          Await.result(
+            vdrAdapter.prepareCredDefTxn(
+              "credDefJson",
+              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+              "did1",
+              None
+            ),
+            apiTimeout
+          )
+        }
+        ex.getMessage shouldBe "invalid fq did: did1"
+      }
+    }
+
+    "when asked to prepare cred def txn with non fqSchemaId" - {
+      "should result in failure" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val ex = intercept[RuntimeException] {
+          Await.result(
+            vdrAdapter.prepareCredDefTxn(
+              "credDefJson",
+              "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
+              None
+            ),
+            apiTimeout
+          )
+        }
+        ex.getMessage shouldBe "invalid identifier: F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+      }
+    }
+
+    "when asked to prepare cred def txn with valid data" - {
+      "should result in failure" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        Await.result(
+          vdrAdapter.prepareCredDefTxn(
+            "credDefJson",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
+            None
+          ),
+          apiTimeout
+        )
+      }
+    }
+
+    "when asked to submit cred def txn with valid data" - {
+      "should result in failure" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val preparedTxn = Await.result(
+          vdrAdapter.prepareCredDefTxn(
+            """{"field1":"value"1}""",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
+            None
+          ),
+          apiTimeout
+        )
+        Await.result(
+          vdrAdapter.submitTxn(
+            preparedTxn,
+            "signature".getBytes,
+            Array.empty
+          ),
+          apiTimeout
+        )
+      }
+    }
+
   }
 
   def createVDRActorAdapter(ledgers: List[Ledger]): VDRActorAdapter = {

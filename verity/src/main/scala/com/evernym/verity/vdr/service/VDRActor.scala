@@ -5,8 +5,8 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.vdr.{FQSchemaId, VDRToolsFactoryParam}
-import com.evernym.verity.vdr.service.VDRActor.Commands.{LedgersRegistered, PrepareSchemaTxn, ResolveSchema, SubmitTxn}
+import com.evernym.verity.vdr.{FQCredDefId, FQSchemaId, VDRToolsFactoryParam}
+import com.evernym.verity.vdr.service.VDRActor.Commands.{LedgersRegistered, PrepareCredDefTxn, PrepareSchemaTxn, ResolveSchema, SubmitTxn}
 import com.evernym.verity.vdr.service.VDRActor.Replies.{PrepareTxnResp, ResolveSchemaResp, SubmitTxnResp}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,6 +32,12 @@ object VDRActor {
 
     case class ResolveSchema(schemaId: FQSchemaId,
                              replyTo: ActorRef[Replies.ResolveSchemaResp]) extends Cmd
+
+    case class PrepareCredDefTxn(credDefJson: String,
+                                 fqCredDefId: FQCredDefId,
+                                 submitterDID: DidStr,
+                                 endorser: Option[String],
+                                 replyTo: ActorRef[Replies.PrepareTxnResp]) extends Cmd
   }
 
   trait Reply extends ActorMessage
@@ -79,9 +85,10 @@ object VDRActor {
 
   def ready(vdrTools: VDRTools)(implicit executionContext: ExecutionContext): Behavior[Cmd] =
     Behaviors.receiveMessagePartial {
-      case pst: PrepareSchemaTxn  => handlePrepareSchemaTxn(vdrTools, pst)
-      case st: SubmitTxn          => handleSubmitTxn(vdrTools, st)
-      case rs: ResolveSchema      => handleResolveSchema(vdrTools, rs)
+      case pst: PrepareSchemaTxn    => handlePrepareSchemaTxn(vdrTools, pst)
+      case st: SubmitTxn            => handleSubmitTxn(vdrTools, st)
+      case rs: ResolveSchema        => handleResolveSchema(vdrTools, rs)
+      case pcdt: PrepareCredDefTxn  => handlePrepareCredDefTxn(vdrTools, pcdt)
     }
 
   private def handlePrepareSchemaTxn(vdrTools: VDRTools,
@@ -91,6 +98,15 @@ object VDRActor {
       vdrTools.prepareSchemaTxn(pst.schemaJson, pst.fqSchemaId, pst.submitterDID, pst.endorser),
       pst.replyTo
     )
+    Behaviors.same
+  }
+
+  private def handlePrepareCredDefTxn(vdrTools: VDRTools,
+                                      pcdt: PrepareCredDefTxn)
+                                     (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
+    handlePrepareTxnResp(
+      vdrTools.prepareCredDefTxn(pcdt.credDefJson, pcdt.fqCredDefId, pcdt.submitterDID, pcdt.endorser),
+      pcdt.replyTo)
     Behaviors.same
   }
 

@@ -23,6 +23,14 @@ object VDRAdapterUtil {
     )
   }
 
+  def buildDidDoc(vdrDidDoc: VDR_DidDoc): DidDoc = {
+    DidDoc(
+      vdrDidDoc.id,
+      vdrDidDoc.verKeyStr,
+      vdrDidDoc.endpoint
+    )
+  }
+
   def buildPingResult(vdrPingResult: VDR_PingResult): PingResult = {
     PingResult(vdrPingResult.status.mapValues(e => LedgerStatus(e.reachable)))
   }

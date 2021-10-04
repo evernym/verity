@@ -7,6 +7,7 @@ import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vdr.service.{IndyLedger, Ledger, VDRToolsConfig}
 import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Millis, Seconds, Span}
 
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
@@ -127,7 +128,7 @@ class VDRActorAdapterSpec
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           )
-          submittedTxn <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
+          _ <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
         } yield {
           //nothing to validate
         }
@@ -229,7 +230,7 @@ class VDRActorAdapterSpec
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           )
-          submittedTxn <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
+          _ <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
         } yield {
           //nothing to validate
         }
@@ -237,6 +238,51 @@ class VDRActorAdapterSpec
       }
     }
 
+    "when asked to resolve DID with invalid did" - {
+      "should result in failure" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val ex = intercept[RuntimeException] {
+          Await.result(
+            vdrAdapter.resolveDID("did1"),
+            apiTimeout
+          )
+        }
+        ex.getMessage shouldBe "invalid fq did: did1"
+      }
+    }
+
+    "when asked to resolve DID with valid did" - {
+      "should be successful" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+
+        //make sure all ledgers are registered
+        eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+          val result = Await.result(vdrAdapter.ping(List.empty), apiTimeout)
+          result shouldBe PingResult(
+            Map(
+              "indy:sovrin" -> LedgerStatus(reachable = true),
+              "sov" -> LedgerStatus(reachable = true)
+            )
+          )
+        }
+
+        //add did doc to  the VDR (as of now, we don't have prepareDIDTxn support, so directly adding it)
+        Await.result(
+          testVDRTools.addDidDoc(
+            TestVDRDidDoc("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM", "verKey", None)
+          ),
+          apiTimeout
+        )
+
+        val dd = Await.result(
+            vdrAdapter.resolveDID("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM"),
+            apiTimeout
+        )
+        dd.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM"
+        dd.verKey shouldBe "verKey"
+        dd.endpoint shouldBe None
+      }
+    }
   }
 
   def createVDRActorAdapter(ledgers: List[Ledger]): VDRActorAdapter = {
@@ -253,6 +299,10 @@ class VDRActorAdapterSpec
 
   implicit lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   implicit val ec: ExecutionContext = ecp.futureExecutionContext
+
+  def addDidDoc(dd: TestVDRDidDoc): Unit = {
+    testVDRTools.addDidDoc(dd)
+  }
 
   var testVDRTools = new TestVDRTools
 }

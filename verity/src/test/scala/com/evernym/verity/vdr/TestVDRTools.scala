@@ -1,7 +1,7 @@
 package com.evernym.verity.vdr
 
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
-import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.vdr.service._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -34,6 +34,15 @@ class TestVDRTools(implicit ec: ExecutionContext)
     }
   }
 
+  override def prepareCredDefTxn(credDefJson: String,
+                                 fqCredDefId: String,
+                                 submitterDID: DidStr,
+                                 endorser: Option[String]): Future[VDR_PreparedTxn] = {
+    forLedger(submitterDID) { ledger: InMemLedger =>
+      ledger.prepareCredDefTxn(credDefJson,fqCredDefId,submitterDID, endorser)
+    }
+  }
+
   override def submitTxn(preparedTxn: VDR_PreparedTxn,
                          signature: Array[Byte],
                          endorsement: Array[Byte]): Future[VDR_SubmittedTxn] = {
@@ -48,16 +57,19 @@ class TestVDRTools(implicit ec: ExecutionContext)
     }
   }
 
-  override def prepareCredDefTxn(credDefJson: String,
-                                 fqCredDefId: String,
-                                 submitterDID: DidStr,
-                                 endorser: Option[String]): Future[VDR_PreparedTxn] = {
-    forLedger(submitterDID) { ledger: InMemLedger =>
-      ledger.prepareCredDefTxn(credDefJson,fqCredDefId,submitterDID, endorser)
+  override def resolveDID(fqDid: FQDid): Future[VDR_DidDoc] = {
+    forLedger(fqDid) { ledger: InMemLedger =>
+      ledger.resolveDid(fqDid)
     }
   }
 
   //--helper functions
+
+  def addDidDoc(dd: TestVDRDidDoc): Future[Unit] = {
+    forLedger(dd.id) { ledger: InMemLedger =>
+      ledger.addDidDoc(dd)
+    }
+  }
 
   private def forLedger[T](fqDidStr: DidStr)(f: InMemLedger => T): Future[T] = {
     try {
@@ -134,6 +146,11 @@ trait InMemLedger {
     VDR_Schema(schemaId, schemas(schemaId))
   }
 
+  def resolveDid(fqDid: FQDid): VDR_DidDoc = {
+    val dd = JacksonMsgCodec.fromJson[TestVDRDidDoc](new String(didDocs(fqDid)))
+    VDR_DidDoc(fqDid, dd.verKey, dd.endpoint)
+  }
+
   def prepareCredDefTxn(credDefJson: String,
                         fQCredDefId: FQCredDefId,
                         submitterDID: DidStr,
@@ -144,7 +161,13 @@ trait InMemLedger {
     VDR_PreparedTxn(id, VDR_NoSignature, jsonPayload.getBytes, VDR_NoEndorsement)
   }
 
+  def addDidDoc(dd: TestVDRDidDoc): Unit = {
+    val ddJson = JacksonMsgCodec.toJson(dd)
+    didDocs = didDocs + (dd.id -> ddJson.getBytes)
+  }
+
   private var schemas: Map[FQSchemaId, Payload] = Map.empty
+  private var didDocs: Map[FQDid, Payload] = Map.empty
 
   type Payload = Array[Byte]
 }
@@ -158,3 +181,4 @@ case class TestIndyLedger(namespaces: List[Namespace],
 
 case class TestVDRSchema(schemaId: String, json: String)
 case class TestVDRCredDef(credDefId: String, json: String)
+case class TestVDRDidDoc(id: FQDid, verKey: VerKeyStr, endpoint: Option[String])

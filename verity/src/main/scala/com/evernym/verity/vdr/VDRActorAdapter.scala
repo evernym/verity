@@ -66,4 +66,16 @@ class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory,
         case ResolveSchemaResp(Failure(e))    => throw e
       }
   }
+
+  override def prepareCredDefTxn(credDefJson: String,
+                                 fqCredDefId: FQCredDefId,
+                                 submitterDID: DidStr,
+                                 endorser: Option[String]): Future[PreparedTxn] = {
+    vdrActorRef
+      .ask(ref => VDRActor.Commands.PrepareCredDefTxn(credDefJson,fqCredDefId, submitterDID, endorser , ref))
+      .map {
+        case PrepareTxnResp(Success(txn)) => buildPreparedTxn(txn)
+        case PrepareTxnResp(Failure(e))   => throw e
+      }
+  }
 }

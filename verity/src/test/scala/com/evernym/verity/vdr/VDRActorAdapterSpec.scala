@@ -103,7 +103,7 @@ class VDRActorAdapterSpec
     }
 
     "when asked to prepare schema txn with valid data" - {
-      "should result in failure" in {
+      "should be successful" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         Await.result(
           vdrAdapter.prepareSchemaTxn(
@@ -118,25 +118,20 @@ class VDRActorAdapterSpec
     }
 
     "when asked to submit schema txn with valid data" - {
-      "should result in failure" in {
+      "should be successful" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
-        val preparedTxn = Await.result(
-          vdrAdapter.prepareSchemaTxn(
+        val result = for {
+          preparedTxn <- vdrAdapter.prepareSchemaTxn(
             """{"field1":"value"1}""",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
-          ),
-          apiTimeout
-        )
-        Await.result(
-          vdrAdapter.submitTxn(
-            preparedTxn,
-            "signature".getBytes,
-            Array.empty
-          ),
-          apiTimeout
-        )
+          )
+          submittedTxn <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
+        } yield {
+          //nothing to validate
+        }
+        Await.result(result, apiTimeout)
       }
     }
 
@@ -153,35 +148,95 @@ class VDRActorAdapterSpec
       }
     }
 
-    "when asked to resolve schema for schema id" - {
-      "it should fail" in {
+    "when asked to resolve schema for valid schema id" - {
+      "it should be successful" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
-        val preparedTxn = Await.result(
-          vdrAdapter.prepareSchemaTxn(
+        val result = for {
+          preparedTxn <- vdrAdapter.prepareSchemaTxn(
             """{"field1":"value"1}""",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
+            None
+          )
+          _ <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
+          schema <- vdrAdapter.resolveSchema("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1")
+        } yield {
+          schema.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+          schema.json shouldBe """{"field1":"value"1}"""
+        }
+        Await.result(result, apiTimeout)
+      }
+    }
+
+    "when asked to prepare cred def txn with non fqdid" - {
+      "should result in failure" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val ex = intercept[RuntimeException] {
+          Await.result(
+            vdrAdapter.prepareCredDefTxn(
+              "credDefJson",
+              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+              "did1",
+              None
+            ),
+            apiTimeout
+          )
+        }
+        ex.getMessage shouldBe "invalid fq did: did1"
+      }
+    }
+
+    "when asked to prepare cred def txn with non fqSchemaId" - {
+      "should result in failure" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val ex = intercept[RuntimeException] {
+          Await.result(
+            vdrAdapter.prepareCredDefTxn(
+              "credDefJson",
+              "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
+              None
+            ),
+            apiTimeout
+          )
+        }
+        ex.getMessage shouldBe "invalid identifier: F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+      }
+    }
+
+    "when asked to prepare cred def txn with valid data" - {
+      "should be successful" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        Await.result(
+          vdrAdapter.prepareCredDefTxn(
+            "credDefJson",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           ),
           apiTimeout
         )
-        Await.result(
-          vdrAdapter.submitTxn(
-            preparedTxn,
-            "signature".getBytes,
-            Array.empty
-          ),
-          apiTimeout
-        )
-
-        val schema = Await.result(
-          vdrAdapter.resolveSchema("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"),
-          apiTimeout
-        )
-        schema.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
-        schema.json shouldBe """{"field1":"value"1}"""
       }
     }
+
+    "when asked to submit cred def txn with valid data" - {
+      "should be successful" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val result = for {
+          preparedTxn <- vdrAdapter.prepareCredDefTxn(
+            """{"field1":"value"1}""",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
+            None
+          )
+          submittedTxn <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
+        } yield {
+          //nothing to validate
+        }
+        Await.result(result, apiTimeout)
+      }
+    }
+
   }
 
   def createVDRActorAdapter(ledgers: List[Ledger]): VDRActorAdapter = {

@@ -1,7 +1,7 @@
 package com.evernym.verity.vdr.service
 
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.vdr.{FQSchemaId, Namespace}
+import com.evernym.verity.vdr.{FQCredDefId, FQSchemaId, Namespace}
 
 import scala.concurrent.Future
 
@@ -22,6 +22,11 @@ trait VDRTools {
                 endorsement: Array[Byte]): Future[VDR_SubmittedTxn]
 
   def resolveSchema(schemaId: FQSchemaId): Future[VDR_Schema]
+
+  def prepareCredDefTxn(credDefJson: String,
+                        fqCredDefId: FQCredDefId,
+                        submitterDID: DidStr,
+                        endorser: Option[String]) : Future[VDR_PreparedTxn]
 }
 
 //TODO: most of the below parameters will be removed once corresponding library objects are available to use

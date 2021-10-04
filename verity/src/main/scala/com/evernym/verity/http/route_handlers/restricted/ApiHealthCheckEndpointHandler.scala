@@ -2,17 +2,17 @@ package com.evernym.verity.http.route_handlers.restricted
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes._
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.{complete, _}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import akka.util.Timeout
-import com.evernym.verity.Main.ecp.futureExecutionContext
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.cluster_singleton.{GetValue, KeyValueMapper}
+import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.http.common.CustomExceptionHandler._
-import com.evernym.verity.http.route_handlers.{HttpRouteWithPlatform, PlatformServiceProvider}
+import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.vault.WalletDoesNotExist
 import com.evernym.verity.vault.WalletUtil.generateWalletParamAsync
@@ -106,13 +106,10 @@ trait ApiHealthCheckEndpointHandler {
                       respDynamo <- dynamoDBFuture
                     } yield (
                       respRDS._1 && respDynamo._1,
-                      s"""
-                         |"RDS": "${respRDS._2}",
-                         |"DynamoDB": "${respDynamo._2}"
-                         |""".stripMargin
+                      ApiStatus(respRDS._2, respDynamo._2)
                     )
                     val ans = Await.result(res, Duration(10, TimeUnit.SECONDS))
-                    HttpResponse(if (ans._1) OK else ServiceUnavailable, entity = ans._2)
+                    HttpResponse(if (ans._1) OK else ServiceUnavailable, entity=HttpEntity(ContentType(MediaTypes.`application/json`), DefaultMsgCodec.toJson(ans._2)))
                   }
                 }
               } ~
@@ -131,3 +128,5 @@ trait ApiHealthCheckEndpointHandler {
     }
 
 }
+
+case class ApiStatus(rds: String, dynamoDB: String)

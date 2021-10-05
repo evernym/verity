@@ -84,19 +84,17 @@ class TestVDRTools(implicit ec: ExecutionContext)
       val ledger = ledgerRegistry.ledgers.find(_.namespaces.contains(testIdentifier.namespace)).getOrElse(
         throw new RuntimeException("ledger not found for the namespace: " + testIdentifier.namespace)
       )
-      Future(f(ledger))
+      Future.successful(f(ledger))
     } catch {
-      case _: RuntimeException =>
-        Future.failed(new RuntimeException("invalid fq did: " + fqDidStr))
+      case ex: RuntimeException  => Future.failed(ex)
     }
   }
 
   private def withLedger[T](id: String)(f: InMemLedger => T): Future[T] = {
     ledgerRegistry.ledgers.find(_.id == id) match {
-      case Some(ledger) => Future(f(ledger))
+      case Some(ledger) => Future.successful(f(ledger))
       case None         => Future.failed(new RuntimeException("ledger not found with id: " + id))
     }
-
   }
 
   private var ledgerRegistry: TestLedgerRegistry = TestLedgerRegistry(List.empty)
@@ -111,10 +109,10 @@ object TestFQIdentifier {
         case Some(namespace) =>
           val identifier = didFqId.replace(s"$namespace:", "")
           TestFQIdentifier("did", namespace, identifier)
-        case None => throw new RuntimeException("invalid identifier: " + fqId)
+        case None => throw new InvalidIdentifierException("invalid identifier: " + fqId)
       }
     } else {
-      throw new RuntimeException("invalid identifier: " + fqId)
+      throw new InvalidIdentifierException("invalid identifier: " + fqId)
     }
   }
 }
@@ -156,29 +154,35 @@ trait InMemLedger {
                 signature: Array[Byte],
                 endorsement: Array[Byte]): VDR_SubmittedTxn = {
     val node = JacksonMsgCodec.docFromStrUnchecked(new String(preparedTxn.bytesToSign))
-    if (node.has("credDefId")) {
-      val cd = JacksonMsgCodec.fromJson[TestVDRCredDef](new String(preparedTxn.bytesToSign))
-      credDefs = credDefs + (cd.credDefId -> cd.json.getBytes)
-    } else {
-      val s = JacksonMsgCodec.fromJson[TestVDRSchema](new String(preparedTxn.bytesToSign))
-      schemas = schemas + (s.schemaId -> s.json.getBytes)
+    node.get("payloadType").asText() match {
+      case "schema" =>
+        val s = JacksonMsgCodec.fromJson[TestVDRSchema](new String(preparedTxn.bytesToSign))
+        schemas = schemas + (s.schemaId -> s.json.getBytes)
+
+      case "creddef" =>
+        val cd = JacksonMsgCodec.fromJson[TestVDRCredDef](new String(preparedTxn.bytesToSign))
+        credDefs = credDefs + (cd.credDefId -> cd.json.getBytes)
+
+      case other =>
+        throw new RuntimeException("payload type not supported: " + other)
     }
     VDR_SubmittedTxn()
   }
 
   def resolveSchema(schemaId: FQSchemaId): VDR_Schema = {
-    VDR_Schema(schemaId, schemas(schemaId))
+    val data = schemas.getOrElse(schemaId, throw new RuntimeException("schema not found for given id: " + schemaId))
+    VDR_Schema(schemaId, data)
   }
 
   def resolveCredDef(credDefId: FQCredDefId): VDR_CredDef = {
-    val data = credDefs(credDefId)
+    val data = credDefs.getOrElse(credDefId, throw new RuntimeException("cred def not found for given id: " + credDefId))
     val cd = JacksonMsgCodec.fromJson[TestVDRCredDef](new String(data))
     VDR_CredDef(credDefId, cd.schemaId, data)
   }
 
-
   def resolveDid(fqDid: FQDid): VDR_DidDoc = {
-    val dd = JacksonMsgCodec.fromJson[TestVDRDidDoc](new String(didDocs(fqDid)))
+    val data = didDocs.getOrElse(fqDid, throw new RuntimeException("did doc not found for given id: " + fqDid))
+    val dd = JacksonMsgCodec.fromJson[TestVDRDidDoc](new String(data))
     VDR_DidDoc(fqDid, dd.verKey, dd.endpoint)
   }
 
@@ -206,6 +210,21 @@ case class TestIndyLedger(namespaces: List[Namespace],
   override def id: String = namespaces.mkString("-")
 }
 
-case class TestVDRSchema(schemaId: String, json: String)
-case class TestVDRCredDef(credDefId: String, schemaId: String, json: String)
+trait TestPayloadBase {
+  def payloadType: String
+}
+
+case class TestVDRSchema(schemaId: FQSchemaId, json: String)
+  extends TestPayloadBase {
+  override val payloadType: String = "schema"
+}
+case class TestVDRCredDef(credDefId: FQCredDefId, schemaId: FQSchemaId, json: String)
+  extends TestPayloadBase {
+  override val payloadType: String = "creddef"
+}
 case class TestVDRDidDoc(id: FQDid, verKey: VerKeyStr, endpoint: Option[String])
+  extends TestPayloadBase {
+  override val payloadType: String = "diddoc"
+}
+
+class InvalidIdentifierException(msg: String) extends RuntimeException(msg)

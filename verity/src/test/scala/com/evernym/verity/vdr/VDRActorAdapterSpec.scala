@@ -81,7 +81,7 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid fq did: did1"
+        ex.getMessage shouldBe "invalid identifier: did1"
       }
     }
 
@@ -145,7 +145,20 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid fq did: did1"
+        ex.getMessage shouldBe "invalid identifier: did1"
+      }
+    }
+
+    "when asked to resolve schema for non existent one" - {
+      "it should fail" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val ex = intercept[RuntimeException] {
+          Await.result(
+            vdrAdapter.resolveSchema("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"),
+            apiTimeout
+          )
+        }
+        ex.getMessage shouldBe "schema not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
       }
     }
 
@@ -183,7 +196,7 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid fq did: did1"
+        ex.getMessage shouldBe "invalid identifier: did1"
       }
     }
 
@@ -247,7 +260,20 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid fq did: did1"
+        ex.getMessage shouldBe "invalid identifier: did1"
+      }
+    }
+
+    "when asked to resolve cred def for non existent one" - {
+      "it should fail" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val ex = intercept[RuntimeException] {
+          Await.result(
+            vdrAdapter.resolveCredDef("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"),
+            apiTimeout
+          )
+        }
+        ex.getMessage shouldBe "cred def not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
       }
     }
 
@@ -281,7 +307,20 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid fq did: did1"
+        ex.getMessage shouldBe "invalid identifier: did1"
+      }
+    }
+
+    "when asked to resolve DID for non existent one" - {
+      "should result in failure" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val ex = intercept[RuntimeException] {
+          Await.result(
+            vdrAdapter.resolveDID("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM"),
+            apiTimeout
+          )
+        }
+        ex.getMessage shouldBe "did doc not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM"
       }
     }
 
@@ -300,21 +339,15 @@ class VDRActorAdapterSpec
           )
         }
 
-        //add did doc to  the VDR (as of now, we don't have prepareDIDTxn support, so directly adding it)
-        Await.result(
-          testVDRTools.addDidDoc(
-            TestVDRDidDoc("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM", "verKey", None)
-          ),
-          apiTimeout
-        )
-
-        val dd = Await.result(
-            vdrAdapter.resolveDID("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM"),
-            apiTimeout
-        )
-        dd.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM"
-        dd.verKey shouldBe "verKey"
-        dd.endpoint shouldBe None
+        for {
+          //add did doc to  the VDR (as of now, we don't have prepareDIDTxn support, so directly adding it)
+          _ <- testVDRTools.addDidDoc(TestVDRDidDoc("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM", "verKey", None));
+          dd <- vdrAdapter.resolveDID("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM")
+        } yield {
+          dd.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM"
+          dd.verKey shouldBe "verKey"
+          dd.endpoint shouldBe None
+        }
       }
     }
   }

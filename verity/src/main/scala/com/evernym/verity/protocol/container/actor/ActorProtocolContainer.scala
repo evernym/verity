@@ -323,7 +323,10 @@ class ActorProtocolContainer[
       grantedAccessRights,
       LedgerAccessAPI(
         agentActorContext.generalCache,
-        agentActorContext.ledgerSvc, wallet)
+        agentActorContext.ledgerSvc,
+        null,   //TODO: replace this with actual VDR Adapter implementation during final integration
+        wallet
+      )
     )
 
   override lazy val urlShortening =

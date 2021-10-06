@@ -10,7 +10,7 @@ import com.evernym.verity.constants.Constants.URL
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.http.base.open._
-import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, AppStatusHealthCheckSpec, RestrictedRestApiSpec}
+import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, AppStatusHealthCheckSpec, MockApiHealthCheck, RestrictedRestApiSpec}
 import com.evernym.verity.http.route_handlers.EndpointHandlerBase
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
@@ -19,7 +19,7 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
 import com.evernym.verity.testkit.mock.msgsendingsvc.MockMsgSendingSvcListener
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.http.route_handlers.restricted.{AbstractApiHealthCheck, MockApiHealthCheck}
+import com.evernym.verity.http.route_handlers.restricted.AbstractApiHealthCheck
 import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent, MockEnvUtil}
 import org.mockito.MockitoSugar.mock
 import org.scalatest.concurrent.Eventually

@@ -1,11 +1,25 @@
 package com.evernym.verity.http.base.restricted
 
 import akka.http.scaladsl.model.StatusCodes.{OK, ServiceUnavailable}
+import com.evernym.verity.actor.Platform
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
-import com.evernym.verity.http.route_handlers.restricted.ApiStatus
+import com.evernym.verity.http.route_handlers.restricted.{AbstractApiHealthCheck, ApiStatus}
 import org.mockito.MockitoSugar.when
 
 import scala.concurrent.Future
+
+
+class MockApiHealthCheck extends AbstractApiHealthCheck{
+  override def checkAkkaEventStorageReadiness: Future[(Boolean, String)] = {
+    Future.successful((false, "OK"))
+  }
+
+  override def checkWalletStorageReadiness: Future[(Boolean, String)] = {
+    Future.successful((true, "OK"))
+  }
+
+  override def platform: Platform = ???
+}
 
 trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
 

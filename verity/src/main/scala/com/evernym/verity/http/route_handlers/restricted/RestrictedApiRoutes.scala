@@ -20,8 +20,8 @@ trait RestrictedApiRoutes
     with ItemManagerEndpointHandler
     with MsgProgressTrackerEndpointHandler
     with OutboxEndpointHandler
-    with ApiHealthCheckEndpointHandler {
+    with HealthCheckEndpointHandlerV2 {
 
   protected val restrictedApiRoutes: Route = healthCheckRoute ~ resourceUsageRoute ~ setupRoutes ~
-    maintenanceRoutes ~ itemManagerRoutes ~ msgProgressTrackerRoutes ~ outboxRoute ~ apiHealthCheckRoute
+    maintenanceRoutes ~ itemManagerRoutes ~ msgProgressTrackerRoutes ~ outboxRoute ~ healthCheckRouteV2
 }

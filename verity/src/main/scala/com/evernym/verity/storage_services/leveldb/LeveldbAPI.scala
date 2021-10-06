@@ -75,4 +75,6 @@ class LeveldbAPI(config: AppConfig, executionContext: ExecutionContext)(implicit
   class LeveldbFailure(statusCode: String, statusMsg: Option[String] = None,
                        statusMsgDetail: Option[String] = None, errorDetail: Option[Any] = None)
     extends BadRequestErrorException(statusCode, statusMsg, statusMsgDetail, errorDetail)
+
+  override def ping: Future[Unit] = Future.successful((): Unit)
 }

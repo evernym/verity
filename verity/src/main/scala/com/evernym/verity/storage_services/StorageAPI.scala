@@ -11,6 +11,7 @@ abstract class StorageAPI(val config: AppConfig, executionContext: ExecutionCont
   def get(bucketName: String, id: String): Future[Option[Array[Byte]]]
   def put(bucketName: String, id: String, data: Array[Byte]): Future[StorageInfo]
   def delete(bucketName: String, id: String): Future[Done]
+  def ping: Future[Unit] = Future.successful((): Unit)
 }
 
 object StorageAPI {

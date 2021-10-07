@@ -3,6 +3,7 @@ package com.evernym.verity.msgoutbox
 import akka.actor.typed.ActorRef
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.Entity
+import akka.pattern.StatusReply
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpecBase
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.msgoutbox.base.BaseMsgOutboxSpec
@@ -36,7 +37,8 @@ class OutboxRetentionPolicySpec
         outboxIds.foreach { outboxIdParam =>
           val probe = createTestProbe[RelationshipResolver.Replies.OutboxParam]()
           outboxRegion ! ShardingEnvelope(outboxIdParam.entityId.toString, GetOutboxParam(probe.ref))
-          outboxRegion ! ShardingEnvelope(outboxIdParam.entityId.toString, Commands.Init(outboxIdParam.relId, outboxIdParam.recipId, outboxIdParam.destId))
+          val secondProbe = createTestProbe[Outbox.Replies.Initialized]()
+          outboxRegion ! ShardingEnvelope(outboxIdParam.entityId.toString, Commands.Init(outboxIdParam.relId, outboxIdParam.recipId, outboxIdParam.destId, secondProbe.ref))
           val outboxParam = probe.expectMessageType[RelationshipResolver.Replies.OutboxParam]
           outboxParam.walletId shouldBe testWallet.walletId
           outboxParam.comMethods shouldBe defaultDestComMethods
@@ -58,11 +60,13 @@ class OutboxRetentionPolicySpec
 
       "when periodically checking outbox status" - {
         "those messages should NOT disappear" in {
-          val probe = createTestProbe[Replies.DeliveryStatus]()
+          val probe = createTestProbe[StatusReply[Replies.DeliveryStatus]]()
           eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
             outboxIds.foreach { outboxId =>
-              outboxRegion ! ShardingEnvelope(outboxId.entityId.toString, GetDeliveryStatus(probe.ref))
-              val messages = probe.expectMessageType[Replies.DeliveryStatus].messages
+              outboxRegion ! ShardingEnvelope(outboxId.entityId.toString, GetDeliveryStatus(List(), List(), false, probe.ref))
+              val status = probe.expectMessageType[StatusReply[Replies.DeliveryStatus]]
+              status.isSuccess shouldBe true
+              val messages = status.getValue.messages
               messages.size shouldBe totalMsgs
             }
           }
@@ -138,10 +142,10 @@ class OutboxRetentionPolicySpec
         appConfig.withFallback(OVERRIDE_CONFIG).config,
         testAccessTokenRefreshers,
         testRelResolver,
-        testMsgStore,
         testMsgPackagers,
         testMsgTransports,
-        executionContext
+        executionContext,
+        testMsgRepository
       )
     })
 

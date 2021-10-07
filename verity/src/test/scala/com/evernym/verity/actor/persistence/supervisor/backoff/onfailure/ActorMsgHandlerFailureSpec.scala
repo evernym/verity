@@ -11,6 +11,9 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
+//This test confirms that if any `RuntimeException` occurs during message handling
+// it will be restarted as per default supervisor strategy
+// and restarting will be controlled by Backoff.onFailure supervisor
 
 class ActorMsgHandlerFailureSpec
   extends ActorSpec
@@ -24,7 +27,8 @@ class ActorMsgHandlerFailureSpec
 
   "OnFailure BackoffSupervised actor" - {
     "when throws an unhandled exception during msg handling" - {
-      "should stop and start (not exactly a restart) once" in {
+      "should stop and start (not exactly a restart) as per BACKOFF strategy" in {
+
         mockSupervised ! GetRestartCount
         expectMsgType[RestartCount].count shouldBe 0
 
@@ -35,7 +39,7 @@ class ActorMsgHandlerFailureSpec
 
         eventually (timeoutVal, intervalVal) {
           mockSupervised ! GetCurrentChild
-          expectMsgType[CurrentChild].ref.value
+          expectMsgType[CurrentChild].ref.isDefined shouldBe true
         }
 
         mockSupervised ! GetRestartCount
@@ -52,6 +56,7 @@ class ActorMsgHandlerFailureSpec
        verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
+            strategy = OnFailure
             min-seconds = 1
             max-seconds = 2
             random-factor = 0

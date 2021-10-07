@@ -4,11 +4,13 @@ import akka.actor.Props
 import com.evernym.verity.actor.agent.agency.{AgencyAgent, AgencyAgentPairwise}
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.persistence.SupervisorUtil
-import com.evernym.verity.actor.testkit.ActorSpec
+import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.actor.wallet.WalletActor
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants._
+import com.evernym.verity.protocol.container.actor.ActorProtocol
+import com.evernym.verity.protocol.protocols.connections.v_1_0.ConnectionsDef
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -35,6 +37,7 @@ class SupervisorUtilSpec
           Props(new AgencyAgent(agentActorContext, executionContext))
         )
         onFailureProps.isDefined shouldBe true
+        onFailureProps.get.args.head.toString shouldBe "class akka.pattern.internal.BackoffOnRestartSupervisor"
 
         val onStopProps = SupervisorUtil.onStopSupervisorProps(
           appConfig,
@@ -43,6 +46,7 @@ class SupervisorUtilSpec
           Props(new AgencyAgent(agentActorContext, executionContext))
         )
         onStopProps.isDefined shouldBe true
+        onStopProps.get.args.head.toString shouldBe "class akka.pattern.internal.BackoffOnStopSupervisor"
       }
     }
 
@@ -55,6 +59,7 @@ class SupervisorUtilSpec
           Props(new AgencyAgentPairwise(agentActorContext, executionContext))
         )
         onFailureProps.isDefined shouldBe true
+        onFailureProps.get.args.head.toString shouldBe "class akka.pattern.internal.BackoffOnRestartSupervisor"
 
         val onStopProps = SupervisorUtil.onStopSupervisorProps(
           appConfig,
@@ -63,6 +68,7 @@ class SupervisorUtilSpec
           Props(new AgencyAgentPairwise(agentActorContext, executionContext))
         )
         onStopProps.isDefined shouldBe true
+        onStopProps.get.args.head.toString shouldBe "class akka.pattern.internal.BackoffOnStopSupervisor"
       }
     }
 
@@ -78,6 +84,7 @@ class SupervisorUtilSpec
             Props(new UserAgent(agentActorContext, platform.collectionsMetricsCollector, executionContext))
           )
           onFailureProps.isDefined shouldBe true
+          onFailureProps.get.args.head.toString shouldBe "class akka.pattern.internal.BackoffOnRestartSupervisor"
 
           val onStopProps = SupervisorUtil.onStopSupervisorProps(
             appConfig,
@@ -86,6 +93,7 @@ class SupervisorUtilSpec
             Props(new UserAgent(agentActorContext, platform.collectionsMetricsCollector, executionContext))
           )
           onStopProps.isDefined shouldBe true
+          onStopProps.get.args.head.toString shouldBe "class akka.pattern.internal.BackoffOnStopSupervisor"
         }
       }
     }
@@ -101,6 +109,7 @@ class SupervisorUtilSpec
             Props(new UserAgentPairwise(agentActorContext, platform.collectionsMetricsCollector, executionContext))
           )
           onFailureProps.isDefined shouldBe true
+          onFailureProps.get.args.head.toString shouldBe "class akka.pattern.internal.BackoffOnRestartSupervisor"
 
           val onStopProps = SupervisorUtil.onStopSupervisorProps(
             appConfig,
@@ -109,6 +118,7 @@ class SupervisorUtilSpec
             Props(new UserAgentPairwise(agentActorContext, platform.collectionsMetricsCollector, executionContext))
           )
           onStopProps.isDefined shouldBe true
+          onStopProps.get.args.head.toString shouldBe "class akka.pattern.internal.BackoffOnStopSupervisor"
         }
       }
     }
@@ -130,6 +140,83 @@ class SupervisorUtilSpec
           Props(new WalletActor(agentActorContext.appConfig, agentActorContext.poolConnManager, executionContext))
         )
         onStopProps.isDefined shouldBe false
+      }
+    }
+
+    "when asked to generate backoff supervisor for protocol actor" - {
+      "should generate backoff supervisor props" in {
+        val onFailureProps = SupervisorUtil.onFailureSupervisorProps(
+          appConfig,
+          PERSISTENT_PROTOCOL_CONTAINER,
+          "connections-1.0-protocol",
+          ActorProtocol(ConnectionsDef).props(agentActorContext, executionContext)
+        )
+        onFailureProps.isDefined shouldBe true
+        onFailureProps.get.args.head.toString shouldBe "class akka.pattern.internal.BackoffOnRestartSupervisor"
+
+        val onStopProps = SupervisorUtil.onStopSupervisorProps(
+          appConfig,
+          PERSISTENT_PROTOCOL_CONTAINER,
+          "connections-1.0-protocol",
+          ActorProtocol(ConnectionsDef).props(agentActorContext, executionContext)
+        )
+        onStopProps.isDefined shouldBe true
+        onStopProps.get.args.head.toString shouldBe "class akka.pattern.internal.BackoffOnStopSupervisor"
+      }
+    }
+
+    "when asked to generate backoff supervisor for agent actors (when supervision not enabled)" - {
+      "should generate backoff supervisor props" in {
+        val testAppConfig = new TestAppConfig(
+          Option(
+            ConfigFactory.parseString(
+              """
+                |verity.persistent-actor.base.AgencyAgent {
+                |  supervisor {
+                |    enabled = false
+                |  }
+                |}
+                |""".stripMargin
+            )
+          ),
+          clearValidators = true,
+          baseAsFallback = false
+        )
+        val backOffProps = SupervisorUtil.supervisorProps(
+          testAppConfig,
+          PERSISTENT_ACTOR_BASE,
+          AGENCY_AGENT_REGION_ACTOR_NAME,
+          ActorProtocol(ConnectionsDef).props(agentActorContext, executionContext)
+        )
+        backOffProps.isDefined shouldBe false
+      }
+    }
+
+    "when asked to generate backoff supervisor for agent actors (without backoff config)" - {
+      "should generate backoff supervisor props" in {
+        val testAppConfig = new TestAppConfig(
+          Option(
+            ConfigFactory.parseString(
+              """
+                |verity.persistent-actor.base.AgencyAgent {
+                |  supervisor {
+                |    enabled = true
+                |  }
+                |}
+                |""".stripMargin
+            )
+          ),
+          clearValidators = true,
+          baseAsFallback = false
+        )
+        val backOffProps = SupervisorUtil.supervisorProps(
+          testAppConfig,
+          PERSISTENT_ACTOR_BASE,
+          AGENCY_AGENT_REGION_ACTOR_NAME,
+          ActorProtocol(ConnectionsDef).props(agentActorContext, executionContext)
+        )
+        backOffProps.isDefined shouldBe true
+        backOffProps.get.args.head.toString shouldBe "class akka.pattern.internal.BackoffOnRestartSupervisor"
       }
     }
   }

@@ -10,11 +10,13 @@ import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.BaseAsyncOpExecutorImpl
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccessException, LedgerAsyncOps}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
+import com.evernym.verity.vdr.{FQSchemaId, PreparedTxn, VDRAdapter}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class LedgerAccessAPI(cache: Cache,
                       ledgerSvc: LedgerSvc,
+                      vdrAdapter: VDRAdapter,
                       _walletAccess: WalletAccess)
                      (implicit val asyncAPIContext: AsyncAPIContext)
   extends LedgerAsyncOps
@@ -70,6 +72,25 @@ class LedgerAccessAPI(cache: Cache,
     )
   }
 
+  //vdr apis
+  override def prepareSchemaTxn(schemaJson: String,
+                                fqSchemaId: FQSchemaId,
+                                submitterDID: DidStr,
+                                endorser: Option[String]): Unit = {
+    withAsyncOpExecutorActor(
+      { implicit ec => vdrAdapter.prepareSchemaTxn(schemaJson, fqSchemaId, submitterDID, endorser)}
+    )
+  }
+
+  override def submitTxn(preparedTxn: PreparedTxn,
+                         signature: Array[Byte],
+                         endorsement: Array[Byte]): Unit = {
+    withAsyncOpExecutorActor(
+      { implicit ec => vdrAdapter.submitTxn(preparedTxn, signature, endorsement)}
+    )
+  }
+
+  //helper functions
   private def getSchemaBase(schemaIds: Set[String])(implicit ec: ExecutionContext)
   : Future[Map[String, GetSchemaResp]] = {
     val keyDetails = schemaIds.map { sId =>
@@ -102,7 +123,7 @@ class LedgerAccessAPI(cache: Cache,
 }
 
 object LedgerAccessAPI {
-  def apply(cache: Cache, ledgerSvc: LedgerSvc, walletAccess: WalletAccess)
+  def apply(cache: Cache, ledgerSvc: LedgerSvc, vdrAdapter: VDRAdapter, walletAccess: WalletAccess)
            (implicit asyncAPIContext: AsyncAPIContext) =
-    new LedgerAccessAPI(cache, ledgerSvc, walletAccess)
+    new LedgerAccessAPI(cache, ledgerSvc, vdrAdapter, walletAccess)
 }

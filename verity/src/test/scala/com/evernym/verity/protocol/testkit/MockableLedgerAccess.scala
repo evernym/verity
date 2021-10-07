@@ -16,6 +16,7 @@ import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.WalletAPIParam
+import com.evernym.verity.vdr.{FQSchemaId, NoEndorsement, NoSignature, PreparedTxn, SubmittedTxn}
 import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
@@ -121,6 +122,27 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
   override def getCredDefs(credDefIds: Set[String])(handler: Try[Map[String, GetCredDefResp]] => Unit): Unit = {
     handler {
       if (ledgerAvailable) Try(credDefs.filterKeys(c => credDefIds.contains(c)))
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def prepareSchemaTxn(schemaJson: String,
+                                fqSchemaId: FQSchemaId,
+                                submitterDID: DidStr,
+                                endorser: Option[String])
+                               (handler: Try[PreparedTxn] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) Try(PreparedTxn("context", NoSignature, schemaJson.getBytes, NoEndorsement))
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def submitTxn(preparedTxn: PreparedTxn,
+                         signature: Array[Byte],
+                         endorsement: Array[Byte])
+                        (handler: Try[SubmittedTxn] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) Try(SubmittedTxn())
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }

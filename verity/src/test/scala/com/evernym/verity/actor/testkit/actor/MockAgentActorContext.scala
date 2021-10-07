@@ -28,7 +28,7 @@ import com.evernym.verity.transports.MsgSendingSvc
 class MockAgentActorContext(val system: ActorSystem,
                             val appConfig: AppConfig,
                             val ecp: ExecutionContextProvider,
-                            mockAgentMsgRouterProvider: () => Option[MockAgentMsgRouter] = { () => None })
+                            mockAgentMsgRouter: Option[AgentMsgRouter]=None)
   extends AgentActorContext {
 
   implicit lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
@@ -37,8 +37,8 @@ class MockAgentActorContext(val system: ActorSystem,
 
   override lazy val msgSendingSvc: MsgSendingSvc = MockMsgSendingSvc
   override lazy val poolConnManager: LedgerPoolConnManager = new InMemLedgerPoolConnManager(ecp.futureExecutionContext)(system.dispatcher)
-  override lazy val agentMsgRouter: AgentMsgRouter = mockAgentMsgRouterProvider().getOrElse(
-    new MockAgentMsgRouter(executionContext, Map.empty)(appConfig, system)
+  override lazy val agentMsgRouter: AgentMsgRouter = mockAgentMsgRouter.getOrElse(
+    new MockAgentMsgRouter(executionContext)(appConfig, system)
   )
 
   override lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, executionContext)

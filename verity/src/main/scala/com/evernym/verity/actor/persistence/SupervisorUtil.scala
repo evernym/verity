@@ -23,8 +23,8 @@ object SupervisorUtil {
     def fromString(s: String): Try[BackoffStrategy] = {
       s.trim.toLowerCase match {
         case "onfailure" => Success(OnFailure)
-        case "onstop" => Success(OnStop)
-        case s => Failure(new InvalidStrategy("Unknown backoff strategy - 's'"))
+        case "onstop"    => Success(OnStop)
+        case s           => Failure(new InvalidStrategy(s"Unknown backoff strategy - '$s'"))
       }
     }
   }
@@ -39,8 +39,8 @@ object SupervisorUtil {
     getBackoffConfig(appConfig, entityCategory, typeName)
     .map { config =>
       config.strategy match {
-        case OnFailure => onFailureSupervisorProps(config, childProps)
-        case OnStop => onStopSupervisorProps(config, childProps)
+        case OnFailure  => onFailureSupervisorProps(config, childProps)
+        case OnStop     => onStopSupervisorProps(config, childProps)
       }
     }
   }
@@ -92,7 +92,11 @@ object SupervisorUtil {
   private def getBackoffConfig(appConfig: AppConfig, entityCategory: String, typeName: String): Option[BackoffConfig] = {
     val supervisedEnabled =
       PersistentActorConfigUtil
-        .getSupervisedEnabled(appConfig, defaultValue = false, entityCategory, typeName)
+        .getSupervisedEnabled(appConfig, entityCategory, Option(typeName))
+        .getOrElse(
+           PersistentActorConfigUtil.getSupervisedEnabled(appConfig, entityCategory, None)
+             .getOrElse(false)
+        )
     if (supervisedEnabled) {
       val strategy = {
         val confVal = PersistentActorConfigUtil.getBackoffStrategy(

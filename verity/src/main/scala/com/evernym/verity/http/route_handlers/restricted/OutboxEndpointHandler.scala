@@ -12,6 +12,7 @@ import com.evernym.verity.msgoutbox.outbox.Outbox
 
 import scala.concurrent.Future
 
+// todo: should be switched to OutboxService usage after Outbox work finalization
 trait OutboxEndpointHandler { this: HttpRouteWithPlatform =>
 
   import akka.actor.typed.scaladsl.adapter._
@@ -19,7 +20,7 @@ trait OutboxEndpointHandler { this: HttpRouteWithPlatform =>
   private def getOutboxDeliveryStatus(outboxId: String): Future[Any] = {
     val clusterSharding = ClusterSharding(system.toTyped)
     val outboxEntityRef = clusterSharding.entityRefFor(Outbox.TypeKey, outboxId)
-    outboxEntityRef.ask(ref => Outbox.Commands.GetDeliveryStatus(ref))
+    outboxEntityRef.ask(ref => Outbox.Commands.GetDeliveryStatus(List(), List(), false, ref))
   }
 
   private def getMsgDeliveryStatus(msgId: String): Future[Any] = {

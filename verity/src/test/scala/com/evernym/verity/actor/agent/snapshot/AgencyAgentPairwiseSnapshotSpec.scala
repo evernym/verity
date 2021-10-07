@@ -1,7 +1,5 @@
 package com.evernym.verity.actor.agent.snapshot
 
-import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
-import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.agency.agent_provisioning.AgencyAgentPairwiseSpecBase
 import com.evernym.verity.actor.agent.agency.{AgencyAgentPairwiseState, GetLocalAgencyIdentity}
@@ -18,18 +16,16 @@ import scala.concurrent.ExecutionContext
 
 class AgencyAgentPairwiseSnapshotSpec
   extends AgencyAgentPairwiseSpecBase
-    with SnapshotSpecBase
+    with AgentSnapshotSpecBase
     with OverrideConfig {
 
-  override def overrideConfig: Option[Config] = Option(
+  override def specificConfig: Option[Config] = Option(
     ConfigFactory.parseString(
       """verity.persistent-actor.base.AgencyAgentPairwise.snapshot {
         after-n-events = 1
         keep-n-snapshots = 2
         delete-events-on-snapshots = true
       }""")
-      .withFallback(EventSourcedBehaviorTestKit.config)
-      .withFallback(PersistenceTestKitSnapshotPlugin.config)
   )
 
   import mockEdgeAgent.v_0_5_req._

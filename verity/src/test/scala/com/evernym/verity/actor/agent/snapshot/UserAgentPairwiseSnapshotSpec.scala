@@ -1,7 +1,5 @@
 package com.evernym.verity.actor.agent.snapshot
 
-import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
-import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.{ForIdentifier, KeyCreated}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
@@ -23,7 +21,7 @@ class UserAgentPairwiseSnapshotSpec
   extends BasicSpec
     with UserAgentPairwiseSpecScaffolding
     with PersistentActorSpec
-    with SnapshotSpecBase
+    with AgentSnapshotSpecBase
     with OverrideConfig {
 
   override def beforeAll(): Unit = {
@@ -32,15 +30,13 @@ class UserAgentPairwiseSnapshotSpec
     createUserAgent()
   }
 
-  override def overrideConfig: Option[Config] = Option(
+  override def specificConfig: Option[Config] = Option(
     ConfigFactory.parseString(
       """verity.persistent-actor.base.UserAgentPairwise.snapshot {
         after-n-events = 1
         keep-n-snapshots = 2
         delete-events-on-snapshots = false
       }""")
-      .withFallback(EventSourcedBehaviorTestKit.config)
-      .withFallback(PersistenceTestKitSnapshotPlugin.config)
   )
 
   "UserAgentPairwise actor" - {

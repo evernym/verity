@@ -166,7 +166,7 @@ class OAuthWebhookSenderSpec
       testMsgPackagers)
 
     val salt = appConfig.getStringReq(SALT_EVENT_ENCRYPTION)
-    val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, salt)
+    val packager = msg_packager.Packager(msgPackagingParam, testMsgRepository, salt)
     val sender = OAuthWebhookSender(
       buildOAuthAccessTokenHolder(tokenExpiresInSeconds = 5),
       dispatchParam,

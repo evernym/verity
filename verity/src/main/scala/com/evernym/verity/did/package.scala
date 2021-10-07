@@ -1,5 +1,7 @@
 package com.evernym.verity
 
+import com.evernym.verity.did.exception.{UnableToIdentifyDIDMethodException, UnrecognizedDIDMethodException}
+import com.evernym.verity.did.methods._
 import com.evernym.verity.util.Base58Util
 
 import scala.util.Success
@@ -12,11 +14,36 @@ package object did {
   val VALID_DID_BYTE_LENGTH = 16
   val VALID_VER_KEY_BYTE_LENGTH = 32
 
-  def validateDID(did: DidStr): Unit = {
-    val decodedDID = Base58Util.decode(did)
-    decodedDID match {
-      case Success(d) if d.length == VALID_DID_BYTE_LENGTH => //valid did
-      case _ => throw new RuntimeException("invalid did: " + did)
+  def toDIDMethod(did: DidStr): DIDMethod = {
+    val splitted = did.split(":")
+    splitted.length match {
+      case x if x >= 3 => {
+        splitted(1) match {
+          case "sov" => new DIDSov(did)
+          case "key" => new DIDKey(did)
+          case _ => throw new UnrecognizedDIDMethodException(did, splitted(2))
+        }
+      }
+      case 1 => {
+        new UnqualifiedDID(did)
+      }
+      case _ => {
+        throw new UnableToIdentifyDIDMethodException(did)
+      }
+    }
+  }
+
+
+  def validateDID(did: Any): Unit = {
+    did match {
+      case u: UnqualifiedDID =>
+        val decodedDID = Base58Util.decode(u.identifier)
+        decodedDID match {
+          case Success(d) if d.length == VALID_DID_BYTE_LENGTH => //valid did
+          case _ => throw new RuntimeException("invalid did: " + u)
+        }
+      case v: SelfValidated => // validation performed in class
+      case x: DIDMethod => throw new UnrecognizedDIDMethodException(x.toString, x.method)
     }
   }
 
@@ -33,7 +60,7 @@ package object did {
     def toAgentDidPair: com.evernym.verity.actor.agent.DidPair = com.evernym.verity.actor.agent.DidPair(did, verKey)
 
     def validate(): Unit = {
-      validateDID(did)
+      validateDID(toDIDMethod(did))
       validateVerKey(verKey)
     }
   }

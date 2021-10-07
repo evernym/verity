@@ -63,7 +63,6 @@ object ConfigConstants {
   val YOURLS_API_SIGNATURE = s"$YOURLS.signature"
   val YOURLS_API_USERNAME = s"$YOURLS.username"
   val YOURLS_API_PASSWORD = s"$YOURLS.password"
-  val YOURLS_API_TIMEOUT_SECONDS = s"$YOURLS.timeout-seconds"
 
   private val SMS_SVC = s"$SERVICES.sms-service"
 

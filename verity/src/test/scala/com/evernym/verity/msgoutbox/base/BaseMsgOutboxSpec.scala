@@ -3,13 +3,14 @@ package com.evernym.verity.msgoutbox.base
 import akka.Done
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.scaladsl.adapter._
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import com.evernym.verity.util2.{HasExecutionContextProvider, PolicyElements, RetentionPolicy, Status}
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies.{AddMsgReply, MsgAdded}
-import com.evernym.verity.msgoutbox.{Authentication, ComMethod, ComMethodId, DestId, OutboxId, RecipPackaging, WalletId}
+import com.evernym.verity.msgoutbox.{Authentication, ComMethod, ComMethodId, DestId, MessageRepository, OutboxId, RecipId, RecipPackaging, RelId, RelResolver, WalletId}
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter.Commands.{SendBinary, SendJson}
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.HttpTransporter.Replies.SendResponse
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.SendOutboxParam
@@ -38,9 +39,12 @@ import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.config.{Config, ConfigFactory}
 import org.json.JSONObject
-
 import java.util.UUID
-import scala.concurrent.{Await, ExecutionContext}
+
+import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
+import com.evernym.verity.msgoutbox.outbox.OutboxIdParam
+
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
 
@@ -89,7 +93,7 @@ trait BaseMsgOutboxSpec extends HasExecutionContextProvider { this: BehaviourSpe
     }
   }
 
-  val testRelResolver: Behavior[RelationshipResolver.Cmd] = {
+  val testRelationshipResolver: Behavior[RelationshipResolver.Cmd] = {
     val destParams = Map("default" -> DestParam(testWallet.walletId, myKey1.verKey, defaultDestComMethods))
     TestRelResolver(destParams)
   }
@@ -119,6 +123,20 @@ trait BaseMsgOutboxSpec extends HasExecutionContextProvider { this: BehaviourSpe
   )
 
   val testMsgStore: ActorRef[MsgStore.Cmd] = spawn(MsgStore(BUCKET_NAME, storageAPI, executionContext))
+
+  val testMsgRepository: MessageRepository = MessageRepository(testMsgStore, executionContext, system)
+
+  class TestRelResolver extends RelResolver {
+    override def resolveOutboxParam(relId: RelId, recipId: RecipId): Future[OutboxIdParam] = {
+      Future.successful(OutboxIdParam(relId, recipId, "destId"))
+    }
+
+    override def getWalletParam(relId: RelId, destId: DestId): Future[(WalletId, VerKeyStr, Map[ComMethodId, ComMethod])] = {
+      Future.successful(testWallet.walletId, myKey1.verKey, Map("1" -> plainIndyWebhookComMethod))
+    }
+  }
+
+  val testRelResolver: RelResolver = new TestRelResolver
 
   def storeAndAddToMsgMetadataActor(msgType: String,
                                     outboxIds: Set[OutboxId]): MsgId = {

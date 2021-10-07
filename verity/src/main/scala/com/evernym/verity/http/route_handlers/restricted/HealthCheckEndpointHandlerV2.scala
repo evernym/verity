@@ -1,7 +1,7 @@
 package com.evernym.verity.http.route_handlers.restricted
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.StatusCodes._
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives.{complete, _}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
@@ -20,10 +20,15 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Failure
+import scala.util.{Failure, Success}
 
 
-trait AbstractApiHealthChecker {
+case class ReadinessStatus(rds: String = "", dynamoDB: String = "", storageAPI: String = "")
+
+case class ApiStatus(status: Boolean, msg: String)
+
+
+trait AbstractHealthChecker {
   def checkAkkaEventStorageReadiness: Future[ApiStatus]
 
   def checkWalletStorageReadiness: Future[ApiStatus]
@@ -36,9 +41,9 @@ trait AbstractApiHealthChecker {
 /**
  * Logic for this object based on com.evernym.verity.app_launcher.LaunchPreCheck methods
  */
-class ApiHealthChecker(val platform: Platform) extends AbstractApiHealthChecker {
+class HealthChecker(val platform: Platform) extends AbstractHealthChecker {
   private implicit val as: ActorSystem = platform.actorSystem
-  implicit val ex: ExecutionContext = platform.executionContextProvider.futureExecutionContext
+  private implicit val ex: ExecutionContext = platform.executionContextProvider.futureExecutionContext
 
   override def checkAkkaEventStorageReadiness: Future[ApiStatus] = {
     implicit val timeout: Timeout = Timeout(Duration.create(15, TimeUnit.SECONDS))
@@ -47,14 +52,14 @@ class ApiHealthChecker(val platform: Platform) extends AbstractApiHealthChecker 
     val fut = {
       (keyValueMapper ? GetValue("dummy-key"))
         .mapTo[Option[String]]
-        .map { _ =>
+        .transform( t => {
           platform.aac.system.stop(keyValueMapper)
-          ApiStatus(status = true, "OK")
-        }
-    }.recover({ case e: Exception =>
-      platform.aac.system.stop(keyValueMapper)
-      ApiStatus(status = false, e.getMessage)
-    })
+          t match {
+            case Success(_) => Success(ApiStatus(status = true, "OK"))
+            case Failure(e) => Success(ApiStatus(status = false, e.getMessage))
+          }
+        })
+    }
     fut
   }
 
@@ -64,11 +69,9 @@ class ApiHealthChecker(val platform: Platform) extends AbstractApiHealthChecker 
     val wap = generateWalletParamAsync(walletId, platform.aac.appConfig, LibIndyWalletProvider)
     val fLibIndy = wap.flatMap(w => {
       LibIndyWalletProvider.openAsync(w.walletName, w.encryptionKey, w.walletConfig)
-    }) recover {
-      case e: Exception => Future.failed(e)
-    }
-    fLibIndy.flatMap {
-      _ => Future.successful(ApiStatus(status = true, "OK"))
+    })
+    fLibIndy.map {
+      _ => ApiStatus(status = true, "OK")
     } recover {
       case _: WalletDoesNotExist => ApiStatus(status = true, "OK")
       case e: Exception => ApiStatus(status = false, e.getMessage)
@@ -76,29 +79,29 @@ class ApiHealthChecker(val platform: Platform) extends AbstractApiHealthChecker 
   }
 
   override def checkStorageAPIReadiness: Future[ApiStatus] = {
-    platform.aac.storageAPI.ping flatMap {
-      _ => Future.successful(ApiStatus(status = true, "OK"))
+    platform.aac.storageAPI.ping map {
+      _ => ApiStatus(status = true, "OK")
     } recover {
       case e: Exception => ApiStatus(status = false, e.getMessage)
     }
   }
 
   override def checkLiveness: Future[Unit] = {
-    Future.successful((): Unit)
+    Future {}
   }
 }
 
 trait HealthCheckEndpointHandlerV2 {
   this: HttpRouteWithPlatform =>
-  val apiHealthChecker: AbstractApiHealthChecker
+  val healthChecker: AbstractHealthChecker
 
   private implicit val apiStatusJsonFormat: RootJsonFormat[ReadinessStatus] = jsonFormat3(ReadinessStatus)
 
   private def readinessCheck(): Future[(Boolean, ReadinessStatus)] = {
-    val rdsFuture = apiHealthChecker.checkAkkaEventStorageReadiness
-    val dynamoDBFuture = apiHealthChecker.checkWalletStorageReadiness
-    val storageAPIFuture = apiHealthChecker.checkStorageAPIReadiness
-    val res = for {
+    val rdsFuture = healthChecker.checkAkkaEventStorageReadiness
+    val dynamoDBFuture = healthChecker.checkWalletStorageReadiness
+    val storageAPIFuture = healthChecker.checkStorageAPIReadiness
+    for {
       rds <- rdsFuture
       dynamodb <- dynamoDBFuture
       storageAPI <- storageAPIFuture
@@ -106,7 +109,6 @@ trait HealthCheckEndpointHandlerV2 {
       rds.status && dynamodb.status && storageAPI.status,
       ReadinessStatus(rds.msg, dynamodb.msg, storageAPI.msg)
     )
-    res
   }
 
   protected val healthCheckRouteV2: Route =
@@ -116,16 +118,16 @@ trait HealthCheckEndpointHandlerV2 {
           path("readiness") {
             (get & pathEnd) {
               onComplete(readinessCheck()) {
-                case util.Success(value) => complete(if (value._1) OK else ServiceUnavailable, value._2.toJson.toString())
-                case Failure(e) => complete(ServiceUnavailable, e.getMessage)
+                case Success(value) => complete(if (value._1) StatusCodes.OK else StatusCodes.ServiceUnavailable, value._2.toJson.toString())
+                case Failure(e) => complete(StatusCodes.ServiceUnavailable, e.getMessage)
               }
             }
           } ~
             path("liveness") {
               (get & pathEnd) {
-                onComplete(apiHealthChecker.checkLiveness) {
-                  case util.Success(_) => complete(OK, "OK")
-                  case Failure(e) => complete(ServiceUnavailable, e.getMessage)
+                onComplete(healthChecker.checkLiveness) {
+                  case Success(_) => complete(StatusCodes.OK, "OK")
+                  case Failure(e) => complete(StatusCodes.ServiceUnavailable, e.getMessage)
                 }
               }
             }
@@ -134,7 +136,3 @@ trait HealthCheckEndpointHandlerV2 {
     }
 
 }
-
-case class ReadinessStatus(rds: String = "", dynamoDB: String = "", storageAPI: String = "")
-
-case class ApiStatus(status: Boolean, msg: String)

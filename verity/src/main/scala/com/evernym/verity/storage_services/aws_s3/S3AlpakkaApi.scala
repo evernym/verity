@@ -79,10 +79,6 @@ class S3AlpakkaApi(config: AppConfig, executionContext: ExecutionContext)(implic
     extends BadRequestErrorException(statusCode, statusMsg, statusMsgDetail, errorDetail)
 
   override def ping: Future[Unit] = {
-    checkIfBucketExists("dummy-bucket-" + UUID.randomUUID()) flatMap {
-      _ => Future.successful((): Unit)
-    } recover {
-      case e: Exception => Future.failed(e)
-    }
+    checkIfBucketExists("dummy-bucket-" + UUID.randomUUID()).map(_ => ())
   }
 }

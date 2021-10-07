@@ -2,7 +2,6 @@ package com.evernym.verity.http.route_handlers.restricted
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes._
-import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.{complete, _}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
@@ -24,7 +23,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Failure
 
 
-trait AbstractApiHealthCheck {
+trait AbstractApiHealthChecker {
   def checkAkkaEventStorageReadiness: Future[ApiStatus]
 
   def checkWalletStorageReadiness: Future[ApiStatus]
@@ -37,7 +36,7 @@ trait AbstractApiHealthCheck {
 /**
  * Logic for this object based on com.evernym.verity.app_launcher.LaunchPreCheck methods
  */
-class ApiHealthCheck(val platform: Platform) extends AbstractApiHealthCheck {
+class ApiHealthChecker(val platform: Platform) extends AbstractApiHealthChecker {
   private implicit val as: ActorSystem = platform.actorSystem
   implicit val ex: ExecutionContext = platform.executionContextProvider.futureExecutionContext
 
@@ -91,14 +90,14 @@ class ApiHealthCheck(val platform: Platform) extends AbstractApiHealthCheck {
 
 trait HealthCheckEndpointHandlerV2 {
   this: HttpRouteWithPlatform =>
-  val apiHealthCheck: AbstractApiHealthCheck
+  val apiHealthChecker: AbstractApiHealthChecker
 
-  implicit val apiStatusJsonFormat: RootJsonFormat[ReadinessStatus] = jsonFormat3(ReadinessStatus)
+  private implicit val apiStatusJsonFormat: RootJsonFormat[ReadinessStatus] = jsonFormat3(ReadinessStatus)
 
-  def readinessCheck(): Future[(Boolean, ReadinessStatus)] = {
-    val rdsFuture = apiHealthCheck.checkAkkaEventStorageReadiness
-    val dynamoDBFuture = apiHealthCheck.checkWalletStorageReadiness
-    val storageAPIFuture = apiHealthCheck.checkStorageAPIReadiness
+  private def readinessCheck(): Future[(Boolean, ReadinessStatus)] = {
+    val rdsFuture = apiHealthChecker.checkAkkaEventStorageReadiness
+    val dynamoDBFuture = apiHealthChecker.checkWalletStorageReadiness
+    val storageAPIFuture = apiHealthChecker.checkStorageAPIReadiness
     val res = for {
       rds <- rdsFuture
       dynamodb <- dynamoDBFuture
@@ -124,7 +123,7 @@ trait HealthCheckEndpointHandlerV2 {
           } ~
             path("liveness") {
               (get & pathEnd) {
-                onComplete(apiHealthCheck.checkLiveness) {
+                onComplete(apiHealthChecker.checkLiveness) {
                   case util.Success(_) => complete(OK, "OK")
                   case Failure(e) => complete(ServiceUnavailable, e.getMessage)
                 }

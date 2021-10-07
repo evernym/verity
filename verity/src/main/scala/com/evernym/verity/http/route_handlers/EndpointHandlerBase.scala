@@ -13,7 +13,7 @@ import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.common.HttpRouteBase
 import com.evernym.verity.http.route_handlers.configured.ConfiguredApiRoutes
 import com.evernym.verity.http.route_handlers.open.OpenApiRoutes
-import com.evernym.verity.http.route_handlers.restricted.{AbstractApiHealthCheck, ApiHealthCheck, RestrictedApiRoutes}
+import com.evernym.verity.http.route_handlers.restricted.{AbstractApiHealthChecker, ApiHealthChecker, RestrictedApiRoutes}
 
 import scala.concurrent.Future
 
@@ -34,7 +34,7 @@ trait EndpointHandlerBase
 
   def endpointRoutes: Route = ignoreTrailingSlash { baseRoute }
 
-  override val apiHealthCheck: AbstractApiHealthCheck = new ApiHealthCheck(platform)
+  override val apiHealthChecker: AbstractApiHealthChecker = new ApiHealthChecker(platform)
 
   protected def msgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
     case ai: AgencyPublicDid     => handleExpectedResponse(ai)

@@ -58,6 +58,8 @@ class MockAgentActorContext(val system: ActorSystem,
     override def delete(bucketName: String, id: String): Future[Done] = {
       Future { storageMock -= id; Done }
     }
+
+    override def ping: Future[Unit] = Future.successful((): Unit)
   }
 
   override lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] =

@@ -16,7 +16,7 @@ import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.WalletAPIParam
-import com.evernym.verity.vdr.{FQSchemaId, NoEndorsement, NoSignature, PreparedTxn, SubmittedTxn}
+import com.evernym.verity.vdr.{CredDef, FQCredDefId, FQSchemaId, NoEndorsement, NoSignature, PreparedTxn, Schema, SubmittedTxn}
 import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
@@ -137,6 +137,17 @@ class MockableLedgerAccess(walletExecutionContext: ExecutionContext,
     }
   }
 
+  override def prepareCredDefTxn(credDefJson: String,
+                                 fqCredDefId: FQCredDefId,
+                                 submitterDID: DidStr,
+                                 endorser: Option[String])
+                                (handler: Try[PreparedTxn] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) Try(PreparedTxn("context", NoSignature, credDefJson.getBytes, NoEndorsement))
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
   override def submitTxn(preparedTxn: PreparedTxn,
                          signature: Array[Byte],
                          endorsement: Array[Byte])
@@ -144,6 +155,20 @@ class MockableLedgerAccess(walletExecutionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) Try(SubmittedTxn())
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def resolveSchema(fqSchemaId: FQSchemaId)(handler: Try[Schema] => Unit): Unit = {
+    handler {
+      // todo Use schema store to retrieve schema
+      Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def resolveCredDef(fqCredDefId: FQCredDefId)(handler: Try[CredDef] => Unit): Unit = {
+    handler {
+      // todo Use cred def store retrieve cred def
+      Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 }

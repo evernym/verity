@@ -3,7 +3,7 @@ package com.evernym.verity.integration.outbox.with_sdk.oauth
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
-import com.evernym.verity.integration.base.sdk_provider.{OAuthParam, SdkProvider}
+import com.evernym.verity.integration.base.sdk_provider.{SdkProvider, V1OAuthParam}
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestion
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Msg.{Answer, Question}
@@ -27,7 +27,7 @@ class QuestionAnswerSpec
   lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, walletExecutionContext, Option(OAuthParam(5.seconds)))
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, walletExecutionContext, Option(V1OAuthParam(5.seconds)))
   lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, walletExecutionContext)
 
   val firstConn = "connId1"

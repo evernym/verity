@@ -1,8 +1,8 @@
-package com.evernym.verity.integration.outbox.with_rest_api.oauth
+package com.evernym.verity.integration.outbox.with_rest_api.oauth.v1
 
 import akka.http.scaladsl.model.StatusCodes.Accepted
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
-import com.evernym.verity.integration.base.sdk_provider.{OAuthParam, SdkProvider}
+import com.evernym.verity.integration.base.sdk_provider.{SdkProvider, V1OAuthParam}
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestion
@@ -15,12 +15,11 @@ import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.Update
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResult
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{Config => AgentConfig}
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{Write, StatusReport => WSStatusReport}
-import com.typesafe.config.{Config, ConfigFactory}
-import java.util.UUID
-
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
+import com.typesafe.config.{Config, ConfigFactory}
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -36,7 +35,7 @@ class RestIssuerSdkSpec
   lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, executionContext, walletExecutionContext, Option(OAuthParam(5.seconds)))
+  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, executionContext, walletExecutionContext, Option(V1OAuthParam(5.seconds)))
   lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, walletExecutionContext)
 
   override def beforeAll(): Unit = {

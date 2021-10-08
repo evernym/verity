@@ -230,7 +230,7 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
 
   val msgListener: MsgListenerBase[Array[Byte]] = {
     val port = PortProvider.generateUnusedPort(7000)
-    val ml = new PackedMsgListener(port, oauthParam.map(_.tokenExpiresDuration))(system)
+    val ml = new PackedMsgListener(port, oauthParam)(system)
     ml.setCheckAuth(oauthParam.isDefined)
     ml
   }
@@ -437,7 +437,7 @@ case class IssuerRestSDK(param: SdkParam,
 
   val msgListener: MsgListenerBase[String] = {
     val port = PortProvider.generateUnusedPort(7000)
-    val ml = new JsonMsgListener(port, oauthParam.map(_.tokenExpiresDuration))(system)
+    val ml = new JsonMsgListener(port, oauthParam)(system)
     ml.setCheckAuth(oauthParam.isDefined)
     ml
   }

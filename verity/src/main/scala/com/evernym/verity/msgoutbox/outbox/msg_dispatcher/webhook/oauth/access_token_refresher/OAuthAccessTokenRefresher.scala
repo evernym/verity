@@ -21,18 +21,22 @@ object OAuthAccessTokenRefresher {
 
   trait Reply extends ActorMessage
   object Replies {
-    case class GetTokenSuccess(value: String, expiresInSeconds: Int, respJSONObject: Option[JSONObject]) extends Reply
+    case class GetTokenSuccess(value: String, expiresInSeconds: Option[Int], respJSONObject: Option[JSONObject]) extends Reply
     case class GetTokenFailed(errorMsg: String) extends Reply
   }
 
-  def getRefresher(version: String, executionContext: ExecutionContext):  Behavior[OAuthAccessTokenRefresher.Cmd] = {
+  def getRefresher(version: String, executionContext: ExecutionContext): Behavior[OAuthAccessTokenRefresher.Cmd] = {
     version match {
       case OAUTH2_VERSION_1   => OAuthAccessTokenRefresherImplV1(executionContext)
-      case other  => throw new RuntimeException("oauth token refresher not found for version: " + other)
+      case OAUTH2_VERSION_2   => OAuthAccessTokenRefresherImplV2(executionContext)
+      case other              => throw new RuntimeException("oauth token refresher not found for version: " + other)
     }
   }
 
   val AUTH_TYPE_OAUTH2 = "OAuth2"
+
   val OAUTH2_VERSION_1 = "v1"
-  val SUPPORTED_VERSIONS = Seq(OAUTH2_VERSION_1)
+  val OAUTH2_VERSION_2 = "v2"
+
+  val SUPPORTED_VERSIONS = Seq(OAUTH2_VERSION_1, OAUTH2_VERSION_2)
 }

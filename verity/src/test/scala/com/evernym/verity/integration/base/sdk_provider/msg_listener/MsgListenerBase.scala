@@ -7,6 +7,7 @@ import akka.http.scaladsl.model.headers.HttpCredentials
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, StatusCode}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import com.evernym.verity.integration.base.sdk_provider.{OAuthParam, V1OAuthParam, V2OAuthParam}
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
@@ -104,11 +105,15 @@ trait MsgListenerBase[T]
 
 trait HasOAuthSupport {
   def port: Int
-  def tokenExpiresInDuration: Option[FiniteDuration]
+  def oAuthParam: Option[OAuthParam]
 
   lazy val oAuthAccessTokenEndpoint = s"http://localhost:$port/$oAuthAccessTokenEndpointPath"
 
-  private lazy val tokenExpiresInSeconds: Long = tokenExpiresInDuration.map(_.toSeconds).getOrElse(10L)
+  private lazy val tokenExpiresInSeconds: Long = oAuthParam match {
+    case Some(V1OAuthParam(tokenExpiresInDuration)) => tokenExpiresInDuration.toSeconds
+    case _                                          => 10L
+  }
+
   private lazy val oAuthAccessTokenEndpointPath: String = "access-token"
 
   def accessTokenRefreshCount: Int = _tokenRefreshCount
@@ -132,7 +137,7 @@ trait HasOAuthSupport {
 
   protected def hasValidToken(cred: Option[HttpCredentials]): Boolean = {
     val isAuthed = cred match {
-      case Some(c) => token.map(_.value).contains(c.token())
+      case Some(c) => token.exists(_.isValid(c.token()))
       case None    => false
     }
     if (isAuthed) _authedMsgSinceLastReset = _authedMsgSinceLastReset + 1
@@ -141,18 +146,25 @@ trait HasOAuthSupport {
   }
 
   private def refreshToken(): Unit = {
-    token = Option(Token(UUID.randomUUID().toString, LocalDateTime.now().plusSeconds(tokenExpiresInSeconds)))
+    token = Option(Token(UUID.randomUUID().toString, Option(LocalDateTime.now().plusSeconds(tokenExpiresInSeconds))))
     _tokenRefreshCount += 1
   }
 
-  private var token: Option[Token] = None
+  private var token: Option[Token] = oAuthParam match {
+    case Some(V2OAuthParam(token)) => Option(Token(token, None))
+    case _                         => None
+  }
   private var _tokenRefreshCount = 0
   protected var _authedMsgSinceLastReset: Int = 0
   protected var _failedAuthedMsgSinceLastReset: Int = 0
 
 }
 
-case class Token(value: String, expiresAt: LocalDateTime)
+case class Token(value: String, expiresAt: Option[LocalDateTime]) {
+  def isValid(giveToken: String): Boolean = {
+    giveToken == value && expiresAt.forall(e => LocalDateTime.now().isAfter(e))
+  }
+}
 
 case class ReceivedMsgCounter(plainMsgsBeforeLastReset: Int,
                               authedMsgsBeforeLastReset: Int,

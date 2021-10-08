@@ -585,6 +585,8 @@ object MsgFamilyHelper {
 
 case class TheirServiceDetail(verKey: VerKeyStr, routingKeys: Vector[VerKeyStr], serviceEndpoint: ServiceEndpoint)
 
-case class OAuthParam(tokenExpiresDuration: FiniteDuration)
+trait OAuthParam
+case class V1OAuthParam(tokenExpiresDuration: FiniteDuration) extends OAuthParam
+case class V2OAuthParam(fixedToken: String) extends OAuthParam
 
 class UnexpectedMsgException(msg: String) extends RuntimeException(msg)

@@ -3,7 +3,6 @@ package com.evernym.verity.msgoutbox.base
 import akka.Done
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
-import akka.actor.typed.scaladsl.adapter._
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider, PolicyElements, RetentionPolicy, Status}
@@ -284,7 +283,7 @@ object MockOAuthAccessTokenRefresher {
           if (shallFail) {
             replyTo ! OAuthAccessTokenRefresher.Replies.GetTokenFailed("purposefully failing")
           } else if (! shallTimeout) {
-            replyTo ! GetTokenSuccess(UUID.randomUUID().toString, expiresInSeconds, Option(new JSONObject("{}")))
+            replyTo ! GetTokenSuccess(UUID.randomUUID().toString, Option(expiresInSeconds), Option(new JSONObject("{}")))
             tokenRefreshCount += 1
           }
           Behaviors.stopped

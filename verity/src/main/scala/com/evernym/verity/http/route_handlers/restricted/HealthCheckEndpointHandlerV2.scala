@@ -86,6 +86,8 @@ class HealthChecker(val platform: Platform) extends AbstractHealthChecker {
     }
   }
 
+  //This method checks that Verity can respond to the liveness request,
+  // and `Future{}` checks if ExecutionContext is available, and can execute Future.
   override def checkLiveness: Future[Unit] = {
     Future {}
   }

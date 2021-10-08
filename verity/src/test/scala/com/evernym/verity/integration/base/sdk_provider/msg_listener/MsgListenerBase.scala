@@ -162,7 +162,7 @@ trait HasOAuthSupport {
 
 case class Token(value: String, expiresAt: Option[LocalDateTime]) {
   def isValid(giveToken: String): Boolean = {
-    giveToken == value && expiresAt.forall(e => LocalDateTime.now().isAfter(e))
+    giveToken == value && expiresAt.forall(e => LocalDateTime.now().isBefore(e))
   }
 }
 

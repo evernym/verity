@@ -5,9 +5,9 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.vdr.{FQSchemaId, VDRToolsFactoryParam}
-import com.evernym.verity.vdr.service.VDRActor.Commands.{Initialized, PrepareSchemaTxn, SubmitTxn}
-import com.evernym.verity.vdr.service.VDRActor.Replies.{PrepareTxnResp, SubmitTxnResp}
+import com.evernym.verity.vdr.{FQCredDefId, FQDid, FQSchemaId, Namespace, VDRToolsFactoryParam}
+import com.evernym.verity.vdr.service.VDRActor.Commands.{LedgersRegistered, Ping, PrepareCredDefTxn, PrepareSchemaTxn, ResolveCredDef, ResolveDID, ResolveSchema, SubmitTxn}
+import com.evernym.verity.vdr.service.VDRActor.Replies.{PingResp, PrepareTxnResp, ResolveCredDefResp, ResolveDIDResp, ResolveSchemaResp, SubmitTxnResp}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -17,7 +17,10 @@ object VDRActor {
 
   sealed trait Cmd extends ActorMessage
   object Commands {
-    case object Initialized extends Cmd
+    case object LedgersRegistered extends Cmd
+
+    case class Ping(namespaces: List[Namespace],
+                    replyTo: ActorRef[Replies.PingResp]) extends Cmd
 
     case class PrepareSchemaTxn(schemaJson: String,
                                 fqSchemaId: FQSchemaId,
@@ -25,16 +28,36 @@ object VDRActor {
                                 endorser: Option[String],
                                 replyTo: ActorRef[Replies.PrepareTxnResp]) extends Cmd
 
+    case class PrepareCredDefTxn(credDefJson: String,
+                                 fqCredDefId: FQCredDefId,
+                                 submitterDID: DidStr,
+                                 endorser: Option[String],
+                                 replyTo: ActorRef[Replies.PrepareTxnResp]) extends Cmd
+
     case class SubmitTxn(preparedTxn: VDR_PreparedTxn,
                          signature: Array[Byte],
                          endorsement: Array[Byte],
                          replyTo: ActorRef[Replies.SubmitTxnResp]) extends Cmd
+
+    case class ResolveSchema(schemaId: FQSchemaId,
+                             replyTo: ActorRef[Replies.ResolveSchemaResp]) extends Cmd
+
+    case class ResolveCredDef(credDefId: FQCredDefId,
+                              replyTo: ActorRef[Replies.ResolveCredDefResp]) extends Cmd
+
+    case class ResolveDID(fqDid: FQDid,
+                          replyTo: ActorRef[Replies.ResolveDIDResp]) extends Cmd
+
   }
 
   trait Reply extends ActorMessage
   object Replies {
+    case class PingResp(resp: Try[VDR_PingResult]) extends Reply
     case class PrepareTxnResp(preparedTxn: Try[VDR_PreparedTxn]) extends Reply
     case class SubmitTxnResp(preparedTxn: Try[VDR_SubmittedTxn]) extends Reply
+    case class ResolveSchemaResp(resp: Try[VDR_Schema]) extends Reply
+    case class ResolveCredDefResp(resp: Try[VDR_CredDef]) extends Reply
+    case class ResolveDIDResp(resp: Try[VDR_DidDoc]) extends Reply
   }
 
   //implementation of above typed interface
@@ -65,50 +88,88 @@ object VDRActor {
                                    actorContext: ActorContext[Cmd],
                                    executionContext: ExecutionContext): Behavior[Cmd] =
     Behaviors.receiveMessage {
-      case Initialized =>
-        buffer.unstashAll(initialized(vdrTools))
+      case LedgersRegistered =>
+        buffer.unstashAll(ready(vdrTools))
 
       case other       =>
         buffer.stash(other)
         Behaviors.same
     }
 
-  def initialized(vdrTools: VDRTools)
-                 (implicit executionContext: ExecutionContext): Behavior[Cmd] =
+  def ready(vdrTools: VDRTools)(implicit executionContext: ExecutionContext): Behavior[Cmd] =
     Behaviors.receiveMessagePartial {
-      case pst: PrepareSchemaTxn =>
-        handlePrepareTxnResp(
-          vdrTools.prepareSchemaTxn(pst.schemaJson, pst.fqSchemaId, pst.submitterDID, pst.endorser),
-          pst.replyTo
-        )
-        Behaviors.same
+      case p: Ping                  => handlePing(vdrTools, p)
+      case pst: PrepareSchemaTxn    => handlePrepareSchemaTxn(vdrTools, pst)
+      case pcdt: PrepareCredDefTxn  => handlePrepareCredDefTxn(vdrTools, pcdt)
+      case st: SubmitTxn            => handleSubmitTxn(vdrTools, st)
 
-      case st: SubmitTxn =>
-        handleSubmitTxnResp(
-          vdrTools.submitTxn(st.preparedTxn, st.signature, st.endorsement),
-          st.replyTo
-        )
-        Behaviors.same
+      case rs: ResolveSchema        => handleResolveSchema(vdrTools, rs)
+      case rcd: ResolveCredDef      => handleResolveCredDef(vdrTools, rcd)
+      case rd: ResolveDID           => handleResolveDID(vdrTools, rd)
     }
 
-  private def handlePrepareTxnResp(fut: Future[VDR_PreparedTxn],
-                                   replyTo:  ActorRef[PrepareTxnResp])
-                                  (implicit executionContext: ExecutionContext): Unit = {
-    fut.map(resp => replyTo ! PrepareTxnResp(Success(resp)))
-    .recover {
-      case e: RuntimeException =>
-        replyTo ! PrepareTxnResp(Failure(e))
-    }
+  private def handlePing(vdrTools: VDRTools,
+                         p: Ping)
+                        (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
+    vdrTools
+      .ping(p.namespaces)
+      .onComplete(resp => p.replyTo ! PingResp(resp))
+    Behaviors.same
   }
 
-  private def handleSubmitTxnResp(fut: Future[VDR_SubmittedTxn],
-                                  replyTo:  ActorRef[SubmitTxnResp])
-                                 (implicit executionContext: ExecutionContext): Unit = {
-    fut.map(resp => replyTo ! SubmitTxnResp(Success(resp)))
-      .recover {
-        case e: RuntimeException =>
-          replyTo ! SubmitTxnResp(Failure(e))
-      }
+  private def handlePrepareSchemaTxn(vdrTools: VDRTools,
+                                     pst: PrepareSchemaTxn)
+                                    (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
+
+    vdrTools
+      .prepareSchemaTxn(pst.schemaJson, pst.fqSchemaId, pst.submitterDID, pst.endorser)
+      .onComplete(resp => pst.replyTo ! PrepareTxnResp(resp))
+    Behaviors.same
+  }
+
+  private def handlePrepareCredDefTxn(vdrTools: VDRTools,
+                                      pcdt: PrepareCredDefTxn)
+                                     (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
+    vdrTools
+      .prepareCredDefTxn(pcdt.credDefJson, pcdt.fqCredDefId, pcdt.submitterDID, pcdt.endorser)
+      .onComplete(resp => pcdt.replyTo ! PrepareTxnResp(resp))
+    Behaviors.same
+  }
+
+  private def handleSubmitTxn(vdrTools: VDRTools,
+                              st: SubmitTxn)
+                             (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
+    vdrTools
+      .submitTxn(st.preparedTxn, st.signature, st.endorsement)
+      .onComplete(resp => st.replyTo ! SubmitTxnResp(resp))
+    Behaviors.same
+  }
+
+  private def handleResolveSchema(vdrTools: VDRTools,
+                                  rs: ResolveSchema)
+                                 (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
+    vdrTools
+      .resolveSchema(rs.schemaId)
+      .onComplete(resp => rs.replyTo ! ResolveSchemaResp(resp))
+    Behaviors.same
+  }
+
+  private def handleResolveCredDef(vdrTools: VDRTools,
+                                   rcd: ResolveCredDef)
+                                  (implicit executionContext: ExecutionContext): Behavior[Cmd]= {
+    vdrTools
+      .resolveCredDef(rcd.credDefId)
+      .onComplete(resp => rcd.replyTo ! ResolveCredDefResp(resp))
+    Behaviors.same
+  }
+
+  private def handleResolveDID(vdrTools: VDRTools,
+                               rd: ResolveDID)
+                              (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
+    vdrTools
+      .resolveDID(rd.fqDid)
+      .onComplete(resp => rd.replyTo ! ResolveDIDResp(resp))
+    Behaviors.same
   }
 
   private def registerLedgers(vdrTools: VDRTools,
@@ -126,7 +187,7 @@ object VDRActor {
       }
     )
     actorContext.pipeToSelf(futures) {
-      case Success(_)   => Initialized
+      case Success(_)   => LedgersRegistered
       case Failure(ex)  => throw ex
     }
   }

@@ -1,7 +1,7 @@
 package com.evernym.verity.vdr.service
 
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.vdr.{FQSchemaId, Namespace}
+import com.evernym.verity.vdr.{FQDid, FQCredDefId, FQSchemaId, Namespace}
 
 import scala.concurrent.Future
 
@@ -10,6 +10,11 @@ class VDRToolsImpl(libDirLocation: String)
   extends VDRTools {
 
   private val wrapperVDR: Any = null //replace `null` with actual VDR object creation call
+
+  override def ping(namespaces: List[Namespace]): Future[VDR_PingResult] = {
+    //TODO: replace this mock implementation with actual VDR wrapper apis calls once it is available
+    Future.successful(VDR_PingResult(Map.empty))
+  }
 
   override def registerIndyLedger(namespaces: List[Namespace],
                                   genesisTxnFilePath: String,
@@ -27,10 +32,34 @@ class VDRToolsImpl(libDirLocation: String)
     Future.successful(VDR_PreparedTxn("", VDR_NoSignature, Array.empty, VDR_NoEndorsement))
   }
 
+  override def prepareCredDefTxn(credDefJson: String,
+                                 fqCredDefId: String,
+                                 submitterDID: DidStr,
+                                 endorser: Option[String]): Future[VDR_PreparedTxn] = {
+    //TODO: replace this mock implementation with actual VDR wrapper apis calls once it is available
+    Future.successful(VDR_PreparedTxn("", VDR_NoSignature, Array.empty, VDR_NoEndorsement))
+  }
+
   override def submitTxn(preparedTxn: VDR_PreparedTxn,
                          signature: Array[Byte],
                          endorsement: Array[Byte]): Future[VDR_SubmittedTxn] = {
     //TODO: replace this mock implementation with actual VDR wrapper apis calls once it is available
     Future.successful(VDR_SubmittedTxn())
   }
+
+  override def resolveSchema(schemaId: FQSchemaId): Future[VDR_Schema] = {
+    //TODO: replace this mock implementation with actual VDR wrapper apis calls once it is available
+    Future.successful(VDR_Schema("schema-id", "payload".getBytes))
+  }
+
+  override def resolveCredDef(credDefId: FQCredDefId): Future[VDR_CredDef] = {
+    //TODO: replace this mock implementation with actual VDR wrapper apis calls once it is available
+    Future.successful(VDR_CredDef("cred-def-id", "schema-id", s"""{"schemaId":"schema-id}""".getBytes))
+  }
+
+  override def resolveDID(fqDid: FQDid): Future[VDR_DidDoc] = {
+    //TODO: replace this mock implementation with actual VDR wrapper apis calls once it is available
+    Future.successful(VDR_DidDoc("id", "verkey", None))
+  }
+
 }

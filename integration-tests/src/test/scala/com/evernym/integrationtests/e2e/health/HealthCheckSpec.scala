@@ -14,13 +14,13 @@ import com.evernym.integrationtests.e2e.scenario.{Scenario, ScenarioAppEnvironme
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.http.route_handlers.restricted.ReadinessStatus
 import com.evernym.verity.integration.base.verity_provider.VerityAdmin.actorSystem
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.util.StrUtil
+import com.evernym.verity.util.healthcheck.ReadinessStatus
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually
@@ -30,7 +30,7 @@ import scala.concurrent.Await
 import scala.reflect.ClassTag
 
 
-//Copied from SdkFlowSpec, some code has been deleted
+//TODO: Unused code need to delete in MR: https://gitlab.com/evernym/verity/verity/-/merge_requests/268 then merge to this
 class HealthCheckSpec
   extends BasicSpec
     with TempDir
@@ -99,7 +99,7 @@ class HealthCheckSpec
           val req = Http().singleRequest(HttpRequest(uri = s"http://localhost:$port/verity/node/readiness"))
           val resp = Await.result(req, 30.seconds)
           resp.status shouldBe OK
-          responseTo[ReadinessStatus](resp) shouldBe ReadinessStatus("OK", "OK", "OK")
+          responseTo[ReadinessStatus](resp) shouldBe ReadinessStatus(status = true, "OK", "OK", "OK")
         }
 
         "sdk cleanup" - {

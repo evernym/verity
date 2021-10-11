@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import akka.pattern.ask
 import akka.actor.ActorSystem
 import akka.util.Timeout
+import com.evernym.verity.actor.Platform
 
 import scala.concurrent.ExecutionContext
 import com.evernym.verity.util2.Exceptions.NoResponseFromLedgerPoolServiceException
@@ -16,11 +17,12 @@ import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, 
 import com.evernym.verity.actor.cluster_singleton.{GetValue, KeyValueMapper}
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
+import com.evernym.verity.util.healthcheck.{HealthChecker, ReadinessStatus}
 import com.evernym.verity.util2.Exceptions
 
 import scala.annotation.tailrec
 import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, DurationInt}
 import scala.math.min
 
 /**
@@ -31,14 +33,38 @@ object LaunchPreCheck {
 
   private val logger = getLoggerByClass(getClass)
 
-  def checkReqDependencies(aac: AgentActorContext, ec: ExecutionContext): Unit = {
-    checkAkkaEventStorageConnection(aac)(aac.system, ec)
-    checkWalletStorageConnection(aac)(aac.system)
+  def waitReqDependenciesIsOk(platform: Platform ,aac: AgentActorContext, ec: ExecutionContext): Unit = {
     checkLedgerPoolConnection(aac)(aac.system, ec)
-    //if all the checks are successful, it should return from this function
-    // else it will keep checking it until gets successful
-    // once we are done with VE-2934 ("readiness" and "liveness") then
-    // we'll not need this code.
+    while(true){
+      try {
+        val result = Await.result(checkReadiness(platform), 10.seconds)
+        if (result.status) {
+          logger.info("Successfully check external deps")
+          return // all are ok if this line executed
+        }
+        logger.error("Readiness check returned 'not ready': \n" + result.toString)
+      }
+      catch {
+        case e: Exception => logger.error(e.getMessage)
+      }
+    }
+  }
+
+  //TODO: It's copy from com.evernym.verity.http.route_handlers.restricted.HealthCheckEndpointHandlerV2
+  private def checkReadiness(platform: Platform): Future[ReadinessStatus] = {
+    val healthChecker: HealthChecker = new HealthChecker(platform)
+    implicit val ex: ExecutionContext = platform.executionContextProvider.futureExecutionContext
+    val rdsFuture = healthChecker.checkAkkaEventStorageReadiness
+    val dynamoDBFuture = healthChecker.checkWalletStorageReadiness
+    val storageAPIFuture = healthChecker.checkStorageAPIReadiness
+    for {
+      rds <- rdsFuture
+      dynamodb <- dynamoDBFuture
+      storageAPI <- storageAPIFuture
+    } yield ReadinessStatus(rds.status && dynamodb.status && storageAPI.status,
+      rds.msg,
+      dynamodb.msg,
+      storageAPI.msg)
   }
 
   @tailrec

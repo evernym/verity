@@ -13,7 +13,8 @@ import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.common.HttpRouteBase
 import com.evernym.verity.http.route_handlers.configured.ConfiguredApiRoutes
 import com.evernym.verity.http.route_handlers.open.OpenApiRoutes
-import com.evernym.verity.http.route_handlers.restricted.{AbstractHealthChecker, HealthChecker, RestrictedApiRoutes}
+import com.evernym.verity.http.route_handlers.restricted.RestrictedApiRoutes
+import com.evernym.verity.util.healthcheck.{AbstractHealthChecker, HealthChecker}
 
 import scala.concurrent.Future
 

@@ -1,10 +1,8 @@
 package com.evernym.verity.http.base.restricted
 
 import akka.http.scaladsl.model.StatusCodes.{OK, ServiceUnavailable}
-import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.evernym.verity.actor.Platform
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
-import com.evernym.verity.http.route_handlers.restricted.{AbstractHealthChecker, ApiStatus, ReadinessStatus}
+import com.evernym.verity.util.healthcheck.{AbstractHealthChecker, ApiStatus, ReadinessStatus}
 import org.mockito.MockitoSugar.when
 
 import scala.concurrent.Future
@@ -30,7 +28,7 @@ trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
         when(healthChecker.checkStorageAPIReadiness).thenReturn(Future.successful(ApiStatus(true, "OK")))
         buildGetReq("/verity/node/readiness") ~> epRoutes ~> check {
           status shouldBe OK
-          responseTo[ReadinessStatus] shouldBe ReadinessStatus("OK", "OK", "OK")
+          responseTo[ReadinessStatus] shouldBe ReadinessStatus(true, "OK", "OK", "OK")
         }
         }
       }
@@ -43,7 +41,7 @@ trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
         when(healthChecker.checkStorageAPIReadiness).thenReturn(Future.successful(ApiStatus(true, "OK")))
         buildGetReq("/verity/node/readiness") ~> epRoutes ~> check {
           status shouldBe ServiceUnavailable
-          responseTo[ReadinessStatus] shouldBe ReadinessStatus("Something bad", "OK", "OK")
+          responseTo[ReadinessStatus] shouldBe ReadinessStatus(false, "Something bad", "OK", "OK")
         }
       }
     }
@@ -55,7 +53,7 @@ trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
         when(healthChecker.checkStorageAPIReadiness).thenReturn(Future.successful(ApiStatus(true, "OK")))
         buildGetReq("/verity/node/readiness") ~> epRoutes ~> check {
           status shouldBe ServiceUnavailable
-          responseTo[ReadinessStatus] shouldBe ReadinessStatus("OK", "BAD", "OK")
+          responseTo[ReadinessStatus] shouldBe ReadinessStatus(false, "OK", "BAD", "OK")
         }
       }
     }
@@ -67,7 +65,7 @@ trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
       when(healthChecker.checkStorageAPIReadiness).thenReturn(Future.successful(ApiStatus(true, "OK")))
       buildGetReq("/verity/node/readiness") ~> epRoutes ~> check {
         status shouldBe ServiceUnavailable
-        responseTo[ReadinessStatus] shouldBe ReadinessStatus("BAD", "BAD", "OK")
+        responseTo[ReadinessStatus] shouldBe ReadinessStatus(false, "BAD", "BAD", "OK")
       }
     }
   }
@@ -79,7 +77,7 @@ trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
       when(healthChecker.checkStorageAPIReadiness).thenReturn(Future.successful(ApiStatus(false, "BAD")))
       buildGetReq("/verity/node/readiness") ~> epRoutes ~> check {
         status shouldBe ServiceUnavailable
-        responseTo[ReadinessStatus] shouldBe ReadinessStatus("BAD", "BAD", "BAD")
+        responseTo[ReadinessStatus] shouldBe ReadinessStatus(false, "BAD", "BAD", "BAD")
       }
     }
   }

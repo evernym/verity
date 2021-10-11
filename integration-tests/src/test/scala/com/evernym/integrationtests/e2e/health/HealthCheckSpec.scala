@@ -59,9 +59,7 @@ class HealthCheckSpec
 
     val apps = ScenarioAppEnvironment(scenario, appEnv, ecp)
 
-    val verityUrl = ${
-      apps(verity1).urlParam
-    }
+    val verityUrl = apps(verity1).urlParam
 
     s"Health Check Verity Test" - {
       lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(

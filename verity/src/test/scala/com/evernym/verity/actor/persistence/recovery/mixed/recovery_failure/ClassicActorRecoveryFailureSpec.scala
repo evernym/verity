@@ -30,7 +30,6 @@ class ClassicActorRecoveryFailureSpec
 
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   override def executionContextProvider: ExecutionContextProvider = ecp
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 
   override def overrideSpecificConfig: Option[Config] = Option {
     ConfigFactory.parseString(

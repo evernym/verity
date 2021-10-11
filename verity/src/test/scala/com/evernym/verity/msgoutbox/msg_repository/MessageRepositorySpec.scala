@@ -66,6 +66,4 @@ class MessageRepositorySpec
   }
 
   override def futureExecutionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
-
-  override def futureWalletExecutionContext: ExecutionContext = TestExecutionContextProvider.ecp.walletFutureExecutionContext
 }

@@ -129,6 +129,9 @@ then
   sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.limits.* -- -n com.evernym.integrationtests.e2e.tag.annotation.Limits"
 fi
 
+echo "Run Health Check test"
+sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.health.*"
+
 echo "Done running integration tests..."
 popd
 

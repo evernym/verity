@@ -55,9 +55,6 @@ class HealthCheckSpec
   val verity1: AppInstance.AppInstance = testEnv.instance_!(APP_NAME_VERITY_1).appInstance
   val limitsCredDefName = "creds_for_limits"
 
-  //TODO: need find example to get `listening port` param from config
-  val port = 9003
-
   runScenario("sdkFlow")(Scenario(
     "SDK Workflow to test protocols",
     List(verity1),
@@ -71,6 +68,8 @@ class HealthCheckSpec
       .sdk
       .getOrElse(throw new Exception("Verity SDK must be defined for this Suite"))
       .sdkType
+
+    val port = apps(verity1).instance.listeningPort.get
 
     s"Health Check Verity Test" - {
       lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(

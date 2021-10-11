@@ -48,4 +48,6 @@ class MockBlobStore(config: AppConfig, ec: ExecutionContext)(implicit val as: Ac
     val dbKey = calcKey(bucketName, keyStartsWith)
     bucketStore.getOrElse(bucketName, Map.empty).count(_._1.startsWith(dbKey))
   }
+
+  override def ping: Future[Unit] = Future.successful((): Unit)
 }

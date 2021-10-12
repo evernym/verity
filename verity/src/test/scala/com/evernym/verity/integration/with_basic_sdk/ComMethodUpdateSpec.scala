@@ -18,13 +18,12 @@ class ComMethodUpdateSpec
 
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-  lazy val walletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 
   lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, walletExecutionContext, Option(V1OAuthParam(5.seconds)))
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, V1OAuthParam(5.seconds), executionContext, walletExecutionContext)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, Option(V1OAuthParam(5.seconds)))
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, V1OAuthParam(5.seconds), executionContext)
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _

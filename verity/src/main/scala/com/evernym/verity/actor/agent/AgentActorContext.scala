@@ -5,7 +5,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.evernym.verity.util2.Exceptions.{HandledErrorException, SmsSendingFailedException}
-import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.actor.ActorContext
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
@@ -34,8 +34,7 @@ import scala.util.Left
 
 trait AgentActorContext
   extends ActorContext
-  with HasExecutionContextProvider
-  with HasWalletExecutionContextProvider {
+  with HasExecutionContextProvider {
 
   private implicit val executionContext: ExecutionContext = futureExecutionContext
   implicit def appConfig: AppConfig
@@ -51,13 +50,13 @@ trait AgentActorContext
   ).map(f => f.fetcherParam -> f).toMap
 
   lazy val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()
-  lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers, metricsWriter, futureWalletExecutionContext)
-  lazy val msgSendingSvc: MsgSendingSvc = new AkkaHttpMsgSendingSvc(appConfig.config, metricsWriter, futureWalletExecutionContext)
+  lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers, metricsWriter, futureExecutionContext)
+  lazy val msgSendingSvc: MsgSendingSvc = new AkkaHttpMsgSendingSvc(appConfig.config, metricsWriter, futureExecutionContext)
   lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] = protocols.protocolRegistry
   lazy val smsSvc: SMSSender = createSmsSender()
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter(futureExecutionContext)
   lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(system, appConfig, futureExecutionContext)
-  lazy val walletAPI: WalletAPI = new StandardWalletAPI(new ActorWalletService(system, appConfig, futureWalletExecutionContext))
+  lazy val walletAPI: WalletAPI = new StandardWalletAPI(new ActorWalletService(system, appConfig, futureExecutionContext))
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, futureExecutionContext)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val storageAPI: StorageAPI = StorageAPI.loadFromConfig(appConfig, futureExecutionContext)

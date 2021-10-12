@@ -75,15 +75,13 @@ import scala.util.{Failure, Success, Try}
  */
 class UserAgent(val agentActorContext: AgentActorContext,
                 val metricsActorRef: ActorRef,
-                executionContext: ExecutionContext,
-                walletExecutionContext: ExecutionContext)
+                executionContext: ExecutionContext)
   extends UserAgentCommon
     with UserAgentStateUpdateImpl
     with HasAgentActivity
     with MsgNotifierForUserAgent
     with AgentSnapshotter[UserAgentState] {
 
-  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
   implicit def futureExecutionContext: ExecutionContext = executionContext
 
   type StateType = UserAgentState
@@ -239,7 +237,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
 
   def handleOwnerDIDSet(did: DidStr, verKey: VerKeyStr): Unit = {
     val myDidDoc =
-      DidDocBuilder(futureWalletExecutionContext)
+      DidDocBuilder(futureExecutionContext)
         .withDid(did)
         .withAuthKey(did, verKey, Set(EDGE_AGENT_KEY))
         .didDoc

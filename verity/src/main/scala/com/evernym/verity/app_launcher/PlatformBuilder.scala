@@ -21,10 +21,5 @@ class DefaultAgentActorContext(val executionContextProvider: ExecutionContextPro
   /**
    * custom thread pool executor
    */
-  override def futureWalletExecutionContext: ExecutionContext = executionContextProvider.walletFutureExecutionContext
-
-  /**
-   * custom thread pool executor
-   */
   override def futureExecutionContext: ExecutionContext = executionContextProvider.futureExecutionContext
 }

@@ -5,12 +5,11 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
-import com.evernym.verity.util2.HasWalletExecutionContextProvider
 import com.evernym.verity.constants.Constants.URL
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.http.base.open._
-import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, AppStatusHealthCheckSpec, RestrictedRestApiSpec}
+import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, AppStatusHealthCheckSpec, MockHealthChecker, RestrictedRestApiSpec}
 import com.evernym.verity.http.route_handlers.EndpointHandlerBase
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
@@ -19,7 +18,9 @@ import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.pushnotif.MockPushNotifListener
 import com.evernym.verity.testkit.mock.msgsendingsvc.MockMsgSendingSvcListener
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.http.route_handlers.restricted.AbstractHealthChecker
 import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent, MockEnvUtil}
+import org.mockito.MockitoSugar.mock
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.Await
@@ -37,12 +38,11 @@ trait EdgeEndpointBaseSpec
     with MockPushNotifListener
     with MockMsgSendingSvcListener
     with AriesInvitationDecodingSpec
-    with AppStatusHealthCheckSpec
-    with HasWalletExecutionContextProvider {
+    with AppStatusHealthCheckSpec {
 
   lazy val (mockEntEdgeEnv, mockUserEdgeEnv) = {
-    val edge1 = MockEnvUtil.buildNewEnv("edge1", appConfig, "localhost:9001/agency/msg", futureExecutionContext, futureWalletExecutionContext)
-    val edge2 = MockEnvUtil.buildNewEnv("edge2", appConfig, "localhost:9002/agency/msg", futureExecutionContext, futureWalletExecutionContext)
+    val edge1 = MockEnvUtil.buildNewEnv("edge1", appConfig, "localhost:9001/agency/msg", futureExecutionContext)
+    val edge2 = MockEnvUtil.buildNewEnv("edge2", appConfig, "localhost:9002/agency/msg", futureExecutionContext)
     (edge1.withOthersMockEnvSet(edge2), edge2.withOthersMockEnvSet(edge1))
   }
 
@@ -97,6 +97,8 @@ trait EdgeEndpointBaseSpec
     val fut = platform.appStateManager ? cmd
     Await.result(fut, 5.seconds).asInstanceOf[T]
   }
+
+  override val healthChecker: AbstractHealthChecker = mock[MockHealthChecker]
 }
 
 trait EndpointHandlerBaseSpec

@@ -6,13 +6,6 @@ import kamon.instrumentation.executor.ExecutorInstrumentation
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 
-trait HasWalletExecutionContextProvider {
-  /**
-   * custom thread pool executor
-   */
-  def futureWalletExecutionContext: ExecutionContext
-}
-
 trait HasExecutionContextProvider {
   /**
    * custom thread pool executor
@@ -23,8 +16,6 @@ trait HasExecutionContextProvider {
 class ExecutionContextProvider(val appConfig: AppConfig) {
   private lazy val defaultFutureThreadPoolSize: Option[Int] =
     appConfig.getIntOption(VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE)
-  private lazy val walletFutureThreadPoolSize: Option[Int] =
-    appConfig.getIntOption(VERITY_WALLET_FUTURE_THREAD_POOL_SIZE)
 
   /**
    * custom thread pool executor
@@ -37,15 +28,5 @@ class ExecutionContextProvider(val appConfig: AppConfig) {
           case _          => ExecutionContext.fromExecutor(null)
         },
         "future-thread-executor")
-    }
-
-  lazy val walletFutureExecutionContext: ExecutionContext =
-    {
-      ExecutorInstrumentation.instrumentExecutionContext(
-        walletFutureThreadPoolSize match {
-          case Some(size) => ExecutionContext.fromExecutor(Executors.newFixedThreadPool(size))
-          case _          => futureExecutionContext
-        },
-        "wallet-thread-executor")
     }
 }

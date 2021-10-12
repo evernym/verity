@@ -52,9 +52,8 @@ import scala.util.{Failure, Success, Try}
 case class HolderSdk(param: SdkParam,
                      ledgerTxnExecutor: Option[LedgerTxnExecutor],
                      override val ec: ExecutionContext,
-                     wec: ExecutionContext,
                      oauthParam: Option[OAuthParam]=None
-                    ) extends SdkBase(param, ec, wec) {
+                    ) extends SdkBase(param, ec) {
   implicit val executionContext: ExecutionContext = ec
 
   def registerWebhook(updateComMethod: UpdateComMethodReqMsg): ComMethodUpdated = {

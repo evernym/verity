@@ -19,7 +19,7 @@ class BasicMultiNodeClusterSpec
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   lazy val verityEnv = VerityEnvBuilder.default(nodeCount = 3).build(VAS)
-  lazy val issuerSDK = setupIssuerSdk(verityEnv, executionContext, ecp.walletFutureExecutionContext)
+  lazy val issuerSDK = setupIssuerSdk(verityEnv, executionContext)
 
   "VerityAdmin" - {
 

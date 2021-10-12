@@ -22,7 +22,7 @@ class IssuerSetupSpec
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
 
   override def beforeAll(): Unit = {
     super.beforeAll()

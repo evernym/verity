@@ -92,8 +92,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       Props(
         new AgencyAgent(
           agentActorContext,
-          executionContextProvider.futureExecutionContext,
-          executionContextProvider.walletFutureExecutionContext
+          executionContextProvider.futureExecutionContext
         )
       ),
       Option(AGENCY_AGENT_ACTOR_DISPATCHER_NAME)
@@ -107,8 +106,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       Props(
         new AgencyAgentPairwise(
           agentActorContext,
-          executionContextProvider.futureExecutionContext,
-          executionContextProvider.walletFutureExecutionContext
+          executionContextProvider.futureExecutionContext
         )
       ),
       Option(AGENCY_AGENT_PAIRWISE_ACTOR_DISPATCHER_NAME)
@@ -123,8 +121,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
         new UserAgent(
           agentActorContext,
           collectionsMetricsCollector,
-          executionContextProvider.futureExecutionContext,
-          executionContextProvider.walletFutureExecutionContext
+          executionContextProvider.futureExecutionContext
         )
       ),
       Option(USER_AGENT_ACTOR_DISPATCHER_NAME)
@@ -139,8 +136,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
         new UserAgentPairwise(
           agentActorContext,
           collectionsMetricsCollector,
-          executionContextProvider.futureExecutionContext,
-          executionContextProvider.walletFutureExecutionContext
+          executionContextProvider.futureExecutionContext
         )
       ),
       Option(USER_AGENT_PAIRWISE_ACTOR_DISPATCHER_NAME)

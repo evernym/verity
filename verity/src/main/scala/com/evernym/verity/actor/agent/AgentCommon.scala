@@ -14,7 +14,6 @@ import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.observability.logs.LoggingUtil.getAgentIdentityLoggerByClass
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.util2.HasWalletExecutionContextProvider
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{HasMsgProgressTracker, TrackingIdParam}
@@ -46,8 +45,7 @@ trait AgentCommon
     with HasAgentWallet
     with HasSetRoute
     with HasMsgProgressTracker
-    with ResourceUsageCommon
-    with HasWalletExecutionContextProvider { this: AgentPersistentActor =>
+    with ResourceUsageCommon { this: AgentPersistentActor =>
 
   private implicit def executionContext: ExecutionContext = futureExecutionContext
 
@@ -332,7 +330,7 @@ trait AgentCommon
   def updatedDidDocs(explicitlyAddedAuthKeys: Set[AuthKey],
                      didDocs: Seq[DidDoc]): Future[Seq[DidDoc]] =
     Future.traverse(didDocs) { dd =>
-      DidDocBuilder(futureWalletExecutionContext, dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
+      DidDocBuilder(futureExecutionContext, dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
     }
 
   lazy val isVAS: Boolean =

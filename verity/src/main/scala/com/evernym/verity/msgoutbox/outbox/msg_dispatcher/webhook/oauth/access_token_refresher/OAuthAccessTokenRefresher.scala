@@ -29,7 +29,7 @@ object OAuthAccessTokenRefresher {
     version match {
       case OAUTH2_VERSION_1   => OAuthAccessTokenRefresherImplV1(executionContext)
       case OAUTH2_VERSION_2   => OAuthAccessTokenRefresherImplV2(executionContext)
-      case other              => throw new RuntimeException("oauth token refresher not found for version: " + other)
+      case other              => throw new RuntimeException("OAuth token refresher not found for version: " + other)
     }
   }
 

@@ -4,16 +4,17 @@
 
 ### OAuth2 version 1
 Below is the payload to use during **update endpoint** to use the **OAuth 2 v1 flow**
+Note: values mentioned in angular brackets should be replaced accordingly.
 ```
 {
-  "@id": "0729a580-2240-11e6-9eb5-0002a5d5c51b",
+  "@id": "<uuid>",
   "@type": "did:sov:123456789abcdefghi1234;spec/configs/0.6/UPDATE_COM_METHOD",
   "comMethod": {
     "id": "webhook",
     "value": "<webhook-url>",
     "type": 2,
     "packaging": {
-        "pkgType": "plain"      # or 'indy'
+        "pkgType": "plain"      # or "1.0" (indy)
     },
     "authentication": {
         "type":"OAuth2",
@@ -31,16 +32,17 @@ Below is the payload to use during **update endpoint** to use the **OAuth 2 v1 f
 
 ### OAuth2 version 2
 Below is the payload to use during **update endpoint** to use the **OAuth2 v2 flow**
+Note: values mentioned in angular brackets should be replaced accordingly.
 ```
 {
-  "@id": "0729a580-2240-11e6-9eb5-0002a5d5c51b",
+  "@id": "<uuid>",
   "@type": "did:sov:123456789abcdefghi1234;spec/configs/0.6/UPDATE_COM_METHOD",
   "comMethod": {
     "id": "webhook",
     "value": "<webhook-url>",
     "type": 2,
     "packaging": {
-        "pkgType": "plain"    # or 'indy'
+        "pkgType": "plain"    # or "1.0" (indy)
     },
     "authentication": {
         "type":"OAuth2",

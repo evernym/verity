@@ -10,7 +10,7 @@ import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.BaseAsyncOpExecutorImpl
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccessException, LedgerAsyncOps}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.vdr.{FQSchemaId, PreparedTxn, VDRAdapter}
+import com.evernym.verity.vdr.{FQCredDefId, FQSchemaId, PreparedTxn, VDRAdapter}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -82,11 +82,33 @@ class LedgerAccessAPI(cache: Cache,
     )
   }
 
+
+  override def prepareCredDefTxn(credDefJson: String,
+                                 fqCredDefId: FQCredDefId,
+                                 submitterDID: DidStr,
+                                 endorser: Option[String]): Unit = {
+    withAsyncOpExecutorActor(
+      { implicit ec => vdrAdapter.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser) }
+    )
+  }
+
   override def submitTxn(preparedTxn: PreparedTxn,
                          signature: Array[Byte],
                          endorsement: Array[Byte]): Unit = {
     withAsyncOpExecutorActor(
       { implicit ec => vdrAdapter.submitTxn(preparedTxn, signature, endorsement)}
+    )
+  }
+
+  override def resolveSchema(schemaId: FQSchemaId): Unit = {
+    withAsyncOpExecutorActor(
+      { implicit ec => vdrAdapter.resolveSchema(schemaId) }
+    )
+  }
+
+  override def resolveCredDef(credDefId: FQCredDefId): Unit = {
+    withAsyncOpExecutorActor(
+      { implicit ec => vdrAdapter.resolveCredDef(credDefId) }
     )
   }
 

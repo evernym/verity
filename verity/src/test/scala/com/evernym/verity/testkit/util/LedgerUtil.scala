@@ -28,7 +28,6 @@ import scala.util.{Failure, Success}
 class LedgerUtil (val appConfig: AppConfig,
                   val poolConfigName: Option[String],
                   executionContext: ExecutionContext,
-                  walletExecutionContext: ExecutionContext,
                   val submitterDID: DidStr = "Th7MpTaRZVRYnPiabds81Y",
                   val submitterKeySeed: String = "000000000000000000000000Steward1",
                   val submitterRole: String = "STEWARD",
@@ -223,5 +222,5 @@ class LedgerUtil (val appConfig: AppConfig,
   /**
    * custom thread pool executor
    */
-  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
+  override def futureExecutionContext: ExecutionContext = executionContext
 }

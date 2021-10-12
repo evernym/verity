@@ -28,7 +28,7 @@ class WebhookRetrySpec
 
   lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).build(VAS)
 
-  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
+  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, executionContext)
 
   override def beforeAll(): Unit = {
     super.beforeAll()

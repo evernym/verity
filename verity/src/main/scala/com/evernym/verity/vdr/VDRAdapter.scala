@@ -1,6 +1,6 @@
 package com.evernym.verity.vdr
 
-import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 
 import scala.concurrent.Future
 
@@ -14,18 +14,20 @@ trait VDRAdapter {
                        submitterDID: DidStr,
                        endorser: Option[String]): Future[PreparedTxn]
 
+  def prepareCredDefTxn(credDefJson: String,
+                       fqCredDefId: FQCredDefId,
+                       submitterDID: DidStr,
+                       endorser: Option[String]): Future[PreparedTxn]
+
   def submitTxn(preparedTxn: PreparedTxn,
                 signature: Array[Byte],
                 endorsement: Array[Byte]): Future[SubmittedTxn]
 
   def resolveSchema(schemaId: FQSchemaId): Future[Schema]
 
-  def prepareCredDefTxn(credDefJson: String,
-                       fqCredDefId: FQCredDefId,
-                       submitterDID: DidStr,
-                       endorser: Option[String]): Future[PreparedTxn]
-
   def resolveCredDef(credDefId: FQCredDefId): Future[CredDef]
+
+  def resolveDID(fqDid: FQDid): Future[DidDoc]
 }
 
 
@@ -40,8 +42,8 @@ case class PreparedTxn(context: String,
 case class SubmittedTxn()
 
 case class Schema(fqId: FQSchemaId, json: String)
-
 case class CredDef(fqId: FQCredDefId, schemaId: FQSchemaId, json: String)
+case class DidDoc(fqId: FQDid, verKey: VerKeyStr, endpoint: Option[String])
 
 //below will change to some constants/enums when we have actual VDRTools library available for integration
 trait SignatureSpec

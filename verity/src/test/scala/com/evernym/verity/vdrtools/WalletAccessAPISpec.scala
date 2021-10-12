@@ -119,5 +119,5 @@ class WalletAccessAPISpec
   /**
    * custom thread pool executor
    */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

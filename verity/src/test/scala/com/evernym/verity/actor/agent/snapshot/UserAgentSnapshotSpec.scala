@@ -61,7 +61,7 @@ class UserAgentSnapshotSpec
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
 
   lazy val mockEdgeAgent: MockEdgeAgent =
-    buildMockEdgeAgent(mockAgencyAdmin, ecp.futureExecutionContext, ecp.walletFutureExecutionContext)
+    buildMockEdgeAgent(mockAgencyAdmin, ecp.futureExecutionContext)
 
   lazy val userDID = mockEdgeAgent.myDIDDetail
 

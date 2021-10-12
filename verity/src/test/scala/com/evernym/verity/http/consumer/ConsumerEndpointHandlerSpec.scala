@@ -57,7 +57,7 @@ class ConsumerEndpointHandlerSpec
 
   override lazy val agentActorContext: AgentActorContext = platform.agentActorContext
   lazy val mockNewEdgeAgent: MockEdgeAgent =
-    MockEnvUtil.buildMockEdgeAgent(mockEntEdgeEnv.agencyEdgeAgent, futureExecutionContext, futureWalletExecutionContext)
+    MockEnvUtil.buildMockEdgeAgent(mockEntEdgeEnv.agencyEdgeAgent, futureExecutionContext)
   override implicit val msgPackagingContext: AgentMsgPackagingContext =
     AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
 
@@ -80,9 +80,4 @@ class ConsumerEndpointHandlerSpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

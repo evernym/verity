@@ -141,10 +141,5 @@ class MsgExtractorSpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = executionContext
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 

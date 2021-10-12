@@ -28,7 +28,7 @@ class WalletAccessControllerSpec
 
   implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
-  val testWallet = new TestWallet(ecp.walletFutureExecutionContext, false)
+  val testWallet = new TestWallet(ecp.futureExecutionContext, false)
   implicit val wap: WalletAPIParam = testWallet.wap
 
   "Wallet access controller" - {
@@ -177,6 +177,6 @@ object WalletAccessTest
   /**
    * custom thread pool executor
    */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }
 

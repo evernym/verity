@@ -209,7 +209,5 @@ class OAuthWebhookSenderSpec
 
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
-
 //  override val APP_CONFIG: Config = super.APP_CONFIG.withFallback(new Config"verity.salt.wallet_name")
 }

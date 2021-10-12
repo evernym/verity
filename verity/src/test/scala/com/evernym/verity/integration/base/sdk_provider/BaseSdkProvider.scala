@@ -51,45 +51,41 @@ import scala.util.Try
 
 trait SdkProvider { this: BasicSpec =>
 
-  def setupIssuerSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): IssuerSdk =
-    IssuerSdk(buildSdkParam(verityEnv), executionContext, walletExecutionContext, oauthParam)
-  def setupIssuerRestSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): IssuerRestSDK =
-    IssuerRestSDK(buildSdkParam(verityEnv), executionContext, walletExecutionContext, oauthParam)
-  def setupVerifierSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): VerifierSdk =
-    VerifierSdk(buildSdkParam(verityEnv), executionContext, walletExecutionContext, oauthParam)
+  def setupIssuerSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): IssuerSdk =
+    IssuerSdk(buildSdkParam(verityEnv), executionContext, oauthParam)
+  def setupIssuerRestSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): IssuerRestSDK =
+    IssuerRestSDK(buildSdkParam(verityEnv), executionContext, oauthParam)
+  def setupVerifierSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): VerifierSdk =
+    VerifierSdk(buildSdkParam(verityEnv), executionContext, oauthParam)
 
   def setupHolderSdk(
                       verityEnv: VerityEnv,
                       ledgerTxnExecutor: LedgerTxnExecutor,
-                      executionContext: ExecutionContext,
-                      walletExecutionContext: ExecutionContext
+                      executionContext: ExecutionContext
                     ): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), Option(ledgerTxnExecutor), executionContext, walletExecutionContext, None)
+    HolderSdk(buildSdkParam(verityEnv), Option(ledgerTxnExecutor), executionContext, None)
 
   def setupHolderSdk(
                       verityEnv: VerityEnv,
                       ledgerTxnExecutor: Option[LedgerTxnExecutor],
-                      executionContext: ExecutionContext,
-                      walletExecutionContext: ExecutionContext
+                      executionContext: ExecutionContext
                     ): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, executionContext, walletExecutionContext, None)
+    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, executionContext, None)
 
   def setupHolderSdk(
                       verityEnv: VerityEnv,
                       oauthParam: OAuthParam,
                       executionContext: ExecutionContext,
-                      walletExecutionContext: ExecutionContext
                     ): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), None, executionContext, walletExecutionContext, Option(oauthParam))
+    HolderSdk(buildSdkParam(verityEnv), None, executionContext, Option(oauthParam))
 
   def setupHolderSdk(
                       verityEnv: VerityEnv,
                       ledgerTxnExecutor: Option[LedgerTxnExecutor],
                       oauthParam: Option[OAuthParam],
                       executionContext: ExecutionContext,
-                      walletExecutionContext: ExecutionContext
                     ): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, executionContext, walletExecutionContext, oauthParam)
+    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, executionContext, oauthParam)
 
   private def buildSdkParam(verityEnv: VerityEnv): SdkParam = {
     SdkParam(VerityEnvUrlProvider(verityEnv.nodes))
@@ -146,8 +142,7 @@ trait SdkProvider { this: BasicSpec =>
  * @param param sdk parameters
  */
 abstract class SdkBase(param: SdkParam,
-                       executionContext: ExecutionContext,
-                       walletExecutionContext: ExecutionContext) extends Matchers {
+                       executionContext: ExecutionContext) extends Matchers {
 
   implicit val ec: ExecutionContext = executionContext
   type ConnId = String
@@ -318,7 +313,7 @@ abstract class SdkBase(param: SdkParam,
 
   protected lazy val testWalletAPI: LegacyWalletAPI = {
     val walletProvider = LibIndyWalletProvider
-    val walletAPI = new LegacyWalletAPI(testAppConfig, walletProvider, None, NoOpMetricsWriter(), walletExecutionContext)
+    val walletAPI = new LegacyWalletAPI(testAppConfig, walletProvider, None, NoOpMetricsWriter(), executionContext)
     walletAPI.executeSync[WalletCreated.type](CreateWallet())
     walletAPI
   }
@@ -585,6 +580,8 @@ object MsgFamilyHelper {
 
 case class TheirServiceDetail(verKey: VerKeyStr, routingKeys: Vector[VerKeyStr], serviceEndpoint: ServiceEndpoint)
 
-case class OAuthParam(tokenExpiresDuration: FiniteDuration)
+trait OAuthParam
+case class V1OAuthParam(tokenExpiresDuration: FiniteDuration) extends OAuthParam
+case class V2OAuthParam(fixedToken: String) extends OAuthParam
 
 class UnexpectedMsgException(msg: String) extends RuntimeException(msg)

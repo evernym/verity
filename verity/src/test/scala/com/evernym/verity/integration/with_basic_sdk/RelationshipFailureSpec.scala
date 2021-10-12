@@ -30,7 +30,7 @@ class RelationshipFailureSpec
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   lazy val issuerVerityApp: VerityEnv = VerityEnvBuilder.default().build(VAS)
-  lazy val issuerSDK: IssuerSdk = setupIssuerSdk(issuerVerityApp, executionContext, ecp.walletFutureExecutionContext)
+  lazy val issuerSDK: IssuerSdk = setupIssuerSdk(issuerVerityApp, executionContext)
   val connId = "connId1"
 
   var thread: Option[MsgThread] = None

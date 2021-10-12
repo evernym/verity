@@ -41,11 +41,6 @@ class ConsumerUserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpec_V_0_5 {
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 class EnterpriseUserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpec_V_0_5 {
@@ -60,11 +55,6 @@ class EnterpriseUserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpec_V_0_5 
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {

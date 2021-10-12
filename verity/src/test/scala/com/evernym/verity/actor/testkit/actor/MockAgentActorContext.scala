@@ -58,6 +58,8 @@ class MockAgentActorContext(val system: ActorSystem,
     override def delete(bucketName: String, id: String): Future[Done] = {
       Future { storageMock -= id; Done }
     }
+
+    override def ping: Future[Unit] = Future.successful((): Unit)
   }
 
   override lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] =
@@ -68,11 +70,6 @@ class MockAgentActorContext(val system: ActorSystem,
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 case class MockAgentActorContextParam(actorTypeToRegions: Map[Int, ActorRef]=Map.empty)

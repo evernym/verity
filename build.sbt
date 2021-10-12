@@ -368,7 +368,7 @@ lazy val commonLibraryDependencies = {
       exclude ("com.evernym.vdrtools", "vdr-tools"),
 
     "net.glxn" % "qrgen" % "1.4", // QR code generator
-    "com.google.guava" % "guava" % "31.0-jre",
+    "com.google.guava" % "guava" % "31.0.1-jre",
 
     "com.evernym" % "vcx" % vcxWrapperVer,
 

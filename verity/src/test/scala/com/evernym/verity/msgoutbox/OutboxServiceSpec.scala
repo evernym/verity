@@ -142,6 +142,4 @@ class OutboxServiceSpec
   }
 
   override def futureExecutionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
-
-  override def futureWalletExecutionContext: ExecutionContext = TestExecutionContextProvider.ecp.walletFutureExecutionContext
 }

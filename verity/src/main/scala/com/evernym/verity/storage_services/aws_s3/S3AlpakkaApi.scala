@@ -13,6 +13,7 @@ import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
@@ -76,4 +77,8 @@ class S3AlpakkaApi(config: AppConfig, executionContext: ExecutionContext)(implic
   class S3Failure(statusCode: String, statusMsg: Option[String] = None,
                   statusMsgDetail: Option[String] = None, errorDetail: Option[Any] = None)
     extends BadRequestErrorException(statusCode, statusMsg, statusMsgDetail, errorDetail)
+
+  override def ping: Future[Unit] = {
+    checkIfBucketExists("dummy-bucket-" + UUID.randomUUID()).map(_ => ())
+  }
 }

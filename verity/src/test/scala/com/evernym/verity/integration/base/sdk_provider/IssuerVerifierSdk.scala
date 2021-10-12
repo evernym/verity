@@ -36,9 +36,8 @@ import scala.reflect.ClassTag
 
 abstract class VeritySdkBase(param: SdkParam,
                              ec: ExecutionContext,
-                             wec: ExecutionContext,
                              oauthParam: Option[OAuthParam]=None)
-  extends SdkBase(param, ec, wec) {
+  extends SdkBase(param, ec) {
 
   def registerWebhook(id: Option[String] = None, authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated
   def sendCreateRelationship(connId: String): ReceivedMsgParam[Created]
@@ -130,8 +129,8 @@ abstract class VeritySdkBase(param: SdkParam,
  *
  * @param param sdk parameters
  */
-abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionContext, walletExecutionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
-  extends VeritySdkBase(param, executionContext, walletExecutionContext, oauthParam) {
+abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None)
+  extends VeritySdkBase(param, executionContext, oauthParam) {
 
   def appConfig: AppConfig = testAppConfig
 
@@ -230,7 +229,7 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
 
   val msgListener: MsgListenerBase[Array[Byte]] = {
     val port = PortProvider.generateUnusedPort(7000)
-    val ml = new PackedMsgListener(port, oauthParam.map(_.tokenExpiresDuration))(system)
+    val ml = new PackedMsgListener(port, oauthParam)(system)
     ml.setCheckAuth(oauthParam.isDefined)
     ml
   }
@@ -239,21 +238,18 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
 
 case class IssuerSdk(param: SdkParam,
                      executionContext: ExecutionContext,
-                     walletExecutionContext: ExecutionContext,
                      oauthParam: Option[OAuthParam]=None)
-  extends IssuerVerifierSdk(param, executionContext, walletExecutionContext, oauthParam)
+  extends IssuerVerifierSdk(param, executionContext, oauthParam)
 
 case class VerifierSdk(param: SdkParam,
                        executionContext: ExecutionContext,
-                       walletExecutionContext: ExecutionContext,
                        oauthParam: Option[OAuthParam]=None)
-  extends IssuerVerifierSdk(param, executionContext, walletExecutionContext, oauthParam)
+  extends IssuerVerifierSdk(param, executionContext, oauthParam)
 
 case class IssuerRestSDK(param: SdkParam,
                          executionContext: ExecutionContext,
-                         walletExecutionContext: ExecutionContext,
                          oauthParam: Option[OAuthParam]=None)
-  extends VeritySdkBase(param, executionContext, walletExecutionContext, oauthParam) {
+  extends VeritySdkBase(param, executionContext, oauthParam) {
 
   def appConfig: AppConfig = testAppConfig
   import scala.collection.immutable
@@ -437,7 +433,7 @@ case class IssuerRestSDK(param: SdkParam,
 
   val msgListener: MsgListenerBase[String] = {
     val port = PortProvider.generateUnusedPort(7000)
-    val ml = new JsonMsgListener(port, oauthParam.map(_.tokenExpiresDuration))(system)
+    val ml = new JsonMsgListener(port, oauthParam)(system)
     ml.setCheckAuth(oauthParam.isDefined)
     ml
   }

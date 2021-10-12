@@ -10,8 +10,8 @@ import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.{HashUtil, Util}
 import com.evernym.verity.util.HashUtil._
 import com.evernym.verity.vault.WalletAPIParam
-import org.hyperledger.indy.sdk.anoncreds.Anoncreds.issuerCreateSchema
-import org.hyperledger.indy.sdk.anoncreds.DuplicateMasterSecretNameException
+import com.evernym.vdrtools.anoncreds.Anoncreds.issuerCreateSchema
+import com.evernym.vdrtools.anoncreds.DuplicateMasterSecretNameException
 
 import scala.util.{Failure, Success, Try}
 

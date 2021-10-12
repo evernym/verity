@@ -1,16 +1,16 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.vdrtools
 
 import com.evernym.verity.actor.appStateManager.AppStateConstants.{CONTEXT_LIB_INDY_INIT, CONTEXT_LIB_MYSQLSTORAGE_INIT}
 import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI.handleError
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
 import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.Constants.{LIBINDY_LEGACY_FLAVOR, WALLET_TYPE_MYSQL}
-import com.evernym.verity.libindy.wallet.MySqlStorageLib
+import com.evernym.verity.vdrtools.wallet.MySqlStorageLib
 import JnaPath._
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
-import org.hyperledger.indy.sdk.LibIndy
+import com.evernym.vdrtools.LibIndy
 
 object Libraries {
 

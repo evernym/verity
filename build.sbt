@@ -44,18 +44,18 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libIndyVer = "1.95.0~1624"
+val libVdrToolsVer = "0.0.2"
 val sharedLibDeps = Seq(
-  NonMatchingDistLib("libindy-async", libIndyVer, "libindy.so"),
-  NonMatchingDistLib("libnullpay-async", libIndyVer, "libnullpay.so"),
+  NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libvdrtools.so"),
+  NonMatchingDistLib("libnullpay-async", libVdrToolsVer, "libnullpay.so"),
   NonMatchingLib("libvcx-async-test", "0.11.0-bionic~9999", "libvcx.so")  // For integration testing ONLY
 )
 
 //deb package dependencies versions
-val debPkgDepLibIndyMinVersion = libIndyVer
+val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 
 //dependency versions
-val indyWrapperVer  = "1.15.0-dev-1629"
+val vdrtoolswrapperver  = "0.0.2"
 
 val akkaVer         = "2.6.16"
 val akkaHttpVer     = "10.2.6"
@@ -119,7 +119,7 @@ lazy val verity = (project in file("verity"))
     libraryDependencies ++= commonLibraryDependencies,
     // Conditionally download an unpack shared libraries
     update := update.dependsOn(updateSharedLibraries).value,
-    K8sTasks.init(debPkgDepLibIndyMinVersion)
+    K8sTasks.init(debPkgDepLibVdrToolsMinVersion)
   )
 
 lazy val integrationTests = (project in file("integration-tests"))
@@ -151,7 +151,7 @@ lazy val settings = Seq(
     "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
   ),
   resolvers += Resolver.mavenLocal,
-  resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public",
+//  resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public", // this shouldn't be necessay since we're publishing vdr-tools to maven central
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
   resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",
 
@@ -218,11 +218,11 @@ lazy val packageSettings = Seq (
   },
   Compile / resourceGenerators += SourceGenerator.writeVerityVersionConf(version).taskValue,
   Debian / packageArchitecture := "amd64",
-  // libindy provides libindy.so
+  // libvdrtools provides libvdrtools.so
   Debian / debianPackageDependencies ++= Seq(
     "default-jre",
-    s"libindy-async(>= $debPkgDepLibIndyMinVersion)",
-    s"libnullpay-async(>= $debPkgDepLibIndyMinVersion)"  // must be the same version as libindy
+    s"libvdrtools(>= $debPkgDepLibVdrToolsMinVersion)",
+    s"libnullpay-async(>= 1.95.0~1624)"  // TODO: how should this be handled if libnullpay is deprecated?
   ),
   Debian / debianPackageConflicts := Seq(
     "consumer-agent",
@@ -305,8 +305,8 @@ lazy val commonLibraryDependencies = {
     //other akka dependencies
     "com.twitter" %% "chill-akka" % "0.10.0",    //serialization/deserialization for akka remoting
 
-    //hyper-ledger indy dependencies
-    "org.hyperledger" % "indy" % indyWrapperVer,
+    //vdr tools dependencies
+    "com.evernym.vdrtools" % "vdr-tools" % vdrtoolswrapperver,
 
     //logging dependencies
     "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4",
@@ -339,7 +339,7 @@ lazy val commonLibraryDependencies = {
     "org.msgpack" %% "msgpack-scala" % "0.8.13",  //used by legacy pack/unpack operations
     "org.fusesource.jansi" % "jansi" % "2.3.4",    //used by protocol engine for customized logging
     "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
-    "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.5",  //used for libindy sync api calls
+    "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.5",  //used for libvdrtools sync api calls
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
     //"org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0",   //commented as seemed not used
 
@@ -365,7 +365,7 @@ lazy val commonLibraryDependencies = {
     "org.abstractj.kalium" % "kalium" % "0.8.0",  // java binding for nacl
 
     "com.evernym.verity" % "verity-sdk" % veritySdkVer
-      exclude ("org.hyperledger", "indy"),
+      exclude ("com.evernym.vdrtools", "vdr-tools"),
 
     "net.glxn" % "qrgen" % "1.4", // QR code generator
     "com.google.guava" % "guava" % "31.0-jre",

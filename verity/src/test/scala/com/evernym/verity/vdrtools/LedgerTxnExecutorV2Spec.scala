@@ -1,4 +1,4 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.vdrtools
 
 import com.evernym.verity.util2.Exceptions.{InvalidValueException, MissingReqFieldException}
 import com.evernym.verity.util2.Status.{StatusDetail, StatusDetailException, TAA_NOT_SET_ON_THE_LEDGER}
@@ -6,14 +6,14 @@ import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.ledger._
-import com.evernym.verity.libindy.ledger.{IndyLedgerPoolConnManager, LedgerTxnExecutorV2, SubmitToLedger}
+import com.evernym.verity.vdrtools.ledger.{IndyLedgerPoolConnManager, LedgerTxnExecutorV2, SubmitToLedger}
 import com.evernym.verity.did.{DidStr, DidPair}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import org.hyperledger.indy.sdk.pool.Pool
+import com.evernym.vdrtools.pool.Pool
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.scalatest.MockitoSugar
 

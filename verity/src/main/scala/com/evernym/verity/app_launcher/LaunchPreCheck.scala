@@ -14,7 +14,7 @@ import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.WalletDoesNotExist
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, SeriousSystemError}
 import com.evernym.verity.actor.cluster_singleton.{GetValue, KeyValueMapper}
-import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
+import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util2.Exceptions
 

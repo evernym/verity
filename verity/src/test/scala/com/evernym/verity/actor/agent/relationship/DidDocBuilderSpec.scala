@@ -11,7 +11,7 @@ import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, CLOUD_AG
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.wallet.{Close, CreateNewKey, CreateWallet, NewKeyCreated, WalletActor, WalletCreatedBase}
 import com.evernym.verity.constants.ActorNameConstants.WALLET_REGION_ACTOR_NAME
-import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.protocol.protocols.connecting.common.LegacyRoutingDetail
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.vault.WalletAPIParam

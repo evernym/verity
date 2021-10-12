@@ -34,7 +34,7 @@ import com.evernym.verity.sdk.utils.{Context, JsonUtil, Util}
 import com.evernym.verity.testkit.listener.Listener
 import com.evernym.verity.util.Base58Util
 import com.typesafe.scalalogging.Logger
-import org.hyperledger.indy.sdk.crypto.Crypto
+import com.evernym.vdrtools.crypto.Crypto
 import org.json.{JSONArray, JSONObject}
 
 import java.lang

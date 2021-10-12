@@ -12,7 +12,7 @@ import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
-import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
+import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
 import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
 import com.evernym.verity.vault.WalletUtil._

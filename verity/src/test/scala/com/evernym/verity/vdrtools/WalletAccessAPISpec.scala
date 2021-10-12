@@ -1,4 +1,4 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.vdrtools
 
 import akka.actor.ActorRef
 import com.evernym.verity.util2.ExecutionContextProvider

@@ -1,4 +1,4 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.vdrtools
 
 import java.nio.file.Files
 

@@ -11,7 +11,7 @@ import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
-import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
+import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.AgentCreated
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg.ConnResponse

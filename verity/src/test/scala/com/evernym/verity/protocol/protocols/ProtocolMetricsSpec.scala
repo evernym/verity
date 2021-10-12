@@ -67,7 +67,6 @@ class AriesProtocolMetricSpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
   override def executionContextProvider: ExecutionContextProvider = ecp
 
 }

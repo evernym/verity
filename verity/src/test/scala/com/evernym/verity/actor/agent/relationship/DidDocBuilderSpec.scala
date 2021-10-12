@@ -47,7 +47,7 @@ class DidDocBuilderSpec
 
   lazy val ecp = TestExecutionContextProvider.ecp
   override implicit lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   implicit lazy val didDocBuilderParam: DidDocBuilderParam =
     DidDocBuilderParam(new TestAppConfig(), Option(thisAgentKey.did))

@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.user
 
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util2.Status._
-import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, SetupAgentEndpoint}
 import com.evernym.verity.actor.agentRegion
 import com.evernym.verity.actor.base.Done
@@ -26,15 +26,14 @@ trait UserAgentSpecScaffolding
     with AgentSpecHelper
     with AgentWalletSetupProvider
     with Eventually
-    with HasExecutionContextProvider
-    with HasWalletExecutionContextProvider{
+    with HasExecutionContextProvider {
 
   implicit def msgPackagingContext: AgentMsgPackagingContext
 
   override lazy val mockAgencyAdmin: MockEdgeAgent =
-    new MockEdgeAgent(UrlParam("localhost:9001"), platform.agentActorContext.appConfig, futureExecutionContext, futureWalletExecutionContext)
+    new MockEdgeAgent(UrlParam("localhost:9001"), platform.agentActorContext.appConfig, futureExecutionContext)
 
-  override lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
+  override lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext)
   lazy val mockPusher: MockPusher = new MockPusher(appConfig, futureExecutionContext)
 
   import mockEdgeAgent._

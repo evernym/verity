@@ -65,7 +65,6 @@ class MultiSdkFlowSpec
       lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
         appEnv.config,
         ecp.futureExecutionContext,
-        ecp.walletFutureExecutionContext,
         Option(appEnv.ledgerConfig.submitterDID),
         Option(appEnv.ledgerConfig.submitterSeed),
         genesisTxnPath = Some(appEnv.ledgerConfig.genesisFilePath)

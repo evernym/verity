@@ -27,14 +27,14 @@ object MockableLedgerAccess {
   val MOCK_NOT_ENDORSER = "MOCK_NOT_ENDORSER"
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
   def apply(): MockableLedgerAccess = {
-    new MockableLedgerAccess(ecp.walletFutureExecutionContext)
+    new MockableLedgerAccess(ecp.futureExecutionContext)
   }
 
   def apply(ledgerAvailable: Boolean): MockableLedgerAccess =
-    new MockableLedgerAccess(ecp.walletFutureExecutionContext, ledgerAvailable=ledgerAvailable)
+    new MockableLedgerAccess(ecp.futureExecutionContext, ledgerAvailable=ledgerAvailable)
 }
 
-class MockableLedgerAccess(walletExecutionContext: ExecutionContext,
+class MockableLedgerAccess(executionContext: ExecutionContext,
                            val schemas: Map[String, GetSchemaResp] = MockLedgerData.schemas01,
                            val credDefs: Map[String, GetCredDefResp] = MockLedgerData.credDefs01,
                            val ledgerAvailable: Boolean = true)
@@ -43,7 +43,7 @@ class MockableLedgerAccess(walletExecutionContext: ExecutionContext,
   import MockableLedgerAccess._
   implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
-  val testWallet = new TestWallet(walletExecutionContext, false)
+  val testWallet = new TestWallet(executionContext, false)
   implicit val wap: WalletAPIParam = testWallet.wap
   override val walletAccess = new WalletAccessController (
     Set(),

@@ -50,7 +50,7 @@ object LaunchPreCheck {
     }
   }
 
-  //TODO: It's copy from com.evernym.verity.http.route_handlers.restricted.HealthCheckEndpointHandlerV2
+  //TODO: copied from com.evernym.verity.http.route_handlers.restricted.HealthCheckEndpointHandlerV2
   private def checkReadiness(platform: Platform): Future[ReadinessStatus] = {
     val healthChecker: HealthChecker = new HealthChecker(platform)
     implicit val ex: ExecutionContext = platform.executionContextProvider.futureExecutionContext

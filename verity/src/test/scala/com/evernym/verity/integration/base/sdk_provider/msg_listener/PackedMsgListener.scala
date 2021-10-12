@@ -6,11 +6,11 @@ import akka.http.scaladsl.model.{HttpRequest, MediaTypes}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractRequest, logRequestResult, pathPrefix, post, reject, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.http.common.HttpCustomTypes
+import com.evernym.verity.integration.base.sdk_provider.OAuthParam
 
-import scala.concurrent.duration._
 
 class PackedMsgListener(val port: Int,
-                        val tokenExpiresInDuration: Option[FiniteDuration] = None)(implicit val actorSystem: ActorSystem)
+                        val oAuthParam: Option[OAuthParam] = None)(implicit val actorSystem: ActorSystem)
   extends MsgListenerBase[Array[Byte]] {
 
   override val msgRoute: Route =

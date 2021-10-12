@@ -5,11 +5,10 @@ import akka.http.scaladsl.model.headers.HttpCredentials
 import akka.http.scaladsl.model.{HttpRequest, MediaTypes}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractRequest, logRequestResult, pathPrefix, post, reject, _}
 import akka.http.scaladsl.server.Route
-
-import scala.concurrent.duration._
+import com.evernym.verity.integration.base.sdk_provider.OAuthParam
 
 class JsonMsgListener(val port: Int,
-                      val tokenExpiresInDuration: Option[FiniteDuration] = None)
+                      val oAuthParam: Option[OAuthParam] = None)
                      (implicit val actorSystem: ActorSystem)
   extends MsgListenerBase[String] {
 

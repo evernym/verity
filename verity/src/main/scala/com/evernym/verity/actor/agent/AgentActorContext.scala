@@ -16,8 +16,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher, OAuthAccessTokenRefresherImplV1}
-import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.OAUTH2_VERSION_1
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher}
 import com.evernym.verity.observability.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.registry.ProtocolRegistry
@@ -64,9 +63,11 @@ trait AgentActorContext
 
   //NOTE: this 'oAuthAccessTokenRefreshers' is only need here until we switch to the outbox solution
   val oAuthAccessTokenRefreshers: AccessTokenRefreshers = new AccessTokenRefreshers {
-    override def refreshers: Map[Version, Behavior[OAuthAccessTokenRefresher.Cmd]] = Map(
-      OAUTH2_VERSION_1 -> OAuthAccessTokenRefresherImplV1(executionContext)
-    )
+    override def refreshers: Map[Version, Behavior[OAuthAccessTokenRefresher.Cmd]] =
+      OAuthAccessTokenRefresher
+        .SUPPORTED_VERSIONS
+        .map (v => v -> OAuthAccessTokenRefresher.getRefresher(v, executionContext))
+        .toMap
   }
 
   def createActorSystem(): ActorSystem = {

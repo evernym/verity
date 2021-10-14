@@ -1,4 +1,4 @@
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ template "verity.fullname" . }}
@@ -19,12 +19,17 @@ spec:
   - http:
       paths:
       {{- if .Values.ingress.force_ssl }}
-      - path: /*
+      - path: /
+        pathType: Prefix
         backend:
           serviceName: ssl-redirect
           servicePort: use-annotation
       {{- end }}
-      - path: /*
+      - path: /
+        pathType: Prefix
         backend:
-          serviceName: {{ template "verity.fullname" . }}
-          servicePort: {{ .Values.k8sService.port }}
+          service:
+            name: {{ template "verity.fullname" . }}
+            port:
+              number: {{ .Values.k8sService.port }}
+

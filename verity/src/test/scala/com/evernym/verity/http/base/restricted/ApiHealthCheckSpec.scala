@@ -9,13 +9,15 @@ import scala.concurrent.Future
 
 
 class MockHealthChecker extends HealthChecker{
-  override def checkAkkaEventStorageReadiness: Future[ApiStatus] = Future.successful(ApiStatus(true, "OK"))
+  override def checkAkkaEventStorageStatus: Future[ApiStatus] = Future.successful(ApiStatus(true, "OK"))
 
-  override def checkWalletStorageReadiness: Future[ApiStatus] = Future.successful(ApiStatus(true, "OK"))
+  override def checkWalletStorageStatus: Future[ApiStatus] = Future.successful(ApiStatus(true, "OK"))
 
-  override def checkStorageAPIReadiness: Future[ApiStatus] = Future.successful(ApiStatus(true, "OK"))
+  override def checkStorageAPIStatus: Future[ApiStatus] = Future.successful(ApiStatus(true, "OK"))
 
   override def checkLiveness: Future[Unit] = Future.successful((): Unit)
+
+  override def checkLedgerPoolStatus: Future[ApiStatus] = Future.successful(ApiStatus(true, "OK"))
 }
 
 trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
@@ -23,9 +25,9 @@ trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
   def testBaseApiHeathCheck(): Unit = {
     "when sent req to /verity/node/readiness and event journal and wallet storage services ready" - {
       "should be return 200 OK" in {
-        when(healthChecker.checkAkkaEventStorageReadiness).thenReturn(Future.successful(ApiStatus(true, "OK")))
-        when(healthChecker.checkWalletStorageReadiness).thenReturn(Future.successful(ApiStatus(true, "OK")))
-        when(healthChecker.checkStorageAPIReadiness).thenReturn(Future.successful(ApiStatus(true, "OK")))
+        when(healthChecker.checkAkkaEventStorageStatus).thenReturn(Future.successful(ApiStatus(true, "OK")))
+        when(healthChecker.checkWalletStorageStatus).thenReturn(Future.successful(ApiStatus(true, "OK")))
+        when(healthChecker.checkStorageAPIStatus).thenReturn(Future.successful(ApiStatus(true, "OK")))
         buildGetReq("/verity/node/readiness") ~> epRoutes ~> check {
           status shouldBe OK
           responseTo[ReadinessStatus] shouldBe ReadinessStatus(true, "OK", "OK", "OK")
@@ -36,9 +38,9 @@ trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
 
     "when sent req to /verity/node/readiness and only event journal isn't responding" - {
       "should be return 503 Unavailable" in {
-        when(healthChecker.checkAkkaEventStorageReadiness).thenReturn(Future.successful(ApiStatus(false, "Something bad")))
-        when(healthChecker.checkWalletStorageReadiness).thenReturn(Future.successful(ApiStatus(true, "OK")))
-        when(healthChecker.checkStorageAPIReadiness).thenReturn(Future.successful(ApiStatus(true, "OK")))
+        when(healthChecker.checkAkkaEventStorageStatus).thenReturn(Future.successful(ApiStatus(false, "Something bad")))
+        when(healthChecker.checkWalletStorageStatus).thenReturn(Future.successful(ApiStatus(true, "OK")))
+        when(healthChecker.checkStorageAPIStatus).thenReturn(Future.successful(ApiStatus(true, "OK")))
         buildGetReq("/verity/node/readiness") ~> epRoutes ~> check {
           status shouldBe ServiceUnavailable
           responseTo[ReadinessStatus] shouldBe ReadinessStatus(false, "Something bad", "OK", "OK")
@@ -48,9 +50,9 @@ trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
 
     "when sent req to /verity/node/readiness and only wallet storage isn't responding" - {
       "should be return 503 Unavailable" in {
-        when(healthChecker.checkAkkaEventStorageReadiness).thenReturn(Future.successful(ApiStatus(true, "OK")))
-        when(healthChecker.checkWalletStorageReadiness).thenReturn(Future.successful(ApiStatus(false, "BAD")))
-        when(healthChecker.checkStorageAPIReadiness).thenReturn(Future.successful(ApiStatus(true, "OK")))
+        when(healthChecker.checkAkkaEventStorageStatus).thenReturn(Future.successful(ApiStatus(true, "OK")))
+        when(healthChecker.checkWalletStorageStatus).thenReturn(Future.successful(ApiStatus(false, "BAD")))
+        when(healthChecker.checkStorageAPIStatus).thenReturn(Future.successful(ApiStatus(true, "OK")))
         buildGetReq("/verity/node/readiness") ~> epRoutes ~> check {
           status shouldBe ServiceUnavailable
           responseTo[ReadinessStatus] shouldBe ReadinessStatus(false, "OK", "BAD", "OK")
@@ -60,9 +62,9 @@ trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
 
   "when sent req to /verity/node/readiness and event journal and wallet storage isn't responding" - {
     "should be return 503 Unavailable" in {
-      when(healthChecker.checkAkkaEventStorageReadiness).thenReturn(Future.successful(ApiStatus(false, "BAD")))
-      when(healthChecker.checkWalletStorageReadiness).thenReturn(Future.successful(ApiStatus(false, "BAD")))
-      when(healthChecker.checkStorageAPIReadiness).thenReturn(Future.successful(ApiStatus(true, "OK")))
+      when(healthChecker.checkAkkaEventStorageStatus).thenReturn(Future.successful(ApiStatus(false, "BAD")))
+      when(healthChecker.checkWalletStorageStatus).thenReturn(Future.successful(ApiStatus(false, "BAD")))
+      when(healthChecker.checkStorageAPIStatus).thenReturn(Future.successful(ApiStatus(true, "OK")))
       buildGetReq("/verity/node/readiness") ~> epRoutes ~> check {
         status shouldBe ServiceUnavailable
         responseTo[ReadinessStatus] shouldBe ReadinessStatus(false, "BAD", "BAD", "OK")
@@ -72,9 +74,9 @@ trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
 
   "when sent req to /verity/node/readiness and event journal, wallet storage and storage api isn't responding" - {
     "should be return 503 Unavailable" in {
-      when(healthChecker.checkAkkaEventStorageReadiness).thenReturn(Future.successful(ApiStatus(false, "BAD")))
-      when(healthChecker.checkWalletStorageReadiness).thenReturn(Future.successful(ApiStatus(false, "BAD")))
-      when(healthChecker.checkStorageAPIReadiness).thenReturn(Future.successful(ApiStatus(false, "BAD")))
+      when(healthChecker.checkAkkaEventStorageStatus).thenReturn(Future.successful(ApiStatus(false, "BAD")))
+      when(healthChecker.checkWalletStorageStatus).thenReturn(Future.successful(ApiStatus(false, "BAD")))
+      when(healthChecker.checkStorageAPIStatus).thenReturn(Future.successful(ApiStatus(false, "BAD")))
       buildGetReq("/verity/node/readiness") ~> epRoutes ~> check {
         status shouldBe ServiceUnavailable
         responseTo[ReadinessStatus] shouldBe ReadinessStatus(false, "BAD", "BAD", "BAD")

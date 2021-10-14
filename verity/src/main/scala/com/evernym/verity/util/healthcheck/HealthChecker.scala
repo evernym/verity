@@ -8,11 +8,13 @@ case class ApiStatus(status: Boolean, msg: String)
 
 
 trait HealthChecker {
-  def checkAkkaEventStorageReadiness: Future[ApiStatus]
+  def checkAkkaEventStorageStatus: Future[ApiStatus]
 
-  def checkWalletStorageReadiness: Future[ApiStatus]
+  def checkWalletStorageStatus: Future[ApiStatus]
 
-  def checkStorageAPIReadiness: Future[ApiStatus]
+  def checkStorageAPIStatus: Future[ApiStatus]
+
+  def checkLedgerPoolStatus: Future[ApiStatus]
 
   def checkLiveness: Future[Unit]
 }

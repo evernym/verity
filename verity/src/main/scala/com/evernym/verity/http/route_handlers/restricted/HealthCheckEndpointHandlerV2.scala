@@ -20,9 +20,9 @@ trait HealthCheckEndpointHandlerV2 {
   private implicit val apiStatusJsonFormat: RootJsonFormat[ReadinessStatus] = jsonFormat4(ReadinessStatus)
 
   private def readinessCheck(): Future[ReadinessStatus] = {
-    val rdsFuture = healthChecker.checkAkkaEventStorageReadiness
-    val dynamoDBFuture = healthChecker.checkWalletStorageReadiness
-    val storageAPIFuture = healthChecker.checkStorageAPIReadiness
+    val rdsFuture = healthChecker.checkAkkaEventStorageStatus
+    val dynamoDBFuture = healthChecker.checkWalletStorageStatus
+    val storageAPIFuture = healthChecker.checkStorageAPIStatus
     for {
       rds <- rdsFuture
       dynamodb <- dynamoDBFuture

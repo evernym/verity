@@ -42,18 +42,17 @@ object LaunchPreCheck {
         logger.info("Successfully check external deps")
         return // all are ok if this line executed
       }
-      logger.warn("Readiness check returned 'not ready': \n" + result.toString)
+      logger.warn("Startup probe check returned 'not ready': \n" + result.toString)
     }
   }
 
   private def startupProbe(platform: Platform): Future[StartupProbeStatus] = {
     val healthChecker: HealthChecker = HealthChecker.apply(platform)
     implicit val ex: ExecutionContext = platform.executionContextProvider.futureExecutionContext
-    val rdsFuture = healthChecker.checkAkkaEventStorageReadiness
-    val dynamoDBFuture = healthChecker.checkWalletStorageReadiness
-    val storageAPIFuture = healthChecker.checkStorageAPIReadiness
-    val ledgerFuture = ledgerStartupProbe(platform.aac)(platform.actorSystem,
-      platform.executionContextProvider.futureExecutionContext)
+    val rdsFuture = healthChecker.checkAkkaEventStorageStatus
+    val dynamoDBFuture = healthChecker.checkWalletStorageStatus
+    val storageAPIFuture = healthChecker.checkStorageAPIStatus
+    val ledgerFuture = healthChecker.checkLedgerPoolStatus
     for {
       rds <- rdsFuture
       dynamodb <- dynamoDBFuture
@@ -85,21 +84,6 @@ object LaunchPreCheck {
         checkLedgerPoolConnection(aac, if (delay > 0) min(delay * 2, 60) else 1)
     }
   }
-
-  private def ledgerStartupProbe(aac: AgentActorContext)
-                                (implicit as: ActorSystem, ec: ExecutionContext): Future[ApiStatus] = {
-    val pcFut = Future(aac.poolConnManager.open()).map(_ => true)
-    pcFut.map(
-      _ => ApiStatus(status = true, "OK")
-    ).recover {
-      case e: Exception =>
-        val errorMsg = s"ledger connection check failed (error stack trace: ${Exceptions.getStackTraceAsSingleLineString(e)})"
-        AppStateUpdateAPI(as).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT,
-          new NoResponseFromLedgerPoolServiceException(Option(errorMsg))))
-        ApiStatus(status = false, errorMsg)
-    }
-  }
-
   @tailrec
   private def checkAkkaEventStorageConnection(aac: AgentActorContext, delay: Int = 0)
                                              (implicit as: ActorSystem, ec: ExecutionContext): Boolean = {

@@ -35,7 +35,7 @@ trait EndpointHandlerBase
 
   def endpointRoutes: Route = ignoreTrailingSlash { baseRoute }
 
-  override val healthChecker: HealthChecker = HealthChecker.apply(platform)
+  override val healthChecker: HealthChecker = platform.healthChecker
 
   protected def msgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
     case ai: AgencyPublicDid     => handleExpectedResponse(ai)

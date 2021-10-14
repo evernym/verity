@@ -12,13 +12,13 @@ import com.evernym.integrationtests.e2e.scenario.Scenario.runScenario
 import com.evernym.integrationtests.e2e.scenario.{Scenario, ScenarioAppEnvironment}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.fixture.TempDir
+import com.evernym.verity.http.route_handlers.restricted.ReadinessStatus
 import com.evernym.verity.integration.base.verity_provider.VerityAdmin.actorSystem
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.util.StrUtil
-import com.evernym.verity.util.healthcheck.ReadinessStatus
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually

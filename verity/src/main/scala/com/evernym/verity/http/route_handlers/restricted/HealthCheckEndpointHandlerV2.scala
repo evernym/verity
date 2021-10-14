@@ -5,12 +5,15 @@ import akka.http.scaladsl.server.Directives.{complete, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
-import com.evernym.verity.util.healthcheck.{HealthChecker, ReadinessStatus}
+import com.evernym.verity.util.healthcheck.{HealthChecker}
 import spray.json.DefaultJsonProtocol.{StringJsonFormat, _}
 import spray.json.{RootJsonFormat, enrichAny}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
+
+
+case class ReadinessStatus(status: Boolean = false, rds: String = "", dynamoDB: String = "", storageAPI: String = "")
 
 
 trait HealthCheckEndpointHandlerV2 {

@@ -1,28 +1,25 @@
 package com.evernym.verity.app_launcher
 
-import java.util.UUID
-import java.util.concurrent.TimeUnit
-import akka.pattern.ask
 import akka.actor.ActorSystem
+import akka.pattern.ask
 import akka.util.Timeout
-import com.evernym.verity.actor.Platform
-
-import scala.concurrent.ExecutionContext
-import com.evernym.verity.util2.Exceptions.NoResponseFromLedgerPoolServiceException
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
-import com.evernym.verity.vault.WalletUtil._
-import com.evernym.verity.vault.WalletDoesNotExist
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, SeriousSystemError}
 import com.evernym.verity.actor.cluster_singleton.{GetValue, KeyValueMapper}
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
-import com.evernym.verity.util.healthcheck.{ApiStatus, HealthChecker, HealthCheckerImpl, ReadinessStatus}
+import com.evernym.verity.util.healthcheck.HealthChecker
 import com.evernym.verity.util2.Exceptions
+import com.evernym.verity.util2.Exceptions.NoResponseFromLedgerPoolServiceException
+import com.evernym.verity.vault.WalletDoesNotExist
+import com.evernym.verity.vault.WalletUtil._
 
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 import scala.annotation.tailrec
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.{Duration, DurationInt}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.math.min
 
 case class StartupProbeStatus(status: Boolean, rds: String, dynamodb: String, storageAPI: String, ledger: String)
@@ -35,9 +32,9 @@ object LaunchPreCheck {
 
   private val logger = getLoggerByClass(getClass)
 
-  def waitReqDependenciesIsOk(platform: Platform): Unit = {
+  def waitForRequiredDepsIsOk(healthChecker: HealthChecker, executionContext: ExecutionContext): Unit = {
     while (true) {
-      val result = Await.result(startupProbe(platform), 10.seconds)
+      val result = Await.result(startupProbe(healthChecker)(executionContext), 10.seconds)
       if (result.status) {
         logger.info("Successfully check external deps")
         return // all are ok if this line executed
@@ -46,9 +43,7 @@ object LaunchPreCheck {
     }
   }
 
-  private def startupProbe(platform: Platform): Future[StartupProbeStatus] = {
-    val healthChecker: HealthChecker = HealthChecker.apply(platform)
-    implicit val ex: ExecutionContext = platform.executionContextProvider.futureExecutionContext
+  private def startupProbe(healthChecker: HealthChecker)(implicit executionContext: ExecutionContext): Future[StartupProbeStatus] = {
     val rdsFuture = healthChecker.checkAkkaEventStorageStatus
     val dynamoDBFuture = healthChecker.checkWalletStorageStatus
     val storageAPIFuture = healthChecker.checkStorageAPIStatus

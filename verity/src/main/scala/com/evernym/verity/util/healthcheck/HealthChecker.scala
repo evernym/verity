@@ -1,8 +1,10 @@
 package com.evernym.verity.util.healthcheck
 
+import akka.actor.ActorSystem
 import com.evernym.verity.actor.Platform
+import com.evernym.verity.actor.agent.AgentActorContext
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 case class ApiStatus(status: Boolean, msg: String)
 
@@ -20,7 +22,9 @@ trait HealthChecker {
 }
 
 object HealthChecker {
-  def apply(platform: Platform): HealthChecker = {
-    new HealthCheckerImpl(platform)
+  def apply(agentActorContext: AgentActorContext,
+            actorSystem: ActorSystem,
+            futureExecutionContext: ExecutionContext): HealthChecker = {
+    new HealthCheckerImpl(agentActorContext, actorSystem, futureExecutionContext)
   }
 }

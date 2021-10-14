@@ -40,7 +40,7 @@ class HttpServer(val platform: Platform, routes: Route, executionContext: Execut
   var httpBinding: Option[ServerBinding] = None
 
   def start(): Unit = {
-    LaunchPreCheck.waitReqDependenciesIsOk(platform, platform.agentActorContext, futureExecutionContext)
+    LaunchPreCheck.waitReqDependenciesIsOk(platform)
     startService(init _)
   }
 

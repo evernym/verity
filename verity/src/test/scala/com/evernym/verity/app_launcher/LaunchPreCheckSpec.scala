@@ -12,7 +12,7 @@ class LaunchPreCheckSpec
     "when asked to test external dependency" - {
       "should respond successfully" in {
         //if all the checks are successful, it should return from this function
-        LaunchPreCheck.waitReqDependenciesIsOk(platform, platform.agentActorContext, ecp.futureExecutionContext)
+        LaunchPreCheck.waitReqDependenciesIsOk(platform)
       }
     }
   }

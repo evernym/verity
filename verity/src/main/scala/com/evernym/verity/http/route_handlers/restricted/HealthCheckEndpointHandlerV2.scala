@@ -5,7 +5,7 @@ import akka.http.scaladsl.server.Directives.{complete, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
-import com.evernym.verity.util.healthcheck.{AbstractHealthChecker, ReadinessStatus}
+import com.evernym.verity.util.healthcheck.{HealthChecker, ReadinessStatus}
 import spray.json.DefaultJsonProtocol.{StringJsonFormat, _}
 import spray.json.{RootJsonFormat, enrichAny}
 
@@ -15,7 +15,7 @@ import scala.util.{Failure, Success}
 
 trait HealthCheckEndpointHandlerV2 {
   this: HttpRouteWithPlatform =>
-  val healthChecker: AbstractHealthChecker
+  val healthChecker: HealthChecker
 
   private implicit val apiStatusJsonFormat: RootJsonFormat[ReadinessStatus] = jsonFormat4(ReadinessStatus)
 

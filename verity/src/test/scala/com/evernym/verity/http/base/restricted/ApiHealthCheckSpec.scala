@@ -2,13 +2,13 @@ package com.evernym.verity.http.base.restricted
 
 import akka.http.scaladsl.model.StatusCodes.{OK, ServiceUnavailable}
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
-import com.evernym.verity.util.healthcheck.{AbstractHealthChecker, ApiStatus, ReadinessStatus}
+import com.evernym.verity.util.healthcheck.{HealthChecker, ApiStatus, ReadinessStatus}
 import org.mockito.MockitoSugar.when
 
 import scala.concurrent.Future
 
 
-class MockHealthChecker extends AbstractHealthChecker{
+class MockHealthChecker extends HealthChecker{
   override def checkAkkaEventStorageReadiness: Future[ApiStatus] = Future.successful(ApiStatus(true, "OK"))
 
   override def checkWalletStorageReadiness: Future[ApiStatus] = Future.successful(ApiStatus(true, "OK"))

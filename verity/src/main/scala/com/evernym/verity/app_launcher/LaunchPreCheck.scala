@@ -17,13 +17,15 @@ import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, 
 import com.evernym.verity.actor.cluster_singleton.{GetValue, KeyValueMapper}
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
-import com.evernym.verity.util.healthcheck.{HealthChecker, ReadinessStatus}
+import com.evernym.verity.util.healthcheck.{ApiStatus, HealthChecker, HealthCheckerImpl, ReadinessStatus}
 import com.evernym.verity.util2.Exceptions
 
 import scala.annotation.tailrec
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.{Duration, DurationInt}
 import scala.math.min
+
+case class StartupProbeStatus(status: Boolean, rds: String, dynamodb: String, storageAPI: String, ledger: String)
 
 /**
  * checks to perform during agent service start to make sure that basic required
@@ -33,38 +35,35 @@ object LaunchPreCheck {
 
   private val logger = getLoggerByClass(getClass)
 
-  def waitReqDependenciesIsOk(platform: Platform ,aac: AgentActorContext, ec: ExecutionContext): Unit = {
-    checkLedgerPoolConnection(aac)(aac.system, ec)
-    while(true){
-      try {
-        val result = Await.result(checkReadiness(platform), 10.seconds)
-        if (result.status) {
-          logger.info("Successfully check external deps")
-          return // all are ok if this line executed
-        }
-        logger.error("Readiness check returned 'not ready': \n" + result.toString)
+  def waitReqDependenciesIsOk(platform: Platform): Unit = {
+    while (true) {
+      val result = Await.result(startupProbe(platform), 10.seconds)
+      if (result.status) {
+        logger.info("Successfully check external deps")
+        return // all are ok if this line executed
       }
-      catch {
-        case e: Exception => logger.error(e.getMessage)
-      }
+      logger.warn("Readiness check returned 'not ready': \n" + result.toString)
     }
   }
 
-  //TODO: copied from com.evernym.verity.http.route_handlers.restricted.HealthCheckEndpointHandlerV2
-  private def checkReadiness(platform: Platform): Future[ReadinessStatus] = {
-    val healthChecker: HealthChecker = new HealthChecker(platform)
+  private def startupProbe(platform: Platform): Future[StartupProbeStatus] = {
+    val healthChecker: HealthChecker = HealthChecker.apply(platform)
     implicit val ex: ExecutionContext = platform.executionContextProvider.futureExecutionContext
     val rdsFuture = healthChecker.checkAkkaEventStorageReadiness
     val dynamoDBFuture = healthChecker.checkWalletStorageReadiness
     val storageAPIFuture = healthChecker.checkStorageAPIReadiness
+    val ledgerFuture = ledgerStartupProbe(platform.aac)(platform.actorSystem,
+      platform.executionContextProvider.futureExecutionContext)
     for {
       rds <- rdsFuture
       dynamodb <- dynamoDBFuture
       storageAPI <- storageAPIFuture
-    } yield ReadinessStatus(rds.status && dynamodb.status && storageAPI.status,
+      ledger <- ledgerFuture
+    } yield StartupProbeStatus(rds.status && dynamodb.status && storageAPI.status && ledger.status,
       rds.msg,
       dynamodb.msg,
-      storageAPI.msg)
+      storageAPI.msg,
+      ledger.msg)
   }
 
   @tailrec
@@ -73,7 +72,7 @@ object LaunchPreCheck {
     try {
       if (delay > 0)
         logger.debug(s"Retrying after $delay seconds")
-      Thread.sleep(delay * 1000)    //this is only executed during agent service start time
+      Thread.sleep(delay * 1000) //this is only executed during agent service start time
       implicit val timeout: Timeout = Timeout(Duration.create(15, TimeUnit.SECONDS))
       val pcFut = Future(aac.poolConnManager.open()).map(_ => true)
       Await.result(pcFut, timeout.duration)
@@ -87,13 +86,27 @@ object LaunchPreCheck {
     }
   }
 
+  private def ledgerStartupProbe(aac: AgentActorContext)
+                                (implicit as: ActorSystem, ec: ExecutionContext): Future[ApiStatus] = {
+    val pcFut = Future(aac.poolConnManager.open()).map(_ => true)
+    pcFut.map(
+      _ => ApiStatus(status = true, "OK")
+    ).recover {
+      case e: Exception =>
+        val errorMsg = s"ledger connection check failed (error stack trace: ${Exceptions.getStackTraceAsSingleLineString(e)})"
+        AppStateUpdateAPI(as).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT,
+          new NoResponseFromLedgerPoolServiceException(Option(errorMsg))))
+        ApiStatus(status = false, errorMsg)
+    }
+  }
+
   @tailrec
   private def checkAkkaEventStorageConnection(aac: AgentActorContext, delay: Int = 0)
                                              (implicit as: ActorSystem, ec: ExecutionContext): Boolean = {
     try {
       if (delay > 0)
         logger.debug(s"Retrying after $delay seconds")
-      Thread.sleep(delay * 1000)    //this is only executed during agent service start time
+      Thread.sleep(delay * 1000) //this is only executed during agent service start time
       implicit val timeout: Timeout = Timeout(Duration.create(15, TimeUnit.SECONDS))
       val actorId = "dummy-actor-" + UUID.randomUUID().toString
       val keyValueMapper = aac.system.actorOf(KeyValueMapper.props(ec)(aac), actorId)
@@ -120,14 +133,14 @@ object LaunchPreCheck {
     try {
       if (delay > 0)
         logger.debug(s"Retrying after $delay seconds")
-      Thread.sleep(delay * 1000)    //this is only executed during agent service start time
+      Thread.sleep(delay * 1000) //this is only executed during agent service start time
       val walletId = "dummy-wallet-" + UUID.randomUUID().toString
       val wap = generateWalletParamSync(walletId, aac.appConfig, LibIndyWalletProvider)
       LibIndyWalletProvider.openSync(wap.walletName, wap.encryptionKey, wap.walletConfig)
       true
     } catch {
       //TODO: this logic doesn't seem to be working, should come back to this and fix it
-      case _ @ (_ : WalletDoesNotExist) =>
+      case _@(_: WalletDoesNotExist) =>
         //NOTE: we are catching this exceptions which is thrown if invalid/wrong data (in our case non existent wallet name)
         //is passed but at least it confirms that connection with wallet storage was successful.
         true

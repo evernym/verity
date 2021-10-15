@@ -16,7 +16,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class LedgerAccessAPI(cache: Cache,
                       ledgerSvc: LedgerSvc,
-                      vdrAdapter: VDRAdapter,
                       _walletAccess: WalletAccess)
                      (implicit val asyncAPIContext: AsyncAPIContext)
   extends LedgerAsyncOps
@@ -72,45 +71,6 @@ class LedgerAccessAPI(cache: Cache,
     )
   }
 
-  //vdr apis
-  override def prepareSchemaTxn(schemaJson: String,
-                                fqSchemaId: FQSchemaId,
-                                submitterDID: DidStr,
-                                endorser: Option[String]): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec => vdrAdapter.prepareSchemaTxn(schemaJson, fqSchemaId, submitterDID, endorser)}
-    )
-  }
-
-
-  override def prepareCredDefTxn(credDefJson: String,
-                                 fqCredDefId: FQCredDefId,
-                                 submitterDID: DidStr,
-                                 endorser: Option[String]): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec => vdrAdapter.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser) }
-    )
-  }
-
-  override def submitTxn(preparedTxn: PreparedTxn,
-                         signature: Array[Byte],
-                         endorsement: Array[Byte]): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec => vdrAdapter.submitTxn(preparedTxn, signature, endorsement)}
-    )
-  }
-
-  override def resolveSchema(schemaId: FQSchemaId): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec => vdrAdapter.resolveSchema(schemaId) }
-    )
-  }
-
-  override def resolveCredDef(credDefId: FQCredDefId): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec => vdrAdapter.resolveCredDef(credDefId) }
-    )
-  }
 
   //helper functions
   private def getSchemaBase(schemaIds: Set[String])(implicit ec: ExecutionContext)
@@ -145,7 +105,7 @@ class LedgerAccessAPI(cache: Cache,
 }
 
 object LedgerAccessAPI {
-  def apply(cache: Cache, ledgerSvc: LedgerSvc, vdrAdapter: VDRAdapter, walletAccess: WalletAccess)
+  def apply(cache: Cache, ledgerSvc: LedgerSvc, walletAccess: WalletAccess)
            (implicit asyncAPIContext: AsyncAPIContext) =
-    new LedgerAccessAPI(cache, ledgerSvc, vdrAdapter, walletAccess)
+    new LedgerAccessAPI(cache, ledgerSvc, walletAccess)
 }

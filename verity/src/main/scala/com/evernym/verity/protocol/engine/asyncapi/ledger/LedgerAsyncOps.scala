@@ -24,21 +24,5 @@ trait LedgerAsyncOps {
 
   def runPrepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr): Unit
 
-  def prepareSchemaTxn(schemaJson: String,
-                       fqSchemaId: FQSchemaId,
-                       submitterDID: DidStr,
-                       endorser: Option[String]): Unit
 
-  def prepareCredDefTxn(credDefJson: String,
-                        fqCredDefId: FQCredDefId,
-                        submitterDID: DidStr,
-                        endorser: Option[String]): Unit
-
-  def resolveSchema(schemaId: FQSchemaId): Unit
-
-  def resolveCredDef(credDefId: FQCredDefId): Unit
-
-  def submitTxn(preparedTxn: PreparedTxn,
-                signature: Array[Byte],
-                endorsement: Array[Byte]): Unit
 }

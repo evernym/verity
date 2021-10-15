@@ -6,8 +6,6 @@ metadata:
     app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
     app.gitlab.com/env: {{ .Values.env }}
 spec:
-  #strategy:
-  #  type: "Recreate"
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -42,6 +40,19 @@ spec:
 {{ include "verity.vaultInjectTemplate" (dict "Secret" $credentials_tf) | indent 10 }}
         {{- end }}
     spec:
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: {{ template "verity.fullname" . }}
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: {{ template "verity.fullname" . }}
       containers:
       - name: {{ template "verity.fullname" . }}
         image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag }}

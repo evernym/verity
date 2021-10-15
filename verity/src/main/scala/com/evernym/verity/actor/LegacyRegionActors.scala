@@ -25,8 +25,7 @@ trait LegacyRegionActors extends LegacyRegionNames { this: Platform =>
           new UserAgent(
             agentActorContext,
             collectionsMetricsCollector,
-            this.executionContextProvider.futureExecutionContext,
-            this.executionContextProvider.walletFutureExecutionContext
+            this.executionContextProvider.futureExecutionContext
           )
         ),
         Option(USER_AGENT_ACTOR_DISPATCHER_NAME)
@@ -43,8 +42,7 @@ trait LegacyRegionActors extends LegacyRegionNames { this: Platform =>
           new UserAgentPairwise(
             agentActorContext,
             collectionsMetricsCollector,
-            this.executionContextProvider.futureExecutionContext,
-            this.executionContextProvider.walletFutureExecutionContext
+            this.executionContextProvider.futureExecutionContext
           )
         ),
         Option(USER_AGENT_PAIRWISE_ACTOR_DISPATCHER_NAME)

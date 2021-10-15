@@ -15,10 +15,10 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 
-class ActorWalletService(system: ActorSystem, appConfigParam: AppConfig, walletExecutionContext: ExecutionContext)
+class ActorWalletService(system: ActorSystem, appConfigParam: AppConfig, executionContext: ExecutionContext)
   extends WalletService {
 
-  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
+  override def futureExecutionContext: ExecutionContext = executionContext
   lazy val walletActorRegion: ActorRef = ClusterSharding(system).shardRegion(WALLET_REGION_ACTOR_NAME)
 
   override val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()

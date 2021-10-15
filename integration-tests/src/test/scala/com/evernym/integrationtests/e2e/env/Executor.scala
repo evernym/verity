@@ -18,12 +18,10 @@ class AgencyAgentSetupHelper {
     val agencyAgent: AgentMsgSenderHttpWrapper = new AgentMsgSenderHttpWrapper {
       def urlParam: UrlParam = up
       override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-      override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
       private val ecp = TestExecutionContextProvider.ecp
       override val mockClientAgent =
         new MockCloudAgent(
           ecp.futureExecutionContext,
-          ecp.walletFutureExecutionContext,
           urlParam,
           appConfig
         )
@@ -39,12 +37,10 @@ class AgencyAgentSetupHelper {
     val agencyAgent: AgentMsgSenderHttpWrapper = new AgentMsgSenderHttpWrapper {
       def urlParam: UrlParam = up
       override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-      override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
       private val ecp = TestExecutionContextProvider.ecp
       override val mockClientAgent =
         new MockCloudAgent(
           ecp.futureExecutionContext,
-          ecp.walletFutureExecutionContext,
           urlParam,
           appConfig
         )
@@ -63,10 +59,8 @@ object Executor {
         urlParam,
         appConfig,
         ecp.futureExecutionContext,
-        ecp.walletFutureExecutionContext
       )
     override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-    override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
   }
 
   class MockConsumerEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:6701"))
@@ -77,10 +71,8 @@ object Executor {
         urlParam,
         appConfig,
         ecp.futureExecutionContext,
-        ecp.walletFutureExecutionContext
       )
     override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-    override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
   }
 
   class MockVerityEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:6901"))
@@ -91,10 +83,8 @@ object Executor {
         urlParam,
         appConfig,
         ecp.futureExecutionContext,
-        ecp.walletFutureExecutionContext
       )
     override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-    override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
   }
 
   class MockThirdPartyEdgeAgentApiExecutor(val urlParam: UrlParam=UrlParam("localhost:9004"))
@@ -105,10 +95,8 @@ object Executor {
         urlParam,
         appConfig,
         ecp.futureExecutionContext,
-        ecp.walletFutureExecutionContext
       )
     override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-    override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
   }
 
   def prepareVerity1Apps(): EdgeApps = {

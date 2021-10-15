@@ -9,6 +9,16 @@
   * input/output **may change** until finalized on VDR side
 
 
+### Lifecycle APIs
+* **ping**(namespaces: List[Namespace]): **Future[PingResult]**
+  * Purpose
+    * To check ledger's reachability/availability
+  * Input
+    * namespaces: list of namespaces (if empty, it will use registered ledger's namespace)
+  * Output
+    * **PingResult**
+
+
 ### Read APIs (To be finalized once corresponding api in VDRTools is finalized)
 * **resolveDID**(fqdid: DidStr, cacheOpts: CacheOpt): **Future[DIDDoc]**
   * Purpose
@@ -97,47 +107,75 @@
 
 
 #### Input/Output param details
+
 * **DidStr**: Fully qualified DID string
 
 
 <br/>
 
-* **DIDDoc** (To be finalized)
+* **DIDDoc**(id: FQDid, verKeyStr: VerKeyStr, endpoint: Option[String])
+  * Description
+    * did document
+  * Params
+    * id: fully qualified did (https://www.w3.org/TR/did-core/#did-syntax)
+    * verKeyStr: verification key string
+    * endpoint: optional, service endpoint url if set
 
+
+<br/>
+
+* **PingResult**(status: Map[Namespace, LedgerStatus])
+  * Description
+    * ping result
+  * Params
+    * status: map of namespace and corresponding ledger status
 
 <br/>
 
 * **CacheOpt**(noCache: Boolean, noUpdate: Boolean, noStore: Boolean, minFresh: Int)
-  * noCache: Skip usage of cache (false by default)
-  * noUpdate: Use only cached data, do not update the cache (false by default)
-  * noStore: Skip storing fresh data if updated (false by default)
-  * minFresh: Return cached data if not older than this many seconds, -1 means do not check age (-1 by default)
+  * Description
+    * Cache options
+  * Params
+    * noCache: Skip usage of cache (false by default)
+    * noUpdate: Use only cached data, do not update the cache (false by default)
+    * noStore: Skip storing fresh data if updated (false by default)
+    * minFresh: Return cached data if not older than this many seconds, -1 means do not check age (-1 by default)
 
 <br/>
 
 * **Schema**(fqname: String, json: String)
-  * fqname: Fully qualified schema name (for example: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:npdb:4.3.4)
-  * payload: schema bytes
+  * Description
+    * Schema object
+  * Params
+    * fqname: Fully qualified schema name (for example: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:npdb:4.3.4)
+    * payload: schema bytes
   
 <br/>
 
 * **CredDef**(fqname: String, json: String, fqschema: String)
-  * fqname: Fully qualified cred def name (for example: did:indy:sovrin:5nDyJVP1NrcPAttP3xwMB9:3:CL:56495:npdb)
-  * payload: cred def bytes
-  * fqschema: Fully qualified schema name (for example: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:npdb:4.3.4) 
+  * Description
+    * A cred def object
+  * Params
+    * fqname: Fully qualified cred def name (for example: did:indy:sovrin:5nDyJVP1NrcPAttP3xwMB9:3:CL:56495:npdb)
+    * payload: cred def bytes
+    * fqschema: Fully qualified schema name (for example: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:npdb:4.3.4) 
 
 <br/>
 
 * **PreparedTxn**(context: String, signatureSpec: SignatureSpec, bytesToSign: Array[Byte], endorsementSpec: EndorsementSpec)
-  * context: opaque string, for now this most likely will contain just ledger id
-  * signatureSpec: specifications about signing process (eg. what algorithm to use, length of signature 
-                   and any other information to generalize the signing process). This should be agnostic to ledger 
-  * bytesToSign: actual data that needs to be signed
-  * endorsementSpec: specification about endorsing process, which is ledger type specific 
-                     It may also contain type None
+  * Description
+    * prepared transaction
+  * Params
+    * context: opaque string, for now this most likely will contain just ledger id
+    * signatureSpec: specifications about signing process (eg. what algorithm to use, length of signature 
+                     and any other information to generalize the signing process). This should be agnostic to ledger 
+    * bytesToSign: actual data that needs to be signed
+    * endorsementSpec: specification about endorsing process, which is ledger type specific 
+                       It may also contain type None
 
 <br/>
 
 * **Endorsement**
   * Indy: just endorser signature
   * Cheqd: payment parameters and account signature
+  

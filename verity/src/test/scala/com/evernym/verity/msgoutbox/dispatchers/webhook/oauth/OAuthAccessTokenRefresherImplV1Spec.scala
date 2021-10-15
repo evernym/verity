@@ -20,7 +20,7 @@ class OAuthAccessTokenRefresherImplV1Spec
     "when asked to get new token with missing required fields" - {
       "should respond with failure" in {
         val testProbe = createTestProbe[OAuthAccessTokenRefresher.Reply]()
-        val oAuthAccessTokenRefresher = createOAuthAccessTokenRefresherV1()
+        val oAuthAccessTokenRefresher = createOAuthAccessTokenRefresher()
         oAuthAccessTokenRefresher ! GetToken(
           Map(
             "grant_type" -> "client_credentials",
@@ -36,7 +36,7 @@ class OAuthAccessTokenRefresherImplV1Spec
     "when asked to get new token with empty data for required fields" - {
       "should respond with failure" in {
         val testProbe = createTestProbe[OAuthAccessTokenRefresher.Reply]()
-        val oAuthAccessTokenRefresher = createOAuthAccessTokenRefresherV1()
+        val oAuthAccessTokenRefresher = createOAuthAccessTokenRefresher()
         oAuthAccessTokenRefresher ! GetToken(
           Map(
             "url" -> "",
@@ -53,7 +53,7 @@ class OAuthAccessTokenRefresherImplV1Spec
     "when asked to get new token with null data for required fields" - {
       "should respond with failure" in {
         val testProbe = createTestProbe[OAuthAccessTokenRefresher.Reply]()
-        val oAuthAccessTokenRefresher = createOAuthAccessTokenRefresherV1()
+        val oAuthAccessTokenRefresher = createOAuthAccessTokenRefresher()
         oAuthAccessTokenRefresher ! GetToken(
           Map(
             "url" -> null,
@@ -72,7 +72,7 @@ class OAuthAccessTokenRefresherImplV1Spec
     "when asked to get new token" - {
       "should be successful" ignore {
         val testProbe = createTestProbe[OAuthAccessTokenRefresher.Reply]()
-        val oAuthAccessTokenRefresher = createOAuthAccessTokenRefresherV1()
+        val oAuthAccessTokenRefresher = createOAuthAccessTokenRefresher()
         oAuthAccessTokenRefresher ! GetToken(
           // replace below data with correct value
           Map(
@@ -88,7 +88,7 @@ class OAuthAccessTokenRefresherImplV1Spec
     }
   }
 
-  def createOAuthAccessTokenRefresherV1(): ActorRef[OAuthAccessTokenRefresher.Cmd] = {
+  def createOAuthAccessTokenRefresher(): ActorRef[OAuthAccessTokenRefresher.Cmd] = {
     spawn(OAuthAccessTokenRefresherImplV1(TestExecutionContextProvider.ecp.futureExecutionContext))
   }
 }

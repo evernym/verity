@@ -16,7 +16,6 @@ import scala.concurrent.ExecutionContext
  * @param myDIDDetail
  */
 class MockCloudAgent(override val executionContext: ExecutionContext,
-                     walletExecutionContext: ExecutionContext,
                      override val agencyEndpoint: UrlParam,
                      override val appConfig: AppConfig,
                      override val myDIDDetail: AgentDIDDetail = CommonSpecUtil.generateNewAgentDIDDetail())
@@ -35,9 +34,4 @@ class MockCloudAgent(override val executionContext: ExecutionContext,
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = executionContext
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
 }

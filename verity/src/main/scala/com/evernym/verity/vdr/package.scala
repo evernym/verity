@@ -4,4 +4,5 @@ package object vdr {
   type Namespace = String
   type FQSchemaId = String
   type FQCredDefId = String
+  type FQDid = String
 }

@@ -41,9 +41,9 @@ class ReuseAttachmentSpec
   lazy val verifierVerityEnv = VerityEnvBuilder.default().build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
-  lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv, executionContext, ecp.walletFutureExecutionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
+  lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv, executionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
 
   val oobIssuerHolderConn = "connId1"
   val oobVerifierHolderConn = "connId2"

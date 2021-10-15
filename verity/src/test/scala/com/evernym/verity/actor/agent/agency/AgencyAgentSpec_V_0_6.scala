@@ -79,6 +79,4 @@ class AgencyAgentSpec_V_0_6 extends AgencyAgentScaffolding {
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

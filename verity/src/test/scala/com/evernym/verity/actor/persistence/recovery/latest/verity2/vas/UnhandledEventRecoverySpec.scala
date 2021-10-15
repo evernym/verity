@@ -35,7 +35,7 @@ class UnhandledEventRecoverySpec
 
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   override def executionContextProvider: ExecutionContextProvider = ecp
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }
 
 object MockAppStateListener {

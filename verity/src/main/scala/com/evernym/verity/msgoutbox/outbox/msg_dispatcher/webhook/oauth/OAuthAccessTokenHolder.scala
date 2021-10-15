@@ -109,7 +109,7 @@ object OAuthAccessTokenHolder {
     case AccessTokenRefresherReplyAdapter(reply: GetTokenSuccess) =>
       logger.info(s"[${setup.identifier}][OAuth] refreshed access token received (expires in seconds: ${reply.expiresInSeconds})")
       setup.actorContext.cancelReceiveTimeout()
-      setup.buffer.unstashAll(initialized(Option(AuthTokenParam(reply.value, reply.expiresInSeconds)))
+      setup.buffer.unstashAll(initialized(Option(AuthTokenParam.from(reply.value, reply.expiresInSeconds)))
       (setup.copy(prevTokenRefreshResponse = reply.respJSONObject)))
 
     case AccessTokenRefresherReplyAdapter(reply: OAuthAccessTokenRefresher.Replies.GetTokenFailed) =>
@@ -160,12 +160,12 @@ case class Setup(receiveTimeout: FiniteDuration,
 }
 
 object AuthTokenParam {
-  def apply(value: String, expiresInSeconds: Int): AuthTokenParam = {
-    AuthTokenParam(value, LocalDateTime.now.plusSeconds(expiresInSeconds))
+  def from(value: String, expiresInSeconds: Option[Int]): AuthTokenParam = {
+    AuthTokenParam(value, expiresInSeconds.map(e => LocalDateTime.now.plusSeconds(e)))
   }
 }
 
-case class AuthTokenParam(value: String, expiresAt: LocalDateTime) {
-  def isExpired: Boolean = LocalDateTime.now().isAfter(expiresAt)
-  def secondsRemaining: Long = ChronoUnit.SECONDS.between(LocalDateTime.now(), expiresAt)
+case class AuthTokenParam(value: String, expiresAt: Option[LocalDateTime]) {
+  def isExpired: Boolean = expiresAt.exists(e => LocalDateTime.now().isAfter(e))
+  def secondsRemaining: Option[Long] = expiresAt.map(e => ChronoUnit.SECONDS.between(LocalDateTime.now(), e))
 }

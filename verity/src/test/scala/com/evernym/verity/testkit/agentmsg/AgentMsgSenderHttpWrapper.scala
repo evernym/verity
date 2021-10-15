@@ -7,7 +7,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.`X-Real-Ip`
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
@@ -51,11 +51,9 @@ trait AgentMsgSenderHttpWrapper
   extends CommonSpecUtil
     with LedgerClient
     with Eventually
-    with HasExecutionContextProvider
-    with HasWalletExecutionContextProvider {
+    with HasExecutionContextProvider {
 
   implicit lazy val executionContext: ExecutionContext = futureExecutionContext
-  lazy val walletExecutionContext: ExecutionContext = futureWalletExecutionContext
 
   val logger: Logger = getLoggerByName(getClass.getName)
 
@@ -267,15 +265,15 @@ trait AgentMsgSenderHttpWrapper
                       withSeed: Option[String]=None,
                       config: Option[AppConfig]=None,
                       withRole: Option[String]=None): Unit = {
-    createLedgerUtil(executionContext, walletExecutionContext, config, fromDID, withSeed).bootstrapNewDID(ad.DID, ad.verKey, withRole.orNull)
+    createLedgerUtil(executionContext, config, fromDID, withSeed).bootstrapNewDID(ad.DID, ad.verKey, withRole.orNull)
   }
 
   def updateAgencyEndpointInLedger(did: DidStr, withSeed: String, endpoint: String, config: Option[AppConfig]=None): Unit = {
-    createLedgerUtil(executionContext, walletExecutionContext, config, Option(did), Option(withSeed)).setEndpointUrl(did, endpoint)
+    createLedgerUtil(executionContext, config, Option(did), Option(withSeed)).setEndpointUrl(did, endpoint)
   }
 
   def getAttribFromLedger(did: DidStr, withSeed: String, attribName: String, config: Option[AppConfig]=None): Unit = {
-    createLedgerUtil(executionContext, walletExecutionContext, config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
+    createLedgerUtil(executionContext, config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
   }
 
   def buildClientNamePrependedMsg(msg: String): String = {

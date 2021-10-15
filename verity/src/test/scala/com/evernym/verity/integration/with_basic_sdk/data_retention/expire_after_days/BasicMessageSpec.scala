@@ -33,8 +33,8 @@ class BasicMessageSpec
 
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor, executionContext)
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _

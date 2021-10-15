@@ -2,7 +2,6 @@ package com.evernym.verity.protocol.engine.asyncapi.ledger
 
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.vdr.{FQCredDefId, FQSchemaId, PreparedTxn}
 
 trait LedgerAsyncOps {
 

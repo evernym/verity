@@ -9,13 +9,11 @@ variables:
   # TRIGGERAPI_REF_VERITY_RELEASE: "auto-deploy"
 
 stages:
-  - check
   - package
   - publish
   - deploy
 
 include:
-  - '/cicd/jobs/check.yml'
   - '/cicd/jobs/package.yml'
   - '/cicd/jobs/publish.yml'
   - '/cicd/jobs/deploy.yml'

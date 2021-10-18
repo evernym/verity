@@ -71,11 +71,11 @@ spec:
           failureThreshold: 20
         readinessProbe:
           httpGet:
-            path: /agency
+            path: /verity/node/readiness
             port: 9000
         livenessProbe:
           httpGet:
-            path: /agency/heartbeat
+            path: /verity/node/liveness
             port: 9000
           periodSeconds: 30
           failureThreshold: 1

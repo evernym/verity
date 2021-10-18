@@ -26,6 +26,7 @@ package:
     refs:
       - master@dev/verity/verity
       - main@evernym/verity/verity
+      - rajesh.kalaria_ve3058_troubleshooting-changes
 
 package-manual:
   extends: .package-common

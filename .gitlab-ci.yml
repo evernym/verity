@@ -10,10 +10,10 @@ variables:
 
 stages:
   - check
-  - test
+  #- test
   - package
-  - build-test-harness
-  - acceptance
+  #- build-test-harness
+  #- acceptance
   - publish
   - deploy
 

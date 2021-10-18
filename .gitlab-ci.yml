@@ -10,18 +10,13 @@ variables:
 
 stages:
   - check
-  #- test
   - package
-  #- build-test-harness
-  #- acceptance
   - publish
   - deploy
 
 include:
   - '/cicd/jobs/check.yml'
-  - '/cicd/jobs/test.yml'
   - '/cicd/jobs/package.yml'
-  - '/cicd/jobs/interop.yml'
   - '/cicd/jobs/publish.yml'
   - '/cicd/jobs/deploy.yml'
   - template: Security/SAST.gitlab-ci.yml 

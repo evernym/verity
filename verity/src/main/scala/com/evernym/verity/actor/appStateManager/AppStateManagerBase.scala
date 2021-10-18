@@ -239,10 +239,9 @@ trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
         // Sleep a while to give the load balancers time to get a sufficient number of non-200 http response codes
         // from agency/heartbeat AFTER application state transition to 'Draining'.
         Thread.sleep(delayBeforeLeavingCluster * 1000) // seconds converted to milliseconds
-        logger.info(s"Akka node ${cluster.selfAddress} is leaving the cluster...")
-        // NOTE: Tasks to gracefully leave an Akka cluster include graceful shutdown of Cluster Singletons and Cluster
-        //       Sharding.
-        cluster.leave(cluster.selfAddress)
+        logger.info(s"Akka node ${cluster.selfAddress} is terminating the actor system (which will start coordinated shutdown)...")
+        // Start coordinated shutdown (as mentioned here: https://doc.akka.io/docs/akka/current/coordinated-shutdown.html#coordinated-shutdown)
+        context.system.terminate()
 
         def checkIfNodeHasLeftCluster(delay: Int, tries: Int): Boolean = {
           if (tries <= 0) return false

@@ -17,7 +17,3 @@ include:
   - '/cicd/jobs/package.yml'
   - '/cicd/jobs/publish.yml'
   - '/cicd/jobs/deploy.yml'
- 
-spotbugs-sast:
-  variables:
-    FAIL_NEVER: 1

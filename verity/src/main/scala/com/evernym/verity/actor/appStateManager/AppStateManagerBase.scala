@@ -239,12 +239,12 @@ trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
         .scheduleOnce(delayBeforeLeavingCluster.seconds) {
           logger.info(s"akka node ${cluster.selfAddress} will start coordinated shutdown...")
           //start coordinated shutdown (as mentioned here: https://doc.akka.io/docs/akka/current/coordinated-shutdown.html#coordinated-shutdown)
-          val terminationStartTime = LocalDateTime
+          val terminationStartTime = LocalDateTime.now()
           context
             .system
             .terminate()
             .map { _ =>
-              val terminationFinishTime = LocalDateTime
+              val terminationFinishTime = LocalDateTime.now()
               val timeTaken = ChronoUnit.MILLIS.between(terminationStartTime, terminationFinishTime)
               logger.info(s"coordinated shutdown finished in millis: $timeTaken")
             }.recover {

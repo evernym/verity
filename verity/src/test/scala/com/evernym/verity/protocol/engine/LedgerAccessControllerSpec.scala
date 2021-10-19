@@ -16,7 +16,7 @@ import com.evernym.verity.protocol.testkit.MockableWalletAccess
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.vdr.service.{IndyLedger, VDRToolsConfig}
-import com.evernym.verity.vdr.{TestVDRTools, VDRActorAdapter, VDRToolsFactoryParam}
+import com.evernym.verity.vdr.{TestVDRTools, VDRActorAdapter, VDRAdapter, VDRToolsFactoryParam}
 
 import scala.concurrent.ExecutionContext
 import scala.util.Try
@@ -29,8 +29,7 @@ class LedgerAccessControllerSpec
   val actorSystem: ActorSystem = ActorSystemVanilla("test")
   lazy val generalCache: Cache = new Cache("GC", Map(), NoOpMetricsWriter(), executionContext)
 
-  //TODO: replace this with actual VDR Adapter implementation during final integration
-  val vdrImpl = null
+  val vdrImpl: VDRAdapter = new MockVDRAdapter()
 
   implicit def asyncAPIContext: AsyncAPIContext =
     AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)

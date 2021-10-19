@@ -24,7 +24,7 @@ class LedgerAccessController(val accessRights: Set[AccessRight],
   override def walletAccess: WalletAccess = ledgerExecutor.walletAccess
 
   //TODO: possibly it doesn't work, need resolve this
-  private def vdrAsyncRunIfAllowed[T](accessRight: AccessRight, op: ExecutionContext => Future[T], handler: Try[T] => Unit): Unit = {
+  private def vdrAsyncRunIfAllowed[T](accessRight: AccessRight, op: ExecutionContext => Future[Any], handler: Try[T] => Unit): Unit = {
     if (accessRights(accessRight)) {
       withAsyncOpExecutorActor(op)
     }

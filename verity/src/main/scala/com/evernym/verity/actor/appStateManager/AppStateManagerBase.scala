@@ -243,7 +243,7 @@ trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
             .system
             .terminate()
             .map { _ =>
-              cluster.down(cluster.selfAddress)
+              cluster.down(cluster.selfAddress)   //TODO: need to confirm if this is required or not
               val terminationFinishTime = LocalDateTime.now()
               val timeTaken = ChronoUnit.MILLIS.between(terminationStartTime, terminationFinishTime)
               logger.info(s"coordinated shutdown finished in millis: $timeTaken")

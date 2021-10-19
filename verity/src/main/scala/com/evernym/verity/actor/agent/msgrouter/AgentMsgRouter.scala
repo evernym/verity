@@ -32,7 +32,6 @@ import com.evernym.verity.util.Util._
 import com.evernym.verity.util.{Base58Util, ReqMsgContext, RestMsgContext}
 import com.typesafe.scalalogging.Logger
 
-import java.net.InetAddress
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
@@ -185,7 +184,7 @@ class AgentMsgRouter(executionContext: ExecutionContext)(implicit val appConfig:
       ar.actualFut.recover {
         case ate: AskTimeoutException =>
           logger.error(s"ask timed out => ${ar.reason.getOrElse("no details available")}")
-          throw new AskTimeoutException(s"[${InetAddress.getLocalHost.getHostName}] ask timed out => ${ar.reason.getOrElse("no details available")}", ate.getCause())
+          throw ate
         case x => throw x
       }
     }

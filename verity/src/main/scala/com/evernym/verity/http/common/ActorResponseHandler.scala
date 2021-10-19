@@ -14,6 +14,8 @@ import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util2.{ActorErrorResp, ActorResponse, DoNotLogError, Exceptions, Status}
 import com.typesafe.scalalogging.Logger
 
+import java.net.InetAddress
+
 /**
  * common logic to handle expected and/or unexpected response from actor
  */
@@ -94,8 +96,10 @@ trait ActorResponseHandler {
 case class StatusDetailResp(statusCode: String, statusMsg: String, detail: Option[String]) extends ActorMessage
 
 case object StatusDetailResp {
-  def apply(sd: StatusDetail, detail: Option[Any] = None): StatusDetailResp =
-    StatusDetailResp (sd.statusCode, sd.statusMsg, detail.map(_.toString))
+  def apply(sd: StatusDetail, detail: Option[Any] = None): StatusDetailResp = {
+    val hostName = InetAddress.getLocalHost.getHostName
+    StatusDetailResp (sd.statusCode, s"[$hostName]: ${sd.statusMsg}", detail.map(_.toString))
+  }
 
   def apply(br: ActorErrorResp): StatusDetailResp = {
     StatusDetailResp (Status.getFromCode(br.statusCode).copy(statusMsg = br.respMsg))
@@ -137,7 +141,7 @@ object HttpResponseBuilder {
       case aer: ActorErrorResp        =>
         httpStatusFromExceptionClass(aer.exceptionClass) -> StatusDetailResp(aer)
       case ate: AskTimeoutException   =>
-        httpStatusFromException(ate) -> StatusDetailResp(TIMEOUT, Some(ate))
+        httpStatusFromException(ate) -> StatusDetailResp(TIMEOUT, Some(ate.getMessage))
       case rte: RuntimeException      =>
         httpStatusFromException(rte) -> StatusDetailResp(ActorResponse(rte))
       case _                          =>

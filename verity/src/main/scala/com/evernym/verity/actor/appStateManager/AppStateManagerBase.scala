@@ -251,6 +251,7 @@ trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
                 logger.error("error encountered during coordinated shutdown", (LOG_KEY_ERR_MSG, e))
             }
         }
+      Thread.sleep(delayBeforeLeavingCluster*1000)
     } catch {
       case e: Exception => logger.error(
         s"failed to Drain the akka node. Reason: ${e.toString}"

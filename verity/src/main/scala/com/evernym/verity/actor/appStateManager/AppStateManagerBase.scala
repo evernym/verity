@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.appStateManager
 
-import java.time.ZonedDateTime
+import java.time.{LocalDateTime, ZonedDateTime}
 import akka.actor.Actor
 import akka.cluster.Cluster
 import com.evernym.verity.util2.HasExecutionContextProvider
@@ -17,6 +17,7 @@ import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.util2.{ExceptionConverter, Exceptions}
 import com.typesafe.scalalogging.Logger
 
+import java.time.temporal.ChronoUnit
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
@@ -224,39 +225,35 @@ trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
   def performServiceDrain(): Unit = {
     try {
       val cluster = Cluster(context.system)
-      val delayBeforeLeavingCluster = appConfig.getIntOption(
-        APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS).getOrElse(10)
-      logger.info(
-        s"""Will remain in draining state for at least $delayBeforeLeavingCluster seconds before starting the Coordinated Shutdown..."""
-      )
+      val delayBeforeLeavingCluster = appConfig.getIntOption(APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS).getOrElse(10)
 
+      logger.info(
+        s"""will remain in draining state for at least $delayBeforeLeavingCluster seconds
+           |before starting the Coordinated Shutdown...""".stripMargin)
       context
         .system
         .scheduler
+        //NOTE: this `delayBeforeLeavingCluster` should be greater than `readinessProbe.periodSeconds`
+        // to make sure the node is removed from the load-balancer before it is getting removed from the cluster
         .scheduleOnce(delayBeforeLeavingCluster.seconds) {
-          logger.info(s"Akka node ${cluster.selfAddress} is terminating the actor system (which will start coordinated shutdown)...")
-          // Start coordinated shutdown (as mentioned here: https://doc.akka.io/docs/akka/current/coordinated-shutdown.html#coordinated-shutdown)
+          logger.info(s"akka node ${cluster.selfAddress} will start coordinated shutdown...")
+          //start coordinated shutdown (as mentioned here: https://doc.akka.io/docs/akka/current/coordinated-shutdown.html#coordinated-shutdown)
+          val terminationStartTime = LocalDateTime
           context
             .system
             .terminate()
             .map { _ =>
-              cluster.down(cluster.selfAddress)
-              self ! SuccessEvent(Shutdown, CONTEXT_AGENT_SERVICE_SHUTDOWN,
-                causeDetail = CauseDetail(
-                  "agent-service-shutdown", "agent-service-shutdown-successfully"
-                ),
-                msg = Option("Akka node is about to shutdown.")
-              )
+              val terminationFinishTime = LocalDateTime
+              val timeTaken = ChronoUnit.MILLIS.between(terminationStartTime, terminationFinishTime)
+              logger.info(s"coordinated shutdown finished in millis: $timeTaken")
             }.recover {
-            case e: Throwable =>
-              logger.error(
-                "node encountered a failure while attempting to 'leave' the cluster.", (LOG_KEY_ERR_MSG, e)
-              )
-          }
+              case e: Throwable =>
+                logger.error("error encountered during coordinated shutdown", (LOG_KEY_ERR_MSG, e))
+            }
         }
     } catch {
       case e: Exception => logger.error(
-        s"Failed to Drain the akka node. Reason: ${e.toString}"
+        s"failed to Drain the akka node. Reason: ${e.toString}"
       )
     }
   }

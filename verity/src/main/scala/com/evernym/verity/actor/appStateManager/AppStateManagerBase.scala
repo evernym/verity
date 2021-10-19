@@ -226,7 +226,6 @@ trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
     try {
       val cluster = Cluster(context.system)
       val delayBeforeLeavingCluster = appConfig.getIntOption(APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS).getOrElse(10)
-
       logger.info(
         s"""will remain in draining state for at least $delayBeforeLeavingCluster seconds
            |before starting the Coordinated Shutdown...""".stripMargin)

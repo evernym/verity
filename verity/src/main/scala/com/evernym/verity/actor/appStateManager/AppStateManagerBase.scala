@@ -18,6 +18,7 @@ import com.evernym.verity.util2.{ExceptionConverter, Exceptions}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 
 
 trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
@@ -228,27 +229,30 @@ trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
       logger.info(
         s"""Will remain in draining state for at least $delayBeforeLeavingCluster seconds before starting the Coordinated Shutdown..."""
       )
-      // Sleep a while to give the load balancers time to get a sufficient number of non-200 http response codes
-      // from agency/heartbeat AFTER application state transition to 'Draining'.
-      Thread.sleep(delayBeforeLeavingCluster * 1000) // seconds converted to milliseconds
-      logger.info(s"Akka node ${cluster.selfAddress} is terminating the actor system (which will start coordinated shutdown)...")
-      // Start coordinated shutdown (as mentioned here: https://doc.akka.io/docs/akka/current/coordinated-shutdown.html#coordinated-shutdown)
+
       context
         .system
-        .terminate()
-        .map { _ =>
-          cluster.down(cluster.selfAddress)
-          self ! SuccessEvent(Shutdown, CONTEXT_AGENT_SERVICE_SHUTDOWN,
-            causeDetail = CauseDetail(
-              "agent-service-shutdown", "agent-service-shutdown-successfully"
-            ),
-            msg = Option("Akka node is about to shutdown.")
-          )
-        }.recover {
-          case e: Throwable =>
-            logger.error(
-              "node encountered a failure while attempting to 'leave' the cluster.", (LOG_KEY_ERR_MSG, e)
-            )
+        .scheduler
+        .scheduleOnce(delayBeforeLeavingCluster.seconds) {
+          logger.info(s"Akka node ${cluster.selfAddress} is terminating the actor system (which will start coordinated shutdown)...")
+          // Start coordinated shutdown (as mentioned here: https://doc.akka.io/docs/akka/current/coordinated-shutdown.html#coordinated-shutdown)
+          context
+            .system
+            .terminate()
+            .map { _ =>
+              cluster.down(cluster.selfAddress)
+              self ! SuccessEvent(Shutdown, CONTEXT_AGENT_SERVICE_SHUTDOWN,
+                causeDetail = CauseDetail(
+                  "agent-service-shutdown", "agent-service-shutdown-successfully"
+                ),
+                msg = Option("Akka node is about to shutdown.")
+              )
+            }.recover {
+            case e: Throwable =>
+              logger.error(
+                "node encountered a failure while attempting to 'leave' the cluster.", (LOG_KEY_ERR_MSG, e)
+              )
+          }
         }
     } catch {
       case e: Exception => logger.error(

@@ -229,6 +229,7 @@ trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
       logger.info(
         s"""will remain in draining state for at least $delayBeforeLeavingCluster seconds
            |before starting the Coordinated Shutdown...""".stripMargin)
+
       context
         .system
         .scheduler

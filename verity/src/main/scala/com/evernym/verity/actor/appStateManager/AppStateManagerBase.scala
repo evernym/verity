@@ -233,7 +233,8 @@ trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
       context
         .system
         .scheduler
-        //NOTE: this `delayBeforeLeavingCluster` should be greater than `readinessProbe.periodSeconds`
+        //NOTE: this `delayBeforeLeavingCluster` should be greater than
+        // `readinessProbe.periodSeconds * readinessProbe.failureThreshold`
         // to make sure the node is removed from the load-balancer before it is getting removed from the cluster
         .scheduleOnce(delayBeforeLeavingCluster.seconds) {
           logger.info(s"akka node ${cluster.selfAddress} will start coordinated shutdown...")

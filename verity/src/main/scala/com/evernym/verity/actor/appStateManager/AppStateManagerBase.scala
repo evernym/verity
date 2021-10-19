@@ -3,14 +3,13 @@ package com.evernym.verity.actor.appStateManager
 import java.time.ZonedDateTime
 import akka.actor.Actor
 import akka.cluster.Cluster
-import akka.cluster.MemberStatus.{Down, Removed}
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Exceptions.{HandledErrorException, TransitionHandlerNotProvidedException}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager.state._
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.ConfigConstants.{APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS, APP_STATE_MANAGER_STATE_DRAINING_DELAY_BETWEEN_STATUS_CHECKS_IN_SECONDS, APP_STATE_MANAGER_STATE_DRAINING_MAX_STATUS_CHECK_COUNT, APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_COUNT, APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_DURATION}
+import com.evernym.verity.config.ConfigConstants.{APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS, APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_COUNT, APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_DURATION}
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.AppVersion
@@ -18,8 +17,7 @@ import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.util2.{ExceptionConverter, Exceptions}
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.concurrent.ExecutionContext
 
 
 trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
@@ -224,64 +222,34 @@ trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
 
   def performServiceDrain(): Unit = {
     try {
-      // TODO: Start a CoordinatedShutdown (rely on the ClusterDaemon addTask here) OR do the following?
       val cluster = Cluster(context.system)
-      val f: Future[Boolean] = Future {
-        val delayBeforeLeavingCluster = appConfig.getIntOption(
-          APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS).getOrElse(10)
-        val delayBetweenStatusChecks = appConfig.getIntOption(
-          APP_STATE_MANAGER_STATE_DRAINING_DELAY_BETWEEN_STATUS_CHECKS_IN_SECONDS).getOrElse(1)
-        val maxStatusCheckCount = appConfig.getIntOption(
-          APP_STATE_MANAGER_STATE_DRAINING_MAX_STATUS_CHECK_COUNT).getOrElse(20)
-        logger.info(
-          s"""Will remain in draining state for at least $delayBeforeLeavingCluster seconds before starting the Coordinated Shutdown..."""
-        )
-        // Sleep a while to give the load balancers time to get a sufficient number of non-200 http response codes
-        // from agency/heartbeat AFTER application state transition to 'Draining'.
-        Thread.sleep(delayBeforeLeavingCluster * 1000) // seconds converted to milliseconds
-        logger.info(s"Akka node ${cluster.selfAddress} is terminating the actor system (which will start coordinated shutdown)...")
-        // Start coordinated shutdown (as mentioned here: https://doc.akka.io/docs/akka/current/coordinated-shutdown.html#coordinated-shutdown)
-        context.system.terminate()
-
-        def checkIfNodeHasLeftCluster(delay: Int, tries: Int): Boolean = {
-          if (tries <= 0) return false
-          logger.debug(s"Check if cluster is terminated or status is set to Removed or Down...")
-          if (cluster.isTerminated || cluster.selfMember.status == Removed || cluster.selfMember.status == Down) {
-            return true
-          }
-          logger.debug(s"""Cluster is NOT terminated AND status is NOT set to Removed or Down. Sleep $delay milliseconds and try again up to $tries more time(s).""")
-          Thread.sleep(delay * 1000) // sleep one second and check again
-          checkIfNodeHasLeftCluster(delay, tries - 1)
-        }
-        checkIfNodeHasLeftCluster(delayBetweenStatusChecks, maxStatusCheckCount)
-      }
-
-      f onComplete {
-        case Success(true) =>
-          logger.info("Akka node has left the cluster")
-
-          logger.info(
-            s"""Akka node ${cluster.selfAddress} is being marked as 'down' as well in the event of network failures while 'leaving' the cluster..."""
-          )
-          // NOTE: In case of network failures during this process (leaving) it might still be necessary to set the
-          //       node’s status to Down in order to complete the removal.
+      val delayBeforeLeavingCluster = appConfig.getIntOption(
+        APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS).getOrElse(10)
+      logger.info(
+        s"""Will remain in draining state for at least $delayBeforeLeavingCluster seconds before starting the Coordinated Shutdown..."""
+      )
+      // Sleep a while to give the load balancers time to get a sufficient number of non-200 http response codes
+      // from agency/heartbeat AFTER application state transition to 'Draining'.
+      Thread.sleep(delayBeforeLeavingCluster * 1000) // seconds converted to milliseconds
+      logger.info(s"Akka node ${cluster.selfAddress} is terminating the actor system (which will start coordinated shutdown)...")
+      // Start coordinated shutdown (as mentioned here: https://doc.akka.io/docs/akka/current/coordinated-shutdown.html#coordinated-shutdown)
+      context
+        .system
+        .terminate()
+        .map { _ =>
           cluster.down(cluster.selfAddress)
-
-          // Begin shutting down the node. The transition to "Shutdown" will stop the sysServiceNotifier and
-          // perform a service shutdown (system exit).
           self ! SuccessEvent(Shutdown, CONTEXT_AGENT_SERVICE_SHUTDOWN,
             causeDetail = CauseDetail(
               "agent-service-shutdown", "agent-service-shutdown-successfully"
             ),
             msg = Option("Akka node is about to shutdown.")
           )
-        case Success(false) =>
-          logger.error("node timed out while attempting to 'leave' the cluster")
-        case Failure(error) =>
-          logger.error(
-            "node encountered a failure while attempting to 'leave' the cluster.", (LOG_KEY_ERR_MSG, error)
-          )
-      }
+        }.recover {
+          case e: Throwable =>
+            logger.error(
+              "node encountered a failure while attempting to 'leave' the cluster.", (LOG_KEY_ERR_MSG, e)
+            )
+        }
     } catch {
       case e: Exception => logger.error(
         s"Failed to Drain the akka node. Reason: ${e.toString}"

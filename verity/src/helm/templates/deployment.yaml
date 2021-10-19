@@ -73,6 +73,9 @@ spec:
           httpGet:
             path: /verity/node/readiness
             port: 9000
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 1
         livenessProbe:
           httpGet:
             path: /verity/node/liveness

@@ -14,7 +14,7 @@ import com.evernym.verity.http.common.HttpRouteBase
 import com.evernym.verity.http.route_handlers.configured.ConfiguredApiRoutes
 import com.evernym.verity.http.route_handlers.open.OpenApiRoutes
 import com.evernym.verity.http.route_handlers.restricted.RestrictedApiRoutes
-import com.evernym.verity.util.healthcheck.{HealthChecker, HealthCheckerImpl}
+import com.evernym.verity.util.healthcheck.HealthChecker
 
 import scala.concurrent.Future
 

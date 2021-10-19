@@ -48,7 +48,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
   implicit def appConfig: AppConfig = agentActorContext.appConfig
   implicit def actorSystem: ActorSystem = agentActorContext.system
 
-  def healthChecker: HealthChecker = HealthChecker(aac, aac.system, executionContextProvider.futureExecutionContext)
+  def healthChecker: HealthChecker = HealthChecker(aac, appStateManager, aac.system, executionContextProvider.futureExecutionContext)
 
   implicit lazy val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS,
     DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)

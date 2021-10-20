@@ -1,14 +1,10 @@
 package com.evernym.verity.urlshortener
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model._
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.actor.testkit.ActorSpec
-import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.ConfigConstants.{S3_SHORTENER_BUCKET_NAME, S3_SHORTENER_ID_LENGTH, S3_SHORTENER_RETRY_COUNT, S3_SHORTENER_URL_PREFIX}
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.BasicAsyncSpec
-import com.evernym.verity.testkit.mock.blob_store.MockBlobStore
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory}
@@ -17,13 +13,7 @@ import org.mockito.scalatest.MockitoSugar
 import org.scalatest.concurrent.ScalaFutures
 
 import java.nio.charset.StandardCharsets
-import scala.concurrent.{ExecutionContext, Future}
-
-class TestStorageApi(config: AppConfig, ec: ExecutionContext, mock: HttpRequest => Future[HttpResponse])
-                    (implicit override val as: ActorSystem) extends MockBlobStore(config, ec) {
-  override def put(bucketName: String, id: String, data: Array[Byte]): Future[StorageInfo] = super.put(bucketName, id, data)
-}
-
+import scala.concurrent.Future
 
 class S3ShortenerSvcSpec
   extends ActorSpec
@@ -162,9 +152,6 @@ class S3ShortenerSvcSpec
              id-length = 8
              retry-count = 3
            }
-         }
-         blob-store {
-           storage-service = "com.evernym.verity.urlshortener.TestStorageApi"
          }
        }
     """

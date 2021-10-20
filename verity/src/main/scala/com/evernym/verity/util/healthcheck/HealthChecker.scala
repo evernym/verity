@@ -10,7 +10,11 @@ case class ApiStatus(status: Boolean, msg: String)
 
 trait HealthChecker {
 
-  def checkHeartbeatStatus: Future[ApiStatus]
+  private var _isReady = true
+
+  def isReady: Boolean = _isReady
+
+  def updateReadinessStatus(status: Boolean): Unit = _isReady = status
 
   def checkAkkaEventStorageStatus: Future[ApiStatus]
 

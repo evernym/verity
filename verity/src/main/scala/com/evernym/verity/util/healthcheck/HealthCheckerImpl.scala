@@ -5,13 +5,11 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.appStateManager.AppStateConstants.CONTEXT_AGENT_SERVICE_INIT
-import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, GetHeartbeat, SeriousSystemError}
+import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, SeriousSystemError}
 import com.evernym.verity.actor.cluster_singleton.{GetValue, KeyValueMapper}
-import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.util2.Exceptions.NoResponseFromLedgerPoolServiceException
-import com.evernym.verity.util2.Status.ACCEPTING_TRAFFIC
 import com.evernym.verity.vault.WalletDoesNotExist
 import com.evernym.verity.vault.WalletUtil.generateWalletParamAsync
 
@@ -86,24 +84,6 @@ class HealthCheckerImpl(val agentActorContext: AgentActorContext,
         val errorMsg = s"ledger connection check failed (error stack trace: ${Exceptions.getStackTraceAsSingleLineString(e)})"
         AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT,
           new NoResponseFromLedgerPoolServiceException(Option(errorMsg))))
-        ApiStatus(status = false, e.getMessage)
-    }
-  }
-
-  override def checkHeartbeatStatus: Future[ApiStatus] = {
-    implicit val timeout: Timeout = Timeout(Duration.create(15, TimeUnit.SECONDS))
-    val fut = appStateManager ? GetHeartbeat
-    fut.map {
-      case heartbeat: StatusDetailResp =>
-        heartbeat.statusCode match {
-          case ACCEPTING_TRAFFIC.statusCode =>
-            ApiStatus(status = true, "OK")
-          case status =>
-            ApiStatus(status = false, status)
-        }
-    }.recover {
-      case e: Exception =>
-        val errorMsg = s"heartbeat check failed (error stack trace: ${Exceptions.getStackTraceAsSingleLineString(e)})"
         ApiStatus(status = false, e.getMessage)
     }
   }

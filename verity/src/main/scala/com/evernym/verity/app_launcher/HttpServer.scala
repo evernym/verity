@@ -3,13 +3,13 @@ package com.evernym.verity.app_launcher
 import akka.Done
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http.ServerBinding
-import akka.http.scaladsl.server.Route
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.{HttpServerBindResult, HttpServerUtil}
+import com.evernym.verity.http.route_handlers.HttpRouteHandler
 import com.evernym.verity.observability.metrics.CustomMetrics.{AS_START_TIME, initGaugeMetrics}
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.observability.metrics.MetricsWriter
@@ -24,7 +24,7 @@ import scala.concurrent.duration.{Duration, SECONDS}
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
-class HttpServer(val platform: Platform, routes: Route, executionContext: ExecutionContext)
+class HttpServer(val platform: Platform, routeHandler: HttpRouteHandler, executionContext: ExecutionContext)
   extends HttpServerUtil
   with HasExecutionContextProvider {
 
@@ -52,7 +52,7 @@ class HttpServer(val platform: Platform, routes: Route, executionContext: Execut
   }
 
   private def init(): (Future[Seq[HttpServerBindResult]]) = {
-    startNewServer(routes, appConfig)
+    startNewServer(routeHandler.endpointRoutes, appConfig)
   }
 
   private def startService(f: () => Future[Seq[HttpServerBindResult]]): Unit = {
@@ -65,7 +65,9 @@ class HttpServer(val platform: Platform, routes: Route, executionContext: Execut
           Signal.handle(new Signal("TERM"), new SignalHandler() {
             def handle(sig: Signal): Unit = {
               logger.info("Trapping SIGTERM and begin draining Akka node...")
+              routeHandler.healthChecker.updateReadinessStatus(false)
               AppStateUpdateAPI(system).publishEvent(StartDraining)
+
             }
           })
           bindResults.foreach { br =>

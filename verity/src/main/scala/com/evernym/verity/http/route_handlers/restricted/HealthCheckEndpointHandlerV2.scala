@@ -14,35 +14,41 @@ import scala.util.{Failure, Success}
 
 
 case class ReadinessStatus(status: Boolean = false,
-                           heartbeat: String = "",
                            rds: String = "",
                            dynamoDB: String = "",
                            storageAPI: String = "")
-
 
 trait HealthCheckEndpointHandlerV2 {
   this: HttpRouteWithPlatform =>
   val healthChecker: HealthChecker
 
-  private implicit val apiStatusJsonFormat: RootJsonFormat[ReadinessStatus] = jsonFormat5(ReadinessStatus)
+  private implicit val apiStatusJsonFormat: RootJsonFormat[ReadinessStatus] = jsonFormat4(ReadinessStatus)
 
   private def readinessCheck(): Future[ReadinessStatus] = {
-    val heartbeatFut = healthChecker.checkHeartbeatStatus
-    val rdsFuture = healthChecker.checkAkkaEventStorageStatus
-    val dynamoDBFuture = healthChecker.checkWalletStorageStatus
-    val storageAPIFuture = healthChecker.checkStorageAPIStatus
-    for {
-      heartbeat <- heartbeatFut
-      rds <- rdsFuture
-      dynamodb <- dynamoDBFuture
-      storageAPI <- storageAPIFuture
-    } yield ReadinessStatus(
-      heartbeat.status && rds.status && dynamodb.status && storageAPI.status,
-      heartbeat.msg,
-      rds.msg,
-      dynamodb.msg,
-      storageAPI.msg
-    )
+    if (healthChecker.isReady) {
+      val rdsFuture = healthChecker.checkAkkaEventStorageStatus
+      val dynamoDBFuture = healthChecker.checkWalletStorageStatus
+      val storageAPIFuture = healthChecker.checkStorageAPIStatus
+      for {
+        rds <- rdsFuture
+        dynamodb <- dynamoDBFuture
+        storageAPI <- storageAPIFuture
+      } yield ReadinessStatus(
+        rds.status && dynamodb.status && storageAPI.status,
+        rds.msg,
+        dynamodb.msg,
+        storageAPI.msg
+      )
+    } else {
+      Future.successful(
+        ReadinessStatus(
+          status = false,
+          "n/a",
+          "n/a",
+          "n/a"
+        )
+      )
+    }
   }
 
   protected val healthCheckRouteV2: Route =

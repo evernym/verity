@@ -21,7 +21,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import java.nio.file.Path
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.language.postfixOps
 
 
@@ -50,7 +50,11 @@ object LocalVerity {
 
     val platform = initializeApp(appConfig, verityNodeParam.serviceParam, ecp)
 
-    val httpServer = new HttpServer(platform, new HttpRouteHandler(platform, ecp.futureExecutionContext).endpointRoutes, ecp.futureExecutionContext)
+    val httpServer = new HttpServer(
+      platform,
+      new HttpRouteHandler(platform, ecp.futureExecutionContext),
+      ecp.futureExecutionContext
+    )
     httpServer.start()
 
     waitTillUp(platform.appStateManager)

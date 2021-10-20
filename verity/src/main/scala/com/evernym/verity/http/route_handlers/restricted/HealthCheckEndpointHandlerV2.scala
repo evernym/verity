@@ -26,7 +26,7 @@ trait HealthCheckEndpointHandlerV2 {
   private implicit val apiStatusJsonFormat: RootJsonFormat[ReadinessStatus] = jsonFormat4(ReadinessStatus)
 
   private def readinessCheck(): Future[ReadinessStatus] = {
-    //TODO: temporary changes
+    //TODO: temporary troubleshooting changes
     if (healthChecker.isReady) {
       logger.info(s"[${InetAddress.getLocalHost.getHostName}] HealthCheck -> node is up, checking other services")
       val rdsFuture = healthChecker.checkAkkaEventStorageStatus

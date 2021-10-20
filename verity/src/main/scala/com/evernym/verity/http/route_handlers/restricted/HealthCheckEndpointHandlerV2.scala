@@ -25,6 +25,7 @@ trait HealthCheckEndpointHandlerV2 {
   private implicit val apiStatusJsonFormat: RootJsonFormat[ReadinessStatus] = jsonFormat4(ReadinessStatus)
 
   private def readinessCheck(): Future[ReadinessStatus] = {
+    //TODO: temporary changes
     if (healthChecker.isReady) {
       val rdsFuture = healthChecker.checkAkkaEventStorageStatus
       val dynamoDBFuture = healthChecker.checkWalletStorageStatus

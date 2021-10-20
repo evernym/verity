@@ -27,6 +27,7 @@ trait HealthCheckEndpointHandlerV2 {
   private def readinessCheck(): Future[ReadinessStatus] = {
     //TODO: temporary changes
     if (healthChecker.isReady) {
+      logger.info("HealthCheck -> node is up, checking other services")
       val rdsFuture = healthChecker.checkAkkaEventStorageStatus
       val dynamoDBFuture = healthChecker.checkWalletStorageStatus
       val storageAPIFuture = healthChecker.checkStorageAPIStatus
@@ -41,6 +42,7 @@ trait HealthCheckEndpointHandlerV2 {
         storageAPI.msg
       )
     } else {
+      logger.info("HealthCheck -> node is draining...")
       Future.successful(
         ReadinessStatus(
           status = false,

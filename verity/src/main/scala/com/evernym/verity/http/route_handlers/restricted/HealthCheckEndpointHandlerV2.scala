@@ -9,6 +9,7 @@ import com.evernym.verity.util.healthcheck.HealthChecker
 import spray.json.DefaultJsonProtocol._
 import spray.json.{RootJsonFormat, enrichAny}
 
+import java.net.InetAddress
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
@@ -27,7 +28,7 @@ trait HealthCheckEndpointHandlerV2 {
   private def readinessCheck(): Future[ReadinessStatus] = {
     //TODO: temporary changes
     if (healthChecker.isReady) {
-      logger.info("HealthCheck -> node is up, checking other services")
+      logger.info(s"[${InetAddress.getLocalHost.getHostName}] HealthCheck -> node is up, checking other services")
       val rdsFuture = healthChecker.checkAkkaEventStorageStatus
       val dynamoDBFuture = healthChecker.checkWalletStorageStatus
       val storageAPIFuture = healthChecker.checkStorageAPIStatus
@@ -42,7 +43,7 @@ trait HealthCheckEndpointHandlerV2 {
         storageAPI.msg
       )
     } else {
-      logger.info("HealthCheck -> node is draining...")
+      logger.info(s"[${InetAddress.getLocalHost.getHostName}] HealthCheck -> node is draining...")
       Future.successful(
         ReadinessStatus(
           status = false,

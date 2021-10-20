@@ -16,6 +16,7 @@ import com.evernym.verity.http.route_handlers.open.OpenApiRoutes
 import com.evernym.verity.http.route_handlers.restricted.RestrictedApiRoutes
 import com.evernym.verity.util.healthcheck.HealthChecker
 
+import java.net.InetAddress
 import scala.concurrent.Future
 
 
@@ -61,6 +62,7 @@ trait EndpointHandlerBase
     handleExceptions(exceptionHandler) {
       logRequestResult("agency-service") {
         pathPrefix("agency") {
+          logger.info(s"[${InetAddress.getLocalHost.getHostName}] HealthCheck -> node is draining...")
           extractRequest { implicit req: HttpRequest =>
             extractClientIP { implicit remoteAddress =>
               (get & pathEnd) {

@@ -62,7 +62,7 @@ trait EndpointHandlerBase
     handleExceptions(exceptionHandler) {
       logRequestResult("agency-service") {
         pathPrefix("agency") {
-          logger.info(s"[${InetAddress.getLocalHost.getHostName}] HealthCheck -> node is draining...")
+          logger.info(s"[${InetAddress.getLocalHost.getHostName}] HealthCheck -> received agency request")
           extractRequest { implicit req: HttpRequest =>
             extractClientIP { implicit remoteAddress =>
               (get & pathEnd) {

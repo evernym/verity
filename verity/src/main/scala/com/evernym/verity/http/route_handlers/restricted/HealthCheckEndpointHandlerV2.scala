@@ -63,6 +63,7 @@ trait HealthCheckEndpointHandlerV2 {
             (get & pathEnd) {
               onComplete(readinessCheck()) {
                 case Success(value) =>
+                  //TODO: temporary changes
                   logger.info(s"[${InetAddress.getLocalHost.getHostName}] HealthCheck -> result: ${value.status}")
                   complete {
                     val resp = (if (value.status) StatusCodes.OK else StatusCodes.ServiceUnavailable, value.toJson.toString())

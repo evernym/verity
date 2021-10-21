@@ -64,6 +64,12 @@ object ConfigConstants {
   val YOURLS_API_USERNAME = s"$YOURLS.username"
   val YOURLS_API_PASSWORD = s"$YOURLS.password"
 
+  private val S3_SHORTENER = s"$URL_SHORTENER_SVC.s3-shortener"
+  val S3_SHORTENER_URL_PREFIX = s"$S3_SHORTENER.url-prefix"
+  val S3_SHORTENER_BUCKET_NAME = s"$S3_SHORTENER.bucket-name"
+  val S3_SHORTENER_ID_LENGTH = s"$S3_SHORTENER.id-length"
+  val S3_SHORTENER_RETRY_COUNT = s"$S3_SHORTENER.retry-count"
+
   private val SMS_SVC = s"$SERVICES.sms-service"
 
   private val SMS_EXTERNAL_SVC = s"$SMS_SVC.external-services"

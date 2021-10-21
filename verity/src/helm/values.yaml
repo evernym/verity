@@ -19,4 +19,7 @@ taa:
 # Intended to allow quick injection of config that is
 # not managed by this helm chart
 customConfig: |
-  
+  {
+    akka.cluster.app-version = 1.2.58
+    akka.actor.debug.receive = on
+  }

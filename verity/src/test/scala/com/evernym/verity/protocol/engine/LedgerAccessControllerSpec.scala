@@ -16,7 +16,7 @@ import com.evernym.verity.protocol.testkit.MockableWalletAccess
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.vdr.service.{IndyLedger, VDRToolsConfig}
-import com.evernym.verity.vdr.{TestVDRTools, VDRActorAdapter, VDRToolsFactoryParam}
+import com.evernym.verity.vdr.{TestVDRTools, VDRActorAdapter, VDRAdapter, VDRToolsFactoryParam}
 
 import scala.concurrent.ExecutionContext
 import scala.util.Try
@@ -29,6 +29,8 @@ class LedgerAccessControllerSpec
   val actorSystem: ActorSystem = ActorSystemVanilla("test")
   lazy val generalCache: Cache = new Cache("GC", Map(), NoOpMetricsWriter(), executionContext)
 
+  val vdrImpl: VDRAdapter = new MockVDRAdapter()
+
   implicit def asyncAPIContext: AsyncAPIContext =
     AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
@@ -36,7 +38,7 @@ class LedgerAccessControllerSpec
   "Ledger access controller" - {
     "when given correct access rights" - {
       "should pass the access right checks" in {
-        val controller = new LedgerAccessController(Set(LedgerReadAccess), ledgerAPI(generalCache))
+        val controller = new LedgerAccessController(Set(LedgerReadAccess),vdrImpl, ledgerAPI(generalCache))
         controller.getCredDef("cred-def-id") { r => r.isSuccess shouldBe true}
         controller.getSchema("schema-id") { r => r.isSuccess shouldBe true }
       }
@@ -44,7 +46,7 @@ class LedgerAccessControllerSpec
 
     "when given wrong access rights" - {
       "should fail the access right checks" in {
-        val controller = new LedgerAccessController(Set(), ledgerAPI(generalCache))
+        val controller = new LedgerAccessController(Set(),vdrImpl, ledgerAPI(generalCache))
         controller.getCredDef("cred-def-id") { r => r.isSuccess shouldBe false }
         controller.getSchema("schema-id") { r => r.isSuccess shouldBe false }
       }
@@ -61,7 +63,6 @@ class LedgerAccessControllerSpec
     new LedgerAccessAPI(
       cache,
       new MockLedgerSvc(AkkaTestBasic.system(), executionContext),
-      new VDRActorAdapter(vdrToolFactory, vdrToolsConfig, None)(ec, actorSystem.toTyped),
       wa
     ){
 

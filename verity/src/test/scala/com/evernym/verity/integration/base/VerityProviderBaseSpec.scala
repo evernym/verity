@@ -156,7 +156,7 @@ trait VerityProviderBaseSpec
   private val MULTI_NODE_CLUSTER_CONFIG = ConfigFactory.parseString(
     s"""
       |{
-      |  akka.coordinated-shutdown.default-phase-timeout = 15s
+      |  akka.coordinated-shutdown.phases.before-service-unbind.timeout = 5 s
       |}
       |""".stripMargin
   )

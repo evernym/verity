@@ -1,6 +1,7 @@
 package com.evernym.verity.storage_services.aws_s3
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import akka.stream.Attributes
 import akka.stream.alpakka.s3._
 import akka.stream.alpakka.s3.scaladsl.S3
@@ -33,11 +34,11 @@ class S3AlpakkaApi(config: AppConfig, executionContext: ExecutionContext)(implic
   /**
    * @param id needs to be unique or data can be overwritten
    */
-  def put(bucketName: String, id: String, data: Array[Byte]): Future[StorageInfo] = {
+  def put(bucketName: String, id: String, data: Array[Byte], contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo] = {
     val file: Source[ByteString, NotUsed] = Source.single(ByteString(data))
 
     val s3Sink: Sink[ByteString, Future[MultipartUploadResult]] =
-      S3 multipartUpload(bucketName, id) withAttributes s3Attrs
+      S3 multipartUpload(bucketName, id, contentType=contentType) withAttributes s3Attrs
 
     file.runWith(s3Sink).map(x => StorageInfo(x.location.toString(), "S3"))
   }

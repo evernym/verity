@@ -2,6 +2,7 @@ package com.evernym.verity.actor.testkit.actor
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.Done
+import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.actor.agent.AgentActorContext
@@ -46,7 +47,7 @@ class MockAgentActorContext(val system: ActorSystem,
   override lazy val storageAPI: StorageAPI = new StorageAPI(appConfig, ecp.futureExecutionContext) {
     var storageMock: Map[String, Array[Byte]] = Map()
 
-    override def put(bucketName: String, id: String, data: Array[Byte]): Future[StorageInfo] = {
+    override def put(bucketName: String, id: String, data: Array[Byte], contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo] = {
       storageMock += (id -> data)
       Future { StorageInfo("https://s3-us-west-2.amazonaws.com") }
     }

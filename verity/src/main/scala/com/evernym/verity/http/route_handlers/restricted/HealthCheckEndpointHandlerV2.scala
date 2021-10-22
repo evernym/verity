@@ -29,6 +29,7 @@ trait HealthCheckEndpointHandlerV2 {
     //TODO: temporary changes
     if (healthChecker.isReady) {
       logger.info(s"[${InetAddress.getLocalHost.getHostName}] HealthCheck -> node is up, checking other services")
+      //TODO: temporary changes
 //      val rdsFuture = healthChecker.checkAkkaEventStorageStatus
 //      val dynamoDBFuture = healthChecker.checkWalletStorageStatus
       val storageAPIFuture = healthChecker.checkStorageAPIStatus

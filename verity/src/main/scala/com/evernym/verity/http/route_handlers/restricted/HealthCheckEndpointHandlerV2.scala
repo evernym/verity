@@ -39,6 +39,7 @@ trait HealthCheckEndpointHandlerV2 {
         )
       )
     } else {
+      //TODO: temporary changes
       //val akkaStorageFuture = healthChecker.checkAkkaStorageStatus
       val walletStorageFuture = healthChecker.checkWalletStorageStatus
       val blobStorageFuture = healthChecker.checkBlobStorageStatus

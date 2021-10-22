@@ -29,17 +29,17 @@ trait HealthCheckEndpointHandlerV2 {
     //TODO: temporary changes
     if (healthChecker.isReady) {
       logger.info(s"[${InetAddress.getLocalHost.getHostName}] HealthCheck -> node is up, checking other services")
-      val rdsFuture = healthChecker.checkAkkaEventStorageStatus
-      val dynamoDBFuture = healthChecker.checkWalletStorageStatus
+//      val rdsFuture = healthChecker.checkAkkaEventStorageStatus
+//      val dynamoDBFuture = healthChecker.checkWalletStorageStatus
       val storageAPIFuture = healthChecker.checkStorageAPIStatus
       for {
-        rds <- rdsFuture
-        dynamodb <- dynamoDBFuture
+//        rds <- rdsFuture
+//        dynamodb <- dynamoDBFuture
         storageAPI <- storageAPIFuture
       } yield ReadinessStatus(
-        rds.status && dynamodb.status && storageAPI.status,
-        rds.msg,
-        dynamodb.msg,
+        storageAPI.status,
+        "",
+        "",
         storageAPI.msg
       )
     } else {

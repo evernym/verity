@@ -1,11 +1,9 @@
 package com.evernym.verity.integration.base.verity_provider.node.local
 
-import akka.actor.ActorRef
 import akka.cluster.{Cluster, MemberStatus}
 import akka.cluster.MemberStatus.{Down, Removed, Up}
 import akka.testkit.TestKit
 import com.evernym.verity.actor.Platform
-import com.evernym.verity.actor.node_singleton.DrainNode
 import com.evernym.verity.app_launcher.HttpServer
 import com.evernym.verity.integration.base.verity_provider.PortProfile
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
@@ -67,7 +65,7 @@ case class VerityLocalNode(tmpDirPath: Path,
     //TODO: before starting using this method, need to find out why this one fails intermittently
     isAvailable = false
     val cluster = Cluster(platform.actorSystem)
-    platform.nodeSingleton.tell(DrainNode, ActorRef.noSender)
+    platform.appStateHandler.startScheduledCoordinatedShutdown()
     TestKit.awaitCond(isNodeShutdown(cluster), waitAtMost, 300.millis)
   }
 

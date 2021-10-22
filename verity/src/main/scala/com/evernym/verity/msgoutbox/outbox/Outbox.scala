@@ -312,7 +312,7 @@ object Outbox {
       }
 
     case Commands.UpdateOutboxParam(StatusReply.Error(e)) =>
-      logger.warn(s"Exception occured ${e}")
+      logger.warn(s"Exception occurred ${e}")
       Effect.noReply
   }
 

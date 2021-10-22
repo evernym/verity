@@ -28,7 +28,7 @@ object Main extends App {
   //start akka http server
   val httpServer = new HttpServer(
     platform,
-    new HttpRouteHandler(platform, ecp.futureExecutionContext),
+    new HttpRouteHandler(platform, ecp.futureExecutionContext).endpointRoutes,
     ecp.futureExecutionContext
   )
   httpServer.start()

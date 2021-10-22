@@ -21,5 +21,4 @@ taa:
 customConfig: |
   {
     akka.cluster.app-version = 1.2.58
-    akka.actor.debug.receive = on
   }

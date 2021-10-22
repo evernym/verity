@@ -3,20 +3,19 @@ package com.evernym.verity.app_launcher
 import akka.Done
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http.ServerBinding
+import akka.http.scaladsl.server.Route
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.Platform
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.{HttpServerBindResult, HttpServerUtil}
-import com.evernym.verity.http.route_handlers.HttpRouteHandler
 import com.evernym.verity.observability.metrics.CustomMetrics.{AS_START_TIME, initGaugeMetrics}
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.observability.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.util.UnableToCreateLogger
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
-import sun.misc.{Signal, SignalHandler}
 
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -24,7 +23,7 @@ import scala.concurrent.duration.{Duration, SECONDS}
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
-class HttpServer(val platform: Platform, routeHandler: HttpRouteHandler, executionContext: ExecutionContext)
+class HttpServer(val platform: Platform, routes: Route, executionContext: ExecutionContext)
   extends HttpServerUtil
   with HasExecutionContextProvider {
 
@@ -52,7 +51,7 @@ class HttpServer(val platform: Platform, routeHandler: HttpRouteHandler, executi
   }
 
   private def init(): (Future[Seq[HttpServerBindResult]]) = {
-    startNewServer(routeHandler.endpointRoutes, appConfig)
+    startNewServer(routes, appConfig)
   }
 
   private def startService(f: () => Future[Seq[HttpServerBindResult]]): Unit = {
@@ -61,15 +60,6 @@ class HttpServer(val platform: Platform, routeHandler: HttpRouteHandler, executi
       val bindResultFut = f()
       bindResultFut.onComplete {
         case Success(bindResults) =>
-          // Drain the Akka node on a SIGTERM - systemd sends the JVM a SIGTERM on a 'systemctl stop'
-          Signal.handle(new Signal("TERM"), new SignalHandler() {
-            def handle(sig: Signal): Unit = {
-              logger.info("Trapping SIGTERM and begin draining Akka node...")
-              routeHandler.healthChecker.updateReadinessStatus(false)
-              AppStateUpdateAPI(system).publishEvent(StartDraining)
-
-            }
-          })
           bindResults.foreach { br =>
             httpBinding = Option(br.serverBinding)
             AppStateUpdateAPI(system).publishEvent(SuccessEvent(ListeningSuccessful, CONTEXT_AGENT_SERVICE_INIT,

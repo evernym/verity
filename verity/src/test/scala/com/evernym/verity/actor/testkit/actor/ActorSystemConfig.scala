@@ -108,6 +108,8 @@ trait ActorSystemConfig {
           //TODO: once we fix root cause behind serialization issue, then we should turn this on again.
           serialize-messages = off
         }
+
+        coordinated-shutdown.phases.before-service-unbind.timeout = 0 s
       }
       """
     val baseConfig = ConfigFactory.parseString(baseConfigStr)

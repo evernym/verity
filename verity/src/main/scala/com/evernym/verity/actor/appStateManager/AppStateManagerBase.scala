@@ -1,28 +1,25 @@
 package com.evernym.verity.actor.appStateManager
 
-import java.time.{LocalDateTime, ZonedDateTime}
-import akka.actor.Actor
-import akka.cluster.Cluster
+import java.time.ZonedDateTime
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Exceptions.{HandledErrorException, TransitionHandlerNotProvidedException}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager.state._
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.ConfigConstants.{APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS, APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_COUNT, APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_DURATION}
+import com.evernym.verity.config.ConfigConstants.{APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_COUNT, APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_DURATION}
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
-import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.AppVersion
+import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.util2.{ExceptionConverter, Exceptions}
 import com.typesafe.scalalogging.Logger
 
-import java.time.temporal.ChronoUnit
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
 
 
-trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
+trait AppStateManagerBase
+  extends HasExecutionContextProvider { this: CoreActorExtended =>
 
   private implicit val ex: ExecutionContext = futureExecutionContext
 
@@ -54,28 +51,6 @@ trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
     AppStateDetailed(runningVersion, getState, events, causesByState, causesByContext)
   }
 
-  protected def getHeartbeat: StatusDetailResp = {
-    import com.evernym.verity.util2.Status.{ACCEPTING_TRAFFIC, NOT_ACCEPTING_TRAFFIC}
-    val currentState: AppState = getState
-    currentState match {
-      case _: InitializingState
-           | DrainingState
-           | ShutdownWithErrors
-           | ShutdownState =>
-        StatusDetailResp(NOT_ACCEPTING_TRAFFIC.withMessage(currentState.toString))
-      case ListeningState
-           | DegradedState
-           | SickState =>
-        StatusDetailResp(ACCEPTING_TRAFFIC.withMessage(currentState.toString))
-      case _ =>
-        StatusDetailResp(
-          NOT_ACCEPTING_TRAFFIC.withMessage(
-            s"Unknown application state: ${currentState.toString}. Assuming NOT accepting traffic."
-          )
-        )
-    }
-  }
-
   private def logTransitionMsg(newState: AppState, msg: String): Unit = {
     newState match {
       case SickState | ShutdownWithErrors => logger.error(msg)
@@ -104,14 +79,6 @@ trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
     addToCausesByState(param.causeDetail)
     addToCausesByContext(param.context, param.causeDetail)
     logTransitionedMsg(newState)
-  }
-
-  def startDraining(): Unit = {
-    // Begin draining the node. The transition to "Draining" will schedule the node to leave the cluster (down itself)
-    processSuccessEvent(SuccessEvent(DrainingStarted, CONTEXT_AGENT_SERVICE_DRAIN,
-      causeDetail = CauseDetail("agent-service-draining", "agent-service-started-draining-successfully"),
-      msg = Option("Informing load-balancers/clients/proxies this akka node is about to stop accepting requests.")
-    ))
   }
 
   def reportAndStay(param: EventParam): Unit = {
@@ -222,42 +189,13 @@ trait AppStateManagerBase extends HasExecutionContextProvider { this: Actor =>
     logTransitionMsg(newState, msg)
   }
 
-  def performServiceDrain(): Unit = {
-    try {
-      val cluster = Cluster(context.system)
-      val delayBeforeLeavingCluster = appConfig.getIntOption(APP_STATE_MANAGER_STATE_DRAINING_DELAY_BEFORE_LEAVING_CLUSTER_IN_SECONDS).getOrElse(10)
-      logger.info(
-        s"""will remain in draining state for at least $delayBeforeLeavingCluster seconds
-           |before starting the Coordinated Shutdown...""".stripMargin)
-      context
-        .system
-        .scheduler
-        //NOTE: this `delayBeforeLeavingCluster` should be greater than
-        // `readinessProbe.periodSeconds * readinessProbe.failureThreshold`
-        // to make sure the node is removed from the load-balancer before it is getting removed from the cluster
-        .scheduleOnce(delayBeforeLeavingCluster.seconds) {
-          logger.info(s"akka node ${cluster.selfAddress} will start coordinated shutdown...")
-          //start coordinated shutdown (as mentioned here: https://doc.akka.io/docs/akka/current/coordinated-shutdown.html#coordinated-shutdown)
-          val terminationStartTime = LocalDateTime.now()
-          context
-            .system
-            .terminate()
-            .map { _ =>
-              cluster.down(cluster.selfAddress)   //TODO: need to confirm if this is required or not
-              val terminationFinishTime = LocalDateTime.now()
-              val timeTaken = ChronoUnit.MILLIS.between(terminationStartTime, terminationFinishTime)
-              logger.info(s"coordinated shutdown finished in millis: $timeTaken")
-            }.recover {
-              case e: Throwable =>
-                logger.error("error encountered during coordinated shutdown", (LOG_KEY_ERR_MSG, e))
-            }
-        }
-    } catch {
-      case e: Exception => logger.error(
-        s"failed to Drain the akka node. Reason: ${e.toString}"
-      )
-    }
+  def changeStatusToDrainingStarted(): Unit = {
+    processSuccessEvent(SuccessEvent(DrainingStarted, CONTEXT_AGENT_SERVICE_DRAIN,
+      causeDetail = CauseDetail("agent-service-draining", "agent-service-started-draining-successfully"),
+      msg = Option("Indicating load-balancers/proxies this node is about to stop accepting requests")
+    ))
   }
+
 }
 
 //api response case classes

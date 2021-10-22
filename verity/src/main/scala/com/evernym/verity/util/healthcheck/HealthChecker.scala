@@ -1,26 +1,22 @@
 package com.evernym.verity.util.healthcheck
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorSystem
 import com.evernym.verity.actor.agent.AgentActorContext
 
 import scala.concurrent.{ExecutionContext, Future}
 
 case class ApiStatus(status: Boolean, msg: String)
 
-
 trait HealthChecker {
 
-  private var _isReady = true
+  //can be leveldb, dynamodb etc
+  def checkAkkaStorageStatus: Future[ApiStatus]
 
-  def isReady: Boolean = _isReady
-
-  def updateReadinessStatus(status: Boolean): Unit = _isReady = status
-
-  def checkAkkaEventStorageStatus: Future[ApiStatus]
-
+  //can be sqlite, rds etc
   def checkWalletStorageStatus: Future[ApiStatus]
 
-  def checkStorageAPIStatus: Future[ApiStatus]
+  //can be leveldb, s3 etc
+  def checkBlobStorageStatus: Future[ApiStatus]
 
   def checkLedgerPoolStatus: Future[ApiStatus]
 
@@ -29,9 +25,8 @@ trait HealthChecker {
 
 object HealthChecker {
   def apply(agentActorContext: AgentActorContext,
-            appStateManager: ActorRef,
             actorSystem: ActorSystem,
             futureExecutionContext: ExecutionContext): HealthChecker = {
-    new HealthCheckerImpl(agentActorContext, appStateManager, actorSystem, futureExecutionContext)
+    new HealthCheckerImpl(agentActorContext, actorSystem, futureExecutionContext)
   }
 }

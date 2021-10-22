@@ -5,6 +5,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
+import com.evernym.verity.actor.AppStateHandler
 import com.evernym.verity.constants.Constants.URL
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -99,6 +100,7 @@ trait EdgeEndpointBaseSpec
   }
 
   override val healthChecker: HealthChecker = mock[MockHealthChecker]
+  override val appStateHandler: AppStateHandler = mock[AppStateHandler]
 }
 
 trait EndpointHandlerBaseSpec

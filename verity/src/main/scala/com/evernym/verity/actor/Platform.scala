@@ -1,6 +1,6 @@
 package com.evernym.verity.actor
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Extension, ExtensionId, PoisonPill, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, CoordinatedShutdown, Extension, ExtensionId, PoisonPill, Props}
 import akka.cluster.singleton._
 import akka.pattern.ask
 import akka.util.Timeout
@@ -48,7 +48,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
   implicit def appConfig: AppConfig = agentActorContext.appConfig
   implicit def actorSystem: ActorSystem = agentActorContext.system
 
-  def healthChecker: HealthChecker = HealthChecker(aac, appStateManager, aac.system, executionContextProvider.futureExecutionContext)
+  def healthChecker: HealthChecker = HealthChecker(aac, aac.system, executionContextProvider.futureExecutionContext)
 
   implicit lazy val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS,
     DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
@@ -330,6 +330,19 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       case None           => defaultDurationInSeconds
     }
   }
+
+  //this is the akka recommended way to intercept SIGTERM as mentioned below
+  // https://doc.akka.io/docs/akka/current/coordinated-shutdown.html
+  CoordinatedShutdown(actorSystem)
+    .addTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "start-draining-process") { () =>
+      // Drain the Akka node on a SIGTERM
+      //  - systemd sends the JVM a SIGTERM on a 'systemctl stop'
+      //  - kubernetes sends the Container a SIGTERM during pod termination
+      appStateHandler.startScheduledCoordinatedShutdown()
+    }
+
+  val appStateHandler = new AppStateHandler(appConfig, actorSystem, appStateManager)(agentActorContext.futureExecutionContext)
+
 }
 
 trait PlatformServices {

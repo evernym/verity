@@ -3,48 +3,33 @@ package com.evernym.verity.http.route_handlers.restricted
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives.{complete, _}
 import akka.http.scaladsl.server.Route
+import com.evernym.verity.actor.AppStateHandler
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.util.healthcheck.HealthChecker
-import spray.json.DefaultJsonProtocol._
+import spray.json.DefaultJsonProtocol.{StringJsonFormat, _}
 import spray.json.{RootJsonFormat, enrichAny}
 
-import java.net.InetAddress
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
-
 case class ReadinessStatus(status: Boolean = false,
-                           rds: String = "",
-                           dynamoDB: String = "",
-                           storageAPI: String = "")
+                           akkaStorageStatus: String = "",
+                           walletStorageStatus: String = "",
+                           blobStorageStatus: String = "")
+
 
 trait HealthCheckEndpointHandlerV2 {
   this: HttpRouteWithPlatform =>
   val healthChecker: HealthChecker
+  val appStateHandler: AppStateHandler
 
   private implicit val apiStatusJsonFormat: RootJsonFormat[ReadinessStatus] = jsonFormat4(ReadinessStatus)
 
   private def readinessCheck(): Future[ReadinessStatus] = {
-    //TODO: temporary changes
-    if (healthChecker.isReady) {
-      logger.info(s"[${InetAddress.getLocalHost.getHostName}] HealthCheck -> node is up, checking other services")
-      //TODO: temporary changes
-//      val rdsFuture = healthChecker.checkAkkaEventStorageStatus
-//      val dynamoDBFuture = healthChecker.checkWalletStorageStatus
-      val storageAPIFuture = healthChecker.checkStorageAPIStatus
-      for {
-//        rds <- rdsFuture
-//        dynamodb <- dynamoDBFuture
-        storageAPI <- storageAPIFuture
-      } yield ReadinessStatus(
-        storageAPI.status,
-        "",
-        "",
-        storageAPI.msg
-      )
-    } else {
-      logger.info(s"[${InetAddress.getLocalHost.getHostName}] HealthCheck -> node is draining...")
+    if (appStateHandler.isDrainingStarted) {
+      //if draining is already started, it doesn't make sense to check any other service,
+      // just return status as false to indicate readinessProbe failure
       Future.successful(
         ReadinessStatus(
           status = false,
@@ -52,6 +37,20 @@ trait HealthCheckEndpointHandlerV2 {
           "n/a",
           "n/a"
         )
+      )
+    } else {
+      //val akkaStorageFuture = healthChecker.checkAkkaStorageStatus
+      val walletStorageFuture = healthChecker.checkWalletStorageStatus
+      val blobStorageFuture = healthChecker.checkBlobStorageStatus
+      for {
+        //akkaStorage   <- akkaStorageFuture
+        walletStorage <- walletStorageFuture
+        blobStorage   <- blobStorageFuture
+      } yield ReadinessStatus(
+        walletStorage.status && blobStorage.status,
+        "OK",
+        walletStorage.msg,
+        blobStorage.msg
       )
     }
   }
@@ -63,14 +62,7 @@ trait HealthCheckEndpointHandlerV2 {
           path("readiness") {
             (get & pathEnd) {
               onComplete(readinessCheck()) {
-                case Success(value) =>
-                  //TODO: temporary changes
-                  logger.info(s"[${InetAddress.getLocalHost.getHostName}] HealthCheck -> result: ${value.status}")
-                  complete {
-                    val resp = (if (value.status) StatusCodes.OK else StatusCodes.ServiceUnavailable, value.toJson.toString())
-                    logger.info(s"[${InetAddress.getLocalHost.getHostName}] HealthCheck -> resp: $resp")
-                    resp
-                  }
+                case Success(value) => complete(if (value.status) StatusCodes.OK else StatusCodes.ServiceUnavailable, value.toJson.toString())
                 case Failure(e) => complete(StatusCodes.ServiceUnavailable, e.getMessage)
               }
             }

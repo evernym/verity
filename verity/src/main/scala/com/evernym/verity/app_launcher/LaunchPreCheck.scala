@@ -22,7 +22,11 @@ import scala.concurrent.duration.{Duration, DurationInt}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.math.min
 
-case class StartupProbeStatus(status: Boolean, rds: String, dynamodb: String, storageAPI: String, ledger: String)
+case class StartupProbeStatus(status: Boolean,
+                              akkaStorageStatus: String,
+                              walletStorageStatus: String,
+                              blobStorageStatus: String,
+                              ledgerPoolStatus: String)
 
 /**
  * checks to perform during agent service start to make sure that basic required
@@ -44,20 +48,22 @@ object LaunchPreCheck {
   }
 
   private def startupProbe(healthChecker: HealthChecker)(implicit executionContext: ExecutionContext): Future[StartupProbeStatus] = {
-    val rdsFuture = healthChecker.checkAkkaEventStorageStatus
-    val dynamoDBFuture = healthChecker.checkWalletStorageStatus
-    val storageAPIFuture = healthChecker.checkStorageAPIStatus
+    val akkaStorageFuture = healthChecker.checkAkkaStorageStatus
+    val walletStorageFuture = healthChecker.checkWalletStorageStatus
+    val blobStorageFuture = healthChecker.checkBlobStorageStatus
     val ledgerFuture = healthChecker.checkLedgerPoolStatus
     for {
-      rds <- rdsFuture
-      dynamodb <- dynamoDBFuture
-      storageAPI <- storageAPIFuture
-      ledger <- ledgerFuture
-    } yield StartupProbeStatus(rds.status && dynamodb.status && storageAPI.status && ledger.status,
-      rds.msg,
-      dynamodb.msg,
-      storageAPI.msg,
-      ledger.msg)
+      akkaStorage   <- akkaStorageFuture
+      walletStorage <- walletStorageFuture
+      blobStorage   <- blobStorageFuture
+      ledger        <- ledgerFuture
+    } yield StartupProbeStatus(
+      akkaStorage.status && walletStorage.status && blobStorage.status && ledger.status,
+      akkaStorage.msg,
+      walletStorage.msg,
+      blobStorage.msg,
+      ledger.msg
+    )
   }
 
   @tailrec

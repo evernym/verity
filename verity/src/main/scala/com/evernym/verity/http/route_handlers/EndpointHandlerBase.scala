@@ -5,7 +5,7 @@ import akka.http.scaladsl.model.{HttpRequest, RemoteAddress}
 import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, get, handleExceptions, ignoreTrailingSlash, logRequestResult, parameters, pathPrefix, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.AgencyPublicDid
+import com.evernym.verity.actor.{AgencyPublicDid, AppStateHandler}
 import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_ENDPOINT
@@ -36,6 +36,7 @@ trait EndpointHandlerBase
   def endpointRoutes: Route = ignoreTrailingSlash { baseRoute }
 
   override val healthChecker: HealthChecker = platform.healthChecker
+  override val appStateHandler: AppStateHandler = platform.appStateHandler
 
   protected def msgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
     case ai: AgencyPublicDid     => handleExpectedResponse(ai)

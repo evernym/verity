@@ -3,37 +3,56 @@ package com.evernym.verity.http.route_handlers.restricted
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives.{complete, _}
 import akka.http.scaladsl.server.Route
+import com.evernym.verity.actor.AppStateHandler
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
-import com.evernym.verity.util.healthcheck.{HealthChecker}
+import com.evernym.verity.util.healthcheck.HealthChecker
 import spray.json.DefaultJsonProtocol.{StringJsonFormat, _}
 import spray.json.{RootJsonFormat, enrichAny}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
-
-case class ReadinessStatus(status: Boolean = false, rds: String = "", dynamoDB: String = "", storageAPI: String = "")
+case class ReadinessStatus(status: Boolean = false,
+                           akkaStorageStatus: String = "",
+                           walletStorageStatus: String = "",
+                           blobStorageStatus: String = "")
 
 
 trait HealthCheckEndpointHandlerV2 {
   this: HttpRouteWithPlatform =>
   val healthChecker: HealthChecker
+  val appStateHandler: AppStateHandler
 
   private implicit val apiStatusJsonFormat: RootJsonFormat[ReadinessStatus] = jsonFormat4(ReadinessStatus)
 
   private def readinessCheck(): Future[ReadinessStatus] = {
-    val rdsFuture = healthChecker.checkAkkaEventStorageStatus
-    val dynamoDBFuture = healthChecker.checkWalletStorageStatus
-    val storageAPIFuture = healthChecker.checkStorageAPIStatus
-    for {
-      rds <- rdsFuture
-      dynamodb <- dynamoDBFuture
-      storageAPI <- storageAPIFuture
-    } yield ReadinessStatus(rds.status && dynamodb.status && storageAPI.status,
-      rds.msg,
-      dynamodb.msg,
-      storageAPI.msg)
+    if (appStateHandler.isDrainingStarted) {
+      //if draining is already started, it doesn't make sense to check any other service,
+      // just return status as false to indicate readinessProbe failure
+      Future.successful(
+        ReadinessStatus(
+          status = false,
+          "n/a",
+          "n/a",
+          "n/a"
+        )
+      )
+    } else {
+      val akkaStorageFuture = healthChecker.checkAkkaStorageStatus
+      val walletStorageFuture = healthChecker.checkWalletStorageStatus
+      val blobStorageFuture = healthChecker.checkBlobStorageStatus
+      for {
+        akkaStorage   <- akkaStorageFuture
+        walletStorage <- walletStorageFuture
+        blobStorage   <- blobStorageFuture
+      } yield ReadinessStatus(
+        akkaStorage.status && walletStorage.status && blobStorage.status,
+        akkaStorage.msg,
+        walletStorage.msg,
+        blobStorage.msg
+      )
+    }
   }
 
   protected val healthCheckRouteV2: Route =

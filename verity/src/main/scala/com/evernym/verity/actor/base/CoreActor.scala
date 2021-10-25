@@ -143,9 +143,9 @@ trait CoreActor
 
   def actorDetail: ActorDetail = ActorDetail(entityType, entityId, actorId)
 
-  val recordStartCountMetrics = true
-  val recordRestartCountMetrics = true
-  val recordStopCountMetrics = true
+  val recordStartCountMetrics = false
+  val recordRestartCountMetrics = false
+  val recordStopCountMetrics = false
 
   def publishAppStateEvent (event: AppStateEvent): Unit = {
     AppStateUpdateAPI(context.system).publishEvent(event)

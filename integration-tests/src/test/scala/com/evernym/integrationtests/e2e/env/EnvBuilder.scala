@@ -452,8 +452,8 @@ case class VerityInstance(name: String,
     */
 
   lazy val specificEnvVars: List[EnvVar] = {
-    val verityAkkaRemotePort = PortProvider.firstFreePortFrom2000
-    val verityAkkaManagementPort = PortProvider.firstFreePortFrom2000
+    val verityAkkaRemotePort = PortProvider.getFreePort
+    val verityAkkaManagementPort = PortProvider.getFreePort
     List(
       EnvVar("APP_ACTOR_SYSTEM_NAME", appType.systemName),
       EnvVar("POOL_NAME", s"${name}_pool"),

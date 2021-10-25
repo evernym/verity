@@ -1,13 +1,11 @@
 package com.evernym.integrationtests.e2e.util
 
+import java.util.concurrent.atomic.AtomicInteger
+
 object PortProvider {
 
-  var lastPortFrom2000: Int = 2000
+  var incrementalPort: AtomicInteger = new AtomicInteger(2000)
 
-  def firstFreePortFrom2000: Int = {
-    val p = lastPortFrom2000
-    lastPortFrom2000 += 1
-    p
-  }
+  def getFreePort: Int = incrementalPort.getAndIncrement
 
 }

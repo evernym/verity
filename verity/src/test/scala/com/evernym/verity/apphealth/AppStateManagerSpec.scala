@@ -230,7 +230,7 @@ class AppStateManagerSpec
 
 
   def switchToDraining()(implicit amt: AppStateManagerTestKit): Unit = {
-    platform.appStateHandler.startScheduledCoordinatedShutdown()
+    platform.appStateHandler.startBeforeServiceUnbindTask()
 
     AppStateUpdateAPI(system).publishEvent(SuccessEvent(
         DrainingStarted,

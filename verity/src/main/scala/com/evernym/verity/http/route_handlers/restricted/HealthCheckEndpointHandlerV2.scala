@@ -3,7 +3,7 @@ package com.evernym.verity.http.route_handlers.restricted
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives.{complete, _}
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.actor.AppStateHandler
+import com.evernym.verity.actor.AppStateCoordinator
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.util.healthcheck.HealthChecker
@@ -22,12 +22,13 @@ case class ReadinessStatus(status: Boolean = false,
 trait HealthCheckEndpointHandlerV2 {
   this: HttpRouteWithPlatform =>
   val healthChecker: HealthChecker
-  val appStateHandler: AppStateHandler
+  val appStateHandler: AppStateCoordinator
 
   private implicit val apiStatusJsonFormat: RootJsonFormat[ReadinessStatus] = jsonFormat4(ReadinessStatus)
 
   private def readinessCheck(): Future[ReadinessStatus] = {
     if (appStateHandler.isDrainingStarted) {
+      appStateHandler.incrementPostDrainingReadinessProbeCount()
       //if draining is already started, it doesn't make sense to check any other service,
       // just return status as false to indicate readinessProbe failure
       Future.successful(

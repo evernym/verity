@@ -65,7 +65,7 @@ case class VerityLocalNode(tmpDirPath: Path,
     //TODO: before starting using this method, need to find out why this one fails intermittently
     isAvailable = false
     val cluster = Cluster(platform.actorSystem)
-    platform.appStateHandler.startScheduledCoordinatedShutdown()
+    platform.appStateHandler.startBeforeServiceUnbindTask()
     TestKit.awaitCond(isNodeShutdown(cluster), waitAtMost, 300.millis)
   }
 

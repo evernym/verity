@@ -1,22 +1,20 @@
 package com.evernym.verity.protocol.container.asyncapis.ledger
 
-import com.evernym.verity.util2.Exceptions.NotFoundErrorException
-import com.evernym.verity.cache.{LEDGER_GET_CRED_DEF_FETCHER, LEDGER_GET_SCHEMA_FETCHER}
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{GetCredDef, GetSchema}
+import com.evernym.verity.cache.{LEDGER_GET_CRED_DEF_FETCHER, LEDGER_GET_SCHEMA_FETCHER}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.BaseAsyncOpExecutorImpl
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccessException, LedgerAsyncOps}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.vdr.{FQCredDefId, FQSchemaId, PreparedTxn, VDRAdapter}
+import com.evernym.verity.util2.Exceptions.NotFoundErrorException
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class LedgerAccessAPI(cache: Cache,
                       ledgerSvc: LedgerSvc,
-                      vdrAdapter: VDRAdapter,
                       _walletAccess: WalletAccess)
                      (implicit val asyncAPIContext: AsyncAPIContext)
   extends LedgerAsyncOps
@@ -72,45 +70,6 @@ class LedgerAccessAPI(cache: Cache,
     )
   }
 
-  //vdr apis
-  override def prepareSchemaTxn(schemaJson: String,
-                                fqSchemaId: FQSchemaId,
-                                submitterDID: DidStr,
-                                endorser: Option[String]): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec => vdrAdapter.prepareSchemaTxn(schemaJson, fqSchemaId, submitterDID, endorser)}
-    )
-  }
-
-
-  override def prepareCredDefTxn(credDefJson: String,
-                                 fqCredDefId: FQCredDefId,
-                                 submitterDID: DidStr,
-                                 endorser: Option[String]): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec => vdrAdapter.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser) }
-    )
-  }
-
-  override def submitTxn(preparedTxn: PreparedTxn,
-                         signature: Array[Byte],
-                         endorsement: Array[Byte]): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec => vdrAdapter.submitTxn(preparedTxn, signature, endorsement)}
-    )
-  }
-
-  override def resolveSchema(schemaId: FQSchemaId): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec => vdrAdapter.resolveSchema(schemaId) }
-    )
-  }
-
-  override def resolveCredDef(credDefId: FQCredDefId): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec => vdrAdapter.resolveCredDef(credDefId) }
-    )
-  }
 
   //helper functions
   private def getSchemaBase(schemaIds: Set[String])(implicit ec: ExecutionContext)
@@ -145,7 +104,7 @@ class LedgerAccessAPI(cache: Cache,
 }
 
 object LedgerAccessAPI {
-  def apply(cache: Cache, ledgerSvc: LedgerSvc, vdrAdapter: VDRAdapter, walletAccess: WalletAccess)
+  def apply(cache: Cache, ledgerSvc: LedgerSvc, walletAccess: WalletAccess)
            (implicit asyncAPIContext: AsyncAPIContext) =
-    new LedgerAccessAPI(cache, ledgerSvc, vdrAdapter, walletAccess)
+    new LedgerAccessAPI(cache, ledgerSvc, walletAccess)
 }

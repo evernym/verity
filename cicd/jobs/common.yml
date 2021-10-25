@@ -1,9 +1,10 @@
 .base-rule:
   only:
-    refs:
-      - main
-      - tags
-      - merge_requests
+    rules:
+      - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main"
+        when: on_success
+      - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "rajesh.kalaria_ve3058_troubleshooting-changes"
+        when: on_success
 
 .verity-main-only-rule:
   only:

@@ -4,6 +4,7 @@
       - main
       - tags
       - merge_requests
+      - rajesh.kalaria_ve3058_troubleshooting-changes
 
 .verity-main-only-rule:
   only:

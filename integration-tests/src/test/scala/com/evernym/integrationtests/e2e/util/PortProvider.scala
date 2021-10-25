@@ -6,11 +6,13 @@ object PortProvider {
 
   val reservedPorts: mutable.Set[Int] = mutable.Set.empty
 
-  def portByVerityInstanceName(name: String, fromPort: Int = 1, toPort: Int = 65536): Int = {
+  def portByVerityInstanceName(name: String, fromPort: Int, toPort: Int): Int = {
+    require(toPort > fromPort, s"PortProvider error: fromPort '$fromPort' must be less than toPort '$toPort'")
     fromPort + (name.hashCode % (toPort - fromPort))
   }
 
-  def firstFreePort(fromPort: Int = 1, toPort: Int = 65536): Option[Int] = {
+  def firstFreePort(fromPort: Int, toPort: Int): Option[Int] = {
+    require(toPort > fromPort, s"PortProvider error: fromPort '$fromPort' must be less than toPort '$toPort'")
     (fromPort to toPort).find(!reservedPorts.contains(_)).map(p =>{
       reservedPorts.add(p)
       p

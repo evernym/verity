@@ -65,7 +65,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
   extends BaseSdkProvider
     with ListeningSdkProvider {
 
-  val logger: Logger = getLoggerByClass(getClass)
+//  val logger: Logger = getLoggerByClass(getClass)
 
   /**
     * Check that the sdk is available (ex. on class path, installed or whatever)

@@ -33,7 +33,9 @@ import com.evernym.verity.actor.metrics.activity_tracker.ActivityTracker
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.typed.base.UserGuardian
 import com.evernym.verity.libindy.Libraries
+import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.util.healthcheck.HealthChecker
+import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -331,18 +333,28 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
     }
   }
 
-  //this is the akka recommended way to intercept SIGTERM as mentioned below
+  //Verity will start coordinated shutdown when:
+  //  - systemd sends the JVM a SIGTERM on a 'systemctl stop'
+  //  - kubernetes sends the Container a SIGTERM during pod termination
+
+  //below is the akka recommended way to handle tasks during coordinated shutdown
   // https://doc.akka.io/docs/akka/current/coordinated-shutdown.html
+
   CoordinatedShutdown(actorSystem)
     .addTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "start-draining-process") { () =>
-      // Drain the Akka node on a SIGTERM
-      //  - systemd sends the JVM a SIGTERM on a 'systemctl stop'
-      //  - kubernetes sends the Container a SIGTERM during pod termination
-      appStateHandler.startScheduledCoordinatedShutdown()
+      //this task/function will be executed as soon as SIGTERM is captured/received
+      logger.info("Coordinated shutdown: 'before service unbind` task started ...")
+
+      appStateHandler.setDrainingStarted()
+
+      //will wait for `akka.coordinated-shutdown.phases.before-service-unbind.timeout`
+      // to complete the future returned by below statement
+      appStateHandler.startBeforeServiceUnbindTask()
     }
 
-  val appStateHandler = new AppStateHandler(appConfig, actorSystem, appStateManager)(agentActorContext.futureExecutionContext)
+  val appStateHandler = new AppStateCoordinator(appConfig, actorSystem, appStateManager)(agentActorContext.futureExecutionContext)
 
+  val logger: Logger = LoggingUtil.getLoggerByClass(getClass)
 }
 
 trait PlatformServices {

@@ -17,13 +17,23 @@ trait HeartbeatEndpointHandler
   extends ResourceUsageCommon { this: PlatformServiceProvider =>
   private implicit val executionContext: ExecutionContext = futureExecutionContext
 
+  def heartbeatStatus: StatusDetailResp = {
+    import com.evernym.verity.util2.Status.{ACCEPTING_TRAFFIC, NOT_ACCEPTING_TRAFFIC}
+    if (platform.appStateHandler.isDrainingStarted) {
+      platform.appStateHandler.incrementPostDrainingReadinessProbeCount()
+      StatusDetailResp(NOT_ACCEPTING_TRAFFIC.withMessage("draining started"))
+    } else {
+      StatusDetailResp(ACCEPTING_TRAFFIC.withMessage("Listening"))
+    }
+  }
+
   protected val heartbeatRoute: Route =
     handleExceptions(exceptionHandler) {
       logRequestResult("agency-service") {
         path("agency" / "heartbeat") {
           (get & pathEnd) {
             complete {
-              platform.appStateHandler.currentStatus match {
+              heartbeatStatus match {
                 case statusResp: StatusDetailResp =>
                   statusResp.statusCode match {
                     case ACCEPTING_TRAFFIC.statusCode =>

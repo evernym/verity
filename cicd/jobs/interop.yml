@@ -1,9 +1,7 @@
 build-test-harness:
   stage: build-test-harness
-  only:
-    refs:
-      - master@dev/verity/verity
-      - main@evernym/verity/verity
+  extends:
+    - .verity-main-only-rule
   variables:
     DOCKER_REGISTRY: "https://index.docker.io/v1/"
     DOCKER_REPOSITORY: "verity-test-harness-image"
@@ -21,10 +19,8 @@ build-test-harness:
 
 interop:
   stage: acceptance
-  only:
-    refs:
-      - master@dev/verity/verity
-      - main@evernym/verity/verity
+  extends:
+    - .verity-main-only-rule
   needs: ["build-test-harness"]
   artifacts:
     paths:

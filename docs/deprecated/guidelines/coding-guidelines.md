@@ -2,7 +2,7 @@
 ### General
 
 * copy-paste
-  * instead of copy pasting the existing code and doing minor tweaks, move common code into base traits/classes etc and 
+  * instead of copy-pasting the existing code and doing minor tweaks, move common code into base traits/classes etc and 
     just reuse the code.
 
 * naming convention
@@ -30,8 +30,8 @@
 * anticipatory code
   * should not create any anticipatory code, only do sufficient coding to meet current requirements
 
-* pushing to master branch
-  * code with compile time warnings should not be pushed to master branch.
+* pushing to main branch
+  * code with compile time warnings should not be pushed to main branch.
   
 * unnecessary abstraction
   * abstraction has a benefit and cost, but premature abstraction mostly has cost and no benefit. So we should avoid any premature abstraction.  

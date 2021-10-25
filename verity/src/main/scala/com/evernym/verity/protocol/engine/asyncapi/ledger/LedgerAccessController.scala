@@ -1,18 +1,23 @@
 package com.evernym.verity.protocol.engine.asyncapi.ledger
 
-import com.evernym.verity.util2.Status.StatusDetail
-import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerRequest, TxnResp}
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerRequest, TxnResp}
+import com.evernym.verity.protocol.container.actor.AsyncAPIContext
+import com.evernym.verity.protocol.container.asyncapis.BaseAsyncOpExecutorImpl
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner, BaseAccessController, LedgerReadAccess, LedgerWriteAccess}
-import com.evernym.verity.vdr.{CredDef, FQCredDefId, FQSchemaId, PreparedTxn, Schema, SubmittedTxn}
+import com.evernym.verity.protocol.engine.asyncapi._
+import com.evernym.verity.util2.Status.StatusDetail
+import com.evernym.verity.vdr._
 
 import scala.util.Try
 
 class LedgerAccessController(val accessRights: Set[AccessRight],
+                             vdrTools: VDRAdapter,
                              ledgerExecutor: LedgerAsyncOps)
-                            (implicit val asyncOpRunner: AsyncOpRunner)
+                            (implicit val asyncOpRunner: AsyncOpRunner,
+                             implicit val asyncAPIContext: AsyncAPIContext)
   extends LedgerAccess
+    with BaseAsyncOpExecutorImpl
     with BaseAccessController {
 
   override def walletAccess: WalletAccess = ledgerExecutor.walletAccess
@@ -55,31 +60,29 @@ class LedgerAccessController(val accessRights: Set[AccessRight],
                                 submitterDID: DidStr,
                                 endorser: Option[String])
                                (handler: Try[PreparedTxn] => Unit): Unit =
-    runIfAllowed(LedgerWriteAccess, {
-      ledgerExecutor.prepareSchemaTxn(schemaJson, fqSchemaId, submitterDID, endorser)}, handler
-    )
+    runIfAllowed(LedgerWriteAccess, {vdrTools.prepareSchemaTxn(schemaJson, fqSchemaId, submitterDID, endorser)}, handler)
 
 
-  override def prepareCredDefTxn(credDefJson: String,
+
+override def prepareCredDefTxn(credDefJson: String,
                                  fqCredDefId: FQCredDefId,
                                  submitterDID: DidStr,
                                  endorser: Option[String])
                                 (handler: Try[PreparedTxn] => Unit): Unit =
-    runIfAllowed(LedgerWriteAccess,
-      { ledgerExecutor.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser) },
-      handler
-    )
+    runIfAllowed(LedgerWriteAccess, { vdrTools.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser) }, handler)
+
 
   override def submitTxn(preparedTxn: PreparedTxn,
                          signature: Array[Byte],
                          endorsement: Array[Byte])
                         (handler: Try[SubmittedTxn] => Unit): Unit =
-    runIfAllowed(LedgerWriteAccess, {
-      ledgerExecutor.submitTxn(preparedTxn, signature, endorsement)}, handler
-    )
+    runIfAllowed(LedgerWriteAccess, {vdrTools.submitTxn(preparedTxn, signature, endorsement)}, handler)
 
-  override def resolveSchema(fqSchemaId: FQSchemaId)(handler: Try[Schema] => Unit): Unit =
-    runIfAllowed(LedgerReadAccess, { ledgerExecutor.resolveSchema(fqSchemaId) }, handler)
+
+
+override def resolveSchema(fqSchemaId: FQSchemaId)(handler: Try[Schema] => Unit): Unit =
+    runIfAllowed(LedgerReadAccess, { vdrTools.resolveSchema(fqSchemaId) }, handler)
+
   override def resolveCredDef(fqCredDefId: FQCredDefId)(handler: Try[CredDef] => Unit): Unit =
-    runIfAllowed(LedgerReadAccess, { ledgerExecutor.resolveCredDef(fqCredDefId) }, handler)
+    runIfAllowed(LedgerReadAccess, { vdrTools.resolveCredDef(fqCredDefId) }, handler)
 }

@@ -5,15 +5,17 @@ import akka.http.scaladsl.server.Directives.{complete, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
-import com.evernym.verity.util.healthcheck.{HealthChecker}
+import com.evernym.verity.util.healthcheck.HealthChecker
 import spray.json.DefaultJsonProtocol.{StringJsonFormat, _}
 import spray.json.{RootJsonFormat, enrichAny}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
-
-case class ReadinessStatus(status: Boolean = false, rds: String = "", dynamoDB: String = "", storageAPI: String = "")
+case class ReadinessStatus(status: Boolean = false,
+                           akkaStorageStatus: String = "",
+                           walletStorageStatus: String = "",
+                           blobStorageStatus: String = "")
 
 
 trait HealthCheckEndpointHandlerV2 {
@@ -23,17 +25,19 @@ trait HealthCheckEndpointHandlerV2 {
   private implicit val apiStatusJsonFormat: RootJsonFormat[ReadinessStatus] = jsonFormat4(ReadinessStatus)
 
   private def readinessCheck(): Future[ReadinessStatus] = {
-    val rdsFuture = healthChecker.checkAkkaEventStorageStatus
-    val dynamoDBFuture = healthChecker.checkWalletStorageStatus
-    val storageAPIFuture = healthChecker.checkStorageAPIStatus
+    val akkaStorageFuture = healthChecker.checkAkkaStorageStatus
+    val walletStorageFuture = healthChecker.checkWalletStorageStatus
+    val blobStorageFuture = healthChecker.checkBlobStorageStatus
     for {
-      rds <- rdsFuture
-      dynamodb <- dynamoDBFuture
-      storageAPI <- storageAPIFuture
-    } yield ReadinessStatus(rds.status && dynamodb.status && storageAPI.status,
-      rds.msg,
-      dynamodb.msg,
-      storageAPI.msg)
+      akkaStorage   <- akkaStorageFuture
+      walletStorage <- walletStorageFuture
+      blobStorage   <- blobStorageFuture
+    } yield ReadinessStatus(
+      akkaStorage.status && walletStorage.status && blobStorage.status,
+      akkaStorage.msg,
+      walletStorage.msg,
+      blobStorage.msg
+    )
   }
 
   protected val healthCheckRouteV2: Route =

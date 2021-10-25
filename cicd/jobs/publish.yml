@@ -32,6 +32,17 @@ publish-docker:
   extends:
     - .publish-common
     - .main-or-manual-rule
+  rules:
+    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main"
+      variables:
+        INCLUDE_DOCKER_AWS_DESTINATIONS: "true"
+      when: on_success
+    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "rajesh.kalaria_ve3058_troubleshooting-changes"
+      variables:
+        INCLUDE_DOCKER_AWS_DESTINATIONS: "true"
+      when: on_success
+    - if: $CI_PROJECT_NAMESPACE #This should "default" to never, unless matched above on main branches
+      when: never
   needs:
     - package
   script:

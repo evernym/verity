@@ -18,6 +18,7 @@ stages:
   - deploy
 
 include:
+  - '/cicd/jobs/common.yml'
   - '/cicd/jobs/check.yml'
   - '/cicd/jobs/test.yml'
   - '/cicd/jobs/package.yml'

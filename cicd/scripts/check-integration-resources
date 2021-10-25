@@ -1,0 +1,94 @@
+#!/bin/bash -e
+
+
+echo
+echo "**********"
+echo "Testing if resources are available..."
+echo "**********"
+
+repeat_until_ready()
+{
+  cmd="$1"
+  shift
+  args=( "$@" )
+  attempt_counter=0
+  max_attempts=5
+  until $cmd "${args[@]}"; do
+  if [ ${attempt_counter} -eq ${max_attempts} ];then
+    echo "Max attempts reached"
+    exit 1
+  fi
+  echo "Attempting connection... failed."
+  attempt_counter=$(($attempt_counter+1))
+  sleep 5
+done
+}
+
+echo
+echo "**********"
+echo "ledger"
+echo "**********"
+
+echo "Testing pool connection..."
+echo "Waiting until ledger on indy-pool is ready..."
+repeat_until_ready nc -vz indy-pool 9701
+echo "indy-pool is ready..."
+
+echo
+echo "**********"
+echo "mysql"
+echo "**********"
+
+echo "Testing mysql connection..."
+echo "Waiting until mysql is ready..."
+repeat_until_ready mysql -u"msuser" -p"mspassword" -h"mysql" -P3306  -D wallet -e "show tables;"
+echo "Connection to mysql on port 3306 was successful!"
+
+echo
+echo "**********"
+echo "DynamoDB"
+echo "**********"
+
+echo "Testing dynamodb connection..."
+echo "Ensure dynamodb tables are created..."
+aws_output=$(aws configure get output || true)
+aws_region=$(aws configure get region || true)
+aws_access_key_id=$(aws configure get aws_access_key_id || true)
+aws_secret_access_key=$(aws configure get aws_secret_access_key || true)
+aws configure set output text
+aws configure set region none
+aws configure set aws_access_key_id none
+aws configure set aws_secret_access_key none
+if [ "$(aws dynamodb list-tables --endpoint-url http://dynamodb:8000 | wc -l)" -ge 6 ]; then
+  aws configure set output "${aws_output}"
+  aws configure set region "${aws_region}"
+  aws configure set aws_access_key_id "${aws_access_key_id}"
+  aws configure set aws_secret_access_key "${aws_secret_access_key}"
+  echo "Connection to dynamodb on port 8000 was successful. All tables exist!"
+
+  echo "Wait until dynamodb port is open..."
+  repeat_until_ready nc -vz dynamodb 8000
+  echo "dynamodb is ready..."
+else
+  exit 1
+fi
+
+echo
+echo "**********"
+echo "YoURLs"
+echo "**********"
+
+repeat_until_ready curl --fail -s -o /dev/null -XPOST http://$YOURLS_HOST:$YOURLS_PORT/admin/install.php --data 'install=Install+YOURLS'
+
+echo "Testing YoURLs connection..."
+echo "Writing Short URL"
+
+curl --fail -s "http://$YOURLS_HOST:$YOURLS_PORT/yourls-api.php\
+?username=yourlsuser\
+&password=yourlspass\
+&action=shorturl\
+&format=json\
+&url=http%3A%2F%2Fexample.com/$RANDOM"  \
+| grep '"status":"success"'
+
+echo ""

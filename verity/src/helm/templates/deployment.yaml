@@ -27,7 +27,7 @@ spec:
         {{- $credentials := printf "kubernetes_secrets/eks-%s/%s-%s" .Values.gitlab_env .Values.name .Values.service }}
         {{- $credentials_tf := printf "kubernetes_secrets/eks-%s/%s-%s-tf" .Values.gitlab_env .Values.name .Values.service }}
         vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/role: "k8s-eks-{{ .Values.env }}"
+        vault.hashicorp.com/role: "k8s-eks-{{ coalesce .Values.vault_auth_role .Values.env }}"
         vault.hashicorp.com/auth-path: "auth/k8s/eks-{{ coalesce .Values.vault_auth_path .Values.gitlab_env }}"
         vault.hashicorp.com/agent-inject-secret-credentials: "{{ $credentials }}"
         vault.hashicorp.com/agent-inject-secret-credentials-tf: "{{ $credentials_tf }}"

@@ -149,13 +149,14 @@ object VerityLocalConfig {
   private def coordinatedShutdownConfig(): Config = {
     ConfigFactory.parseString(
       """
-        |akka.coordinated-shutdown.phases.before-service-unbind.timeout = 0 s
+        |akka.coordinated-shutdown.phases.before-service-unbind.timeout = 5 s
+        |
         |verity.draining {
+        |  //maximum check attempts to ensure draining state is communicated
+        |  max-check-count = 0
+        |
         |  //how frequently to check if draining state is communicated/known by the LB
         |  check-interval = 1 s
-        |
-        |  //maximum check attempts for above check
-        |  max-check-count = 0
         |
         |  //how much time to wait (to serve existing received requests)
         |  // before letting service-unbind phase to continue
@@ -180,18 +181,18 @@ object VerityLocalConfig {
                  taaAutoAccept: Boolean = true,
                  sharedEventStore: Option[SharedEventStore]=None): Config = {
     val parts = Seq(
-      akkaConfig(),
-      coordinatedShutdownConfig(),
-      changePoolName(),
-      turnOffWarnings(),
-      messageSerialization(),
-
       useLevelDBPersistence(tempDir, sharedEventStore),
       useDefaultWallet(tempDir),
       useCustomPort(port, otherNodeArteryPorts),
       configureLibIndy(taaEnabled, taaAutoAccept),
       identityUrlShortener(),
-      prometheusServer(port.prometheusPort)
+      prometheusServer(port.prometheusPort),
+
+      akkaConfig(),
+      coordinatedShutdownConfig(),
+      changePoolName(),
+      turnOffWarnings(),
+      messageSerialization()
     )
 
     parts.fold(ConfigFactory.empty())(_.withFallback(_).resolve())

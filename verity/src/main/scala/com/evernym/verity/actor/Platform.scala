@@ -33,9 +33,7 @@ import com.evernym.verity.actor.metrics.activity_tracker.ActivityTracker
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.typed.base.UserGuardian
 import com.evernym.verity.libindy.Libraries
-import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.util.healthcheck.HealthChecker
-import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -333,9 +331,10 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
     }
   }
 
-  val appStateCoordinator = new AppStateCoordinator(appConfig, actorSystem, appStateManager)(agentActorContext.futureExecutionContext)
-
-  val logger: Logger = LoggingUtil.getLoggerByClass(getClass)
+  val appStateCoordinator = new AppStateCoordinator(
+    appConfig,
+    actorSystem,
+    appStateManager)(agentActorContext.futureExecutionContext)
 }
 
 trait PlatformServices {

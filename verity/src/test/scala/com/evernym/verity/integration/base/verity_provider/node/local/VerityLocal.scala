@@ -47,14 +47,14 @@ object LocalVerity {
 
     val config = buildStandardVerityConfig(verityNodeParam)
     val appConfig = new AppConfigWrapper(config)
-
     val platform = initializeApp(appConfig, verityNodeParam.serviceParam, ecp)
-
-    val httpServer = new HttpServer(platform, new HttpRouteHandler(platform, ecp.futureExecutionContext).endpointRoutes, ecp.futureExecutionContext)
+    val httpServer = new HttpServer(
+      platform,
+      new HttpRouteHandler(platform, ecp.futureExecutionContext).endpointRoutes,
+      ecp.futureExecutionContext
+    )
     httpServer.start()
-
     waitTillUp(platform.appStateManager)
-
     httpServer
   }
 

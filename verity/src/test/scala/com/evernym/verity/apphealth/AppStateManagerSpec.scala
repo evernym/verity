@@ -1,7 +1,7 @@
 package com.evernym.verity.apphealth
 
 import akka.cluster.Cluster
-import akka.cluster.MemberStatus.{Down, Leaving, Removed}
+import akka.cluster.MemberStatus.{Down, Removed}
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.appStateManager.{AppStateDetailed, AppStateUpdateAPI, CauseDetail, DrainingStarted, ErrorEvent, EventDetail, ListeningSuccessful, ManualUpdate, MildSystemError, RecoverIfNeeded, SeriousSystemError, SuccessEvent}
@@ -335,8 +335,8 @@ class AppStateManagerSpec
     ConfigFactory.parseString(
       """
         |verity.draining {
-        |  check-interval = 1 s
         |  max-check-count = 1
+        |  check-interval = 1 s
         |  wait-before-service-unbind = 0 s
         |}""".stripMargin
     )

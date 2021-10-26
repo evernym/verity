@@ -2,7 +2,6 @@ package com.evernym.verity.actor
 
 import akka.actor.ActorRef
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.node_singleton.DrainInitiated
 import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
@@ -25,17 +24,6 @@ class NodeSingletonSpec
         expectMsgPF() {
           case NodeConfigRefreshed =>
         }
-      }
-    }
-  }
-
-  def drainNodeSpecs(): Unit = {
-
-    "DrainNodeSpec" - {
-      "should be able to initiate draining phase of shutdown" in {
-        nodeSingleton ! DrainInitiated
-
-        expectMsg(NodeConfigRefreshed)
       }
     }
   }

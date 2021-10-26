@@ -32,16 +32,16 @@ class AppStateCoordinator(appConfig: AppConfig,
   def startDrainingProcess(): Future[Done] = {
     setDrainingStarted()
 
-    val checkInterval = appConfig
-      .getDurationOption("verity.draining.check-interval")
-      .getOrElse(Duration(2, SECONDS))
-
     val maxCheckCount = appConfig
       .getIntOption("verity.draining.max-check-count")
       .getOrElse(10)
 
+    val checkInterval = appConfig
+      .getDurationOption("verity.draining.check-interval")
+      .getOrElse(Duration(2, SECONDS))
+
     legacyStartDraining()
-    performDraining(checkInterval, maxCheckCount, Promise[Done]())
+    performDraining(maxCheckCount, checkInterval, Promise[Done]())
   }
 
   //need to keep this till we support both AppStateManager
@@ -49,8 +49,8 @@ class AppStateCoordinator(appConfig: AppConfig,
     appStateManager ! StartDraining
   }
 
-  private def performDraining(checkInterval: FiniteDuration,
-                              checkAttemptLeft: Int,
+  private def performDraining(checkAttemptLeft: Int,
+                              checkInterval: FiniteDuration,
                               promise: Promise[Done]): Future[Done] = {
     if (checkAttemptLeft < 1 || _postDrainingReadinessProbeCount.get() >= 1) {
       //this means
@@ -79,7 +79,7 @@ class AppStateCoordinator(appConfig: AppConfig,
       system
         .scheduler
         .scheduleOnce(checkInterval) {
-          performDraining(checkInterval, checkAttemptLeft-1, promise)
+          performDraining(checkAttemptLeft-1, checkInterval, promise)
         }
     }
     promise.future

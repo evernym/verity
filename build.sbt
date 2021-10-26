@@ -44,7 +44,7 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libVdrToolsVer = "0.0.2"
+val libVdrToolsVer = "0.8.0"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libvdrtools.so"),
   NonMatchingDistLib("libnullpay-async", libVdrToolsVer, "libnullpay.so"),
@@ -55,7 +55,7 @@ val sharedLibDeps = Seq(
 val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 
 //dependency versions
-val vdrtoolswrapperver  = "0.0.2"
+val vdrtoolswrapperver  = "0.8.0"
 
 val akkaVer         = "2.6.16"
 val akkaHttpVer     = "10.2.6"
@@ -71,7 +71,7 @@ val sdnotifyVer     = "1.3"
 //test dependency versions
 val scalatestVer    = "3.2.10"
 val mockitoVer      = "1.16.42"
-val veritySdkVer    = "0.4.10-b1ecd34a"
+val veritySdkVer    = "0.4.10-50c493d0"
 val vcxWrapperVer   = "0.12.0.1738"
 
 // compiler plugin versions
@@ -153,7 +153,7 @@ lazy val settings = Seq(
   resolvers += Resolver.mavenLocal,
 //  resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public", // this shouldn't be necessay since we're publishing vdr-tools to maven central
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
-  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",
+//  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",
 
   Test / parallelExecution := false,
   Test / logBuffered := false,

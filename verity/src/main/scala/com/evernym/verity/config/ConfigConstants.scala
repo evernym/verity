@@ -95,7 +95,7 @@ object ConfigConstants {
   val TWILIO_DEFAULT_NUMBER = s"$TWILIO.default-number"
   val TWILIO_APP_NAME = s"$TWILIO.app-name"
 
-  private val LIB_INDY = s"$VERITY.lib-indy"
+  private val LIB_INDY = s"$VERITY.lib-vdrtools"
   val LIB_INDY_LIBRARY_DIR_LOCATION = s"$LIB_INDY.library-dir-location"
   val LIB_INDY_FLAVOR = s"$LIB_INDY.flavor"
 

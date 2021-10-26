@@ -44,7 +44,7 @@ class AppStateCoordinator(appConfig: AppConfig,
     performDraining(maxCheckCount, checkInterval, Promise[Done]())
   }
 
-  //need to keep this till we support both AppStateManager
+  //need to keep this till we support 'AppStateManager' and 'new probe APIs'
   private def legacyStartDraining(): Unit = {
     appStateManager ! StartDraining
   }
@@ -106,8 +106,8 @@ class AppStateCoordinator(appConfig: AppConfig,
 
   private def addLogDuringPhase(phase: String, taskName: String): Unit = {
     CoordinatedShutdown(system)
-      .addTask(phase, "log-service-stop") { () =>
-        logger.info(s"Coordinated shutdown [$phase]")
+      .addTask(phase, taskName) { () =>
+        logger.info(s"Coordinated shutdown [$phase:$taskName]")
         Future.successful(Done)
       }
   }

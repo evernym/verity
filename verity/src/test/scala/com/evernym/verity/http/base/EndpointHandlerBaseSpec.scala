@@ -100,7 +100,7 @@ trait EdgeEndpointBaseSpec
   }
 
   override val healthChecker: HealthChecker = mock[MockHealthChecker]
-  override val appStateHandler: AppStateCoordinator = mock[AppStateCoordinator]
+  override val appStateCoordinator: AppStateCoordinator = mock[AppStateCoordinator]
 }
 
 trait EndpointHandlerBaseSpec

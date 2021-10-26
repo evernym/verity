@@ -22,15 +22,15 @@ case class ReadinessStatus(status: Boolean = false,
 trait HealthCheckEndpointHandlerV2 {
   this: HttpRouteWithPlatform =>
   val healthChecker: HealthChecker
-  val appStateHandler: AppStateCoordinator
+  val appStateCoordinator: AppStateCoordinator
 
   private implicit val apiStatusJsonFormat: RootJsonFormat[ReadinessStatus] = jsonFormat4(ReadinessStatus)
 
   private def readinessCheck(): Future[ReadinessStatus] = {
-    if (appStateHandler.isDrainingStarted) {
-      appStateHandler.incrementPostDrainingReadinessProbeCount()
-      //if draining is already started, it doesn't make sense to check any other service,
-      // just return status as false to indicate readinessProbe failure
+    if (appStateCoordinator.isDrainingStarted) {
+      appStateCoordinator.incrementPostDrainingReadinessProbeCount()
+      //if draining is already started, it doesn't make sense to check any other external dependency,
+      // just return status as `false` to indicate readinessProbe failure
       Future.successful(
         ReadinessStatus(
           status = false,

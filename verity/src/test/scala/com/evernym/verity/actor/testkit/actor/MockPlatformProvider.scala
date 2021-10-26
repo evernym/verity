@@ -84,7 +84,7 @@ trait ProvidesMockPlatform
   }
 
   case object UserInitiatedShutdown extends CoordinatedShutdown.Reason
-  def kickOffCoordinatedShutdown(): Unit = CoordinatedShutdown(system).run(UserInitiatedShutdown)
+  def kickOffUserInitiatedShutdown(): Unit = CoordinatedShutdown(system).run(UserInitiatedShutdown)
 }
 
 case class MockPlatformParam(mockAgentActorContextParam: MockAgentActorContextParam=MockAgentActorContextParam())

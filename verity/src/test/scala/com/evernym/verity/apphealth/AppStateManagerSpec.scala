@@ -230,7 +230,7 @@ class AppStateManagerSpec
   }
 
   def switchToDraining()(implicit amt: AppStateManagerTestKit): Unit = {
-    kickOffCoordinatedShutdown()
+    kickOffUserInitiatedShutdown()
 
     AppStateUpdateAPI(system).publishEvent(SuccessEvent(
         DrainingStarted,

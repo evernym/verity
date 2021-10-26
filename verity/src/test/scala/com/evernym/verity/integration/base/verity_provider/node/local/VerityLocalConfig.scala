@@ -10,7 +10,7 @@ import java.nio.file.Path
 
 object VerityLocalConfig {
 
-  private def messageSerialization: Config = {
+  private def messageSerialization(): Config = {
     ConfigFactory.parseString(
       //TODO: once we fix root cause behind serialization issue, then we should turn this on again.
       """akka.actor.serialize-messages = off
@@ -146,6 +146,25 @@ object VerityLocalConfig {
     )
   }
 
+  private def coordinatedShutdownConfig(): Config = {
+    ConfigFactory.parseString(
+      """
+        |akka.coordinated-shutdown.phases.before-service-unbind.timeout = 0 s
+        |verity.draining {
+        |  //how frequently to check if draining state is communicated/known by the LB
+        |  check-interval = 1 s
+        |
+        |  //maximum check attempts for above check
+        |  max-check-count = 0
+        |
+        |  //how much time to wait (to serve existing received requests)
+        |  // before letting service-unbind phase to continue
+        |  wait-before-service-unbind = 0 s
+        |}
+        |""".stripMargin
+    )
+  }
+
   private def identityUrlShortener(): Config = {
     ConfigFactory.parseString(
       s"""
@@ -161,14 +180,16 @@ object VerityLocalConfig {
                  taaAutoAccept: Boolean = true,
                  sharedEventStore: Option[SharedEventStore]=None): Config = {
     val parts = Seq(
+      akkaConfig(),
+      coordinatedShutdownConfig(),
+      changePoolName(),
+      turnOffWarnings(),
+      messageSerialization(),
+
       useLevelDBPersistence(tempDir, sharedEventStore),
       useDefaultWallet(tempDir),
-      changePoolName(),
       useCustomPort(port, otherNodeArteryPorts),
-      turnOffWarnings(),
-      messageSerialization,
       configureLibIndy(taaEnabled, taaAutoAccept),
-      akkaConfig(),
       identityUrlShortener(),
       prometheusServer(port.prometheusPort)
     )

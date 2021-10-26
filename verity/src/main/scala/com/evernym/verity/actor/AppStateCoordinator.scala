@@ -1,7 +1,8 @@
 package com.evernym.verity.actor
 
 import akka.Done
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown}
+import akka.actor.CoordinatedShutdown._
 import com.evernym.verity.actor.appStateManager.StartDraining
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.observability.logs.LoggingUtil
@@ -11,7 +12,6 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.Success
 import scala.concurrent.duration._
-
 
 class AppStateCoordinator(appConfig: AppConfig,
                           system: ActorSystem,
@@ -29,7 +29,9 @@ class AppStateCoordinator(appConfig: AppConfig,
       _postDrainingReadinessProbeCount.incrementAndGet()
   }
 
-  def startBeforeServiceUnbindTask(): Future[Done] = {
+  def startDrainingProcess(): Future[Done] = {
+    setDrainingStarted()
+
     val checkInterval = appConfig
       .getDurationOption("verity.draining.check-interval")
       .getOrElse(Duration(2, SECONDS))
@@ -50,7 +52,6 @@ class AppStateCoordinator(appConfig: AppConfig,
   private def performDraining(checkInterval: FiniteDuration,
                               checkAttemptLeft: Int,
                               promise: Promise[Done]): Future[Done] = {
-
     if (checkAttemptLeft < 1 || _postDrainingReadinessProbeCount.get() >= 1) {
       //this means
       // - either "max check attempt exceeded" (in this case any new received request may/will fail)
@@ -84,8 +85,44 @@ class AppStateCoordinator(appConfig: AppConfig,
     promise.future
   }
 
+  private def addTasksToPhases(): Unit = {
+    addTaskToBeforeServiceUnbindPhase()
+    addLogDuringPhase(PhaseBeforeServiceUnbind, "log-before-service-unbind")
+    addLogDuringPhase(PhaseServiceStop, "log-service-stop")
+    addLogDuringPhase(PhaseClusterLeave, "log-cluster-leave")
+    addLogDuringPhase(PhaseClusterShutdown, "log-cluster-shutdown")
+    addLogDuringPhase(PhaseActorSystemTerminate, "log-actor-system-terminate")
+  }
+
+  private def addTaskToBeforeServiceUnbindPhase(): Unit = {
+    CoordinatedShutdown(system)
+      .addTask(PhaseBeforeServiceUnbind, "start-draining-process") { () =>
+        logger.info("Coordinated shutdown [BeforeServiceUnbind-draining]")
+        //will wait for `akka.coordinated-shutdown.phases.before-service-unbind.timeout`
+        // to complete the future returned by below statement
+        startDrainingProcess()
+      }
+  }
+
+  private def addLogDuringPhase(phase: String, taskName: String): Unit = {
+    CoordinatedShutdown(system)
+      .addTask(phase, "log-service-stop") { () =>
+        logger.info(s"Coordinated shutdown [$phase]")
+        Future.successful(Done)
+      }
+  }
+
   private val _isDrainingStarted = new AtomicBoolean(false)
   private val _postDrainingReadinessProbeCount = new AtomicInteger(0)
 
   val logger: Logger = LoggingUtil.getLoggerByClass(getClass)
+
+
+  //Verity will start coordinated shutdown when:
+  //  - systemd sends the JVM a SIGTERM on a 'systemctl stop'
+  //  - kubernetes sends the Container a SIGTERM during pod termination
+
+  //This class adds some tasks to be executed during coordinated shutdown as mentioned here
+  // https://doc.akka.io/docs/akka/current/coordinated-shutdown.html
+  addTasksToPhases()
 }

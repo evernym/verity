@@ -1,6 +1,6 @@
 package com.evernym.verity.actor
 
-import akka.actor.{Actor, ActorRef, ActorSystem, CoordinatedShutdown, Extension, ExtensionId, PoisonPill, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Extension, ExtensionId, PoisonPill, Props}
 import akka.cluster.singleton._
 import akka.pattern.ask
 import akka.util.Timeout
@@ -332,25 +332,6 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       case None           => defaultDurationInSeconds
     }
   }
-
-  //Verity will start coordinated shutdown when:
-  //  - systemd sends the JVM a SIGTERM on a 'systemctl stop'
-  //  - kubernetes sends the Container a SIGTERM during pod termination
-
-  //below is the akka recommended way to handle tasks during coordinated shutdown
-  // https://doc.akka.io/docs/akka/current/coordinated-shutdown.html
-
-  CoordinatedShutdown(actorSystem)
-    .addTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "start-draining-process") { () =>
-      //this task/function will be executed as soon as SIGTERM is captured/received
-      logger.info("Coordinated shutdown: 'before service unbind` task started ...")
-
-      appStateHandler.setDrainingStarted()
-
-      //will wait for `akka.coordinated-shutdown.phases.before-service-unbind.timeout`
-      // to complete the future returned by below statement
-      appStateHandler.startBeforeServiceUnbindTask()
-    }
 
   val appStateHandler = new AppStateCoordinator(appConfig, actorSystem, appStateManager)(agentActorContext.futureExecutionContext)
 

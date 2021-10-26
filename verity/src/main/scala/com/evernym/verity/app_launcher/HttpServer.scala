@@ -16,7 +16,6 @@ import com.evernym.verity.observability.metrics.MetricsWriter
 import com.evernym.verity.protocol.engine.util.UnableToCreateLogger
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
-import sun.misc.{Signal, SignalHandler}
 
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -40,7 +39,7 @@ class HttpServer(val platform: Platform, routes: Route, executionContext: Execut
   var httpBinding: Option[ServerBinding] = None
 
   def start(): Unit = {
-    LaunchPreCheck.checkReqDependencies(platform.agentActorContext, futureExecutionContext)
+    LaunchPreCheck.waitForRequiredDepsIsOk(platform.healthChecker, platform.executionContextProvider.futureExecutionContext)
     startService(init _)
   }
 
@@ -61,13 +60,6 @@ class HttpServer(val platform: Platform, routes: Route, executionContext: Execut
       val bindResultFut = f()
       bindResultFut.onComplete {
         case Success(bindResults) =>
-          // Drain the Akka node on a SIGTERM - systemd sends the JVM a SIGTERM on a 'systemctl stop'
-          Signal.handle(new Signal("TERM"), new SignalHandler() {
-            def handle(sig: Signal): Unit = {
-              logger.info("Trapping SIGTERM and begin draining Akka node...")
-              AppStateUpdateAPI(system).publishEvent(StartDraining)
-            }
-          })
           bindResults.foreach { br =>
             httpBinding = Option(br.serverBinding)
             AppStateUpdateAPI(system).publishEvent(SuccessEvent(ListeningSuccessful, CONTEXT_AGENT_SERVICE_INIT,

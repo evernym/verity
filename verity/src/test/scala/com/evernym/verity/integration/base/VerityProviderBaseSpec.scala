@@ -155,11 +155,7 @@ trait VerityProviderBaseSpec
 
   private val MULTI_NODE_CLUSTER_CONFIG = ConfigFactory.parseString(
     s"""
-      |verity.app-state-manager.state.draining {
-      |  delay-before-leave = 5
-      |  delay-between-status-checks = 1
-      |  max-status-check-count = 20
-      |}
+      |
       |""".stripMargin
   )
   def executionContextProvider: ExecutionContextProvider

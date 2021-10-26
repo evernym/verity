@@ -27,8 +27,6 @@ import org.scalatest.time.SpanSugar.convertIntToGrainOfTime
 import scala.concurrent.Await
 import scala.reflect.ClassTag
 
-
-//Copied from SdkFlowSpec
 class HealthCheckSpec
   extends BasicSpec
     with TempDir
@@ -87,7 +85,7 @@ class HealthCheckSpec
           val req = Http().singleRequest(HttpRequest(uri = s"$verityUrl/verity/node/readiness"))
           val resp = Await.result(req, 30.seconds)
           resp.status shouldBe OK
-          responseTo[ReadinessStatus](resp) shouldBe ReadinessStatus("OK", "OK", "OK")
+          responseTo[ReadinessStatus](resp) shouldBe ReadinessStatus(status = true, "OK", "OK", "OK")
         }
 
         "sdk cleanup" - {

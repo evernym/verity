@@ -97,7 +97,7 @@ See details here: [integration-tests/README.md](integration-tests/README.md)
 ## Development Process
 All developers are expected to do the following:
 
-1. Keep the default branch (i.e. master) stable
+1. Keep the default branch (i.e. main) stable
 2. Follow TDD principles to produce sufficient test coverage
 3. When collaborating with other team members, prepend 'wip-' to a branch name if
    a branch is not ready to be vetted/tested by GitLab CI/CD pipelines. Doing so

@@ -333,7 +333,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
     }
   }
 
-  val appStateHandler = new AppStateCoordinator(appConfig, actorSystem, appStateManager)(agentActorContext.futureExecutionContext)
+  val appStateCoordinator = new AppStateCoordinator(appConfig, actorSystem, appStateManager)(agentActorContext.futureExecutionContext)
 
   val logger: Logger = LoggingUtil.getLoggerByClass(getClass)
 }

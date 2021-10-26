@@ -19,8 +19,8 @@ trait HeartbeatEndpointHandler
 
   def heartbeatStatus: StatusDetailResp = {
     import com.evernym.verity.util2.Status.{ACCEPTING_TRAFFIC, NOT_ACCEPTING_TRAFFIC}
-    if (platform.appStateHandler.isDrainingStarted) {
-      platform.appStateHandler.incrementPostDrainingReadinessProbeCount()
+    if (platform.appStateCoordinator.isDrainingStarted) {
+      platform.appStateCoordinator.incrementPostDrainingReadinessProbeCount()
       StatusDetailResp(NOT_ACCEPTING_TRAFFIC.withMessage("draining started"))
     } else {
       StatusDetailResp(ACCEPTING_TRAFFIC.withMessage("Listening"))

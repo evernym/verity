@@ -85,7 +85,7 @@ class AppStateCoordinator(appConfig: AppConfig,
     promise.future
   }
 
-  private def addTasksToPhases(): Unit = {
+  private def addTasksToCoordinatedShutdownPhases(): Unit = {
     addTaskToBeforeServiceUnbindPhase()
     addLogDuringPhase(PhaseBeforeServiceUnbind, "log-before-service-unbind")
     addLogDuringPhase(PhaseServiceStop, "log-service-stop")
@@ -118,11 +118,11 @@ class AppStateCoordinator(appConfig: AppConfig,
   val logger: Logger = LoggingUtil.getLoggerByClass(getClass)
 
 
-  //Verity will start coordinated shutdown when:
-  //  - systemd sends the JVM a SIGTERM on a 'systemctl stop'
-  //  - kubernetes sends the Container a SIGTERM during pod termination
+  //Verity will start coordinated shutdown when any of these happens:
+  //  - `systemd` sends the JVM a SIGTERM during 'systemctl stop'
+  //  - `kubernetes` sends the Container a SIGTERM during 'pod termination'
 
-  //This class adds some tasks to be executed during coordinated shutdown as mentioned here
+  //Below function adds some tasks to be executed during coordinated shutdown
   // https://doc.akka.io/docs/akka/current/coordinated-shutdown.html
-  addTasksToPhases()
+  addTasksToCoordinatedShutdownPhases()
 }

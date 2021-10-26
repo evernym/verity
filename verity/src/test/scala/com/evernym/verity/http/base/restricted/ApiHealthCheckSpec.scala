@@ -26,7 +26,7 @@ trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
   def testBaseApiHeathCheck(): Unit = {
     "when sent req to /verity/node/readiness and event journal and wallet storage services ready" - {
       "should be return 200 OK" in {
-        when(appStateHandler.isDrainingStarted).thenReturn(false)
+        when(appStateCoordinator.isDrainingStarted).thenReturn(false)
         when(healthChecker.checkAkkaStorageStatus).thenReturn(Future.successful(ApiStatus(true, "OK")))
         when(healthChecker.checkWalletStorageStatus).thenReturn(Future.successful(ApiStatus(true, "OK")))
         when(healthChecker.checkBlobStorageStatus).thenReturn(Future.successful(ApiStatus(true, "OK")))

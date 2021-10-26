@@ -330,6 +330,11 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       case None           => defaultDurationInSeconds
     }
   }
+
+  val appStateCoordinator = new AppStateCoordinator(
+    appConfig,
+    actorSystem,
+    appStateManager)(agentActorContext.futureExecutionContext)
 }
 
 trait PlatformServices {

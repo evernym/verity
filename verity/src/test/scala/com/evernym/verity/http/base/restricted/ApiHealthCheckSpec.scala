@@ -16,9 +16,9 @@ class MockHealthChecker extends HealthChecker{
 
   override def checkBlobStorageStatus: Future[ApiStatus] = Future.successful(ApiStatus(true, "OK"))
 
-  override def checkLedgerPoolStatus: Future[ApiStatus] = Future.successful(ApiStatus(true, "OK"))
-
   override def checkLiveness: Future[Unit] = Future.successful((): Unit)
+
+  override def checkLedgerPoolStatus: Future[ApiStatus] = Future.successful(ApiStatus(true, "OK"))
 }
 
 trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
@@ -26,6 +26,7 @@ trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>
   def testBaseApiHeathCheck(): Unit = {
     "when sent req to /verity/node/readiness and event journal and wallet storage services ready" - {
       "should be return 200 OK" in {
+        when(appStateCoordinator.isDrainingStarted).thenReturn(false)
         when(healthChecker.checkAkkaStorageStatus).thenReturn(Future.successful(ApiStatus(true, "OK")))
         when(healthChecker.checkWalletStorageStatus).thenReturn(Future.successful(ApiStatus(true, "OK")))
         when(healthChecker.checkBlobStorageStatus).thenReturn(Future.successful(ApiStatus(true, "OK")))

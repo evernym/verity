@@ -229,8 +229,9 @@ class AppStateManagerSpec
     }
   }
 
-
   def switchToDraining()(implicit amt: AppStateManagerTestKit): Unit = {
+    kickOffUserInitiatedShutdown()
+
     AppStateUpdateAPI(system).publishEvent(SuccessEvent(
         DrainingStarted,
         CONTEXT_AGENT_SERVICE_DRAIN,
@@ -333,9 +334,10 @@ class AppStateManagerSpec
   override def overrideConfig: Option[Config] = Option(
     ConfigFactory.parseString(
       """
-        |verity.app-state-manager.state.draining {
-        |  delay-before-leave = 2
-        |  delay-between-status-checks = 1
+        |verity.draining {
+        |  max-check-count = 1
+        |  check-interval = 1 s
+        |  wait-before-service-unbind = 0 s
         |}""".stripMargin
     )
   )

@@ -37,6 +37,5 @@ object DrainingState extends AppState {
     //TODO: Doing it the current way ensures traffic stops being routed from the load balancer to this node,
     // but does not ensure the akka node gracefully leaves the cluster (migrate singletons, shards, etc.)
     notifierService.setStatus(name)
-    appStateManager.performServiceDrain()
   }
 }

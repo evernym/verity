@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.testkit.actor
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown}
 import com.evernym.verity.actor.{Platform, PlatformServices}
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -82,6 +82,9 @@ trait ProvidesMockPlatform
   def getTotalAgentMsgsSentByCloudAgentToRemoteAgent: Int = {
     platform.agentActorContext.msgSendingSvc.asInstanceOf[MockMsgSendingSvc].totalBinaryMsgsSent
   }
+
+  case object UserInitiatedShutdown extends CoordinatedShutdown.Reason
+  def kickOffUserInitiatedShutdown(): Unit = CoordinatedShutdown(system).run(UserInitiatedShutdown)
 }
 
 case class MockPlatformParam(mockAgentActorContextParam: MockAgentActorContextParam=MockAgentActorContextParam())

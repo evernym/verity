@@ -11,7 +11,7 @@ trait SysServiceNotifier {
 object SDNotifyService extends SysServiceNotifier {
   private def shouldSend(): Boolean = sys.env
     .get("NOTIFY_SOCKET")
-    .exists(!_.isEmpty)
+    .exists(_.nonEmpty)
 
   def setStatus(newStatus: String): Unit = {
     if(shouldSend()) {

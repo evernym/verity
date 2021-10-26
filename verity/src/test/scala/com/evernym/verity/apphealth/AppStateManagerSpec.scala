@@ -10,6 +10,7 @@ import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager.state.{DegradedState, DrainingState, InitializingState, ListeningState, ShutdownWithErrors, SickState}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
 import com.evernym.verity.testkit.{BasicFixtureSpec, CancelGloballyAfterFailure}
+import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.Outcome
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
@@ -228,9 +229,8 @@ class AppStateManagerSpec
     }
   }
 
-
   def switchToDraining()(implicit amt: AppStateManagerTestKit): Unit = {
-    platform.appStateHandler.startBeforeServiceUnbindTask()
+    kickOffUserInitiatedShutdown()
 
     AppStateUpdateAPI(system).publishEvent(SuccessEvent(
         DrainingStarted,
@@ -330,6 +330,17 @@ class AppStateManagerSpec
     Thread.sleep(100)  //just to make sure the app state manager actor gets stopped
     r
   }
+
+  override def overrideConfig: Option[Config] = Option(
+    ConfigFactory.parseString(
+      """
+        |verity.draining {
+        |  max-check-count = 1
+        |  check-interval = 1 s
+        |  wait-before-service-unbind = 0 s
+        |}""".stripMargin
+    )
+  )
 
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   override def executionContextProvider: ExecutionContextProvider = ecp

@@ -113,7 +113,6 @@ class NodeSingleton(val appConfig: AppConfig, executionContext: ExecutionContext
   }
 }
 
-case object DrainInitiated extends ActorMessage
 case class PersistentActorQueryParam(actorParam: ActorParam, cmd: Any)
   extends ActorMessage
 

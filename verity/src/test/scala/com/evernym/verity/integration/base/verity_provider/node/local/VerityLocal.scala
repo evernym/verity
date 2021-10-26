@@ -21,7 +21,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import java.nio.file.Path
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContextExecutor}
+import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
 import scala.language.postfixOps
 
 
@@ -56,9 +56,7 @@ object LocalVerity {
       ecp.futureExecutionContext
     )
     httpServer.start()
-
     waitTillUp(platform.appStateManager)
-
     httpServer
   }
 

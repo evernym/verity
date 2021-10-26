@@ -37,7 +37,7 @@ trait HeartbeatSpec  { this : EdgeEndpointBaseSpec =>
         }
 
         // Set app state to Draining
-        platform.appStateHandler.startBeforeServiceUnbindTask()
+        platform.appStateCoordinator.startDrainingProcess()
         publishAppStateEvent(StartDraining)
         publishAppStateEvent(ErrorEvent(DrainingStarted, CONTEXT_GENERAL, new RuntimeException("test"), Option("test")))
 

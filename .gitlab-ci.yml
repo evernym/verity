@@ -14,6 +14,7 @@ stages:
   - deploy
 
 include:
+  - '/cicd/jobs/common.yml'
   - '/cicd/jobs/package.yml'
   - '/cicd/jobs/publish.yml'
   - '/cicd/jobs/deploy.yml'

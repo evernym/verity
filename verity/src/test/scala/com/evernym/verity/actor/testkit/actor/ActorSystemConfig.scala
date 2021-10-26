@@ -109,7 +109,7 @@ trait ActorSystemConfig {
           serialize-messages = off
         }
 
-        coordinated-shutdown.phases.before-service-unbind.timeout = 0 s
+        coordinated-shutdown.phases.before-service-unbind.timeout = 1 s
       }
       """
     val baseConfig = ConfigFactory.parseString(baseConfigStr)

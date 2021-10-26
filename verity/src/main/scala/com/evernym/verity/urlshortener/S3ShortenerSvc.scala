@@ -1,7 +1,7 @@
 package com.evernym.verity.urlshortener
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.Uri
+import akka.http.scaladsl.model.{ContentType, ContentTypes, Uri}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.{S3_SHORTENER_BUCKET_NAME, S3_SHORTENER_ID_LENGTH, S3_SHORTENER_RETRY_COUNT, S3_SHORTENER_URL_PREFIX}
 import com.evernym.verity.constants.Constants.URL_SHORTENER_PROVIDER_ID_S3_SHORTENER
@@ -60,7 +60,7 @@ class S3ShortenerSvc(val appConfig: AppConfig, implicit val futureExecutionConte
     // generate different id every time.
     val id = genShortId()
 
-    storageAPI.put(bucketName, id, data) map { _ =>
+    storageAPI.put(bucketName, id, data, ContentTypes.`application/json`) map { _ =>
       id
     } recoverWith {
       case e: Throwable =>

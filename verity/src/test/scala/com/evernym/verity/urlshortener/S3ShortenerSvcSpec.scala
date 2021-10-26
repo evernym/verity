@@ -1,6 +1,7 @@
 package com.evernym.verity.urlshortener
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.storage_services.StorageAPI
@@ -45,15 +46,20 @@ class S3ShortenerSvcSpec
         val bucketCaptor: ArgumentCaptor[String] = ArgumentCaptor.forClass(classOf[String])
         val idCaptor: ArgumentCaptor[String] = ArgumentCaptor.forClass(classOf[String])
         val dataCaptor: ArgumentCaptor[Array[Byte]] = ArgumentCaptor.forClass(classOf[Array[Byte]])
+        val contentTypeCaptor: ArgumentCaptor[ContentType] = ArgumentCaptor.forClass(classOf[ContentType])
 
-        when(mockApi.put(any[String], any[String], any[Array[Byte]])) thenReturn Future.successful(StorageInfo())
+        when(mockApi.put(any[String], any[String], any[Array[Byte]], any[ContentType])).thenReturn (
+          Future.successful(StorageInfo())
+        )
 
         service.shortenURL(UrlInfo(longUrlCon))(system) map { shortUrl =>
-          verify(mockApi, times(1)).put(bucketCaptor.capture(), idCaptor.capture(), dataCaptor.capture())
+          verify(mockApi, times(1))
+            .put(bucketCaptor.capture(), idCaptor.capture(), dataCaptor.capture(), contentTypeCaptor.capture())
 
           val id = idCaptor.getValue
           bucketCaptor.getValue shouldBe bucketName
           dataCaptor.getValue shouldBe invitationData
+          contentTypeCaptor.getValue shouldBe ContentTypes.`application/json`
           shortUrl shouldBe shortUrlPrefix + id
         }
       }
@@ -64,15 +70,20 @@ class S3ShortenerSvcSpec
         val bucketCaptor: ArgumentCaptor[String] = ArgumentCaptor.forClass(classOf[String])
         val idCaptor: ArgumentCaptor[String] = ArgumentCaptor.forClass(classOf[String])
         val dataCaptor: ArgumentCaptor[Array[Byte]] = ArgumentCaptor.forClass(classOf[Array[Byte]])
+        val contentTypeCaptor: ArgumentCaptor[ContentType] = ArgumentCaptor.forClass(classOf[ContentType])
 
-        when(mockApi.put(any[String], any[String], any[Array[Byte]])) thenReturn Future.successful(StorageInfo())
+        when(mockApi.put(any[String], any[String], any[Array[Byte]], any[ContentType])).thenReturn (
+          Future.successful(StorageInfo())
+        )
 
         service.shortenURL(UrlInfo(longUrlCon))(system) map { shortUrl =>
-          verify(mockApi, times(1)).put(bucketCaptor.capture(), idCaptor.capture(), dataCaptor.capture())
+          verify(mockApi, times(1))
+            .put(bucketCaptor.capture(), idCaptor.capture(), dataCaptor.capture(), contentTypeCaptor.capture())
 
           val id = idCaptor.getValue
           bucketCaptor.getValue shouldBe bucketName
           dataCaptor.getValue shouldBe invitationData
+          contentTypeCaptor.getValue shouldBe ContentTypes.`application/json`
           shortUrl shouldBe shortUrlPrefix + id
         }
       }
@@ -85,20 +96,23 @@ class S3ShortenerSvcSpec
         val bucketCaptor: ArgumentCaptor[String] = ArgumentCaptor.forClass(classOf[String])
         val idCaptor: ArgumentCaptor[String] = ArgumentCaptor.forClass(classOf[String])
         val dataCaptor: ArgumentCaptor[Array[Byte]] = ArgumentCaptor.forClass(classOf[Array[Byte]])
+        val contentTypeCaptor: ArgumentCaptor[ContentType] = ArgumentCaptor.forClass(classOf[ContentType])
 
-        when(mockApi.put(any[String], any[String], any[Array[Byte]])).thenReturn (
+        when(mockApi.put(any[String], any[String], any[Array[Byte]], any[ContentType])).thenReturn (
           Future( throw new Exception("Failed first time")),
           Future( throw new Exception("Failed second time")),
           Future.successful(StorageInfo()) // The Third Time Lucky
         )
 
         service.shortenURL(UrlInfo(longUrlCon))(system) map { shortUrl =>
-          verify(mockApi, times(3)).put(bucketCaptor.capture(), idCaptor.capture(), dataCaptor.capture())
+          verify(mockApi, times(3))
+            .put(bucketCaptor.capture(), idCaptor.capture(), dataCaptor.capture(), contentTypeCaptor.capture())
 
           val ids = idCaptor.getAllValues.toArray
-          // bucket and data should be the same every time
+          // bucket, data and contentType should be the same every time
           bucketCaptor.getAllValues.toArray.distinct shouldBe Array(bucketName)
           dataCaptor.getAllValues.toArray.distinct shouldBe Array(invitationData)
+          contentTypeCaptor.getAllValues.toArray.distinct shouldBe Array(ContentTypes.`application/json`)
           // ids should be different every time
           ids.distinct.length shouldBe 3
           // id length should be id length
@@ -116,8 +130,9 @@ class S3ShortenerSvcSpec
         val bucketCaptor: ArgumentCaptor[String] = ArgumentCaptor.forClass(classOf[String])
         val idCaptor: ArgumentCaptor[String] = ArgumentCaptor.forClass(classOf[String])
         val dataCaptor: ArgumentCaptor[Array[Byte]] = ArgumentCaptor.forClass(classOf[Array[Byte]])
+        val contentTypeCaptor: ArgumentCaptor[ContentType] = ArgumentCaptor.forClass(classOf[ContentType])
 
-        when(mockApi.put(any[String], any[String], any[Array[Byte]])).thenReturn (
+        when(mockApi.put(any[String], any[String], any[Array[Byte]], any[ContentType])).thenReturn (
           Future( throw new Exception("Failed every time"))
         )
 
@@ -126,12 +141,14 @@ class S3ShortenerSvcSpec
         } recover {
           case e: Throwable =>
             println(e)
-            verify(mockApi, times(retryCount + 1)).put(bucketCaptor.capture(), idCaptor.capture(), dataCaptor.capture())
+            verify(mockApi, times(retryCount + 1))
+              .put(bucketCaptor.capture(), idCaptor.capture(), dataCaptor.capture(), contentTypeCaptor.capture())
 
             val ids = idCaptor.getAllValues.toArray
-            // bucket and data should be the same every time
+            // bucket, data and contentType should be the same every time
             bucketCaptor.getAllValues.toArray.distinct shouldBe Array(bucketName)
             dataCaptor.getAllValues.toArray.distinct shouldBe Array(invitationData)
+            contentTypeCaptor.getAllValues.toArray.distinct shouldBe Array(ContentTypes.`application/json`)
             // ids should be different every time
             ids.distinct.length shouldBe retryCount + 1
             // id length should be id length

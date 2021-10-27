@@ -937,6 +937,19 @@ class UserAgent(val agentActorContext: AgentActorContext,
     updateOAuthAccessTokenHolder()
     super.postRecoveryCompleted()
   }
+
+  override def postAgentStateFix(): Future[Any] = {
+    logger.info(
+      s"[$persistenceId] unbounded elements => " +
+        s"isSnapshotApplied: $isAnySnapshotApplied, " +
+        s"configs: ${state.configs.size}, " +
+        s"messages: ${state.msgAndDelivery.map(_.msgs.size).getOrElse(0)}, " +
+        s"threadContexts: ${state.threadContext.map(_.contexts.size).getOrElse(0)}, " +
+        s"protoInstances: ${state.protoInstances.map(_.instances.size).getOrElse(0)}, " +
+        s"relationshipAgents: ${state.relationshipAgents.size}"
+    )
+    super.postAgentStateFix()
+  }
 }
 
 object UserAgent {

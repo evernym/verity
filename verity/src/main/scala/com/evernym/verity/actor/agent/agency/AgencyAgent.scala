@@ -327,6 +327,16 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
     * @return
     */
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_ACTOR
+
+  override def postAgentStateFix(): Future[Any] = {
+    logger.info(
+      s"[$persistenceId] unbounded elements => " +
+        s"isSnapshotApplied: $isAnySnapshotApplied, " +
+        s"threadContexts: ${state.threadContext.map(_.contexts.size).getOrElse(0)}, " +
+        s"protoInstances: ${state.protoInstances.map(_.instances.size).getOrElse(0)}"
+    )
+    super.postAgentStateFix()
+  }
 }
 
 //response

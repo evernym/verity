@@ -33,7 +33,7 @@ import com.evernym.verity.actor.metrics.activity_tracker.ActivityTracker
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.typed.base.UserGuardian
 import com.evernym.verity.vdrtools.Libraries
-
+import com.evernym.verity.util.healthcheck.HealthChecker
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -46,6 +46,8 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
   implicit def agentActorContext: AgentActorContext = aac
   implicit def appConfig: AppConfig = agentActorContext.appConfig
   implicit def actorSystem: ActorSystem = agentActorContext.system
+
+  def healthChecker: HealthChecker = HealthChecker(aac, aac.system, executionContextProvider.futureExecutionContext)
 
   implicit lazy val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS,
     DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
@@ -327,6 +329,11 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       case None           => defaultDurationInSeconds
     }
   }
+
+  val appStateCoordinator = new AppStateCoordinator(
+    appConfig,
+    actorSystem,
+    appStateManager)(agentActorContext.futureExecutionContext)
 }
 
 trait PlatformServices {

@@ -18,7 +18,7 @@ import org.json.JSONObject
 import java.util.UUID
 
 protected trait VcxProvision {
-  val logger: Logger = getLoggerByName(getClass.getName)
+  def logger: Logger
 
   def sdkConfig: SdkConfig
 

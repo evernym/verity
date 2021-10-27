@@ -1,8 +1,8 @@
 package com.evernym.integrationtests.e2e.flow
 
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.StatusCodes.MovedPermanently
-import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
+import akka.http.scaladsl.model.StatusCodes.{MovedPermanently, OK}
+import akka.http.scaladsl.model.{HttpEntity, HttpMethods, HttpRequest, Uri}
 import com.evernym.integrationtests.e2e.TestConstants
 import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
@@ -245,15 +245,21 @@ trait InteractiveSdkFlow extends MetricsFlow {
     assert(result.contains(logoUrl))
   }
 
-  def resolveShortInviteUrl(shortInviteUrl: String)(implicit scenario: Scenario): String = {
+  def checkShortInviteUrl(shortInviteUrl: String, inviteUrl: String)(implicit scenario: Scenario): Unit = {
     val fut = Http()(scenario.actorSystem).singleRequest(
       HttpRequest(
         method = HttpMethods.GET,
         uri = shortInviteUrl,
       ))
     val response = Await.result(fut, 10.seconds)
-    response.status shouldBe MovedPermanently
-    response.getHeader("Location").get.value
+    response.status match {
+      case MovedPermanently =>
+        response.getHeader("Location").get.value shouldBe inviteUrl
+      case OK =>
+        val respString = response.entity.asInstanceOf[HttpEntity.Strict].getData().utf8String
+        new JSONObject(respString) // checking that we go valid JSON
+      case s => fail(s"Un-expected response status: $s")
+    }
   }
 
   def writeSchemaWithEndorserDid(sdk: VeritySdkProvider,
@@ -564,7 +570,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
             // check shortInviteURL.
             val shortInviteUrl = msg.getString("shortInviteURL")
-            resolveShortInviteUrl(shortInviteUrl) shouldBe inviteUrl
+            checkShortInviteUrl(shortInviteUrl, inviteUrl)
 
             msg.getJSONObject("~thread").getString("thid") shouldBe threadId
           }
@@ -663,7 +669,8 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
             // check shortInviteURL.
             val shortInviteUrl = msg.getString("shortInviteURL")
-            resolveShortInviteUrl(shortInviteUrl) shouldBe inviteUrl
+
+            checkShortInviteUrl(shortInviteUrl, inviteUrl)
 
             msg.getJSONObject("~thread").getString("thid") shouldBe threadId
 

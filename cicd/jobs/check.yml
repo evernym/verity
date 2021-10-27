@@ -1,12 +1,8 @@
 license-data-check:
   stage: check
+  extends:
+    - .base-rule
   image: registry.gitlab.com/evernym/containers/ssh-git:latest
   script: ./cicd/scripts/license-date-check.sh
-  only:
-    refs:
-      - master
-      - main
-      - tags
-      - merge_requests
   tags:
     - docker-machine

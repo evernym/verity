@@ -5,7 +5,7 @@ import akka.http.scaladsl.model.{HttpRequest, RemoteAddress}
 import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, get, handleExceptions, ignoreTrailingSlash, logRequestResult, parameters, pathPrefix, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.AgencyPublicDid
+import com.evernym.verity.actor.{AgencyPublicDid, AppStateCoordinator}
 import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_ENDPOINT
@@ -13,7 +13,8 @@ import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.common.HttpRouteBase
 import com.evernym.verity.http.route_handlers.configured.ConfiguredApiRoutes
 import com.evernym.verity.http.route_handlers.open.OpenApiRoutes
-import com.evernym.verity.http.route_handlers.restricted.{AbstractHealthChecker, HealthChecker, RestrictedApiRoutes}
+import com.evernym.verity.http.route_handlers.restricted.RestrictedApiRoutes
+import com.evernym.verity.util.healthcheck.HealthChecker
 
 import scala.concurrent.Future
 
@@ -34,7 +35,8 @@ trait EndpointHandlerBase
 
   def endpointRoutes: Route = ignoreTrailingSlash { baseRoute }
 
-  override val healthChecker: AbstractHealthChecker = new HealthChecker(platform)
+  override val healthChecker: HealthChecker = platform.healthChecker
+  override val appStateCoordinator: AppStateCoordinator = platform.appStateCoordinator
 
   protected def msgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
     case ai: AgencyPublicDid     => handleExpectedResponse(ai)

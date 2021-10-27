@@ -34,6 +34,7 @@ trait StaleConfigValidatorBase extends ConfigValidator {
     RemovedConfig("verity.services.sms-service.send-via-local-agency"),
     RemovedConfig("verity.services.sms-service.endpoint"),
     RemovedConfig("verity.services.sms-service.allowed-client-ip-addresses"),
+    RemovedConfig("verity.app-state-manager.state.draining")
   )
 
   private def renamedConfig: Set[StaleConfig] = Set (

@@ -2,6 +2,7 @@ package com.evernym.verity.storage_services.leveldb
 
 import akka.actor.ActorSystem
 import akka.Done
+import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status.DATA_NOT_FOUND
 import com.evernym.verity.actor.StorageInfo
@@ -44,7 +45,7 @@ class LeveldbAPI(config: AppConfig, executionContext: ExecutionContext)(implicit
   /**
    * @param id needs to be unique or data can be overwritten
    */
-  def put(bucketName: String, id: String, data: Array[Byte]): Future[StorageInfo] = {
+  def put(bucketName: String, id: String, data: Array[Byte], contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo] = {
     Future {
       withDB { db =>
         db.put(dbKey(bucketName, id).getBytes(), data)

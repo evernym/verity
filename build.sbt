@@ -57,7 +57,7 @@ val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 //dependency versions
 val vdrtoolswrapperver  = "0.8.0"
 
-val akkaVer         = "2.6.16"
+val akkaVer         = "2.6.17"
 val akkaHttpVer     = "10.2.6"
 val akkaMgtVer      = "1.1.1"
 val alpAkkaVer      = "3.0.3"
@@ -71,7 +71,7 @@ val sdnotifyVer     = "1.3"
 //test dependency versions
 val scalatestVer    = "3.2.10"
 val mockitoVer      = "1.16.42"
-val veritySdkVer    = "0.4.10-50c493d0"
+val veritySdkVer    = "0.5.0"
 val vcxWrapperVer   = "0.12.0.1738"
 
 // compiler plugin versions

@@ -321,10 +321,10 @@ class ActorProtocolContainer[
   override lazy val ledger =
     new LedgerAccessController(
       grantedAccessRights,
+      null, //TODO: replace this with actual VDR Adapter implementation
       LedgerAccessAPI(
         agentActorContext.generalCache,
         agentActorContext.ledgerSvc,
-        null,   //TODO: replace this with actual VDR Adapter implementation during final integration
         wallet
       )
     )

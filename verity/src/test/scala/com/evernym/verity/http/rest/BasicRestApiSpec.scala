@@ -9,7 +9,6 @@ import akka.util.ByteString
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.http.rest.base.RestApiBaseSpec
 import com.evernym.verity.http.route_handlers.open.{RestAcceptedResponse, RestErrorResponse, RestOKResponse, `API-REQUEST-ID`}
-import com.evernym.verity.observability.metrics.MetricsBackend
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util2.Status
 

@@ -60,8 +60,12 @@ class S3ShortenerSvc(val appConfig: AppConfig, implicit val futureExecutionConte
     // generate different id every time.
     val id = genShortId()
 
-    storageAPI.put(bucketName, id, data, ContentTypes.`application/json`) map { _ =>
-      id
+    storageAPI.get(bucketName, id) flatMap {
+      case Some(_) => Future.failed(new RuntimeException(s"Duplicate short id found: $id"))
+      case None =>
+        storageAPI.put(bucketName, id, data, ContentTypes.`application/json`) map { _ =>
+          id
+        }
     } recoverWith {
       case e: Throwable =>
         logger.warn(s"Storing short url data failed: ${e}")

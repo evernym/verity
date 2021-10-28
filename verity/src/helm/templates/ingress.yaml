@@ -2,6 +2,9 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ template "verity.fullname" . }}
+  labels:
+    verity-role: {{ .Values.service }}
+    verity-environment: {{ .Values.env }}
   annotations:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing

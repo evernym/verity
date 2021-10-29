@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.wallet
 
 import java.util.UUID
-
 import akka.actor.PoisonPill
 import akka.testkit.ImplicitSender
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -59,12 +58,24 @@ class WalletActorSpec
       "should respond with WalletCreated" in {
         issuerWalletActor ! CreateWallet()
         expectMsgType[WalletCreated.type]
+
+        //repeat the test to ensure that new requests will be put in stash while actor perform current message
+        issuerWalletActor ! CreateWallet()
+        expectMsgType[WalletAlreadyCreated.type]
+        issuerWalletActor ! CreateWallet()
+        expectMsgType[WalletAlreadyCreated.type]
+        issuerWalletActor ! CreateWallet()
+        expectMsgType[WalletAlreadyCreated.type]
+        issuerWalletActor ! CreateWallet()
+        expectMsgType[WalletAlreadyCreated.type]
+
         holderWalletActor ! CreateWallet()
         expectMsgType[WalletCreated.type]
         verifierWalletActor ! CreateWallet()
         expectMsgType[WalletCreated.type]
       }
     }
+
 
     "when sent CreateWallet command again" - {
       "should respond with WalletAlreadyCreated" in {

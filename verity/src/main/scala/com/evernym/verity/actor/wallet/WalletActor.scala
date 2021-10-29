@@ -20,6 +20,7 @@ import com.evernym.verity.vault.operation_executor.DidOpExecutor.buildErrorDetai
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
 import com.evernym.verity.vault.{KeyParam, WalletDoesNotExist, WalletExt, WalletProvider}
 import com.typesafe.scalalogging.Logger
+import org.hyperledger.indy.sdk.IndyException
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -29,6 +30,8 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
     with Stash {
 
   implicit lazy val futureExecutionContext: ExecutionContext = executionContext
+
+  protected var isWalletOpening: Boolean = false
 
   override def receiveCmd: Receive = preInitReceiver orElse openWalletCallbackReceiver
 
@@ -47,11 +50,15 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
 
   /**
    * in this receiver it will only entertain 'CreateWallet' or 'SetupNewAgentWallet' command
+   *
    * @return
    */
   def postInitReceiver: Receive = {
+    case _: CreateWallet if isWalletOpening =>
+      stash()
     case cmd: CreateWallet =>
       logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
+      isWalletOpening = true
       val sndr = sender()
       val fut = WalletMsgHandler.handleCreateWalletAsync()
       sendRespWhenResolved(cmd.id, sndr, fut)
@@ -89,6 +96,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
 
   /**
    * will entertain wallet commands only if wallet is already opened
+   *
    * @return
    */
   def postOpenWalletReceiver: Receive = {
@@ -164,6 +172,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
             SetWallet(None)
           case e =>
             logger.error(s"unexpected error occurred while trying to open wallet: " + e.getMessage)
+            isWalletOpening = false
             throw e
         }.pipeTo(self)
     }
@@ -199,6 +208,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
 
   implicit def walletExt: WalletExt = walletExtOpt.getOrElse(
     throw new RuntimeException("wallet not opened"))
+
   implicit lazy val walletParam: WalletParam = walletParamOpt.getOrElse(
     throw new RuntimeException("wallet param not computed"))
   implicit lazy val wmp: WalletMsgParam = wmpOpt.getOrElse(
@@ -211,7 +221,7 @@ trait WalletCommand extends ActorMessage {
   //overridden to make sure if this codebase is logging this wallet command anywhere
   // it doesn't log any critical/private information
   val name: String = getClass.getSimpleName
-  val id: String = UUID.randomUUID().toString  //only for logging purposes
+  val id: String = UUID.randomUUID().toString //only for logging purposes
 }
 
 //NOTE:
@@ -236,7 +246,7 @@ case class CreateNewKey(DID: Option[DidStr] = None, seed: Option[String] = None)
 
 case class CreateDID(keyType: String) extends WalletCommand
 
-case class StoreTheirKey(theirDID: DidStr, theirDIDVerKey: VerKeyStr, ignoreIfAlreadyExists: Boolean=false)
+case class StoreTheirKey(theirDID: DidStr, theirDIDVerKey: VerKeyStr, ignoreIfAlreadyExists: Boolean = false)
   extends WalletCommand
 
 case class GetVerKeyOpt(did: DidStr, getKeyFromPool: Boolean = false) extends WalletCommand
@@ -246,7 +256,7 @@ case class GetVerKey(did: DidStr, getKeyFromPool: Boolean = false) extends Walle
 case class SignMsg(keyParam: KeyParam, msg: Array[Byte]) extends WalletCommand
 
 case class VerifySignature(keyParam: KeyParam, challenge: Array[Byte],
-                           signature: Array[Byte], verKeyUsed: Option[VerKeyStr]=None)
+                           signature: Array[Byte], verKeyUsed: Option[VerKeyStr] = None)
   extends WalletCommand
 
 case class PackMsg(msg: Array[Byte], recipVerKeyParams: Set[KeyParam], senderVerKeyParam: Option[KeyParam])
@@ -301,33 +311,52 @@ trait Reply extends ActorMessage
 case class WalletCmdErrorResponse(sd: StatusDetail) extends Reply
 
 trait WalletCmdSuccessResponse extends Reply
+
 case class AgentWalletSetupCompleted(ownerDidPair: DidPair, agentKey: NewKeyCreated) extends WalletCmdSuccessResponse
 
 trait WalletCreatedBase extends WalletCmdSuccessResponse
+
 case object WalletCreated extends WalletCreatedBase
+
 case object WalletAlreadyCreated extends WalletCreatedBase
+
 case class NewKeyCreated(did: DidStr, verKey: VerKeyStr) extends WalletCmdSuccessResponse {
   def didPair: DidPair = DidPair(did, verKey)
 }
+
 case class GetVerKeyOptResp(verKey: Option[VerKeyStr]) extends WalletCmdSuccessResponse
+
 case class GetVerKeyResp(verKey: VerKeyStr) extends WalletCmdSuccessResponse
+
 case class TheirKeyStored(did: DidStr, verKey: VerKeyStr) extends WalletCmdSuccessResponse {
   def didPair: DidPair = DidPair(did, verKey)
 }
+
 case class VerifySigResult(verified: Boolean) extends WalletCmdSuccessResponse
+
 case class SignedMsg(msg: Array[Byte], fromVerKey: VerKeyStr) extends WalletCmdSuccessResponse {
   def signatureResult: SignatureResult = SignatureResult(msg, fromVerKey)
 }
+
 case class MasterSecretCreated(ms: String) extends WalletCmdSuccessResponse
+
 case class CredOfferCreated(offer: String) extends WalletCmdSuccessResponse
+
 case class CredDefCreated(credDefId: String, credDefJson: String) extends WalletCmdSuccessResponse
+
 case class CredReqCreated(credReqJson: String, credReqMetadataJson: String) extends WalletCmdSuccessResponse
+
 case class CredCreated(cred: String) extends WalletCmdSuccessResponse
+
 case class CredStored(cred: String) extends WalletCmdSuccessResponse
+
 case class CredForProofReqCreated(cred: String) extends WalletCmdSuccessResponse
+
 case class ProofCreated(proof: String) extends WalletCmdSuccessResponse
+
 case class ProofVerifResult(result: Boolean) extends WalletCmdSuccessResponse
-case class PackedMsg(msg: Array[Byte], metadata: Option[PayloadMetadata]=None)
+
+case class PackedMsg(msg: Array[Byte], metadata: Option[PayloadMetadata] = None)
   extends WalletCmdSuccessResponse
 
 case class UnpackedMsg(msg: Array[Byte],
@@ -335,8 +364,9 @@ case class UnpackedMsg(msg: Array[Byte],
                        recipVerKey: Option[VerKeyStr]) extends WalletCmdSuccessResponse {
   def msgString: String = new String(msg)
 }
+
 object UnpackedMsg {
-  def apply(msg: String, senderVerKey: Option[VerKeyStr] = None, recipVerKey: Option[VerKeyStr]=None): UnpackedMsg =
+  def apply(msg: String, senderVerKey: Option[VerKeyStr] = None, recipVerKey: Option[VerKeyStr] = None): UnpackedMsg =
     UnpackedMsg(msg.getBytes, senderVerKey, recipVerKey)
 }
 

@@ -12,52 +12,59 @@ metadata:
 data:
   customers.conf: |
     {{- if .Values.customers }}
-    "verity" : {
-      {{- range .Values.customers }}
-      #************************
-      # {{ .domainDid }}
-      #************************
+    {
+      "verity": {
+        {{- range $domainDid, $values := .Values.customers }}
+        
         {{- if .templates }}
-      msg-template.agent-specific {
-        {{ .domainDid }} {
-          {{ if .templates.inviteUrl }}sms-msg-template-invite-url = {{.templates.inviteUrl | quote }}{{- end }}
-          {{ if .templates.offerConnMsg }}sms-msg-template-offer-conn-msg = {{.templates.offerConnMsg | quote }}{{- end }}
-          {{ if .templates.deeplinkUrl }}sms-offer-template-deeplink-url = {{.templates.deeplinkUrl | quote }}{{- end }}
+        "msg-template": {
+          "agent-specific": {
+            {{ $domainDid | quote }}: {
+              {{ if .templates.inviteUrl }}"sms-msg-template-invite-url": {{.templates.inviteUrl | quote }}{{- end -}}
+              {{ if .templates.offerConnMsg }}"sms-msg-template-offer-conn-msg": {{.templates.offerConnMsg | quote }}{{- end }}
+              {{ if .templates.deeplinkUrl }}"sms-offer-template-deeplink-url": {{.templates.deeplinkUrl | quote }}{{- end }}
+            }
+          }
         }
-      }
         {{- end }}
 
         {{- if .authorizedKeys }}
-      agent.authentication.keys {
-        {{ .domainDid }}: [{{ join ", " .authorizedKeys }}]
-      }
+        "agent": {
+          "authentication": {
+            "keys": {
+              {{ $domainDid | quote }}: [{{ join ", " .authorizedKeys }}]
+            }
+          }
+        }
         {{- end }}
 
         {{- if .retentionPolicies }}
-      retention-policy {
-        protocol-state {
-          {{ .domainDid }} {
-            {{ if .retentionPolicies.fallback }}undefined-fallback = {{.retentionPolicies.fallback | quote }}{{- end }}
-            {{- if .retentionPolicies.protocols }}
-              {{- range .retentionPolicies.protocols }}
-            {{ .ref | quote }} = {{ .time | quote }}
+        "retention-policy": {
+          "protocol-state": {
+            {{ $domainDid | quote }}: {
+              {{ if .retentionPolicies.fallback }}"undefined-fallback": {{.retentionPolicies.fallback | quote }}{{- end }}
+              {{- if .retentionPolicies.protocols }}
+                {{- range .retentionPolicies.protocols }}
+              {{ .ref | quote }}: {{ .time | quote }}
+                {{- end }}
               {{- end }}
-            {{- end }}
+            }
+          }
+          "outbox-state": {
+            {{ $domainDid | quote }}: {
+              {{ if .retentionPolicies.fallback }}"undefined-fallback": {{.retentionPolicies.fallback | quote }}{{- end }}
+              {{- if .retentionPolicies.outbox }}
+                {{- range .retentionPolicies.outbox }}
+              {{ .ref | quote }}: {{ .time | quote }}
+                {{- end }}
+              {{- end }}
+            }
           }
         }
-        outbox-state {
-          {{ .domainDid }} {
-            {{ if .retentionPolicies.fallback }}undefined-fallback = {{.retentionPolicies.fallback | quote }}{{- end }}
-            {{- if .retentionPolicies.outbox }}
-              {{- range .retentionPolicies.outbox }}
-            {{ .ref | quote }} = {{ .time | quote }}
-              {{- end }}
-            {{- end }}
-          }
-        }
-      }
         {{- end }}
-      {{- end }}
+
+        {{- end }}
+      }
     }
     {{- end }}
   sponsors.conf: |

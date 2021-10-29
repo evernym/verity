@@ -4,7 +4,7 @@ metadata:
   name: vars-{{ template "verity.fullname" . }}
   labels:
     tags.datadoghq.com/service: {{ .Values.service }}
-    tags.datadoghq.com/environment: {{ .Values.env }}
+    tags.datadoghq.com/env: {{ .Values.env }}
 data:
 {{ toYaml .Values.vars | indent 2 }}
 ---
@@ -14,7 +14,7 @@ metadata:
   name: file-{{ template "verity.fullname" . }}
   labels:
     tags.datadoghq.com/service: {{ .Values.service }}
-    tags.datadoghq.com/environment: {{ .Values.env }}
+    tags.datadoghq.com/env: {{ .Values.env }}
 data:
   customers.conf: |
     {{- if .Values.customers }}
@@ -138,6 +138,6 @@ metadata:
   name: ledger-genesis-{{ template "verity.fullname" . }}
   labels:
     tags.datadoghq.com/service: {{ .Values.service }}
-    tags.datadoghq.com/environment: {{ .Values.env }}
+    tags.datadoghq.com/env: {{ .Values.env }}
 data:
 {{ index .Values "ledger-genesis" | toPrettyJson | indent 2 }}

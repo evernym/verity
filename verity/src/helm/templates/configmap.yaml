@@ -2,6 +2,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: vars-{{ template "verity.fullname" . }}
+  labels:
+    tags.datadoghq.com/service: {{ .Values.service }}
+    tags.datadoghq.com/environment: {{ .Values.env }}
 data:
 {{ toYaml .Values.vars | indent 2 }}
 ---
@@ -9,6 +12,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: file-{{ template "verity.fullname" . }}
+  labels:
+    tags.datadoghq.com/service: {{ .Values.service }}
+    tags.datadoghq.com/environment: {{ .Values.env }}
 data:
   customers.conf: |
     {{- if .Values.customers }}
@@ -130,5 +136,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: ledger-genesis-{{ template "verity.fullname" . }}
+  labels:
+    tags.datadoghq.com/service: {{ .Values.service }}
+    tags.datadoghq.com/environment: {{ .Values.env }}
 data:
 {{ index .Values "ledger-genesis" | toPrettyJson | indent 2 }}

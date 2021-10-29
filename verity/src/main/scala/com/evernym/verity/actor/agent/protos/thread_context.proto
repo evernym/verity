@@ -1,6 +1,5 @@
 syntax = "proto3";
 
-import "scalapb/scalapb.proto";
 import "msg_pack_format.proto";
 import "type_format.proto";
 import "msg_orders.proto";

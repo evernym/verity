@@ -4,7 +4,7 @@ metadata:
   name: {{ template "verity.fullname" . }}
   labels:
     tags.datadoghq.com/service: {{ .Values.service }}
-    tags.datadoghq.com/environment: {{ .Values.env }}
+    tags.datadoghq.com/env: {{ .Values.env }}
   annotations:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing

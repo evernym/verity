@@ -4,7 +4,7 @@ metadata:
   name: {{ template "verity.fullname" . }}
   labels:
     tags.datadoghq.com/service: {{ .Values.service }}
-    tags.datadoghq.com/environment: {{ .Values.env }}
+    tags.datadoghq.com/env: {{ .Values.env }}
 spec:
   type: {{ .Values.k8sService.type }}
   selector:

@@ -2,6 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ template "verity.fullname" . }}
+  labels:
+    tags.datadoghq.com/service: {{ .Values.service }}
+    tags.datadoghq.com/environment: {{ .Values.env }}
   annotations:
     app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
     app.gitlab.com/env: {{ .Values.env }}
@@ -20,8 +23,8 @@ spec:
       labels:
         app: {{ template "verity.fullname" . }}
         actorSystemName: verity
-        verity-role: {{ .Values.service }}
-        verity-environment: {{ .Values.env }}
+        tags.datadoghq.com/service: {{ .Values.service }}
+        tags.datadoghq.com/environment: {{ .Values.env }}
       annotations:
         app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
         app.gitlab.com/env: {{ .Values.env }}

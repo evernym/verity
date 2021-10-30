@@ -30,7 +30,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{AttIds, Availab
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.{Presentation, RequestPresentation}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProof.{credentialsToUse, extractAttachment}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
-import com.evernym.verity.observability.metrics.{NoOpMetricsWriter, backend}
+import com.evernym.verity.observability.metrics.NoOpMetricsWriter
 import com.evernym.verity.protocol.engine.util.DIDDoc
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util2.Status

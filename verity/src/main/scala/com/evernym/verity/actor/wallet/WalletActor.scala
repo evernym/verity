@@ -1,27 +1,27 @@
 package com.evernym.verity.actor.wallet
 
-import java.util.UUID
-import akka.pattern.pipe
 import akka.actor.{ActorRef, NoSerializationVerificationNeeded, Stash}
-import com.evernym.verity.util2.Exceptions.HandledErrorException
-import com.evernym.verity.util2.Status.{INVALID_VALUE, StatusDetail, UNHANDLED}
+import akka.pattern.pipe
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.config.AppConfig
-import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter}
-import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.actor.base.CoreActor
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
+import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter}
 import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
+import com.evernym.verity.util2.Exceptions.HandledErrorException
+import com.evernym.verity.util2.Status.{INVALID_VALUE, StatusDetail, UNHANDLED}
+import com.evernym.verity.vault
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.operation_executor.DidOpExecutor.buildErrorDetail
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
 import com.evernym.verity.vault.{KeyParam, WalletDoesNotExist, WalletExt, WalletProvider}
 import com.typesafe.scalalogging.Logger
-import org.hyperledger.indy.sdk.IndyException
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -30,8 +30,6 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
     with Stash {
 
   implicit lazy val futureExecutionContext: ExecutionContext = executionContext
-
-  protected var isWalletOpening: Boolean = false
 
   override def receiveCmd: Receive = preInitReceiver orElse openWalletCallbackReceiver
 
@@ -49,23 +47,11 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
   }
 
   /**
-   * in this receiver it will only entertain 'CreateWallet' or 'SetupNewAgentWallet' command
+   * in this receiver it will only entertain 'SetupNewAgentWallet' command
    *
    * @return
    */
   def postInitReceiver: Receive = {
-    case _: CreateWallet if isWalletOpening =>
-      stash()
-    case cmd: CreateWallet =>
-      logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
-      isWalletOpening = true
-      val sndr = sender()
-      val fut = WalletMsgHandler.handleCreateWalletAsync()
-      sendRespWhenResolved(cmd.id, sndr, fut)
-        .map { _ =>
-          openWalletIfExists()
-        }
-
     case snw: SetupNewAgentWallet =>
       val sndr = sender()
       setNewReceiveBehaviour(openWalletCallbackReceiver)
@@ -75,6 +61,23 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
       }
   }
 
+  def walletCanBeOpenedReceive: Receive = {
+    case cmd: CreateWallet =>
+      logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
+      setNewReceiveBehaviour(walletAlreadyIsOpeningReceive orElse postInitReceiver orElse openWalletCallbackReceiver)
+      val sndr = sender()
+      val fut = WalletMsgHandler.handleCreateWalletAsync()
+      sendRespWhenResolved(cmd.id, sndr, fut)
+        .map { _ =>
+          openWalletIfExists()
+        }
+  }
+
+  def walletAlreadyIsOpeningReceive: Receive = {
+        case _: CreateWallet =>
+          stash()
+  }
+
   /**
    * as part of 'openWalletIfExists' function call, it calls open wallet async api
    * and as part of it's callback, it sends 'SetWallet' command back to this actor
@@ -82,13 +85,16 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
    * @return
    */
   def openWalletCallbackReceiver: Receive = {
+
+    case util.Failure(vault.WalletAlreadyOpened(_)) =>
+      setNewReceiveBehaviour(walletCanBeOpenedReceive orElse postInitReceiver orElse openWalletCallbackReceiver)
     case sw: SetWallet =>
       sw.wallet match {
         case Some(w) =>
           walletExtOpt = Option(w)
           setNewReceiveBehaviour(postOpenWalletReceiver)
         case None =>
-          setNewReceiveBehaviour(postInitReceiver orElse openWalletCallbackReceiver)
+          setNewReceiveBehaviour(walletCanBeOpenedReceive orElse postInitReceiver orElse openWalletCallbackReceiver)
       }
       unstashAll()
     case _: WalletCommand => stash()
@@ -171,8 +177,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
           case _ @ (_: WalletDoesNotExist)  =>
             SetWallet(None)
           case e =>
-            logger.error(s"unexpected error occurred while trying to open wallet: " + e.getMessage)
-            isWalletOpening = false
+            logger.error(s"unexpected error occurred while trying to open wallet: " + e.getMessage + e.getClass.getName)
             throw e
         }.pipeTo(self)
     }

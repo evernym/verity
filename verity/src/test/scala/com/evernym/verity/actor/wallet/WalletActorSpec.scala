@@ -54,8 +54,8 @@ class WalletActorSpec
 
   "WalletActor" - {
 
-    "when sent CreateWallet command" - {
-      "should respond with WalletCreated" in {
+    "when sent CreateWallet command and resent several times" - {
+      "should respond with WalletCreated, then WalletAlreadyCreated" in {
         issuerWalletActor ! CreateWallet()
         expectMsgType[WalletCreated.type]
 

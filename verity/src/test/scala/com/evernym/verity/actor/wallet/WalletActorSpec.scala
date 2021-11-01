@@ -50,25 +50,35 @@ class WalletActorSpec
   lazy val holderWalletActor: agentRegion = agentRegion(UUID.randomUUID().toString, walletRegionActor)
   lazy val verifierWalletActor: agentRegion = agentRegion(UUID.randomUUID().toString, walletRegionActor)
 
+  lazy val testWalletActor: agentRegion = agentRegion(UUID.randomUUID().toString, walletRegionActor)
+
   val testByteMsg: Array[Byte] = "test message".getBytes()
 
   "WalletActor" - {
 
-    "when sent CreateWallet command and resent several times" - {
-      "should respond with WalletCreated, then WalletAlreadyCreated" in {
+    "when sent CreateWallet command and then sent it again" - {
+      "should respond with WalletCreated and then WalletAlreadyOpened" in {
+        //repeat the test to ensure that new requests will be put in stash while actor perform current message
+        testWalletActor ! CreateWallet()
+        expectMsgType[WalletCreated.type]
+        testWalletActor ! CreateWallet()
+        expectMsgType[WalletAlreadyCreated.type]
+        testWalletActor ! CreateWallet()
+        expectMsgType[WalletAlreadyCreated.type]
+      }
+    }
+
+    "when sent Close to testActor" - {
+      "should be closed successfully" in {
+        testWalletActor ! Close()
+        expectMsgType[Done.type]
+      }
+    }
+
+    "when sent CreateWallet command" - {
+      "should respond with WalletCreated" in {
         issuerWalletActor ! CreateWallet()
         expectMsgType[WalletCreated.type]
-
-        //repeat the test to ensure that new requests will be put in stash while actor perform current message
-        issuerWalletActor ! CreateWallet()
-        expectMsgType[WalletAlreadyCreated.type]
-        issuerWalletActor ! CreateWallet()
-        expectMsgType[WalletAlreadyCreated.type]
-        issuerWalletActor ! CreateWallet()
-        expectMsgType[WalletAlreadyCreated.type]
-        issuerWalletActor ! CreateWallet()
-        expectMsgType[WalletAlreadyCreated.type]
-
         holderWalletActor ! CreateWallet()
         expectMsgType[WalletCreated.type]
         verifierWalletActor ! CreateWallet()

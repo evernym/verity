@@ -47,10 +47,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
       openWalletIfExists()
     case sw: SetWallet =>
       trySetWallet(sw)
-    case util.Failure(vault.WalletAlreadyOpened(_)) =>
-      setNewReceiveBehaviour(stateWalletNotOpened)
     case _: WalletCommand => stash()
-
   }
 
   def stateWalletNotOpened: Receive = {
@@ -60,16 +57,10 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
       setupNewAgentWalletAction(snw)
     case sw: SetWallet =>
       trySetWallet(sw)
-    case util.Failure(vault.WalletAlreadyOpened(_)) =>
-      setNewReceiveBehaviour(stateWalletNotOpened)
     case _: WalletCommand => stash()
   }
 
   def stateWalletIsOpening: Receive = {
-    case _: CreateWallet =>
-      stash()
-    case snw: SetupNewAgentWallet =>
-      setupNewAgentWalletAction(snw)
     case util.Failure(vault.WalletAlreadyOpened(_)) =>
       setNewReceiveBehaviour(stateWalletNotOpened)
     case sw: SetWallet =>
@@ -82,8 +73,6 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
    * as part of 'openWalletIfExists' function call, it calls open wallet async api
    * and as part of it's callback, it sends 'SetWallet' command back to this actor
    * to update the state accordingly
-   *
-   * @return
    */
   def stateOpenWalletCallbackOnly: Receive = {
     case util.Failure(vault.WalletAlreadyOpened(_)) =>
@@ -93,6 +82,22 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
     case _: WalletCommand => stash()
   }
 
+  /**
+   * will entertain wallet commands only if wallet is already opened
+   *
+   */
+  def stateReady: Receive = {
+    case snaw: SetupNewAgentWallet =>
+      handleSetupNewAgentWallet(snaw)
+
+    case _: CreateWallet if walletExtOpt.isDefined =>
+      sender ! WalletAlreadyCreated
+
+    case cmd: WalletCommand if walletExtOpt.isDefined => //only entertain commands extending 'WalletCommand'
+      val sndr = sender()
+      logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
+      sendRespWhenResolved(cmd.id, sndr, WalletMsgHandler.executeAsync(cmd))
+  }
 
 
   private def trySetWallet(sw: SetWallet): Unit = {
@@ -124,25 +129,6 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
       openWalletIfExists()
       self.tell(snw, sndr)
     }
-  }
-
-
-
-  /**
-   * will entertain wallet commands only if wallet is already opened
-   *
-   */
-  def stateReady: Receive = {
-    case snaw: SetupNewAgentWallet =>
-      handleSetupNewAgentWallet(snaw)
-
-    case _: CreateWallet if walletExtOpt.isDefined =>
-      sender ! WalletAlreadyCreated
-
-    case cmd: WalletCommand if walletExtOpt.isDefined => //only entertain commands extending 'WalletCommand'
-      val sndr = sender()
-      logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
-      sendRespWhenResolved(cmd.id, sndr, WalletMsgHandler.executeAsync(cmd))
   }
 
   private def handleSetupNewAgentWallet(snw: SetupNewAgentWallet): Unit = {

@@ -5,7 +5,7 @@ import com.evernym.verity.did.DidPair
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.journal.DebugProtocols
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.{IssueCredMsgFamily, IssueCredentialProtoDef}
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredentialProtoDef
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Ctl.Reuse
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Role.{Invitee, Inviter}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}

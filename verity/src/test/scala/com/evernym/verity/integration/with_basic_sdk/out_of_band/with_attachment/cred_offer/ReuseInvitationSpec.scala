@@ -1,8 +1,7 @@
-package com.evernym.verity.integration.with_basic_sdk.out_of_band.with_attachment
+package com.evernym.verity.integration.with_basic_sdk.out_of_band.with_attachment.cred_offer
 
-import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Offer
@@ -13,6 +12,7 @@ import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitatio
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
+import com.evernym.verity.util2.ExecutionContextProvider
 
 import scala.concurrent.ExecutionContext
 

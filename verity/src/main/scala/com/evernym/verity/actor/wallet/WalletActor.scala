@@ -52,9 +52,9 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
 
   def stateWalletNotOpened: Receive = {
     case cmd: CreateWallet =>
-      tryCreateWallet(cmd)
+      handleCreateWallet(cmd)
     case snw: SetupNewAgentWallet =>
-      setupNewAgentWalletAction(snw)
+      handleSetupNewAgentWalletOnStateWalletIsNotOpened(snw)
     case sw: SetWallet =>
       handleSetWallet(sw)
     case _: WalletCommand => stash()
@@ -80,7 +80,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
    */
   def stateReady: Receive = {
     case snaw: SetupNewAgentWallet =>
-      handleSetupNewAgentWallet(snaw)
+      handleSetupNewAgentWalletOnStateReady(snaw)
 
     case _: CreateWallet if walletExtOpt.isDefined =>
       sender ! WalletAlreadyCreated
@@ -103,25 +103,32 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
     unstashAll()
   }
 
-  private def tryCreateWallet(cmd: CreateWallet, shouldResponseToSender: Boolean = true): Unit = {
-    logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
+  /**
+   *there is some code duplicate in two following methods,
+   * but state changing looks better inside handle method against a function that combines repeating code
+   */
+
+  private def handleCreateWallet(cmd: CreateWallet): Unit = {
     setNewReceiveBehaviour(stateWalletIsOpening)
     val sndr = sender()
-
+    logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
     val fut = WalletMsgHandler.handleCreateWalletAsync()
-    val finalFuture = if (shouldResponseToSender) sendRespWhenResolved(cmd.id, sndr , fut) else fut
+    sendRespWhenResolved(cmd.id, sndr, fut)
+      .map { _ =>
+        openWalletIfExists()
+      }
+  }
 
-    finalFuture.map { _ =>
+  private def handleSetupNewAgentWalletOnStateWalletIsNotOpened(snw: SetupNewAgentWallet): Unit = {
+    setNewReceiveBehaviour(stateWalletIsOpening)
+    val sndr = sender()
+    WalletMsgHandler.handleCreateWalletAsync().map { _ =>
       openWalletIfExists()
+      self.tell(snw, sndr)
     }
   }
 
-  private def setupNewAgentWalletAction(snw: SetupNewAgentWallet): Unit = {
-    tryCreateWallet(CreateWallet(), shouldResponseToSender = false)
-    self.tell(snw, sender())
-  }
-
-  private def handleSetupNewAgentWallet(snw: SetupNewAgentWallet): Unit = {
+  private def handleSetupNewAgentWalletOnStateReady(snw: SetupNewAgentWallet): Unit = {
     val sndr = sender()
     logger.debug(s"[$actorId] [${snw.id}] wallet op started: " + snw)
     val ownerKeyFut =

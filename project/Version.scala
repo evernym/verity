@@ -10,7 +10,7 @@ object Version {
   val major = settingKey[String]("semver major version").withRank(BSetting)
   val minor = settingKey[String]("semver minor version").withRank(BSetting)
   val patch = settingKey[String]("semver patch version").withRank(BSetting)
-  val build = settingKey[String]("build version").withRank(BSetting)
+  val build = settingKey[String]("semver build version").withRank(BSetting)
   val dateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ")
   val currentZonedDateTime: ZonedDateTime = ZonedDateTime.now()
 
@@ -24,7 +24,7 @@ object Version {
 //      git.gitHeadCommit.value,
 //      git.gitUncommittedChanges.value
 //    )
-//    version := s"${major.value}.${minor.value}.${patch.value}-${build.value}"
+//    version := s"${major.value}.${minor.value}.${patch.value}.${build.value}"
 //  }
 
   private def shortHash(commitHash: Option[String]): String = {

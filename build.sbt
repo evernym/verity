@@ -95,7 +95,7 @@ ThisBuild / build := buildNum(
   git.gitHeadCommit.value,
   git.gitUncommittedChanges.value
 )
-ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}-${build.value}"
+ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}.${build.value}"
 maintainer := "Evernym Inc <dev@evernym.com>"
 
 ThisBuild / sharedLibraries := sharedLibDeps
@@ -243,7 +243,7 @@ lazy val protoBufSettings = Seq(
     scalapb.gen(flatPackage = true) -> (Compile / sourceManaged).value
   ),
   Compile / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
-  Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch).taskValue,
+  Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch, build).taskValue,
 
   Test / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
   Test / PB.targets := Seq(

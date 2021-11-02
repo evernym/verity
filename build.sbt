@@ -81,19 +81,21 @@ val silencerVersion = "1.7.5"
 val COMPILE_TIME_ONLY = "compileonly"
 val CompileOnly = config(COMPILE_TIME_ONLY)
 
-val majorNum = "0"
-val minorNum = "4"
+val majorNum = "2"
+val minorNum = "16"
+val bugfixNum = "0"
 
 // I'm not sure why setting this keys don't resolve in all
 // other scopes but it does not so we re-resolve it commonSettings
 ThisBuild / major := majorNum
 ThisBuild / minor := minorNum
+ThisBuild / bugfix := bugfixNum
 ThisBuild / patch := patchNum(
   git.gitHeadCommitDate.value,
   git.gitHeadCommit.value,
   git.gitUncommittedChanges.value
 )
-ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}"
+ThisBuild / version := s"${major.value}.${minor.value}.${bugfix.value}.${patch.value}"
 maintainer := "Evernym Inc <dev@evernym.com>"
 
 ThisBuild / sharedLibraries := sharedLibDeps

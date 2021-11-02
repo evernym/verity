@@ -10,18 +10,21 @@ object Version {
   val major = settingKey[String]("semver major version").withRank(BSetting)
   val minor = settingKey[String]("semver minor version").withRank(BSetting)
   val patch = settingKey[String]("semver patch version").withRank(BSetting)
-  val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ")
-  val currentZonedDateTime = ZonedDateTime.now()
+  val build = settingKey[String]("build version").withRank(BSetting)
+  val dateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ")
+  val currentZonedDateTime: ZonedDateTime = ZonedDateTime.now()
 
 //  def currentVersion: Seq[Setting[_]] = {
-//    major := "0"
-//    minor := "4"
-//    patch := patchNum(
+//    major := "2"
+//    minor := "16"
+//    patch := "0"
+//    build := patchNum(
+//      bugfixNum,
 //      git.gitHeadCommitDate.value,
 //      git.gitHeadCommit.value,
 //      git.gitUncommittedChanges.value
 //    )
-//    version := s"${major.value}.${minor.value}.${patch.value}"
+//    version := s"${major.value}.${minor.value}.${patch.value}-${build.value}"
 //  }
 
   private def shortHash(commitHash: Option[String]): String = {
@@ -36,7 +39,7 @@ object Version {
     s"${epoch - TIME_OFFSET}"
   }
 
-  def patchNum(commitDate: Option[String], commitHash: Option[String], uncommitChanges: Boolean): String = {
+  def buildNum(commitDate: Option[String], commitHash: Option[String], uncommitChanges: Boolean): String = {
     if (uncommitChanges || !sys.env.contains("CI")) {
       // Always use SNAPSHOTs when producing artifacts outside of gitlab pipelines
       if (sys.env.contains("DEVLAB")) {

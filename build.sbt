@@ -83,19 +83,19 @@ val CompileOnly = config(COMPILE_TIME_ONLY)
 
 val majorNum = "2"
 val minorNum = "16"
-val bugfixNum = "0"
+val patchNum = "0"
 
 // I'm not sure why setting this keys don't resolve in all
 // other scopes but it does not so we re-resolve it commonSettings
 ThisBuild / major := majorNum
 ThisBuild / minor := minorNum
-ThisBuild / patch := patchNum(
-  bugfixNum,
+ThisBuild / patch := patchNum
+ThisBuild / build := buildNum(
   git.gitHeadCommitDate.value,
   git.gitHeadCommit.value,
   git.gitUncommittedChanges.value
 )
-ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}"
+ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}-${build.value}"
 maintainer := "Evernym Inc <dev@evernym.com>"
 
 ThisBuild / sharedLibraries := sharedLibDeps

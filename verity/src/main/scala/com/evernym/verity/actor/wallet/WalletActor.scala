@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.wallet
 
-import akka.actor.{ActorRef, NoSerializationVerificationNeeded, Stash}
+import akka.actor.{Actor, ActorRef, NoSerializationVerificationNeeded, Stash}
 import akka.pattern.pipe
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.PayloadMetadata
@@ -46,7 +46,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
       wmpOpt = Option(WalletMsgParam(walletProvider, swp.wp, Option(poolManager)))
       openWalletIfExists()
     case sw: SetWallet =>
-      trySetWallet(sw)
+      handleSetWallet(sw)
     case _: WalletCommand => stash()
   }
 
@@ -56,17 +56,8 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
     case snw: SetupNewAgentWallet =>
       setupNewAgentWalletAction(snw)
     case sw: SetWallet =>
-      trySetWallet(sw)
+      handleSetWallet(sw)
     case _: WalletCommand => stash()
-  }
-
-  def stateWalletIsOpening: Receive = {
-    case util.Failure(vault.WalletAlreadyOpened(_)) =>
-      setNewReceiveBehaviour(stateWalletNotOpened)
-    case sw: SetWallet =>
-      trySetWallet(sw)
-    case _: WalletCommand =>
-      stash()
   }
 
   /**
@@ -74,12 +65,13 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
    * and as part of it's callback, it sends 'SetWallet' command back to this actor
    * to update the state accordingly
    */
-  def stateOpenWalletCallbackOnly: Receive = {
+  def stateWalletIsOpening: Receive = {
     case util.Failure(vault.WalletAlreadyOpened(_)) =>
       setNewReceiveBehaviour(stateWalletNotOpened)
     case sw: SetWallet =>
-      trySetWallet(sw)
-    case _: WalletCommand => stash()
+      handleSetWallet(sw)
+    case _: WalletCommand =>
+      stash()
   }
 
   /**
@@ -100,7 +92,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
   }
 
 
-  private def trySetWallet(sw: SetWallet): Unit = {
+  private def handleSetWallet(sw: SetWallet): Unit = {
     sw.wallet match {
       case Some(w) =>
         walletExtOpt = Option(w)
@@ -111,24 +103,22 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
     unstashAll()
   }
 
-  private def tryCreateWallet(cmd: CreateWallet): Unit = {
+  private def tryCreateWallet(cmd: CreateWallet, shouldResponseToSender: Boolean = true): Unit = {
     logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
     setNewReceiveBehaviour(stateWalletIsOpening)
     val sndr = sender()
+
     val fut = WalletMsgHandler.handleCreateWalletAsync()
-    sendRespWhenResolved(cmd.id, sndr, fut)
-      .map { _ =>
-        openWalletIfExists()
-      }
+    val finalFuture = if (shouldResponseToSender) sendRespWhenResolved(cmd.id, sndr , fut) else fut
+
+    finalFuture.map { _ =>
+      openWalletIfExists()
+    }
   }
 
   private def setupNewAgentWalletAction(snw: SetupNewAgentWallet): Unit = {
-    val sndr = sender()
-    setNewReceiveBehaviour(stateOpenWalletCallbackOnly)
-    WalletMsgHandler.handleCreateWalletAsync().map { _ =>
-      openWalletIfExists()
-      self.tell(snw, sndr)
-    }
+    tryCreateWallet(CreateWallet(), shouldResponseToSender = false)
+    self.tell(snw, sender())
   }
 
   private def handleSetupNewAgentWallet(snw: SetupNewAgentWallet): Unit = {

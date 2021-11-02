@@ -76,7 +76,6 @@ object InviteUtil {
     val preCodedId = s"$encodeVer$delimiter$protoRef$delimiter$relationshipId$delimiter$threadId"
     val encoded = Base58Util.encode(preCodedId.getBytes())
     s"${encoded.substring(0, 7)}-${encoded.substring(7, 16)}-${encoded.substring(16, 25)}-${encoded.substring(25, 34)}-${encoded.substring(34)}"
-
   }
 
   def isThreadedInviteId(id: String): Boolean = {
@@ -106,7 +105,6 @@ object InviteUtil {
           Failure(new Exception("Unable to extract 4 elements from ThreadedInviteId"))
       }
       .map{x =>
-        val s = x(0)
         ThreadedInviteIdDecoded(x(0), x(1), x(2), x(3))
       }
   }

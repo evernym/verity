@@ -122,6 +122,7 @@ class ActorProtocolContainer[
         case None     => agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(domainId, GetSponsorRel), self)
       }
     case ProtocolCmd(FromProtocol(fromPinstId, newRel), _) =>
+      logger.info(s"[$pinstId] protocol event migration started (fromPinstId: '$fromPinstId')")
       newRel.relationshipType match {
         case PAIRWISE_RELATIONSHIP =>
           val changeRelEvt = PairwiseRelIdsChanged(newRel.myDid_!, newRel.theirDid_!)
@@ -151,8 +152,9 @@ class ActorProtocolContainer[
   }
 
   final def baseBehavior: Receive = {
-    case ProtocolCmd(stc: SetThreadContext, None)  => handleSetThreadContext(stc.tcd)
     case s: SponsorRel                             => handleSponsorRel(s)
+    case ProtocolCmd(stc: SetThreadContext, None)  => handleSetThreadContext(stc.tcd)
+    case ProtocolCmd(stc: FromProtocol, None)      => logger.info(s"[$pinstId] protocol events already migrated from '${stc.fromPinstId}'")
     case pc: ProtocolCmd                           => handleProtocolCmd(pc)
   }
 
@@ -165,6 +167,7 @@ class ActorProtocolContainer[
     case ProtocolCmd(ExtractedEvent(event), None) =>
       persistExt(event)( _ => applyRecordedEvent(event) )
     case ProtocolCmd(ExtractionComplete(), None) =>
+      logger.info(s"[$pinstId] protocol event migration completed")
       persistExt(changeRelEvt){ _ =>
         applyRecordedEvent(changeRelEvt)
         toBaseBehavior()

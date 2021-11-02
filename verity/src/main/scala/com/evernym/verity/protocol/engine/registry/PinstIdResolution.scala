@@ -132,7 +132,6 @@ object PinstIdResolution {
           ).hex
 
         case Scope.Adhoc =>
-
           safeMultiHash(
             SHA256_trunc16,
             protoHash,

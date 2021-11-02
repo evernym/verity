@@ -89,13 +89,13 @@ val bugfixNum = "0"
 // other scopes but it does not so we re-resolve it commonSettings
 ThisBuild / major := majorNum
 ThisBuild / minor := minorNum
-ThisBuild / bugfix := bugfixNum
 ThisBuild / patch := patchNum(
+  bugfixNum,
   git.gitHeadCommitDate.value,
   git.gitHeadCommit.value,
   git.gitUncommittedChanges.value
 )
-ThisBuild / version := s"${major.value}.${minor.value}.${bugfix.value}.${patch.value}"
+ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}"
 maintainer := "Evernym Inc <dev@evernym.com>"
 
 ThisBuild / sharedLibraries := sharedLibDeps

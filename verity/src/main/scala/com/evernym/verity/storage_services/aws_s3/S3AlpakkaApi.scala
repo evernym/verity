@@ -25,7 +25,7 @@ import scala.language.postfixOps
 class S3AlpakkaApi(config: AppConfig, executionContext: ExecutionContext, overrideConfig: Config = ConfigFactory.empty())(implicit val as: ActorSystem) extends StorageAPI(config, executionContext, overrideConfig) {
   private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
-  def s3Settings: S3Settings = S3Settings(overrideConfig.resolveWith(config.config.getConfig("alpakka.s3")))
+  def s3Settings: S3Settings = S3Settings(overrideConfig.withFallback(config.config.getConfig("alpakka.s3")))
   lazy val s3Attrs: Attributes = S3Attributes.settings(s3Settings)
 
   def createBucket(bucketName: String): Future[Done] =  S3.makeBucket(bucketName)

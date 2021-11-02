@@ -28,7 +28,7 @@ class LeveldbAPI(config: AppConfig, executionContext: ExecutionContext, override
   extends StorageAPI(config, executionContext, overrideConfig) {
   private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
-  lazy val path: String = overrideConfig.resolveWith(config.config.getConfig("verity.blob-store")).getString("local-store-path")
+  lazy val path: String = overrideConfig.withFallback(config.config.getConfig("verity.blob-store")).getString("local-store-path")
   lazy val options: Options = new Options()
     .createIfMissing(true)
     .paranoidChecks(true)

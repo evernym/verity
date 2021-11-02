@@ -8,6 +8,7 @@ import com.evernym.verity.util2.Status.DATA_NOT_FOUND
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI
+import com.typesafe.config.{Config, ConfigFactory}
 import org.iq80.leveldb.impl.Iq80DBFactory
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -23,11 +24,11 @@ import java.io.File
 //NOTE: if at all this file gets moved to different package, then it will require configuration change
 // so until it is important, should avoid moving this to different package.
 
-class LeveldbAPI(config: AppConfig, executionContext: ExecutionContext)(implicit val as: ActorSystem)
-  extends StorageAPI(config, executionContext) {
+class LeveldbAPI(config: AppConfig, executionContext: ExecutionContext, overrideConfig: Config = ConfigFactory.empty())(implicit val as: ActorSystem)
+  extends StorageAPI(config, executionContext, overrideConfig) {
   private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
-  lazy val path: String = config.config.getConfig("verity.blob-store").getString("local-store-path")
+  lazy val path: String = overrideConfig.resolveWith(config.config.getConfig("verity.blob-store")).getString("local-store-path")
   lazy val options: Options = new Options()
     .createIfMissing(true)
     .paranoidChecks(true)

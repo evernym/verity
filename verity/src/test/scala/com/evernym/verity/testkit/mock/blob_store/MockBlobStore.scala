@@ -6,12 +6,13 @@ import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class MockBlobStore(config: AppConfig, ec: ExecutionContext)(implicit val as: ActorSystem)
-  extends StorageAPI(config, ec) {
+class MockBlobStore(config: AppConfig, ec: ExecutionContext, overrideConfig: Config = ConfigFactory.empty())(implicit val as: ActorSystem)
+  extends StorageAPI(config, ec, overrideConfig) {
 
   lazy implicit val executionContext: ExecutionContext = ec
 

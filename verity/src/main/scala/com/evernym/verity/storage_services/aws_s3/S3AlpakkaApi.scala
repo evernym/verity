@@ -13,6 +13,7 @@ import com.evernym.verity.util2.Status.S3_FAILURE
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI
+import com.typesafe.config.{Config, ConfigFactory}
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
@@ -21,10 +22,10 @@ import scala.language.postfixOps
 //NOTE: if at all this file gets moved to different package, then it will require configuration change
 // so until it is important, should avoid moving this to different package.
 
-class S3AlpakkaApi(config: AppConfig, executionContext: ExecutionContext)(implicit val as: ActorSystem) extends StorageAPI(config, executionContext) {
+class S3AlpakkaApi(config: AppConfig, executionContext: ExecutionContext, overrideConfig: Config = ConfigFactory.empty())(implicit val as: ActorSystem) extends StorageAPI(config, executionContext, overrideConfig) {
   private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
-  def s3Settings: S3Settings = S3Settings(config.config.getConfig("alpakka.s3"))
+  def s3Settings: S3Settings = S3Settings(overrideConfig.resolveWith(config.config.getConfig("alpakka.s3")))
   lazy val s3Attrs: Attributes = S3Attributes.settings(s3Settings)
 
   def createBucket(bucketName: String): Future[Done] =  S3.makeBucket(bucketName)

@@ -84,15 +84,16 @@ trait AppStatusHealthCheckSpec { this : EdgeEndpointBaseSpec =>
       "should respond with listening app state" in {
         buildGetReq("/agency/internal/health-check/application-state?detail=Y") ~> epRoutes ~> check {
           val appVersion: AppVersion = BuildInfo.version
-          val staticAppVersion = s"${appVersion.major}.${appVersion.minor}.${appVersion.patch}"
+          val staticAppVersion = s"${appVersion.major}.${appVersion.minor}.${appVersion.patch}.${appVersion.build}"
           status shouldBe OK
           val detailedResp: AppStateDetailedResp = responseTo[AppStateDetailedResp]
           val pieces: Array[String] = detailedResp.runningVersion.split('.')
-          pieces.length should be >= 3
-          pieces.length should be <= 4
+          pieces.length should be >= 4
+          pieces.length should be <= 5
           pieces(0).toInt should be >= 0
           pieces(1).toInt should be >= 0
-          assert(pieces(2) == "0-SNAPSHOT" || pieces.length == 4)
+          pieces(2).toInt should be >= 0
+          assert(pieces(3) == "0-SNAPSHOT" || pieces.length == 5)
           detailedResp.runningVersion shouldBe staticAppVersion
           detailedResp.currentState shouldBe STATUS_LISTENING
         }

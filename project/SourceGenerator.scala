@@ -5,7 +5,7 @@ import scala.language.postfixOps
 import java.io.File
 
 object SourceGenerator {
-  def generateVersionFile(major: SettingKey[String], minor: SettingKey[String], patch: SettingKey[String]): Def.Initialize[Task[Seq[File]]] = {
+  def generateVersionFile(major: SettingKey[String], minor: SettingKey[String], patch: SettingKey[String], build: SettingKey[String]): Def.Initialize[Task[Seq[File]]] = {
     Def.task {
       val file = (Compile / sourceManaged).value / "com" / "evernym" / "verity" / "version.scala"
       println("Generated version file: " + file)
@@ -14,10 +14,10 @@ object SourceGenerator {
                         |
                         |package com.evernym.verity
                         |
-                        |case class AppVersion (major: String, minor: String, patch: String)
+                        |case class AppVersion (major: String, minor: String, patch: String, build: String)
                         |
                         |object BuildInfo {
-                        |  val version = AppVersion("${major.value}", "${minor.value}", "${patch.value}")
+                        |  val version = AppVersion("${major.value}", "${minor.value}", "${patch.value}", "${build.value}")
                         |}""".stripMargin
       IO.write(file, contents)
       Seq(file)

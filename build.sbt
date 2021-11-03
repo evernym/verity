@@ -81,19 +81,21 @@ val silencerVersion = "1.7.5"
 val COMPILE_TIME_ONLY = "compileonly"
 val CompileOnly = config(COMPILE_TIME_ONLY)
 
-val majorNum = "0"
-val minorNum = "4"
+val majorNum = "2"
+val minorNum = "16"
+val patchNum = "0"
 
 // I'm not sure why setting this keys don't resolve in all
 // other scopes but it does not so we re-resolve it commonSettings
 ThisBuild / major := majorNum
 ThisBuild / minor := minorNum
-ThisBuild / patch := patchNum(
+ThisBuild / patch := patchNum
+ThisBuild / build := buildNum(
   git.gitHeadCommitDate.value,
   git.gitHeadCommit.value,
   git.gitUncommittedChanges.value
 )
-ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}"
+ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}.${build.value}"
 maintainer := "Evernym Inc <dev@evernym.com>"
 
 ThisBuild / sharedLibraries := sharedLibDeps
@@ -241,7 +243,7 @@ lazy val protoBufSettings = Seq(
     scalapb.gen(flatPackage = true) -> (Compile / sourceManaged).value
   ),
   Compile / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
-  Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch).taskValue,
+  Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch, build).taskValue,
 
   Test / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
   Test / PB.targets := Seq(

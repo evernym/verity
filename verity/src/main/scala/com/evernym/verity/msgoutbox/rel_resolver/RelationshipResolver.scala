@@ -17,8 +17,8 @@ object RelationshipResolver {
 
   trait Cmd extends ActorMessage
   object Commands {
-    case class SendOutboxParam(relId: RelId, destId: DestId, replyTo: ActorRef[Reply]) extends Cmd
-    case class GetRelParam(relId: RelId, replyTo: ActorRef[Reply]) extends Cmd
+    case class SendOutboxParam(relId: RelId, destId: DestId, replyTo: ActorRef[SendOutboxParamReply]) extends Cmd
+    case class GetRelParam(relId: RelId, replyTo: ActorRef[GetRelParamReply]) extends Cmd
 
     case class OutboxParamResp(walletId: WalletId,
                                senderVerKey: VerKeyStr,
@@ -32,16 +32,18 @@ object RelationshipResolver {
   }
 
   trait Reply extends ActorMessage
+  sealed trait SendOutboxParamReply extends Reply
+  sealed trait GetRelParamReply extends Reply
   object Replies {
     case class OutboxParam(walletId: WalletId,
                            senderVerKey: VerKeyStr,
-                           comMethods: Map[ComMethodId, ComMethod]) extends Reply {
+                           comMethods: Map[ComMethodId, ComMethod]) extends SendOutboxParamReply {
       if (comMethods.count(_._2.typ == COM_METHOD_TYPE_HTTP_ENDPOINT) > 1) {
         throw new RuntimeException("one outbox can have max one http com method")
       }
     }
 
-    case class RelParam(selfRelId: RelId, relationship: Option[Relationship]) extends Reply
+    case class RelParam(selfRelId: RelId, relationship: Option[Relationship]) extends GetRelParamReply
   }
 
   def apply(agentMsgRouter: AgentMsgRouter): Behavior[Cmd] = {
@@ -55,22 +57,22 @@ object RelationshipResolver {
   private def initialized(implicit actorContext: ActorContext[Cmd],
                           buffer: StashBuffer[Cmd],
                           agentMsgRouter: AgentMsgRouter): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
-    case Commands.SendOutboxParam(relId, destId, replyTo: ActorRef[Reply]) =>
+    case Commands.SendOutboxParam(relId, destId, replyTo: ActorRef[SendOutboxParamReply]) =>
       agentMsgRouter.forward((InternalMsgRouteParam(relId, GetOutboxParam(destId)), actorContext.self.toClassic))
       waitingForGetOutboxParam(replyTo)
 
-    case Commands.GetRelParam(relId, replyTo: ActorRef[Reply]) =>
+    case Commands.GetRelParam(relId, replyTo: ActorRef[GetRelParamReply]) =>
       agentMsgRouter.forward((InternalMsgRouteParam(relId, GetRelParam), actorContext.self.toClassic))
       waitingForGetRelParam(replyTo)
   }
 
-  private def waitingForGetOutboxParam(replyTo: ActorRef[Reply]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
+  private def waitingForGetOutboxParam(replyTo: ActorRef[SendOutboxParamReply]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
     case OutboxParamResp(walletId, senderVerKey, comMethods) =>
       replyTo ! OutboxParam(walletId, senderVerKey, comMethods)
       Behaviors.stopped
   }
 
-  private def waitingForGetRelParam(replyTo: ActorRef[Reply]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
+  private def waitingForGetRelParam(replyTo: ActorRef[GetRelParamReply]): Behavior[Cmd] = Behaviors.receiveMessage[Cmd] {
     case RelParamResp(selfRelId, relationship) =>
       replyTo ! RelParam(selfRelId, relationship)
       Behaviors.stopped

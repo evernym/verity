@@ -403,15 +403,6 @@ message MsgExpirationTimeUpdated {
     int32 timeInSeconds = 2;
 }
 
-message ParameterStored {
-    string name = 1;
-    string value = 2;
-}
-
-message ProtocolInitialized {
-    repeated ParameterStored parameters = 1;
-}
-
 message ProtocolObserverAdded {
     int32 typeId = 1;
     string jsonDetail = 2;
@@ -500,16 +491,6 @@ message TheirDidUpdated {
 message SponsorAssigned {
     string id = 1;
     string sponsee = 2;
-}
-
-message WindowRules {
-    string frequency = 1;
-    string behavior = 2;
-}
-
-message WindowActivityDefined {
-    option (scalapb.message).extends = "com.evernym.verity.actor.metrics.Active";
-    repeated WindowRules windows = 1;
 }
 
 message ThreadContextMigrationStarted {

@@ -77,7 +77,6 @@ class AgencyAgentCreateNewAgentFailure extends AgentProvBaseSpec_V_0_7 {
   createAgentFailures()
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
   override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
@@ -121,7 +120,6 @@ class AgencyAgentCreateNewCloudAgent extends AgentProvBaseSpec_V_0_7 {
 
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
   override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
@@ -165,14 +163,13 @@ class AgencyAgentCreateNewEdgeAgent extends AgentProvBaseSpec_V_0_7 {
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
 
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
   override def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 class AgencyAgentCreateNewAgentTokenDoubleUseFailure extends AgentProvBaseSpec_V_0_7 {
   import mockEdgeAgent.v_0_7_resp._
 
-  lazy val mockEdgeAgent1: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
+  lazy val mockEdgeAgent1: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext)
 
   lazy val nonce: String = getNonce
   lazy val commonTime: IsoDateTime = TimeUtil.nowDateString
@@ -216,7 +213,6 @@ class AgencyAgentCreateNewAgentTokenDoubleUseFailure extends AgentProvBaseSpec_V
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
 }

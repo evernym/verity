@@ -30,10 +30,9 @@ class PresentProofSpec
   lazy val verifierVerityEnv = VerityEnvBuilder.default().build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val walletExecutionContext = ecp.walletFutureExecutionContext
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, walletExecutionContext)
-  lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv, executionContext, walletExecutionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, walletExecutionContext)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
+  lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv, executionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
 
   val issuerHolderConn = "connId1"
   val verifierHolderConn = "connId2"

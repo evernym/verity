@@ -9,6 +9,7 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
+import com.evernym.verity.protocol.engine.registry.{LaunchesProtocol, ProtocolRegistry}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.evernym.verity.protocol.{Control, CtlEnvelope}
 import com.evernym.verity.util.MsgUtil
@@ -373,7 +374,7 @@ trait SimpleLaunchesProtocol extends LaunchesProtocol with HasExecutionContextPr
 
       val driverParam = SimpleControllerProviderInputType(system, rel.myDid_!, threadId)
 
-      val driver = protocolRegistry.find_!(protoDef.msgFamily.protoRef).driverGen map { _.apply(driverParam, futureExecutionContext) }
+      val driver = protocolRegistry.find_!(protoDef.protoRef).driverGen map { _.apply(driverParam, futureExecutionContext) }
 
       val pce = ProtocolContainerElements( system, rel.myDid_!, pinstId, Option(threadId), protoDef,
         initProvider, None, driver, journalContext, walletAccessProvider, ledgerAccessProvider, urlShorteningAccessProvider)

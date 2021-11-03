@@ -4,7 +4,7 @@ import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.base.EntityIdentifier
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Cmd
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.{AccessTokenRefresherReplyAdapter, GetToken, TimedOut, UpdateParams}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Replies.AuthToken
@@ -13,9 +13,9 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_t
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.slf4j.event.Level
-
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
+
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
@@ -45,27 +45,27 @@ object OAuthAccessTokenHolder {
             params: Map[String, String],
             accessTokenRefresher: Behavior[OAuthAccessTokenRefresher.Cmd]): Behavior[Cmd] = {
     Behaviors.setup { actorContext =>
-      val accessTokenRefresherReplyAdapter = actorContext.messageAdapter(reply => AccessTokenRefresherReplyAdapter(reply))
-      Behaviors.withStash(100) { buffer =>
-        val setup = Setup(
-          receiveTimeout,
-          params,
-          None,
-          accessTokenRefresher,
-          accessTokenRefresherReplyAdapter,
-          actorContext,
-          buffer
-        )
-        Behaviors
-          .supervise(initialized(None)(setup))
-          .onFailure[RuntimeException](
-            SupervisorStrategy
-              .restart
-              .withLogLevel(Level.WARN)
-              .withLoggingEnabled(enabled = true)
-              .withLimit(maxNrOfRetries = 10, withinTimeRange = 10.seconds)
+      Behaviors.supervise(
+        Behaviors.withStash(100) { buffer: StashBuffer[Cmd] =>
+          val accessTokenRefresherReplyAdapter = actorContext.messageAdapter(reply => AccessTokenRefresherReplyAdapter(reply))
+          val setup = Setup(
+            receiveTimeout,
+            params,
+            None,
+            accessTokenRefresher,
+            accessTokenRefresherReplyAdapter,
+            actorContext,
+            buffer
           )
-      }
+          initialized(None)(setup)
+        }
+        ).onFailure[RuntimeException](
+          SupervisorStrategy
+            .restart
+            .withLogLevel(Level.WARN)
+            .withLoggingEnabled(enabled = true)
+            .withLimit(maxNrOfRetries = 10, withinTimeRange = 10.seconds)
+        )
     }
   }
 
@@ -76,6 +76,7 @@ object OAuthAccessTokenHolder {
 
     case cmd @ GetToken(refreshed, replyTo) =>
       if (refreshed) {
+        logger.info(s"[${setup.identifier}][OAuth] access token will be refreshed")
         setup.buffer.stash(GetToken(refreshed = false, replyTo))
         refreshToken(setup)
       } else {
@@ -106,29 +107,35 @@ object OAuthAccessTokenHolder {
 
   private def waitingForGetTokenResponse(implicit setup: Setup): Behavior[Cmd] = Behaviors.receiveMessage {
     case AccessTokenRefresherReplyAdapter(reply: GetTokenSuccess) =>
-      setup.actorContext.cancelReceiveTimeout()
       logger.info(s"[${setup.identifier}][OAuth] refreshed access token received (expires in seconds: ${reply.expiresInSeconds})")
-      setup.buffer.unstashAll(initialized(Option(AuthTokenParam(reply.value, reply.expiresInSeconds)))
+      setup.actorContext.cancelReceiveTimeout()
+      setup.buffer.unstashAll(initialized(Option(AuthTokenParam.from(reply.value, reply.expiresInSeconds)))
       (setup.copy(prevTokenRefreshResponse = reply.respJSONObject)))
 
     case AccessTokenRefresherReplyAdapter(reply: OAuthAccessTokenRefresher.Replies.GetTokenFailed) =>
+      logger.warn(s"[${setup.identifier}][OAuth] refresh access token failed: " + reply.errorMsg)
       setup.actorContext.cancelReceiveTimeout()
-      logger.error(s"[${setup.identifier}][OAuth] refresh access token failed: " + reply.errorMsg)
-      handleError(reply.errorMsg)
+      handleErrorDuringGetToken(reply.errorMsg)
 
     case TimedOut =>
+      logger.warn(s"[${setup.identifier}][OAuth] get access token timed out")
       setup.actorContext.cancelReceiveTimeout()
-      handleError("get token timed out")(setup)
+      handleErrorDuringGetToken("get new access token timed out")(setup)
 
     case other =>
+      //while this actor is waiting for new access token, if it receives other commands (mostly it should be GetToken)
+      // stash it
       setup.buffer.stash(other)
       Behaviors.same
   }
 
-  private def handleError(errorMsg: String)(implicit setup: Setup): Behavior[Cmd] = {
+  private def handleErrorDuringGetToken(errorMsg: String)(implicit setup: Setup): Behavior[Cmd] = {
+    //handle/reply to stashed commands
     setup.buffer.foreach {
-      case GetToken(_, replyTo)   => replyTo ! Replies.GetTokenFailed(errorMsg)
+      case GetToken(_, replyTo)  => replyTo ! Replies.GetTokenFailed(errorMsg)
+      case other                 => setup.actorContext.self ! other
     }
+    setup.buffer.clear()
     initialized(None)
   }
 
@@ -153,12 +160,12 @@ case class Setup(receiveTimeout: FiniteDuration,
 }
 
 object AuthTokenParam {
-  def apply(value: String, expiresInSeconds: Int): AuthTokenParam = {
-    AuthTokenParam(value, LocalDateTime.now.plusSeconds(expiresInSeconds))
+  def from(value: String, expiresInSeconds: Option[Int]): AuthTokenParam = {
+    AuthTokenParam(value, expiresInSeconds.map(e => LocalDateTime.now.plusSeconds(e)))
   }
 }
 
-case class AuthTokenParam(value: String, expiresAt: LocalDateTime) {
-  def isExpired: Boolean = LocalDateTime.now().isAfter(expiresAt)
-  def secondsRemaining: Long = ChronoUnit.SECONDS.between(LocalDateTime.now(), expiresAt)
+case class AuthTokenParam(value: String, expiresAt: Option[LocalDateTime]) {
+  def isExpired: Boolean = expiresAt.exists(e => LocalDateTime.now().isAfter(e))
+  def secondsRemaining: Option[Long] = expiresAt.map(e => ChronoUnit.SECONDS.between(LocalDateTime.now(), e))
 }

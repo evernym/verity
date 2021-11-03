@@ -1,12 +1,13 @@
 package com.evernym.verity.testkit.mock.agent
 
+import com.evernym.verity.actor.HasAppConfig
+
 import java.util.UUID
 import com.evernym.verity.actor.testkit.{AgentDIDDetail, CommonSpecUtil}
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
-import com.evernym.verity.protocol.protocols.HasAppConfig
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, SenderDetail}
 import com.evernym.verity.testkit.{HasDefaultTestWallet, HasTestWalletAPI}
 import com.evernym.verity.testkit.util.PublicIdentifier

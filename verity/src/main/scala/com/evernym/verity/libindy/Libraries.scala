@@ -7,7 +7,7 @@ import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.Constants.{LIBINDY_LEGACY_FLAVOR, WALLET_TYPE_MYSQL}
 import com.evernym.verity.libindy.wallet.MySqlStorageLib
 import JnaPath._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 import org.hyperledger.indy.sdk.LibIndy

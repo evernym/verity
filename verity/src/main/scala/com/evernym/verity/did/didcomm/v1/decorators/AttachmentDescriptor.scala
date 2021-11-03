@@ -1,7 +1,7 @@
 package com.evernym.verity.did.didcomm.v1.decorators
 
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.protocol.engine.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.util.Base64Util
 
 sealed trait AttachmentData

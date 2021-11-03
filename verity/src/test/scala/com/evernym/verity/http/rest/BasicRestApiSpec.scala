@@ -1,7 +1,6 @@
 package com.evernym.verity.http.rest
 
 import java.util.UUID
-
 import akka.http.scaladsl.model.ContentTypes._
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.headers.{RawHeader, `Content-Type`}
@@ -12,7 +11,6 @@ import com.evernym.verity.http.rest.base.RestApiBaseSpec
 import com.evernym.verity.http.route_handlers.open.{RestAcceptedResponse, RestErrorResponse, RestOKResponse, `API-REQUEST-ID`}
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util2.Status
-import com.evernym.verity.metrics.MetricsBackend
 
 import scala.concurrent.ExecutionContext
 
@@ -380,7 +378,6 @@ class BasicRestApiSpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
 }

@@ -35,10 +35,11 @@ class OutboxRetentionPolicySpec
     "when started for the first time" - {
       "should fetch required information from relationship actor" in {
         outboxIds.foreach { outboxIdParam =>
-          val probe = createTestProbe[StatusReply[RelationshipResolver.Replies.OutboxParam]]()
+          val probe = createTestProbe[RelationshipResolver.Replies.OutboxParam]()
           outboxRegion ! ShardingEnvelope(outboxIdParam.entityId.toString, GetOutboxParam(probe.ref))
-          outboxRegion ! ShardingEnvelope(outboxIdParam.entityId.toString, Commands.Init(outboxIdParam.relId, outboxIdParam.recipId, outboxIdParam.destId))
-          val outboxParam = probe.expectMessageType[StatusReply[RelationshipResolver.Replies.OutboxParam]].getValue
+          val secondProbe = createTestProbe[Outbox.Replies.Initialized]()
+          outboxRegion ! ShardingEnvelope(outboxIdParam.entityId.toString, Commands.Init(outboxIdParam.relId, outboxIdParam.recipId, outboxIdParam.destId, secondProbe.ref))
+          val outboxParam = probe.expectMessageType[RelationshipResolver.Replies.OutboxParam]
           outboxParam.walletId shouldBe testWallet.walletId
           outboxParam.comMethods shouldBe defaultDestComMethods
         }
@@ -48,10 +49,10 @@ class OutboxRetentionPolicySpec
         "should be successful" in {
           (1 to totalMsgs).foreach { _ =>
             val msgId = storeAndAddToMsgMetadataActor("cred-offer", outboxIds.map(_.entityId.toString))
-            val probe = createTestProbe[StatusReply[Replies.MsgAddedReply]]()
+            val probe = createTestProbe[Replies.MsgAddedReply]()
             outboxIds.foreach { outboxId =>
               outboxRegion ! ShardingEnvelope(outboxId.entityId.toString, AddMsg(msgId, 1.days, probe.ref))
-              probe.expectMessage(StatusReply.success(Replies.MsgAdded))
+              probe.expectMessage(Replies.MsgAdded)
             }
           }
         }
@@ -62,8 +63,10 @@ class OutboxRetentionPolicySpec
           val probe = createTestProbe[StatusReply[Replies.DeliveryStatus]]()
           eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
             outboxIds.foreach { outboxId =>
-              outboxRegion ! ShardingEnvelope(outboxId.entityId.toString, GetDeliveryStatus(probe.ref))
-              val messages = probe.expectMessageType[StatusReply[Replies.DeliveryStatus]].getValue.messages
+              outboxRegion ! ShardingEnvelope(outboxId.entityId.toString, GetDeliveryStatus(List(), List(), false, probe.ref))
+              val status = probe.expectMessageType[StatusReply[Replies.DeliveryStatus]]
+              status.isSuccess shouldBe true
+              val messages = status.getValue.messages
               messages.size shouldBe totalMsgs
             }
           }
@@ -74,10 +77,10 @@ class OutboxRetentionPolicySpec
       "when checking the Message actors" - {
         "there should be delivery status found for this outbox" in {
           storedMsgs.foreach { msgId =>
-            val probe = createTestProbe[StatusReply[MsgDeliveryStatus]]()
+            val probe = createTestProbe[MsgDeliveryStatus]()
             eventually(timeout(Span(10, Seconds)), interval(Span(2, Seconds))) {
               messageMetaRegion ! ShardingEnvelope(msgId, MessageMeta.Commands.GetDeliveryStatus(probe.ref))
-              val msgDeliveryStatus = probe.expectMessageType[StatusReply[MsgDeliveryStatus]].getValue
+              val msgDeliveryStatus = probe.expectMessageType[MsgDeliveryStatus]
               outboxIds.foreach { outboxId =>
                 val outboxDeliveryStatus = msgDeliveryStatus.outboxDeliveryStatus(outboxId.entityId.toString)
                 outboxDeliveryStatus.status shouldBe Status.MSG_DELIVERY_STATUS_FAILED.statusCode
@@ -139,14 +142,13 @@ class OutboxRetentionPolicySpec
         appConfig.withFallback(OVERRIDE_CONFIG).config,
         testAccessTokenRefreshers,
         testRelResolver,
-        testMsgStore,
         testMsgPackagers,
         testMsgTransports,
-        executionContext
+        executionContext,
+        testMsgRepository
       )
     })
 
   lazy val ecp = new ExecutionContextProvider(appConfig)
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

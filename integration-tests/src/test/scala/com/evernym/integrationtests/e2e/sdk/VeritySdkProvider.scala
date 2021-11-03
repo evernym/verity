@@ -5,6 +5,7 @@ import com.evernym.integrationtests.e2e.scenario.Scenario
 import com.evernym.integrationtests.e2e.sdk.process.{DotNetSdkProvider, NodeSdkProvider, PythonSdkProvider}
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
@@ -21,6 +22,7 @@ import com.evernym.verity.sdk.protocols.writecreddef.v0_6.{RevocationRegistryCon
 import com.evernym.verity.sdk.protocols.writeschema.v0_6.WriteSchemaV0_6
 import com.evernym.verity.sdk.utils.Context
 import com.evernym.verity.sdk.wallet.{DefaultWalletConfig, WalletConfig}
+import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
 import java.util.UUID
@@ -33,6 +35,8 @@ trait VeritySdkProvider {
     val error = s"Protocol - $protocolName - is not supported by the ${this.getClass.getSimpleName} provider -- $msg"
     throw new UnsupportedOperationException(error)
   }
+
+  val logger: Logger = getLoggerByName(getClass.getName)
 
   var publicDID: Option[String] = None
 

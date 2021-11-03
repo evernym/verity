@@ -4,7 +4,7 @@ import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKi
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.{EventSourcedBehaviorTestKit, PersistenceTestKit, SnapshotTestKit}
 import com.evernym.verity.integration.base.PortProvider
-import com.evernym.verity.metrics.{MetricsWriterExtension, TestMetricsBackend}
+import com.evernym.verity.observability.metrics.{MetricsWriterExtension, TestMetricsBackend}
 import com.typesafe.config.{Config, ConfigFactory}
 
 

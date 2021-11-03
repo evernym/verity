@@ -7,7 +7,7 @@ import com.evernym.sdk.vcx.VcxException
 import com.evernym.sdk.vcx.utils.UtilsApi
 import com.evernym.sdk.vcx.vcx.VcxApi
 import com.evernym.sdk.vcx.wallet.WalletApi
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
 import com.evernym.verity.sdk.utils.Context
 import com.evernym.verity.sdk.wallet.DefaultWalletConfig
@@ -18,7 +18,7 @@ import org.json.JSONObject
 import java.util.UUID
 
 protected trait VcxProvision {
-  val logger: Logger = getLoggerByName(getClass.getName)
+  def logger: Logger
 
   def sdkConfig: SdkConfig
 

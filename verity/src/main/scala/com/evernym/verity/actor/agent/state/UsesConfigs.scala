@@ -1,5 +1,7 @@
 package com.evernym.verity.actor.agent.state
 
+import com.evernym.verity.actor.HasAppConfig
+
 import java.time.ZonedDateTime
 import com.evernym.verity.util2.Exceptions.InternalServerErrorException
 import com.evernym.verity.util2.HasExecutionContextProvider
@@ -10,7 +12,6 @@ import com.evernym.verity.cache.AGENT_ACTOR_CONFIG_CACHE_FETCHER
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.GetConfigCacheParam
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.protocol.protocols.HasAppConfig
 
 import scala.concurrent.{ExecutionContext, Future}
 

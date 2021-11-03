@@ -2,7 +2,7 @@ package com.evernym.verity.libindy.wallet
 
 import com.evernym.verity.actor.wallet.WalletCreated
 import com.evernym.verity.vault.operation_executor.FutureConverter
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.vault.{WalletExt, _}
 import com.typesafe.scalalogging.Logger

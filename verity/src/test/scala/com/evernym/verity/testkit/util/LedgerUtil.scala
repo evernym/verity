@@ -8,7 +8,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter, TransactionAuthorAgreement}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.testkit.HasDefaultTestWallet
 import com.evernym.verity.util.OptionUtil
@@ -28,7 +28,6 @@ import scala.util.{Failure, Success}
 class LedgerUtil (val appConfig: AppConfig,
                   val poolConfigName: Option[String],
                   executionContext: ExecutionContext,
-                  walletExecutionContext: ExecutionContext,
                   val submitterDID: DidStr = "Th7MpTaRZVRYnPiabds81Y",
                   val submitterKeySeed: String = "000000000000000000000000Steward1",
                   val submitterRole: String = "STEWARD",
@@ -223,5 +222,5 @@ class LedgerUtil (val appConfig: AppConfig,
   /**
    * custom thread pool executor
    */
-  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
+  override def futureExecutionContext: ExecutionContext = executionContext
 }

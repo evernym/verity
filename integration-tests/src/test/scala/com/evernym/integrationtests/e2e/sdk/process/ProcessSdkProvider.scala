@@ -3,7 +3,7 @@ package com.evernym.integrationtests.e2e.sdk.process
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider._
 import com.evernym.integrationtests.e2e.sdk.{BaseSdkProvider, ListeningSdkProvider}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.sdk.protocols.relationship.v1_0.GoalCode
 import com.evernym.verity.sdk.utils.{AsJsonObject, Context}
 import com.typesafe.scalalogging.Logger
@@ -18,7 +18,7 @@ trait ProcessSdkProvider
   extends BaseSdkProvider
     with ListeningSdkProvider {
 
-  val logger: Logger = getLoggerByName(getClass.getName)
+//  val logger: Logger = getLoggerByName(getClass.getName)
 
   private def printOut(output: String, outType: String = "OUTPUT"): Unit = {
     logger.debug(

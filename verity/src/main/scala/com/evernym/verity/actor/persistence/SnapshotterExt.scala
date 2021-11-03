@@ -4,8 +4,8 @@ import akka.persistence._
 import com.evernym.verity.actor.{DeprecatedStateMsg, PersistentMsg, State}
 import com.evernym.verity.config.ConfigConstants.PERSISTENCE_SNAPSHOT_MAX_ITEM_SIZE_IN_BYTES
 import com.evernym.verity.constants.LogKeyConstants.{LOG_KEY_ERR_MSG, LOG_KEY_PERSISTENCE_ID}
-import com.evernym.verity.logging.ThrottledLogger
-import com.evernym.verity.metrics.CustomMetrics._
+import com.evernym.verity.observability.metrics.CustomMetrics._
+import com.evernym.verity.observability.logs.ThrottledLogger
 import com.evernym.verity.transformations.transformers.<=>
 
 import scala.concurrent.duration._

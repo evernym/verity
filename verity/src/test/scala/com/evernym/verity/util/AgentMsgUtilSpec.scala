@@ -6,7 +6,7 @@ import com.evernym.verity.agentmsg.msgfamily.pairwise.CreateKeyReqMsg_MFV_0_6
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.protocol.engine
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.PinstIdResolution
+import com.evernym.verity.protocol.engine.registry.{PinstIdResolution, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_V_0_6}
 import com.evernym.verity.protocol.protocols.tictactoe.Board.X
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeMsgFamily.Move
@@ -16,7 +16,7 @@ import com.evernym.verity.testkit.BasicSpec
 
 class AgentMsgUtilSpec extends BasicSpec {
 
-  implicit val protoReg = engine.ProtocolRegistry(ConnectingProtoDef_V_0_6 -> PinstIdResolution.DEPRECATED_V0_1)
+  implicit val protoReg = ProtocolRegistry(ConnectingProtoDef_V_0_6 -> PinstIdResolution.DEPRECATED_V0_1)
 
   val createKeyJson = s"""{"forDID":"did1","forDIDVerKey":"didverkey1"}"""
 

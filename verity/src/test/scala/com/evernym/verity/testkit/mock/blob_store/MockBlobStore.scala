@@ -2,15 +2,17 @@ package com.evernym.verity.testkit.mock.blob_store
 
 import akka.Done
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class MockBlobStore(config: AppConfig, ec: ExecutionContext)(implicit val as: ActorSystem)
-  extends StorageAPI(config, ec) {
+class MockBlobStore(config: AppConfig, ec: ExecutionContext, overrideConfig: Config = ConfigFactory.empty())(implicit val as: ActorSystem)
+  extends StorageAPI(config, ec, overrideConfig) {
 
   lazy implicit val executionContext: ExecutionContext = ec
 
@@ -26,7 +28,7 @@ class MockBlobStore(config: AppConfig, ec: ExecutionContext)(implicit val as: Ac
     Future(bucketStore(bucketName).get(dbKey))
   }
 
-  override def put(bucketName: String, id: String, data: Array[Byte]): Future[StorageInfo] = {
+  override def put(bucketName: String, id: String, data: Array[Byte], contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo] = {
     synchronized {
       val dbKey = calcKey(bucketName, id)
       val bucketItems = bucketStore.getOrElse(bucketName, Map.empty) ++ Map(dbKey -> data)
@@ -48,4 +50,6 @@ class MockBlobStore(config: AppConfig, ec: ExecutionContext)(implicit val as: Ac
     val dbKey = calcKey(bucketName, keyStartsWith)
     bucketStore.getOrElse(bucketName, Map.empty).count(_._1.startsWith(dbKey))
   }
+
+  override def ping: Future[Unit] = Future.successful((): Unit)
 }

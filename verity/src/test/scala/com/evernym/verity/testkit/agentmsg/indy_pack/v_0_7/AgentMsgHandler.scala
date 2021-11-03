@@ -4,7 +4,7 @@ import com.evernym.verity.did.{DidStr, DidPair}
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.util.{AgentCreated_MFV_0_7, CreateAgentProblemReport_MFV_0_7}
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.mock.agent.{HasCloudAgent, MockAgent}
 
 /**

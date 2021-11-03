@@ -13,15 +13,17 @@ import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.logging.LoggingUtil
+import com.evernym.verity.did.didcomm.v1.messages.TypedMsgLike
+import com.evernym.verity.observability.logs.{HasLogger, LoggingUtil}
 import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, ActorProtocol, InitProtocolReq, MsgEnvelope}
 import com.evernym.verity.protocol.{Control, engine}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.registry.{PinstIdPair, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{PublicIdentifier, PublicIdentifierCreated}
 import com.evernym.verity.util.MsgIdProvider
 import com.typesafe.scalalogging.Logger
-import java.util.UUID
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
@@ -151,7 +153,7 @@ abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorConte
   }
 
   def sendPinstId(gpp: GetPinstId): Unit = {
-    val entry = registeredProtocols.find_!(gpp.protoDef.msgFamily.protoRef)
+    val entry = registeredProtocols.find_!(gpp.protoDef.protoRef)
     val pinstId = resolvePinstId(
       gpp.protoDef,
       entry.pinstIdResol,

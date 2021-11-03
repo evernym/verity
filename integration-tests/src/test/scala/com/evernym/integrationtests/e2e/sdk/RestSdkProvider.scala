@@ -10,9 +10,10 @@ import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.integrationtests.e2e.sdk.process.SdkProviderException
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{MsgFamily, ProtoRef}
+import com.evernym.verity.protocol.engine.ProtoRef
 import com.evernym.verity.sdk.exceptions.WalletException
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
@@ -22,7 +23,6 @@ import com.evernym.verity.sdk.protocols.outofband.OutOfBand
 import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate, ProposedAttribute, ProposedPredicate}
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
-import com.evernym.verity.sdk.protocols.provision.Provision
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
 import com.evernym.verity.sdk.protocols.questionanswer.v1_0.CommittedAnswerV1_0
 import com.evernym.verity.sdk.protocols.relationship.v1_0.{GoalCode, RelationshipV1_0}
@@ -65,7 +65,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
   extends BaseSdkProvider
     with ListeningSdkProvider {
 
-  val logger: Logger = getLoggerByClass(getClass)
+//  val logger: Logger = getLoggerByClass(getClass)
 
   /**
     * Check that the sdk is available (ex. on class path, installed or whatever)
@@ -91,9 +91,48 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
     listener.listen()
   }
 
-  // TODO: change after implementing this in rest.
-  override def provision_0_7: ProvisionV0_7 = Provision.v0_7()
-  override def provision_0_7(token: String): ProvisionV0_7 = Provision.v0_7(token)
+  override def provision_0_7: ProvisionV0_7 = provision_0_7(null)
+  override def provision_0_7(token: String): ProvisionV0_7 = {
+
+    new UndefinedProvision_0_7 {
+      def sendMsgToVerity(ctx: Context, jsonMsg: String, protoRef: ProtoRef): JSONObject = {
+        val restApiUrl = s"${ctx.verityUrl()}/api/${ctx.verityPublicDID()}/${protoRef.msgFamilyName}/${protoRef.msgFamilyVersion}"
+        logger.debug("# POST rest api url: " + restApiUrl)
+        logger.debug(s"# JSON msg sent: $jsonMsg")
+        val result = Http()(actorSystem).singleRequest(
+          HttpRequest(
+            method = HttpMethods.POST,
+            uri = restApiUrl,
+            entity = HttpEntity(ContentTypes.`application/json`, jsonMsg),
+          ).addHeader(generateAuthHeader(ctx))
+        )
+
+        val httpResponse = Await.result(result, httpTimeout)
+        val respString = httpResponse.entity.asInstanceOf[HttpEntity.Strict].getData().utf8String
+        val respJson = new JSONObject(respString)
+        logger.debug(s"# POST Response:${httpResponse.status} $respJson")
+        respJson.getJSONObject("result")
+      }
+
+      override def provision(context: Context): Context = {
+        val json = new JSONObject
+        json.put("@id", UUID.randomUUID.toString)
+        json.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "agent-provisioning", "0.7", "create-edge-agent")) // "did:sov:123456789abcdefghi1234;spec/agent-provisioning/0.7/create-edge-agent")
+        json.put("requesterVk", context.sdkVerKey())
+
+        if (token != null) {
+          val tokenObj = new JSONObject(token)
+          json.put("provisionToken", tokenObj)
+        }
+
+        val resp = sendMsgToVerity(context, json.toString, ProtoRef("agent-provisioning", "0.7"))
+
+        val domainDID = resp.getString("selfDID")
+        val verityAgentVerKey = resp.getString("agentVerKey")
+        context.toContextBuilder.domainDID(domainDID).verityAgentVerKey(verityAgentVerKey).build
+      }
+    }
+  }
 
   override def issuerSetup_0_6: IssuerSetupV0_6 = {
     val createJson = new JSONObject
@@ -200,6 +239,11 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
         logger.debug(s"write schema json: ${writeSchemaJson.toString}")
         sendHttpPostReq(context, writeSchemaJson.toString, ProtoRef("write-schema", "0.6"), Option(UUID.randomUUID.toString))
       }
+      override def write(ctx: Context, endorserDid: String): Unit = {
+        writeSchemaJson.put("endorserDid", endorserDid)
+        logger.debug(s"write schema json: ${writeSchemaJson.toString}")
+        sendHttpPostReq(context, writeSchemaJson.toString, ProtoRef("write-schema", "0.6"), Option(UUID.randomUUID.toString))
+      }
     }
   }
 
@@ -220,6 +264,11 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
 
     new UndefinedWriteCredentialDefinition_0_6 {
       override def write(ctx: Context): Unit = {
+        logger.debug(s"write cred def json: ${writeCredDefJson.toString}")
+        sendHttpPostReq(context, writeCredDefJson.toString, ProtoRef("write-cred-def", "0.6"), Option(UUID.randomUUID.toString))
+      }
+      override def write(ctx: Context, endorserDid: String): Unit = {
+        writeCredDefJson.put("endorserDid", endorserDid)
         logger.debug(s"write cred def json: ${writeCredDefJson.toString}")
         sendHttpPostReq(context, writeCredDefJson.toString, ProtoRef("write-cred-def", "0.6"), Option(UUID.randomUUID.toString))
       }
@@ -358,7 +407,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
     if (httpResponse.status == OK) {
       val str = httpResponse.entity match {
         case s: HttpEntity.Strict => s.getData().utf8String
-        case d: HttpEntity.Default=> d.toStrict(5000, actorSystem).toCompletableFuture.get().getData().utf8String
+        case d: HttpEntity.Default=> d.toStrict(5000, actorSystem).toCompletableFuture.get().getData.utf8String
         case x: Any => throw new RuntimeException(s"Unsupported entity class ${x.getClass}")
       }
       val responseJson = new JSONObject(str)

@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent.snapshot
 
-import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
-import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
+
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.KeyCreated
 import com.evernym.verity.actor.agent.agency.{AgencyAgentScaffolding, AgencyAgentState}
@@ -18,18 +17,16 @@ import scala.concurrent.ExecutionContext
 
 class AgencyAgentSnapshotSpec
   extends AgencyAgentScaffolding
-    with SnapshotSpecBase
+    with AgentSnapshotSpecBase
     with OverrideConfig {
 
-  override def overrideConfig: Option[Config] = Option(
+  override def specificConfig: Option[Config] = Option(
     ConfigFactory.parseString(
       """verity.persistent-actor.base.AgencyAgent.snapshot {
         after-n-events = 1
         keep-n-snapshots = 2
         delete-events-on-snapshots = false
       }""")
-    .withFallback(EventSourcedBehaviorTestKit.config)
-    .withFallback(PersistenceTestKitSnapshotPlugin.config)
   )
 
   agencySetupSpecs()
@@ -98,9 +95,4 @@ class AgencyAgentSnapshotSpec
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

@@ -7,7 +7,7 @@ import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
 import com.evernym.verity.actor.wallet.{Close, CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.{DidStr, VerKeyStr}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessPack, AccessRight, AccessSign, AccessStoreTheirDiD, AccessUnPack, AccessVerKey, AccessVerify, AnonCreds, AsyncOpRunner}
@@ -119,5 +119,5 @@ class WalletAccessAPISpec
   /**
    * custom thread pool executor
    */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

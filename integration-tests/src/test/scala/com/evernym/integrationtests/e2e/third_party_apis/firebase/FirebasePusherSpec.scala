@@ -5,7 +5,7 @@ import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.config.ConfigConstants.{FCM_API_HOST, FCM_API_KEY, FCM_API_PATH}
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.push_notification.{FirebasePushServiceParam, FirebasePusher, PushNotifParam}
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.scalalogging.Logger

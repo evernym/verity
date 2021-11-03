@@ -17,6 +17,7 @@ import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_A
 import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, SelfRelationship, _}
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
 import com.evernym.verity.actor.agent.user.UserAgent._
+import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.ChildEvent
@@ -27,7 +28,7 @@ import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.metrics.CustomMetrics._
+import com.evernym.verity.observability.metrics.CustomMetrics._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.configs._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
@@ -39,15 +40,14 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.metrics.MetricsUnit
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.CreateKeyEndpointDetail
-import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.protocol.protocols.connecting.common.{ConnReqReceived, SendMsgToRegisteredEndpoint}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.PublicIdentifierCreated
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl
@@ -62,7 +62,8 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAcc
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.UpdateParams
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.AUTH_TYPE_OAUTH2
-import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
+import com.evernym.verity.msgoutbox.outbox.Outbox.DESTINATION_ID_DEFAULT
+import com.evernym.verity.observability.metrics.MetricsUnit
 import com.evernym.verity.util2.ActorErrorResp
 
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
@@ -74,15 +75,13 @@ import scala.util.{Failure, Success, Try}
  */
 class UserAgent(val agentActorContext: AgentActorContext,
                 val metricsActorRef: ActorRef,
-                executionContext: ExecutionContext,
-                walletExecutionContext: ExecutionContext)
+                executionContext: ExecutionContext)
   extends UserAgentCommon
     with UserAgentStateUpdateImpl
     with HasAgentActivity
     with MsgNotifierForUserAgent
     with AgentSnapshotter[UserAgentState] {
 
-  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
   implicit def futureExecutionContext: ExecutionContext = executionContext
 
   type StateType = UserAgentState
@@ -193,9 +192,14 @@ class UserAgent(val agentActorContext: AgentActorContext,
   }
 
   def sendToOAuthAccessTokenHolder(forUrl: String, cmd: OAuthAccessTokenHolder.Cmd): Unit = {
+    logger.info(s"[$persistenceId][OAuth] received request for OAuth access token forUrl: " + forUrl)
     httpComMethodsWithAuth.filter(_.value == forUrl).foreach { hc =>
-      context.child(oAuthHolderKey(hc)).foreach { actorRef =>
-        actorRef ! cmd
+      context.child(oAuthHolderActorName(hc)) match {
+        case Some(actorRef) =>
+          logger.info(s"[$persistenceId][OAuth] about to send '$cmd' to OAuthTokenHolder actor: " + actorRef)
+          actorRef ! cmd
+        case None =>
+          logger.error(s"[$persistenceId][OAuth] AccessTokenHolder actor was expected to be already created, but not found")
       }
     }
   }
@@ -223,12 +227,17 @@ class UserAgent(val agentActorContext: AgentActorContext,
       case EndpointType.FWD_PUSH    => ForwardPushEndpoint(cmu.id, cmu.value, allAuthKeyIds, packagingContext)
     }
     state = state.copy(relationship = state.relWithEndpointAddedOrUpdatedInMyDidDoc(endpoint))
-    updateOAuthAccessTokenHolder()
+
+    if (isSuccessfullyRecovered) {
+      //during recovery we don't want to update oauth access token holder
+      // for each ComMethodUpdated event to avoid unnecessary communication
+      updateOAuthAccessTokenHolder()
+    }
   }
 
   def handleOwnerDIDSet(did: DidStr, verKey: VerKeyStr): Unit = {
     val myDidDoc =
-      DidDocBuilder(futureWalletExecutionContext)
+      DidDocBuilder(futureExecutionContext)
         .withDid(did)
         .withAuthKey(did, verKey, Set(EDGE_AGENT_KEY))
         .didDoc
@@ -876,7 +885,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
     super.afterStop()
     metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_REL_AGENTS_TAG, this.actorId)
     metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_TAG, this.actorId)
-    metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_DELIVRY_STATUS_TAG, this.actorId)
+    metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_DELIVERY_STATUS_TAG, this.actorId)
     metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_DETAILS_TAG, this.actorId)
     metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, this.actorId)
   }
@@ -885,10 +894,14 @@ class UserAgent(val agentActorContext: AgentActorContext,
     httpComMethodsWithAuth.foreach { hc =>
       hc.authentication match {
         case Some(auth) if auth.`type` == AUTH_TYPE_OAUTH2 =>
-          context.child(oAuthHolderKey(hc)) match {
+          val actorName = oAuthHolderActorName(hc)
+          logger.info(s"[$persistenceId][OAuth] OAuthAccessTokenHolder will be updated (actorName: $actorName)")
+          context.child(actorName) match {
             case Some(child) =>
+              logger.info(s"[$persistenceId][OAuth] existing OAuthAccessTokenHolder will be updated")
               child ! UpdateParams(auth.data, OAuthAccessTokenRefresher.getRefresher(auth.version, executionContext))
             case None =>
+              logger.info(s"[$persistenceId][OAuth] new OAuthAccessTokenHolder will be created")
               val receiveTimeout = appConfig.getDurationOption(OUTBOX_OAUTH_RECEIVE_TIMEOUT)
                 .getOrElse(FiniteDuration(30, SECONDS))
               context.spawn(
@@ -897,7 +910,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
                   auth.data,
                   agentActorContext.oAuthAccessTokenRefreshers.refreshers(auth.version)
                 ),
-                oAuthHolderKey(hc)
+                actorName
               )
           }
         case None => //nothing to do
@@ -918,8 +931,25 @@ class UserAgent(val agentActorContext: AgentActorContext,
     }.getOrElse(Seq.empty)
   }
 
-  private def oAuthHolderKey(hc: HttpEndpoint): String = hc.id + hc.value.hashCode
+  private def oAuthHolderActorName(hc: HttpEndpoint): String = hc.id + hc.value.hashCode
 
+  override def postRecoveryCompleted(): Unit = {
+    updateOAuthAccessTokenHolder()
+    super.postRecoveryCompleted()
+  }
+
+  override def postAgentStateFix(): Future[Any] = {
+    logger.info(
+      s"[$persistenceId] unbounded elements => " +
+        s"isSnapshotApplied: $isAnySnapshotApplied, " +
+        s"configs: ${state.configs.size}, " +
+        s"messages: ${state.msgAndDelivery.map(_.msgs.size).getOrElse(0)}, " +
+        s"threadContexts: ${state.threadContext.map(_.contexts.size).getOrElse(0)}, " +
+        s"protoInstances: ${state.protoInstances.map(_.instances.size).getOrElse(0)}, " +
+        s"relationshipAgents: ${state.relationshipAgents.size}"
+    )
+    super.postAgentStateFix()
+  }
 }
 
 object UserAgent {
@@ -1025,7 +1055,7 @@ trait UserAgentStateUpdateImpl
     state = state.withMsgAndDelivery(msgAndDelivery)
     val m = state.msgAndDelivery.get
     metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_MND_MSGS_TAG, this.actorId, m.msgs.size)
-    metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_MND_MSGS_DELIVRY_STATUS_TAG, this.actorId, m.msgDeliveryStatus.size)
+    metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_MND_MSGS_DELIVERY_STATUS_TAG, this.actorId, m.msgDeliveryStatus.size)
     metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_MND_MSGS_DETAILS_TAG, this.actorId, m.msgDetails.size)
     metricsActorRef ! UpdateCollectionMetric(COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, this.actorId, m.msgPayloads.size)
   }

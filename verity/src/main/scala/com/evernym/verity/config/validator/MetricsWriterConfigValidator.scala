@@ -2,7 +2,7 @@ package com.evernym.verity.config.validator
 
 import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.config.validator.base.{ConfigValidator, ConfigValidatorCreator}
-import com.evernym.verity.metrics.MetricsBackend
+import com.evernym.verity.observability.metrics.MetricsBackend
 import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.util2.Status.VALIDATION_FAILED
 import com.typesafe.config.Config

@@ -14,16 +14,14 @@ import DevEnvironmentTasks.{agentJars, envRepos, jdkExpectedVersion}
 import Lightbend.{lightbendCinnamonAgentJar, lightbendCinnamonVer, lightbendClassFilter, lightbendDeps, lightbendResolvers}
 import SharedLibrary.{NonMatchingDistLib, NonMatchingLib}
 import SharedLibraryTasks.{sharedLibraries, updateSharedLibraries}
-import Util.{buildPackageMappings, dirsContaining, referenceConfMerge, searchForAdditionalJars}
+import Util._
 import Version._
 import sbt.Keys.{libraryDependencies, organization, update}
 import sbtassembly.AssemblyKeys.assemblyMergeStrategy
 import sbtassembly.MergeStrategy
 
-import java.io.BufferedReader
-import java.io.FileReader
 import scala.language.postfixOps
-import scala.util.Try
+
 
 enablePlugins(JavaAppPackaging)
 
@@ -57,24 +55,24 @@ val sharedLibDeps = Seq(
 val debPkgDepLibIndyMinVersion = libIndyVer
 
 //dependency versions
-val indyWrapperVer  = "1.15.0-dev-1618"
+val indyWrapperVer  = "1.15.0-dev-1629"
 
-val akkaVer         = "2.6.16"
+val akkaVer         = "2.6.17"
 val akkaHttpVer     = "10.2.6"
 val akkaMgtVer      = "1.1.1"
 val alpAkkaVer      = "3.0.3"
 val kamonVer        = "2.2.3"
-val kanelaAgentVer  = "1.0.10"
+val kanelaAgentVer  = "1.0.13"
 val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
 val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
                                   // around base64 decoding etc, should look into it.
 val sdnotifyVer     = "1.3"
 
 //test dependency versions
-val scalatestVer    = "3.2.9"
-val mockitoVer      = "1.16.37"
-val veritySdkVer    = "0.4.9-1024e509"
-val vcxWrapperVer   = "0.10.1.1216"
+val scalatestVer    = "3.2.10"
+val mockitoVer      = "1.16.46"
+val veritySdkVer    = "0.4.10-b1ecd34a"
+val vcxWrapperVer   = "0.12.0.1738"
 
 // compiler plugin versions
 val silencerVersion = "1.7.5"
@@ -116,6 +114,7 @@ lazy val verity = (project in file("verity"))
     testSettings,
     packageSettings,
     protoBufSettings,
+    coverageSettings,
     lightbendCommercialSettings,
     libraryDependencies ++= commonLibraryDependencies,
     // Conditionally download an unpack shared libraries
@@ -252,6 +251,16 @@ lazy val protoBufSettings = Seq(
   //
 ) ++ Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings)
 
+// For this really to do its job correctly, it needs the class files from compiling. But since
+// coverageExcludedFiles is a SettingKey, requiring compile would annoying. So compile for
+// accurate results.
+val coverageSettings = Seq(
+  coverageExcludedFiles := scoverageFilterProtobufPattern(
+    (Compile / classDirectory).value,
+    (Test / classDirectory).value
+  )
+)
+
 val lightbendCommercialSettings = {
     Lightbend.init ++ Seq (
       lightbendCinnamonVer := cinnamonVer,
@@ -301,7 +310,7 @@ lazy val commonLibraryDependencies = {
 
     //logging dependencies
     "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4",
-    "ch.qos.logback" % "logback-classic" % "1.2.5",
+    "ch.qos.logback" % "logback-classic" % "1.2.6",
     akkaGrp %% "akka-slf4j" % akkaVer,
 
     //kamon monitoring dependencies
@@ -328,7 +337,7 @@ lazy val commonLibraryDependencies = {
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",
     "org.msgpack" %% "msgpack-scala" % "0.8.13",  //used by legacy pack/unpack operations
-    "org.fusesource.jansi" % "jansi" % "2.3.4",    //used by protocol engine for customized logging
+    "org.fusesource.jansi" % "jansi" % "2.4.0",    //used by protocol engine for customized logging
     "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.5",  //used for libindy sync api calls
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
@@ -359,7 +368,7 @@ lazy val commonLibraryDependencies = {
       exclude ("org.hyperledger", "indy"),
 
     "net.glxn" % "qrgen" % "1.4", // QR code generator
-    "com.google.guava" % "guava" % "30.1.1-jre",
+    "com.google.guava" % "guava" % "31.0.1-jre",
 
     "com.evernym" % "vcx" % vcxWrapperVer,
 

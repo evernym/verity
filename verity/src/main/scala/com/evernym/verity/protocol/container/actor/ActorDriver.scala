@@ -4,16 +4,16 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.cluster.sharding.ClusterSharding
 import com.evernym.verity.constants.ActorNameConstants.{AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME, AGENCY_AGENT_REGION_ACTOR_NAME}
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
-import com.evernym.verity.actor._
+import com.evernym.verity.actor.{HasAppConfig, _}
 import com.evernym.verity.actor.agent.agency.AgencyIdUtil
 import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessSignalMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing.SendSignalMsg
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.{Driver, PinstId, ProtoRef, ProtocolRegistry, SignalEnvelope}
-import com.evernym.verity.protocol.protocols.HasAppConfig
+import com.evernym.verity.protocol.engine.{Driver, PinstId, ProtoRef, SignalEnvelope}
 import com.evernym.verity.cache.base.Cache
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry
 
 import scala.concurrent.ExecutionContext
 
@@ -96,6 +96,7 @@ abstract class ActorDriver(cp: ActorDriverGenParam, ec: ExecutionContext)
 case class ActorDriverGenParam(system: ActorSystem,
                                config: AppConfig,
                                protocolRegistry: ProtocolRegistry[ActorDriverGenParam],
-                               generalCache: Cache, agentMsgRouter: AgentMsgRouter,
+                               generalCache: Cache,
+                               agentMsgRouter: AgentMsgRouter,
                                msgForwarder: MsgForwarder)
 

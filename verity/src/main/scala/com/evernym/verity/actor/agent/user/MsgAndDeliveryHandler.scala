@@ -7,12 +7,12 @@ import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated, MsgDeliveryStatus
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.agent.{AgentCommon, Msg}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.UpdateMsgStatusReqMsg
-import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import MsgHelper._
 import com.evernym.verity.actor.agent.user.msgstore.MsgStore
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.util.Util.checkIfDIDLengthIsValid
 
 trait MsgAndDeliveryHandler { this: AgentCommon =>

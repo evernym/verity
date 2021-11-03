@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent.msgrouter.Route
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
 import com.evernym.verity.actor.itemmanager.{ItemContainer, ItemManager}
-import com.evernym.verity.actor.metrics.{ActivityTracker, CollectionsMetricCollector, LibindyMetricsCollector}
+import com.evernym.verity.actor.metrics.{CollectionsMetricCollector, LibindyMetricsCollector}
 import com.evernym.verity.actor.msg_tracer.MsgTracingRegionActors
 import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
@@ -30,9 +30,11 @@ import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 
 import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyService, SysServiceNotifier, SysShutdownProvider, SysShutdownService}
+import com.evernym.verity.actor.metrics.activity_tracker.ActivityTracker
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.typed.base.UserGuardian
 import com.evernym.verity.libindy.Libraries
+import com.evernym.verity.util.healthcheck.HealthChecker
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -46,6 +48,8 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
   implicit def agentActorContext: AgentActorContext = aac
   implicit def appConfig: AppConfig = agentActorContext.appConfig
   implicit def actorSystem: ActorSystem = agentActorContext.system
+
+  def healthChecker: HealthChecker = HealthChecker(aac, aac.system, executionContextProvider.futureExecutionContext)
 
   implicit lazy val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS,
     DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
@@ -92,8 +96,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       Props(
         new AgencyAgent(
           agentActorContext,
-          executionContextProvider.futureExecutionContext,
-          executionContextProvider.walletFutureExecutionContext
+          executionContextProvider.futureExecutionContext
         )
       ),
       Option(AGENCY_AGENT_ACTOR_DISPATCHER_NAME)
@@ -117,8 +120,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       Props(
         new AgencyAgentPairwise(
           agentActorContext,
-          executionContextProvider.futureExecutionContext,
-          executionContextProvider.walletFutureExecutionContext
+          executionContextProvider.futureExecutionContext
         )
       ),
       Option(AGENCY_AGENT_PAIRWISE_ACTOR_DISPATCHER_NAME)
@@ -143,8 +145,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
         new UserAgent(
           agentActorContext,
           collectionsMetricsCollector,
-          executionContextProvider.futureExecutionContext,
-          executionContextProvider.walletFutureExecutionContext
+          executionContextProvider.futureExecutionContext
         )
       ),
       Option(USER_AGENT_ACTOR_DISPATCHER_NAME)
@@ -169,8 +170,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
         new UserAgentPairwise(
           agentActorContext,
           collectionsMetricsCollector,
-          executionContextProvider.futureExecutionContext,
-          executionContextProvider.walletFutureExecutionContext
+          executionContextProvider.futureExecutionContext
         )
       ),
       Option(USER_AGENT_PAIRWISE_ACTOR_DISPATCHER_NAME)
@@ -397,7 +397,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
   val segmentedStateRegions: Map[String, ActorRef] = agentActorContext.protocolRegistry
     .entries.filter(_.protoDef.segmentStoreStrategy.isDefined)
     .map { e =>
-      val typeName = SegmentedStateStore.buildTypeName(e.protoDef.msgFamily.protoRef)
+      val typeName = SegmentedStateStore.buildTypeName(e.protoDef.protoRef)
       val region = createPersistentRegion(
         typeName,
         SegmentedStateStore.props(agentActorContext.appConfig, executionContextProvider.futureExecutionContext),
@@ -468,6 +468,11 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       case None           => defaultDurationInSeconds
     }
   }
+
+  val appStateCoordinator = new AppStateCoordinator(
+    appConfig,
+    actorSystem,
+    appStateManager)(agentActorContext.futureExecutionContext)
 }
 
 trait PlatformServices {

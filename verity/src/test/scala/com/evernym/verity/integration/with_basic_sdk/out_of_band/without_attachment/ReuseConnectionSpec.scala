@@ -17,7 +17,7 @@ import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 import scala.concurrent.ExecutionContext
 
 
-//Holder and Issuer already have a connection.
+//Holder and Issuer already have a connection/relationship.
 //Holder receives a new OOB invitation from the same Issuer
 // Holder re-uses the existing connection (handshake-reuse)
 
@@ -31,8 +31,8 @@ class ReuseConnectionSpec
   lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
 
   val issuerHolderConn = "connId1"
   val oobIssuerHolderConn = "connId2"

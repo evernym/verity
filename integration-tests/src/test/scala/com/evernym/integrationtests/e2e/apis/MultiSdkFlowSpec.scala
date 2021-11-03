@@ -10,7 +10,7 @@ import com.evernym.integrationtests.e2e.sdk.VeritySdkProvider
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.ConfigUtilBaseSpec
 import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.WriteCredentialDefinitionV0_6
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
@@ -65,7 +65,6 @@ class MultiSdkFlowSpec
       lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
         appEnv.config,
         ecp.futureExecutionContext,
-        ecp.walletFutureExecutionContext,
         Option(appEnv.ledgerConfig.submitterDID),
         Option(appEnv.ledgerConfig.submitterSeed),
         genesisTxnPath = Some(appEnv.ledgerConfig.genesisFilePath)

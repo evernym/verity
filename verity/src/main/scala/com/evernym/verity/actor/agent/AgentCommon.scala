@@ -12,10 +12,8 @@ import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.logging.LoggingUtil.getAgentIdentityLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getAgentIdentityLoggerByClass
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols.HasAgentWallet
-import com.evernym.verity.util2.HasWalletExecutionContextProvider
 import com.evernym.verity.actor.agent.state.base.{AgentStateInterface, AgentStateUpdateInterface}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{HasMsgProgressTracker, TrackingIdParam}
@@ -25,10 +23,12 @@ import com.evernym.verity.cache.{AGENCY_IDENTITY_CACHE_FETCHER, AGENT_ACTOR_CONF
 import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
 import com.evernym.verity.config.ConfigConstants.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VERITY_ENDORSER_DEFAULT_DID}
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgType, TypedMsgLike}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
-import com.evernym.verity.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
-import com.evernym.verity.metrics.{InternalSpan, MetricsUnit, MetricsWriter}
+import com.evernym.verity.observability.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
+import com.evernym.verity.observability.metrics.{InternalSpan, MetricsUnit, MetricsWriter}
 import com.evernym.verity.protocol.container.actor.ProtocolIdDetail
+import com.evernym.verity.protocol.engine.registry.PinstIdResolver
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.google.protobuf.ByteString
@@ -45,8 +45,7 @@ trait AgentCommon
     with HasAgentWallet
     with HasSetRoute
     with HasMsgProgressTracker
-    with ResourceUsageCommon
-    with HasWalletExecutionContextProvider { this: AgentPersistentActor =>
+    with ResourceUsageCommon { this: AgentPersistentActor =>
 
   private implicit def executionContext: ExecutionContext = futureExecutionContext
 
@@ -331,7 +330,7 @@ trait AgentCommon
   def updatedDidDocs(explicitlyAddedAuthKeys: Set[AuthKey],
                      didDocs: Seq[DidDoc]): Future[Seq[DidDoc]] =
     Future.traverse(didDocs) { dd =>
-      DidDocBuilder(futureWalletExecutionContext, dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
+      DidDocBuilder(futureExecutionContext, dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
     }
 
   lazy val isVAS: Boolean =

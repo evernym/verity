@@ -1,12 +1,10 @@
 package com.evernym.verity.actor
 
-import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.node_singleton.TrackingParam
 import com.evernym.verity.protocol.engine.Ledgers
 import com.evernym.verity.util.TokenProvider
 import com.evernym.verity.util.Util._
 import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
-import com.evernym.verity.util2.Status
 import scalapb.GeneratedMessage
 
 /**
@@ -101,17 +99,3 @@ case class StartProgressTracking(trackingId: TrackingParam) extends ActorMessage
 case class StopProgressTracking(trackingId: String) extends ActorMessage
 case object NodeMetricsResetDone extends ActorMessage
 case object AllNodeMetricsResetDone extends ActorMessage
-
-trait Bad {
-  def statusCode: String
-  def statusMsg: Option[String]
-  def detail: Option[Any]
-
-  def getStatusMsg: String = {
-    statusMsg.getOrElse(getStatusMsgFromCode(statusCode))
-  }
-
-  def isAlreadyExists: Boolean = statusCode == ALREADY_EXISTS.statusCode
-
-  Status.getFromCode(statusCode)
-}

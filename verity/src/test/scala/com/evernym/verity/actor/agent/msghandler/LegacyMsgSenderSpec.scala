@@ -16,7 +16,7 @@ import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.config.ConfigConstants.OUTBOX_OAUTH_RECEIVE_TIMEOUT
-import com.evernym.verity.config.{AppConfig, ConfigConstants}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.GetTokenSuccess
@@ -32,7 +32,7 @@ import java.util.UUID
 import com.evernym.verity.util.TestExecutionContextProvider
 
 import scala.collection.immutable
-import scala.concurrent.duration.{FiniteDuration, SECONDS}
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -301,7 +301,7 @@ class LegacyMsgSenderSpec
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
 
   def createLegacyMsgSender(): ActorRef[LegacyMsgSender.Cmd] = {
-    system.spawn(LegacyMsgSender("selfRelDID", mockAgentMsgRouter, MockMsgSendingSvc, ecp.futureExecutionContext), UUID.randomUUID().toString)
+    system.spawn(LegacyMsgSender("selfRelDID", mockAgentMsgRouter, MockMsgSendingSvc, 5.seconds, ecp.futureExecutionContext), UUID.randomUUID().toString)
   }
 
   val mockAgentMsgRouter = new MockAgentMsgRouter(appConfig, system, ecp.futureExecutionContext)
@@ -353,7 +353,7 @@ object MockOAuthAccessTokenRefresher {
         case OAuthAccessTokenRefresher.Commands.GetToken(params, prevTokenRefreshResponse, replyTo) =>
           val token = UUID.randomUUID().toString
           MockMsgSendingSvc.addAuthedToken(token)
-          replyTo ! GetTokenSuccess(token, 10, Option(new JSONObject("{}")))
+          replyTo ! GetTokenSuccess(token, Option(10), Option(new JSONObject("{}")))
           Behaviors.stopped
       }
     }

@@ -5,5 +5,7 @@ trait DIDMethod {
   val method: String
   val identifier: String
 
-  override def toString: String = s"${scheme}:${method}:${identifier}"
+  override def toString: String = s"$scheme:$method:$identifier"
 }
+
+trait SelfValidated

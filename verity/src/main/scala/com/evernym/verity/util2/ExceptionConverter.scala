@@ -2,7 +2,7 @@ package com.evernym.verity.util2
 
 import akka.persistence.dynamodb.journal.{DynamoDBJournalFailure, DynamoDBJournalRejection}
 import com.amazonaws.{AmazonClientException, AmazonServiceException}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util2.Exceptions._
 import com.evernym.verity.util2.Status._

@@ -6,13 +6,13 @@ import akka.cluster.sharding.typed.scaladsl.Entity
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
 import com.evernym.verity.actor.typed.EventSourcedBehaviourSpecBase
-import com.evernym.verity.metrics.CustomMetrics.{AS_OUTBOX_MSG_DELIVERY, AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT}
+import com.evernym.verity.observability.metrics.CustomMetrics.{AS_OUTBOX_MSG_DELIVERY, AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, AS_OUTBOX_MSG_DELIVERY_SUCCESSFUL_COUNT}
 import com.evernym.verity.msgoutbox.base.BaseMsgOutboxSpec
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Replies.MsgDeliveryStatus
 import com.evernym.verity.msgoutbox.outbox.Outbox.Commands.{AddMsg, GetDeliveryStatus, GetOutboxParam, UpdateConfig, UpdateOutboxParam}
 import com.evernym.verity.msgoutbox.outbox.Outbox.{Commands, Replies, TypeKey}
-import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam}
+import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam, WalletUpdateParam}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.storage_services.BucketLifeCycleUtil
 import com.evernym.verity.testkit.BasicSpec
@@ -35,7 +35,7 @@ class OutboxSpec
 
     "when gets created with invalid outbox id" - {
       "stops with error without responding" in {
-        val probe = createTestProbe[StatusReply[RelationshipResolver.Replies.OutboxParam]]()
+        val probe = createTestProbe[RelationshipResolver.Replies.OutboxParam]()
         outboxRegion ! ShardingEnvelope("outboxId", GetOutboxParam(probe.ref))
         probe.expectNoMessage()
         checkMsgDeliveryMetrics(0, 0, 0)
@@ -44,10 +44,11 @@ class OutboxSpec
 
     "when started for the first time" - {
       "should fetch required information from relationship actor" in {
-        val probe = createTestProbe[StatusReply[RelationshipResolver.Replies.OutboxParam]]()
+        val probe = createTestProbe[RelationshipResolver.Replies.OutboxParam]()
         outboxRegion ! ShardingEnvelope(outboxId, GetOutboxParam(probe.ref))
-        outboxRegion ! ShardingEnvelope(outboxId, Commands.Init(relId, recipId, destId))
-        val outboxParam = probe.expectMessageType[StatusReply[RelationshipResolver.Replies.OutboxParam]].getValue
+        val secondProbe = createTestProbe[Outbox.Replies.Initialized]()
+        outboxRegion ! ShardingEnvelope(outboxId, Commands.Init(relId, recipId, destId, secondProbe.ref))
+        val outboxParam = probe.expectMessageType[RelationshipResolver.Replies.OutboxParam]
         outboxParam.walletId shouldBe testWallet.walletId
         outboxParam.comMethods shouldBe defaultDestComMethods
         checkRetention(expectedSnapshots = 2, expectedEvents = 1)
@@ -59,9 +60,9 @@ class OutboxSpec
 
       "when sent GetOutboxParam" - {
         "should respond with proper information" in {
-          val probe = createTestProbe[StatusReply[RelationshipResolver.Replies.OutboxParam]]()
+          val probe = createTestProbe[RelationshipResolver.Replies.OutboxParam]()
           outboxRegion ! ShardingEnvelope(outboxId, GetOutboxParam(probe.ref))
-          val outboxParam = probe.expectMessageType[StatusReply[RelationshipResolver.Replies.OutboxParam]].getValue
+          val outboxParam = probe.expectMessageType[RelationshipResolver.Replies.OutboxParam]
           outboxParam.walletId shouldBe testWallet.walletId
           outboxParam.comMethods shouldBe defaultDestComMethods
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
@@ -72,12 +73,12 @@ class OutboxSpec
       "when sent AddMsg(msg-1, ...) command" - {
         "should be successful" in {
           val msgId = storeAndAddToMsgMetadataActor("cred-offer", Set(outboxId))
-          val probe = createTestProbe[StatusReply[Replies.MsgAddedReply]]()
+          val probe = createTestProbe[Replies.MsgAddedReply]()
           outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, 1.days, probe.ref))
-          probe.expectMessage(StatusReply.success(Replies.MsgAdded))
+          probe.expectMessage(Replies.MsgAdded)
 
           outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, 1.days, probe.ref))
-          probe.expectMessage(StatusReply.success(Replies.MsgAlreadyAdded))
+          probe.expectMessage(Replies.MsgAlreadyAdded)
 
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
           checkMsgDeliveryMetrics(0, 0, 1)
@@ -87,9 +88,9 @@ class OutboxSpec
       "when sent different AddMsg(msg-2, ...) command" - {
         "should be successful" in {
           val msgId = storeAndAddToMsgMetadataActor("cred-request", Set(outboxId))
-          val probe = createTestProbe[StatusReply[Replies.MsgAddedReply]]()
+          val probe = createTestProbe[Replies.MsgAddedReply]()
           outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, 1.days, probe.ref))
-          probe.expectMessage(StatusReply.success(Replies.MsgAdded))
+          probe.expectMessage(Replies.MsgAdded)
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
           checkMsgDeliveryMetrics(0, 0, 2)
         }
@@ -98,9 +99,9 @@ class OutboxSpec
       "when sent another AddMsg(msg-3, ...) command" - {
         "should be successful" in {
           val msgId = storeAndAddToMsgMetadataActor("cred", Set(outboxId))
-          val probe = createTestProbe[StatusReply[Replies.MsgAddedReply]]()
+          val probe = createTestProbe[Replies.MsgAddedReply]()
           outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, 1.days, probe.ref))
-          probe.expectMessage(StatusReply.success(Replies.MsgAdded))
+          probe.expectMessage(Replies.MsgAdded)
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
           checkMsgDeliveryMetrics(0, 0, 3)
         }
@@ -110,8 +111,10 @@ class OutboxSpec
         "eventually those messages should disappear" in {
           val probe = createTestProbe[StatusReply[Replies.DeliveryStatus]]()
           eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
-            outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(probe.ref))
-            val messages = probe.expectMessageType[StatusReply[Replies.DeliveryStatus]].getValue.messages
+            outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(List(), List(), false, probe.ref))
+            val status = probe.expectMessageType[StatusReply[Replies.DeliveryStatus]]
+            status.isSuccess shouldBe true
+            val messages = status.getValue.messages
             messages.size shouldBe 0
             checkRetention(expectedSnapshots = 2, expectedEvents = 1)
             checkMsgDeliveryMetrics(3, 0, 0)
@@ -123,10 +126,10 @@ class OutboxSpec
       "when checking the Message actors" - {
         "there should be delivery status found for this outbox" in {
           storedMsgs.foreach { msgId =>
-            val probe = createTestProbe[StatusReply[MsgDeliveryStatus]]()
+            val probe = createTestProbe[MsgDeliveryStatus]()
             eventually(timeout(Span(10, Seconds)), interval(Span(2, Seconds))) {
               messageMetaRegion ! ShardingEnvelope(msgId, MessageMeta.Commands.GetDeliveryStatus(probe.ref))
-              val msgDeliveryStatus = probe.expectMessageType[StatusReply[MsgDeliveryStatus]].getValue
+              val msgDeliveryStatus = probe.expectMessageType[MsgDeliveryStatus]
               val outboxDeliveryStatus = msgDeliveryStatus.outboxDeliveryStatus(outboxId)
               outboxDeliveryStatus.status shouldBe Status.MSG_DELIVERY_STATUS_SENT.statusCode
               outboxDeliveryStatus.msgActivities.size shouldBe 2
@@ -154,7 +157,7 @@ class OutboxSpec
     "when received UpdateOutboxParam" - {
       "should update its details" in {
         outboxRegion ! ShardingEnvelope(outboxId,
-          UpdateOutboxParam(testWallet.walletId, myKey1.verKey, Map("1" -> oAuthIndyWebhookComMethod))
+          UpdateOutboxParam(StatusReply.Success(WalletUpdateParam(testWallet.walletId, myKey1.verKey, Map("1" -> oAuthIndyWebhookComMethod))))
         )
       }
     }
@@ -163,9 +166,9 @@ class OutboxSpec
       "should be successful" in {
         (1 to 3).foreach { _ =>
           val msgId = storeAndAddToMsgMetadataActor("cred-offer", Set(outboxId))
-          val probe = createTestProbe[StatusReply[Replies.MsgAddedReply]]()
+          val probe = createTestProbe[Replies.MsgAddedReply]()
           outboxRegion ! ShardingEnvelope(outboxId, AddMsg(msgId, 1.days, probe.ref))
-          probe.expectMessage(StatusReply.success(Replies.MsgAdded))
+          probe.expectMessage(Replies.MsgAdded)
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
         }
       }
@@ -175,8 +178,10 @@ class OutboxSpec
       "eventually those messages should disappear" in {
         val probe = createTestProbe[StatusReply[Replies.DeliveryStatus]]()
         eventually(timeout(Span(10, Seconds)), interval(Span(100, Millis))) {
-          outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(probe.ref))
-          val messages = probe.expectMessageType[StatusReply[Replies.DeliveryStatus]].getValue.messages
+          outboxRegion ! ShardingEnvelope(outboxId, GetDeliveryStatus(List(), List(), false, probe.ref))
+          val status = probe.expectMessageType[StatusReply[Replies.DeliveryStatus]]
+          status.isSuccess shouldBe true
+          val messages = status.getValue.messages
           messages.size shouldBe 0
           checkRetention(expectedSnapshots = 2, expectedEvents = 1)
         }
@@ -241,14 +246,13 @@ class OutboxSpec
         appConfig.withFallback(SNAPSHOT_CONFIG).config,
         testAccessTokenRefreshers,
         testRelResolver,
-        testMsgStore,
         testMsgPackagers,
         testMsgTransports,
-        futureExecutionContext
+        futureExecutionContext,
+        testMsgRepository
       )
     })
 
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

@@ -23,47 +23,59 @@
       $TRIGGERAPI_URL_VERITY_RELEASE
   tags:
     - docker-machine
-  needs: ["package" ,"publish-deb", "publish-docker"]
+  needs: ["package" ,"publish-debian", "publish-docker"]
+
+deploy-k8s:
+  extends:
+    - .verity-main-only-rule
+  stage: deploy
+  script:
+    - ls verity/target/verity-application*.deb
+    - export debianPackage=`ls verity/target/verity-application*.deb`
+    - >
+      if [ ! -z "${debianPackage}" ]; then
+        export VERITY_VERSION=`echo "$debianPackage" | cut -d'_' -f2`
+      else
+        /bin/false
+      fi
+    - curl
+      --request POST
+      --form token=$TRIGGER_API_K8S_TOKEN
+      --form ref=master
+      --form "variables[VERITY_APPLICATION_VERSION]=$VERITY_VERSION"
+      $TRIGGERAPI_URL_VERITY_K8S_RELEASE
+  tags:
+    - docker-machine
+  needs: ["package" ,"publish-debian", "publish-docker"]
 
 deploy-manually-team1:
-  extends: .deploy-common
+  extends:
+    - .deploy-common
+    - .verity-main-only-rule
   variables:
     TARGET_ENVIRONMENT: 'team1'
     TRIGGERAPI_REF_VERITY_RELEASE: $TARGET_ENVIRONMENT
     MERGE_FORK_PROJECT_ID: "766"
     MERGE_FORK_BRANCH: $TARGET_ENVIRONMENT
   when: manual
-  only:
-    refs:
-      - main@evernym/verity/verity
 
-.deploy-manually-team2:
-  extends: .deploy-common
-  variables:
-    TARGET_ENVIRONMENT: 'team2'
-  when: manual
-
-deploy-dev-rc: # default branch for automatic deployment verity master to dev-rc
+deploy-dev-rc: # default branch for automatic deployment verity main to dev-rc
   extends:
     - .deploy-common
+    - .verity-main-only-rule
   variables:
     TARGET_ENVIRONMENT: 'dev-rc'
     TRIGGERAPI_REF_VERITY_RELEASE: $TARGET_ENVIRONMENT
     MERGE_FORK_PROJECT_ID: "766"
     MERGE_FORK_BRANCH: $TARGET_ENVIRONMENT
-  only:
-    refs:
-      - main@evernym/verity/verity
 
-deploy-manually-dev-rc: # special branch for manual deployment verity master with control-repo changes to dev-rc: MERGE_FORK_PROJECT_ID and MERGE_FORK_BRANCH must be provided in job UI
+deploy-manually-dev-rc: # special branch for manual deployment verity main with control-repo changes to dev-rc: MERGE_FORK_PROJECT_ID and MERGE_FORK_BRANCH must be provided in job UI
   extends:
     - .deploy-common
+    - .verity-main-only-rule
   variables:
     TARGET_ENVIRONMENT: 'dev-rc'
     TRIGGERAPI_REF_VERITY_RELEASE: $TARGET_ENVIRONMENT
     MERGE_FORK_PROJECT_ID: "766"
     MERGE_FORK_BRANCH: $TARGET_ENVIRONMENT
   when: manual
-  only:
-    refs:
-      - main@evernym/verity/verity

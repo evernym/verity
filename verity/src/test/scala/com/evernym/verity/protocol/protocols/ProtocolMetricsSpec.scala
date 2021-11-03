@@ -1,9 +1,10 @@
 package com.evernym.verity.protocol.protocols
 
 import com.evernym.verity.actor.agent.{AgentProvHelper, SponsorRel}
-import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
-import com.evernym.verity.metrics.MetricHelpers.{SPONSOR_ID, SPONSOR_ID2, getMetricWithTags}
-import com.evernym.verity.metrics.{CustomMetrics, MetricWithTags}
+import com.evernym.verity.observability.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
+import com.evernym.verity.observability.metrics.MetricHelpers.{SPONSOR_ID, SPONSOR_ID2, getMetricWithTags}
+import com.evernym.verity.observability.metrics.MetricWithTags
+import com.evernym.verity.observability.metrics.CustomMetrics
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_7, MSG_FAMILY_AGENT_PROVISIONING}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -66,7 +67,6 @@ class AriesProtocolMetricSpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
   override def executionContextProvider: ExecutionContextProvider = ecp
 
 }

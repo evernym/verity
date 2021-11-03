@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.tictactoe
 
-import com.evernym.verity.protocol.engine.{ParticipantId, ParticipantIndex, Roster}
+import com.evernym.verity.protocol.engine.context.Roster
+import com.evernym.verity.protocol.engine.{ParticipantId, ParticipantIndex}
 import com.evernym.verity.protocol.protocols.tictactoe.Board.CellValue
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeMsgFamily.Move
 

@@ -1,6 +1,6 @@
 package com.evernym.verity.util
 
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
 import org.apache.commons.net.util.SubnetUtils
 import org.apache.http.conn.util.InetAddressUtils

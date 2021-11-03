@@ -26,7 +26,7 @@ done
 
 cd $SCRIPT_DIR/../../../../
 sbt "set test in assembly := {}" assembly
-startCmd="/usr/bin/java -javaagent:$SCRIPT_DIR/../../../../integration-tests/lib/kanela-agent-1.0.10.jar -cp $SCRIPT_DIR:$SCRIPT_DIR/../../../../verity/target/scala-2.12/verity-assembly-0.4.0-SNAPSHOT.jar:$SCRIPT_DIR/../../../../verity/src/main/resources:$SCRIPT_DIR/../../../../integration-tests/src/test/resources/common:$SCRIPT_DIR/../../../../integration-tests/src/test/resources/consumer com.evernym.verity.Main"
+startCmd="/usr/bin/java -javaagent:$SCRIPT_DIR/../../../../integration-tests/lib/kanela-agent.jar -cp $SCRIPT_DIR:$SCRIPT_DIR/../../../../verity/target/scala-2.12/verity-assembly-0.4.0-SNAPSHOT.jar:$SCRIPT_DIR/../../../../verity/src/main/resources:$SCRIPT_DIR/../../../../integration-tests/src/test/resources/common:$SCRIPT_DIR/../../../../integration-tests/src/test/resources/consumer com.evernym.verity.Main"
 
 echo "===================================== CAS ====================================================="
 echo "verity load balanced url (if you have configured): http://locahost:$CAS_LOAD_BALANCER_PORT"

@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.persistence.supervisor.backoff.onfailure
 
-import akka.pattern.BackoffSupervisor.{CurrentChild, GetCurrentChild}
+import akka.pattern.BackoffSupervisor.{CurrentChild, GetCurrentChild, GetRestartCount, RestartCount}
 import akka.testkit.EventFilter
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.supervisor.{GenerateRecoveryFailure, IgnoreSupervisorLogErrors, MockActorRecoveryFailure}
@@ -9,13 +9,15 @@ import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 
+//This test confirms that if any `RuntimeException` occurs during message handling
+// it will be restarted as per default supervisor strategy
+// and restarting will be controlled by Backoff.onFailure supervisor
 
 class ActorRecoveryFailureSpec
   extends ActorSpec
   with BasicSpec
   with Eventually
   with IgnoreSupervisorLogErrors {
-
 
   override def expectDeadLetters: Boolean = true
 
@@ -24,14 +26,19 @@ class ActorRecoveryFailureSpec
   "OnFailure BackoffSupervised actor" - {
     "when throws an unhandled exception during recovery" - {
       "should stop and start (not exactly a restart) as per BACKOFF strategy" in {
-        //4 from 'handleFailure' in 'akka.actor.FaultHandling' (the default handler)
+
+        //3 errors from 'handleFailure' in 'akka.actor.FaultHandling' (the default handler)
         val expectedLogEntries = 3
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = expectedLogEntries) intercept {
           mockSupervised ! GenerateRecoveryFailure
           expectNoMessage()
         }
 
-        // Supervisor should stop restarting child
+        //because 'max-nr-of-retries' is defined as 3
+        mockSupervised ! GetRestartCount
+        expectMsgType[RestartCount].count shouldBe 3
+
+        //supervisor should stop restarting child once crossed 'max-nr-of-retries'
         mockSupervised ! GetCurrentChild
         expectMsgType[CurrentChild].ref shouldBe None
       }
@@ -43,6 +50,7 @@ class ActorRecoveryFailureSpec
        verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
+            strategy = OnFailure
             min-seconds = 1
             max-seconds = 2
             random-factor = 0

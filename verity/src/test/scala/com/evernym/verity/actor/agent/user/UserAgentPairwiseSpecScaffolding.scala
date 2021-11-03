@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.user
 
 import com.evernym.verity.util2.Status._
-import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, SetupAgentEndpoint, SetupAgentEndpoint_V_0_7, SponsorRel}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
@@ -10,7 +10,6 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgpacker.PackMsgParam
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, ThreadId}
-import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.push_notification.MockPusher
 import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
@@ -20,6 +19,7 @@ import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util._
 import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
+import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.did.DidStr
@@ -35,19 +35,18 @@ trait UserAgentPairwiseSpecScaffolding
     with AgentSpecHelper
     with AgentWalletSetupProvider
     with Eventually
-    with HasExecutionContextProvider
-    with HasWalletExecutionContextProvider {
+    with HasExecutionContextProvider {
 
   implicit def msgPackagingContext: AgentMsgPackagingContext
 
   val mockEntAgencyAdmin: MockEdgeAgent =
-    new MockEdgeAgent(UrlParam("localhost:9002"), platform.agentActorContext.appConfig, futureExecutionContext, futureWalletExecutionContext)
+    new MockEdgeAgent(UrlParam("localhost:9002"), platform.agentActorContext.appConfig, futureExecutionContext)
 
-  lazy val mockRemoteEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockEntAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
+  lazy val mockRemoteEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockEntAgencyAdmin, futureExecutionContext)
 
-  lazy val mockRemoteEdgeCloudAgent: MockCloudAgent = buildMockCloudAgent(mockEntAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
+  lazy val mockRemoteEdgeCloudAgent: MockCloudAgent = buildMockCloudAgent(mockEntAgencyAdmin, futureExecutionContext)
 
-  lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
+  lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext)
 
   lazy val mockPusher: MockPusher = new MockPusher(appConfig, futureExecutionContext)
 

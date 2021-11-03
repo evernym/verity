@@ -18,12 +18,12 @@ import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.metrics.CustomMetrics._
+import com.evernym.verity.observability.metrics.CustomMetrics._
 import com.evernym.verity.protocol.engine.MultiEvent
 import com.evernym.verity.util.Util._
 import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
-import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.metrics.InternalSpan
+import com.evernym.verity.observability.logs.LoggingUtil
+import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.transformations.transformers.<=>
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
@@ -313,7 +313,7 @@ trait BasePersistentActor
         s"totalRecoveredEvents: $totalRecoveredEvents, " +
         s"timeTakenInMillis: $millis)"
       if (millis > warnRecoveryTime) logger.warn(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
-      else logger.debug(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
+      else logger.info(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
 
       publishAppStateEvent(RecoverIfNeeded(CONTEXT_EVENT_RECOVERY))
       postRecoveryCompleted()
@@ -418,15 +418,11 @@ trait BasePersistentActor
 
   def handleErrorEventParam(errorEventParam: ErrorEvent): Unit = {
     publishAppStateEvent(errorEventParam)
-    throw errorEventParam.cause
+    log.error(errorEventParam.cause.getMessage)
   }
 
   def handlePersistenceFailure(cause: Throwable, errorMsg: String): Unit = {
     handleErrorEventParam(ErrorEvent(SeriousSystemError, CONTEXT_EVENT_PERSIST, cause, Option(errorMsg)))
-  }
-
-  def handleRecoveryFailure(cause: Throwable, errorMsg: String): Unit = {
-    handleErrorEventParam(ErrorEvent(SeriousSystemError, CONTEXT_EVENT_RECOVERY, cause, Option(errorMsg)))
   }
 
   def handleUndoTransformFailure(cause: Throwable, errorMsg: String): Unit = {
@@ -456,15 +452,13 @@ trait BasePersistentActor
 
   override def onRecoveryFailure(cause: Throwable, event: Option[Any]): Unit = {
     event match {
-      case Some(_) =>
-        val errorMsg = s"[$persistenceId] actor not able to start (" +
-          s"error-msg: ${cause.getMessage})"
-        handleRecoveryFailure(cause, errorMsg)
+      case Some(event) =>
+        logger.error(s"[$persistenceId] error while applying event ${event.getClass.getSimpleName}: ${Exceptions.getStackTraceAsSingleLineString(cause)}")
       case None =>
-        val errorMsg = s"[$persistenceId] actor not able to start (" +
-          s"error-msg: ${cause.getMessage}, "+
-          s"possible-causes: $JOURNAL_ERROR_POSSIBLE_CAUSE)"
-        handleRecoveryFailure(cause, errorMsg)
+        logger.error(s"[$persistenceId] error while actor recovery, " +
+          s"possible-causes: $JOURNAL_ERROR_POSSIBLE_CAUSE " +
+          s"(error message: ${Exceptions.getStackTraceAsSingleLineString(cause)})"
+        )
     }
   }
 

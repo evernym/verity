@@ -166,7 +166,7 @@ class OAuthWebhookSenderSpec
       testMsgPackagers)
 
     val salt = appConfig.getStringReq(SALT_EVENT_ENCRYPTION)
-    val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, salt)
+    val packager = msg_packager.Packager(msgPackagingParam, testMsgRepository, salt)
     val sender = OAuthWebhookSender(
       buildOAuthAccessTokenHolder(tokenExpiresInSeconds = 5),
       dispatchParam,
@@ -208,8 +208,6 @@ class OAuthWebhookSenderSpec
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
 
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 
 //  override val APP_CONFIG: Config = super.APP_CONFIG.withFallback(new Config"verity.salt.wallet_name")
 }

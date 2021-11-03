@@ -4,8 +4,10 @@ import akka.actor.{Actor, ActorRef, ActorSystem}
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
+import com.evernym.verity.observability.logs.HasLogger
 import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, _}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.registry.{LaunchesProtocol, PinstIdPair, ProtocolRegistry}
 
 import scala.concurrent.{ExecutionContext, Future}
 

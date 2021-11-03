@@ -9,9 +9,11 @@ k8sService:
   type: NodePort
   port: 80
   targetPort: 9000
+ingress:
+  force_ssl: false
 # List of sponsors for Verity
 sponsors:
-# List configuration for for TAA.
+# List configuration for TAA.
 taa:
 # Custom and Adhoc Configuration for Verity in HOCON Notation
 # Intended to allow quick injection of config that is

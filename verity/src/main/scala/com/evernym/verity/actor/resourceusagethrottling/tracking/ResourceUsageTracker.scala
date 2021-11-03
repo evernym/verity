@@ -18,7 +18,7 @@ import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocki
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.UpdateWarningStatus
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.{getResourceSimpleName, getResourceTypeName}
 import com.evernym.verity.config.ConfigConstants.USAGE_RULES
-import com.evernym.verity.metrics.InternalSpan
+import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.util2.Exceptions
 
 import scala.concurrent.{ExecutionContext, Future}

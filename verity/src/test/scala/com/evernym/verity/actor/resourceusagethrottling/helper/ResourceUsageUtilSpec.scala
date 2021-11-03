@@ -1,7 +1,8 @@
 package com.evernym.verity.actor.resourceusagethrottling.helper
 
 import com.evernym.verity.agentmsg.msgpacker.MsgFamilyDetail
-import com.evernym.verity.protocol.engine.{EvernymQualifier, MsgType}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.EvernymQualifier
+import com.evernym.verity.did.didcomm.v1.messages.MsgType
 import com.evernym.verity.testkit.BasicSpec
 
 class ResourceUsageUtilSpec extends BasicSpec {

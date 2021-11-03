@@ -1,7 +1,8 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0.legacy
 
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi}
+import com.evernym.verity.protocol.engine.Protocol
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{Ack, IssueCred, OfferCred, ProposeCred, RequestCred}

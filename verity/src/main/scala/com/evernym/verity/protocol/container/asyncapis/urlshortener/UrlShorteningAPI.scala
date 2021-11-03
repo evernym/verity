@@ -1,12 +1,11 @@
 package com.evernym.verity.protocol.container.asyncapis.urlshortener
 
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
-import com.evernym.verity.protocol.engine.BaseAsyncAccessImpl
-import com.evernym.verity.protocol.engine.asyncapi.urlShorter.{UrlShorteningAccess, UrlShorteningAsyncOps}
-import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo, UrlShorteningResponse}
+import com.evernym.verity.protocol.container.asyncapis.BaseAsyncAccessImpl
+import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAsyncOps
+import com.evernym.verity.urlshortener.{DefaultURLShortener, UrlInfo}
 
 import scala.concurrent.ExecutionContext
-import scala.util.Try
 
 class UrlShorteningAPI(executionContext: ExecutionContext)(implicit val asyncAPIContext: AsyncAPIContext)
   extends UrlShorteningAsyncOps

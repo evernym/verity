@@ -1,11 +1,14 @@
 package com.evernym.verity.protocol.protocols.basicMessage.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.protocol.Control
+import com.evernym.verity.protocol.engine.Scope
 import com.evernym.verity.protocol.engine.asyncapi.AccessRight
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
-import com.evernym.verity.protocol.engine.{MsgFamily, ParameterName, Parameters, ProtocolContextApi, ProtocolDefinition, Scope}
+import com.evernym.verity.protocol.engine.{ParameterName, Parameters, ProtocolDefinition}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Role.Participator
 
 object BasicMessageDefinition extends ProtocolDefinition[BasicMessage, Role, Msg, Event, State, String] {

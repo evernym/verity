@@ -3,7 +3,7 @@ package com.evernym.verity.actor.agent.state
 import akka.actor.Actor.Receive
 import com.evernym.verity.util2.Exceptions.InvalidValueException
 import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
-import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship._
@@ -12,13 +12,12 @@ import com.evernym.verity.actor.agent.{EncryptionParamBuilder, MsgPackFormat}
 import com.evernym.verity.actor.{ConnectionCompleted, ConnectionStatusUpdated, TheirDidDocDetail, TheirProvisionalDidDocDetail}
 import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.constants.Constants.GET_AGENCY_VER_KEY_FROM_POOL
-import com.evernym.verity.protocol.engine._
 import com.evernym.verity.actor.agent.PayloadMetadata
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, EDGE_AGENT_KEY}
 import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail, TheirRoutingParam}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.did.{DidStr, VerKeyStr}
-import com.evernym.verity.metrics.MetricsWriter
+import com.evernym.verity.observability.metrics.MetricsWriter
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -29,8 +28,7 @@ import scala.util.Left
  * for example: updating connection status, their did doc etc
  */
 trait PairwiseConnStateBase
-  extends HasExecutionContextProvider
-    with HasWalletExecutionContextProvider {
+  extends HasExecutionContextProvider {
   private implicit def executionContext: ExecutionContext = futureExecutionContext
 
   type StateType <: AgentStatePairwiseInterface
@@ -62,7 +60,7 @@ trait PairwiseConnStateBase
                                     relScopeDIDVerKey: VerKeyStr,
                                     lrd: LegacyRoutingDetail): Unit = {
     val theirDidDoc =
-      DidDocBuilder(futureWalletExecutionContext)
+      DidDocBuilder(futureExecutionContext)
         .withDid(relScopeDID)
         .withAuthKey(relScopeDID, relScopeDIDVerKey, Set(EDGE_AGENT_KEY))
         .withAuthKeyAndEndpointDetail(lrd.agentKeyDID, lrd.agentVerKey, Set(AGENT_KEY_TAG), Left(lrd))
@@ -80,7 +78,7 @@ trait PairwiseConnStateBase
                               relScopeDIDVerKey: VerKeyStr,
                               rd: RoutingDetail): Unit = {
     val theirDidDoc =
-      DidDocBuilder(futureWalletExecutionContext)
+      DidDocBuilder(futureExecutionContext)
         .withDid(relScopeDID)
         .withAuthKeyAndEndpointDetail(relScopeDID, relScopeDIDVerKey, Set(AGENT_KEY_TAG), Right(rd))
         .didDoc

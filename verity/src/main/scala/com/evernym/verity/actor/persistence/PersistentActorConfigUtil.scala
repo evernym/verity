@@ -36,11 +36,9 @@ object PersistentActorConfigUtil {
    * @return supervised-enabled or not
    */
   def getSupervisedEnabled(appConfig: AppConfig,
-                           defaultValue: Boolean,
                            entityCategory: String,
-                           entityType: String): Boolean = {
-    val confValue = getConfBooleanValue(appConfig, entityCategory, SUPERVISOR_ENABLED, Option(entityType), None)
-    confValue.getOrElse(defaultValue)
+                           entityType: Option[String]): Option[Boolean] = {
+    getConfBooleanValue(appConfig, entityCategory, SUPERVISOR_ENABLED, entityType, None)
   }
 
   /**

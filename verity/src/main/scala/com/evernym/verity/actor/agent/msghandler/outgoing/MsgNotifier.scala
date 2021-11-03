@@ -23,9 +23,11 @@ import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.InternalSpan
-import com.evernym.verity.protocol.engine.MsgFamily.{VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{VALID_MESSAGE_TYPE_REG_EX_DID, VALID_MESSAGE_TYPE_REG_EX_HTTP}
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
+import com.evernym.verity.observability.logs.HasLogger
+import com.evernym.verity.observability.metrics.CustomMetrics._
+import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.push_notification._
@@ -38,6 +40,7 @@ import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.util2.Exceptions.HandledErrorException
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 
 
 trait MsgNotifier {
@@ -69,7 +72,11 @@ trait MsgNotifierForStoredMsgs
     with HasExecutionContextProvider
     with HasActorResponseTimeout {
 
-  this: AgentPersistentActor with MsgAndDeliveryHandler with HasMsgProgressTracker with HasLogger =>
+  this: AgentPersistentActor
+    with MsgAndDeliveryHandler
+    with HasMsgProgressTracker
+    with HasOutgoingMsgSender
+    with HasLogger =>
 
   private implicit def executionContext: ExecutionContext = futureExecutionContext
 
@@ -191,9 +198,9 @@ trait MsgNotifierForStoredMsgs
           logger.debug(s"[${notifDetail.uid}:${notifDetail.msgType}] about to send message to endpoint: " + hcm)
           val fut = pw.metadata.map(_.msgPackFormat) match {
             case None | Some(MPF_INDY_PACK | MPF_MSG_PACK) =>
-              sendBinaryMsg(pw.msg, hcm.value, withAuthHeader = hcm.hasAuthEnabled)
+              sendBinaryMsg(notifDetail, pw.msg, hcm.value, withAuthHeader = hcm.hasAuthEnabled)
             case Some(MPF_PLAIN) =>
-              sendJsonMsg(new String(pw.msg), hcm.value, withAuthHeader = hcm.hasAuthEnabled)
+              sendJsonMsg(notifDetail, new String(pw.msg), hcm.value, withAuthHeader = hcm.hasAuthEnabled)
             case Some(Unrecognized(_)) =>
               throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
           }
@@ -215,7 +222,7 @@ trait MsgNotifierForStoredMsgs
           val pkgType = hcm.packaging.map(_.pkgType).getOrElse(MPF_INDY_PACK)
           val fut = pkgType match {
             case MPF_PLAIN =>
-              sendJsonMsg(new String(pw.msg), hcm.value, hcm.hasAuthEnabled)
+              sendJsonMsg(notifDetail, new String(pw.msg), hcm.value, hcm.hasAuthEnabled)
             case MPF_INDY_PACK | MPF_MSG_PACK =>
               val endpointRecipKeys = hcm.packaging.map(_.recipientKeys.map(verKey => KeyParam(Left(verKey))))
               // if endpoint recipKeys are not configured or empty, use default (legacy compatibility).
@@ -224,7 +231,7 @@ trait MsgNotifierForStoredMsgs
                 case _ => defaultSelfRecipKeys
               }
               msgExtractor.packAsync(pkgType, new String(pw.msg), recipKeys).flatMap { packedMsg =>
-                sendBinaryMsg(packedMsg.msg, hcm.value, hcm.hasAuthEnabled)
+                sendBinaryMsg(notifDetail, packedMsg.msg, hcm.value, hcm.hasAuthEnabled)
               }
             case Unrecognized(_) => throw new RuntimeException("unsupported msgPackFormat: Unrecognized can't be used here")
           }
@@ -350,7 +357,7 @@ trait MsgNotifierForStoredMsgs
             // so until vcx/connect.me fix gets deployed to app/play stores,
             // below will help avoiding it to be processed unnecessarily
             // and post deployment we can remove below filter and this comment.
-            .filter(_.value != "mock_value_just_to_register")
+            .filter(_.value != "FCM:mock_value_just_to_register")
 
         if (cms.nonEmpty) {
           self ! UpdateMsgDeliveryStatus(pnData.uid, domainId, MSG_DELIVERY_STATUS_PENDING.statusCode, None)
@@ -406,22 +413,40 @@ trait MsgNotifierForStoredMsgs
   import akka.actor.typed.scaladsl.adapter._
   implicit val typedSystem: ActorSystem[_] = agentActorContext.system.toTyped
 
-  private def sendBinaryMsg(msg: Array[Byte], toUrl: String, withAuthHeader: Boolean)
+  private def sendBinaryMsg(notifMsgDetail: NotifyMsgDetail, msg: Array[Byte], toUrl: String, withAuthHeader: Boolean)
   : Future[Either[HandledErrorException, Any]] = {
-    newLegacyMsgSender.ask(ref => SendBinaryMsg(msg, toUrl, withAuthHeader, withRefreshedToken = false, ref))
-      .mapTo[SendMsgResp]
-      .map(_.resp)
+    withRespHandler(
+      notifMsgDetail,
+      newLegacyMsgSender()
+        .ask(ref => SendBinaryMsg(msg, toUrl, withAuthHeader, withRefreshedToken = false, ref))
+        .mapTo[SendMsgResp]
+    )
   }
 
-  private def sendJsonMsg(msg: String, toUrl: String, withAuthHeader: Boolean)
+  private def sendJsonMsg(notifMsgDetail: NotifyMsgDetail, msg: String, toUrl: String, withAuthHeader: Boolean)
   : Future[Either[HandledErrorException, Any]] = {
-    newLegacyMsgSender.ask(ref => SendJsonMsg(msg, toUrl, withAuthHeader, withRefreshedToken = false, ref))
-      .mapTo[SendMsgResp]
-      .map(_.resp)
+    withRespHandler(
+      notifMsgDetail,
+      newLegacyMsgSender()
+        .ask(ref => SendJsonMsg(msg, toUrl, withAuthHeader, withRefreshedToken = false, ref))
+        .mapTo[SendMsgResp]
+    )
   }
 
-  private def newLegacyMsgSender: akka.actor.typed.ActorRef[LegacyMsgSender.Cmd] =
-    context.spawnAnonymous(LegacyMsgSender(domainId, agentMsgRouter, msgSendingSvc, executionContext))
+  private def withRespHandler(notifMsgDetail: NotifyMsgDetail, sendMsgResp: Future[SendMsgResp]):
+  Future[Either[HandledErrorException, Any]] = {
+    val resp = sendMsgResp.map(_.resp)
+    resp.map {
+      case Left(_)  => forwardToOutgoingMsgSenderIfExists(notifMsgDetail.uid, MsgSendingFailed(notifMsgDetail.uid, notifMsgDetail.msgType))
+      case Right(_) => forwardToOutgoingMsgSenderIfExists(notifMsgDetail.uid, MsgSentSuccessfully(notifMsgDetail.uid, notifMsgDetail.msgType))
+    }
+    resp
+  }
+
+  private def newLegacyMsgSender(): akka.actor.typed.ActorRef[LegacyMsgSender.Cmd] = {
+    val receiveTimeout = 30.seconds
+    context.spawnAnonymous(LegacyMsgSender(domainId, agentMsgRouter, msgSendingSvc, receiveTimeout, executionContext))
+  }
 
   private def updatePushNotificationDeliveryStatus(umds: UpdateMsgDeliveryStatus): Unit =
     self ! umds
@@ -437,6 +462,7 @@ trait MsgNotifierForUserAgentCommon
     with PushNotifMsgBuilder
     with MsgAndDeliveryHandler
     with HasMsgProgressTracker
+    with HasOutgoingMsgSender
     with SendOutgoingMsg
     with HasLogger =>
 

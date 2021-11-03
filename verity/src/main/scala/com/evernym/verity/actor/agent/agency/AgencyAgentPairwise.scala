@@ -31,8 +31,7 @@ import scala.concurrent.{ExecutionContext, Future}
  managing one pairwise relationship between the agency and a user.
  */
 class AgencyAgentPairwise(val agentActorContext: AgentActorContext,
-                          generalExecutionContext: ExecutionContext,
-                          walletExecutionContext: ExecutionContext)
+                          generalExecutionContext: ExecutionContext)
   extends AgencyAgentCommon
     with AgencyAgentPairwiseStateUpdateImpl
     with PairwiseConnState
@@ -40,8 +39,6 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext,
 
   private implicit val executionContext: ExecutionContext = generalExecutionContext
   override def futureExecutionContext: ExecutionContext = generalExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
-
 
   type StateType = AgencyAgentPairwiseState
   var state = new AgencyAgentPairwiseState
@@ -75,12 +72,12 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext,
                               theirPairwiseDID: DidStr, theirPairwiseDIDVerKey: VerKeyStr): Unit = {
     state = state.withThisAgentKeyId(myPairwiseDID)
     val myDidDoc =
-      DidDocBuilder(futureWalletExecutionContext)
+      DidDocBuilder(futureExecutionContext)
       .withDid(myPairwiseDID)
       .withAuthKey(myPairwiseDID, myPairwiseDIDVerKey, Set(EDGE_AGENT_KEY))
       .didDoc
     val theirDidDoc =
-      DidDocBuilder(futureWalletExecutionContext)
+      DidDocBuilder(futureExecutionContext)
         .withDid(theirPairwiseDID)
         .withAuthKey(theirPairwiseDID, theirPairwiseDIDVerKey)
         .didDoc
@@ -178,6 +175,15 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext,
     */
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_PAIRWISE_ACTOR
 
+  override def postAgentStateFix(): Future[Any] = {
+    logger.info(
+      s"[$persistenceId] unbounded elements => " +
+        s"isSnapshotApplied: $isAnySnapshotApplied, " +
+        s"threadContexts: ${state.threadContext.map(_.contexts.size).getOrElse(0)}, " +
+        s"protoInstances: ${state.protoInstances.map(_.instances.size).getOrElse(0)}"
+    )
+    super.postAgentStateFix()
+  }
 }
 
 object AgencyAgentPairwise {

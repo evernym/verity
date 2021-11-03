@@ -17,7 +17,7 @@ object ActorProtocol {
   def apply(protoDef: ProtoDef) = new ActorProtocol(protoDef)
 
   def buildTypeName(protoDef: ProtoDef): String = {
-    buildTypeName(protoDef.msgFamily.protoRef)
+    buildTypeName(protoDef.protoRef)
   }
 
   def buildTypeName(protoRef: ProtoRef): String = {

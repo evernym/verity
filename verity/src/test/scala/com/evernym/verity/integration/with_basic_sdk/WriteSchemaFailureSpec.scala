@@ -26,7 +26,7 @@ class WriteSchemaFailureSpec
   override lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new DummyLedgerTxnExecutor(executionContext))
 
   lazy val issuerVerityApp = VerityEnvBuilder.default().build(VAS)
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext, ecp.walletFutureExecutionContext)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext)
 
   override def beforeAll(): Unit = {
     super.beforeAll()

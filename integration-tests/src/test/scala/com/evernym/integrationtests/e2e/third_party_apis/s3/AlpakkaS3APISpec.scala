@@ -5,11 +5,11 @@ import akka.actor.ActorSystem
 import akka.stream.alpakka.s3.BucketAccess.{AccessGranted, NotExists}
 import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.storage_services.aws_s3.S3AlpakkaApi
 import com.evernym.verity.testkit.BasicAsyncSpec
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.Logger
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
@@ -30,7 +30,7 @@ class AlpakkaS3APISpec
 
   val logger: Logger = getLoggerByClass(classOf[AlpakkaS3APISpec])
 
-  val testConfig =
+  val testConfig: String =
     """
       |verity.blob-store {
       |  bucket-name = "blob-store"
@@ -89,7 +89,6 @@ class AlpakkaS3APISpec
 
     "when asked to check if bucket exists" - {
       "should respond with NotExists" in {
-        val s3Settings = alpAkkaS3API.s3Settings
         alpAkkaS3API checkIfBucketExists UUID.randomUUID.toString map { _ shouldBe NotExists }
       }
 
@@ -151,6 +150,29 @@ class AlpakkaS3APISpec
 
       "should do succeed in downloading" in {
         alpAkkaS3API get(newBucketName, newId) map { data => checkArrayEquality(Option(newId.getBytes), data)}
+      }
+
+      "when override config is present" - {
+        "it should take precedence" in {
+          val overrideConfig: Config = ConfigFactory.parseString(
+            """
+              |aws {
+              |  region {
+              |    default-region = "eu-central-1"
+              |  }
+              |}
+              |""".stripMargin
+          )
+
+          val testAlpAkkaS3API: S3AlpakkaApi = StorageAPI.loadFromConfig(
+            appConfig,
+            TestExecutionContextProvider.ecp.futureExecutionContext,
+            overrideConfig = overrideConfig
+          ).asInstanceOf[S3AlpakkaApi]
+
+          // should be the region from override config and not from main config.
+          testAlpAkkaS3API.s3Settings.s3RegionProvider.getRegion.toString shouldBe "eu-central-1"
+        }
       }
     }
   }

@@ -4,8 +4,8 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.did.DidPair
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.protocol.engine.DebugProtocols
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredMsgFamily
+import com.evernym.verity.protocol.engine.journal.DebugProtocols
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredentialProtoDef
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Ctl.Reuse
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Role.{Invitee, Inviter}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
@@ -39,7 +39,7 @@ class OutOfBandProtocolSpec
   val relationshipDID = "3e9BGJ98uh3w1KTtXG8D9r"
   val threadId = "2d8ad968-8256-4d85-824c-55ad04518373"
   val invitationIdWithThreadedId = InviteUtil.buildThreadedInviteId(
-    IssueCredMsgFamily.protoRef,
+    IssueCredentialProtoDef.protoRef,
     relationshipDID,
     threadId
   )
@@ -90,7 +90,7 @@ class OutOfBandProtocolSpec
 
       inviter expect state [State.ConnectionReused]
       inviter.expectAs(signal [Signal.MoveProtocol]) { s =>
-        s.protoRefStr shouldBe IssueCredMsgFamily.protoRef.toString
+        s.protoRefStr shouldBe IssueCredentialProtoDef.protoRef.toString
         s.fromRelationship shouldBe relationshipDID
         s.threadId shouldBe threadId
       }

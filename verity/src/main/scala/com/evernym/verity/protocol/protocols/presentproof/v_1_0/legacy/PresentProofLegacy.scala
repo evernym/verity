@@ -1,12 +1,12 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0.legacy
 
-import com.evernym.verity.actor.wallet.CredForProofReqCreated
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.metrics.InternalSpan
-import com.evernym.verity.protocol.Control
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
-import com.evernym.verity.protocol.engine.util.?=>
+import com.evernym.verity.observability.metrics.InternalSpan
+import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Protocol
+import com.evernym.verity.protocol.engine.asyncapi.wallet.CredForProofResult
+import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProblemReportCodes._
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Role.{Prover, Verifier}
@@ -73,7 +73,7 @@ trait PresentProofLegacy
     val proofRequest: ProofRequest = s.data.requests.head
     val proofRequestJson: String = DefaultMsgCodec.toJson(proofRequest)
 
-    ctx.wallet.credentialsForProofReq(proofRequestJson) { credentialsNeededJson: Try[CredForProofReqCreated] =>
+    ctx.wallet.credentialsForProofReq(proofRequestJson) { credentialsNeededJson: Try[CredForProofResult] =>
       val credentialsNeeded =
         credentialsNeededJson.map(_.cred).map(DefaultMsgCodec.fromJson[AvailableCredentials](_))
       val (credentialsUsedJson, ids) = credentialsToUse(credentialsNeeded, msg.selfAttestedAttrs)

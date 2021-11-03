@@ -189,7 +189,7 @@ trait AgencyAgentCommon
         wsc.ownerDidPair.toAgentDidPair ,
         wsc.agentKey.didPair.toAgentDidPair,
         requesterVerKey,
-        requester.sponsorRel
+        requester.sponsorRel.map(x => SponsorRel(x.sponsorId, x.sponseeId))
       )
       userAgentRegion ? ForIdentifier(newActorId, setupEndpoint)
     }.map {

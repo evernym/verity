@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.wallet
 
 import java.util.UUID
-
 import akka.actor.PoisonPill
 import akka.testkit.ImplicitSender
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -11,7 +10,7 @@ import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.did.{DidPair, VerKeyStr}
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredential
@@ -51,9 +50,30 @@ class WalletActorSpec
   lazy val holderWalletActor: agentRegion = agentRegion(UUID.randomUUID().toString, walletRegionActor)
   lazy val verifierWalletActor: agentRegion = agentRegion(UUID.randomUUID().toString, walletRegionActor)
 
+  lazy val testWalletActor: agentRegion = agentRegion(UUID.randomUUID().toString, walletRegionActor)
+
   val testByteMsg: Array[Byte] = "test message".getBytes()
 
   "WalletActor" - {
+
+    "when sent CreateWallet command and then sent it again" - {
+      "should respond with WalletCreated and then WalletAlreadyOpened" in {
+        //repeat the test to ensure that new requests will be put in stash while actor perform current message
+        testWalletActor ! CreateWallet()
+        expectMsgType[WalletCreated.type]
+        testWalletActor ! CreateWallet()
+        expectMsgType[WalletAlreadyCreated.type]
+        testWalletActor ! CreateWallet()
+        expectMsgType[WalletAlreadyCreated.type]
+      }
+    }
+
+    "when sent Close to testActor" - {
+      "should be closed successfully" in {
+        testWalletActor ! Close()
+        expectMsgType[Done.type]
+      }
+    }
 
     "when sent CreateWallet command" - {
       "should respond with WalletCreated" in {
@@ -65,6 +85,7 @@ class WalletActorSpec
         expectMsgType[WalletCreated.type]
       }
     }
+
 
     "when sent CreateWallet command again" - {
       "should respond with WalletAlreadyCreated" in {

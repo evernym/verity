@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import akka.actor.ActorRef
-import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.actor.{ActorMessage, HasAppConfig}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.actor.agent.msghandler.AgentMsgProcessor.{PACKED_MSG_LIMIT, PAYLOAD_ERROR, REST_LIMIT}
@@ -30,18 +30,19 @@ import com.evernym.verity.config.ConfigConstants.MSG_LIMITS
 import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.did.didcomm.v1.Thread
-import com.evernym.verity.logging.LoggingUtil
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId, MsgType, TypedMsgLike}
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
-import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, InitProtocolReq, MsgEnvelope, ServiceDecorator}
+import com.evernym.verity.observability.logs.{HasLogger, LoggingUtil}
+import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, InitProtocolReq, MsgEnvelope}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.registry.{PinstIdPair, ProtocolRegistry, UnsupportedMessageType}
 import com.evernym.verity.protocol.protocols
-import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.AgentCreated
 import com.evernym.verity.protocol.protocols.connecting.common.GetInviteDetail
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}
-import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.PushToken
 import com.evernym.verity.push_notification.PushNotifData
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
@@ -121,10 +122,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     case psrp: ProtocolSyncRespMsg    => handleProtocolSyncRespMsg(psrp)
 
     //pinst -> actor protocol container (send method) -> this actor
-    case ProtocolOutgoingMsg(sd: ServiceDecorator, _, _, rmId, _, pDef, tcd) =>
-      handleProtocolServiceDecorator(sd, rmId, pDef, tcd)
-
-    //pinst -> actor protocol container (send method) -> this actor
     case pom: ProtocolOutgoingMsg     => handleProtocolOutgoingMsg(pom)
 
     //pinst -> actor driver (sendToForwarder method) -> this actor [to be sent to edge agent]
@@ -170,8 +167,17 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    */
   def handleProtocolOutgoingMsg(pom: ProtocolOutgoingMsg): Unit = {
     logger.trace(s"sending protocol outgoing message: $pom")
-    handleOutgoingMsg(OutgoingMsg(pom.msg, pom.to, pom.from, pom.pinstId,
-      pom.protoDef, pom.threadContextDetail, Option(pom.requestMsgId)))
+    handleOutgoingMsg(
+      OutgoingMsg(
+        pom.msg,
+        pom.to,
+        pom.from,
+        pom.pinstId,
+        pom.protoDef,
+        pom.threadContextDetail,
+        Option(pom.requestMsgId)
+      )
+    )
   }
 
   def handleOutgoingMsg[A](om: OutgoingMsg[A], isSignalMsg: Boolean=false): Unit = {
@@ -374,22 +380,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           msg.getClass.getSimpleName + extraDetail.map(ed => s" ($ed)").getOrElse(""),
           s"SENT [to $NEXT_HOP_MY_EDGE_AGENT_SYNC]")
       )
-    }
-  }
-
-  def handleProtocolServiceDecorator(sd: ServiceDecorator,
-                                     requestMsgId: MsgId,
-                                     protoDef: ProtoDef,
-                                     tcd: ThreadContextDetail): Unit = {
-    val agentMsg: AgentJsonMsg = createAgentMsg(sd.msg, protoDef,
-      tcd, Option(TypeFormat.STANDARD_TYPE_FORMAT))
-
-    sd match {
-      case pushToken: PushToken =>
-        val pnd = PushNotifData(requestMsgId, agentMsg.msgType.msgName, sendAsAlertPushNotif = true, Map.empty,
-          Map("type" -> agentMsg.msgType.msgName, "msg" -> agentMsg.jsonStr))
-        sendToAgentActor(SendPushNotif(Set(sd.deliveryMethod), pnd, Some(pushToken.msg.sponsorId)))
-      case x => throw new RuntimeException("unsupported Service Decorator: " + x)
     }
   }
 
@@ -885,7 +875,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   var msgRespContext: Option[MsgRespContext] = None
 
   override def getPinstId(protoDef: ProtoDef): Option[PinstId] =
-    param.protoInstances.flatMap(_.instances.get(protoDef.msgFamily.protoRef.toString))
+    param.protoInstances.flatMap(_.instances.get(protoDef.protoRef.toString))
   override def contextualId: Option[String] = Option(param.thisAgentAuthKey.keyId)
   override def domainId: DomainId = param.domainId
 
@@ -903,7 +893,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
 }
 
 /**
- * a parameter whose value depend's on individual agent actor's type/state
+ * a parameter whose value depends on individual agent actor's type/state
  */
 case class StateParam(agentActorRef: ActorRef,
                       domainId: DomainId,

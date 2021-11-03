@@ -8,17 +8,17 @@ import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.wallet.WalletCommand
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.ActorNameConstants.WALLET_REGION_ACTOR_NAME
-import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
+import com.evernym.verity.observability.metrics.{MetricsWriter, MetricsWriterExtension}
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 
-class ActorWalletService(system: ActorSystem, appConfigParam: AppConfig, walletExecutionContext: ExecutionContext)
+class ActorWalletService(system: ActorSystem, appConfigParam: AppConfig, executionContext: ExecutionContext)
   extends WalletService {
 
-  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
+  override def futureExecutionContext: ExecutionContext = executionContext
   lazy val walletActorRegion: ActorRef = ClusterSharding(system).shardRegion(WALLET_REGION_ACTOR_NAME)
 
   override val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()

@@ -14,8 +14,8 @@ import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.util2.Status.{BAD_REQUEST, StatusDetail, UNAUTHORIZED, UNHANDLED}
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.http.common.HttpCustomTypes
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.metrics.{ClientSpan, MetricsWriter}
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.metrics.{ClientSpan, MetricsWriter}
 import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util.Util.buildHandledError
 import com.evernym.verity.util2.{Exceptions, UrlParam}
@@ -153,30 +153,30 @@ class AkkaHttpMsgSendingSvc(config: Config, metricsWriter: MetricsWriter, execut
   }
   private val superPoolFlow = Http().superPool[NotUsed]()
 
-  protected def performResponseParsing[T](id: String)(implicit up: UrlParam, um: Unmarshaller[ResponseEntity, T]):
+  private def performResponseParsing[T](id: String)(implicit up: UrlParam, um: Unmarshaller[ResponseEntity, T]):
   PartialFunction[HttpResponse, Future[Either[HandledErrorException, T]]] = {
     case hr: HttpResponse if List(OK, Accepted).contains(hr.status) =>
-      logger.debug(s"[$id] successful response ('${hr.status.value}') received from '${up.url}'")
+      logger.debug(s"[$id] [incoming response] successful response ('${hr.status.value}') received from '${up.url}'")
       Unmarshal(hr.entity).to[T].map(Right(_))
 
     case hr: HttpResponse if hr.status ==  BadRequest =>
       Unmarshal(hr.entity).to[String].map { respMsg =>
         val errorMsg = buildStatusDetail(respMsg).map(_.toString).getOrElse(respMsg)
-        val error = s"[$id] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
+        val error = s"[$id] [incoming response] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
         logger.warn(error)
         Left(buildHandledError(BAD_REQUEST.withMessage(error))) }
 
     case hr: HttpResponse if hr.status ==  Unauthorized =>
       Unmarshal(hr.entity).to[String].map { respMsg =>
         val errorMsg = buildStatusDetail(respMsg).map(_.toString).getOrElse(respMsg)
-        val error = s"[$id] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
+        val error = s"[$id] [incoming response] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
         logger.warn(error)
         Left(buildHandledError(UNAUTHORIZED.withMessage(error))) }
 
     case hr: HttpResponse =>
       Unmarshal(hr.entity).to[String].map { respMsg =>
         val errorMsg = buildStatusDetail(respMsg).map(_.toString).getOrElse(respMsg)
-        val error = s"[$id] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
+        val error = s"[$id] [incoming response] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
         logger.warn(error)
         Left(buildHandledError(UNHANDLED.withMessage(error)))
       }

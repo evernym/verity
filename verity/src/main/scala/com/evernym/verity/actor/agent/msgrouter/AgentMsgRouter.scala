@@ -24,9 +24,9 @@ import com.evernym.verity.cache.fetchers.{CacheValueFetcher, RoutingDetailCacheF
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.metrics.MetricsWriterExtension
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.observability.metrics.MetricsWriterExtension
 import com.evernym.verity.util.LogUtil.logDuration
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util.{Base58Util, ReqMsgContext, RestMsgContext}

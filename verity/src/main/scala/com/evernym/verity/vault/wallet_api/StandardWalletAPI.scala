@@ -3,7 +3,7 @@ package com.evernym.verity.vault.wallet_api
 import akka.actor.ActorRef
 import com.evernym.verity.actor.wallet.WalletCommand
 import com.evernym.verity.vault.operation_executor.FutureConverter
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.vault.service._
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.scalalogging.Logger

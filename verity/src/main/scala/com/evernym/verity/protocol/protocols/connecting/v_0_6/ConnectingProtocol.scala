@@ -1,28 +1,30 @@
 package com.evernym.verity.protocol.protocols.connecting.v_0_6
 
-import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.Status.KEY_ALREADY_CREATED
-import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.AgentDetail
-import com.evernym.verity.actor.agent.msgsender.AgentMsgSender
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
-import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored}
+import com.evernym.verity.actor.agent.{AgentDetail, MsgSendingFailed, MsgSentSuccessfully}
+import com.evernym.verity.actor.wallet._
+import com.evernym.verity.actor.{ActorMessage, AgentDetailSet, KeyCreated}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
+import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol._
-import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
+import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
+import com.evernym.verity.protocol.engine.events.ParameterStored
+import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common._
-import com.evernym.verity.push_notification.PushNotifMsgBuilder
 import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.util.Util._
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.KEY_ALREADY_CREATED
 import com.evernym.verity.vault._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,11 +34,7 @@ import scala.util.Left
 //noinspection ScalaDeprecation
 class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String])
     extends Protocol[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String](ConnectingProtoDef)
-      with ConnectingProtocolBase[ConnectingProtocol,Role,ConnectingState,String]
-      with HasAppConfig
-      with AgentMsgSender
-      with MsgDeliveryResultHandler
-      with PushNotifMsgBuilder {
+      with ConnectingProtocolBase[ConnectingProtocol,Role,ConnectingState,String] {
 
   implicit lazy val futureExecutionContext: ExecutionContext = ctx.executionContext
 

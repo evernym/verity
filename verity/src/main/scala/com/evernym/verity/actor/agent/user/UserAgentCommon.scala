@@ -22,7 +22,6 @@ import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common.{NotifyUserViaPushNotif, SendMsgToRegisteredEndpoint}
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Config
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{Sig => UpdateConfigsSig}
@@ -38,8 +37,10 @@ import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.R
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsReqMsg, UpdateMsgStatusReqMsg}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.did.{DidStr, VerKeyStr}
-import com.evernym.verity.metrics.InternalSpan
+import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.SendConfig
 
 import scala.concurrent.{ExecutionContext, Future}

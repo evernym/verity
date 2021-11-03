@@ -6,7 +6,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model.{FormData, HttpMethods, HttpRequest}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.Replies.{GetTokenFailed, GetTokenSuccess}
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
@@ -36,6 +36,7 @@ object OAuthAccessTokenRefresherImplV1 {
                             (implicit system: ActorSystem[Nothing],
                              executionContext: ExecutionContext): Future[OAuthAccessTokenRefresher.Reply] = {
     try {
+      OAuthUtil.validateAuthData(Seq("url", "grant_type", "client_id", "client_secret"), params)
       val url = params("url")
       logger.info("[OAuth] about to send get access token request to: " + url)
       val formData = Seq("grant_type", "client_id", "client_secret").map(attrName =>
@@ -53,7 +54,7 @@ object OAuthAccessTokenRefresherImplV1 {
             val jsonObject = new JSONObject(respMsg)
             val accessToken = jsonObject.getString("access_token")
             val expiresIn = jsonObject.getInt("expires_in")
-            GetTokenSuccess(accessToken, expiresIn, None)
+            GetTokenSuccess(accessToken, Option(expiresIn), None)
           } else {
             GetTokenFailed(s"error response ('${hr.status.value}') received from '$url': $respMsg")
           }

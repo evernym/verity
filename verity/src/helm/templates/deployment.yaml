@@ -58,6 +58,7 @@ spec:
         labelSelector:
           matchLabels:
             app: {{ template "verity.fullname" . }}
+      terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
       containers:
       - name: {{ template "verity.fullname" . }}
         image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag }}
@@ -70,20 +71,25 @@ spec:
             cpu: {{ .Values.deployment.resources.limits.cpu }}
         startupProbe:
           httpGet:
-            path: /agency/heartbeat
-            port: 9000
-          periodSeconds: 10
-          failureThreshold: 20
+            path: {{ .Values.deployment.probes.startup.path }}
+            port: {{ .Values.deployment.containerPort }}
+          periodSeconds: {{ .Values.deployment.probes.startup.periodSeconds }}
+          timeoutSeconds: {{ .Values.deployment.probes.startup.timeoutSeconds }}
+          failureThreshold: {{ .Values.deployment.probes.startup.failureThreshold }}
         readinessProbe:
           httpGet:
-            path: /agency
-            port: 9000
+            path: {{ .Values.deployment.probes.readiness.path }}
+            port: {{ .Values.deployment.containerPort }}
+          periodSeconds: {{ .Values.deployment.probes.readiness.periodSeconds }}
+          timeoutSeconds: {{ .Values.deployment.probes.readiness.timeoutSeconds }}
+          failureThreshold: {{ .Values.deployment.probes.readiness.failureThreshold }}
         livenessProbe:
           httpGet:
-            path: /agency/heartbeat
-            port: 9000
-          periodSeconds: 30
-          failureThreshold: 1
+            path: {{ .Values.deployment.probes.liveness.path }}
+            port: {{ .Values.deployment.containerPort }}
+          periodSeconds: {{ .Values.deployment.probes.liveness.periodSeconds }}
+          timeoutSeconds: {{ .Values.deployment.probes.liveness.timeoutSeconds }}
+          failureThreshold: {{ .Values.deployment.probes.liveness.failureThreshold }}
         envFrom:
         - configMapRef:
             name: vars-{{ template "verity.fullname" . }}

@@ -221,7 +221,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
     passivateIdleEntityAfter = Some(FiniteDuration(
       ConfigUtil.getReceiveTimeout(
         appConfig,
-        ActivityTracker.defaultReceiveTimeoutInSeconds,
+        ActivityTracker.defaultPassivationTimeout,
         PERSISTENT_ACTOR_BASE,
         ACTIVITY_TRACKER_REGION_ACTOR_NAME,
         null

@@ -27,23 +27,23 @@ trait PresentProofLegacy
   // TODO: Remove All Legacy control, protocol, and events during Ticket=VE-2605
   def legacyApplyEvent: ApplyEvent = {
     //Prover Events
-    case (_: StatesLegacy.Initialized    , _, RequestGiven(r)           ) => StatesLegacy.initRequestReceived(r)
-    case (_: StatesLegacy.Initialized    , _, PresentationProposed(a, p)) => StatesLegacy.initProposalSent(a, p)
+    case (_: States.Initialized          , _, RequestGiven(r)           ) => StatesLegacy.initRequestReceived(r)
+    case (_: States.Initialized          , _, PresentationProposed(a, p)) => StatesLegacy.initProposalSent(a, p)
     case (s: StatesLegacy.ProposalSent   , _, RequestGiven(r)           ) => StatesLegacy.RequestReceived(s.data.addRequest(r))
     case (s: StatesLegacy.RequestReceived, _, PresentationUsed(p)       ) => StatesLegacy.Presented(s.data.addPresentation(p))
     case (s: StatesLegacy.RequestReceived, _, PresentationProposed(a, p)) => StatesLegacy.ProposalSent(s.data.addProposal(a, p))
 
     //Verifier Events
-    case (_: StatesLegacy.Initialized     , _, RequestUsed(r)          ) => StatesLegacy.initRequestSent(r)
-    case (_: StatesLegacy.Initialized     , _, ProposeReceived(a, p)   ) => StatesLegacy.initProposalReceived(a, p)
+    case (_: States.Initialized           , _, RequestUsed(r)          ) => StatesLegacy.initRequestSent(r)
+    case (_: States.Initialized           , _, ProposeReceived(a, p)   ) => StatesLegacy.initProposalReceived(a, p)
     case (s: StatesLegacy.ProposalReceived, _, RequestUsed(r)          ) => StatesLegacy.RequestSent(s.data.addRequest(r))
     case (s: StatesLegacy.RequestSent     , _, PresentationGiven(p)    ) => StatesLegacy.Complete(s.data.addPresentation(p))
     case (s: StatesLegacy.RequestSent     , _, ProposeReceived(a, p)   ) => StatesLegacy.ProposalReceived(s.data.addProposal(a, p))
   }
 
   def legacyProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {
-    case (StatesLegacy.Initialized(_),  _, msg: Msg.RequestPresentation) => handleMsgRequestLegacy(msg)
-    case (StatesLegacy.Initialized(_),  _, msg: Msg.ProposePresentation) => apply(Role.Verifier.toEvent); handleMsgProposePresentationLegacy(msg)
+    case (States.Initialized(_),        _, msg: Msg.RequestPresentation) => handleMsgRequestLegacy(msg)
+    case (States.Initialized(_),        _, msg: Msg.ProposePresentation) => apply(Role.Verifier.toEvent); handleMsgProposePresentationLegacy(msg)
     case (s: StatesLegacy.RequestSent,  _, msg: Msg.Presentation       ) => handleMsgPresentationLegacy(s, msg)
   }
 

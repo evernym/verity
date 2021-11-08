@@ -1,7 +1,7 @@
 package com.evernym.verity.integration.base.verity_provider.node.local
 
 import akka.persistence.journal.leveldb.SharedLeveldbJournal
-import com.evernym.verity.config.ConfigConstants.{LIB_INDY_LEDGER_POOL_NAME, LIB_INDY_LIBRARY_DIR_LOCATION, LIB_INDY_WALLET_TYPE}
+import com.evernym.verity.config.ConfigConstants.{LIB_INDY_LEDGER_POOL_NAME, LIB_VDRTOOLS_LIBRARY_DIR_LOCATION, LIB_VDRTOOLS_WALLET_TYPE}
 import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore}
 import com.typesafe.config.{Config, ConfigFactory}
 
@@ -85,8 +85,8 @@ object VerityLocalConfig {
   private def useDefaultWallet(tempDir: Path): Config = {
     ConfigFactory.parseString(
       s"""
-         |$LIB_INDY_WALLET_TYPE = "default"
-         |$LIB_INDY_LIBRARY_DIR_LOCATION  = "${tempDir.resolve("indy")}"
+         |$LIB_VDRTOOLS_WALLET_TYPE = "default"
+         |$LIB_VDRTOOLS_LIBRARY_DIR_LOCATION  = "${tempDir.resolve("indy")}"
          |""".stripMargin
     )
   }

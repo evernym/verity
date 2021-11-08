@@ -222,7 +222,6 @@ lazy val packageSettings = Seq (
   Debian / debianPackageDependencies ++= Seq(
     "default-jre",
     s"libvdrtools(>= $debPkgDepLibVdrToolsMinVersion)",
-    s"libnullpay-async(>= 1.95.0~1624)"  // TODO: how should this be handled if libnullpay is deprecated?
   ),
   Debian / debianPackageConflicts := Seq(
     "consumer-agent",

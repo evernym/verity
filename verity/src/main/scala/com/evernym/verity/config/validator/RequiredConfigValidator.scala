@@ -56,10 +56,10 @@ trait RequiredConfigValidatorBase extends ConfigValidatorBase {
     ConfDetail(OPEN_MARKET_PASSWORD, depConfDetail=Option(DepConfDetail(SMS_EXTERNAL_SVC_PREFERRED_ORDER, Option("OM")))),
     ConfDetail(OPEN_MARKET_SERVICE_ID, depConfDetail=Option(DepConfDetail(SMS_EXTERNAL_SVC_PREFERRED_ORDER, Option("OM")))),
 
-    ConfDetail(LIB_INDY_LIBRARY_DIR_LOCATION),
+    ConfDetail(LIB_VDRTOOLS_LIBRARY_DIR_LOCATION),
     ConfDetail(LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION),
     ConfDetail(LIB_INDY_LEDGER_POOL_NAME),
-    ConfDetail(LIB_INDY_WALLET_TYPE, allowedValues = Set(WALLET_TYPE_DEFAULT, WALLET_TYPE_MYSQL)),
+    ConfDetail(LIB_VDRTOOLS_WALLET_TYPE, allowedValues = Set(WALLET_TYPE_DEFAULT, WALLET_TYPE_MYSQL)),
 
     ConfDetail(SALT_WALLET_NAME),
     ConfDetail(SALT_WALLET_ENCRYPTION),
@@ -85,12 +85,12 @@ trait RequiredConfigValidatorBase extends ConfigValidatorBase {
     ConfDetail(AKKA_SHARDING_REGION_NAME_USER_AGENT),
     ConfDetail(AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE),
 
-    ConfDetail(WALLET_STORAGE_READ_HOST, depConfDetail=Option(DepConfDetail(LIB_INDY_WALLET_TYPE, Option(WALLET_TYPE_MYSQL)))),
-    ConfDetail(WALLET_STORAGE_WRITE_HOST, depConfDetail=Option(DepConfDetail(LIB_INDY_WALLET_TYPE, Option(WALLET_TYPE_MYSQL)))),
-    ConfDetail(WALLET_STORAGE_HOST_PORT, depConfDetail=Option(DepConfDetail(LIB_INDY_WALLET_TYPE, Option(WALLET_TYPE_MYSQL)))),
-    ConfDetail(WALLET_STORAGE_CRED_USERNAME, depConfDetail=Option(DepConfDetail(LIB_INDY_WALLET_TYPE, Option(WALLET_TYPE_MYSQL)))),
-    ConfDetail(WALLET_STORAGE_CRED_PASSWORD, depConfDetail=Option(DepConfDetail(LIB_INDY_WALLET_TYPE, Option(WALLET_TYPE_MYSQL)))),
-    ConfDetail(WALLET_STORAGE_DB_NAME, depConfDetail=Option(DepConfDetail(LIB_INDY_WALLET_TYPE, Option(WALLET_TYPE_MYSQL)))),
+    ConfDetail(WALLET_STORAGE_READ_HOST, depConfDetail=Option(DepConfDetail(LIB_VDRTOOLS_WALLET_TYPE, Option(WALLET_TYPE_MYSQL)))),
+    ConfDetail(WALLET_STORAGE_WRITE_HOST, depConfDetail=Option(DepConfDetail(LIB_VDRTOOLS_WALLET_TYPE, Option(WALLET_TYPE_MYSQL)))),
+    ConfDetail(WALLET_STORAGE_HOST_PORT, depConfDetail=Option(DepConfDetail(LIB_VDRTOOLS_WALLET_TYPE, Option(WALLET_TYPE_MYSQL)))),
+    ConfDetail(WALLET_STORAGE_CRED_USERNAME, depConfDetail=Option(DepConfDetail(LIB_VDRTOOLS_WALLET_TYPE, Option(WALLET_TYPE_MYSQL)))),
+    ConfDetail(WALLET_STORAGE_CRED_PASSWORD, depConfDetail=Option(DepConfDetail(LIB_VDRTOOLS_WALLET_TYPE, Option(WALLET_TYPE_MYSQL)))),
+    ConfDetail(WALLET_STORAGE_DB_NAME, depConfDetail=Option(DepConfDetail(LIB_VDRTOOLS_WALLET_TYPE, Option(WALLET_TYPE_MYSQL)))),
 
     ConfDetail("akka.actor.serializers.protoser", allowedValues = Set("com.evernym.verity.actor.serializers.ProtoBufSerializer")),
     ConfDetail("akka.actor.serializers.kryo-akka", allowedValues = Set("com.twitter.chill.akka.AkkaSerializer")),

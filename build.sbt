@@ -58,7 +58,7 @@ val debPkgDepLibIndyMinVersion = libIndyVer
 val indyWrapperVer  = "1.15.0-dev-1629"
 
 val akkaVer         = "2.6.17"
-val akkaHttpVer     = "10.2.6"
+val akkaHttpVer     = "10.2.7"
 val akkaMgtVer      = "1.1.1"
 val alpAkkaVer      = "3.0.3"
 val kamonVer        = "2.2.3"
@@ -83,7 +83,7 @@ val CompileOnly = config(COMPILE_TIME_ONLY)
 
 val majorNum = "2"
 val minorNum = "16"
-val patchNum = "0"
+val patchNum = "1"
 
 // I'm not sure why setting this keys don't resolve in all
 // other scopes but it does not so we re-resolve it commonSettings

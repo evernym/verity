@@ -47,6 +47,7 @@ val evernymDevRepo = DebianRepo(
 val libVdrToolsVer = "0.8.0"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libindy.so"),
+  NonMatchingDistLib("libnullpay-async", libVdrToolsVer, "libnullpay.so"),
   NonMatchingLib("libvcx", "0.12.0-bionic~421", "libvcx.so")  // For integration testing ONLY
 )
 

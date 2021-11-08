@@ -58,9 +58,20 @@ trait ProtocolDefinition[P, R, M, E, S, I] extends SegmentedStateProtoDef[S] {
 object Scope {
   sealed trait ProtocolScope
 
+  //one protocol instance per Agent, for example:
+  // `IssuerSetup`
   case object Agent extends ProtocolScope
-  case object Relationship extends ProtocolScope
-  case object Adhoc extends ProtocolScope
 
+  //one protocol instance per Relationship, for example:
+  // `BasicMessage`
+  case object Relationship extends ProtocolScope
+
+  //any number of protocol instances per Agent or per Relationship, for example:
+  // Per Agent        : any number of `Relationship` protocol instances
+  // Per Relationship : any number of `OutOfBand` protocol instances
   case object RelProvisioning extends ProtocolScope
+
+  //any number of protocol instances per Agent or per Relationship, for example:
+  // Per Agent: `WriteSchema`, `WriteCredDef`
+  case object Adhoc extends ProtocolScope
 }

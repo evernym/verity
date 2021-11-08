@@ -58,7 +58,7 @@ val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 val vdrtoolswrapperver  = "0.8.0"
 
 val akkaVer         = "2.6.17"
-val akkaHttpVer     = "10.2.6"
+val akkaHttpVer     = "10.2.7"
 val akkaMgtVer      = "1.1.1"
 val alpAkkaVer      = "3.0.3"
 val kamonVer        = "2.2.3"
@@ -74,6 +74,7 @@ val mockitoVer      = "1.16.42"
 val veritySdkVer    = "0.5.0"
 val vcxWrapperVer   = "0.12.0.421"
 
+
 // compiler plugin versions
 val silencerVersion = "1.7.5"
 
@@ -81,19 +82,21 @@ val silencerVersion = "1.7.5"
 val COMPILE_TIME_ONLY = "compileonly"
 val CompileOnly = config(COMPILE_TIME_ONLY)
 
-val majorNum = "0"
-val minorNum = "4"
+val majorNum = "2"
+val minorNum = "16"
+val patchNum = "1"
 
 // I'm not sure why setting this keys don't resolve in all
 // other scopes but it does not so we re-resolve it commonSettings
 ThisBuild / major := majorNum
 ThisBuild / minor := minorNum
-ThisBuild / patch := patchNum(
+ThisBuild / patch := patchNum
+ThisBuild / build := buildNum(
   git.gitHeadCommitDate.value,
   git.gitHeadCommit.value,
   git.gitUncommittedChanges.value
 )
-ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}"
+ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}.${build.value}"
 maintainer := "Evernym Inc <dev@evernym.com>"
 
 ThisBuild / sharedLibraries := sharedLibDeps
@@ -240,7 +243,7 @@ lazy val protoBufSettings = Seq(
     scalapb.gen(flatPackage = true) -> (Compile / sourceManaged).value
   ),
   Compile / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
-  Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch).taskValue,
+  Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch, build).taskValue,
 
   Test / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
   Test / PB.targets := Seq(
@@ -336,7 +339,7 @@ lazy val commonLibraryDependencies = {
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",
     "org.msgpack" %% "msgpack-scala" % "0.8.13",  //used by legacy pack/unpack operations
-    "org.fusesource.jansi" % "jansi" % "2.3.4",    //used by protocol engine for customized logging
+    "org.fusesource.jansi" % "jansi" % "2.4.0",    //used by protocol engine for customized logging
     "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.5",  //used for libvdrtools sync api calls
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",

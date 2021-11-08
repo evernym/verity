@@ -229,6 +229,7 @@ class AppStateManagerSpec
     }
   }
 
+    //this usually takes a long time, so the timeout time has been increased
   def switchToDraining()(implicit amt: AppStateManagerTestKit): Unit = {
     kickOffUserInitiatedShutdown()
 
@@ -239,7 +240,7 @@ class AppStateManagerSpec
         msg = Option(CAUSE_MESSAGE_DRAINING_STARTED)
       ))
 
-    eventually(timeout(Span(7, Seconds)), interval(Span(100, Millis))) {
+    eventually(timeout(Span(15, Seconds)), interval(Span(100, Millis))) {
       withLatestAppState { implicit las =>
         las.currentState shouldBe DrainingState
 
@@ -257,7 +258,7 @@ class AppStateManagerSpec
     }
 
     val cluster = Cluster(system)
-    eventually(timeout(Span(7, Seconds)), interval(Span(200, Millis))) {
+    eventually(timeout(Span(15, Seconds)), interval(Span(200, Millis))) {
       List(Down, Removed).contains(cluster.selfMember.status) shouldBe true
     }
   }

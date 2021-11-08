@@ -17,7 +17,7 @@ import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 import scala.concurrent.ExecutionContext
 
 
-//Holder and Issuer already have a connection.
+//Holder and Issuer already have a connection/relationship.
 //Holder receives a new OOB invitation from the same Issuer
 // Holder re-uses the existing connection (handshake-reuse)
 

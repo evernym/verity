@@ -5,10 +5,11 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-abstract class StorageAPI(val config: AppConfig, executionContext: ExecutionContext) {
+abstract class StorageAPI(val config: AppConfig, executionContext: ExecutionContext, overrideConfig: Config = ConfigFactory.empty()) {
   def get(bucketName: String, id: String): Future[Option[Array[Byte]]]
   def put(bucketName: String, id: String, data: Array[Byte], contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo]
   def delete(bucketName: String, id: String): Future[Done]
@@ -16,11 +17,11 @@ abstract class StorageAPI(val config: AppConfig, executionContext: ExecutionCont
 }
 
 object StorageAPI {
-  def loadFromConfig(appConfig: AppConfig, executionContext: ExecutionContext)(implicit as: ActorSystem): StorageAPI = {
+  def loadFromConfig(appConfig: AppConfig, executionContext: ExecutionContext, overrideConfig: Config = ConfigFactory.empty())(implicit as: ActorSystem): StorageAPI = {
     Class
       .forName(appConfig.config.getConfig("verity.blob-store").getString("storage-service"))
-      .getConstructor(classOf[AppConfig], classOf[ExecutionContext], classOf[ActorSystem])
-      .newInstance(appConfig, executionContext, as)
+      .getConstructor(classOf[AppConfig], classOf[ExecutionContext], classOf[Config], classOf[ActorSystem])
+      .newInstance(appConfig, executionContext, overrideConfig, as)
       .asInstanceOf[StorageAPI]
   }
 }

@@ -2,6 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ template "verity.fullname" . }}
+  labels:
+    tags.datadoghq.com/service: {{ .Values.service }}
+    tags.datadoghq.com/env: {{ .Values.env }}
   annotations:
     app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
     app.gitlab.com/env: {{ .Values.env }}
@@ -20,6 +23,8 @@ spec:
       labels:
         app: {{ template "verity.fullname" . }}
         actorSystemName: verity
+        tags.datadoghq.com/service: {{ .Values.service }}
+        tags.datadoghq.com/env: {{ .Values.env }}
       annotations:
         app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
         app.gitlab.com/env: {{ .Values.env }}
@@ -27,8 +32,8 @@ spec:
         {{- $credentials := printf "kubernetes_secrets/eks-%s/%s-%s" .Values.gitlab_env .Values.name .Values.service }}
         {{- $credentials_tf := printf "kubernetes_secrets/eks-%s/%s-%s-tf" .Values.gitlab_env .Values.name .Values.service }}
         vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/role: "k8s-eks-{{ .Values.env }}"
-        vault.hashicorp.com/auth-path: "auth/k8s/eks-{{ .Values.gitlab_env }}"
+        vault.hashicorp.com/role: "k8s-eks-{{ coalesce .Values.vault_auth_role .Values.env }}"
+        vault.hashicorp.com/auth-path: "auth/k8s/eks-{{ coalesce .Values.vault_auth_path .Values.gitlab_env }}"
         vault.hashicorp.com/agent-inject-secret-credentials: "{{ $credentials }}"
         vault.hashicorp.com/agent-inject-secret-credentials-tf: "{{ $credentials_tf }}"
         vault.hashicorp.com/tls-secret: vault-tls-secret
@@ -53,6 +58,7 @@ spec:
         labelSelector:
           matchLabels:
             app: {{ template "verity.fullname" . }}
+      terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
       containers:
       - name: {{ template "verity.fullname" . }}
         image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag }}
@@ -65,20 +71,25 @@ spec:
             cpu: {{ .Values.deployment.resources.limits.cpu }}
         startupProbe:
           httpGet:
-            path: /agency/heartbeat
-            port: 9000
-          periodSeconds: 10
-          failureThreshold: 20
+            path: {{ .Values.deployment.probes.startup.path }}
+            port: {{ .Values.deployment.containerPort }}
+          periodSeconds: {{ .Values.deployment.probes.startup.periodSeconds }}
+          timeoutSeconds: {{ .Values.deployment.probes.startup.timeoutSeconds }}
+          failureThreshold: {{ .Values.deployment.probes.startup.failureThreshold }}
         readinessProbe:
           httpGet:
-            path: /agency
-            port: 9000
+            path: {{ .Values.deployment.probes.readiness.path }}
+            port: {{ .Values.deployment.containerPort }}
+          periodSeconds: {{ .Values.deployment.probes.readiness.periodSeconds }}
+          timeoutSeconds: {{ .Values.deployment.probes.readiness.timeoutSeconds }}
+          failureThreshold: {{ .Values.deployment.probes.readiness.failureThreshold }}
         livenessProbe:
           httpGet:
-            path: /agency/heartbeat
-            port: 9000
-          periodSeconds: 30
-          failureThreshold: 1
+            path: {{ .Values.deployment.probes.liveness.path }}
+            port: {{ .Values.deployment.containerPort }}
+          periodSeconds: {{ .Values.deployment.probes.liveness.periodSeconds }}
+          timeoutSeconds: {{ .Values.deployment.probes.liveness.timeoutSeconds }}
+          failureThreshold: {{ .Values.deployment.probes.liveness.failureThreshold }}
         envFrom:
         - configMapRef:
             name: vars-{{ template "verity.fullname" . }}

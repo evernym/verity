@@ -36,8 +36,7 @@ class OutOfBand(val ctx: ProtocolContextApi[OutOfBand, Role, Msg, OutOfBandEvent
   def handleHandshakeReuse(m: Msg.HandshakeReuse): Any = {
     if (m.`~thread` == null || m.`~thread`.pthid == null) {
       ctx.send(Msg.buildProblemReport(s"Message $m has invalid '~thread` field", "invalid-reuse-message"))
-    }
-    else {
+    } else {
       ctx.apply(ConnectionReuseRequested())
       val resp = Msg.HandshakeReuseAccepted(m.`~thread`)
       ctx.send(resp)

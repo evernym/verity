@@ -69,6 +69,7 @@ object ConfigConstants {
   val S3_SHORTENER_BUCKET_NAME = s"$S3_SHORTENER.bucket-name"
   val S3_SHORTENER_ID_LENGTH = s"$S3_SHORTENER.id-length"
   val S3_SHORTENER_RETRY_COUNT = s"$S3_SHORTENER.retry-count"
+  val S3_SHORTENER_CONFIG_OVERRIDES = s"$S3_SHORTENER.config-overrides"
 
   private val SMS_SVC = s"$SERVICES.sms-service"
 

@@ -1,9 +1,9 @@
 package com.evernym.verity.urlshortener
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.{ContentType, ContentTypes, Uri}
+import akka.http.scaladsl.model.{ContentTypes, Uri}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.ConfigConstants.{S3_SHORTENER_BUCKET_NAME, S3_SHORTENER_ID_LENGTH, S3_SHORTENER_RETRY_COUNT, S3_SHORTENER_URL_PREFIX}
+import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.Constants.URL_SHORTENER_PROVIDER_ID_S3_SHORTENER
 import com.evernym.verity.http.common.ConfigSvc
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
@@ -43,7 +43,11 @@ class S3ShortenerSvc(val appConfig: AppConfig, implicit val futureExecutionConte
 
   }
 
-  def getStorageAPI(implicit as: ActorSystem): StorageAPI = StorageAPI.loadFromConfig(appConfig, futureExecutionContext)
+  def getStorageAPI(implicit as: ActorSystem): StorageAPI = StorageAPI.loadFromConfig(
+    appConfig,
+    futureExecutionContext,
+    appConfig.config.getConfig(S3_SHORTENER_CONFIG_OVERRIDES)
+  )
 
   override def shortenURL(urlInfo: UrlInfo)
                          (implicit actorSystem: ActorSystem): Future[String] = {
@@ -60,11 +64,15 @@ class S3ShortenerSvc(val appConfig: AppConfig, implicit val futureExecutionConte
     // generate different id every time.
     val id = genShortId()
 
-    storageAPI.put(bucketName, id, data, ContentTypes.`application/json`) map { _ =>
-      id
+    storageAPI.get(bucketName, id) flatMap {
+      case Some(_) => Future.failed(new RuntimeException(s"Duplicate short id found: $id"))
+      case None =>
+        storageAPI.put(bucketName, id, data, ContentTypes.`application/json`) map { _ =>
+          id
+        }
     } recoverWith {
       case e: Throwable =>
-        logger.warn(s"Storing short url data failed: ${e}")
+        logger.warn(s"Storing short url data failed: ${e.getMessage}")
         if (retryCount > 0)
           storeWithRetry(storageAPI, data, retryCount - 1)
         else

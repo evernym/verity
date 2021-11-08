@@ -1,8 +1,7 @@
-package com.evernym.verity.integration.with_basic_sdk.out_of_band.with_attachment
+package com.evernym.verity.integration.with_basic_sdk.out_of_band.with_attachment.cred_offer
 
-import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
@@ -13,11 +12,13 @@ import com.evernym.verity.protocol.protocols.outofband.v_1_0.Signal.{ConnectionR
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
+import com.evernym.verity.util2.ExecutionContextProvider
 import org.json.JSONObject
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext
 
-//Holder and Issuer already have a connection.
+//Holder and Issuer already have a connection/relationship.
 //Holder receives a new "cred offer attached OOB invitation" from the same Issuer.
 // Holder re-uses the existing connection (handshake-reuse) and move forward successfully with OOB attached cred offer
 class ReuseConnectionSpec
@@ -84,12 +85,13 @@ class ReuseConnectionSpec
       "should be successful" in {
         val oobInvite = oobInvitation.get
         val handshakeReuse = HandshakeReuse(MsgThread(pthid = Option(oobInvite.`@id`)))
-        val msgThread = Option(MsgThread(pthid = Option(oobInvite.`@id`)))
+        val msgThread = Option(MsgThread(thid = Option(UUID.randomUUID().toString), pthid = Option(oobInvite.`@id`)))
         holderSDK.sendProtoMsgToTheirAgent(issuerHolderConn, handshakeReuse, msgThread)
         holderSDK.expectMsgFromConn[HandshakeReuseAccepted](issuerHolderConn)
         val receivedMsg = issuerSDK.expectMsgOnWebhook[ConnectionReused]()
         issuerSDK.expectMsgOnWebhook[MoveProtocol]()
         receivedMsg.threadOpt.map(_.pthid).isDefined shouldBe true
+
         java.lang.Thread.sleep(2000)  //time to let "move protocol" finish on verity side
       }
     }

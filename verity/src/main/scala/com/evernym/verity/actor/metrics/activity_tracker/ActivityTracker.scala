@@ -14,8 +14,9 @@ import com.evernym.verity.protocol.engine.DomainId
 import com.evernym.verity.util.TimeUtil
 import com.evernym.verity.util.TimeUtil.{IsoDateTime, dateAfterDuration, isDateExpired, toMonth}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
+import scala.util.Random
 
 /**
  Records an Agent's
@@ -191,6 +192,14 @@ class ActivityTracker(override val appConfig: AppConfig,
 
   override def snapshotState: Option[ActivityState] = {
     Option(state)
+  }
+
+  override def postActorRecoveryCompleted(): Future[Any] = {
+    logger.info(s"[$persistenceId] unbounded elements => " +
+      s"activities: ${state.activities}, " +
+      s"random activity ids: ${Random.shuffle(state.activities.keySet.take(20)).take(5).mkString(", ")}"
+    )
+    super.postActorRecoveryCompleted()
   }
 }
 

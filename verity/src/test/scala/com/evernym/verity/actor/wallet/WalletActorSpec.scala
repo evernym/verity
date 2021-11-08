@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.wallet
 
 import java.util.UUID
-
 import akka.actor.PoisonPill
 import akka.testkit.ImplicitSender
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -51,9 +50,30 @@ class WalletActorSpec
   lazy val holderWalletActor: agentRegion = agentRegion(UUID.randomUUID().toString, walletRegionActor)
   lazy val verifierWalletActor: agentRegion = agentRegion(UUID.randomUUID().toString, walletRegionActor)
 
+  lazy val testWalletActor: agentRegion = agentRegion(UUID.randomUUID().toString, walletRegionActor)
+
   val testByteMsg: Array[Byte] = "test message".getBytes()
 
   "WalletActor" - {
+
+    "when sent CreateWallet command and then sent it again" - {
+      "should respond with WalletCreated and then WalletAlreadyOpened" in {
+        //repeat the test to ensure that new requests will be put in stash while actor perform current message
+        testWalletActor ! CreateWallet()
+        expectMsgType[WalletCreated.type]
+        testWalletActor ! CreateWallet()
+        expectMsgType[WalletAlreadyCreated.type]
+        testWalletActor ! CreateWallet()
+        expectMsgType[WalletAlreadyCreated.type]
+      }
+    }
+
+    "when sent Close to testActor" - {
+      "should be closed successfully" in {
+        testWalletActor ! Close()
+        expectMsgType[Done.type]
+      }
+    }
 
     "when sent CreateWallet command" - {
       "should respond with WalletCreated" in {
@@ -65,6 +85,7 @@ class WalletActorSpec
         expectMsgType[WalletCreated.type]
       }
     }
+
 
     "when sent CreateWallet command again" - {
       "should respond with WalletAlreadyCreated" in {

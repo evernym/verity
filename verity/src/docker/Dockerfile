@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 
-ARG LIBINDY_VERSION
+ARG LIBVDRTOOLS_VERSION
 ARG EVERNYM_CERTIFICATE
 
 WORKDIR /root
@@ -28,8 +28,7 @@ RUN curl https://repo.corp.evernym.com/repo.corp.evenym.com-sig.key | apt-key ad
 # Install libindy libraries
 RUN apt-get update && \
     apt-get install -y \
-        libindy-async=${LIBINDY_VERSION}-bionic \
-        libnullpay-async=${LIBINDY_VERSION}-bionic
+        libvdrtools=0.8.0-bionic
 
 # cleanup and remove Evernym internal repo
 RUN apt-get autoremove -y && \

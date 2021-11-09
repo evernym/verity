@@ -30,6 +30,8 @@ object SegmentedStateStore extends HasProps {
   }
 
   override def props(implicit conf: AppConfig, executionContext: ExecutionContext): Props =  Props(new SegmentedStateStore(conf, executionContext))
+
+  val defaultPassivationTimeout = 600
 }
 
 /*

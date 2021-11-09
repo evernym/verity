@@ -14,8 +14,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class MockBlobStore(config: AppConfig, ec: ExecutionContext, overrideConfig: Config = ConfigFactory.empty())(implicit val as: ActorSystem)
   extends StorageAPI(config, ec, overrideConfig) {
 
-  lazy implicit val executionContext: ExecutionContext = ec
-
   type BucketName = String
   type DBKey = String
 
@@ -25,7 +23,7 @@ class MockBlobStore(config: AppConfig, ec: ExecutionContext, overrideConfig: Con
 
   override def get(bucketName: String, id: String): Future[Option[Array[Byte]]] = {
     val dbKey = calcKey(bucketName, id)
-    Future(bucketStore(bucketName).get(dbKey))
+    Future.successful(bucketStore(bucketName).get(dbKey))
   }
 
   override def put(bucketName: String, id: String, data: Array[Byte], contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo] = {
@@ -33,7 +31,7 @@ class MockBlobStore(config: AppConfig, ec: ExecutionContext, overrideConfig: Con
       val dbKey = calcKey(bucketName, id)
       val bucketItems = bucketStore.getOrElse(bucketName, Map.empty) ++ Map(dbKey -> data)
       bucketStore += bucketName -> bucketItems
-      Future(StorageInfo(dbKey, "mock"))
+      Future.successful(StorageInfo(dbKey, "mock"))
     }
   }
 
@@ -42,7 +40,7 @@ class MockBlobStore(config: AppConfig, ec: ExecutionContext, overrideConfig: Con
       val dbKey = calcKey(bucketName, id)
       val bucketItems = bucketStore.getOrElse(bucketName, Map.empty) - dbKey
       bucketStore += (bucketName -> bucketItems)
-      Future(Done)
+      Future.successful(Done)
     }
   }
 
@@ -51,5 +49,5 @@ class MockBlobStore(config: AppConfig, ec: ExecutionContext, overrideConfig: Con
     bucketStore.getOrElse(bucketName, Map.empty).count(_._1.startsWith(dbKey))
   }
 
-  override def ping: Future[Unit] = Future.successful((): Unit)
+  override def ping: Future[Unit] = Future.successful(())
 }

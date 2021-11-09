@@ -1009,6 +1009,7 @@ object UserAgentPairwise {
   final val COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG = "user-agent-pairwise.mnd.msgs-payloads"
   final val COLLECTION_METRIC_MND_MSGS_DETAILS_TAG = "user-agent-pairwise.mnd.msgs-details"
   final val COLLECTION_METRIC_MND_MSGS_DELIVRY_STATUS_TAG = "user-agent-pairwise.mnd.msgs-delivery-status"
+  val defaultPassivationTimeout = 600
 }
 
 case class GetConfigDetail(name: String, req: Boolean = true)

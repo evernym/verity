@@ -958,6 +958,7 @@ object UserAgent {
   final val COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG = "user-agent.mnd.msgs-payloads"
   final val COLLECTION_METRIC_MND_MSGS_DETAILS_TAG = "user-agent.mnd.msgs-details"
   final val COLLECTION_METRIC_MND_MSGS_DELIVERY_STATUS_TAG = "user-agent.mnd.msgs-delivery-status"
+  val defaultPassivationTimeout = 600
 }
 
 case class PairwiseConnSetExt(agentDID: DidStr, agentDIDVerKey: VerKeyStr, reqMsgContext: ReqMsgContext)

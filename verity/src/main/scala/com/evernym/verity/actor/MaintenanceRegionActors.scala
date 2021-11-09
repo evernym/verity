@@ -1,7 +1,13 @@
 package com.evernym.verity.actor
 
+import java.util.concurrent.TimeUnit
+
 import com.evernym.verity.actor.agent.maintenance.ActorStateCleanupExecutor
+import com.evernym.verity.config.ConfigConstants.PERSISTENT_ACTOR_BASE
+import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.constants.ActorNameConstants.ACTOR_STATE_CLEANUP_EXECUTOR
+
+import scala.concurrent.duration.FiniteDuration
 
 trait MaintenanceRegionActors { this: Platform =>
   val actorStateCleanupExecutor = createPersistentRegion(
@@ -10,6 +16,16 @@ trait MaintenanceRegionActors { this: Platform =>
       appConfig,
       agentActorContext,
       this.executionContextProvider.futureExecutionContext
-    )
+    ),
+    passivateIdleEntityAfter = Some(FiniteDuration(
+      ConfigUtil.getReceiveTimeout(
+        appConfig,
+        ActorStateCleanupExecutor.defaultPassivationTimeout,
+        PERSISTENT_ACTOR_BASE,
+        ACTOR_STATE_CLEANUP_EXECUTOR,
+        null
+      ).toSeconds,
+      TimeUnit.SECONDS
+    ))
   )
 }

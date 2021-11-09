@@ -205,9 +205,11 @@ class ActivityTracker(override val appConfig: AppConfig,
 
 
 object ActivityTracker {
- def props(implicit config: AppConfig, agentMsgRouter: AgentMsgRouter, executionContext: ExecutionContext): Props = {
-  Props(new ActivityTracker(config, agentMsgRouter, executionContext))
- }
+  def props(implicit config: AppConfig, agentMsgRouter: AgentMsgRouter, executionContext: ExecutionContext): Props = {
+    Props(new ActivityTracker(config, agentMsgRouter, executionContext))
+  }
+
+  val defaultPassivationTimeout = 600
 }
 
 /** Types of agent activity that may be used for metrics

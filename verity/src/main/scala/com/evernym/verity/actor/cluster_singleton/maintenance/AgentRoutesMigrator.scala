@@ -7,7 +7,7 @@ import com.evernym.verity.actor.agent.maintenance.RegisteredRouteSummary
 import com.evernym.verity.actor.agent.msgrouter.RoutingAgentBucketMapperV1
 import com.evernym.verity.actor.agent.msgrouter.legacy.{GetRegisteredRouteSummary, MigratePending}
 import com.evernym.verity.actor.base.Done
-import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
+import com.evernym.verity.actor.persistence.{BasePersistentActor, BasePersistentTimeoutActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, MigrationCandidatesRecorded, MigrationStatusRecorded}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext
 
 
 class AgentRoutesMigrator(val appConfig: AppConfig, executionContext: ExecutionContext)
-  extends BasePersistentActor
+  extends BasePersistentTimeoutActor
   with DefaultPersistenceEncryption {
 
   override def futureExecutionContext: ExecutionContext = executionContext

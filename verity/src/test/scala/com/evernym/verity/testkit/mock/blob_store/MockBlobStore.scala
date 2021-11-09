@@ -11,7 +11,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class MockBlobStore(config: AppConfig, ec: ExecutionContext, overrideConfig: Config = ConfigFactory.empty())
+class MockBlobStore(config: AppConfig, ec: ExecutionContext, overrideConfig: Config = ConfigFactory.empty())(implicit val as: ActorSystem)
   extends StorageAPI(config, ec, overrideConfig) {
 
   type BucketName = String

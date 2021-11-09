@@ -32,6 +32,7 @@ trait PresentProofLegacy
     case (s: StatesLegacy.ProposalSent   , _, RequestGiven(r)           ) => StatesLegacy.RequestReceived(s.data.addRequest(r))
     case (s: StatesLegacy.RequestReceived, _, PresentationUsed(p)       ) => StatesLegacy.Presented(s.data.addPresentation(p))
     case (s: StatesLegacy.RequestReceived, _, PresentationProposed(a, p)) => StatesLegacy.ProposalSent(s.data.addProposal(a, p))
+    case (s: StatesLegacy.Presented      , _, PresentationAck(a)        ) => StatesLegacy.Presented(s.data.addAck(a))
 
     //Verifier Events
     case (_: States.Initialized           , _, RequestUsed(r)          ) => StatesLegacy.initRequestSent(r)
@@ -39,6 +40,8 @@ trait PresentProofLegacy
     case (s: StatesLegacy.ProposalReceived, _, RequestUsed(r)          ) => StatesLegacy.RequestSent(s.data.addRequest(r))
     case (s: StatesLegacy.RequestSent     , _, PresentationGiven(p)    ) => StatesLegacy.Complete(s.data.addPresentation(p))
     case (s: StatesLegacy.RequestSent     , _, ProposeReceived(a, p)   ) => StatesLegacy.ProposalReceived(s.data.addProposal(a, p))
+    case (s: StatesLegacy.Complete        , _, AttributesGiven(ap)     ) => StatesLegacy.Complete(s.data.addAttributesPresented(ap))
+    case (s: StatesLegacy.Complete        , _, ResultsOfVerification(r)) => StatesLegacy.Complete(s.data.addVerificationResults(r))
   }
 
   def legacyProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {

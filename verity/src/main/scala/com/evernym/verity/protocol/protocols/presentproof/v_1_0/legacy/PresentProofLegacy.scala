@@ -12,6 +12,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProblemReportCod
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Role.{Prover, Verifier}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults._
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0._
+import com.evernym.verity.util.OptionUtil
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -42,6 +43,9 @@ trait PresentProofLegacy
     case (s: StatesLegacy.RequestSent     , _, ProposeReceived(a, p)   ) => StatesLegacy.ProposalReceived(s.data.addProposal(a, p))
     case (s: StatesLegacy.Complete        , _, AttributesGiven(ap)     ) => StatesLegacy.Complete(s.data.addAttributesPresented(ap))
     case (s: StatesLegacy.Complete        , _, ResultsOfVerification(r)) => StatesLegacy.Complete(s.data.addVerificationResults(r))
+
+    //Common
+    case (s: HasData                      , _, Rejection(role, reason) ) => StatesLegacy.Rejected(s.data, Role.numToRole(role), OptionUtil.blankOption(reason))
   }
 
   def legacyProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {

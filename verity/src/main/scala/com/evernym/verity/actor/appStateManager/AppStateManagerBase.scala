@@ -47,7 +47,7 @@ trait AppStateManagerBase
   def getCurrentStateCauses: List[CauseDetail] = causesByState.getOrElse(currentState.toString, List.empty)
 
   protected def getDetailedAppState: AppStateDetailed = {
-    val runningVersion = s"${appVersion.major}.${appVersion.minor}.${appVersion.patch}"
+    val runningVersion = s"${appVersion.major}.${appVersion.minor}.${appVersion.patch}.${appVersion.build}"
     AppStateDetailed(runningVersion, getState, events, causesByState, causesByContext)
   }
 

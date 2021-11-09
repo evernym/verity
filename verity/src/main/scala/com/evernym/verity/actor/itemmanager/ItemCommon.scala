@@ -85,6 +85,7 @@ trait ItemCommandHandlerBase extends ActorLogging { this: BasePersistentActor =>
 
 object ItemManager {
   def props(executionContext: ExecutionContext)(implicit conf: AppConfig): Props = Props(new ItemManager(executionContext))
+  val defaultPassivationTimeout = 600
 }
 
 class ItemManager(executionContext: ExecutionContext)(implicit val appConfig: AppConfig) extends ItemManagerBase {
@@ -97,6 +98,7 @@ class ItemManager(executionContext: ExecutionContext)(implicit val appConfig: Ap
 
 object ItemContainer {
   def props(executionContext: ExecutionContext)(implicit conf: AppConfig): Props = Props(new ItemContainer(executionContext))
+  val defaultPassivationTimeout = 600
 }
 
 class ItemContainer(executionContext: ExecutionContext)(implicit val appConfig: AppConfig) extends ItemContainerBase {

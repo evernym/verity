@@ -61,6 +61,7 @@ class Route(executionContext: ExecutionContext)(implicit val appConfig: AppConfi
 
 object Route {
   def props(executionContext: ExecutionContext)(implicit appConfig: AppConfig): Props = Props(new Route(executionContext))
+  val defaultPassivationTimeout = 600
 }
 
 

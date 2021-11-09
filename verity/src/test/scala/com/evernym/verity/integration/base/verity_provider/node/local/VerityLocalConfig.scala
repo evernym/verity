@@ -112,7 +112,7 @@ object VerityLocalConfig {
   private def configureLibIndy(taaEnabled: Boolean, taaAutoAccept: Boolean): Config = {
     ConfigFactory.parseString(
       s"""
-         |verity.lib-indy {
+         |verity.lib-vdrtools {
          |  ledger {
          |    transaction_author_agreement = {
          |      agreements = {

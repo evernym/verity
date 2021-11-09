@@ -90,7 +90,7 @@ provision() {
   curl -d "{\"alias\":\"verity\",\"did\":$DID,\"verkey\":$VERKEY, \"role\":\"ENDORSER\"}" -X POST ${ledger_url}/register
 
   # Write out TAA configruation to the file
-  echo "verity.lib-indy.ledger.transaction_author_agreement.agreements = {\"${TAA_VERSION}\" = { digest = \${?TAA_HASH}, mechanism = on_file, time-of-acceptance = \${?TAA_ACCEPTANCE}}}" > /etc/verity/verity-application/taa.conf
+  echo "verity.lib-vdrtools.ledger.transaction_author_agreement.agreements = {\"${TAA_VERSION}\" = { digest = \${?TAA_HASH}, mechanism = on_file, time-of-acceptance = \${?TAA_ACCEPTANCE}}}" > /etc/verity/verity-application/taa.conf
 
   # Generate random logo
   ROBO_HASH=$(date +%s | md5sum | base64 | head -c 8)

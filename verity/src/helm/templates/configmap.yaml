@@ -119,7 +119,7 @@ data:
     </configuration>
   ledgers.conf: |
     {{- if .Values.taa }}
-    verity.lib-indy.ledger.transaction_author_agreement.agreements = {
+    verity.lib-vdrtools.ledger.transaction_author_agreement.agreements = {
       {{- range .Values.taa }}
       "{{ .version }}" {
           "digest" = "{{ .digest }}"

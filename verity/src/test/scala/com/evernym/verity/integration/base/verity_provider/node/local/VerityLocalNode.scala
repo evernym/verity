@@ -13,8 +13,8 @@ import com.typesafe.config.Config
 
 import java.nio.file.Path
 import com.evernym.verity.util2.ExecutionContextProvider
+import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 
-import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
@@ -63,7 +63,10 @@ case class VerityLocalNode(tmpDirPath: Path,
   private def stopGracefully(): Unit = {
     isAvailable = false
     val cluster = Cluster(platform.actorSystem)
-    CoordinatedShutdown(platform.actorSystem).run(UserInitiatedShutdown)
+
+    val result = CoordinatedShutdown(platform.actorSystem).run(UserInitiatedShutdown)
+
+    assert(result.isReadyWithin(20.seconds),"Coordinated shutdown failed")
     TestKit.awaitCond(isNodeShutdown(cluster), waitAtMost, 300.millis)
   }
 

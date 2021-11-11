@@ -45,10 +45,9 @@ class TestAppConfig(newConfig: Option[Config] = None,
                     clearValidators: Boolean = false,
                     baseAsFallback: Boolean = true)
   extends AppConfig {
-  if(clearValidators) {
+  if (clearValidators) {
     validatorCreators = List.empty
   }
-  val baseConfig: Config = getLoadedConfig
   if (baseAsFallback) {
     setConfig(newConfig.map(cfg => cfg.withFallback(baseConfig)).getOrElse(baseConfig))
   } else {
@@ -59,6 +58,8 @@ class TestAppConfig(newConfig: Option[Config] = None,
     setConfig(config.withFallback(fallback))
     this
   }
+
+  lazy val baseConfig: Config = getLoadedConfig
 }
 object TestAppConfig {
   def apply(newConfig: Option[Config] = None, clearValidators: Boolean = false) =

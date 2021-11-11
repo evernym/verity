@@ -102,6 +102,13 @@ object ConfigConstants {
   val TWILIO_DEFAULT_NUMBER = s"$TWILIO.default-number"
   val TWILIO_APP_NAME = s"$TWILIO.app-name"
 
+  private val INFO_BIP = s"$SMS_EXTERNAL_SVC.info-bip"
+  val INFO_BIP_ENDPOINT = s"$INFO_BIP.endpoint"
+  val INFO_BIP_ENDPOINT_HOST = s"$INFO_BIP_ENDPOINT.host"
+  val INFO_BIP_ENDPOINT_PORT = s"$INFO_BIP_ENDPOINT.port"
+  val INFO_BIP_ENDPOINT_PATH_PREFIX = s"$INFO_BIP_ENDPOINT.path-prefix"
+  val INFO_BIP_ENDPOINT_ACCESS_TOKEN = s"$INFO_BIP.access-token"
+
   private val LIB_INDY = s"$VERITY.lib-indy"
   val LIB_INDY_LIBRARY_DIR_LOCATION = s"$LIB_INDY.library-dir-location"
   val LIB_INDY_FLAVOR = s"$LIB_INDY.flavor"

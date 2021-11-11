@@ -77,7 +77,7 @@ trait AgentActorContext
   private def createSmsSender(): SMSSender = {
     new SMSSender {
       implicit lazy val timeout: Timeout = Util.buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
-      val smsSender: ActorRef = system.actorOf(DefaultSMSSender.props(appConfig), "sms-sender")
+      val smsSender: ActorRef = system.actorOf(DefaultSMSSender.props(appConfig, futureExecutionContext), "sms-sender")
 
       override def sendMessage(smsInfo: SmsInfo): Future[Either[HandledErrorException, String]] = {
         val smsSendFut = smsSender ? smsInfo

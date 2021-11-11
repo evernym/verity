@@ -25,10 +25,10 @@ RUN curl https://repo.corp.evernym.com/repo.corp.evenym.com-sig.key | apt-key ad
     add-apt-repository "deb https://repo.corp.evernym.com/deb evernym-agency-dev-ubuntu main" && \
     add-apt-repository "deb https://repo.corp.evernym.com/deb evernym-ubuntu main"
 
-# Install libindy libraries
+# Install libvdrtools libraries
 RUN apt-get update && \
     apt-get install -y \
-        libvdrtools=0.8.0-bionic
+        libvdrtools={LIBVDRTOOLS_VERSION}-bionic
 
 # cleanup and remove Evernym internal repo
 RUN apt-get autoremove -y && \

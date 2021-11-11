@@ -176,6 +176,7 @@ class OrderedRoutes {
 object LegacyAgentRouteStore {
   def props(executionContext: ExecutionContext)(implicit appConfig: AppConfig): Props =
     Props(new LegacyAgentRouteStore(executionContext))
+  val defaultPassivationTimeout = 600
 }
 
 //cmds

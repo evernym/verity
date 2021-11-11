@@ -95,6 +95,8 @@ class TimeBasedMovingItemManagerSpec
         expectMsgPF() {
           case ItemCmdResponse(ItemDetailResponse(ITEM_ID_1, ITEM_STATUS_ACTIVE|ITEM_STATUS_MIGRATED, _, Some(ORIG_ITEM_DETAIL)), senderEntityId) =>
             checkItemContainerEntityId(senderEntityId)
+          //previous item container's storage cleaned
+          case ItemContainerStaleOrConfigNotYetSet =>
         }
 
         //the item in the latest container should be always in active state
@@ -139,6 +141,8 @@ class TimeBasedMovingItemManagerSpec
         expectMsgPF() {
           case ItemCmdResponse(ItemDetailResponse(ITEM_ID_1, ITEM_STATUS_ACTIVE|ITEM_STATUS_MIGRATED, _, Some(UPDATED_ITEM_DETAIL)), senderEntityId) =>
             checkItemContainerEntityId(senderEntityId)
+          //previous item container's storage cleaned
+          case ItemContainerStaleOrConfigNotYetSet =>
         }
 
         sendExternalCmdToItemManager(itemManagerEntityId1, GetItem(ITEM_ID_1))
@@ -160,6 +164,8 @@ class TimeBasedMovingItemManagerSpec
         expectMsgPF() {
           case ItemCmdResponse(ItemDetailResponse(ITEM_ID_2, ITEM_STATUS_ACTIVE|ITEM_STATUS_MIGRATED, _, None), senderEntityId) =>
             checkItemContainerEntityId(senderEntityId)
+          //previous item container's storage cleaned
+          case ItemContainerStaleOrConfigNotYetSet =>
         }
 
         sendExternalCmdToItemManager(itemManagerEntityId1, GetItem(ITEM_ID_2))

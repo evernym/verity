@@ -16,65 +16,106 @@ import com.evernym.verity.util.Util
 import com.evernym.verity.util.Util._
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.actor.base.CoreActorExtended
-import com.evernym.verity.util2.Exceptions
+import com.evernym.verity.util2.Status
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
-import scala.util.{Success, Try}
+import scala.concurrent.{ExecutionContext, Future}
 
-class DefaultSMSSender(val config: AppConfig) extends CoreActorExtended {
+class DefaultSMSSender(val config: AppConfig,
+                       executionContext: ExecutionContext)
+  extends CoreActorExtended {
+
+  private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   def receiveCmd: Receive = {
     case smsInfo: SmsInfo => sendMessage(smsInfo)
   }
 
   def sendMessage(smsInfo: SmsInfo): Unit = {
-    servicesToBeUsedInOrder.view.map { smsSender =>
-      Try {
-        val smsStart = System.currentTimeMillis()
-        val smsSendResultByProvider =
-          try {
-            val normalizedPhoneNumber = smsSender.getNormalizedPhoneNumber(smsInfo.to)
-            val normalizedSmsInfo = smsInfo.copy(to=normalizedPhoneNumber)
-            smsSender.sendMessage(normalizedSmsInfo)
-          } catch {
-            case e: HandledErrorException =>
-              Left(new SmsSendingFailedException(Option(e.getMessage), errorDetail=Option(Exceptions.getErrorMsg(e))))
-          }
-        val duration = System.currentTimeMillis() - smsStart
-        logResult(smsSendResultByProvider, smsSender.providerId)
-        updateMetrics(smsSendResultByProvider, smsSender.providerId, duration)
-        smsSendResultByProvider
+    val sndr = sender()
+    sendMessageWithProviders(smsInfo, servicesToBeUsedInOrder)
+      .map {
+        case Right(smsSent) =>
+          //one of the service was able to successfully sent the sms
+          sndr ! smsSent
+          publishAppStateEvent(RecoverIfNeeded(CONTEXT_SMS_OPERATION))
+        case Left(_)      =>
+          //none of the services were able to sent sms
+          val err = "none of the providers could send sms to phone_number. For more details take a look at provider specific error messages"
+          sndr ! SmsSendingFailed(UNHANDLED.statusCode, err)
+          publishAppStateEvent(ErrorEvent(SeriousSystemError, CONTEXT_SMS_OPERATION, new SmsSendingFailedException(Option(err)), None))
+          throw new InternalServerErrorException(SMS_SENDING_FAILED.statusCode, Option(SMS_SENDING_FAILED.statusMsg),
+            errorDetail=Option(err))
       }
-    }.collectFirst({
-      case Success(Right(result)) =>
-        sender ! result
-        publishAppStateEvent(RecoverIfNeeded(CONTEXT_SMS_OPERATION))
-      case Success(Left(e: SmsSendingFailedException)) =>
-        sender ! SmsSendingFailed(e.respCode, e.respMsg.getOrElse(e.getErrorMsg))
-        publishAppStateEvent(RecoverIfNeeded(CONTEXT_SMS_OPERATION))
-    }).getOrElse {
-      val err = "none of the providers could send sms to phone_number. For more details take a look at provider specific error messages"
-      sender ! SmsSendingFailed(UNHANDLED.statusCode, err)
-      publishAppStateEvent(ErrorEvent(SeriousSystemError, CONTEXT_SMS_OPERATION, new SmsSendingFailedException(Option(err)), None))
-      throw new InternalServerErrorException(SMS_SENDING_FAILED.statusCode, Option(SMS_SENDING_FAILED.statusMsg),
-        errorDetail=Option(err))
+  }
+
+  //will try to send sms via preferred providers
+  //it will stop as soon as
+  //  * a sms provider sends the sms successfully
+  //  * all preferred providers are attempted and failed
+  def sendMessageWithProviders(smsInfo: SmsInfo,
+                               smsSenders: List[SMSServiceProvider]):
+  Future[Either[HandledErrorException, SmsSent]] = {
+    if (smsSenders.isEmpty) {
+      Future.successful(Left(buildHandledError(
+        Status.SMS_SENDING_FAILED.statusCode,
+        Option("all preferred sms provider failed in sending sms")
+      )))
+    } else {
+      val smsSender = smsSenders.head
+      val smsStart = System.currentTimeMillis()
+      val normalizedPhoneNumber = smsSender.getNormalizedPhoneNumber(smsInfo.to)
+      val normalizedSmsInfo = smsInfo.copy(to = normalizedPhoneNumber)
+      smsSender
+        .sendMessage(normalizedSmsInfo)
+        .recoverWith {
+          case ex: RuntimeException =>
+            //handle failures to make sure other available sms providers get a chance to send sms
+            Future.successful(Left(buildHandledError(Status.UNHANDLED.statusCode,
+              Option(ex.getMessage), Option(ex.getMessage))))
+        }
+        .flatMap { result =>
+          val duration = System.currentTimeMillis() - smsStart
+          logResult(result, smsSender.providerId, smsSenders.tail.size)
+          updateMetrics(result, smsSender.providerId, duration)
+          result match {
+            case Right(value) =>
+              Future.successful(Right(value))
+            case Left(_) =>
+              //retry with other available sms providers
+              sendMessageWithProviders(smsInfo, smsSenders.tail)
+          }
+        }
     }
   }
 
-  def logResult(smsSendResultByProvider: Either[HandledErrorException, SmsSent], providerId: String): Unit = {
-    smsSendResultByProvider match {
+  private def logResult(smsSendResult: Either[HandledErrorException, SmsSent],
+                        providerId: String,
+                        totalProvidersLeft: Int): Unit = {
+    smsSendResult match {
       case Left(em) =>
-        val err = "could not send sms"
-        logger.error(err, (LOG_KEY_PROVIDER, providerId),
-          (LOG_KEY_RESPONSE_CODE, em.respCode), (LOG_KEY_ERR_MSG, em.getErrorMsg))
+        if (totalProvidersLeft >= 1) {
+          logger.warn(s"could not send sms ($totalProvidersLeft more left to be tried)",
+            (LOG_KEY_PROVIDER, providerId),
+            (LOG_KEY_RESPONSE_CODE, em.respCode),
+            (LOG_KEY_ERR_MSG, em.getErrorMsg)
+          )
+        } else {
+          logger.error(s"could NOT send sms (all preferred providers failed)",
+            (LOG_KEY_PROVIDER, providerId),
+            (LOG_KEY_RESPONSE_CODE, em.respCode),
+            (LOG_KEY_ERR_MSG, em.getErrorMsg)
+          )
+        }
       case Right(_) =>
         logger.debug("sms sent successfully", (LOG_KEY_PROVIDER, providerId))
     }
   }
 
-  def updateMetrics(smsSendResultByProvider: Either[HandledErrorException, SmsSent], providerId: String, duration: Long): Unit = {
-    smsSendResultByProvider match {
+  private def updateMetrics(smsSendResult: Either[HandledErrorException, SmsSent],
+                            providerId: String,
+                            duration: Long): Unit = {
+    smsSendResult match {
       case Left(_) =>
         providerId match {
           case SMS_PROVIDER_ID_TWILIO =>
@@ -86,6 +127,9 @@ class DefaultSMSSender(val config: AppConfig) extends CoreActorExtended {
 	        case SMS_PROVIDER_ID_OPEN_MARKET =>
             metricsWriter.gaugeIncrement(AS_SERVICE_OPEN_MARKET_DURATION, duration)
             metricsWriter.gaugeIncrement(AS_SERVICE_OPEN_MARKET_FAILED_COUNT)
+          case SMS_PROVIDER_ID_INFO_BIP =>
+            metricsWriter.gaugeIncrement(AS_SERVICE_INFO_BIP_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_INFO_BIP_FAILED_COUNT)
         }
       case Right(_) =>
         providerId match {
@@ -98,24 +142,29 @@ class DefaultSMSSender(val config: AppConfig) extends CoreActorExtended {
 	        case SMS_PROVIDER_ID_OPEN_MARKET =>
             metricsWriter.gaugeIncrement(AS_SERVICE_OPEN_MARKET_DURATION, duration)
             metricsWriter.gaugeIncrement(AS_SERVICE_OPEN_MARKET_SUCCEED_COUNT)
+          case SMS_PROVIDER_ID_INFO_BIP =>
+            metricsWriter.gaugeIncrement(AS_SERVICE_INFO_BIP_DURATION, duration)
+            metricsWriter.gaugeIncrement(AS_SERVICE_INFO_BIP_SUCCEED_COUNT)
         }
     }
   }
 
-  val logger: Logger = getLoggerByClass(classOf[DefaultSMSSender])
+  private val logger: Logger = getLoggerByClass(classOf[DefaultSMSSender])
 
-  lazy val allServices: List[SMSServiceProvider] =
+  private lazy val allServices: List[SMSServiceProvider] =
     List(
-      new BandwidthSmsSvc(config),
-      new TwilioSmsSvc(config),
-      new OpenMarketSmsSvc(config))
+      new BandwidthDispatcher(config),
+      new TwilioDispatcher(config),
+      new OpenMarketDispatcherMEP(config),
+      new InfoBipDirectSmsDispatcher(config, executionContext)(context.system)
+    )
 
   /**
    * keep this as a method so that it uses the benefit of config hot-reloading
    * to determine which service provider are in preferred list
    * @return
    */
-  def servicesToBeUsedInOrder: List[SMSServiceProvider] = {
+  private def servicesToBeUsedInOrder: List[SMSServiceProvider] = {
     val preferredOrder = config.getStringListReq(SMS_EXTERNAL_SVC_PREFERRED_ORDER)
     preferredOrder.flatMap(id => allServices.find(s => s.providerId == id))
   }
@@ -134,21 +183,18 @@ case class SendSms(smsInfo: SmsInfo)
 trait SMSServiceProvider {
   def providerId: String
   def appConfig: AppConfig
-  def sendMessage(smsInfo: SmsInfo): Either[HandledErrorException, SmsSent]
+  def sendMessage(smsInfo: SmsInfo): Future[Either[HandledErrorException, SmsSent]]
 
   def getNormalizedPhoneNumber(ph: String): String = {
     Util.getNormalizedPhoneNumber(ph)
   }
 }
 
-class BandwidthSmsSvc(val appConfig: AppConfig) extends BandwidthDispatcher
-class TwilioSmsSvc(val appConfig: AppConfig)  extends TwilioDispatcher
-class OpenMarketSmsSvc (val appConfig: AppConfig)  extends OpenMarketMEPAPI
-
 trait SMSSender {
   def sendMessage(smsInfo: SmsInfo): Future[Either[HandledErrorException, String]]
 }
 
 object DefaultSMSSender {
-  def props(config: AppConfig): Props = Props(new DefaultSMSSender(config))
+  def props(config: AppConfig, executionContext: ExecutionContext): Props =
+    Props(new DefaultSMSSender(config, executionContext))
 }

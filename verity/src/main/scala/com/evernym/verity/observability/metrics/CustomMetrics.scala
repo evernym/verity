@@ -13,6 +13,7 @@ object CustomMetrics {
   private final val AS_SERVICE_BANDWIDTH = s"$AGENT_SERVICE.bandwidth"
   private final val AS_SERVICE_TWILIO = s"$AGENT_SERVICE.twilio"
   private final val AS_SERVICE_OPEN_MARKET = s"$AGENT_SERVICE.open-market"
+  private final val AS_SERVICE_INFO_BIP = s"$AGENT_SERVICE.info-bip"
 
   final val AS_ENDPOINT_HTTP_AGENT_MSG_COUNT = s"$AS_ENDPOINT_HTTP_AGENT_MSG.count"
   final val AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT = s"$AS_ENDPOINT_HTTP_AGENT_MSG.succeed.count"
@@ -27,6 +28,9 @@ object CustomMetrics {
   final val AS_SERVICE_OPEN_MARKET_DURATION = s"$AS_SERVICE_OPEN_MARKET.duration"
   final val AS_SERVICE_OPEN_MARKET_SUCCEED_COUNT = s"$AS_SERVICE_OPEN_MARKET.succeed.count"
   final val AS_SERVICE_OPEN_MARKET_FAILED_COUNT = s"$AS_SERVICE_OPEN_MARKET.failed.count"
+  final val AS_SERVICE_INFO_BIP_DURATION = s"$AS_SERVICE_INFO_BIP.duration"
+  final val AS_SERVICE_INFO_BIP_SUCCEED_COUNT = s"$AS_SERVICE_INFO_BIP.succeed.count"
+  final val AS_SERVICE_INFO_BIP_FAILED_COUNT = s"$AS_SERVICE_INFO_BIP.failed.count"
   final val AS_SERVICE_FIREBASE_DURATION = s"$AS_SERVICE_FIREBASE.duration"
   final val AS_SERVICE_FIREBASE_SUCCEED_COUNT = s"$AS_SERVICE_FIREBASE.succeed.count"
   final val AS_SERVICE_FIREBASE_FAILED_COUNT = s"$AS_SERVICE_FIREBASE.failed.count"

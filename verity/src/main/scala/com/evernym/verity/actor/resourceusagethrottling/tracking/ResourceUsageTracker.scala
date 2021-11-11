@@ -178,6 +178,7 @@ object ResourceUsageTracker {
 
   def props(appConfig: AppConfig, actionExecutor: UsageViolationActionExecutor, executionContext: ExecutionContext): Props =
     Props(new ResourceUsageTracker(appConfig, actionExecutor, executionContext))
+  val defaultPassivationTimeout = 600
 
 //  /**
 //   *

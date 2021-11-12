@@ -26,7 +26,7 @@ do
 done
 
 sbt "set test in assembly := {}" assembly
-startCmd="/usr/bin/java -javaagent:$SCRIPT_DIR/../../../../integration-tests/lib/kanela-agent.jar -cp $SCRIPT_DIR/../../../../verity/target/scala-2.12/verity-assembly-0.4.0-SNAPSHOT.jar:$SCRIPT_DIR/../../../../verity/src/main/resources:$SCRIPT_DIR/../../../../integration-tests/src/test/resources/common:$SCRIPT_DIR/../../../../integration-tests/src/test/resources/verity com.evernym.verity.Main"
+startCmd="/usr/bin/java -javaagent:$SCRIPT_DIR/../../../../integration-tests/lib/kanela-agent.jar -cp $VERITY_JAR_LOCATION:$SCRIPT_DIR/../../../../verity/src/main/resources:$SCRIPT_DIR/../../../../integration-tests/src/test/resources/common:$SCRIPT_DIR/../../../../integration-tests/src/test/resources/verity com.evernym.verity.Main"
 
 echo "===================================== VAS ====================================================="
 echo "verity load balanced url (if you have configured): http://locahost:$VAS_LOAD_BALANCER_PORT"

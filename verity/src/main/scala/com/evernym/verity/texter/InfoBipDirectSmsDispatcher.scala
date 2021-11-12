@@ -8,12 +8,9 @@ import akka.http.scaladsl.model.{HttpEntity, HttpMethods, HttpRequest, MediaType
 import akka.http.scaladsl.unmarshalling.Unmarshal
 
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.util.Util._
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.ConfigSvc
-import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import org.json.JSONObject
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -34,12 +31,12 @@ class InfoBipDirectSmsDispatcher(val appConfig: AppConfig,
   lazy val sendMsgResource: String = s"$webApiUrl/$smsResourcePathPrefix"
   lazy val accessToken: String = appConfig.getStringReq(INFO_BIP_ENDPOINT_ACCESS_TOKEN)
 
-  def sendMessage(smsInfo: SmsInfo): Future[Either[HandledErrorException, SmsSent]] = {
+  def sendMessage(smsInfo: SmsInfo): Future[SmsReqSent] = {
     val headers = immutable.Seq(RawHeader("Authorization", "App " + accessToken))
     val req = HttpRequest(
       method = HttpMethods.POST,
       uri = sendMsgResource,
-      entity = HttpEntity(MediaTypes.`application/json`, getJsonBody(smsInfo)),
+      entity = HttpEntity(MediaTypes.`application/json`, serializeToJson(smsInfo)),
       headers = headers
     )
     Http()
@@ -48,32 +45,21 @@ class InfoBipDirectSmsDispatcher(val appConfig: AppConfig,
         httpResp.status match {
           case OK =>
             Unmarshal(httpResp.entity).to[String].map { jsonRespMsg =>
-              val respJson = new JSONObject(jsonRespMsg)
-              val resp = respJson
-                .getJSONArray("messages")
-                .getJSONObject(0)
-              val msgId = resp.getString("messageId")
-              val statusObject = resp.getJSONObject("status")
-              val groupId = statusObject.getInt("groupId")
-              val groupName = statusObject.getString("groupName")
-
-              groupId match {
+              val apiResp = ApiResp(jsonRespMsg)
+              apiResp.groupId match {
                 case GROUP_STATUS_ID_PENDING =>
-                  Right(SmsSent(msgId, providerId))
+                  SmsReqSent(apiResp.msgId, providerId)
                 case _ =>
-                  logger.error("error status received from info-bip sms api: " + statusObject.toString)
-                  Left(buildHandledError(groupName, Option(statusObject.toString)))
+                  throw new RuntimeException("error status received from info-bip sms api: " + apiResp.statusObject.toString)
               }
             }
           case other =>
-            logger.error("error response received from info-bip sms api: " + other.toString)
-            Future.successful(Left(buildHandledError(other.toString, Option(other.toString),
-              Option(other.reason()))))
+            throw new RuntimeException("error response received from info-bip sms api: " + other.toString)
         }
       }
   }
 
-  private def getJsonBody(smsInfo: SmsInfo): String = {
+  private def serializeToJson(smsInfo: SmsInfo): String = {
     s"""
       {
         "messages":[
@@ -88,9 +74,19 @@ class InfoBipDirectSmsDispatcher(val appConfig: AppConfig,
       }""".stripMargin
   }
 
-  private val logger = getLoggerByName("InfoBipDirectSmsDispatcher")
   lazy val providerId: String = SMS_PROVIDER_ID_INFO_BIP
 
   //https://www.infobip.com/docs/essentials/response-status-and-error-codes#general-status-codes
   final val GROUP_STATUS_ID_PENDING = 1
+}
+
+case class ApiResp(jsonMsg: String) {
+  val respJson = new JSONObject(jsonMsg)
+  val resp = respJson
+    .getJSONArray("messages")
+    .getJSONObject(0)
+  val msgId = resp.getString("messageId")
+  val statusObject = resp.getJSONObject("status")
+  val groupId = statusObject.getInt("groupId")
+  val groupName = statusObject.getString("groupName")
 }

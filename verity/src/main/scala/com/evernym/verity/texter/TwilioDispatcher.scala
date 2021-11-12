@@ -1,7 +1,7 @@
 package com.evernym.verity.texter
 
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.util2.Exceptions.{HandledErrorException, InternalServerErrorException, SmsSendingFailedException}
+import com.evernym.verity.util2.Exceptions.{InternalServerErrorException, SmsSendingFailedException}
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.config.ConfigConstants._
@@ -30,16 +30,17 @@ class TwilioDispatcher(val appConfig: AppConfig)
 
   lazy val messageFactory: SmsFactory = client.get.getAccount().getSmsFactory
 
-  def sendMessage(smsInfo: SmsInfo): Future[Either[HandledErrorException, SmsSent]] = {
+  def sendMessage(smsInfo: SmsInfo): Future[SmsReqSent] = {
     try {
       val params = Map("Body" -> smsInfo.text, "To" -> smsInfo.to, "From" -> from)
       val smsInstance = messageFactory.create(params.asJava)
-      Future.successful(Right(SmsSent(smsInstance.getSid, providerId)))
+      Future.successful(SmsReqSent(smsInstance.getSid, providerId))
     } catch {
       case e: TwilioRestException =>
-        Future.successful(Left(new SmsSendingFailedException(Option(e.getMessage))))
+        Future.failed(new SmsSendingFailedException(Option(e.getMessage)))
       case e: Exception =>
-        Future.successful(Left(new InternalServerErrorException(UNHANDLED.statusCode, Option(e.getMessage))))
+        Future.failed(new InternalServerErrorException(UNHANDLED.statusCode, Option(e.getMessage)))
     }
   }
+
 }

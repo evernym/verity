@@ -6,7 +6,6 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model.{HttpEntity, HttpMethods, HttpRequest, MediaTypes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.AppConfig
@@ -15,6 +14,7 @@ import org.json.JSONObject
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.immutable
+import scala.util.{Failure, Success, Try}
 
 
 class InfoBipDirectSmsDispatcher(val appConfig: AppConfig,
@@ -45,12 +45,16 @@ class InfoBipDirectSmsDispatcher(val appConfig: AppConfig,
         httpResp.status match {
           case OK =>
             Unmarshal(httpResp.entity).to[String].map { jsonRespMsg =>
-              val apiResp = ApiResp(jsonRespMsg)
-              apiResp.groupId match {
-                case GROUP_STATUS_ID_PENDING =>
-                  SmsReqSent(apiResp.msgId, providerId)
-                case _ =>
-                  throw new RuntimeException("error status received from info-bip sms api: " + apiResp.statusObject.toString)
+              parseResp(jsonRespMsg) match {
+                case Success(apiResp) =>
+                  apiResp.groupId match {
+                    case GROUP_STATUS_ID_PENDING =>
+                      SmsReqSent(apiResp.msgId, providerId)
+                    case _ =>
+                      throw new RuntimeException("error status received from info-bip sms api: " + apiResp.statusResp)
+                  }
+                case Failure(ex) =>
+                  throw new RuntimeException("error parsing info-bip sms api response: " + ex.getMessage)
               }
             }
           case other =>
@@ -74,19 +78,24 @@ class InfoBipDirectSmsDispatcher(val appConfig: AppConfig,
       }""".stripMargin
   }
 
+  private def parseResp(resp: String): Try[ApiResp] = {
+    Try {
+      val respJSONObj = new JSONObject(resp)
+      val messagesResp = respJSONObj
+        .getJSONArray("messages")
+        .getJSONObject(0)
+      val statusObject = messagesResp.getJSONObject("status")
+      val groupId = statusObject.getInt("groupId")
+      val groupName = statusObject.getString("groupName")
+      val msgId = messagesResp.getString("messageId")
+      ApiResp(groupId, groupName, msgId, statusObject.toString)
+    }
+  }
+
   lazy val providerId: String = SMS_PROVIDER_ID_INFO_BIP
 
   //https://www.infobip.com/docs/essentials/response-status-and-error-codes#general-status-codes
   final val GROUP_STATUS_ID_PENDING = 1
 }
 
-case class ApiResp(jsonMsg: String) {
-  val respJson = new JSONObject(jsonMsg)
-  val resp = respJson
-    .getJSONArray("messages")
-    .getJSONObject(0)
-  val msgId = resp.getString("messageId")
-  val statusObject = resp.getJSONObject("status")
-  val groupId = statusObject.getInt("groupId")
-  val groupName = statusObject.getString("groupName")
-}
+case class ApiResp(groupId: Int, groupName: String, msgId: String, statusResp: String)

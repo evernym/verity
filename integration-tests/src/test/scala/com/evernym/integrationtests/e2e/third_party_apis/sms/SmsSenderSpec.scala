@@ -29,7 +29,6 @@ class SmsSenderSpec
           smsSender ! SmsInfo("4045943696", "test msg")
           expectMsgPF(duration) {
             case srs: SmsReqSent   => logger.info("sms request sent: " + srs)
-            case srf: SmsReqFailed => logger.error("sms request failed: " + srf)
           }
         }
       }

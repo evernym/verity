@@ -47,7 +47,7 @@ trait MsgReceiver extends Eventually {
     assertAndExpectMsg(None, max)(check)
   }
 
-  private def assertName(expectedName: String, msg: JSONObject): Boolean = {
+  protected def assertName(expectedName: String, msg: JSONObject): Boolean = {
     try {
       msg.getString(`@TYPE`)
         .endsWith(expectedName)
@@ -147,6 +147,8 @@ trait ListeningSdkProvider extends MsgReceiver {
 
     handles.addDefaultHandler({msg: JSONObject =>
       receiveMsg(msg)
+      if (assertName("status-report", msg))
+        logger.info(s"ListenerSdkProvider: status-report received: ${msg.toString}")
     })
 
     listener = new Listener(port, { encryptMsg  =>

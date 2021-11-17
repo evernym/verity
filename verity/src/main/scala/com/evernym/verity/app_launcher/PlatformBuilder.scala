@@ -10,18 +10,19 @@ import scala.concurrent.ExecutionContext
 
 
 object PlatformBuilder {
-  def build(executionContextProvider: ExecutionContextProvider, appConfig: AppConfig, agentActorContext: Option[AgentActorContext]=None): Platform = {
-    new Platform(agentActorContext.getOrElse(new DefaultAgentActorContext(executionContextProvider, appConfig)), PlatformServices, executionContextProvider)
+  def build(executionContextProvider: ExecutionContextProvider,
+            appConfig: AppConfig, agentActorContext: Option[AgentActorContext]=None): Platform = {
+    new Platform(
+      agentActorContext.getOrElse(new DefaultAgentActorContext(executionContextProvider, appConfig)),
+      PlatformServices, executionContextProvider
+    )
   }
 }
 
-class DefaultAgentActorContext(val executionContextProvider: ExecutionContextProvider, val appConfig: AppConfig) extends AgentActorContext {
+class DefaultAgentActorContext(val executionContextProvider: ExecutionContextProvider,
+                               val appConfig: AppConfig)
+  extends AgentActorContext {
   override implicit lazy val system: ActorSystem = createActorSystem()
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = executionContextProvider.walletFutureExecutionContext
 
   /**
    * custom thread pool executor

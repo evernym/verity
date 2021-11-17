@@ -81,7 +81,6 @@ trait BaseVcxFlowSpec
     appConfig,
     None,
     executionContextProvider.futureExecutionContext,
-    executionContextProvider.walletFutureExecutionContext,
     taa = ConfigUtil.findTAAConfig(appConfig, "1.0.0"),
     genesisTxnPath = Some(testEnv.ledgerConfig.genesisFilePath)
   )

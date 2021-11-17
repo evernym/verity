@@ -1,8 +1,8 @@
 package com.evernym.integrationtests.e2e.flow
 
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.StatusCodes.MovedPermanently
-import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
+import akka.http.scaladsl.model.StatusCodes.{MovedPermanently, OK}
+import akka.http.scaladsl.model.{HttpEntity, HttpMethods, HttpRequest, Uri}
 import com.evernym.integrationtests.e2e.TestConstants
 import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
@@ -245,16 +245,58 @@ trait InteractiveSdkFlow extends MetricsFlow {
     assert(result.contains(logoUrl))
   }
 
-  def resolveShortInviteUrl(shortInviteUrl: String)(implicit scenario: Scenario): String = {
+  def checkShortInviteUrl(shortInviteUrl: String, inviteUrl: String)(implicit scenario: Scenario): Unit = {
     val fut = Http()(scenario.actorSystem).singleRequest(
       HttpRequest(
         method = HttpMethods.GET,
         uri = shortInviteUrl,
       ))
     val response = Await.result(fut, 10.seconds)
-    response.status shouldBe MovedPermanently
-    response.getHeader("Location").get.value
+    response.status match {
+      case MovedPermanently =>
+        response.getHeader("Location").get.value shouldBe inviteUrl
+      case OK =>
+        val respString = response.entity.asInstanceOf[HttpEntity.Strict].getData().utf8String
+        new JSONObject(respString) // checking that we go valid JSON
+      case s => fail(s"Un-expected response status: $s")
+    }
   }
+
+  def writeSchemaWithEndorserDid(sdk: VeritySdkProvider,
+                                 ledgerUtil: LedgerUtil,
+                                 schemaName: String,
+                                 endorserDid: String,
+                                 schemaVersion: String,
+                                 schemaAttrs: String*)
+                                (implicit scenario: Scenario): Unit = {
+    writeSchemaWithEndorserDid(sdk, sdk, ledgerUtil, schemaName, endorserDid, schemaVersion, schemaAttrs: _*)
+  }
+
+  def writeSchemaWithEndorserDid(issuerSdk: VeritySdkProvider,
+                                 msgReceiverSdkProvider: VeritySdkProvider,
+                                 ledgerUtil: LedgerUtil,
+                                 schemaName: String,
+                                 endorserDid: String,
+                                 schemaVersion: String,
+                                 schemaAttrs: String*)
+                                (implicit scenario: Scenario): Unit = {
+    val issuerName = issuerSdk.sdkConfig.name
+    s"get write schema $schemaName transaction for $issuerName" - {
+
+      val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
+
+      s"[$issuerName] use write-schema protocol" in {
+        val schema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
+        schema.write(issuerSdk.context, endorserDid)
+
+        var schemaId = ""
+        msgReceiverSdk.expectMsg("status-report") {resp =>
+          resp shouldBe an[JSONObject]
+        }
+      }
+    }
+  }
+
 
   def writeSchema(sdk: VeritySdkProvider,
                   ledgerUtil: LedgerUtil,
@@ -432,6 +474,49 @@ trait InteractiveSdkFlow extends MetricsFlow {
     }
   }
 
+  def writeCredDefWithEndorserDid(sdk: VeritySdkProvider,
+                                  credDefName: String,
+                                  credTag: String,
+                                  revocation: RevocationRegistryConfig,
+                                  schemaName: String,
+                                  endorserDid: String,
+                                  schemaVersion: String,
+                                  ledgerUtil: LedgerUtil
+                                 )
+                                 (implicit scenario: Scenario): Unit = {
+    writeCredDefWithEndorserDid(sdk, sdk, credDefName, credTag, revocation, schemaName, endorserDid, schemaVersion, ledgerUtil)
+  }
+
+  def writeCredDefWithEndorserDid(issuerSdk: VeritySdkProvider,
+                                  msgReceiverSdkProvider: VeritySdkProvider,
+                                  credDefName: String,
+                                  credTag: String,
+                                  revocation: RevocationRegistryConfig,
+                                  schemaName: String,
+                                  endorserDid: String,
+                                  schemaVersion: String,
+                                  ledgerUtil: LedgerUtil
+                                 )
+                                 (implicit scenario: Scenario): Unit = {
+
+    val issuerName = issuerSdk.sdkConfig.name
+
+    val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
+
+    s"get credential def ($credDefName) transaction for $issuerName" - {
+      s"[$issuerName] use write-cred-def protocol" taggedAs UNSAFE_IgnoreLog in {
+        val schemaId = issuerSdk.data_!(s"$schemaName-$schemaVersion-id")
+        issuerSdk.writeCredDef_0_6(credDefName, schemaId, Some(credTag), Some(revocation))
+          .write(issuerSdk.context, endorserDid)
+
+        var credDefId = ""
+        msgReceiverSdk.expectMsg("status-report", Some(credDefTimeout.max(scenario.timeout))) { resp =>
+          resp shouldBe an[JSONObject]
+        }
+      }
+    }
+  }
+
   def connect_1_0(inviter: ApplicationAdminExt,
                   invitee: ApplicationAdminExt,
                   connectionId: String,
@@ -485,7 +570,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
             // check shortInviteURL.
             val shortInviteUrl = msg.getString("shortInviteURL")
-            resolveShortInviteUrl(shortInviteUrl) shouldBe inviteUrl
+            checkShortInviteUrl(shortInviteUrl, inviteUrl)
 
             msg.getJSONObject("~thread").getString("thid") shouldBe threadId
           }
@@ -584,7 +669,8 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
             // check shortInviteURL.
             val shortInviteUrl = msg.getString("shortInviteURL")
-            resolveShortInviteUrl(shortInviteUrl) shouldBe inviteUrl
+
+            checkShortInviteUrl(shortInviteUrl, inviteUrl)
 
             msg.getJSONObject("~thread").getString("thid") shouldBe threadId
 

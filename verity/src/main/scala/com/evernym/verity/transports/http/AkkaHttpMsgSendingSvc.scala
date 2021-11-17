@@ -153,30 +153,30 @@ class AkkaHttpMsgSendingSvc(config: Config, metricsWriter: MetricsWriter, execut
   }
   private val superPoolFlow = Http().superPool[NotUsed]()
 
-  protected def performResponseParsing[T](id: String)(implicit up: UrlParam, um: Unmarshaller[ResponseEntity, T]):
+  private def performResponseParsing[T](id: String)(implicit up: UrlParam, um: Unmarshaller[ResponseEntity, T]):
   PartialFunction[HttpResponse, Future[Either[HandledErrorException, T]]] = {
     case hr: HttpResponse if List(OK, Accepted).contains(hr.status) =>
-      logger.debug(s"[$id] successful response ('${hr.status.value}') received from '${up.url}'")
+      logger.debug(s"[$id] [incoming response] successful response ('${hr.status.value}') received from '${up.url}'")
       Unmarshal(hr.entity).to[T].map(Right(_))
 
     case hr: HttpResponse if hr.status ==  BadRequest =>
       Unmarshal(hr.entity).to[String].map { respMsg =>
         val errorMsg = buildStatusDetail(respMsg).map(_.toString).getOrElse(respMsg)
-        val error = s"[$id] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
+        val error = s"[$id] [incoming response] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
         logger.warn(error)
         Left(buildHandledError(BAD_REQUEST.withMessage(error))) }
 
     case hr: HttpResponse if hr.status ==  Unauthorized =>
       Unmarshal(hr.entity).to[String].map { respMsg =>
         val errorMsg = buildStatusDetail(respMsg).map(_.toString).getOrElse(respMsg)
-        val error = s"[$id] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
+        val error = s"[$id] [incoming response] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
         logger.warn(error)
         Left(buildHandledError(UNAUTHORIZED.withMessage(error))) }
 
     case hr: HttpResponse =>
       Unmarshal(hr.entity).to[String].map { respMsg =>
         val errorMsg = buildStatusDetail(respMsg).map(_.toString).getOrElse(respMsg)
-        val error = s"[$id] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
+        val error = s"[$id] [incoming response] error response ('${hr.status.value}') received from '${up.url}': $errorMsg"
         logger.warn(error)
         Left(buildHandledError(UNHANDLED.withMessage(error)))
       }

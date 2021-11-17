@@ -44,11 +44,6 @@ class ConsumerAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 class EnterpriseAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
@@ -70,11 +65,6 @@ class EnterpriseAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 class VerityAgentPairwiseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
@@ -92,11 +82,6 @@ class VerityAgentPairwiseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 

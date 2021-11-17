@@ -2,6 +2,7 @@ package com.evernym.verity.actor.testkit.actor
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.Done
+import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.actor.agent.AgentActorContext
@@ -28,7 +29,7 @@ import com.evernym.verity.transports.MsgSendingSvc
 class MockAgentActorContext(val system: ActorSystem,
                             val appConfig: AppConfig,
                             val ecp: ExecutionContextProvider,
-                            mockAgentMsgRouterProvider: () => Option[MockAgentMsgRouter] = { () => None })
+                            mockAgentMsgRouter: Option[AgentMsgRouter]=None)
   extends AgentActorContext {
 
   implicit lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
@@ -37,8 +38,8 @@ class MockAgentActorContext(val system: ActorSystem,
 
   override lazy val msgSendingSvc: MsgSendingSvc = MockMsgSendingSvc
   override lazy val poolConnManager: LedgerPoolConnManager = new InMemLedgerPoolConnManager(ecp.futureExecutionContext)(system.dispatcher)
-  override lazy val agentMsgRouter: AgentMsgRouter = mockAgentMsgRouterProvider().getOrElse(
-    new MockAgentMsgRouter(executionContext, Map.empty)(appConfig, system)
+  override lazy val agentMsgRouter: AgentMsgRouter = mockAgentMsgRouter.getOrElse(
+    new MockAgentMsgRouter(executionContext)(appConfig, system)
   )
 
   override lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, executionContext)
@@ -46,7 +47,7 @@ class MockAgentActorContext(val system: ActorSystem,
   override lazy val storageAPI: StorageAPI = new StorageAPI(appConfig, ecp.futureExecutionContext) {
     var storageMock: Map[String, Array[Byte]] = Map()
 
-    override def put(bucketName: String, id: String, data: Array[Byte]): Future[StorageInfo] = {
+    override def put(bucketName: String, id: String, data: Array[Byte], contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo] = {
       storageMock += (id -> data)
       Future { StorageInfo("https://s3-us-west-2.amazonaws.com") }
     }
@@ -58,6 +59,8 @@ class MockAgentActorContext(val system: ActorSystem,
     override def delete(bucketName: String, id: String): Future[Done] = {
       Future { storageMock -= id; Done }
     }
+
+    override def ping: Future[Unit] = Future.successful((): Unit)
   }
 
   override lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] =
@@ -68,11 +71,6 @@ class MockAgentActorContext(val system: ActorSystem,
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 case class MockAgentActorContextParam(actorTypeToRegions: Map[Int, ActorRef]=Map.empty)

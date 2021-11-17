@@ -1,0 +1,38 @@
+.base-rule:
+  only:
+    refs:
+      - main
+      - tags
+      - merge_requests
+
+.verity-main-only-rule:
+  only:
+    refs:
+      - main@evernym/verity/verity
+
+.main-or-manual-rule:
+  rules:
+    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main" # Main branch build
+      when: on_success
+    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_TAG # Tag build
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"  # MR build
+      when: manual
+      allow_failure: true
+    - if: $CI
+      when: never
+
+.main-changes-or-manual-rule:
+  rules:
+    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main" # Main branch build
+      changes:
+        - $DEFINED_CHANGES
+      when: on_success
+    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_TAG # Tag build
+      changes:
+        - $DEFINED_CHANGES
+      when: on_success
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"  # MR build
+      when: manual
+    - if: $CI
+      when: never

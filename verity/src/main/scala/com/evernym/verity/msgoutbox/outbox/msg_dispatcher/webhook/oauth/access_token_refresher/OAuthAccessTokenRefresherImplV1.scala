@@ -36,6 +36,7 @@ object OAuthAccessTokenRefresherImplV1 {
                             (implicit system: ActorSystem[Nothing],
                              executionContext: ExecutionContext): Future[OAuthAccessTokenRefresher.Reply] = {
     try {
+      OAuthUtil.validateAuthData(Seq("url", "grant_type", "client_id", "client_secret"), params)
       val url = params("url")
       logger.info("[OAuth] about to send get access token request to: " + url)
       val formData = Seq("grant_type", "client_id", "client_secret").map(attrName =>
@@ -53,7 +54,7 @@ object OAuthAccessTokenRefresherImplV1 {
             val jsonObject = new JSONObject(respMsg)
             val accessToken = jsonObject.getString("access_token")
             val expiresIn = jsonObject.getInt("expires_in")
-            GetTokenSuccess(accessToken, expiresIn, None)
+            GetTokenSuccess(accessToken, Option(expiresIn), None)
           } else {
             GetTokenFailed(s"error response ('${hr.status.value}') received from '$url': $respMsg")
           }

@@ -9,7 +9,7 @@ import org.json.JSONObject
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.JavaConverters._
-import scala.util.{Left, Random}
+import scala.util.Random
 
 //TODO: This is not perfect/exact mock ledger object
 //it doesn't have any privilege checking etc.

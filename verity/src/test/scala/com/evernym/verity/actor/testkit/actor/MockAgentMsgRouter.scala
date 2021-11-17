@@ -6,12 +6,15 @@ import com.evernym.verity.config.AppConfig
 
 import scala.concurrent.ExecutionContext
 
-class MockAgentMsgRouter(val ec: ExecutionContext, actorTypeToRegionsMapping: Map[Int, ActorRef]=Map.empty)
+class MockAgentMsgRouter(val ec: ExecutionContext,
+                         mockActorRegionProvider: MockActorRegionProvider = new MockActorRegionProvider{})
                         (implicit val ac: AppConfig, val s: ActorSystem)
   extends AgentMsgRouter(ec) {
 
-  require(actorTypeToRegionsMapping != null, "actorTypeToRegionsMapping can't be null")
-
   override def getActorTypeToRegions(actorTypeId: Int): ActorRef =
-    actorTypeToRegionsMapping.getOrElse(actorTypeId, super.getActorTypeToRegions(actorTypeId))
+    mockActorRegionProvider.typeToRegions.getOrElse(actorTypeId, super.getActorTypeToRegions(actorTypeId))
+}
+
+trait MockActorRegionProvider {
+  def typeToRegions: Map[Int, ActorRef] = Map.empty
 }

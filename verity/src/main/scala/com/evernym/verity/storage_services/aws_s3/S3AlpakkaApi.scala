@@ -1,6 +1,7 @@
 package com.evernym.verity.storage_services.aws_s3
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import akka.stream.Attributes
 import akka.stream.alpakka.s3._
 import akka.stream.alpakka.s3.scaladsl.S3
@@ -12,17 +13,19 @@ import com.evernym.verity.util2.Status.S3_FAILURE
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.storage_services.StorageAPI
+import com.typesafe.config.{Config, ConfigFactory}
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 //NOTE: if at all this file gets moved to different package, then it will require configuration change
 // so until it is important, should avoid moving this to different package.
 
-class S3AlpakkaApi(config: AppConfig, executionContext: ExecutionContext)(implicit val as: ActorSystem) extends StorageAPI(config, executionContext) {
+class S3AlpakkaApi(config: AppConfig, executionContext: ExecutionContext, overrideConfig: Config = ConfigFactory.empty())(implicit val as: ActorSystem) extends StorageAPI(config, executionContext, overrideConfig) {
   private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
-  def s3Settings: S3Settings = S3Settings(config.config.getConfig("alpakka.s3"))
+  def s3Settings: S3Settings = S3Settings(overrideConfig.withFallback(config.config.getConfig("alpakka.s3")))
   lazy val s3Attrs: Attributes = S3Attributes.settings(s3Settings)
 
   def createBucket(bucketName: String): Future[Done] =  S3.makeBucket(bucketName)
@@ -32,11 +35,11 @@ class S3AlpakkaApi(config: AppConfig, executionContext: ExecutionContext)(implic
   /**
    * @param id needs to be unique or data can be overwritten
    */
-  def put(bucketName: String, id: String, data: Array[Byte]): Future[StorageInfo] = {
+  def put(bucketName: String, id: String, data: Array[Byte], contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo] = {
     val file: Source[ByteString, NotUsed] = Source.single(ByteString(data))
 
     val s3Sink: Sink[ByteString, Future[MultipartUploadResult]] =
-      S3 multipartUpload(bucketName, id) withAttributes s3Attrs
+      S3 multipartUpload(bucketName, id, contentType=contentType) withAttributes s3Attrs
 
     file.runWith(s3Sink).map(x => StorageInfo(x.location.toString(), "S3"))
   }
@@ -76,4 +79,8 @@ class S3AlpakkaApi(config: AppConfig, executionContext: ExecutionContext)(implic
   class S3Failure(statusCode: String, statusMsg: Option[String] = None,
                   statusMsgDetail: Option[String] = None, errorDetail: Option[Any] = None)
     extends BadRequestErrorException(statusCode, statusMsg, statusMsgDetail, errorDetail)
+
+  override def ping: Future[Unit] = {
+    checkIfBucketExists("dummy-bucket-" + UUID.randomUUID()).map(_ => ())
+  }
 }

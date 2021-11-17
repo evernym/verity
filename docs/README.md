@@ -1,17 +1,13 @@
-# Verity Design Topics
+# Docs
+This folder contains documentation for the Verity Project. 
 
-* [people](people.md)
-* [configuration management](config-mgmt.md)
-* [threat model](threat-model.md)
-* [secret management](secret-mgmt.md)
-* [external dependencies](external-deps.md)
-* [networking](networking.md)
-* [DR, backup, and high availability](dr.md)
-* geos, legal jurisdictions, and regulatory compliance
-* ldap
-* permissions
-* storage
-* akka clustering
-* clustering for aurora
-* logging and monitoring
-* [app lifecycle contract](app-lifecycle.md)
+## Organization
+| ❗ Please **do not** add files or directory to the root of this repo ❗ |
+|---|
+
+
+This repo following top-level directories:
+* [`/decisions`](decisions/README.md) - Architectural decision records.
+* [`/designs`](designs/README.md) - Design collateral.
+* [`/documentation`](documentation/README.md) - Standard documentation about the application.
+* [`/guidelines`](guidelines/README.md) - Guidance that applies to our work.

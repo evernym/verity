@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.testkit.actor
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown}
 import com.evernym.verity.actor.{Platform, PlatformServices}
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -35,7 +35,9 @@ object MockShutdownService extends SysShutdownProvider {
   }
 }
 
-trait ProvidesMockPlatform extends MockAppConfig { tc =>
+trait ProvidesMockPlatform
+  extends MockAppConfig
+    with MockActorRegionProvider { tc =>
 
   implicit val system: ActorSystem
 
@@ -43,13 +45,9 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
 
   def localAgencyEndpoint: String = "localhost:9000"
 
-  def actorTypeToRegions: Map[Int, ActorRef] = Map.empty
-  def mockAgentMsgRouterProvider(): Option[MockAgentMsgRouter] = {
-    Option(new MockAgentMsgRouter(executionContextProvider.futureExecutionContext, actorTypeToRegions)(appConfig, system))
-  }
-
   lazy val platform : Platform = {
-    val plt = new MockPlatform(new MockAgentActorContext(system, appConfig, executionContextProvider, mockAgentMsgRouterProvider), executionContextProvider)
+    val mockAgentMsgRouter = Option(new MockAgentMsgRouter(executionContextProvider.futureExecutionContext, this)(appConfig, system))
+    val plt = new MockPlatform(new MockAgentActorContext(system, appConfig, executionContextProvider, mockAgentMsgRouter), executionContextProvider)
     MetricsWriterExtension(plt.actorSystem).updateMetricsBackend(testMetricsBackend)
     plt
   }
@@ -78,13 +76,15 @@ trait ProvidesMockPlatform extends MockAppConfig { tc =>
     new MockEdgeAgent(
       UrlParam(localAgencyEndpoint),
       platform.agentActorContext.appConfig,
-      executionContextProvider.futureExecutionContext,
-      executionContextProvider.walletFutureExecutionContext
+      executionContextProvider.futureExecutionContext
     )
 
   def getTotalAgentMsgsSentByCloudAgentToRemoteAgent: Int = {
     platform.agentActorContext.msgSendingSvc.asInstanceOf[MockMsgSendingSvc].totalBinaryMsgsSent
   }
+
+  case object UserInitiatedShutdown extends CoordinatedShutdown.Reason
+  def kickOffUserInitiatedShutdown(): Unit = CoordinatedShutdown(system).run(UserInitiatedShutdown)
 }
 
 case class MockPlatformParam(mockAgentActorContextParam: MockAgentActorContextParam=MockAgentActorContextParam())

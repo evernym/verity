@@ -1,15 +1,15 @@
 package com.evernym.verity.protocol.container.asyncapis.ledger
 
-import com.evernym.verity.util2.Exceptions.NotFoundErrorException
-import com.evernym.verity.cache.{LEDGER_GET_CRED_DEF_FETCHER, LEDGER_GET_SCHEMA_FETCHER}
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{GetCredDef, GetSchema}
+import com.evernym.verity.cache.{LEDGER_GET_CRED_DEF_FETCHER, LEDGER_GET_SCHEMA_FETCHER}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.BaseAsyncOpExecutorImpl
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccessException, LedgerAsyncOps}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
+import com.evernym.verity.util2.Exceptions.NotFoundErrorException
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -70,6 +70,8 @@ class LedgerAccessAPI(cache: Cache,
     )
   }
 
+
+  //helper functions
   private def getSchemaBase(schemaIds: Set[String])(implicit ec: ExecutionContext)
   : Future[Map[String, GetSchemaResp]] = {
     val keyDetails = schemaIds.map { sId =>

@@ -1,11 +1,12 @@
 package com.evernym.verity.texter
 
-import java.net.HttpURLConnection._
+import com.evernym.verity.config.AppConfig
 
+import java.net.HttpURLConnection._
 import javax.ws.rs.client.{Client, ClientBuilder, Entity}
 import javax.ws.rs.core.MediaType
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.util2.Exceptions.{HandledErrorException, InternalServerErrorException, SmsSendingFailedException}
+import com.evernym.verity.util2.Exceptions.{InternalServerErrorException, SmsSendingFailedException}
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.http.common.ConfigSvc
@@ -14,9 +15,12 @@ import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature
 
 import scala.collection.JavaConverters._
+import scala.concurrent.Future
 
 
-trait BandwidthDispatcher extends SMSServiceProvider with ConfigSvc {
+class BandwidthDispatcher(val appConfig: AppConfig)
+  extends SMSServiceProvider
+    with ConfigSvc {
 
   lazy val providerId = SMS_PROVIDER_ID_BANDWIDTH
   lazy val from: String = appConfig.getStringReq(BANDWIDTH_DEFAULT_NUMBER)
@@ -48,7 +52,7 @@ trait BandwidthDispatcher extends SMSServiceProvider with ConfigSvc {
       replace(FORM_FEED, SPACE).replace(NULL_CHARACTER, SPACE).replaceAll(DOUBLE_QUOTE, DOUBLE_QUOTE_FOR_BANDWIDTH)
   }
 
-  def sendMessage(smsInfo: SmsInfo): Either[HandledErrorException, SmsSent] = {
+  def sendMessage(smsInfo: SmsInfo): Future[SmsReqSent] = {
     val message = removeSpecialCharacters(smsInfo.text)
     val jsonEntity = """{"receiptRequested":"""" + "all" + """","from":"""" + from +
       """","to":"""" + smsInfo.to + """","text" :"""" + message + """"}"""
@@ -63,15 +67,15 @@ trait BandwidthDispatcher extends SMSServiceProvider with ConfigSvc {
             result.getHeaders.asScala.find(_._1 == "Location").map { h =>
               h._2.asScala.head.toString.replaceAll(target.getUri.toString + FORWARD_SLASH, EMPTY_STRING)
             }
-          Right(SmsSent(msgId.getOrElse(EMPTY_STRING), providerId))
+          Future.successful(SmsReqSent(msgId.getOrElse(EMPTY_STRING), providerId))
         case HTTP_UNAUTHORIZED =>
-          Left(new InternalServerErrorException(UNHANDLED.statusCode, Option(result.getStatusInfo.getReasonPhrase)))
+          Future.failed(new InternalServerErrorException(UNHANDLED.statusCode, Option(result.getStatusInfo.getReasonPhrase)))
         case _ =>
-          Left(new SmsSendingFailedException(Option(result.getStatusInfo.getReasonPhrase)))
+          Future.failed(new SmsSendingFailedException(Option(result.getStatusInfo.getReasonPhrase)))
       }
     } catch {
       case e: Exception =>
-        Left(new InternalServerErrorException(UNHANDLED.statusCode, Option(e.getMessage)))
+        Future.failed(new InternalServerErrorException(UNHANDLED.statusCode, Option(e.getMessage)))
     }
   }
 

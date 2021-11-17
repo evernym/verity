@@ -7,6 +7,7 @@ import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.scenario.Scenario
 import com.evernym.verity.sdk.handlers.Handlers
 import com.evernym.verity.sdk.utils.Context
+import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.Interval
@@ -19,6 +20,8 @@ import scala.language.postfixOps
 trait MsgReceiver extends Eventually {
   def shouldExpectMsg(): Boolean = true
   def shouldCheckMsg(): Boolean = true
+
+  def logger: Logger
 
   val unCheckedMsgs: mutable.Map[String, JSONObject] = mutable.Map()
 
@@ -57,7 +60,14 @@ trait MsgReceiver extends Eventually {
   private def assertMsg(expectedName: Option[String], msg: JSONObject, check: JSONObject => Unit): Option[JSONObject] = {
     if (shouldCheckMsg()) {
       if (expectedName.forall(assertName(_, msg))) {
-        check(msg)
+        try {
+          check(msg)
+        }
+        catch {
+          case t: Throwable =>
+            logger.warn("check on message failed: " + t.getMessage)
+            throw t
+        }
         Some(msg)
       } else None
     } else Some(msg)
@@ -99,6 +109,8 @@ trait MsgReceiver extends Eventually {
 trait ListeningSdkProvider extends MsgReceiver {
   protected var listener: Listener = _
   private val queue: LinkedBlockingDeque[JSONObject] = new LinkedBlockingDeque[JSONObject]()
+
+  def logger: Logger
 
   def receiveMsg(msg: JSONObject): Unit = queue.offerFirst(msg)
 

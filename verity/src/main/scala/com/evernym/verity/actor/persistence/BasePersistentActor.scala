@@ -313,7 +313,7 @@ trait BasePersistentActor
         s"totalRecoveredEvents: $totalRecoveredEvents, " +
         s"timeTakenInMillis: $millis)"
       if (millis > warnRecoveryTime) logger.warn(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
-      else logger.debug(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
+      else logger.info(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
 
       publishAppStateEvent(RecoverIfNeeded(CONTEXT_EVENT_RECOVERY))
       postRecoveryCompleted()
@@ -327,7 +327,6 @@ trait BasePersistentActor
   def postRecoveryCompleted(): Unit = {
     postActorRecoveryStarted = LocalDateTime.now
     metricsWriter.runWithSpan("postRecoveryCompleted", "BasePersistentActor", InternalSpan) {
-      context.setReceiveTimeout(entityReceiveTimeout)
       logger.debug("post actor recovery started", (LOG_KEY_PERSISTENCE_ID, persistenceId))
       basePostActorRecoveryCompleted()
     }
@@ -419,7 +418,7 @@ trait BasePersistentActor
 
   def handleErrorEventParam(errorEventParam: ErrorEvent): Unit = {
     publishAppStateEvent(errorEventParam)
-    throw errorEventParam.cause
+    log.error(errorEventParam.cause.getMessage)
   }
 
   def handlePersistenceFailure(cause: Throwable, errorMsg: String): Unit = {
@@ -457,7 +456,7 @@ trait BasePersistentActor
         logger.error(s"[$persistenceId] error while applying event ${event.getClass.getSimpleName}: ${Exceptions.getStackTraceAsSingleLineString(cause)}")
       case None =>
         logger.error(s"[$persistenceId] error while actor recovery, " +
-          s"possible-causes: $JOURNAL_ERROR_POSSIBLE_CAUSE" +
+          s"possible-causes: $JOURNAL_ERROR_POSSIBLE_CAUSE " +
           s"(error message: ${Exceptions.getStackTraceAsSingleLineString(cause)})"
         )
     }
@@ -522,4 +521,11 @@ trait HasActorResponseTimeout {
 
 trait EventPersistenceEncryption {
   def persistenceEncryptionKey: String
+}
+
+trait BasePersistentTimeoutActor extends BasePersistentActor {
+  override def postRecoveryCompleted(): Unit = {
+    super.postRecoveryCompleted()
+    context.setReceiveTimeout(this.entityReceiveTimeout)
+  }
 }

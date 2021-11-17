@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.persistence
 
-trait SingletonPersistentActorBase extends BasePersistentActor {
+trait SingletonPersistentActorBase extends BasePersistentTimeoutActor {
 
   def receiveBaseEvent: Receive
   def receiveBaseCmd: Receive

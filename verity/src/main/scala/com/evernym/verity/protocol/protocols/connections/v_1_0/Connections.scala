@@ -147,7 +147,9 @@ class Connections(val ctx: ProtocolContextApi[Connections, Role, Msg, Event, Sta
         val resp = Msg.ConnResponse(sigBlock)
         ctx.send(resp)
         ctx.signal(Signal.ConnResponseSent(resp, rel.myDid))
-      case Failure(_) =>
+      case Failure(e) =>
+        //this logging was added because one of unit tests failed once and there weren't enough logs
+        logFailure(e)
         sendProblemReport("request_processing_error", "error while processing request")
     }
   }
@@ -257,6 +259,10 @@ class Connections(val ctx: ProtocolContextApi[Connections, Role, Msg, Event, Sta
       ctx.apply(AckSent())
     }
     ctx.send(ack)
+  }
+
+  def logFailure(t: Throwable) : Unit = {
+    ctx.logger.error(s"error occurred during connections processing: ${t.getMessage}")
   }
 
   def receivedAck(s: State.ResponseSent, m: Msg.Ack): Unit = {

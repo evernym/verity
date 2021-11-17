@@ -25,8 +25,6 @@ import com.typesafe.scalalogging.Logger
 import java.util.UUID
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
-import com.evernym.verity.actor.typed.base.UserGuardian.Commands.SendMsgToOutbox
-import com.evernym.verity.agentmsg.AgentMsgBuilder.createAgentMsg
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType, TypedMsgLike}
 import com.evernym.verity.observability.logs.HasLogger
@@ -41,7 +39,6 @@ import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAcces
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
 import com.evernym.verity.protocol.engine.container.{ProtocolContainer, RecordsEvents}
 import com.evernym.verity.protocol.engine.events.PairwiseRelIdsChanged
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 
 import scala.concurrent.duration._
@@ -125,6 +122,7 @@ class ActorProtocolContainer[
         case None     => agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(domainId, GetSponsorRel), self)
       }
     case ProtocolCmd(FromProtocol(fromPinstId, newRel), _) =>
+      logger.info(s"[$pinstId] protocol event migration started (fromPinstId: '$fromPinstId')")
       newRel.relationshipType match {
         case PAIRWISE_RELATIONSHIP =>
           val changeRelEvt = PairwiseRelIdsChanged(newRel.myDid_!, newRel.theirDid_!)
@@ -154,8 +152,9 @@ class ActorProtocolContainer[
   }
 
   final def baseBehavior: Receive = {
-    case ProtocolCmd(stc: SetThreadContext, None)  => handleSetThreadContext(stc.tcd)
     case s: SponsorRel                             => handleSponsorRel(s)
+    case ProtocolCmd(stc: SetThreadContext, None)  => handleSetThreadContext(stc.tcd)
+    case ProtocolCmd(stc: FromProtocol, None)      => logger.info(s"[$pinstId] protocol events already migrated from '${stc.fromPinstId}'")
     case pc: ProtocolCmd                           => handleProtocolCmd(pc)
   }
 
@@ -168,6 +167,7 @@ class ActorProtocolContainer[
     case ProtocolCmd(ExtractedEvent(event), None) =>
       persistExt(event)( _ => applyRecordedEvent(event) )
     case ProtocolCmd(ExtractionComplete(), None) =>
+      logger.info(s"[$pinstId] protocol event migration completed")
       persistExt(changeRelEvt){ _ =>
         applyRecordedEvent(changeRelEvt)
         toBaseBehavior()
@@ -324,9 +324,12 @@ class ActorProtocolContainer[
   override lazy val ledger =
     new LedgerAccessController(
       grantedAccessRights,
+      null, //TODO: replace this with actual VDR Adapter implementation
       LedgerAccessAPI(
         agentActorContext.generalCache,
-        agentActorContext.ledgerSvc, wallet)
+        agentActorContext.ledgerSvc,
+        wallet
+      )
     )
 
   override lazy val urlShortening =
@@ -453,28 +456,6 @@ class ActorProtocolContainer[
       }
     }
   }
-
-  //TODO: below function is preparation for outbox integration (not yet integrated though)
-  def sendToOutboxRouter(pom: ProtocolOutgoingMsg): Unit = {
-    if (isVAS && ! pom.msg.isInstanceOf[AgentProvisioningMsgFamily.AgentCreated]) {
-      val agentMsg = createAgentMsg(pom.msg, definition, pom.threadContextDetail)
-      val retPolicy = ConfigUtil.getOutboxStateRetentionPolicyForInterDomain(
-        appConfig, domainId, definition.protoRef.toString)
-      //TODO: will below approach become choke point?
-      userGuardian ! SendMsgToOutbox(
-        pom.from,
-        pom.to,
-        agentMsg.jsonStr,
-        agentMsg.msgType.toString,
-        retPolicy)
-    }
-  }
-
-  lazy val userGuardian: ActorRef = Util.getActorRefFromSelection("/user/guardian", context.system)(appConfig)
-  lazy val isVAS: Boolean =
-    appConfig
-      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
-      .contains("VerityAgent")
 }
 
 //trait ProtoMsg extends MsgBase

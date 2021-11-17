@@ -69,7 +69,6 @@ class SdkFlowSpec
       lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
         appEnv.config,
         ecp.futureExecutionContext,
-        ecp.walletFutureExecutionContext,
         Option(appEnv.ledgerConfig.submitterDID),
         Option(appEnv.ledgerConfig.submitterSeed),
         appEnv.ledgerConfig.submitterRole,
@@ -116,6 +115,9 @@ class SdkFlowSpec
     setupIssuer(sdk, ledgerUtil)
 
     val schemaName = "license"+UUID.randomUUID().toString.substring(0, 8)
+    val schemaWithEndorserName = "license"+UUID.randomUUID().toString.substring(0, 8)
+
+    val endorserDid = "did:sov:GzUgM8dC2A31qweQCWG8Dn"
 
     writeSchemaNeedsEndorsement(
       sdk,
@@ -146,12 +148,34 @@ class SdkFlowSpec
       "last_name"
     )
 
+    writeSchemaWithEndorserDid(
+      sdk,
+      ledgerUtil,
+      schemaWithEndorserName,
+      endorserDid,
+      "0.1",
+      "license_num",
+      "first_name",
+      "last_name"
+    )
+
     writeCredDef(
       sdk,
       "cred_name1",
       "tag",
       WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
       schemaName,
+      "0.1",
+      ledgerUtil
+    )
+
+    writeCredDefWithEndorserDid(
+      sdk,
+      "cred_name1",
+      "tag",
+      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
+      schemaName,
+      endorserDid,
       "0.1",
       ledgerUtil
     )

@@ -62,7 +62,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAcc
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.UpdateParams
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.AUTH_TYPE_OAUTH2
-import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
+import com.evernym.verity.msgoutbox.outbox.Outbox.DESTINATION_ID_DEFAULT
 import com.evernym.verity.observability.metrics.MetricsUnit
 import com.evernym.verity.util2.ActorErrorResp
 
@@ -75,15 +75,13 @@ import scala.util.{Failure, Success, Try}
  */
 class UserAgent(val agentActorContext: AgentActorContext,
                 val metricsActorRef: ActorRef,
-                executionContext: ExecutionContext,
-                walletExecutionContext: ExecutionContext)
+                executionContext: ExecutionContext)
   extends UserAgentCommon
     with UserAgentStateUpdateImpl
     with HasAgentActivity
     with MsgNotifierForUserAgent
     with AgentSnapshotter[UserAgentState] {
 
-  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
   implicit def futureExecutionContext: ExecutionContext = executionContext
 
   type StateType = UserAgentState
@@ -239,7 +237,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
 
   def handleOwnerDIDSet(did: DidStr, verKey: VerKeyStr): Unit = {
     val myDidDoc =
-      DidDocBuilder(futureWalletExecutionContext)
+      DidDocBuilder(futureExecutionContext)
         .withDid(did)
         .withAuthKey(did, verKey, Set(EDGE_AGENT_KEY))
         .didDoc
@@ -939,6 +937,19 @@ class UserAgent(val agentActorContext: AgentActorContext,
     updateOAuthAccessTokenHolder()
     super.postRecoveryCompleted()
   }
+
+  override def postAgentStateFix(): Future[Any] = {
+    logger.info(
+      s"[$persistenceId] unbounded elements => " +
+        s"isSnapshotApplied: $isAnySnapshotApplied, " +
+        s"configs: ${state.configs.size}, " +
+        s"messages: ${state.msgAndDelivery.map(_.msgs.size).getOrElse(0)}, " +
+        s"threadContexts: ${state.threadContext.map(_.contexts.size).getOrElse(0)}, " +
+        s"protoInstances: ${state.protoInstances.map(_.instances.size).getOrElse(0)}, " +
+        s"relationshipAgents: ${state.relationshipAgents.size}"
+    )
+    super.postAgentStateFix()
+  }
 }
 
 object UserAgent {
@@ -947,6 +958,7 @@ object UserAgent {
   final val COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG = "user-agent.mnd.msgs-payloads"
   final val COLLECTION_METRIC_MND_MSGS_DETAILS_TAG = "user-agent.mnd.msgs-details"
   final val COLLECTION_METRIC_MND_MSGS_DELIVERY_STATUS_TAG = "user-agent.mnd.msgs-delivery-status"
+  val defaultPassivationTimeout = 600
 }
 
 case class PairwiseConnSetExt(agentDID: DidStr, agentDIDVerKey: VerKeyStr, reqMsgContext: ReqMsgContext)

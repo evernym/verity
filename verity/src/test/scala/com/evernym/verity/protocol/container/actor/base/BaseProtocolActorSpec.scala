@@ -87,7 +87,7 @@ trait BaseProtocolActorSpec
 
   //overriding agent msg routing mapping to make the flow working
   // (from actor protocol container to the 'mock controller')
-  override val actorTypeToRegions = Map(
+  override val typeToRegions = Map(
     MOCK_CONTROLLER_ACTOR_TYPE -> createNonPersistentRegion(MOCK_CONTROLLER_REGION_NAME, mockControllerActorProps)
   )
 

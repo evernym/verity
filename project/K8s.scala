@@ -128,11 +128,13 @@ object K8sConfigTemplateGen {
         collectIncludes(explicitIncludes)
       ).sorted
 
-    collection.mkString("", "\n", "\n\n") + """include "config-map/sponsors.conf"
+    collection.mkString("", "\n", "\n\n") + """
+                                  |include "config-map/sponsors.conf"
                                   |include "config-map/ledgers.conf"
                                   |include "config-map/usage-rules.conf"
                                   |include "config-map/metrics.conf"
                                   |include "config-map/customer.conf"
+                                  |include "config-map/sms-preferred-order.conf"
                                   |include "config-map/custom.conf"""".stripMargin
   }
 

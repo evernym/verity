@@ -112,7 +112,20 @@ trait ListeningSdkProvider extends MsgReceiver {
 
   def logger: Logger
 
-  def receiveMsg(msg: JSONObject): Unit = queue.offerFirst(msg)
+  def receiveMsg(msg: JSONObject): Unit = {
+    queue.offerFirst(msg)
+    logReceivedMsg(msg)
+  }
+
+  def logReceivedMsg(msg: JSONObject): Unit = {
+    val msgType: String = msg.getString(`@TYPE`)
+    if (msgType.endsWith("problem-report")) {
+      logger.warn(s"Received error report: ${msg.toString}")
+    }
+    else {
+      logger.info(s"Received $msgType")
+    }
+  }
 
   def expectMsg(max: Duration): JSONObject = {
     val m = Option {
@@ -147,8 +160,6 @@ trait ListeningSdkProvider extends MsgReceiver {
 
     handles.addDefaultHandler({msg: JSONObject =>
       receiveMsg(msg)
-      if (assertName("status-report", msg))
-        logger.info(s"ListenerSdkProvider: status-report received: ${msg.toString}")
     })
 
     listener = new Listener(port, { encryptMsg  =>

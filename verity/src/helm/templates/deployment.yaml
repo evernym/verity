@@ -7,7 +7,7 @@ metadata:
     tags.datadoghq.com/env: {{ .Values.env }}
   annotations:
     app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
-    app.gitlab.com/env: {{ .Values.env }}
+    app.gitlab.com/env: {{ .Values.gitlab_ci_environment_slug }}
 spec:
   strategy:
     type: RollingUpdate
@@ -27,7 +27,7 @@ spec:
         tags.datadoghq.com/env: {{ .Values.env }}
       annotations:
         app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
-        app.gitlab.com/env: {{ .Values.env }}
+        app.gitlab.com/env: {{ .Values.gitlab_ci_environment_slug }}
         {{- if .Values.deployment.vault.enable }}
         {{- $credentials := printf "kubernetes_secrets/eks-%s/%s-%s" .Values.gitlab_env .Values.name .Values.service }}
         {{- $credentials_tf := printf "kubernetes_secrets/eks-%s/%s-%s-tf" .Values.gitlab_env .Values.name .Values.service }}
@@ -119,4 +119,13 @@ spec:
       - name: ledger-genesis-files
         configMap:
           name: ledger-genesis-{{ template "verity.fullname" . }}
-
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "verity.fullname" . }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: {{ template "verity.fullname" . }}

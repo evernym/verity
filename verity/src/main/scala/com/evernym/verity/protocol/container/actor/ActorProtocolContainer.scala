@@ -403,6 +403,16 @@ class ActorProtocolContainer[
     }
   }
 
+  override protected def runFutureAsyncOp(op: => Future[Any]): Unit = {
+    setNewReceiveBehaviour(toAsyncOpInProgressBehaviour, discardOld = false)
+    withHandleResp {
+      val result = op //given operation gets executed here
+      result.onComplete {
+        r => self.tell(AsyncOpResp(r), sender())
+      }
+    }
+  }
+
   def withHandleResp(code: => Unit): Unit = {
     //NOTE: using 'handleResponse' in below line to be able to send back synchronous response
     // of callback handler execution to waiting caller in case it original request was expecting a synchronous response

@@ -26,14 +26,14 @@ class LedgerAccessController(vdrTools: VDRAdapter,
     with BaseAccessController {
 
   def getSchema(schemaId: String)(handler: Try[GetSchemaResp] => Unit): Unit = {
-    withAsyncOpRunner({
+    withAsyncFutureOpRunner({
       getSchemaBase(Set(schemaId)).map { r => r(schemaId) }
     },
       handler)
   }
 
   def getCredDef(credDefId: String)(handler: Try[GetCredDefResp] => Unit): Unit = {
-    withAsyncOpRunner({
+    withAsyncFutureOpRunner({
       getCredDefsBase(Set(credDefId)).map { r => r(credDefId) }
     },
       handler)
@@ -41,41 +41,41 @@ class LedgerAccessController(vdrTools: VDRAdapter,
 
   override def getSchemas(schemaIds: Set[String])
                          (handler: Try[Map[String, GetSchemaResp]] => Unit): Unit = {
-    withAsyncOpRunner({
+    withAsyncFutureOpRunner({
       getSchemaBase(schemaIds)
     }, handler)
   }
 
   override def getCredDefs(credDefIds: Set[String])
                           (handler: Try[Map[String, GetCredDefResp]] => Unit): Unit = {
-    withAsyncOpRunner({
+    withAsyncFutureOpRunner({
       getCredDefsBase(credDefIds)
     }, handler)
   }
 
   override def writeSchema(submitterDID: DidStr, schemaJson: String)
                           (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
-    withAsyncOpRunner({
+    withAsyncFutureOpRunner({
       ledgerSvc.writeSchema(submitterDID, schemaJson, walletAccess)
     }, handler)
   }
 
   override def prepareSchemaForEndorsement(submitterDID: DidStr, schemaJson: String, endorserDID: DidStr)
                                           (handler: Try[LedgerRequest] => Unit): Unit =
-    withAsyncOpRunner({
+    withAsyncFutureOpRunner({
       ledgerSvc.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)
     }, handler)
 
   override def writeCredDef(submitterDID: DidStr, credDefJson: String)
                            (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
-    withAsyncOpRunner({
+    withAsyncFutureOpRunner({
       ledgerSvc.writeCredDef(submitterDID, credDefJson, walletAccess)
     }, handler)
   }
 
   override def prepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr)
                                            (handler: Try[LedgerRequest] => Unit): Unit = {
-    withAsyncOpRunner({
+    withAsyncFutureOpRunner({
       ledgerSvc.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID, walletAccess)
     }, handler)
   }
@@ -85,7 +85,7 @@ class LedgerAccessController(vdrTools: VDRAdapter,
                                 submitterDID: DidStr,
                                 endorser: Option[String])
                                (handler: Try[PreparedTxn] => Unit): Unit = {
-    withAsyncOpRunner({
+    withAsyncFutureOpRunner({
       vdrTools.prepareSchemaTxn(schemaJson, fqSchemaId, submitterDID, endorser)
     }, handler)
   }
@@ -96,7 +96,7 @@ class LedgerAccessController(vdrTools: VDRAdapter,
                                  submitterDID: DidStr,
                                  endorser: Option[String])
                                 (handler: Try[PreparedTxn] => Unit): Unit =
-    withAsyncOpRunner({
+    withAsyncFutureOpRunner({
       vdrTools.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser)
     }, handler)
 
@@ -104,18 +104,18 @@ class LedgerAccessController(vdrTools: VDRAdapter,
                          signature: Array[Byte],
                          endorsement: Array[Byte])
                         (handler: Try[SubmittedTxn] => Unit): Unit =
-    withAsyncOpRunner({
+    withAsyncFutureOpRunner({
       vdrTools.submitTxn(preparedTxn, signature, endorsement)
     }, handler)
 
 
   override def resolveSchema(fqSchemaId: FQSchemaId)(handler: Try[Schema] => Unit): Unit =
-    withAsyncOpRunner({
+    withAsyncFutureOpRunner({
       vdrTools.resolveSchema(fqSchemaId)
     }, handler)
 
   override def resolveCredDef(fqCredDefId: FQCredDefId)(handler: Try[CredDef] => Unit): Unit =
-    withAsyncOpRunner({
+    withAsyncFutureOpRunner({
       vdrTools.resolveCredDef(fqCredDefId)
     }, handler)
 

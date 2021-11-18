@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.engine.asyncapi
 import com.typesafe.scalalogging.Logger
 
 import scala.collection.mutable
+import scala.concurrent.Future
 import scala.util.Try
 
 trait AsyncOpRunner {
@@ -23,11 +24,18 @@ trait AsyncOpRunner {
    * @param op the async operation to be executed
    */
   protected def runAsyncOp(op: => Any): Unit
+  protected def runFutureAsyncOp(op: => Future[Any]): Unit = {}
 
   final def withAsyncOpRunner[T](asyncOp: => Any,
                                  cbHandler: Try[T] => Unit): Unit = {
     pushAsyncOpCallbackHandler(cbHandler)
     runAsyncOp(asyncOp)
+  }
+
+  final def withAsyncFutureOpRunner[T](asyncOp: => Future[Any],
+                                 cbHandler: Try[T] => Unit): Unit = {
+    pushAsyncOpCallbackHandler(cbHandler)
+    runFutureAsyncOp(asyncOp)
   }
 
   import scala.language.existentials

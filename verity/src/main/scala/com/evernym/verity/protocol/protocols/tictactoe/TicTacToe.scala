@@ -1,9 +1,11 @@
 package com.evernym.verity.protocol.protocols.tictactoe
 
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.protocols.tictactoe.Board.CellValue
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeMsgFamily._
 /**

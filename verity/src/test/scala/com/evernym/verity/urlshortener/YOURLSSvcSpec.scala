@@ -3,30 +3,27 @@ package com.evernym.verity.urlshortener
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.HttpMethods.POST
 import akka.http.scaladsl.model._
-import com.evernym.verity.util2.Status.URL_SHORTENING_FAILED
 import com.evernym.verity.actor.testkit.ActorSpec
-import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.testkit.BasicAsyncSpec
 import com.evernym.verity.util.Util.buildHandledError
 import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.util2.Status.URL_SHORTENING_FAILED
 import org.json.JSONObject
 import org.mockito.ArgumentCaptor
 import org.mockito.scalatest.MockitoSugar
 import org.scalatest.concurrent.ScalaFutures
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.{Duration, DurationInt}
+import scala.concurrent.Future
 
 class YOURLSSvcSpec
   extends ActorSpec
-    with BasicSpec
+    with BasicAsyncSpec
     with MockitoSugar
     with ScalaFutures {
-  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
-  lazy implicit val executionContext: ExecutionContext = ecp.futureExecutionContext
 
+  override def executionContextProvider: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
 
   class TestYOURLSSvc(mock: HttpRequest => Future[HttpResponse]) extends YOURLSSvc(appConfig, executionContext) {
-    override lazy val timeout: Duration = testTimeoutSeconds.seconds
     override lazy val apiUrl: String = testApiUrl
     override lazy val apiSignature: Option[String] = Option(testApiSignature)
 
@@ -84,13 +81,14 @@ class YOURLSSvcSpec
         when(mockedHttpClient(any[HttpRequest])) thenReturn Future.successful(response)
 
         val result = service.shortenURL(UrlInfo(longUrl))(system)
-        result shouldBe Right(shortUrl)
 
         verify(mockedHttpClient)(captor.capture())
         val request: HttpRequest = captor.getValue
         request.method shouldBe POST
         request.uri.toString shouldBe testApiUrl
         request.entity shouldBe FormData(formData + ("url" -> longUrl)).toEntity
+
+        result.map(_ shouldBe shortUrl)
       }
     }
 
@@ -104,13 +102,14 @@ class YOURLSSvcSpec
         when(mockedHttpClient(any[HttpRequest])) thenReturn Future.successful(response)
 
         val result = service.shortenURL(UrlInfo(longUrl))(system)
-        result shouldBe Left(buildHandledError(URL_SHORTENING_FAILED))
 
         verify(mockedHttpClient)(captor.capture())
         val request: HttpRequest = captor.getValue
         request.method shouldBe POST
         request.uri.toString shouldBe testApiUrl
         request.entity shouldBe FormData(formData + ("url" -> longUrl)).toEntity
+
+        result.failed map { _ shouldBe buildHandledError(URL_SHORTENING_FAILED)}
       }
     }
 
@@ -124,13 +123,14 @@ class YOURLSSvcSpec
         when(mockedHttpClient(any[HttpRequest])) thenReturn Future.successful(response)
 
         val result = service.shortenURL(UrlInfo(longUrl))(system)
-        result shouldBe Left(buildHandledError(URL_SHORTENING_FAILED))
 
         verify(mockedHttpClient)(captor.capture())
         val request: HttpRequest = captor.getValue
         request.method shouldBe POST
         request.uri.toString shouldBe testApiUrl
         request.entity shouldBe FormData(formData + ("url" -> longUrl)).toEntity
+
+        result.failed map { _ shouldBe buildHandledError(URL_SHORTENING_FAILED)}
       }
     }
 
@@ -144,13 +144,14 @@ class YOURLSSvcSpec
         when(mockedHttpClient(any[HttpRequest])) thenReturn Future.successful(response)
 
         val result = service.shortenURL(UrlInfo(longUrl))(system)
-        result shouldBe Left(buildHandledError(URL_SHORTENING_FAILED))
 
         verify(mockedHttpClient)(captor.capture())
         val request: HttpRequest = captor.getValue
         request.method shouldBe POST
         request.uri.toString shouldBe testApiUrl
         request.entity shouldBe FormData(formData + ("url" -> longUrl)).toEntity
+
+        result.failed map { _ shouldBe buildHandledError(URL_SHORTENING_FAILED)}
       }
     }
 
@@ -164,13 +165,14 @@ class YOURLSSvcSpec
         when(mockedHttpClient(any[HttpRequest])) thenReturn Future.successful(response)
 
         val result = service.shortenURL(UrlInfo(longUrl))(system)
-        result shouldBe Left(buildHandledError(URL_SHORTENING_FAILED))
 
         verify(mockedHttpClient)(captor.capture())
         val request: HttpRequest = captor.getValue
         request.method shouldBe POST
         request.uri.toString shouldBe testApiUrl
         request.entity shouldBe FormData(formData + ("url" -> longUrl)).toEntity
+
+        result.failed map { _ shouldBe buildHandledError(URL_SHORTENING_FAILED)}
       }
     }
 
@@ -184,13 +186,14 @@ class YOURLSSvcSpec
         when(mockedHttpClient(any[HttpRequest])) thenReturn Future.successful(response)
 
         val result = service.shortenURL(UrlInfo(longUrl))(system)
-        result shouldBe Left(buildHandledError(URL_SHORTENING_FAILED))
 
         verify(mockedHttpClient)(captor.capture())
         val request: HttpRequest = captor.getValue
         request.method shouldBe POST
         request.uri.toString shouldBe testApiUrl
         request.entity shouldBe FormData(formData + ("url" -> longUrl)).toEntity
+
+        result.failed map { _ shouldBe buildHandledError(URL_SHORTENING_FAILED)}
       }
     }
 
@@ -204,13 +207,14 @@ class YOURLSSvcSpec
         when(mockedHttpClient(any[HttpRequest])) thenReturn Future.successful(response)
 
         val result = service.shortenURL(UrlInfo(longUrl))(system)
-        result shouldBe Left(buildHandledError(URL_SHORTENING_FAILED))
 
         verify(mockedHttpClient)(captor.capture())
         val request: HttpRequest = captor.getValue
         request.method shouldBe POST
         request.uri.toString shouldBe testApiUrl
         request.entity shouldBe FormData(formData + ("url" -> longUrl)).toEntity
+
+        result.failed map { _ shouldBe buildHandledError(URL_SHORTENING_FAILED)}
       }
     }
 
@@ -224,13 +228,14 @@ class YOURLSSvcSpec
         when(mockedHttpClient(any[HttpRequest])) thenReturn Future.successful(response)
 
         val result = service.shortenURL(UrlInfo(longUrl))(system)
-        result shouldBe Left(buildHandledError(URL_SHORTENING_FAILED))
 
         verify(mockedHttpClient)(captor.capture())
         val request: HttpRequest = captor.getValue
         request.method shouldBe POST
         request.uri.toString shouldBe testApiUrl
         request.entity shouldBe FormData(formData + ("url" -> longUrl)).toEntity
+
+        result.failed map { _ shouldBe buildHandledError(URL_SHORTENING_FAILED)}
       }
     }
 
@@ -244,36 +249,36 @@ class YOURLSSvcSpec
         when(mockedHttpClient(any[HttpRequest])) thenReturn Future.successful(response)
 
         val result = service.shortenURL(UrlInfo(longUrl))(system)
-        result shouldBe Left(buildHandledError(URL_SHORTENING_FAILED))
 
         verify(mockedHttpClient)(captor.capture())
         val request: HttpRequest = captor.getValue
         request.method shouldBe POST
         request.uri.toString shouldBe testApiUrl
         request.entity shouldBe FormData(formData + ("url" -> longUrl)).toEntity
+
+        result.failed map { _ shouldBe buildHandledError(URL_SHORTENING_FAILED)}
       }
     }
 
     "when url shortener response timeouts" - {
       "should return an HandledErrorException" in {
-        val response = HttpResponse(StatusCodes.OK, entity=HttpEntity(ContentTypes.`application/json`, "{\"status\": \"success\""))
         lazy val mockedHttpClient: HttpRequest => Future[HttpResponse] = mock[HttpRequest => Future[HttpResponse]]
         val service = new TestYOURLSSvc(mockedHttpClient)
         val captor: ArgumentCaptor[HttpRequest] = ArgumentCaptor.forClass(classOf[HttpRequest])
 
         when(mockedHttpClient(any[HttpRequest])) thenReturn Future{
-          Thread.sleep((testTimeoutSeconds + 1) * 1000) // sleep longer that timeout
-          response
+          throw RequestTimeoutException(null, "Request timed out")
         }
 
         val result = service.shortenURL(UrlInfo(longUrl))(system)
-        result shouldBe Left(buildHandledError(URL_SHORTENING_FAILED))
 
         verify(mockedHttpClient)(captor.capture())
         val request: HttpRequest = captor.getValue
         request.method shouldBe POST
         request.uri.toString shouldBe testApiUrl
         request.entity shouldBe FormData(formData + ("url" -> longUrl)).toEntity
+
+        result.failed map { _ shouldBe buildHandledError(URL_SHORTENING_FAILED)}
       }
     }
 
@@ -287,13 +292,14 @@ class YOURLSSvcSpec
         when(mockedHttpClient(any[HttpRequest])) thenReturn Future.successful(response)
 
         val result = service.shortenURL(UrlInfo(longUrl))(system)
-        result shouldBe Right(shortUrl)
 
         verify(mockedHttpClient)(captor.capture())
         val request: HttpRequest = captor.getValue
         request.method shouldBe POST
         request.uri.toString shouldBe testApiUrl
         request.entity shouldBe FormData(formDataUserPass + ("url" -> longUrl)).toEntity
+
+        result map { _ shouldBe shortUrl}
       }
     }
 
@@ -305,6 +311,4 @@ class YOURLSSvcSpec
     json.put("shorturl", shortUrl)
     HttpEntity(ContentTypes.`application/json`, json.toString)
   }
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

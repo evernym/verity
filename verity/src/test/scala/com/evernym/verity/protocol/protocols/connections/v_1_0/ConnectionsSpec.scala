@@ -5,8 +5,9 @@ import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
-import com.evernym.verity.protocol.engine.ProtocolRegistry._
-import com.evernym.verity.protocol.engine.{DIDDoc, SignalEnvelope}
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry._
+import com.evernym.verity.protocol.engine.SignalEnvelope
+import com.evernym.verity.protocol.engine.util.DIDDoc
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.{Accept, TheirDidDocUpdated, TheirDidUpdated}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Role.{Invitee, Inviter}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.UpdateTheirDid

@@ -5,7 +5,6 @@ import com.evernym.verity.util2.Status._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine.{Parameters, UNINITIALIZED}
-import com.evernym.verity.protocol.protocols._
 
 trait ConnectingStateBase[S]
   extends HasPairwiseConnectionState

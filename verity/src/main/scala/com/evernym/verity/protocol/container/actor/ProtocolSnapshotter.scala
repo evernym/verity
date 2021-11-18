@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.container.actor
 
 import com.evernym.verity.actor.persistence.{BasePersistentActor, SnapshotterExt}
-import com.evernym.verity.protocol.engine.ProtocolContext
+import com.evernym.verity.protocol.engine.context.ProtocolContext
 
 trait ProtocolSnapshotter[S]
   extends SnapshotterExt[S] { this: ProtocolContext[_,_,_,_,S,_] with BasePersistentActor =>
@@ -14,7 +14,7 @@ trait ProtocolSnapshotter[S]
   override def receiveSnapshot: PartialFunction[Any, Unit] = {
     case as =>
       state = as.asInstanceOf[S]
-      log.debug(s"[$persistenceId] snapshot state received and applied (${definition.msgFamily.protoRef.toString}):" + state)
+      log.debug(s"[$persistenceId] snapshot state received and applied (${definition.protoRef.toString}):" + state)
   }
 
   /**

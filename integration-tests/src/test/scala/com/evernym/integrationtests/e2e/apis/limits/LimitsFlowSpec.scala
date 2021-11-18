@@ -69,7 +69,6 @@ class LimitsFlowSpec
       lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
         appEnv.config,
         ecp.futureExecutionContext,
-        ecp.walletFutureExecutionContext,
         Option(appEnv.ledgerConfig.submitterDID),
         Option(appEnv.ledgerConfig.submitterSeed),
         appEnv.ledgerConfig.submitterRole,

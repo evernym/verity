@@ -3,9 +3,10 @@ package com.evernym.verity.agentmsg.msgfamily.pairwise
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgBase
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
 case class CreateKeyReqMsg_MFV_0_5(forDID: DidStr, forDIDVerKey: VerKeyStr) extends MsgBase {
   override def validate(): Unit = {

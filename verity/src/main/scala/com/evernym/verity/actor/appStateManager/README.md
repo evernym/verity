@@ -1,5 +1,5 @@
 # App Health Monitoring
-Architectural artifacts for this feature are located in the [design](https://github.com/evernym/design/blob/master/blueprints/agency/app-lifecycle.md) repo.
+Architectural artifacts for this feature are located in the [design](https://gitlab.com/evernym/docs/design/-/blob/main/blueprints/agency/app-lifecycle.md) repo.
 
 The AppStateManager is solely responsible for keeping track of Verity's health.
 

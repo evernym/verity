@@ -4,6 +4,7 @@ import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgBase
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
 
 case class SendMsgsReqMsg_MFV_0_5(`@type`: TypeDetail, uids: List[String]) extends MsgBase {

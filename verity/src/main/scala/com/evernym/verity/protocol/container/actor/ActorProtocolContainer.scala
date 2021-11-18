@@ -5,9 +5,9 @@ import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.agent.relationship.RelationshipLike
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.user.{ComMethodDetail, GetSponsorRel}
-import com.evernym.verity.actor.agent.{SponsorRel, _}
+import com.evernym.verity.actor.agent.{AgentActorContext, AgentIdentity, HasWallet, ProtocolEngineExceptionHandler, SponsorRel, ThreadContextDetail}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
-import com.evernym.verity.actor.{ActorMessage, ParameterStored}
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
@@ -16,8 +16,7 @@ import com.evernym.verity.observability.metrics.CustomMetrics.AS_NEW_PROTOCOL_CO
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.msg.{SetDataRetentionPolicy, SetDomainId, SetSponsorRel, SetStorageId}
 import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
-import com.evernym.verity.protocol.protocols.HasWallet
-import com.evernym.verity.protocol.{Control, CtlEnvelope, PairwiseRelIdsChanged}
+import com.evernym.verity.protocol.{Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
 import com.evernym.verity.util2.{ActorResponse, Exceptions, ServiceEndpoint}
@@ -26,9 +25,9 @@ import com.typesafe.scalalogging.Logger
 import java.util.UUID
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
-import com.evernym.verity.actor.typed.base.UserGuardian.Commands.SendMsgToOutbox
-import com.evernym.verity.agentmsg.AgentMsgBuilder.createAgentMsg
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
+import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType, TypedMsgLike}
+import com.evernym.verity.observability.logs.HasLogger
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentStoreAccessAPI
 import com.evernym.verity.protocol.container.asyncapis.urlshortener.UrlShorteningAPI
@@ -38,7 +37,8 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessController
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessController
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
+import com.evernym.verity.protocol.engine.container.{ProtocolContainer, RecordsEvents}
+import com.evernym.verity.protocol.engine.events.PairwiseRelIdsChanged
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 
 import scala.concurrent.duration._
@@ -93,7 +93,6 @@ class ActorProtocolContainer[
   lazy val pinstId: PinstId = entityId
   var senderActorRef: Option[ActorRef] = None
   var agentWalletId: Option[String] = None
-  def sponsorRel: Option[SponsorRel] = backState.sponsorRel
 
   override def domainId: DomainId = backState.domainId.getOrElse(throw new RuntimeException("DomainId not available"))
 
@@ -123,6 +122,7 @@ class ActorProtocolContainer[
         case None     => agentActorContext.agentMsgRouter.forward(InternalMsgRouteParam(domainId, GetSponsorRel), self)
       }
     case ProtocolCmd(FromProtocol(fromPinstId, newRel), _) =>
+      logger.info(s"[$pinstId] protocol event migration started (fromPinstId: '$fromPinstId')")
       newRel.relationshipType match {
         case PAIRWISE_RELATIONSHIP =>
           val changeRelEvt = PairwiseRelIdsChanged(newRel.myDid_!, newRel.theirDid_!)
@@ -152,8 +152,9 @@ class ActorProtocolContainer[
   }
 
   final def baseBehavior: Receive = {
-    case ProtocolCmd(stc: SetThreadContext, None)  => handleSetThreadContext(stc.tcd)
     case s: SponsorRel                             => handleSponsorRel(s)
+    case ProtocolCmd(stc: SetThreadContext, None)  => handleSetThreadContext(stc.tcd)
+    case ProtocolCmd(stc: FromProtocol, None)      => logger.info(s"[$pinstId] protocol events already migrated from '${stc.fromPinstId}'")
     case pc: ProtocolCmd                           => handleProtocolCmd(pc)
   }
 
@@ -166,6 +167,7 @@ class ActorProtocolContainer[
     case ProtocolCmd(ExtractedEvent(event), None) =>
       persistExt(event)( _ => applyRecordedEvent(event) )
     case ProtocolCmd(ExtractionComplete(), None) =>
+      logger.info(s"[$pinstId] protocol event migration completed")
       persistExt(changeRelEvt){ _ =>
         applyRecordedEvent(changeRelEvt)
         toBaseBehavior()
@@ -206,7 +208,7 @@ class ActorProtocolContainer[
   }
 
   def handleSponsorRel(s: SponsorRel): Unit = {
-    if (!s.equals(SponsorRel.empty)) submit(SetSponsorRel(s))
+    if (!s.equals(SponsorRel.empty)) submit(SetSponsorRel(s.sponsorId, s.sponseeId))
     val tags = ConfigUtil.getSponsorRelTag(appConfig, s) ++ Map("proto-ref" -> getProtoRef.toString)
     metricsWriter.gaugeIncrement(AS_NEW_PROTOCOL_COUNT, tags = tags)
   }
@@ -322,9 +324,12 @@ class ActorProtocolContainer[
   override lazy val ledger =
     new LedgerAccessController(
       grantedAccessRights,
+      null, //TODO: replace this with actual VDR Adapter implementation
       LedgerAccessAPI(
         agentActorContext.generalCache,
-        agentActorContext.ledgerSvc, wallet)
+        agentActorContext.ledgerSvc,
+        wallet
+      )
     )
 
   override lazy val urlShortening =
@@ -451,40 +456,10 @@ class ActorProtocolContainer[
       }
     }
   }
-
-  //TODO: below function is preparation for outbox integration (not yet integrated though)
-  def sendToOutboxRouter(pom: ProtocolOutgoingMsg): Unit = {
-    if (isVAS && ! pom.msg.isInstanceOf[AgentProvisioningMsgFamily.AgentCreated]) {
-      val agentMsg = createAgentMsg(pom.msg, definition, pom.threadContextDetail)
-      val retPolicy = ConfigUtil.getOutboxStateRetentionPolicyForInterDomain(
-        appConfig, domainId, definition.msgFamily.protoRef.toString)
-      //TODO: will below approach become choke point?
-      userGuardian ! SendMsgToOutbox(
-        pom.from,
-        pom.to,
-        agentMsg.jsonStr,
-        agentMsg.msgType.toString,
-        retPolicy)
-    }
-  }
-
-  lazy val userGuardian: ActorRef = Util.getActorRefFromSelection("/user/guardian", context.system)(appConfig)
-  lazy val isVAS: Boolean =
-    appConfig
-      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
-      .contains("VerityAgent")
 }
 
-trait ProtoMsg extends MsgBase
+//trait ProtoMsg extends MsgBase
 
-/**
- * This message is sent only when protocol is being created/initialized for first time
- * @param params - Set of Parameter (key & value) which protocol needs
- */
-
-case class Init(params: Parameters) extends Control {
-  def parametersStored: Set[ParameterStored] = params.initParams.map(p => ParameterStored(p.name, p.value))
-}
 
 /**
  * This is sent by LaunchesProtocol during protocol initialization process.

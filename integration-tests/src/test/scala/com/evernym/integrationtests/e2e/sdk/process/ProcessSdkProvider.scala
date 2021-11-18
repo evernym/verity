@@ -18,7 +18,7 @@ trait ProcessSdkProvider
   extends BaseSdkProvider
     with ListeningSdkProvider {
 
-  val logger: Logger = getLoggerByName(getClass.getName)
+//  val logger: Logger = getLoggerByName(getClass.getName)
 
   private def printOut(output: String, outType: String = "OUTPUT"): Unit = {
     logger.debug(

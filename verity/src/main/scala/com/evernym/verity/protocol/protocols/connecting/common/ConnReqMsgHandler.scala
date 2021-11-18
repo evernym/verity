@@ -14,7 +14,7 @@ import com.evernym.verity.config.ConfigUtil.findAgentSpecificConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.protocol.container.actor.ProtoMsg
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.HashAlgorithm.SHA256_trunc4
 import com.evernym.verity.util.HashUtil
@@ -207,14 +207,14 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
       val content = replaceVariables(offerConnMsg, Map(APP_URL_LINK -> url, REQUESTER_NAME -> senderName))
 
       val sendSmsFut = ctx.sendSMS(param.phoneNo, content)
-      handleSmsSentResp(sendSmsFut)
+      handleSmsReqResp(sendSmsFut)
     }
   }
 
-  private def handleSmsSentResp(sendSmsFut: Future[String])
-                               (implicit param: CreateAndSendTinyUrlParam): Unit = {
+  private def handleSmsReqResp(sendSmsFut: Future[String])
+                              (implicit param: CreateAndSendTinyUrlParam): Unit = {
     sendSmsFut.map { _ =>
-      logger.debug(s"[${param.uid}] invite sms sent successfully")
+      logger.debug(s"[${param.uid}] invite sms request sent successfully")
       updateMsgDeliveryStatus(param.uid, PHONE_NUMBER, MSG_DELIVERY_STATUS_SENT.statusCode, None)
     }.recover {
       case er: HandledErrorException =>

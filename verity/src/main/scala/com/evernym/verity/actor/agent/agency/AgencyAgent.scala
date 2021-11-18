@@ -40,8 +40,7 @@ import scala.util.Left
  There is one of these actors per actor system. Contrast AgencyAgentPairwise.
  */
 class AgencyAgent(val agentActorContext: AgentActorContext,
-                  generalExecutionContext: ExecutionContext,
-                  walletExecutionContext: ExecutionContext)
+                  generalExecutionContext: ExecutionContext)
   extends AgencyAgentCommon
     with AgencyAgentStateUpdateImpl
     with AgencyPackedMsgHandler
@@ -49,7 +48,6 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
 
   private implicit val executionContext: ExecutionContext = generalExecutionContext
   override def futureExecutionContext: ExecutionContext = generalExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
 
   type StateType = AgencyAgentState
   var state = new AgencyAgentState
@@ -81,7 +79,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
       .withAgencyDIDPair(DidPair(kg.forDID, kg.forDIDVerKey))
       .withThisAgentKeyId(kg.forDID)
     val myDidDoc =
-      DidDocBuilder(futureWalletExecutionContext)
+      DidDocBuilder(futureExecutionContext)
         .withDid(kg.forDID)
         .withAuthKey(kg.forDID, kg.forDIDVerKey, Set(EDGE_AGENT_KEY))
         .didDoc
@@ -329,6 +327,20 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
     * @return
     */
   override def actorTypeId: Int = ACTOR_TYPE_AGENCY_AGENT_ACTOR
+
+  override def postAgentStateFix(): Future[Any] = {
+    logger.info(
+      s"[$persistenceId] unbounded elements => " +
+        s"isSnapshotApplied: $isAnySnapshotApplied, " +
+        s"threadContexts: ${state.threadContext.map(_.contexts.size).getOrElse(0)}, " +
+        s"protoInstances: ${state.protoInstances.map(_.instances.size).getOrElse(0)}"
+    )
+    super.postAgentStateFix()
+  }
+}
+
+object AgencyAgent {
+  val defaultPassivationTimeout = 600
 }
 
 //response

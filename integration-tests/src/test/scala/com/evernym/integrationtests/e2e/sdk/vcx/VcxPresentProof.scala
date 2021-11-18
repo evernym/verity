@@ -7,7 +7,7 @@ import com.evernym.integrationtests.e2e.sdk.vcx.VcxPresentProof.HolderProofInter
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider.Interaction
 import com.evernym.sdk.vcx.proof.DisclosedProofApi
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.protocol.engine.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProofMsgFamily
 import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate, ProposedAttribute, ProposedPredicate}
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0

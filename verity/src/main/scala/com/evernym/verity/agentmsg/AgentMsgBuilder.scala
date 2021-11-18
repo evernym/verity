@@ -2,7 +2,8 @@ package com.evernym.verity.agentmsg
 
 import com.evernym.verity.actor.agent.{ThreadContextDetail, TypeFormat}
 import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
-import com.evernym.verity.protocol.engine.{MsgId, ProtoDef}
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
+import com.evernym.verity.protocol.engine.ProtoDef
 
 import java.util.UUID
 

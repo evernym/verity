@@ -5,13 +5,37 @@ deployment:
   containerPort: 9000
   vault:
     enable: true
+  terminationGracePeriodSeconds: 120
+  probes:
+    startup:
+      path: "/verity/node/liveness"
+      periodSeconds: 10
+      timeoutSeconds: 2
+      failureThreshold: 20
+    readiness:
+      path: "/verity/node/readiness"
+      periodSeconds: 5
+      timeoutSeconds: 2
+      failureThreshold: 1
+    liveness:
+      path: "/verity/node/liveness"
+      periodSeconds: 5
+      timeoutSeconds: 2
+      failureThreshold: 2
 k8sService:
   type: NodePort
   port: 80
   targetPort: 9000
+ingress:
+  force_ssl: false
+  healthcheckPath: "/verity/node/readiness"
+  healthcheckIntervalSeconds: 5
+  healthcheckTimeoutSeconds: 2
+  unhealthyThresholdCount: 2
+  deregistrationDelay: 120
 # List of sponsors for Verity
 sponsors:
-# List configuration for for TAA.
+# List configuration for TAA.
 taa:
 # Custom and Adhoc Configuration for Verity in HOCON Notation
 # Intended to allow quick injection of config that is

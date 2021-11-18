@@ -6,7 +6,6 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
-//import com.evernym.verity
 import scalapb.lenses.Updatable
 
 

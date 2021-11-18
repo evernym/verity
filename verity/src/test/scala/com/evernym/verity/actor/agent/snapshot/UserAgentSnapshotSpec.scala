@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent.snapshot
 
-import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
-import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
+
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.KeyCreated
 import com.evernym.verity.actor.agent.{AgentWalletSetupProvider, SetupAgentEndpoint}
@@ -20,7 +19,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 class UserAgentSnapshotSpec
   extends BasicSpec
     with PersistentActorSpec
-    with SnapshotSpecBase
+    with AgentSnapshotSpecBase
     with AgentWalletSetupProvider
     with OverrideConfig {
 
@@ -29,15 +28,13 @@ class UserAgentSnapshotSpec
     setupAgency()
   }
 
-  override def overrideConfig: Option[Config] = Option(
+  override def specificConfig: Option[Config] = Option(
     ConfigFactory.parseString(
       """verity.persistent-actor.base.UserAgent.snapshot {
         after-n-events = 1
         keep-n-snapshots = 2
         delete-events-on-snapshots = false
       }""")
-      .withFallback(EventSourcedBehaviorTestKit.config)
-      .withFallback(PersistenceTestKitSnapshotPlugin.config)
   )
 
   "UserAgent actor" - {
@@ -64,7 +61,7 @@ class UserAgentSnapshotSpec
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
 
   lazy val mockEdgeAgent: MockEdgeAgent =
-    buildMockEdgeAgent(mockAgencyAdmin, ecp.futureExecutionContext, ecp.walletFutureExecutionContext)
+    buildMockEdgeAgent(mockAgencyAdmin, ecp.futureExecutionContext)
 
   lazy val userDID = mockEdgeAgent.myDIDDetail
 

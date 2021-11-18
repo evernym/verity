@@ -17,6 +17,7 @@ import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_A
 import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, SelfRelationship, _}
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
 import com.evernym.verity.actor.agent.user.UserAgent._
+import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.ChildEvent
@@ -39,6 +40,7 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
@@ -46,7 +48,6 @@ import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.CreateKeyEndpointDetail
-import com.evernym.verity.protocol.protocols.MsgDetail
 import com.evernym.verity.protocol.protocols.connecting.common.{ConnReqReceived, SendMsgToRegisteredEndpoint}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.PublicIdentifierCreated
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl
@@ -61,7 +62,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAcc
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.UpdateParams
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.AUTH_TYPE_OAUTH2
-import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
+import com.evernym.verity.msgoutbox.outbox.Outbox.DESTINATION_ID_DEFAULT
 import com.evernym.verity.observability.metrics.MetricsUnit
 import com.evernym.verity.util2.ActorErrorResp
 
@@ -74,15 +75,13 @@ import scala.util.{Failure, Success, Try}
  */
 class UserAgent(val agentActorContext: AgentActorContext,
                 val metricsActorRef: ActorRef,
-                executionContext: ExecutionContext,
-                walletExecutionContext: ExecutionContext)
+                executionContext: ExecutionContext)
   extends UserAgentCommon
     with UserAgentStateUpdateImpl
     with HasAgentActivity
     with MsgNotifierForUserAgent
     with AgentSnapshotter[UserAgentState] {
 
-  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
   implicit def futureExecutionContext: ExecutionContext = executionContext
 
   type StateType = UserAgentState
@@ -238,7 +237,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
 
   def handleOwnerDIDSet(did: DidStr, verKey: VerKeyStr): Unit = {
     val myDidDoc =
-      DidDocBuilder(futureWalletExecutionContext)
+      DidDocBuilder(futureExecutionContext)
         .withDid(did)
         .withAuthKey(did, verKey, Set(EDGE_AGENT_KEY))
         .didDoc
@@ -938,6 +937,19 @@ class UserAgent(val agentActorContext: AgentActorContext,
     updateOAuthAccessTokenHolder()
     super.postRecoveryCompleted()
   }
+
+  override def postAgentStateFix(): Future[Any] = {
+    logger.info(
+      s"[$persistenceId] unbounded elements => " +
+        s"isSnapshotApplied: $isAnySnapshotApplied, " +
+        s"configs: ${state.configs.size}, " +
+        s"messages: ${state.msgAndDelivery.map(_.msgs.size).getOrElse(0)}, " +
+        s"threadContexts: ${state.threadContext.map(_.contexts.size).getOrElse(0)}, " +
+        s"protoInstances: ${state.protoInstances.map(_.instances.size).getOrElse(0)}, " +
+        s"relationshipAgents: ${state.relationshipAgents.size}"
+    )
+    super.postAgentStateFix()
+  }
 }
 
 object UserAgent {
@@ -946,6 +958,7 @@ object UserAgent {
   final val COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG = "user-agent.mnd.msgs-payloads"
   final val COLLECTION_METRIC_MND_MSGS_DETAILS_TAG = "user-agent.mnd.msgs-details"
   final val COLLECTION_METRIC_MND_MSGS_DELIVERY_STATUS_TAG = "user-agent.mnd.msgs-delivery-status"
+  val defaultPassivationTimeout = 600
 }
 
 case class PairwiseConnSetExt(agentDID: DidStr, agentDIDVerKey: VerKeyStr, reqMsgContext: ReqMsgContext)

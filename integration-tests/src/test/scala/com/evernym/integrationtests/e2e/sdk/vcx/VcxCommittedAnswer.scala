@@ -9,7 +9,7 @@ import com.evernym.sdk.vcx.connection.ConnectionApi
 import com.evernym.verity.actor.agent.TypeFormat
 import com.evernym.verity.agentmsg.buildAgentMsg
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.protocol.engine.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.Msg.Answer
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.{CommittedAnswerDefinition, CommittedAnswerMsgFamily, CommittedAnswerProtocol, Sig}
 import com.evernym.verity.sdk.protocols.questionanswer.v1_0.CommittedAnswerV1_0

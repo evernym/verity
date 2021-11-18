@@ -24,6 +24,7 @@ completed, and those services are up and running.
 cd <project-folder>
 ```
 **Notes:**
+* Make sure `VERITY_JAR_LOCATION` in `base.env` points to correct verity assembly jar location/name.
 * Replace "**<cas/eas/vas>**" in below given examples with either "cas" or "eas" or "vas" accordingly
 
 ### to run multi node cluster

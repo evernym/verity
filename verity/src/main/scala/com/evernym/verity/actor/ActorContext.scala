@@ -3,7 +3,7 @@ package com.evernym.verity.actor
 import akka.actor.ActorSystem
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
-import com.evernym.verity.protocol.engine.ProtocolRegistry
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry
 
 trait ActorContext {
   def system: ActorSystem

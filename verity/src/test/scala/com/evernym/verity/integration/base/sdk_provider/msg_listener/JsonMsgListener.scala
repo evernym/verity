@@ -1,15 +1,14 @@
 package com.evernym.verity.integration.base.sdk_provider.msg_listener
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.StatusCodes.{OK, Unauthorized}
+import akka.http.scaladsl.model.headers.HttpCredentials
 import akka.http.scaladsl.model.{HttpRequest, MediaTypes}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractRequest, logRequestResult, pathPrefix, post, reject, _}
 import akka.http.scaladsl.server.Route
-
-import scala.concurrent.duration._
+import com.evernym.verity.integration.base.sdk_provider.OAuthParam
 
 class JsonMsgListener(val port: Int,
-                      val tokenExpiresInDuration: Option[FiniteDuration] = None)
+                      val oAuthParam: Option[OAuthParam] = None)
                      (implicit val actorSystem: ActorSystem)
   extends MsgListenerBase[String] {
 
@@ -19,26 +18,19 @@ class JsonMsgListener(val port: Int,
         extractRequest { implicit req: HttpRequest =>
           extractCredentials { cred =>
             post {
-              if (checkAuthToken) {
-                if (hasValidToken(cred)) agentMsgHandler
-                else complete(Unauthorized)
-              } else {
-                _plainMsgsSinceLastReset = _plainMsgsSinceLastReset + 1
-                agentMsgHandler
-              }
+              agentMsgHandler(cred)
             }
           }
         }
       }
     }
 
-  private def agentMsgHandler(implicit req: HttpRequest): Route = {
+  private def agentMsgHandler(cred: Option[HttpCredentials])(implicit req: HttpRequest): Route = {
     req.entity.contentType.mediaType match {
       case MediaTypes.`application/json` =>
         entity(as[String]) { data =>
           complete {
-            addToQueue(data)
-            OK
+            handleIncomingMsg(data, cred)
           }
         }
       case _ =>

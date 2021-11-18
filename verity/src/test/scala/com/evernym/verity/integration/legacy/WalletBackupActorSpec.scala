@@ -4,16 +4,16 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding
 import com.evernym.verity.actor.base.Done
-import com.evernym.verity.actor.testkit.{AkkaTestBasic, TestAppConfig}
+import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.EVERNYM_QUALIFIER
+import com.evernym.verity.did.didcomm.v1.messages.MsgType
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
-import com.evernym.verity.protocol.engine.MsgType
 import com.evernym.verity.protocol.protocols.deaddrop.DeadDropSpecUtil
 import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
@@ -21,8 +21,8 @@ import com.evernym.verity.testkit.mock.agent.{MockEdgeAgent, MockEnvUtil}
 import com.evernym.verity.testkit.util.Msgs_MFV_0_5
 import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 import com.typesafe.config.Config
-import java.util.UUID
 
+import java.util.UUID
 import com.evernym.verity.util2.ExecutionContextProvider
 
 import scala.concurrent.ExecutionContext
@@ -30,12 +30,12 @@ import scala.concurrent.ExecutionContext
 class WalletBackupActorSpec
   extends UserAgentSpecScaffolding {
 
-  lazy val mockNewEdgeAgent: MockEdgeAgent = MockEnvUtil.buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext, futureWalletExecutionContext)
+  lazy val mockNewEdgeAgent: MockEdgeAgent = MockEnvUtil.buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext)
 
   implicit val msgPackagingContext: AgentMsgPackagingContext =
     AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
 
-  val walletBackupUtil = new WalletBackupSpecUtil(mockEdgeAgent, futureWalletExecutionContext)
+  val walletBackupUtil = new WalletBackupSpecUtil(mockEdgeAgent, futureExecutionContext)
 
   override def overrideConfig: Option[Config] = Option {
     AkkaTestBasic.customJournal("com.evernym.verity.actor.FailsOnLargeEventTestJournal")
@@ -228,11 +228,6 @@ class WalletBackupActorSpec
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 case class CloudAgentDetail(did: DidStr, verKey: VerKeyStr) {
@@ -240,7 +235,7 @@ case class CloudAgentDetail(did: DidStr, verKey: VerKeyStr) {
 }
 
 
-class WalletBackupSpecUtil(mockEdgeAgent: MockEdgeAgent, walletExecutionContext: ExecutionContext) extends DeadDropSpecUtil {
+class WalletBackupSpecUtil(mockEdgeAgent: MockEdgeAgent, executionContext: ExecutionContext) extends DeadDropSpecUtil {
 
   override def appConfig: AppConfig = mockEdgeAgent.appConfig
 
@@ -259,6 +254,6 @@ class WalletBackupSpecUtil(mockEdgeAgent: MockEdgeAgent, walletExecutionContext:
   /**
    * custom thread pool executor
    */
-  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
+  override def futureExecutionContext: ExecutionContext = executionContext
 }
 

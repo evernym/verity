@@ -160,7 +160,7 @@ class PlainWebhookSenderSpec
       testMsgPackagers)
 
     val salt = appConfig.getStringReq(SALT_EVENT_ENCRYPTION)
-    val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam, salt)
+    val packager = msg_packager.Packager(msgPackagingParam, testMsgRepository, salt)
     val sender = PlainWebhookSender(
       dispatchParam,
       packager,
@@ -171,5 +171,4 @@ class PlainWebhookSenderSpec
   }
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

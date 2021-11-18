@@ -1,17 +1,20 @@
 package com.evernym.verity.protocol.container.asyncapis.wallet
 
 import com.evernym.verity.actor.wallet._
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
+import com.evernym.verity.protocol.container.asyncapis.BaseAsyncOpExecutorImpl
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncapi.wallet.{InvalidSignType, WalletAsyncOps}
+import com.evernym.verity.protocol.engine.asyncapi.AsyncResultHandler
+import com.evernym.verity.protocol.engine.asyncapi.wallet._
 import com.evernym.verity.util.ParticipantUtil
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
 import scala.concurrent.Future
 import scala.language.postfixOps
+import scala.util.Try
 
 class WalletAccessAPI(protected val walletApi: WalletAPI,
                       protected val selfParticipantId: ParticipantId)
@@ -19,7 +22,8 @@ class WalletAccessAPI(protected val walletApi: WalletAPI,
                       val asyncAPIContext: AsyncAPIContext)
   extends WalletAsyncOps
     with AnonCredRequestsAPI
-    with BaseAsyncOpExecutorImpl {
+    with BaseAsyncOpExecutorImpl
+    with AsyncResultHandler {
 
   import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess._
 
@@ -89,5 +93,43 @@ class WalletAccessAPI(protected val walletApi: WalletAPI,
 
   private def getDIDFromParticipantId(participantId: ParticipantId): DidStr = {
     ParticipantUtil.DID(participantId)
+  }
+
+  override def handleResult[T](result: Try[Any], handler: Try[T] => Unit): Unit = {
+    handler(
+      result.map {
+        case c: AgentWalletSetupCompleted => DeprecatedWalletSetupResult(c.ownerDidPair, NewKeyResult(c.agentKey.did, c.agentKey.verKey))
+        case c: NewKeyCreated => NewKeyResult(c.did, c.verKey)
+        case c: GetVerKeyResp => VerKeyResult(c.verKey)
+        case c: GetVerKeyOptResp => VerKeyOptResult(c.verKey)
+        case c: SignedMsg => SignedMsgResult(c.msg, c.fromVerKey)
+        case c: VerifySigResult => VerifiedSigResult(c.verified)
+        case c: TheirKeyStored => TheirKeyStoredResult(c.did, c.verKey)
+        case c: SchemaCreated => SchemaCreatedResult(c.schemaId, c.schemaJson)
+
+        case c: CredDefCreated => CredDefCreatedResult(c.credDefId, c.credDefJson)
+
+        case c: CredOfferCreated => CredOfferCreatedResult(c.offer)
+        case c: CredReqCreated => CredReqCreatedResult(c.credReqJson, c.credReqMetadataJson)
+        case c: CredCreated => CredCreatedResult(c.cred)
+        case c: CredStored => CredStoredResult(c.cred)
+        case c: CredForProofReqCreated => CredForProofResult(c.cred)
+
+        case c: ProofCreated => ProofCreatedResult(c.proof)
+        case c: ProofVerifResult => ProofVerificationResult(c.result)
+
+        case c: LedgerRequest => LedgerRequestResult(
+          c.req,
+          c.needsSigning,
+          c.taa.map(t=>TransactionAuthorAgreement(
+            t.version,
+            t.digest,
+            t.mechanism,
+            t.timeOfAcceptance
+          ))
+        )
+      }
+      .map(_.asInstanceOf[T])
+    )
   }
 }

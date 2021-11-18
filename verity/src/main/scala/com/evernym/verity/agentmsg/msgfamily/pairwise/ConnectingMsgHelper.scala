@@ -8,8 +8,11 @@ import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 import com.evernym.verity.protocol.protocols.connecting.common.{SenderAgencyDetail, SenderDetail}
 import com.evernym.verity.util.MessagePackUtil.convertNativeMsgToPackedMsg
 import org.json.JSONObject

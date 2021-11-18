@@ -8,7 +8,8 @@ import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.{ForIdentifier, ShardUtil}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.{PinstIdPair, ThreadId}
+import com.evernym.verity.protocol.engine.ThreadId
+import com.evernym.verity.protocol.engine.registry.PinstIdPair
 import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.BeforeAndAfterAll
@@ -86,7 +87,7 @@ trait BaseProtocolActorSpec
 
   //overriding agent msg routing mapping to make the flow working
   // (from actor protocol container to the 'mock controller')
-  override val actorTypeToRegions = Map(
+  override val typeToRegions = Map(
     MOCK_CONTROLLER_ACTOR_TYPE -> createNonPersistentRegion(MOCK_CONTROLLER_REGION_NAME, mockControllerActorProps)
   )
 

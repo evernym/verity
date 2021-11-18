@@ -7,7 +7,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.`X-Real-Ip`
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
@@ -20,11 +20,11 @@ import com.evernym.verity.agentmsg.tokenizer.SendToken
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.observability.metrics.{MetricDetail, PrometheusMetricsParser}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.RequesterKeys
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
@@ -37,9 +37,9 @@ import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
+
 import java.net.InetAddress
 import java.util.UUID
-
 import scala.concurrent.duration.{Duration, _}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Left
@@ -51,11 +51,9 @@ trait AgentMsgSenderHttpWrapper
   extends CommonSpecUtil
     with LedgerClient
     with Eventually
-    with HasExecutionContextProvider
-    with HasWalletExecutionContextProvider {
+    with HasExecutionContextProvider {
 
   implicit lazy val executionContext: ExecutionContext = futureExecutionContext
-  lazy val walletExecutionContext: ExecutionContext = futureWalletExecutionContext
 
   val logger: Logger = getLoggerByName(getClass.getName)
 
@@ -267,15 +265,15 @@ trait AgentMsgSenderHttpWrapper
                       withSeed: Option[String]=None,
                       config: Option[AppConfig]=None,
                       withRole: Option[String]=None): Unit = {
-    createLedgerUtil(executionContext, walletExecutionContext, config, fromDID, withSeed).bootstrapNewDID(ad.DID, ad.verKey, withRole.orNull)
+    createLedgerUtil(executionContext, config, fromDID, withSeed).bootstrapNewDID(ad.DID, ad.verKey, withRole.orNull)
   }
 
   def updateAgencyEndpointInLedger(did: DidStr, withSeed: String, endpoint: String, config: Option[AppConfig]=None): Unit = {
-    createLedgerUtil(executionContext, walletExecutionContext, config, Option(did), Option(withSeed)).setEndpointUrl(did, endpoint)
+    createLedgerUtil(executionContext, config, Option(did), Option(withSeed)).setEndpointUrl(did, endpoint)
   }
 
   def getAttribFromLedger(did: DidStr, withSeed: String, attribName: String, config: Option[AppConfig]=None): Unit = {
-    createLedgerUtil(executionContext, walletExecutionContext, config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
+    createLedgerUtil(executionContext, config, Option(did), Option(withSeed)).sendGetAttrib(did, attribName)
   }
 
   def buildClientNamePrependedMsg(msg: String): String = {

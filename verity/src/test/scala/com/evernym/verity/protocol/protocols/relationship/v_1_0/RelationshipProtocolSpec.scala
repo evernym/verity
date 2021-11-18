@@ -6,8 +6,8 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.did.DidPair
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
-import com.evernym.verity.protocol.engine.ProtocolRegistry._
-import com.evernym.verity.protocol.engine.{DebugProtocols, InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, ServiceFormatted, SignalEnvelope}
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry._
+import com.evernym.verity.protocol.engine.{InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, SignalEnvelope}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Role.{Provisioner, Requester}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
@@ -17,6 +17,8 @@ import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 import com.evernym.verity.did.methods.DIDKey
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.protocol.engine.journal.DebugProtocols
+import com.evernym.verity.protocol.engine.util.ServiceFormatted
 import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext

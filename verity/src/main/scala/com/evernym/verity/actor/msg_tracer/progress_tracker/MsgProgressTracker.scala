@@ -2,7 +2,6 @@ package com.evernym.verity.actor.msg_tracer.progress_tracker
 
 import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDateTime}
-
 import akka.pattern.ask
 import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
@@ -14,7 +13,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.util.Util.getActorRefFromSelection
 import com.evernym.verity.util2.ReqId
 import com.evernym.verity.actor.base.{CoreActorExtended, DoNotRecordLifeCycleMetrics}
-import com.evernym.verity.protocol.engine.MsgId
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import org.apache.http.conn.util.InetAddressUtils
 
 import scala.concurrent.{ExecutionContext, Future}

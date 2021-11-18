@@ -11,42 +11,61 @@
     - general-xlarge
 
 unit-test:
-  extends: .test
-  only:
-    refs:
-      - master
-      - main
-      - tags
-      - merge_requests
+  extends:
+    - .test
+    - .base-rule
+  variables:
+    DD_ENV: "ci"
+    DD_SERVICE: "verity"
   script:
     - sbt test
+  after_script:
+    - datadog-ci junit upload verity/target/test-reports
   artifacts:
     when: always
     paths:
       - verity/target/test-reports
-#      - verity/target/scala-2.12/jacoco
     reports:
 #      junit: verity/target/test-reports/TEST-*.xml
-#      cobertura:
 
-.static-analysis: # This test don't work and is currently not providing value
-  extends: .test
-  only:
-    refs:
-      - master
-      - main
-      - tags
-      - merge_requests
+coverage:
+  extends:
+    - .test
+    - .base-rule
+  script:
+    - sbt compile # Must compile before running converge, so we can detect and ignore protobuf classes
+    - sbt coverage test
+  after_script:
+    - sbt coverageReport
+  artifacts:
+    when: always
+    paths:
+      - verity/target/scala-2.12/scoverage-report/*
+    reports:
+      cobertura:
+        - verity/target/scala-2.12/coverage-report/cobertura.xml
+  allow_failure: true
+  when: manual
+
+
+
+static-analysis: # This test don't work and is currently not providing value
+  extends:
+    - .test
+    - .base-rule
   artifacts:
     name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
     paths:
       - verity/target/scala-*/scapegoat-report
   script:
-    - devops/scripts/test/docker-static-code-analysis $CI_PROJECT_DIR
-  allow_failure: true # Eventually this will be removed and we will have a zero error/warning policy
+    - sbt scapegoat
+  allow_failure: true # Eventually this will be removed, and we will have a zero error/warning policy
+  when: manual
 
 .integration-common:
-  extends: .test
+  extends:
+    - .test
+    - .base-rule
   variables:
     # General vars
     MESSAGE_PROGRESS_TRACKING_ENABLED: "true"
@@ -62,27 +81,36 @@ unit-test:
     # Ledger Pool
     POOL_HOST: "indy-pool"
     TAA_ENABLE: "true"
+    LIB_INDY_LEDGER_TAA_ENABLED: "true"
+    LIB_INDY_LEDGER_TAA_AUTO_ACCEPT: "true"
+
+    # dynamoDb
+    DYNAMODB_HOST: "dynamodb"
+    DYNAMODB_PORT: "8000"
+    DYNAMODB_ENDPOINT: "$DYNAMODB_HOST:$DYNAMODB_PORT"
 
     # For MYSQL docker container service
+    MYSQL_HOST: "mysql"
     MYSQL_ROOT_PASSWORD: "root"
     MYSQL_DATABASE: "wallet"
     MYSQL_USER: "msuser"
     MYSQL_PASSWORD: "mspassword"
 
     # For yourls service
-    YOURLS_SITE: "http://yourls"
+    YOURLS_HOST: "yourls"
+    YOURLS_PORT: "80"
+    YOURLS_SITE: "http://$YOURLS_HOST:$YOURLS_PORT" # This is for the YOURLS docker container
     YOURLS_USER: "yourlsuser"
     YOURLS_PASS: "yourlspass"
+
   artifacts:
     name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
     paths:
       - integration-tests/target/scalatest-runs
     when: always
-  script:
-    - devops/scripts/test/retrieve-genesis-txn
-    - devops/scripts/s3server/s3_init.sh
-    - devops/scripts/yourls/yourls_init.sh
-    - devops/scripts/test/docker-integration-tests $CI_PROJECT_DIR
+  before_script:
+#    - devops/scripts/s3server/s3_init.sh
+    - cicd/scripts/check-integration-resources
   services:
     - name: registry.gitlab.com/evernym/containers/indy-pool:${indyNodeVersion}_${sovtokenVersion}
       alias: indy-pool
@@ -98,48 +126,35 @@ unit-test:
       alias: yourls
 
 legacy:
-  extends: .integration-common
-  only:
-    refs:
-      - master
-      - main
-      - tags
-      - merge_requests
+  extends:
+    - .integration-common
+  script:
+    - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.ApiFlowSpec"
   variables:
-    TEST_TYPE: "Legacy"
     TEST_SCENARIOS: "scenario1, scenario2"
 
 legacy-with-restart:
-  extends: .integration-common
-  only:
-    refs:
-      - master
-      - main
-      - tags
-      - merge_requests
+  extends:
+    - .integration-common
+  script:
+    - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.ApiFlowSpec"
   variables:
-    TEST_TYPE: "Legacy"
     TEST_SCENARIOS: "scenario1"
     TEST_RESTART_VERITY_RANDOMLY: "true"
 
 integration:
-  extends: .integration-common
-  only:
-    refs:
-      - master
-      - main
-      - tags
-      - merge_requests
-  variables:
-    TEST_TYPE: "Integration"
+  extends:
+    - .integration-common
+  script:
+    - echo "Running 3rd party tests..."
+    - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.third_party_apis.s3.*"
+    - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.third_party_apis.wallet_api.*"
+    - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.vcx.*"
+    - echo "Running $testType e2e API integration tests..."
+    - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.* -- -n com.evernym.integrationtests.e2e.tag.annotation.Integration"
 
 limits:
-  extends: .integration-common
-  only:
-    refs:
-      - master
-      - main
-      - tags
-      - merge_requests
-  variables:
-    TEST_TYPE: "Limits"
+  extends:
+    - .integration-common
+  script:
+    - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.limits.* -- -n com.evernym.integrationtests.e2e.tag.annotation.Limits"

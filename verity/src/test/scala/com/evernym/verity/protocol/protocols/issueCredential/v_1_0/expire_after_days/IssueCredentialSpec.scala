@@ -438,7 +438,7 @@ class IssueCredentialSpec
       val threadedInviteId = InviteUtil.parseThreadedInviteId(
         inviteObj.getString("@id")
       ).get
-      threadedInviteId.protoRefStr shouldBe protoDef.msgFamily.protoRef.toString
+      threadedInviteId.protoRefStr shouldBe protoDef.protoRef.toString
       threadedInviteId.relationshipId shouldBe issuer.did_!
       threadedInviteId.threadId shouldBe issuer.currentInteraction.get.threadId.get
 
@@ -528,7 +528,7 @@ class IssueCredentialSpec
       val threadedInviteId = InviteUtil.parseThreadedInviteId(
         inviteObj.getString("@id")
       ).get
-      threadedInviteId.protoRefStr shouldBe protoDef.msgFamily.protoRef.toString
+      threadedInviteId.protoRefStr shouldBe protoDef.protoRef.toString
       threadedInviteId.relationshipId shouldBe issuer.did_!
       threadedInviteId.threadId shouldBe issuer.currentInteraction.get.threadId.get
 

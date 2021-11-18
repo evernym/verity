@@ -1,13 +1,13 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
-import com.evernym.verity.actor.wallet.GetVerKeyResp
-import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncapi.wallet.VerKeyResult
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
+import com.evernym.verity.protocol.engine.util.{DIDDoc, ServiceFormatted, ServiceFormatter}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvitation
 import com.evernym.verity.util.Base58Util
-import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.did.{DidStr, VerKeyStr}
 
 import scala.util.{Failure, Success, Try}
 
@@ -17,7 +17,7 @@ object InviteUtil {
     (agencyVerKey, ctx.getRoster.selfId) match {
       case (Some(agencyVerKey), Some(did)) =>
         ctx.wallet.verKey(did) {
-          case Success(GetVerKeyResp(verKey: VerKeyStr)) =>
+          case Success(VerKeyResult(verKey: VerKeyStr)) =>
             handler(Success(
               DIDDoc(
                 did,
@@ -76,7 +76,6 @@ object InviteUtil {
     val preCodedId = s"$encodeVer$delimiter$protoRef$delimiter$relationshipId$delimiter$threadId"
     val encoded = Base58Util.encode(preCodedId.getBytes())
     s"${encoded.substring(0, 7)}-${encoded.substring(7, 16)}-${encoded.substring(16, 25)}-${encoded.substring(25, 34)}-${encoded.substring(34)}"
-
   }
 
   def isThreadedInviteId(id: String): Boolean = {
@@ -106,7 +105,6 @@ object InviteUtil {
           Failure(new Exception("Unable to extract 4 elements from ThreadedInviteId"))
       }
       .map{x =>
-        val s = x(0)
         ThreadedInviteIdDecoded(x(0), x(1), x(2), x(3))
       }
   }

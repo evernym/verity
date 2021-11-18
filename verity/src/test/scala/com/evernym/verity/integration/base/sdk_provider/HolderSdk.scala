@@ -17,9 +17,10 @@ import com.evernym.verity.did.{DidPair, DidStr}
 import com.evernym.verity.integration.base.sdk_provider.MsgFamilyHelper.buildMsgTypeStr
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerTxnExecutor, Submitter}
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
-import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
-import com.evernym.verity.protocol.engine.{DIDDoc, MsgId, ThreadId}
+import com.evernym.verity.protocol.engine.ThreadId
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateCloudAgent, RequesterKeys}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg.{ConnRequest, ConnResponse, Connection}
@@ -29,7 +30,8 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{AttIds, Availab
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.{Presentation, RequestPresentation}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProof.{credentialsToUse, extractAttachment}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
-import com.evernym.verity.observability.metrics.{NoOpMetricsWriter, backend}
+import com.evernym.verity.observability.metrics.NoOpMetricsWriter
+import com.evernym.verity.protocol.engine.util.DIDDoc
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.KeyParam
@@ -50,9 +52,8 @@ import scala.util.{Failure, Success, Try}
 case class HolderSdk(param: SdkParam,
                      ledgerTxnExecutor: Option[LedgerTxnExecutor],
                      override val ec: ExecutionContext,
-                     wec: ExecutionContext,
                      oauthParam: Option[OAuthParam]=None
-                    ) extends SdkBase(param, ec, wec) {
+                    ) extends SdkBase(param, ec) {
   implicit val executionContext: ExecutionContext = ec
 
   def registerWebhook(updateComMethod: UpdateComMethodReqMsg): ComMethodUpdated = {

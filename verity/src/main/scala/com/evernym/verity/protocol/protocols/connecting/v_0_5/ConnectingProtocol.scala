@@ -1,35 +1,32 @@
 package com.evernym.verity.protocol.protocols.connecting.v_0_5
 
-import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.msgsender.AgentMsgSender
+import com.evernym.verity.actor.agent.{MsgSendingFailed, MsgSentSuccessfully}
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnReqRedirectedMsgHelper, ConnectingMsgHelper, RedirectConnReqMsgHelper}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
-import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
-import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols._
-import com.evernym.verity.protocol.protocols.connecting.common._
-import com.evernym.verity.push_notification.PushNotifMsgBuilder
-import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
 import com.evernym.verity.did.{DidStr, VerKeyStr}
+import com.evernym.verity.protocol.Control
+import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
+import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
+import com.evernym.verity.protocol.engine.events.ParameterStored
+import com.evernym.verity.protocol.engine.msg.Init
+import com.evernym.verity.protocol.engine.util.?=>
+import com.evernym.verity.protocol.protocols.connecting.common._
 
 import scala.concurrent.ExecutionContext
 
 
 //noinspection ScalaDeprecation
-class ConnectingProtocol(
-                          val ctx: ProtocolContextApi[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String]
-                        )
+class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String])
     extends Protocol[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String](ConnectingProtoDef)
-      with ConnectingProtocolBase[ConnectingProtocol,Role,ConnectingState,String]
-      with HasAppConfig
-      with AgentMsgSender
-      with MsgDeliveryResultHandler
-      with PushNotifMsgBuilder {
+      with ConnectingProtocolBase[ConnectingProtocol,Role,ConnectingState,String] {
 
   override def futureExecutionContext: ExecutionContext = ctx.executionContext
 

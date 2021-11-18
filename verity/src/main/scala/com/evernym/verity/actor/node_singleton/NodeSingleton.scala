@@ -3,9 +3,8 @@ package com.evernym.verity.actor.node_singleton
 import akka.actor.typed.eventstream.EventStream.Subscribe
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import com.evernym.verity.actor._
+import com.evernym.verity.actor.{HasAppConfig, _}
 import com.evernym.verity.actor.agent.HasSingletonParentProxy
-import com.evernym.verity.actor.appStateManager.StartDraining
 import com.evernym.verity.actor.base.{CoreActorExtended, Done}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{GetBlockedList, UpdateBlockingStatus, UsageBlockingStatusChunk}
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{GetWarnedList, UpdateWarningStatus, UsageWarningStatusChunk}
@@ -15,7 +14,6 @@ import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.observability.metrics.MetricsWriterExtension
-import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
@@ -84,12 +82,6 @@ class NodeSingleton(val appConfig: AppConfig, executionContext: ExecutionContext
       MsgProgressTrackerCache(context.system).stopProgressTracking(spt.trackingId)
       sender ! Done
 
-    case DrainNode =>
-      logger.info(s"draining started...")
-      publishAppStateEvent(StartDraining)
-      sender ! DrainInitiated
-      logger.info(s"draining in progress !!")
-
     case p: PersistentActorQueryParam =>
       val ar = getRequiredActor(ReadOnlyPersistentActor.prop(appConfig, p.actorParam, executionContext), p.actorParam.id)
       val sndr = sender()
@@ -121,8 +113,6 @@ class NodeSingleton(val appConfig: AppConfig, executionContext: ExecutionContext
   }
 }
 
-case object DrainNode extends ActorMessage
-case object DrainInitiated extends ActorMessage
 case class PersistentActorQueryParam(actorParam: ActorParam, cmd: Any)
   extends ActorMessage
 

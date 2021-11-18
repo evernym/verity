@@ -353,7 +353,7 @@ object MockOAuthAccessTokenRefresher {
         case OAuthAccessTokenRefresher.Commands.GetToken(params, prevTokenRefreshResponse, replyTo) =>
           val token = UUID.randomUUID().toString
           MockMsgSendingSvc.addAuthedToken(token)
-          replyTo ! GetTokenSuccess(token, 10, Option(new JSONObject("{}")))
+          replyTo ! GetTokenSuccess(token, Option(10), Option(new JSONObject("{}")))
           Behaviors.stopped
       }
     }

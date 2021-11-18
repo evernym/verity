@@ -16,6 +16,7 @@ import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.WalletAPIParam
+import com.evernym.verity.vdr.{CredDef, FQCredDefId, FQSchemaId, NoEndorsement, NoSignature, PreparedTxn, Schema, SubmittedTxn}
 import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
@@ -26,14 +27,14 @@ object MockableLedgerAccess {
   val MOCK_NOT_ENDORSER = "MOCK_NOT_ENDORSER"
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
   def apply(): MockableLedgerAccess = {
-    new MockableLedgerAccess(ecp.walletFutureExecutionContext)
+    new MockableLedgerAccess(ecp.futureExecutionContext)
   }
 
   def apply(ledgerAvailable: Boolean): MockableLedgerAccess =
-    new MockableLedgerAccess(ecp.walletFutureExecutionContext, ledgerAvailable=ledgerAvailable)
+    new MockableLedgerAccess(ecp.futureExecutionContext, ledgerAvailable=ledgerAvailable)
 }
 
-class MockableLedgerAccess(walletExecutionContext: ExecutionContext,
+class MockableLedgerAccess(executionContext: ExecutionContext,
                            val schemas: Map[String, GetSchemaResp] = MockLedgerData.schemas01,
                            val credDefs: Map[String, GetCredDefResp] = MockLedgerData.credDefs01,
                            val ledgerAvailable: Boolean = true)
@@ -42,7 +43,7 @@ class MockableLedgerAccess(walletExecutionContext: ExecutionContext,
   import MockableLedgerAccess._
   implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
-  val testWallet = new TestWallet(walletExecutionContext, false)
+  val testWallet = new TestWallet(executionContext, false)
   implicit val wap: WalletAPIParam = testWallet.wap
   override val walletAccess = new WalletAccessController (
     Set(),
@@ -122,6 +123,52 @@ class MockableLedgerAccess(walletExecutionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) Try(credDefs.filterKeys(c => credDefIds.contains(c)))
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def prepareSchemaTxn(schemaJson: String,
+                                fqSchemaId: FQSchemaId,
+                                submitterDID: DidStr,
+                                endorser: Option[String])
+                               (handler: Try[PreparedTxn] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) Try(PreparedTxn("context", NoSignature, schemaJson.getBytes, NoEndorsement))
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def prepareCredDefTxn(credDefJson: String,
+                                 fqCredDefId: FQCredDefId,
+                                 submitterDID: DidStr,
+                                 endorser: Option[String])
+                                (handler: Try[PreparedTxn] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) Try(PreparedTxn("context", NoSignature, credDefJson.getBytes, NoEndorsement))
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def submitTxn(preparedTxn: PreparedTxn,
+                         signature: Array[Byte],
+                         endorsement: Array[Byte])
+                        (handler: Try[SubmittedTxn] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) Try(SubmittedTxn())
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def resolveSchema(fqSchemaId: FQSchemaId)(handler: Try[Schema] => Unit): Unit = {
+    handler {
+      // todo Use schema store to retrieve schema
+      Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def resolveCredDef(fqCredDefId: FQCredDefId)(handler: Try[CredDef] => Unit): Unit = {
+    handler {
+      // todo Use cred def store retrieve cred def
+      Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 }

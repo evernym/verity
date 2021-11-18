@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine.roster
 
-import com.evernym.verity.protocol.engine.Roster
+import com.evernym.verity.protocol.engine.context.Roster
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 

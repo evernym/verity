@@ -125,13 +125,15 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                                                      name: String,
                                                      schemaId: String,
                                                      tag: Option[String],
-                                                     revocationDetails: Option[RevocationRegistryConfig]
+                                                     revocationDetails: Option[RevocationRegistryConfig],
+                                                     funcParams: Seq[Any] = Seq.empty
                                                     ): String =
   {
     val versionConversion = versionToModule(version)
 
     var rev_s = ""
     val rev = revocationDetails.orNull
+    val fParams = if (funcParams.isEmpty) "context" else Seq("context", mkParams(funcParams)).mkString(",")
     if (rev != null) {
       val rev_json = s"""JsonObject.Parse(@$oneQuote${rev.toJson.toString.replace("\"", "\"\"")}$oneQuote)"""
       rev_s = "new RevocationRegistryConfig((JsonObject)" + rev_json + ")"
@@ -140,7 +142,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     executeOneLine(
       ctx,
       s"using VeritySDK.Protocols.WriteCredDef;",
-      s"WriteCredentialDefinition.$versionConversion(${stringParam(name)}, ${stringParam(schemaId)}, ${stringParam(tag.orNull)}, $rev_s).write(context)"
+      s"WriteCredentialDefinition.$versionConversion(${stringParam(name)}, ${stringParam(schemaId)}, ${stringParam(tag.orNull)}, $rev_s).write(${fParams})"
     )
   }
 
@@ -216,6 +218,8 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     new UndefinedWriteSchema_0_6 {
       override def write(ctx: Context): Unit =
         executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq))
+      override def write(ctx: Context, endorserDid: String): Unit =
+        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq), Seq(endorserDid))
     }
   }
 
@@ -223,6 +227,8 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     new UndefinedWriteCredentialDefinition_0_6 {
       override def write(ctx: Context): Unit =
         executeCmdForWriteCredentialDefinition(ctx, this.version, name, schemaId, tag, revocationDetails)
+      override def write(ctx: Context, endorserDid: String): Unit =
+        executeCmdForWriteCredentialDefinition(ctx, this.version, name, schemaId, tag, revocationDetails, Seq(endorserDid))
     }
   }
 

@@ -2,12 +2,13 @@ package com.evernym.verity.actor.agent.msghandler.outgoing
 
 import akka.actor.{Actor, Props}
 import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.actor.agent.{MsgSendingFailed, MsgSentSuccessfully}
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor.agent.msghandler.{SendMsgToMyDomain, SendMsgToTheirDomain}
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.protocol.engine.{MsgId, MsgName}
-import com.evernym.verity.protocol.protocols.{MsgSendingFailed, MsgSentSuccessfully}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 
 import scala.concurrent.duration._
 
@@ -19,18 +20,19 @@ class OutgoingMsgSender(maxRetryAttempt: Int, initialDelayInSeconds: Int)
 
   override def receiveCmd: Receive = {
     case smd: SendMsgToMyDomain     =>
-      sendCmdToParent(ProcessSendMsgToMyDomain(smd))
-      stopActor()
+      val cmd = ProcessSendMsgToMyDomain(smd)
+      sendCmdToParent(cmd)
+      setNewReceiveBehaviour(retryIfFailed(cmd))
 
     case std: SendMsgToTheirDomain  =>
       val cmd = ProcessSendMsgToTheirDomain(std)
       sendCmdToParent(cmd)
-      setNewReceiveBehaviour(theirDomainNotifier(cmd))
+      setNewReceiveBehaviour(retryIfFailed(cmd))
   }
 
-  def theirDomainNotifier(cmd: ProcessSendMsgToTheirDomain): Receive = {
-    case _: MsgSendingFailed     => handleMsgSendingFailed()
+  def retryIfFailed(cmd: Any): Receive = {
     case _: MsgSentSuccessfully  => stopActor()
+    case _: MsgSendingFailed     => handleMsgSendingFailed()
     case Retry                   => sendCmdToParent(cmd)
   }
 

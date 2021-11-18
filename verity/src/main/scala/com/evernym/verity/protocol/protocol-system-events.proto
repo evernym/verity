@@ -3,7 +3,7 @@ syntax = "proto3";
 // Brought in from scalapb-runtime
 import "scalapb/scalapb.proto";
 
-package com.evernym.verity.protocol;
+package com.evernym.verity.protocol.engine.events;
 
 message DomainIdSet {
     option (scalapb.message).extends = "com.evernym.verity.protocol.engine.ProtoSystemEvent";

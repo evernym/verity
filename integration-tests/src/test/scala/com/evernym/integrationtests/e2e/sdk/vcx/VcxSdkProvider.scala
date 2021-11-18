@@ -8,8 +8,9 @@ import com.evernym.sdk.vcx.utils.UtilsApi
 import com.evernym.sdk.vcx.vcx.VcxApi
 import com.evernym.sdk.vcx.wallet.WalletApi
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgFamily
 import com.evernym.verity.protocol.protocols.connections.v_1_0.ConnectionsMsgFamily
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
@@ -20,6 +21,7 @@ import com.evernym.verity.sdk.protocols.updateendpoint.v0_6.UpdateEndpointV0_6
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.{RevocationRegistryConfig, WriteCredentialDefinitionV0_6}
 import com.evernym.verity.sdk.protocols.writeschema.v0_6.WriteSchemaV0_6
 import com.evernym.verity.sdk.utils.Context
+import com.typesafe.scalalogging.Logger
 import org.json.{JSONArray, JSONException, JSONObject}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.Interval
@@ -99,6 +101,9 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
   with Eventually {
 
   override def sdkType: String = "VCX"
+
+//  override val logger: Logger = getLoggerByName(getClass.getName)
+
 
   lazy val ariesSupportedMsgs = Set(
     ConnectionsMsgFamily.msgType("response")

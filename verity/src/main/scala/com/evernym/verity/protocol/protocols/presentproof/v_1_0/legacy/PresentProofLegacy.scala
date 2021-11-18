@@ -1,17 +1,18 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0.legacy
 
-import com.evernym.verity.actor.wallet.CredForProofReqCreated
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.protocol.Control
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.observability.metrics.InternalSpan
-import com.evernym.verity.protocol.engine.util.?=>
+import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Protocol
+import com.evernym.verity.protocol.engine.asyncapi.wallet.CredForProofResult
+import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProblemReportCodes._
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Role.{Prover, Verifier}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults._
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0._
+import com.evernym.verity.util.OptionUtil
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -27,23 +28,29 @@ trait PresentProofLegacy
   // TODO: Remove All Legacy control, protocol, and events during Ticket=VE-2605
   def legacyApplyEvent: ApplyEvent = {
     //Prover Events
-    case (_: StatesLegacy.Initialized    , _, RequestGiven(r)           ) => StatesLegacy.initRequestReceived(r)
-    case (_: StatesLegacy.Initialized    , _, PresentationProposed(a, p)) => StatesLegacy.initProposalSent(a, p)
+    case (_: States.Initialized          , _, RequestGiven(r)           ) => StatesLegacy.initRequestReceived(r)
+    case (_: States.Initialized          , _, PresentationProposed(a, p)) => StatesLegacy.initProposalSent(a, p)
     case (s: StatesLegacy.ProposalSent   , _, RequestGiven(r)           ) => StatesLegacy.RequestReceived(s.data.addRequest(r))
     case (s: StatesLegacy.RequestReceived, _, PresentationUsed(p)       ) => StatesLegacy.Presented(s.data.addPresentation(p))
     case (s: StatesLegacy.RequestReceived, _, PresentationProposed(a, p)) => StatesLegacy.ProposalSent(s.data.addProposal(a, p))
+    case (s: StatesLegacy.Presented      , _, PresentationAck(a)        ) => StatesLegacy.Presented(s.data.addAck(a))
 
     //Verifier Events
-    case (_: StatesLegacy.Initialized     , _, RequestUsed(r)          ) => StatesLegacy.initRequestSent(r)
-    case (_: StatesLegacy.Initialized     , _, ProposeReceived(a, p)   ) => StatesLegacy.initProposalReceived(a, p)
+    case (_: States.Initialized           , _, RequestUsed(r)          ) => StatesLegacy.initRequestSent(r)
+    case (_: States.Initialized           , _, ProposeReceived(a, p)   ) => StatesLegacy.initProposalReceived(a, p)
     case (s: StatesLegacy.ProposalReceived, _, RequestUsed(r)          ) => StatesLegacy.RequestSent(s.data.addRequest(r))
     case (s: StatesLegacy.RequestSent     , _, PresentationGiven(p)    ) => StatesLegacy.Complete(s.data.addPresentation(p))
     case (s: StatesLegacy.RequestSent     , _, ProposeReceived(a, p)   ) => StatesLegacy.ProposalReceived(s.data.addProposal(a, p))
+    case (s: StatesLegacy.Complete        , _, AttributesGiven(ap)     ) => StatesLegacy.Complete(s.data.addAttributesPresented(ap))
+    case (s: StatesLegacy.Complete        , _, ResultsOfVerification(r)) => StatesLegacy.Complete(s.data.addVerificationResults(r))
+
+    //Common
+    case (s: HasData                      , _, Rejection(role, reason) ) => StatesLegacy.Rejected(s.data, Role.numToRole(role), OptionUtil.blankOption(reason))
   }
 
   def legacyProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {
-    case (StatesLegacy.Initialized(_),  _, msg: Msg.RequestPresentation) => handleMsgRequestLegacy(msg)
-    case (StatesLegacy.Initialized(_),  _, msg: Msg.ProposePresentation) => apply(Role.Verifier.toEvent); handleMsgProposePresentationLegacy(msg)
+    case (States.Initialized(_),        _, msg: Msg.RequestPresentation) => handleMsgRequestLegacy(msg)
+    case (States.Initialized(_),        _, msg: Msg.ProposePresentation) => apply(Role.Verifier.toEvent); handleMsgProposePresentationLegacy(msg)
     case (s: StatesLegacy.RequestSent,  _, msg: Msg.Presentation       ) => handleMsgPresentationLegacy(s, msg)
   }
 
@@ -73,7 +80,7 @@ trait PresentProofLegacy
     val proofRequest: ProofRequest = s.data.requests.head
     val proofRequestJson: String = DefaultMsgCodec.toJson(proofRequest)
 
-    ctx.wallet.credentialsForProofReq(proofRequestJson) { credentialsNeededJson: Try[CredForProofReqCreated] =>
+    ctx.wallet.credentialsForProofReq(proofRequestJson) { credentialsNeededJson: Try[CredForProofResult] =>
       val credentialsNeeded =
         credentialsNeededJson.map(_.cred).map(DefaultMsgCodec.fromJson[AvailableCredentials](_))
       val (credentialsUsedJson, ids) = credentialsToUse(credentialsNeeded, msg.selfAttestedAttrs)

@@ -6,6 +6,7 @@ import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgBase
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
 case class UpdateMsgStatusReqMsg_MFV_0_5(statusCode: String, uids: List[String]) extends MsgBase {
   override def validate(): Unit = {

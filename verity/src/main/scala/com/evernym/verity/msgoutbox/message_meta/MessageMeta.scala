@@ -21,33 +21,39 @@ import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.{RetentionPolicy, Status}
 import java.time.ZonedDateTime
 
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
+import com.typesafe.scalalogging.Logger
 
 
 object MessageMeta {
 
   //commands
   trait Cmd extends ActorMessage
+  sealed trait ProcessedStateCmd extends Cmd
+  sealed trait UninitializedStateCmd extends Cmd
+  sealed trait InitializedStateCmd extends Cmd
+
   object Commands {
-    case class Get(replyTo: ActorRef[Replies.GetMsgReply]) extends Cmd
+    case class Get(replyTo: ActorRef[Replies.GetMsgReply]) extends ProcessedStateCmd with UninitializedStateCmd with InitializedStateCmd
     case class Add(`type`: String,
                    retentionPolicy: String, //TODO: finalize format etc
                    targetOutboxIds: Set[String],
                    legacyMsgData: Option[LegacyMsgData]=None, //TODO: needs to finalize need of this
                    recipPackaging: Option[RecipPackaging], //TODO: needs to finalize need of this
-                   replyTo: ActorRef[Replies.AddMsgReply]) extends Cmd
+                   replyTo: ActorRef[Replies.AddMsgReply]) extends InitializedStateCmd with UninitializedStateCmd
 
     case class RecordMsgActivity(outboxId: String,
                                  deliveryStatus: String,
-                                 msgActivity: Option[MsgActivity]) extends Cmd
+                                 msgActivity: Option[MsgActivity]) extends InitializedStateCmd
 
     case class ProcessedForOutbox(outboxId: String,
                                   deliveryStatus: String,
                                   msgActivity: Option[MsgActivity],
-                                  replyTo: ActorRef[Reply]) extends Cmd
+                                  replyTo: ActorRef[ProcessedForOutboxReply]) extends ProcessedStateCmd with InitializedStateCmd
 
-    case class GetDeliveryStatus(replyTo: ActorRef[Replies.MsgDeliveryStatus]) extends Cmd
+    case class GetDeliveryStatus(replyTo: ActorRef[Replies.MsgDeliveryStatus]) extends ProcessedStateCmd with InitializedStateCmd
 
-    case class MsgStoreReplyAdapter(reply: MsgStore.Reply) extends Cmd
+    case class MsgStoreReplyAdapter(reply: MsgStore.GetPayloadReply) extends InitializedStateCmd
   }
 
   //events
@@ -68,6 +74,7 @@ object MessageMeta {
 
   //reply messages
   trait Reply extends ActorMessage
+  sealed trait ProcessedForOutboxReply extends Reply
   object Replies {
     trait AddMsgReply extends Reply
     case object MsgAdded extends AddMsgReply
@@ -78,12 +85,14 @@ object MessageMeta {
     case class Msg(msgId: MsgId,
                    `type`: String,
                    legacyData: Option[LegacyData],
+                   retentionPolicy: RetentionPolicy,
+                   recipPackaging: Option[RecipPackaging],
                    payload: Option[Array[Byte]] = None) extends GetMsgReply
 
     case class MsgDeliveryStatus(isProcessed: Boolean,
                                  outboxDeliveryStatus: Map[OutboxId, OutboxDeliveryStatus] = Map.empty) extends Reply
 
-    case class RemoveMsg(msgId: MsgId) extends Reply
+    case class RemoveMsg(msgId: MsgId) extends ProcessedForOutboxReply
   }
 
   //common objects used by state and replies
@@ -95,7 +104,7 @@ object MessageMeta {
                        legacyData: Option[LegacyData],
                        payload: Option[Array[Byte]] = None) {
 
-    def buildMsg(msgId: MsgId): Msg = Msg(msgId, `type`, legacyData, payload)
+    def buildMsg(msgId: MsgId): Msg = Msg(msgId, `type`, legacyData, retentionPolicy, recipPackaging, payload)
   }
   case object LegacyData {
     def apply(lmd: LegacyMsgData): LegacyData = LegacyData(lmd.senderDID, lmd.refMsgId)
@@ -108,6 +117,7 @@ object MessageMeta {
 
   // behaviour
   val TypeKey: EntityTypeKey[Cmd] = EntityTypeKey("MessageMeta")
+  private val logger: Logger = getLoggerByClass(getClass)
 
   def apply(entityContext: EntityContext[Cmd],
             msgStore: ActorRef[MsgStore.Cmd],
@@ -132,13 +142,22 @@ object MessageMeta {
   private def commandHandler(msgId: MsgId,
                              msgStoreAdapter: ActorRef[MsgStore.Cmd])
                             (implicit context: ActorContext[Cmd],
-                             msgStoreReplyAdapter: ActorRef[MsgStore.Reply]): (State, Cmd) => ReplyEffect[Event, State] = {
+                             msgStoreReplyAdapter: ActorRef[MsgStore.GetPayloadReply]): (State, Cmd) => ReplyEffect[Event, State] = {
 
-    case (States.Uninitialized, Commands.Get(replyTo)) =>
+    case (States.Uninitialized, cmd: UninitializedStateCmd) => uninitializedStateHandler(cmd)
+    case (st: States.Initialized, cmd: InitializedStateCmd) => initializedStateHandler(msgId, msgStoreAdapter, st)(context, msgStoreReplyAdapter)(cmd)
+    case (st: States.Processed, cmd: ProcessedStateCmd) => processedStateHandler(msgId, st)(cmd)
+    case (st, cmd) =>
+      logger.warn(s"Received unexpected message ${cmd} in state ${st}")
+      Effect.noReply
+  }
+
+  private def uninitializedStateHandler: UninitializedStateCmd => ReplyEffect[Event, State] = {
+    case Commands.Get(replyTo) =>
       Effect
         .reply(replyTo)(Replies.MsgNotYetAdded)
 
-    case (States.Uninitialized, c: Commands.Add) =>
+    case c: Commands.Add =>
       Effect
         .persist(
           Events.MsgAdded(
@@ -150,20 +169,29 @@ object MessageMeta {
             c.legacyMsgData
           ))
         .thenReply(c.replyTo)(_ => Replies.MsgAdded)
+  }
 
-    case (_: States.Initialized, c: Commands.Add) =>
+  private def initializedStateHandler(
+                                       msgId: MsgId,
+                                       msgStoreAdapter: ActorRef[MsgStore.Cmd],
+                                       st: States.Initialized
+                                     )(
+                                       implicit context: ActorContext[Cmd],
+                                       msgStoreReplyAdapter: ActorRef[MsgStore.GetPayloadReply]
+                                     ): InitializedStateCmd => ReplyEffect[Event, State] = {
+    case c: Commands.Add =>
       Effect
         .reply(c.replyTo)(Replies.MsgAlreadyAdded)
 
-    case (st: States.Initialized, Commands.Get(replyTo)) =>
+    case Commands.Get(replyTo) =>
       Effect
         .reply(replyTo)(st.msgDetail.buildMsg(msgId))
 
-    case (st: States.Initialized, Commands.GetDeliveryStatus(replyTo)) =>
+    case Commands.GetDeliveryStatus(replyTo) =>
       Effect
         .reply(replyTo)(Replies.MsgDeliveryStatus(isProcessed = false, st.deliveryStatus))
 
-    case (_: States.Initialized, rma: Commands.RecordMsgActivity) =>
+    case rma: Commands.RecordMsgActivity =>
       val msgActivityRecorded = {
         val msgActivity = rma.msgActivity.map { ma =>
           Events.MsgActivity(ma.detail, Option(TimeZoneUtil.getMillisForCurrentUTCZonedDateTime))
@@ -174,7 +202,7 @@ object MessageMeta {
         .persist(msgActivityRecorded)
         .thenNoReply()
 
-    case (st: States.Initialized, pfo: Commands.ProcessedForOutbox) =>
+    case pfo: Commands.ProcessedForOutbox =>
       if (! st.deliveryStatus.get(pfo.outboxId).exists(_.isProcessed)) {
         val msgActivityRecorded = {
           val msgActivity = pfo.msgActivity.map { ma =>
@@ -191,7 +219,7 @@ object MessageMeta {
           .thenNoReply()
       } else Effect.noReply
 
-    case (st: States.Initialized, Commands.MsgStoreReplyAdapter(MsgStore.Replies.PayloadDeleted)) =>
+    case Commands.MsgStoreReplyAdapter(MsgStore.Replies.PayloadDeleted) =>
       Effect
         .persist(Events.PayloadDeleted())
         .thenRun{ (_: State) =>
@@ -201,16 +229,18 @@ object MessageMeta {
           }
         }
         .thenNoReply()
+  }
 
-    case (_: States.Processed, pfo: Commands.ProcessedForOutbox) =>
+  private def processedStateHandler(msgId: MsgId, st: States.Processed): ProcessedStateCmd => ReplyEffect[Event, State] = {
+    case pfo: Commands.ProcessedForOutbox =>
       Effect
         .reply(pfo.replyTo)(Replies.RemoveMsg(msgId))
 
-    case (st: States.Processed, Commands.GetDeliveryStatus(replyTo)) =>
+    case Commands.GetDeliveryStatus(replyTo) =>
       Effect
         .reply(replyTo)(Replies.MsgDeliveryStatus(isProcessed = true, st.deliveryStatus))
 
-    case (st: States.Processed, Commands.Get(replyTo)) =>
+    case Commands.Get(replyTo) =>
       Effect
         .reply(replyTo)(st.msgDetail.buildMsg(msgId))
   }
@@ -251,7 +281,7 @@ object MessageMeta {
   private def signalHandler(msgId: MsgId,
                             msgStoreAdapter: ActorRef[MsgStore.Cmd])
                            (implicit actorContext: ActorContext[Cmd],
-                            msgStoreReplyAdapter: ActorRef[MsgStore.Reply]): PartialFunction[(State, Signal), Unit] = {
+                            msgStoreReplyAdapter: ActorRef[MsgStore.GetPayloadReply]): PartialFunction[(State, Signal), Unit] = {
     case (st: States.Initialized, RecoveryCompleted) =>
       deletePayloadIfRequired(msgId, msgStoreAdapter, st)
   }
@@ -260,7 +290,7 @@ object MessageMeta {
                                       msgStore: ActorRef[MsgStore.Cmd],
                                       st: State)
                                      (implicit actorContext: ActorContext[Cmd],
-                                      msgStoreReplyAdapter: ActorRef[MsgStore.Reply]): Boolean = {
+                                      msgStoreReplyAdapter: ActorRef[MsgStore.GetPayloadReply]): Boolean = {
     st match {
       case i: Initialized =>
         //if message delivery status is one of the 'terminal state'

@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.protocols.updateConfigs.v_0_6
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.{GetStatus, InitMsg, SendConfig, Update}

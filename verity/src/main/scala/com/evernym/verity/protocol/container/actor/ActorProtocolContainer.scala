@@ -323,13 +323,10 @@ class ActorProtocolContainer[
 
   override lazy val ledger =
     new LedgerAccessController(
-      grantedAccessRights,
       null, //TODO: replace this with actual VDR Adapter implementation
-      LedgerAccessAPI(
         agentActorContext.generalCache,
         agentActorContext.ledgerSvc,
         wallet
-      )
     )
 
   override lazy val urlShortening =

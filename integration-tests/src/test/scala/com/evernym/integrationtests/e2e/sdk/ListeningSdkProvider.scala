@@ -48,7 +48,7 @@ trait MsgReceiver extends Eventually {
     assertAndExpectMsg(None, max)(check)
   }
 
-  protected def assertName(expectedName: String, msg: JSONObject): Boolean = {
+  private def assertName(expectedName: String, msg: JSONObject): Boolean = {
     try {
       msg.getString(`@TYPE`)
         .endsWith(expectedName)
@@ -119,13 +119,14 @@ trait ListeningSdkProvider extends MsgReceiver {
   }
 
   def logReceivedMsg(msg: JSONObject): Unit = {
-    val msgType: String = Try{msg.getString(`@TYPE`)}.getOrElse("untyped-message")
-    if (msgType.endsWith("problem-report")) {
-      logger.warn(s"Received error report: ${msg.toString}")
+    val msgType = msg.optString(`@TYPE`, "untyped")
+    if (msgType.endsWith("problem-report") || msgType == "untyped"){
+      logger.info(s"Received $msgType: ${msg.toString}")
     }
     else {
       logger.info(s"Received $msgType")
     }
+
   }
 
   def expectMsg(max: Duration): JSONObject = {

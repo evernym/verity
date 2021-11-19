@@ -98,6 +98,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        - name: VERITY__METRICS__TAGS__POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         volumeMounts:
         - name: config-files
           mountPath: /etc/verity/verity-application/config-map

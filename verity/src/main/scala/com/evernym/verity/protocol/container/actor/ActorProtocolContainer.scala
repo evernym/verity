@@ -403,6 +403,11 @@ class ActorProtocolContainer[
     }
   }
 
+  /**
+   * If we want to execute Future without a temporal actor, we can't use runAsyncOp method for this purpose
+   * It's because for Future(Failure(..)) case all saved callbacks will be cleaned via abortTransaction()
+   * But Failure case can be expected
+   */
   override protected def runFutureAsyncOp(op: => Future[Any]): Unit = {
     setNewReceiveBehaviour(toAsyncOpInProgressBehaviour, discardOld = false)
     withHandleResp {

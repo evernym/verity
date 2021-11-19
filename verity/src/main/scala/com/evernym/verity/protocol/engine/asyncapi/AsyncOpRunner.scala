@@ -32,8 +32,8 @@ trait AsyncOpRunner {
     runAsyncOp(asyncOp)
   }
 
-  final def withAsyncFutureOpRunner[T](asyncOp: => Future[Any],
-                                 cbHandler: Try[T] => Unit): Unit = {
+  final def withFutureOpRunner[T](asyncOp: => Future[Any],
+                                  cbHandler: Try[T] => Unit): Unit = {
     pushAsyncOpCallbackHandler(cbHandler)
     runFutureAsyncOp(asyncOp)
   }

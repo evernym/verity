@@ -306,7 +306,7 @@ lazy val commonLibraryDependencies = {
     "com.twitter" %% "chill-akka" % "0.10.0",    //serialization/deserialization for akka remoting
 
     //vdr tools dependencies
-    "com.evernym.vdrtools" % "vdr-tools" % vdrtoolswrapperver,
+    "com.evernym.vdrtools" % "vdr-tools" % vdrtoolsWrapperVer,
 
     //logging dependencies
     "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4",

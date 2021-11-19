@@ -1,20 +1,17 @@
 package com.evernym.verity.protocol.engine
 
 import akka.actor.ActorRef
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.wallet._
-import com.evernym.verity.config.AppConfig
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
-import com.evernym.verity.ledger.LedgerRequest
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
-import com.evernym.verity.protocol.container.asyncapis.wallet.{SchemaCreated, WalletAccessAPI}
-import com.evernym.verity.protocol.engine.asyncapi.wallet.{WalletAccess, WalletAccessController}
-import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessSign, AccessVerify}
+import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
-import com.evernym.verity.protocol.testkit.MockableWalletAccess
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessAdapter
+import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessSign, AccessVerify}
 import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet, TestWallet}
 import com.evernym.verity.util.{ParticipantUtil, TestExecutionContextProvider}
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
@@ -22,7 +19,7 @@ import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 
-class WalletAccessControllerSpec
+class WalletAccessAdapterSpec
   extends BasicSpec
     with MockAsyncOpRunner {
 
@@ -33,7 +30,7 @@ class WalletAccessControllerSpec
 
   "Wallet access controller" - {
     "mixed functions should pass if having correct access rights" in {
-      val controller = new WalletAccessController(Set(AccessNewDid, AccessVerify), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controller = new WalletAccessAdapter(Set(AccessNewDid, AccessVerify), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controller.newDid(){ result => result.isSuccess shouldBe true }
       controller.sign(Array[Byte](1, 2, 3)){ result => result.isSuccess shouldBe false }
       controller.verify("participantId", Array[Byte](1, 2, 3), Array[Byte](1, 2, 3)) { result =>
@@ -41,34 +38,34 @@ class WalletAccessControllerSpec
       }
     }
     "newDid should pass if having correct access rights" in {
-      val controllerWithRight = new WalletAccessController(Set(AccessNewDid), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithRight = new WalletAccessAdapter(Set(AccessNewDid), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithRight.newDid() { result => result.isSuccess shouldBe true }
-      val controllerWithoutRight = new WalletAccessController(Set(), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithoutRight = new WalletAccessAdapter(Set(), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithoutRight.newDid(){ result => result.isSuccess shouldBe false }
     }
     "sign should pass if having correct access rights" in {
-      val controllerWithRight = new WalletAccessController(Set(AccessSign), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithRight = new WalletAccessAdapter(Set(AccessSign), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithRight.sign(Array[Byte](1, 2, 3)){ result => result.isSuccess shouldBe true }
-      val controllerWithoutRight = new WalletAccessController(Set(), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithoutRight = new WalletAccessAdapter(Set(), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithoutRight.sign(Array[Byte](1, 2, 3)){ result => result.isSuccess shouldBe false }
     }
     "participantId verify should pass if having correct access rights" in {
-      val controllerWithRight = new WalletAccessController(Set(AccessVerify), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithRight = new WalletAccessAdapter(Set(AccessVerify), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithRight.verify("participantId", Array[Byte](1, 2, 3), Array[Byte](1, 2, 3)) { result =>
         result.isSuccess shouldBe true
       }
-      val controllerWithoutRight = new WalletAccessController(Set(), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithoutRight = new WalletAccessAdapter(Set(), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithoutRight.verify("participantId", Array[Byte](1, 2, 3), Array[Byte](1, 2, 3)) { result =>
         result.isSuccess shouldBe false
       }
     }
 
     "verkey verify should pass if having correct access rights" in {
-      val controllerWithRight = new WalletAccessController(Set(AccessVerify), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithRight = new WalletAccessAdapter(Set(AccessVerify), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithRight.verify(Array[Byte](1, 2, 3), Array[Byte](1, 2, 3), "verkey", SIGN_ED25519_SHA512_SINGLE) { result =>
         result.isSuccess shouldBe true
       }
-      val controllerWithoutRight = new WalletAccessController(Set(), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithoutRight = new WalletAccessAdapter(Set(), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithoutRight.verify(Array[Byte](1, 2, 3), Array[Byte](1, 2, 3), "verkey", SIGN_ED25519_SHA512_SINGLE) { result =>
         result.isSuccess shouldBe false
       }

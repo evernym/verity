@@ -33,10 +33,10 @@ import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentSto
 import com.evernym.verity.protocol.container.asyncapis.urlshortener.UrlShorteningAPI
 import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.asyncapi.AsyncOpRunner
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessController
+import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessAdapter
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessController
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
-import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessAdapter
 import com.evernym.verity.protocol.engine.container.{ProtocolContainer, RecordsEvents}
 import com.evernym.verity.protocol.engine.events.PairwiseRelIdsChanged
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
@@ -314,7 +314,7 @@ class ActorProtocolContainer[
 
 
   override lazy val wallet =
-    new WalletAccessController(
+    new WalletAccessAdapter(
       grantedAccessRights,
       new WalletAccessAPI(
         agentActorContext.walletAPI,
@@ -322,7 +322,7 @@ class ActorProtocolContainer[
     )
 
   override lazy val ledger =
-    new LedgerAccessController(
+    new LedgerAccessAdapter(
       null, //TODO: replace this with actual VDR Adapter implementation
         agentActorContext.generalCache,
         agentActorContext.ledgerSvc,
@@ -412,8 +412,9 @@ class ActorProtocolContainer[
     setNewReceiveBehaviour(toAsyncOpInProgressBehaviour, discardOld = false)
     withHandleResp {
       val result = op //given operation gets executed here
+      val sndr = sender()
       result.onComplete {
-        r => self.tell(AsyncOpResp(r), sender())
+        r => self.tell(AsyncOpResp(r), sndr)
       }
     }
   }

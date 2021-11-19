@@ -15,11 +15,11 @@ import com.evernym.verity.vdr._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-class LedgerAccessController(vdrTools: VDRAdapter,
-                             cache: Cache,
-                             ledgerSvc: LedgerSvc,
-                             _walletAccess: WalletAccess)
-                            (implicit val asyncOpRunner: AsyncOpRunner,
+class LedgerAccessAdapter(vdrTools: VDRAdapter,
+                          cache: Cache,
+                          ledgerSvc: LedgerSvc,
+                          _walletAccess: WalletAccess)
+                         (implicit val asyncOpRunner: AsyncOpRunner,
                              implicit val asyncAPIContext: AsyncAPIContext,
                              implicit val ec: ExecutionContext)
   extends LedgerAccess
@@ -53,8 +53,7 @@ class LedgerAccessController(vdrTools: VDRAdapter,
     }, handler)
   }
 
-  override def writeSchema(submitterDID: DidStr, schemaJson: String)
-                          (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
+  override def writeSchema(submitterDID: DidStr, schemaJson: String)(handler: Try[TxnResp] => Unit): Unit = {
     withFutureOpRunner({
       ledgerSvc.writeSchema(submitterDID, schemaJson, walletAccess)
     }, handler)
@@ -66,8 +65,7 @@ class LedgerAccessController(vdrTools: VDRAdapter,
       ledgerSvc.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)
     }, handler)
 
-  override def writeCredDef(submitterDID: DidStr, credDefJson: String)
-                           (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
+  override def writeCredDef(submitterDID: DidStr, credDefJson: String)(handler: Try[TxnResp] => Unit): Unit = {
     withFutureOpRunner({
       ledgerSvc.writeCredDef(submitterDID, credDefJson, walletAccess)
     }, handler)

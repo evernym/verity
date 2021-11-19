@@ -11,7 +11,7 @@ import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.ledger.LedgerAccessAPI
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, LedgerReadAccess}
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessController
+import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessAdapter
 import com.evernym.verity.protocol.testkit.MockableWalletAccess
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TestExecutionContextProvider
@@ -22,7 +22,7 @@ import com.evernym.verity.vdr.{CredDef, FQCredDefId, FQSchemaId, PreparedTxn, Sc
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-class LedgerAccessControllerSpec
+class LedgerAccessAdapterSpec
   extends BasicSpec
     with MockAsyncOpRunner {
   val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
@@ -54,14 +54,14 @@ class LedgerAccessControllerSpec
     }
   }
 
-  def ledgerAPI(cache: Cache, wa: WalletAccess = MockableWalletAccess()): LedgerAccessController = {
+  def ledgerAPI(cache: Cache, wa: WalletAccess = MockableWalletAccess()): LedgerAccessAdapter = {
     implicit val ec: ExecutionContext = executionContext
     val indyLedger = IndyLedger(List("indy:sovrin", "sov"), "genesis1-path", None)
     val vdrToolsConfig = VDRToolsConfig("/usr/lib", List(indyLedger))
     val vdrToolFactory = { _: VDRToolsFactoryParam => new TestVDRTools }
     import akka.actor.typed.scaladsl.adapter._
 
-    new LedgerAccessController(
+    new LedgerAccessAdapter(
       vdrImpl,
       cache,
       new MockLedgerSvc(AkkaTestBasic.system(), executionContext),
@@ -100,11 +100,11 @@ class LedgerAccessControllerSpec
 
       override def getCredDefs(credDefIds: Set[String])(handler: Try[Map[String, GetCredDefResp]] => Unit): Unit = ???
 
-      override def writeSchema(submitterDID: DidStr, schemaJson: String)(handler: Try[Either[Status.StatusDetail, TxnResp]] => Unit): Unit = ???
+      override def writeSchema(submitterDID: DidStr, schemaJson: String)(handler: Try[TxnResp] => Unit): Unit = ???
 
       override def prepareSchemaForEndorsement(submitterDID: DidStr, schemaJson: String, endorserDID: DidStr)(handler: Try[LedgerRequest] => Unit): Unit = ???
 
-      override def writeCredDef(submitterDID: DidStr, credDefJson: String)(handler: Try[Either[Status.StatusDetail, TxnResp]] => Unit): Unit = ???
+      override def writeCredDef(submitterDID: DidStr, credDefJson: String)(handler: Try[TxnResp] => Unit): Unit = ???
 
       override def prepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr)(handler: Try[LedgerRequest] => Unit): Unit = ???
 

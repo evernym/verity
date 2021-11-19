@@ -9,7 +9,7 @@ import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
-import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessAdapter
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.Status.StatusDetail
@@ -45,7 +45,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
 
   val testWallet = new TestWallet(executionContext, false)
   implicit val wap: WalletAPIParam = testWallet.wap
-  override val walletAccess = new WalletAccessController (
+  override val walletAccess = new WalletAccessAdapter (
     Set(),
     new WalletAccessAPI (
       testWallet.testWalletAPI,
@@ -67,12 +67,11 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
-  override def writeCredDef(submitterDID: DidStr, credDefJson: String)
-                           (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
+  override def writeCredDef(submitterDID: DidStr, credDefJson: String)(handler: Try[TxnResp] => Unit): Unit = {
     handler {
       if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
       else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
-      else if (ledgerAvailable) Try(Right(TxnResp(submitterDID, None, None, "", None, 0, None)))
+      else if (ledgerAvailable) Try(TxnResp(submitterDID, None, None, "", None, 0, None))
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
@@ -84,12 +83,11 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
-  override def writeSchema(submitterDID: DidStr, schemaJson: String)
-                          (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
+  override def writeSchema(submitterDID: DidStr, schemaJson: String)(handler: Try[TxnResp] => Unit): Unit = {
     handler {
       if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
       else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
-      else if (ledgerAvailable) Try(Right(TxnResp(submitterDID, None, None, "", None, 0, None)))
+      else if (ledgerAvailable) Try(TxnResp(submitterDID, None, None, "", None, 0, None))
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }

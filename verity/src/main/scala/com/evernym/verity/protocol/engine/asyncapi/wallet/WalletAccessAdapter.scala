@@ -6,9 +6,9 @@ import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner, 
 
 import scala.util.Try
 
-class WalletAccessController(val accessRights: Set[AccessRight],
-                             val walletExecutor: WalletAsyncOps)
-                            (implicit val asyncOpRunner: AsyncOpRunner)
+class WalletAccessAdapter(val accessRights: Set[AccessRight],
+                          val walletExecutor: WalletAsyncOps)
+                         (implicit val asyncOpRunner: AsyncOpRunner)
 
   extends WalletAccess
     with BaseAccessController {

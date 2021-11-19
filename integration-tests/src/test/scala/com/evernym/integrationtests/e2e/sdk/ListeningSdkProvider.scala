@@ -16,7 +16,6 @@ import org.scalatest.time.{Millis, Span}
 import scala.collection.mutable
 import scala.concurrent.duration.Duration
 import scala.language.postfixOps
-import scala.util.Try
 
 trait MsgReceiver extends Eventually {
   def shouldExpectMsg(): Boolean = true
@@ -121,10 +120,10 @@ trait ListeningSdkProvider extends MsgReceiver {
   def logReceivedMsg(msg: JSONObject): Unit = {
     val msgType = msg.optString(`@TYPE`, "untyped")
     if (msgType.endsWith("problem-report") || msgType == "untyped"){
-      logger.info(s"Received $msgType: ${msg.toString}")
+      logger.info(s"SDK Listener received message '$msgType': ${msg.toString}")
     }
     else {
-      logger.info(s"Received $msgType")
+      logger.info(s"SDK Listener received message '$msgType''")
     }
 
   }

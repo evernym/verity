@@ -114,16 +114,18 @@ object VerityLocalConfig {
       s"""
          |verity.lib-vdrtools {
          |  ledger {
-         |    transaction_author_agreement = {
-         |      agreements = {
-         |        "1.0.0" {
-         |          "digest" = "a0ab0aada7582d4d211bf9355f36482e5cb33eeb46502a71e6cc7fea57bb8305"
-         |          "mechanism" = "on_file"
-         |          "time-of-acceptance" = "2019-11-18"
+         |    indy {
+         |      transaction_author_agreement = {
+         |        agreements = {
+         |          "1.0.0" {
+         |            "digest" = "a0ab0aada7582d4d211bf9355f36482e5cb33eeb46502a71e6cc7fea57bb8305"
+         |            "mechanism" = "on_file"
+         |            "time-of-acceptance" = "2019-11-18"
+         |          }
          |        }
+         |        enabled = $taaEnabled
+         |        auto-accept = $taaAutoAccept
          |      }
-         |      enabled = $taaEnabled
-         |      auto-accept = $taaAutoAccept
          |    }
          |  }
          |}""".stripMargin

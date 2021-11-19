@@ -115,6 +115,17 @@ data:
       }
     }
     {{- end }}
+  msg-types-for-alert-push-notif.conf: |
+    {{- if .Values.msgTypesAlertPushNotif }}
+    {
+    "verity": {
+      "services": {
+        "push-notif-service":
+{{ toPrettyJson .Values.msgTypesAlertPushNotif | indent 10 }}
+        }
+      }
+    }
+    {{- end }}
   logback.xml: |
     <?xml version='1.0' encoding='UTF-8'?>
     <configuration scan="true" scanPeriod="60 seconds">

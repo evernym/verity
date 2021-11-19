@@ -121,9 +121,8 @@ trait ListeningSdkProvider extends MsgReceiver {
     val msgType = msg.optString(`@TYPE`, "untyped")
     if (msgType.endsWith("problem-report") || msgType == "untyped"){
       logger.info(s"SDK Listener received message '$msgType': ${msg.toString}")
-    }
-    else {
-      logger.info(s"SDK Listener received message '$msgType''")
+    } else {
+      logger.info(s"SDK Listener received message '$msgType'")
     }
 
   }

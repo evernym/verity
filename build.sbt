@@ -47,7 +47,6 @@ val evernymDevRepo = DebianRepo(
 val libVdrToolsVer = "0.8.0"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libindy.so"),
-  NonMatchingDistLib("libnullpay-async", libVdrToolsVer, "libnullpay.so"),
   NonMatchingLib("libvcx", "0.12.0-bionic~447", "libvcx.so")  // For integration testing ONLY
 )
 
@@ -55,8 +54,7 @@ val sharedLibDeps = Seq(
 val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 
 //dependency versions
-val vdrtoolswrapperver  = "0.8.0"
-
+val vdrtoolsWrapperVer  = "0.8.0"
 val akkaVer         = "2.6.17"
 val akkaHttpVer     = "10.2.7"
 val akkaMgtVer      = "1.1.1"

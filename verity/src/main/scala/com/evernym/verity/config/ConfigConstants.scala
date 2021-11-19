@@ -110,10 +110,11 @@ object ConfigConstants {
   val LIB_VDRTOOLS_WALLET_TYPE = s"$LIB_VDRTOOLS_WALLET.type"
 
   private val LIB_VDRTOOLS_LEDGER = s"$LIB_VDRTOOLS.ledger"
-  val LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION = s"$LIB_VDRTOOLS_LEDGER.genesis-txn-file-location"
-  val LIB_INDY_LEDGER_POOL_NAME = s"$LIB_VDRTOOLS_LEDGER.pool-name"
-  val LIB_INDY_LEDGER_TXN_PROTOCOL_VERSION = s"$LIB_VDRTOOLS_LEDGER.txn-protocol-version"
-  val LIB_INDY_LEDGER_TAA = s"$LIB_VDRTOOLS_LEDGER.transaction_author_agreement"
+  val LIB_INDY_LEDGER = s"$LIB_VDRTOOLS_LEDGER.indy"
+  val LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION = s"$LIB_INDY_LEDGER.genesis-txn-file-location"
+  val LIB_INDY_LEDGER_POOL_NAME = s"$LIB_INDY_LEDGER.pool-name"
+  val LIB_INDY_LEDGER_TXN_PROTOCOL_VERSION = s"$LIB_INDY_LEDGER.txn-protocol-version"
+  val LIB_INDY_LEDGER_TAA = s"$LIB_INDY_LEDGER.transaction_author_agreement"
 
   private val INFO_BIP = s"$SMS_EXTERNAL_SVC.info-bip"
   val INFO_BIP_ENDPOINT = s"$INFO_BIP.endpoint"
@@ -126,7 +127,7 @@ object ConfigConstants {
   val LIB_INDY_LEDGER_TAA_ENABLED = s"$LIB_INDY_LEDGER_TAA.enabled"
   val LIB_INDY_LEDGER_TAA_AUTO_ACCEPT = s"$LIB_INDY_LEDGER_TAA.auto-accept"
 
-  private val LIB_INDY_LEDGER_POOL_CONFIG = s"$LIB_VDRTOOLS_LEDGER.pool-config"
+  private val LIB_INDY_LEDGER_POOL_CONFIG = s"$LIB_INDY_LEDGER.pool-config"
   val LIB_INDY_LEDGER_POOL_CONFIG_CONN_MANAGER_OPEN_TIMEOUT= s"$LIB_INDY_LEDGER_POOL_CONFIG.connection-manager-open-timeout"
   val LIB_INDY_LEDGER_POOL_CONFIG_TIMEOUT= s"$LIB_INDY_LEDGER_POOL_CONFIG.timeout"
   val LIB_INDY_LEDGER_POOL_CONFIG_EXTENDED_TIMEOUT= s"$LIB_INDY_LEDGER_POOL_CONFIG.extended-timeout"

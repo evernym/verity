@@ -135,6 +135,7 @@ object K8sConfigTemplateGen {
                                   |include "config-map/metrics.conf"
                                   |include "config-map/customer.conf"
                                   |include "config-map/sms-preferred-order.conf"
+                                  |include "config-map/msg-types-for-alert-push-notif.conf"
                                   |include "config-map/custom.conf"""".stripMargin
   }
 

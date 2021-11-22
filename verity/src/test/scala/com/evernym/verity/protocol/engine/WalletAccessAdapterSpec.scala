@@ -30,7 +30,7 @@ class WalletAccessAdapterSpec
 
   "Wallet access controller" - {
     "mixed functions should pass if having correct access rights" in {
-      val controller = new WalletAccessAdapter(Set(AccessNewDid, AccessVerify), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controller = new WalletAccessAdapter(testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controller.newDid(){ result => result.isSuccess shouldBe true }
       controller.sign(Array[Byte](1, 2, 3)){ result => result.isSuccess shouldBe false }
       controller.verify("participantId", Array[Byte](1, 2, 3), Array[Byte](1, 2, 3)) { result =>
@@ -38,34 +38,34 @@ class WalletAccessAdapterSpec
       }
     }
     "newDid should pass if having correct access rights" in {
-      val controllerWithRight = new WalletAccessAdapter(Set(AccessNewDid), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithRight = new WalletAccessAdapter(testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithRight.newDid() { result => result.isSuccess shouldBe true }
-      val controllerWithoutRight = new WalletAccessAdapter(Set(), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithoutRight = new WalletAccessAdapter(testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithoutRight.newDid(){ result => result.isSuccess shouldBe false }
     }
     "sign should pass if having correct access rights" in {
-      val controllerWithRight = new WalletAccessAdapter(Set(AccessSign), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithRight = new WalletAccessAdapter(testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithRight.sign(Array[Byte](1, 2, 3)){ result => result.isSuccess shouldBe true }
-      val controllerWithoutRight = new WalletAccessAdapter(Set(), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithoutRight = new WalletAccessAdapter(testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithoutRight.sign(Array[Byte](1, 2, 3)){ result => result.isSuccess shouldBe false }
     }
     "participantId verify should pass if having correct access rights" in {
-      val controllerWithRight = new WalletAccessAdapter(Set(AccessVerify), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithRight = new WalletAccessAdapter(testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithRight.verify("participantId", Array[Byte](1, 2, 3), Array[Byte](1, 2, 3)) { result =>
         result.isSuccess shouldBe true
       }
-      val controllerWithoutRight = new WalletAccessAdapter(Set(), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithoutRight = new WalletAccessAdapter(testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithoutRight.verify("participantId", Array[Byte](1, 2, 3), Array[Byte](1, 2, 3)) { result =>
         result.isSuccess shouldBe false
       }
     }
 
     "verkey verify should pass if having correct access rights" in {
-      val controllerWithRight = new WalletAccessAdapter(Set(AccessVerify), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithRight = new WalletAccessAdapter(testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithRight.verify(Array[Byte](1, 2, 3), Array[Byte](1, 2, 3), "verkey", SIGN_ED25519_SHA512_SINGLE) { result =>
         result.isSuccess shouldBe true
       }
-      val controllerWithoutRight = new WalletAccessAdapter(Set(), testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
+      val controllerWithoutRight = new WalletAccessAdapter(testWalletAPI(testWallet.testWalletAPI, testWallet.walletId))
       controllerWithoutRight.verify(Array[Byte](1, 2, 3), Array[Byte](1, 2, 3), "verkey", SIGN_ED25519_SHA512_SINGLE) { result =>
         result.isSuccess shouldBe false
       }

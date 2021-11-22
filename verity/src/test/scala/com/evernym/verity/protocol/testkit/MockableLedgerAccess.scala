@@ -46,7 +46,6 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
   val testWallet = new TestWallet(executionContext, false)
   implicit val wap: WalletAPIParam = testWallet.wap
   override val walletAccess = new WalletAccessAdapter (
-    Set(),
     new WalletAccessAPI (
       testWallet.testWalletAPI,
       testWallet.walletId

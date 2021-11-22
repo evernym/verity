@@ -315,7 +315,6 @@ class ActorProtocolContainer[
 
   override lazy val wallet =
     new WalletAccessAdapter(
-      grantedAccessRights,
       new WalletAccessAPI(
         agentActorContext.walletAPI,
         getRoster.selfId_!)

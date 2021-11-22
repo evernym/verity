@@ -6,8 +6,7 @@ import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner, 
 
 import scala.util.Try
 
-class WalletAccessAdapter(val accessRights: Set[AccessRight],
-                          val walletExecutor: WalletAsyncOps)
+class WalletAccessAdapter(val walletExecutor: WalletAsyncOps)
                          (implicit val asyncOpRunner: AsyncOpRunner)
 
   extends WalletAccess
@@ -147,4 +146,5 @@ class WalletAccessAdapter(val accessRights: Set[AccessRight],
     withAsyncOpRunner({walletExecutor.runMultiSignRequest(submitterDID, request)},
       handleResult(handler))
 
+  override def accessRights: Set[AccessRight] = Set.empty
 }

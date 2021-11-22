@@ -17,7 +17,7 @@ import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet}
 import com.evernym.verity.util.{ParticipantUtil, TestExecutionContextProvider}
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 class WalletAccessAPISpec
@@ -40,7 +40,7 @@ class WalletAccessAPISpec
 
   val walletRights: Set[AccessRight] =
     Set(AccessNewDid, AccessSign, AccessVerify, AccessVerKey, AccessPack, AccessUnPack, AccessStoreTheirDiD, AnonCreds)
-  val walletAccess = new WalletAccessAdapter(walletRights, new WalletAccessAPI(walletAPI, selfParticipantId))
+  val walletAccess = new WalletAccessAdapter(new WalletAccessAPI(walletAPI, selfParticipantId))
 
   val TEST_MSG: Array[Byte] = "test string".getBytes()
   val INVALID_SIGN_TYPE = "Invalid sign type"
@@ -110,6 +110,8 @@ class WalletAccessAPISpec
   }
 
   override def runAsyncOp(op: => Any): Unit = op
+
+  override def runFutureAsyncOp(op: => Future[Any]): Unit = op
   override def abortTransaction(): Unit = {}
   def postAllAsyncOpsCompleted(): Unit = {}
   override def logger: Logger = getLoggerByName(getClass.getSimpleName)

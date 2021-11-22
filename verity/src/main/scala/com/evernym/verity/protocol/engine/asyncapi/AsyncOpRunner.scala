@@ -24,7 +24,7 @@ trait AsyncOpRunner {
    * @param op the async operation to be executed
    */
   protected def runAsyncOp(op: => Any): Unit
-  protected def runFutureAsyncOp(op: => Future[Any]): Unit = {}
+  protected def runFutureAsyncOp(op: => Future[Any]): Unit
 
   final def withAsyncOpRunner[T](asyncOp: => Any,
                                  cbHandler: Try[T] => Unit): Unit = {

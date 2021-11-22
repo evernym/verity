@@ -89,7 +89,7 @@ class BasicMessageSpec
   "IssuerSDK" - {
     "should receive 'message' (basicmessage 1.0) message" in {
       issuerSDK.expectMsgOnWebhook[Message]()
-      issuerVerityEnv.checkBlobObjectCount("4d", 0)
+      issuerVerityEnv.checkBlobObjectCount("4d", 2)
     }
   }
 
@@ -101,7 +101,7 @@ class BasicMessageSpec
       |      default {
       |        undefined-fallback {
       |          expire-after-days = 4 day
-      |          expire-after-terminal-state = true
+      |          expire-after-terminal-state = false
       |        }
       |      }
       |    }

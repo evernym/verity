@@ -1,20 +1,19 @@
 package com.evernym.verity.libindy
 
 import akka.actor.ActorRef
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
-import com.evernym.verity.actor.wallet.{Close, CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.actor.wallet._
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
-import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessPack, AccessRight, AccessSign, AccessStoreTheirDiD, AccessUnPack, AccessVerKey, AccessVerify, AnonCreds, AsyncOpRunner}
-import com.evernym.verity.protocol.engine.asyncapi.wallet.{InvalidSignType, WalletAccessAdapter}
 import com.evernym.verity.protocol.engine.ParticipantId
-import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{InvalidSignType, WalletAccessAdapter}
+import com.evernym.verity.protocol.engine.asyncapi._
+import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet} 
 import com.evernym.verity.util.{ParticipantUtil, TestExecutionContextProvider}
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{ExecutionContext, Future}

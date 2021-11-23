@@ -251,7 +251,7 @@ lazy val protoBufSettings = Seq(
   ),
   Test / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test")),
   //
-) ++ Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings)
+)
 
 // For this really to do its job correctly, it needs the class files from compiling. But since
 // coverageExcludedFiles is a SettingKey, requiring compile would annoying. So compile for

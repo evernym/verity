@@ -36,8 +36,6 @@ class WalletAccessAPISpec
     result
   }
 
-  val walletRights: Set[AccessRight] =
-    Set(AccessNewDid, AccessSign, AccessVerify, AccessVerKey, AccessPack, AccessUnPack, AccessStoreTheirDiD, AnonCreds)
   val walletAccess = new WalletAccessAdapter(walletAPI, selfParticipantId)
 
   val TEST_MSG: Array[Byte] = "test string".getBytes()

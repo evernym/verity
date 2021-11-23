@@ -18,13 +18,11 @@ import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType, TypedMsgLike}
 import com.evernym.verity.observability.logs.HasLogger
 import com.evernym.verity.observability.logs.LoggingUtil.getAgentIdentityLoggerByName
 import com.evernym.verity.observability.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
-import com.evernym.verity.protocol.container.asyncapis.segmentstorage.SegmentStoreAccessAPI
-import com.evernym.verity.protocol.container.asyncapis.urlshortener.UrlShorteningAPI
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.AsyncOpRunner
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessAdapter
-import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessController
-import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessController
+import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessAdapter
+import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessAdapter
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessAdapter
 import com.evernym.verity.protocol.engine.container.{ProtocolContainer, RecordsEvents}
 import com.evernym.verity.protocol.engine.events.PairwiseRelIdsChanged
@@ -325,17 +323,14 @@ class ActorProtocolContainer[
     )
 
   override lazy val urlShortening =
-    new UrlShorteningAccessController(
-      grantedAccessRights,
-      new UrlShorteningAPI(executionContext)
+    new UrlShorteningAccessAdapter(
+      executionContext
     )
 
   override lazy val segmentStore =
-    new SegmentStoreAccessController(
-      new SegmentStoreAccessAPI(
+    new SegmentStoreAccessAdapter(
         agentActorContext.storageAPI,
         getProtoRef
-      )
     )
 
   /**

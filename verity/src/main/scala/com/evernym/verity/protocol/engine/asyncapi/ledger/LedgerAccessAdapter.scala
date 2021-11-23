@@ -162,6 +162,4 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
   }
 
   override def walletAccess: WalletAccess = _walletAccess
-
-  override def accessRights: Set[AccessRight] = Set.empty
 }

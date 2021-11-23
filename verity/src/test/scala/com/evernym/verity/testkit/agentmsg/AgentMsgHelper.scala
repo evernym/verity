@@ -16,11 +16,10 @@ import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.question_answer.AskQuestionMsg
 import com.evernym.verity.agentmsg.wallet_backup.WalletBackupMsg
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_1_0, MFV_0_6, MSG_FAMILY_AGENT_PROVISIONING, MSG_TYPE_CONNECT}
-import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
-import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.protocol.protocols.deaddrop.{DeadDropData, DeadDropRetrieveResult}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswerVars.testQuestion
@@ -386,7 +385,6 @@ case class CreateInviteResp_MFV_0_5(mc: MsgCreated_MFV_0_5,
                                     md: InviteMsgDetail_MFV_0_5,
                                     ms: Option[MsgsSent_MFV_0_5])
 
-case class AgentMsgPackagingContext(
-                                     msgPackFormat: MsgPackFormat,
-                                     fwdMsgVersion: Version,
-                                     packForAgencyRoute: Boolean)
+case class AgentMsgPackagingContext(msgPackFormat: MsgPackFormat,
+                                    fwdMsgVersion: Version,
+                                    packForAgencyRoute: Boolean)

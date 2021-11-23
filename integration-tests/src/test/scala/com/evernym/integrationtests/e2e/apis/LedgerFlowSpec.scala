@@ -70,7 +70,6 @@ class LedgerFlowSpec extends BasicSpec
     buildLedgerUtil(
       appConfig,
       TestExecutionContextProvider.ecp.futureExecutionContext,
-      TestExecutionContextProvider.ecp.walletFutureExecutionContext,
       taa = taa,
       genesisTxnPath = Some(testEnv.ledgerConfig.genesisFilePath)
     )

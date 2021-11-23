@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.protocol.engine.registry.PinstIdResolution
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.IssuerSetupDefinition
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswerDefinition
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupProtoDef

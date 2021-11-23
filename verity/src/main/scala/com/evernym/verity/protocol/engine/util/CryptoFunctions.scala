@@ -1,8 +1,7 @@
 package com.evernym.verity.protocol.engine.util
 
 import java.security.MessageDigest
-
-import com.evernym.verity.protocol.engine.{ContextId, SafeThreadId, ThreadId}
+import com.evernym.verity.protocol.engine.{ContextId, ThreadId}
 import org.apache.commons.codec.digest.DigestUtils
 
 import scala.language.implicitConversions
@@ -11,10 +10,9 @@ trait CryptoFunctions {
   final def sha256(input: String): Array[Byte] = {
     sha256(input.getBytes("UTF-8"))
   }
-
   def sha256(input: Array[Byte]): Array[Byte]
 
-  def computeSafeThreadId(contextId: ContextId, threadId: ThreadId): SafeThreadId = {
+  def computeSafeThreadId(contextId: ContextId, threadId: ThreadId): ThreadId = {
     safeHashTrunc16(contextId, threadId)
   }
 

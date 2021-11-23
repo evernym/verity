@@ -5,7 +5,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.evernym.verity.util2.Exceptions.{HandledErrorException, SmsSendingFailedException}
-import com.evernym.verity.util2.{HasExecutionContextProvider, HasWalletExecutionContextProvider}
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.actor.ActorContext
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
@@ -16,14 +16,13 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
 import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher, OAuthAccessTokenRefresherImplV1}
-import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.OAUTH2_VERSION_1
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher}
 import com.evernym.verity.observability.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
-import com.evernym.verity.protocol.engine.ProtocolRegistry
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.storage_services.StorageAPI
-import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsSent}
+import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsReqSent}
 import com.evernym.verity.transports.http.AkkaHttpMsgSendingSvc
 import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util.Util
@@ -35,8 +34,7 @@ import scala.util.Left
 
 trait AgentActorContext
   extends ActorContext
-  with HasExecutionContextProvider
-  with HasWalletExecutionContextProvider {
+  with HasExecutionContextProvider {
 
   private implicit val executionContext: ExecutionContext = futureExecutionContext
   implicit def appConfig: AppConfig
@@ -52,22 +50,24 @@ trait AgentActorContext
   ).map(f => f.fetcherParam -> f).toMap
 
   lazy val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()
-  lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers, metricsWriter, futureWalletExecutionContext)
-  lazy val msgSendingSvc: MsgSendingSvc = new AkkaHttpMsgSendingSvc(appConfig.config, metricsWriter, futureWalletExecutionContext)
+  lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers, metricsWriter, futureExecutionContext)
+  lazy val msgSendingSvc: MsgSendingSvc = new AkkaHttpMsgSendingSvc(appConfig.config, metricsWriter, futureExecutionContext)
   lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] = protocols.protocolRegistry
   lazy val smsSvc: SMSSender = createSmsSender()
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter(futureExecutionContext)
   lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(system, appConfig, futureExecutionContext)
-  lazy val walletAPI: WalletAPI = new StandardWalletAPI(new ActorWalletService(system, appConfig, futureWalletExecutionContext))
+  lazy val walletAPI: WalletAPI = new StandardWalletAPI(new ActorWalletService(system, appConfig, futureExecutionContext))
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, futureExecutionContext)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val storageAPI: StorageAPI = StorageAPI.loadFromConfig(appConfig, futureExecutionContext)
 
   //NOTE: this 'oAuthAccessTokenRefreshers' is only need here until we switch to the outbox solution
   val oAuthAccessTokenRefreshers: AccessTokenRefreshers = new AccessTokenRefreshers {
-    override def refreshers: Map[Version, Behavior[OAuthAccessTokenRefresher.Cmd]] = Map(
-      OAUTH2_VERSION_1 -> OAuthAccessTokenRefresherImplV1(executionContext)
-    )
+    override def refreshers: Map[Version, Behavior[OAuthAccessTokenRefresher.Cmd]] =
+      OAuthAccessTokenRefresher
+        .SUPPORTED_VERSIONS
+        .map (v => v -> OAuthAccessTokenRefresher.getRefresher(v, executionContext))
+        .toMap
   }
 
   def createActorSystem(): ActorSystem = {
@@ -77,12 +77,12 @@ trait AgentActorContext
   private def createSmsSender(): SMSSender = {
     new SMSSender {
       implicit lazy val timeout: Timeout = Util.buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
-      val smsSender: ActorRef = system.actorOf(DefaultSMSSender.props(appConfig), "sms-sender")
+      val smsSender: ActorRef = system.actorOf(DefaultSMSSender.props(appConfig, futureExecutionContext), "sms-sender")
 
       override def sendMessage(smsInfo: SmsInfo): Future[Either[HandledErrorException, String]] = {
         val smsSendFut = smsSender ? smsInfo
         smsSendFut.map {
-          case _: SmsSent => Right("sms sent successfully")
+          case _: SmsReqSent => Right("sms request sent successfully")
           case er: HandledErrorException => Left(er)
           case x => Left(new SmsSendingFailedException(Option(x.toString)))
         }.recover {

@@ -93,8 +93,8 @@ class AgencyAgentStateTransformationSpec extends ActorSpec with BasicSpec {
 
     def protoInstances = ProtocolRunningInstances(
       Map(
-        ConnectingProtoDef.msgFamily.protoRef.toString -> "pinst-id-1",
-        AgentProvisioningDefinition.msgFamily.protoRef.toString -> "pinst-id-2"
+        ConnectingProtoDef.protoRef.toString -> "pinst-id-1",
+        AgentProvisioningDefinition.protoRef.toString -> "pinst-id-2"
       )
     )
 

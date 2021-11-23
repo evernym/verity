@@ -1,16 +1,16 @@
-import java.io.File
-import java.nio.file.Files
-import java.util.Optional
 import com.typesafe.sbt.packager.linux.LinuxPackageMapping
 import com.typesafe.sbt.packager.linux.LinuxPlugin.autoImport.packageMapping
 import sbt.Def.Classpath
-import sbt.{file, _}
 import sbt.internal.inc.classpath.ClasspathUtil
 import sbt.internal.inc.{Analysis, LastModified, Stamps}
+import sbt.{file, _}
 import sbtassembly.MergeStrategy
 import xsbti.compile.analysis._
 import xsbti.compile.{CompileAnalysis, PreviousResult}
 
+import java.io.File
+import java.nio.file.Files
+import java.util.Optional
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.{Duration, MILLISECONDS, SECONDS, _}
@@ -143,5 +143,20 @@ object Util {
           .getOrElse(throw new Exception("Unable to merge reference.conf file"))
       )
     }
+  }
+
+  def listClassFiles(classDirectory: File*): Seq[String] = {
+    PathFinder(classDirectory) ** "*.class" getPaths()
+  }
+
+  def scoverageFilterProtobufPattern(classDirectories: File*): String = {
+    Util.listClassFiles(classDirectories:_*)
+      .filter(_.endsWith("Lens.class"))
+      .map{ p =>
+        val t = p.split('$').dropRight(1).mkString("","$", ".*")
+          .split('/').last
+        ".*"+t
+      }
+      .mkString(";")
   }
 }

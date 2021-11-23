@@ -109,7 +109,7 @@ create_dynamodb_tables() {
     appendToLogWithDashLinePrefix "dynamodb event config: ${createEventTable}"
     appendToLogWithDashLinePrefix "dynamodb snapshot config: ${createSnapShotTable}"
 
-    dynamodbEndpoint="${DYNAMODB_ENDPOINT:-localhost:8000}" # get endpoint from env variable: DYNAMODB_ENDPOINT if set or just localhost
+    dynamodbEndpoint="${DYNAMODB_HOST:-localhost}:${DYNAMODB_PORT:-8000}" # get host from env variable: DYNAMODB_HOST if set or just localhost
 
     # shellcheck disable=SC2046
     retry 3 'check-dynamodb' nc -vz $(echo "${dynamodbEndpoint}" | tr ":" " ") > /dev/null

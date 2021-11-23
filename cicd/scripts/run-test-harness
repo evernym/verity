@@ -1,0 +1,114 @@
+#!/bin/bash -e
+
+curl https://codeload.github.com/hyperledger/aries-agent-test-harness/zip/refs/heads/main > aath.zip
+unzip aath.zip
+cd aries-agent-test-harness-main/aries-test-harness
+pip install -r requirements.txt
+
+echo "==> Install stuff not in the requirements..."   && \
+pip install --no-cache-dir \
+    aiohttp
+
+export LEDGER_URL_CONFIG="${LEDGER_URL_CONFIG}"
+export TAILS_SERVER_URL_CONFIG="${TAILS_SERVER_URL_CONFIG}"
+
+# these are derived from the above two
+LEDGER_URL_HOST="${LEDGER_URL_CONFIG:-http://localhost:9000}"
+LEDGER_URL_INTERNAL="${LEDGER_URL_CONFIG:-http://${DOCKERHOST}:9000}"
+# important: inside the internal URLs, we replace "://localhost:" with "://${DOCKERHOST}:"
+#   so it works inside docker.
+LEDGER_URL_INTERNAL="$(echo ${LEDGER_URL_INTERNAL} | sed "s/:\/\/localhost:/:\/\/${DOCKERHOST}:/" )"
+TAILS_SERVER_URL_INTERNAL="$(echo ${TAILS_SERVER_URL_INTERNAL} | sed "s/:\/\/localhost:/:\/\/${DOCKERHOST}:/" )"
+
+pingLedger(){
+  ledger_url=${1}
+
+  # ping ledger web browser for genesis txns
+  local rtnCd=$(curl -s --write-out '%{http_code}' --output /dev/null ${ledger_url}/genesis)
+  if (( ${rtnCd} == 200 )); then
+    return 0
+  else
+    return 1
+  fi
+}
+
+waitForLedger(){
+  (
+    # Wait for ledger server to start ...
+    local startTime=${SECONDS}
+    local rtnCd=0
+    printf "waiting for ledger to start"
+    # use ledger URL from host
+    while ! pingLedger "$LEDGER_URL_HOST"; do
+      printf "."
+      local duration=$(($SECONDS - $startTime))
+      if (( ${duration} >= ${LEDGER_TIMEOUT} )); then
+        echoRed "\nThe Indy Ledger failed to start within ${duration} seconds.\n"
+        rtnCd=1
+        break
+      fi
+      sleep 1
+    done
+    echo
+    return ${rtnCd}
+  )
+}
+
+pingAgent(){
+  name=${1}
+  port=${2}
+
+  # ping agent using a backchannel-exposed api
+  rtnCd=$(curl -s --write-out '%{http_code}' http://${name}:${port}/agent/command/status/)
+  echo
+  echo $rtnCd
+  echo
+  if (( ${rtnCd} == 200 )); then
+    echo "agent responded successfully"
+    return 0
+  else
+    echo "bad agent response"
+    return 1
+  fi
+}
+
+waitForAgent(){
+  (
+    name=${1}
+
+    # Wait for agent to start ...
+    local startTime=${SECONDS}
+    rtnCd=0
+    printf "waiting for ${name} agent to start"
+    while ! pingAgent ${@}; do
+      printf "."
+      local duration=$(($SECONDS - $startTime))
+      if (( ${duration} >= ${AGENT_TIMEOUT} )); then
+        echoRed "\nThe agent failed to start within ${duration} seconds.\n"
+        rtnCd=1
+        break
+      fi
+      sleep 1
+    done
+    echo "done waiting on agent"
+    return ${rtnCd}
+  )
+}
+
+if ! waitForLedger; then
+  echoRed "\nThe Indy Ledger is not running.\n"
+  exit 1
+fi
+
+exit_code=0
+behave -k -t @T001-RFC0160 -t ~@wip -D Acme=http://Acme:9020 -D Bob=http://Bob:9020 -D Faber=http://Faber:9020 -D Mallory=http://Mallory:9020 || exit_code=1
+
+echo "Retrieving logs"
+curl Acme:8473/output.log > $CI_PROJECT_DIR/verity_log.txt
+curl Acme:8473/backchannel_output.log > $CI_PROJECT_DIR/verity_backchannel_log.txt
+curl Bob:8473/output.log > $CI_PROJECT_DIR/acapy_log.txt
+cat $CI_PROJECT_DIR/verity_log.txt
+cat $CI_PROJECT_DIR/verity_backchannel_log.txt
+cat $CI_PROJECT_DIR/acapy_log.txt
+
+exit $exit_code

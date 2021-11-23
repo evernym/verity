@@ -11,7 +11,7 @@ import org.scalatest.concurrent.Eventually
 
 import scala.language.postfixOps
 
-
+//This test confirms that successful recovery works fine with any supervisor strategy
 class ActorRecoverySuccessSpec
   extends ActorSpec
   with BasicSpec
@@ -37,6 +37,7 @@ class ActorRecoverySuccessSpec
        verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
+            strategy = OnFailure
             min-seconds = 1
             max-seconds = 2
             random-factor = 0

@@ -1,10 +1,10 @@
 package com.evernym.verity.protocol.testkit
 
 import java.util.UUID
-
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry.DriverGen
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.container.RecordsEvents
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import org.scalatest.Outcome
 import org.scalatest.FixtureTestSuite

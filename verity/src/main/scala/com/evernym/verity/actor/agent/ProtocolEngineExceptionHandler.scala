@@ -1,9 +1,10 @@
 package com.evernym.verity.actor.agent
 
+import com.evernym.verity.protocol.engine.registry.{UnsupportedMessageFamily, UnsupportedMessageType}
 import com.evernym.verity.util2.Exceptions.{EmptyValueForOptionalFieldException, InvalidValueException, MissingReqFieldException, NotFoundErrorException}
 import com.evernym.verity.util2.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.protocol.engine.util.{?=>, getErrorMsg}
-import com.evernym.verity.protocol.engine.{EmptyValueForOptionalFieldProtocolEngineException, InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, UnsupportedMessageFamily, UnsupportedMessageType}
+import com.evernym.verity.protocol.engine.{EmptyValueForOptionalFieldProtocolEngineException, InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException}
 
 trait ProtocolEngineExceptionHandler {
 

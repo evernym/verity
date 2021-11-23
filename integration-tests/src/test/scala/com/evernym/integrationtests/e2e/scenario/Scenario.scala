@@ -35,8 +35,7 @@ class ApplicationAdminExt(val scenario: Scenario,
     new MockEdgeAgent(
       urlParam,
       appConfig,
-      ecp.futureExecutionContext,
-      ecp.walletFutureExecutionContext
+      ecp.futureExecutionContext
     )
 
   val sdks: List[VeritySdkProvider] = sdkConfigs.map(VeritySdkProvider.fromSdkConfig(_, scenario))
@@ -60,7 +59,6 @@ class ApplicationAdminExt(val scenario: Scenario,
   }
 
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 case class ScenarioAppEnvironment(

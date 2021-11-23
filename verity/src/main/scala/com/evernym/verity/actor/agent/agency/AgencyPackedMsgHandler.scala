@@ -9,12 +9,12 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_ROUTING, 
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_5, MFV_1_0, MSG_FAMILY_NAME_0_5, MTV_1_0}
-import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER}
 import com.evernym.verity.util.{PackedMsgWrapper, ReqMsgContext, Util}
 
 import scala.concurrent.Future
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER}
 
 /**
  * handles incoming packed (anon crypted) messages

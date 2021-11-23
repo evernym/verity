@@ -1,8 +1,8 @@
 package com.evernym.verity.protocol.protocols.coinflip
 
-import java.lang.reflect.Modifier
+import com.evernym.verity.protocol.engine.context.Roster
 
-import com.evernym.verity.protocol.engine.Roster
+import java.lang.reflect.Modifier
 
 //import com.evernym.verity.agentmsg.msgfamily.protocol.ConnectionData
 //import com.evernym.verity.protocol.Role

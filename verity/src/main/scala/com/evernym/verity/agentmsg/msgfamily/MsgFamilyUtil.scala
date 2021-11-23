@@ -1,8 +1,7 @@
 package com.evernym.verity.agentmsg.msgfamily
 
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, MsgFamilyName, typeStrFromMsgType}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
-import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.IssuerSetupDefinition
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.{QuestionAnswerDefinition, QuestionAnswerMsgFamily}
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily
@@ -131,10 +130,10 @@ object MsgFamilyUtil {
   val MSG_TYPE_DEAD_DROP_RETRIEVE = "DEAD_DROP_RETRIEVE"
   val MSG_TYPE_DETAIL_DEAD_DROP_RETRIEVE: String = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_DEAD_DROP, MFV_0_1_0, MSG_TYPE_DEAD_DROP_RETRIEVE)
 
-  val MSG_FAMILY_QUESTION_ANSWER: MsgFamilyName = QuestionAnswerDefinition.msgFamily.protoRef.msgFamilyName
+  val MSG_FAMILY_QUESTION_ANSWER: MsgFamilyName = QuestionAnswerDefinition.msgFamily.name
   val MSG_TYPE_DETAIL_QUESTION_ANSWER_ASK_QUESTION: String = typeStrFromMsgType(QuestionAnswerMsgFamily.qualifier, MSG_FAMILY_QUESTION_ANSWER, MFV_1_0, "question")
 
-  val MSG_FAMILY_ISSUER_SETUP: MsgFamilyName = IssuerSetupDefinition.msgFamily.protoRef.msgFamilyName
+  val MSG_FAMILY_ISSUER_SETUP: MsgFamilyName = IssuerSetupDefinition.msgFamily.name
   val MSG_TYPE_DETAIL_ISSUER_SETUP_CREATE: String = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_ISSUER_SETUP, MFV_0_6, "create")
   val MSG_TYPE_DETAIL_ISSUER_SETUP_CURRENT_IDENTIFIER: String = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_ISSUER_SETUP, MFV_0_6, "current-public-identifier")
 

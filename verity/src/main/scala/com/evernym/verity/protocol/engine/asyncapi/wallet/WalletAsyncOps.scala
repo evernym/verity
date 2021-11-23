@@ -1,9 +1,12 @@
 package com.evernym.verity.protocol.engine.asyncapi.wallet
 
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine.ParticipantId
+import com.evernym.verity.protocol.engine.asyncapi.AsyncResultHandler
 
-trait WalletAsyncOps extends AnonCredAsyncOps {
+trait WalletAsyncOps
+  extends AnonCredAsyncOps
+  with AsyncResultHandler {
 
   import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess._
 

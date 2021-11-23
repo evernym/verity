@@ -2,7 +2,6 @@ package com.evernym.verity.actor.persistence.supervisor
 
 import akka.actor.Props
 import akka.persistence.AtomicWrite
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, SupervisorUtil}
 import com.evernym.verity.actor.{ActorMessage, KeyCreated, TestJournal}
 import com.evernym.verity.config.AppConfig
@@ -27,6 +26,7 @@ class MockActorCreationFailure(val appConfig: AppConfig, ec: ExecutionContext)
 
   override def receiveEvent: Receive = ???
 
+  //to mimic failure during actor creation
   throw new RuntimeException("purposefully throwing exception during construction of Actor")
 
   /**
@@ -58,7 +58,7 @@ class MockActorRecoveryFailure(val appConfig: AppConfig, ec: ExecutionContext)
     //to control the exception throw flow to be able to accurately test occurrences of failures
     if (exceptionSleepTimeInMillis > 0)
       Thread.sleep(exceptionSleepTimeInMillis)
-    throw new RuntimeException("purposefully throwing exception after persistent recovery")
+    throw new RuntimeException("purposefully throwing exception post recovery completed")
   }
 
   /**
@@ -160,17 +160,27 @@ class GeneratePersistenceFailureJournal extends TestJournal {
 trait PropsProvider {
   def props(appConfig: AppConfig, executionContext: ExecutionContext): Props
 
-  def backOffOnStopProps(appConfig: AppConfig, executionContext: ExecutionContext): Props =
-    SupervisorUtil.onStopSupervisorProps(
-      appConfig,
-      PERSISTENT_ACTOR_BASE,
-      "MockSupervisor",
-      props(appConfig, executionContext)).get
+  def backOffOnStopProps(appConfig: AppConfig, executionContext: ExecutionContext): Props = {
+    val defaultProps = props(appConfig, executionContext)
+    SupervisorUtil
+      .onStopSupervisorProps(
+        appConfig,
+        PERSISTENT_ACTOR_BASE,
+        "MockSupervisor",
+        defaultProps)
+      .getOrElse(defaultProps)
+  }
 
-  def backOffOnFailureProps(appConfig: AppConfig, executionContext: ExecutionContext): Props =
-    SupervisorUtil.onFailureSupervisorProps(
-      appConfig,
-      PERSISTENT_ACTOR_BASE,
-      "MockSupervisor",
-      props(appConfig, executionContext)).get
+  def backOffOnFailureProps(appConfig: AppConfig, executionContext: ExecutionContext): Props = {
+    val defaultProps = props(appConfig, executionContext)
+    SupervisorUtil
+      .onFailureSupervisorProps(
+        appConfig,
+        PERSISTENT_ACTOR_BASE,
+        "MockSupervisor",
+        defaultProps)
+      .getOrElse(
+        defaultProps
+      )
+  }
 }

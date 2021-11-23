@@ -3,6 +3,7 @@ package com.evernym.integrationtests.e2e.env
 import com.evernym.integrationtests.e2e.env.AppInstance.{AppInstance, Consumer, Enterprise, Verity}
 import com.evernym.integrationtests.e2e.env.AppType.AppType
 import com.evernym.integrationtests.e2e.env.SdkType.SdkType
+import com.evernym.integrationtests.e2e.util.PortProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION
@@ -451,8 +452,8 @@ case class VerityInstance(name: String,
     */
 
   lazy val specificEnvVars: List[EnvVar] = {
-    val randSeed = (appType.systemName + endpoint.port.toString + System.currentTimeMillis.toString).hashCode
-    val rand = new Random(randSeed)
+    val verityAkkaRemotePort = PortProvider.getFreePort
+    val verityAkkaManagementPort = PortProvider.getFreePort
     List(
       EnvVar("APP_ACTOR_SYSTEM_NAME", appType.systemName),
       EnvVar("POOL_NAME", s"${name}_pool"),
@@ -464,8 +465,8 @@ case class VerityInstance(name: String,
       EnvVar("VERITY_ENDPOINT_HOST", endpoint.host),
       EnvVar("VERITY_ENDPOINT_PORT", endpoint.port),
       EnvVar("VERITY_HTTP_PORT", listeningPort.get, uniqueValueAcrossEnv = true),
-      EnvVar("VERITY_AKKA_REMOTE_PORT", 2000 + rand.nextInt(1000), uniqueValueAcrossEnv = true),
-      EnvVar("VERITY_AKKA_MANAGEMENT_HTTP_PORT",  3000 + rand.nextInt(1000), uniqueValueAcrossEnv = true),
+      EnvVar("VERITY_AKKA_REMOTE_PORT", verityAkkaRemotePort, uniqueValueAcrossEnv = true),
+      EnvVar("VERITY_AKKA_MANAGEMENT_HTTP_PORT",  verityAkkaManagementPort, uniqueValueAcrossEnv = true),
       EnvVar("GENESIS_TXN_FILE_LOCATION", ledgerConfig.genesisFilePath)
     )
   }

@@ -3,7 +3,7 @@ package com.evernym.verity
 import akka.actor.{Actor, ActorRef}
 import com.evernym.verity.config.ConfigUtil.MAX_RETENTION_POLICY
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.protocol.engine.MsgId
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.typesafe.config.ConfigException
 
 import scala.concurrent.Future

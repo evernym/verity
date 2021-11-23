@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.container.actor
 
 import akka.actor.{ActorRef, Props}
 import com.evernym.verity.actor.base.Stop
-import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
+import com.evernym.verity.actor.persistence.{BasePersistentTimeoutActor, DefaultPersistenceEncryption}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.PinstId
 
@@ -16,7 +16,7 @@ class ExtractEventsActor(override val appConfig: AppConfig,
                          val pinstId: PinstId,
                          val dest: ActorRef,
                          executionContext: ExecutionContext)
-  extends BasePersistentActor
+  extends BasePersistentTimeoutActor
   with DefaultPersistenceEncryption {
 
   override def futureExecutionContext: ExecutionContext = executionContext

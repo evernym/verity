@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package com.evernym.verity.protocol.engine.events;
+
+message ParameterStored {
+    string name = 1;
+    string value = 2;
+}
+
+message ProtocolInitialized {
+    repeated ParameterStored parameters = 1;
+}

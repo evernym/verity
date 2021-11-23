@@ -8,7 +8,7 @@ import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE
 import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.protocol.container.actor.base.{BaseProtocolActorSpec, GetPinstId, MockControllerActorBase, SendToProtocolActor}
-import com.evernym.verity.protocol.engine.PinstIdPair
+import com.evernym.verity.protocol.engine.registry
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Propose
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredentialProtoDef
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.Sent
@@ -27,7 +27,7 @@ class ExtractEventsActorSpec
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   lazy implicit val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+    override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
   override def executionContextProvider: ExecutionContextProvider = ecp
 
   "ExtractEventsActor" - {
@@ -106,7 +106,7 @@ class ExtractEventsActorSpec
       mockController2.sendCmd(GetPinstId(IssueCredentialProtoDef, "thread-id-1"))
       val newPinstId = mockController2.expectMsgType[String]()
 
-      val newPinstIdPair = PinstIdPair(newPinstId, IssueCredentialProtoDef)
+      val newPinstIdPair = registry.PinstIdPair(newPinstId, IssueCredentialProtoDef)
       mockController2.sendCmd(SendToProtocolActor(FromProtocol(pinstIdPair.id, mockRel), newPinstIdPair))
       Thread.sleep(1000)
 

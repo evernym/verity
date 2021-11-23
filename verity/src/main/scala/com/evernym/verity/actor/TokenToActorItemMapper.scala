@@ -5,8 +5,8 @@ import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.actor.persistence.BasePersistentActor
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.util.TokenProvider
-import com.evernym.verity.protocol.engine.MsgId
 
 import scala.concurrent.ExecutionContext
 
@@ -24,6 +24,7 @@ import scala.concurrent.ExecutionContext
 object TokenToActorItemMapper {
   def getToken: String = TokenProvider.getNewToken
   def props(executionContext: ExecutionContext)(implicit appConfig: AppConfig): Props = Props(new TokenToActorItemMapper(appConfig, executionContext))
+  val defaultPassivationTimeout = 600
 }
 
 //cmds

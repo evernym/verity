@@ -61,10 +61,13 @@ import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.config.ConfigUtil
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.msgoutbox
-import com.evernym.verity.msgoutbox.router.OutboxRouter.DESTINATION_ID_DEFAULT
+import com.evernym.verity.msgoutbox.outbox.Outbox.DESTINATION_ID_DEFAULT
 import com.evernym.verity.observability.metrics.InternalSpan
+import com.evernym.verity.protocol.engine.registry.PinstIdPair
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
 import com.evernym.verity.util2.{Exceptions, Status}
 import org.json.JSONObject
@@ -78,8 +81,7 @@ import scala.util.{Failure, Left, Success, Try}
  */
 class UserAgentPairwise(val agentActorContext: AgentActorContext,
                         val metricsActorRef: ActorRef,
-                        executionContext: ExecutionContext,
-                        walletExecutionContext: ExecutionContext)
+                        executionContext: ExecutionContext)
   extends UserAgentCommon
     with UserAgentPairwiseStateUpdateImpl
     with AgentMsgSender
@@ -91,8 +93,6 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     with AgentSnapshotter[UserAgentPairwiseState] {
 
   implicit lazy val futureExecutionContext: ExecutionContext = executionContext
-
-  override def futureWalletExecutionContext: ExecutionContext = walletExecutionContext
 
   type StateType = UserAgentPairwiseState
   var state = new UserAgentPairwiseState
@@ -172,7 +172,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     //includes details of 'their' edge pairwise DID and 'their' cloud agent DID
     case tads: TheirAgentDetailSet =>
       val theirDidDoc =
-        DidDocBuilder(futureWalletExecutionContext)
+        DidDocBuilder(futureExecutionContext)
           .withDid(tads.DID)
           .withAuthKey(tads.DID, "")
           .withAuthKey(tads.agentKeyDID, "", Set(CLOUD_AGENT_KEY))
@@ -280,7 +280,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     val isThisAnEdgeAgent = ad.forDID == ad.agentKeyDID
     val agentKeyTags: Set[Tags] = if (isThisAnEdgeAgent) Set(EDGE_AGENT_KEY) else Set(CLOUD_AGENT_KEY)
     val myDidDoc =
-      DidDocBuilder(futureWalletExecutionContext)
+      DidDocBuilder(futureExecutionContext)
         .withDid(ad.forDID)
         .withAuthKey(ad.forDID, ad.forDIDVerKey, Set(EDGE_AGENT_KEY))
         .withAuthKey(ad.agentKeyDID, ad.agentKeyDIDVerKey, agentKeyTags)
@@ -990,6 +990,18 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_DETAILS_TAG, this.actorId)
     metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, this.actorId)
   }
+
+  override def postAgentStateFix(): Future[Any] = {
+    logger.info(
+      s"[$persistenceId] unbounded elements => " +
+        s"isSnapshotApplied: $isAnySnapshotApplied, " +
+        s"configs: ${state.configs.size}, " +
+        s"messages: ${state.msgAndDelivery.map(_.msgs.size).getOrElse(0)}, " +
+        s"threadContexts: ${state.threadContext.map(_.contexts.size).getOrElse(0)}, " +
+        s"protoInstances: ${state.protoInstances.map(_.instances.size).getOrElse(0)}"
+    )
+    super.postAgentStateFix()
+  }
 }
 
 object UserAgentPairwise {
@@ -997,6 +1009,7 @@ object UserAgentPairwise {
   final val COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG = "user-agent-pairwise.mnd.msgs-payloads"
   final val COLLECTION_METRIC_MND_MSGS_DETAILS_TAG = "user-agent-pairwise.mnd.msgs-details"
   final val COLLECTION_METRIC_MND_MSGS_DELIVRY_STATUS_TAG = "user-agent-pairwise.mnd.msgs-delivery-status"
+  val defaultPassivationTimeout = 600
 }
 
 case class GetConfigDetail(name: String, req: Boolean = true)

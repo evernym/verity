@@ -2,15 +2,14 @@ package com.evernym.verity.actor.agent.user
 
 import akka.event.LoggingReceive
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_PERSISTENCE_ID
-import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.actor.{ActorMessage, HasAppConfig}
 import com.evernym.verity.actor.agent.{HasSingletonParentProxy, MsgPackFormat}
 import com.evernym.verity.actor.cluster_singleton.watcher.CheckWatchedItem
 import com.evernym.verity.actor.itemmanager.ItemManagerEntityHelper
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.config.ConfigConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
-import com.evernym.verity.protocol.engine.MsgId
-import com.evernym.verity.protocol.protocols.HasAppConfig
 
 import scala.concurrent.Future
 

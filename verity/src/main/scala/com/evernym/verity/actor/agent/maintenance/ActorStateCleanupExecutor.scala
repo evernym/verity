@@ -378,6 +378,7 @@ case class ProcessRouteStore(agentRouteStoreEntityId: EntityId, totalRoutes: Int
 object ActorStateCleanupExecutor {
   def props(appConfig: AppConfig, aac: AgentActorContext, executionContext: ExecutionContext): Props =
     Props(new ActorStateCleanupExecutor(appConfig, aac, executionContext))
+  val defaultPassivationTimeout = 600
 }
 
 object BatchStatus {

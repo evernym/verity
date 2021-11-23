@@ -23,4 +23,5 @@ trait LedgerAsyncOps {
 
   def runPrepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr): Unit
 
+
 }

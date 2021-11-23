@@ -35,7 +35,7 @@ object TypedTestKit {
     .withFallback(PersistenceTestKitSnapshotPlugin.config)
 
   def clusterConfig: Config = {
-    val randomPort = PortProvider.generateUnusedPort(2000)
+    val randomPort = PortProvider.getFreePort
 
     ConfigFactory.parseString(
       s"""

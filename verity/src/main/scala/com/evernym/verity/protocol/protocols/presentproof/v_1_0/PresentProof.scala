@@ -1,18 +1,17 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
-import com.evernym.verity.actor.wallet.CredForProofReqCreated
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
-import com.evernym.verity.protocol.Control
 import com.evernym.verity.did.didcomm.v1.conventions.CredValueEncoderV1_0
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.{buildAttachment, buildProtocolMsgAttachment}
 import com.evernym.verity.observability.metrics.InternalSpan
+import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.ShortenInvite
+import com.evernym.verity.protocol.engine.asyncapi.wallet.CredForProofResult
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{ProtoRef, Protocol, ProtocolContextApi}
+import com.evernym.verity.protocol.engine.{ProtoRef, Protocol}
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
@@ -329,7 +328,7 @@ class PresentProof(implicit val ctx: PresentProofContext)
   }
 
   def sendInvite(presentationRequest: Msg.RequestPresentation, stateData: StateData): Unit = {
-    buildOobInvite(definition.msgFamily.protoRef, presentationRequest, stateData) {
+    buildOobInvite(definition.protoRef, presentationRequest, stateData) {
       case Success(invite) =>
         ctx.urlShortening.shorten(invite.inviteURL) {
           case Success(us: UrlShortened) =>
@@ -354,7 +353,7 @@ class PresentProof(implicit val ctx: PresentProofContext)
     val proofRequest = DefaultMsgCodec.fromJson[ProofRequest](requestUsed.requestRaw)
     val proofRequestJson = DefaultMsgCodec.toJson(proofRequest)
 
-    ctx.wallet.credentialsForProofReq(proofRequestJson) { credentialsNeededJson: Try[CredForProofReqCreated] =>
+    ctx.wallet.credentialsForProofReq(proofRequestJson) { credentialsNeededJson: Try[CredForProofResult] =>
       val credentialsNeeded =
         credentialsNeededJson.map(_.cred).map(DefaultMsgCodec.fromJson[AvailableCredentials](_))
       val (credentialsUsedJson, ids) = credentialsToUse(credentialsNeeded, msg.selfAttestedAttrs)

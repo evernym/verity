@@ -11,9 +11,10 @@ import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.encryptor.PersistentDataEncryptor
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
+import com.evernym.verity.protocol.container.asyncapis.BaseAsyncOpExecutorImpl
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAsyncOps, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner, BaseAccessController}
-import com.evernym.verity.protocol.engine.{BaseAsyncOpExecutorImpl, ProtoRef}
+import com.evernym.verity.protocol.engine.ProtoRef
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
 import com.typesafe.scalalogging.Logger

@@ -12,9 +12,11 @@ import com.evernym.verity.config.ConfigConstants.TIMEOUT_GENERAL_ACTOR_ASK_TIMEO
 import com.evernym.verity.constants.ActorNameConstants.TOKEN_TO_ACTOR_ITEM_MAPPER_REGION_ACTOR_NAME
 import com.evernym.verity.constants.Constants.DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.did.DidPair
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.protocol.Control
+import com.evernym.verity.protocol.engine.container.ProtocolContainer
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
-import com.evernym.verity.protocol.engine.{MsgId, PinstId, ProtoRef, ProtocolContainer}
+import com.evernym.verity.protocol.engine.{PinstId, ProtoRef}
 import com.evernym.verity.protocol.legacy.services.{AgentEndpointServiceProvider, CreateAgentEndpointDetail, CreateKeyEndpointDetail, CreateKeyEndpointServiceProvider, LegacyProtocolServicesImpl, TokenToActorMappingProvider}
 import com.evernym.verity.util.TokenProvider
 import com.evernym.verity.util.Util.buildDuration

@@ -9,7 +9,7 @@ import com.evernym.verity.protocol.engine.Constants.{MFV_0_7, MSG_FAMILY_AGENT_P
 import com.evernym.verity.protocol.engine.util.DbcUtil.requireNotNull
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.TimeUtil._
-import com.typesafe.config.ConfigObject
+import com.typesafe.config.{Config, ConfigFactory, ConfigObject}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
@@ -93,7 +93,7 @@ object AgentProvisioningMsgFamily extends MsgFamily {
   }
 
   case class Keys(verKey: VerKeyStr)
-  case class SponsorDetails(name: String, id: String, keys: List[Keys], endpoint: String, active: Boolean=false, pushService: Option[SponsorPushService] = None)
+  case class SponsorDetails(name: String, id: String, keys: List[Keys], endpoint: String, active: Boolean=false, pushService: Option[SponsorPushService] = None, pushMsgOverrides: Config = ConfigFactory.empty())
   case class SponsorPushService(service: String, host: String, path: String, key: String)
   object SponsorDetails {
     def apply(details: ConfigObject): SponsorDetails = {
@@ -108,13 +108,18 @@ object AgentProvisioningMsgFamily extends MsgFamily {
         )
       }.toOption
 
+      val pushMsgOverrides: Config = Try{
+        config.getObject("push-msg-overrides").toConfig
+      }.getOrElse(ConfigFactory.empty())
+
       SponsorDetails(
         config.getString("name"),
         config.getString("id"),
         config.getObjectList("keys").asScala.toList.map(x => Keys(x.toConfig.getString("verKey"))),
         config.getString("endpoint"),
         config.getBoolean("active"),
-        push
+        push,
+        pushMsgOverrides
       )
     }
   }

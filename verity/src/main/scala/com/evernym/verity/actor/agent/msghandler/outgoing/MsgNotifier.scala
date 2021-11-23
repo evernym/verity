@@ -39,6 +39,7 @@ import com.evernym.verity.util2.Exceptions.HandledErrorException
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.util.Try
 
 
 trait MsgNotifier {
@@ -157,8 +158,9 @@ trait MsgNotifierForStoredMsgs
     val msgTypeBasedTemplateConfigName = s"$formattedMsgType-new-msg-body-template"
 
     // check if override exist
-    val msgTypeBasedTemplateOverride = sponsorId.flatMap { sponsorId =>
-      appConfig.getStringOption(s"$PUSH_NOTIF.sponsor-overrides.$sponsorId.$msgTypeBasedTemplateConfigName")
+    val msgTypeBasedTemplateOverride: Option[String] = sponsorId.flatMap { sponsorId =>
+      ConfigUtil.findSponsorConfigWithId(sponsorId, appConfig)
+        .flatMap(Try(_.pushMsgOverrides.getString(msgTypeBasedTemplateConfigName)).toOption)
     }
 
     // if no override use default

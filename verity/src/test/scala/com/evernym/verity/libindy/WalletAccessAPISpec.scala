@@ -7,11 +7,10 @@ import com.evernym.verity.actor.wallet._
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
-import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
 import com.evernym.verity.protocol.engine.ParticipantId
-import com.evernym.verity.protocol.engine.asyncapi.wallet.{InvalidSignType, WalletAccessAdapter}
 import com.evernym.verity.protocol.engine.asyncapi._
-import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet} 
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{InvalidSignType, WalletAccessAdapter}
+import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet}
 import com.evernym.verity.util.{ParticipantUtil, TestExecutionContextProvider}
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.scalalogging.Logger
@@ -39,7 +38,7 @@ class WalletAccessAPISpec
 
   val walletRights: Set[AccessRight] =
     Set(AccessNewDid, AccessSign, AccessVerify, AccessVerKey, AccessPack, AccessUnPack, AccessStoreTheirDiD, AnonCreds)
-  val walletAccess = new WalletAccessAdapter(new WalletAccessAPI(walletAPI, selfParticipantId))
+  val walletAccess = new WalletAccessAdapter(walletAPI, selfParticipantId)
 
   val TEST_MSG: Array[Byte] = "test string".getBytes()
   val INVALID_SIGN_TYPE = "Invalid sign type"

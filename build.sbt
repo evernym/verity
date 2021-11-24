@@ -74,6 +74,8 @@ val mockitoVer      = "1.16.46"
 val veritySdkVer    = "0.4.10-b1ecd34a"
 val vcxWrapperVer   = "0.12.0.1738"
 
+val flexmarkVer     = "0.62.2"
+
 // compiler plugin versions
 val silencerVersion = "1.7.5"
 
@@ -175,8 +177,7 @@ lazy val settings = Seq(
 ) ++ Defaults.itSettings
 
 lazy val testSettings = Seq (
-  //TODO: with sbt 1.3.8 made below test report settings breaking, shall come back to this
-//  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", (target.value / "test-reports" / name.value).toString),
+  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", (target.value / "test-reports" / name.value).toString),
   //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-o"),             // standard test output, a bit verbose
   Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD", "-u", (target.value / "test-reports").toString),  // summarized test output
 
@@ -357,6 +358,8 @@ lazy val commonLibraryDependencies = {
     "org.scalatest" %% "scalatest-freespec" % scalatestVer,
     "org.scalatest" %% "scalatest-shouldmatchers" % scalatestVer,
     "org.mockito" %% "mockito-scala-scalatest" % mockitoVer,
+
+    "com.vladsch.flexmark" % "flexmark-all" % flexmarkVer,
 
     akkaGrp %% "akka-testkit" % akkaVer,
     akkaGrp %% "akka-persistence-testkit" % akkaVer,

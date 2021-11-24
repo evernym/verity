@@ -25,8 +25,9 @@ unit-test:
     when: always
     paths:
       - verity/target/test-reports
+      - verity/target/verity-unit-test.log
     reports:
-#      junit: verity/target/test-reports/TEST-*.xml
+      junit: verity/target/test-reports/TEST-*.xml
 
 coverage:
   extends:

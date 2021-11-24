@@ -5,9 +5,21 @@
         <encoder class='ch.qos.logback.core.encoder.LayoutWrappingEncoder'>
             <layout class='com.evernym.verity.observability.logs.DevLogLayoutWithColor' />
         </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
     </appender>
 
-    <root level="INFO">
+    <appender name='FILE' class="ch.qos.logback.core.FileAppender">
+        <withJansi>true</withJansi>
+        <file>target/verity-unit-test.log</file>
+        <encoder class='ch.qos.logback.core.encoder.LayoutWrappingEncoder'>
+            <layout class='com.evernym.verity.observability.logs.DevLogLayout' />
+        </encoder>
+    </appender>
+
+    <root level="DEBUG">
+        <appender-ref ref="FILE"/>
         <appender-ref ref="STDOUT"/>
     </root>
 

@@ -20,33 +20,37 @@ data:
     {{- if .Values.customers }}
     {
       "verity": {
-        
-        {{- if .templates }}
+
         "msg-template": {
           "agent-specific": {
             {{- range $domainDid, $values := .Values.customers }}
-            {{ $domainDid | quote }}: {
-              {{ if .templates.inviteUrl }}"sms-msg-template-invite-url": {{.templates.inviteUrl | quote }}{{- end -}}
-              {{ if .templates.offerConnMsg }}"sms-msg-template-offer-conn-msg": {{.templates.offerConnMsg | quote }}{{- end }}
-              {{ if .templates.deeplinkUrl }}"sms-offer-template-deeplink-url": {{.templates.deeplinkUrl | quote }}{{- end }}
-            }
+            {{- if .templates }}
+              {{ $domainDid | quote }}: {
+                {{ if .templates.inviteUrl }}"sms-msg-template-invite-url": {{.templates.inviteUrl | quote }}{{- end -}}
+                {{ if .templates.offerConnMsg }}"sms-msg-template-offer-conn-msg": {{.templates.offerConnMsg | quote }}{{- end }}
+                {{ if .templates.deeplinkUrl }}"sms-offer-template-deeplink-url": {{.templates.deeplinkUrl | quote }}{{- end }}
+              }
+            {{- end }}
+            {{- end }}
           }
         }
-        {{- end }}
 
-        {{- if .authorizedKeys }}
         "agent": {
           "authentication": {
             "keys": {
-              {{ $domainDid | quote }}: [{{ join ", " .authorizedKeys }}]
+              {{- range $domainDid, $values := .Values.customers }}
+              {{- if .authorizedKeys }}
+                {{ $domainDid | quote }}: [{{ join ", " .authorizedKeys }}]
+              {{- end }}
+              {{- end }}
             }
           }
         }
-        {{- end }}
 
         {{- if .retentionPolicies }}
         "retention-policy": {
           "protocol-state": {
+            {{- range $domainDid, $values := .Values.customers }}
             {{ $domainDid | quote }}: {
               {{ if .retentionPolicies.fallback }}"undefined-fallback": {{.retentionPolicies.fallback | quote }}{{- end }}
               {{- if .retentionPolicies.protocols }}
@@ -55,8 +59,10 @@ data:
                 {{- end }}
               {{- end }}
             }
+            {{- end }}
           }
           "outbox-state": {
+            {{- range $domainDid, $values := .Values.customers }}
             {{ $domainDid | quote }}: {
               {{ if .retentionPolicies.fallback }}"undefined-fallback": {{.retentionPolicies.fallback | quote }}{{- end }}
               {{- if .retentionPolicies.outbox }}
@@ -65,10 +71,9 @@ data:
                 {{- end }}
               {{- end }}
             }
+            {{- end }}
           }
         }
-        {{- end }}
-
         {{- end }}
       }
     }

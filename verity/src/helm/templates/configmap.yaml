@@ -20,11 +20,11 @@ data:
     {{- if .Values.customers }}
     {
       "verity": {
-        {{- range $domainDid, $values := .Values.customers }}
         
         {{- if .templates }}
         "msg-template": {
           "agent-specific": {
+            {{- range $domainDid, $values := .Values.customers }}
             {{ $domainDid | quote }}: {
               {{ if .templates.inviteUrl }}"sms-msg-template-invite-url": {{.templates.inviteUrl | quote }}{{- end -}}
               {{ if .templates.offerConnMsg }}"sms-msg-template-offer-conn-msg": {{.templates.offerConnMsg | quote }}{{- end }}

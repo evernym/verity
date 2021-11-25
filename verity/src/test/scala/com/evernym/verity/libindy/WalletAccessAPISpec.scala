@@ -28,6 +28,14 @@ class WalletAccessAPISpec
     AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
   implicit def asyncOpRunner: AsyncOpRunner = this
+  override def logger: Logger = getLoggerByName(getClass.getSimpleName)
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  override def executionContextProvider: ExecutionContextProvider = ecp
+  implicit val ec: ExecutionContext = executionContextProvider.futureExecutionContext
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
   val selfParticipantId: ParticipantId = {
     testWalletAPI.executeSync[WalletCreated.type](CreateWallet())
     val result = ParticipantUtil.participantId(
@@ -108,16 +116,8 @@ class WalletAccessAPISpec
   override def runAsyncOp(op: => Any): Unit = op
 
   override def runFutureAsyncOp(fut: Future[Any]): Unit =
-    fut.onComplete{r => executeCallbackHandler(r)}(executionContextProvider.futureExecutionContext)
+    fut.onComplete{r => executeCallbackHandler(r)}
 
   override def abortTransaction(): Unit = {}
   def postAllAsyncOpsCompleted(): Unit = {}
-  override def logger: Logger = getLoggerByName(getClass.getSimpleName)
-  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
-  override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

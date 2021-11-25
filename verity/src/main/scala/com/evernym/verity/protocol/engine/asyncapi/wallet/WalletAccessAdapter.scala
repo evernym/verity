@@ -7,7 +7,7 @@ import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.BaseAsyncOpExecutorImpl
 import com.evernym.verity.protocol.engine.ParticipantId
-import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner, AsyncResultHandler, BaseAccessController}
+import com.evernym.verity.protocol.engine.asyncapi.{AsyncOpRunner, AsyncResultHandler, BaseAccessController}
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil._
 import com.evernym.verity.util.{HashUtil, ParticipantUtil, Util}
@@ -17,7 +17,7 @@ import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds.issuerCreateSchema
 import org.hyperledger.indy.sdk.anoncreds.DuplicateMasterSecretNameException
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
 class WalletAccessAdapter(protected val walletApi: WalletAPI,

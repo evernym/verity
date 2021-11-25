@@ -67,7 +67,7 @@ class ProtocolContainerSpec extends BasicSpec {
 
           override def runAsyncOp(op: => Any): Unit = ???
 
-          override def runFutureAsyncOp(op: => Future[Any]): Unit = ???
+          override def runFutureAsyncOp(fut: Future[Any]): Unit = ???
 
           lazy val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
 

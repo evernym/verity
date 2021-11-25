@@ -77,11 +77,17 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                       sig: Array[Byte],
                       verKeyUsed: Option[VerKeyStr] = None,
                       signType: SignType = SIGN_ED25519_SHA512_SINGLE)
-                     (handler: Try[VerifiedSigResult] => Unit): Unit =
-    withAsyncOpRunner(
-      {runVerify(signer, msg, sig, verKeyUsed, signType)},
-      handleAsyncOpResult(handler)
-    )
+                     (handler: Try[VerifiedSigResult] => Unit): Unit = {
+    // currently only one sign type is supported
+    if (signType != SIGN_ED25519_SHA512_SINGLE) {
+      handleAsyncOpResult(handler)(Failure(InvalidSignType(signType)))
+    } else {
+      withAsyncOpRunner(
+        {walletApi.tell(VerifySignature(KeyParam.fromDID(signer), msg, sig, verKeyUsed))},
+        handleAsyncOpResult(handler)
+      )
+    }
+  }
 
   override def verify(msg: Array[Byte],
                       sig: Array[Byte],
@@ -230,19 +236,6 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
     val ledgerRequest = LedgerRequest(request)
     val submitter = Submitter(submitterDID, Some(wap))
     walletApi.tell(MultiSignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq, senderActorRef)
-  }
-
-  private def runVerify(signer: ParticipantId,
-                         msg: Array[Byte],
-                         sig: Array[Byte],
-                         verKeyUsed: Option[VerKeyStr] = None,
-                         signType: SignType = SIGN_ED25519_SHA512_SINGLE): Unit = {
-    // currently only one sign type is supported
-    if (signType != SIGN_ED25519_SHA512_SINGLE) {
-      Future.failed(InvalidSignType(signType))
-    } else {
-      walletApi.tell(VerifySignature(KeyParam.fromDID(signer), msg, sig, verKeyUsed))
-    }
   }
 
   //AnonCredRequestsAPI

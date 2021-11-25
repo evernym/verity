@@ -6,7 +6,9 @@ import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessAdapter
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.urlshortener.UrlShortened
+import com.evernym.verity.util.TestExecutionContextProvider
 
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
 class UrlShortenerAccessAdapterSpec extends BasicSpec with MockAsyncOpRunner {
@@ -36,4 +38,6 @@ class UrlShortenerAccessAdapterSpec extends BasicSpec with MockAsyncOpRunner {
       }
     }
   }
+
+  override def mockExecutionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
 }

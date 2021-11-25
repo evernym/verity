@@ -35,22 +35,22 @@ class SegmentStoreAccessAdapter(storageAPI: StorageAPI,
                             segment: Any,
                             retentionPolicy: Option[String]=None) (handler: Try[StoredSegment] => Unit): Unit =
     withFutureOpRunner(
-      {saveSegmentedState(segmentAddress, segmentKey, segment, retentionPolicy)},
+      saveSegmentedState(segmentAddress, segmentKey, segment, retentionPolicy),
       handler
     )
   override def withSegment[T](segmentAddress: SegmentAddress,
                               segmentKey: SegmentKey,
                               retentionPolicy: Option[String]=None) (handler: Try[Option[T]] => Unit): Unit =
-    withAsyncOpRunner(
-      {readSegmentedState(segmentAddress, segmentKey, retentionPolicy)},
+    withFutureOpRunner(
+      readSegmentedState(segmentAddress, segmentKey, retentionPolicy),
       handler
     )
 
   override def removeSegment(segmentAddress: SegmentAddress,
                              segmentKey: SegmentKey,
                              retentionPolicy: Option[String]) (handler: Try[SegmentKey] => Unit): Unit = {
-    withAsyncOpRunner(
-      {runDeleteSegmentState(segmentAddress, segmentKey, retentionPolicy)},
+    withFutureOpRunner(
+      runDeleteSegmentState(segmentAddress, segmentKey, retentionPolicy),
       handler
     )
   }

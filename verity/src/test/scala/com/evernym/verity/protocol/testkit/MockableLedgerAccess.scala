@@ -1,22 +1,19 @@
 package com.evernym.verity.protocol.testkit
 
 import akka.actor.ActorRef
-import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
-import com.evernym.verity.ledger._
-import com.evernym.verity.protocol.engine._
-import com.evernym.verity.testkit.TestWallet
 import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
-import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
-import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessController
+import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessAdapter
+import com.evernym.verity.testkit.TestWallet
 import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.Status.StatusDetail
-import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.util2.Status
+import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.evernym.verity.vault.WalletAPIParam
-import com.evernym.verity.vdr.{CredDef, FQCredDefId, FQSchemaId, NoEndorsement, NoSignature, PreparedTxn, Schema, SubmittedTxn}
+import com.evernym.verity.vdr._
 import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
@@ -45,12 +42,9 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
 
   val testWallet = new TestWallet(executionContext, false)
   implicit val wap: WalletAPIParam = testWallet.wap
-  override val walletAccess = new WalletAccessController (
-    Set(),
-    new WalletAccessAPI (
+  override val walletAccess = new WalletAccessAdapter (
       testWallet.testWalletAPI,
       testWallet.walletId
-    )
   )
 
   lazy val invalidEndorserError: String = "Rule for this action is: 1 TRUSTEE signature is required OR 1 STEWARD " +
@@ -67,12 +61,11 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
-  override def writeCredDef(submitterDID: DidStr, credDefJson: String)
-                           (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
+  override def writeCredDef(submitterDID: DidStr, credDefJson: String)(handler: Try[TxnResp] => Unit): Unit = {
     handler {
       if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
       else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
-      else if (ledgerAvailable) Try(Right(TxnResp(submitterDID, None, None, "", None, 0, None)))
+      else if (ledgerAvailable) Try(TxnResp(submitterDID, None, None, "", None, 0, None))
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
@@ -84,12 +77,11 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
-  override def writeSchema(submitterDID: DidStr, schemaJson: String)
-                          (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit = {
+  override def writeSchema(submitterDID: DidStr, schemaJson: String)(handler: Try[TxnResp] => Unit): Unit = {
     handler {
       if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
       else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
-      else if (ledgerAvailable) Try(Right(TxnResp(submitterDID, None, None, "", None, 0, None)))
+      else if (ledgerAvailable) Try(TxnResp(submitterDID, None, None, "", None, 0, None))
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }

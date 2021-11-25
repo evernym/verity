@@ -79,6 +79,8 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
   val segmentStore: SegmentStoreAccess = new MockStorageService(system)
   implicit val asyncOpRunner = this
 
+  implicit val e: ExecutionContext = this.executionContext
+
   def registerWithSystem(): Unit = pce.system.register(this)
 
   override def createServices: Option[Services] = None
@@ -109,6 +111,10 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
   override def runAsyncOp(op: => Any): Unit = {
     val result = Try(op)
     executeCallbackHandler(result)
+  }
+
+  override def runFutureAsyncOp(op: => Future[Any]): Unit = {
+    op.onComplete(r => executeCallbackHandler(r))
   }
 
   def removeSegment(segmentKey: SegmentKey): SegmentKey = {

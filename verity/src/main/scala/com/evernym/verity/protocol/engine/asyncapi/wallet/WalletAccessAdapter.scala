@@ -17,12 +17,13 @@ import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds.issuerCreateSchema
 import org.hyperledger.indy.sdk.anoncreds.DuplicateMasterSecretNameException
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 class WalletAccessAdapter(protected val walletApi: WalletAPI,
                           protected val selfParticipantId: ParticipantId)
-                         (implicit val asyncOpRunner: AsyncOpRunner,
+                         (implicit val ec: ExecutionContext,
+                          implicit val asyncOpRunner: AsyncOpRunner,
                           implicit val wap: WalletAPIParam,
                           val asyncAPIContext: AsyncAPIContext)
 
@@ -66,11 +67,17 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
     )
 
   override def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE)
-                   (handler: Try[SignedMsgResult] => Unit): Unit =
-    withAsyncOpRunner(
-      {runSign(msg)},
-      handleAsyncOpResult(handler)
-    )
+                   (handler: Try[SignedMsgResult] => Unit): Unit = {
+    // currently only one sign type is supported
+    if (signType != SIGN_ED25519_SHA512_SINGLE) {
+      handleAsyncOpResult(handler)(Failure(InvalidSignType(signType)))
+    } else {
+      withAsyncOpRunner(
+        {runSign(msg)},
+        handleAsyncOpResult(handler)
+      )
+    }
+  }
 
   override def verify(signer: ParticipantId,
                       msg: Array[Byte],
@@ -116,8 +123,10 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                             version:  String,
                             data:  String)
                            (handler: Try[SchemaCreatedResult] => Unit): Unit =
-    withAsyncOpRunner(
-      {runCreateSchema(issuerDID, name, version, data)},
+    withFutureOpRunner(
+      issuerCreateSchema(issuerDID, name, version, data).map { result =>
+        SchemaCreated(result.getSchemaId, result.getSchemaJson)
+      },
       handleAsyncOpResult(handler)
     )
 
@@ -128,12 +137,13 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                              revocationDetails: Option[String])
                             (handler: Try[CredDefCreatedResult] => Unit): Unit =
     withAsyncOpRunner(
-      {runCreateCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails)},
+      {walletApi.tell(CreateCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails))},
       handleAsyncOpResult(handler)
     )
 
   override def createCredOffer(credDefId: String)(handler: Try[CredOfferCreatedResult] => Unit): Unit =
-    withAsyncOpRunner({runCreateCredOffer(credDefId)},
+    withAsyncOpRunner(
+      {walletApi.tell(CreateCredOffer(credDefId))},
       handleAsyncOpResult(handler)
     )
 
@@ -143,7 +153,7 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                              credOfferJson: String)
                             (handler: Try[CredReqCreatedResult] => Unit): Unit =
     withAsyncOpRunner(
-      {runCreateCredReq(credDefId, proverDID, credDefJson, credOfferJson)},
+      {walletApi.tell(CreateCredReq(credDefId, proverDID, credDefJson, credOfferJson, masterSecretId))},
       handleAsyncOpResult(handler)
     )
 
@@ -151,7 +161,7 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                           revRegistryId: String, blobStorageReaderHandle: Int)
                          (handler: Try[CredCreatedResult] => Unit): Unit =
     withAsyncOpRunner(
-      {runCreateCred(credOfferJson, credReqJson, credValuesJson, revRegistryId, blobStorageReaderHandle)},
+      {walletApi.tell(CreateCred(credOfferJson, credReqJson, credValuesJson, revRegistryId, blobStorageReaderHandle))},
       handleAsyncOpResult(handler)
     )
 
@@ -162,13 +172,13 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                          revRegDefJson: String)
                         (handler: Try[CredStoredResult] => Unit): Unit =
     withAsyncOpRunner(
-      {runStoreCred(credId, credDefJson, credReqMetadataJson, credJson, revRegDefJson)},
+      {walletApi.tell(StoreCred(credId, credReqMetadataJson, credJson, credDefJson, revRegDefJson))},
       handleAsyncOpResult(handler)
     )
 
   override def credentialsForProofReq(proofRequest: String)(handler: Try[CredForProofResult] => Unit): Unit =
     withAsyncOpRunner(
-      {runCredentialsForProofReq(proofRequest)},
+      {walletApi.tell(CredForProofReq(proofRequest))},
       handleAsyncOpResult(handler)
     )
 
@@ -178,7 +188,7 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                            credentialDefs: String, revStates: String)
                           (handler: Try[ProofCreatedResult] => Unit): Unit = {
     withAsyncOpRunner(
-      {runCreateProof(proofRequest, usedCredentials, schemas, credentialDefs, revStates)},
+      {walletApi.tell(CreateProof(proofRequest, usedCredentials, schemas, credentialDefs, masterSecretId, revStates))},
       handleAsyncOpResult(handler)
     )
   }
@@ -190,8 +200,9 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                            revocRegDefs: String,
                            revocRegs: String)
                           (handler: Try[ProofVerificationResult] => Unit): Unit = {
-    withAsyncOpRunner(
-      {runVerifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)},
+    withFutureOpRunner(
+      AnoncredsWalletOpExecutor.verifyProof(
+        proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs),
       handleAsyncOpResult(handler)
     )
   }
@@ -216,14 +227,10 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
     ParticipantUtil.DID(participantId)
   }
 
-  private def runSign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE): Unit = {
-    // currently only one sign type is supported
-    if (signType != SIGN_ED25519_SHA512_SINGLE)
-      Future.failed(InvalidSignType(signType))
-    else {
+  //Allowed only for signType: SignType = SIGN_ED25519_SHA512_SINGLE
+  private def runSign(msg: Array[Byte]): Unit = {
       val did = getDIDFromParticipantId(selfParticipantId)
       walletApi.tell(SignMsg(KeyParam.fromDID(did), msg))
-    }
   }
 
   private def runSignRequest(submitterDID: DidStr, request: String): Unit = {
@@ -249,73 +256,6 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
       case Failure(_: DuplicateMasterSecretNameException) => msIdHex    //already created
       case Failure(_: RuntimeException) => throw new RuntimeException("error during master secret creation")
     }
-  }
-
-  private def runCreateSchema(issuerDID: DidStr,
-                      name:String,
-                      version: String,
-                      data: String): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec =>
-        issuerCreateSchema(issuerDID, name, version, data).map { result =>
-          SchemaCreated(result.getSchemaId, result.getSchemaJson)
-        }
-      }
-    )
-  }
-
-  private def runCreateCredDef(issuerDID: DidStr,
-                       schemaJson: String,
-                       tag: String,
-                       sigType: Option[String]=None,
-                       revocationDetails: Option[String]=None): Unit =
-    walletApi.tell(CreateCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails))
-
-  private def runCreateCredOffer(credDefId: String): Unit = {
-    walletApi.tell(CreateCredOffer(credDefId))
-  }
-
-  private def runCreateCredReq(credDefId: String, proverDID: DidStr, credDefJson: String, credOfferJson: String): Unit =
-    walletApi.tell(CreateCredReq(credDefId, proverDID,
-      credDefJson, credOfferJson, masterSecretId))
-
-  private def runCreateCred(credOfferJson: String, credReqJson: String, credValuesJson: String,
-                    revRegistryId: String, blobStorageReaderHandle: Int): Unit = {
-    walletApi.tell(CreateCred(credOfferJson, credReqJson, credValuesJson,
-      revRegistryId, blobStorageReaderHandle))
-  }
-
-  private def runStoreCred(credId: String,
-                   credReqMetadataJson: String,
-                   credJson: String,
-                   credDefJson: String,
-                   revRegDefJson: String): Unit = {
-    walletApi.tell(StoreCred(credId, credReqMetadataJson, credJson, credDefJson, revRegDefJson))
-  }
-
-  private def runCredentialsForProofReq(proofRequest: String): Unit =
-    walletApi.tell(CredForProofReq(proofRequest))
-
-  private def runCreateProof(proofRequest: String,
-                     usedCredentials: String,
-                     schemas: String,
-                     credentialDefs: String,
-                     revStates: String): Unit =
-    walletApi.tell(
-      CreateProof(proofRequest, usedCredentials, schemas, credentialDefs, masterSecretId, revStates)
-    )
-
-  private def runVerifyProof(proofRequest: String,
-                     proof: String,
-                     schemas: String,
-                     credentialDefs: String,
-                     revocRegDefs: String,
-                     revocRegs: String): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec => AnoncredsWalletOpExecutor.verifyProof(
-        proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)
-      }
-    )
   }
 
   override def handleResult[T](result: Try[Any], handler: Try[T] => Unit): Unit = {

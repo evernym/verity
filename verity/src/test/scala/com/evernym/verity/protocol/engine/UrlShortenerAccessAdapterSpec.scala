@@ -9,14 +9,14 @@ import com.evernym.verity.urlshortener.UrlShortened
 
 import scala.util.{Failure, Success}
 
-class UrlShortenerAccessControllerSpec extends BasicSpec with MockAsyncOpRunner {
+class UrlShortenerAccessAdapterSpec extends BasicSpec with MockAsyncOpRunner {
   implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
 
 
   "Url Shortener access controller" - {
-    "when given correct access rights" - {
-      "should pass the access right checks" in {
+    "when shortening completed successfully" - {
+      "should be success result passed to handler" in {
         val controller = new UrlShorteningAccessAdapter(
           null
         ){
@@ -27,12 +27,12 @@ class UrlShortenerAccessControllerSpec extends BasicSpec with MockAsyncOpRunner 
       }
     }
 
-    "when given wrong access rights" - {
-      "should fail the access right checks" in {
+    "when shortening fails" - {
+      "should be failure passed to handler" in {
         val controller = new UrlShorteningAccessAdapter(null){
-          override protected def runShorten(longUrl: String): Unit = Failure(throw new Exception)
+          override protected def runShorten(longUrl: String): Unit = Failure(new Exception)
         }
-        controller.shorten("hello") { x => x.failed.get.isInstanceOf[IllegalArgumentException]  }
+        controller.shorten("hello") { x => x shouldBe Failure(new Exception)  }
       }
     }
   }

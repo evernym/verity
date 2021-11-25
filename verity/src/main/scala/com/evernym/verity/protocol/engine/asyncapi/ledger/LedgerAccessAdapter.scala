@@ -25,14 +25,14 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
 
   def getSchema(schemaId: String)(handler: Try[GetSchemaResp] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      {getSchemaBase(Set(schemaId)).map { r => r(schemaId) }},
+      getSchemaBase(Set(schemaId)).map { r => r(schemaId) },
       handler
     )
   }
 
   def getCredDef(credDefId: String)(handler: Try[GetCredDefResp] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      {getCredDefsBase(Set(credDefId)).map { r => r(credDefId)} },
+      getCredDefsBase(Set(credDefId)).map { r => r(credDefId) },
       handler
     )
   }
@@ -40,7 +40,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
   override def getSchemas(schemaIds: Set[String])
                          (handler: Try[Map[String, GetSchemaResp]] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      {getSchemaBase(schemaIds)},
+      getSchemaBase(schemaIds),
       handler
     )
   }
@@ -48,14 +48,14 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
   override def getCredDefs(credDefIds: Set[String])
                           (handler: Try[Map[String, GetCredDefResp]] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      {getCredDefsBase(credDefIds)},
+      getCredDefsBase(credDefIds),
       handler
     )
   }
 
   override def writeSchema(submitterDID: DidStr, schemaJson: String)(handler: Try[TxnResp] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      {ledgerSvc.writeSchema(submitterDID, schemaJson, walletAccess)},
+      ledgerSvc.writeSchema(submitterDID, schemaJson, walletAccess),
       handler
     )
   }
@@ -63,13 +63,13 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
   override def prepareSchemaForEndorsement(submitterDID: DidStr, schemaJson: String, endorserDID: DidStr)
                                           (handler: Try[LedgerRequest] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
-      {ledgerSvc.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)},
+      ledgerSvc.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess),
       handler
     )
 
   override def writeCredDef(submitterDID: DidStr, credDefJson: String)(handler: Try[TxnResp] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      {ledgerSvc.writeCredDef(submitterDID, credDefJson, walletAccess)},
+      ledgerSvc.writeCredDef(submitterDID, credDefJson, walletAccess),
       handler
     )
   }
@@ -77,7 +77,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
   override def prepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr)
                                            (handler: Try[LedgerRequest] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      {ledgerSvc.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID, walletAccess)},
+      ledgerSvc.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID, walletAccess),
       handler
     )
   }
@@ -88,7 +88,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
                                 endorser: Option[String])
                                (handler: Try[PreparedTxn] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      {vdrTools.prepareSchemaTxn(schemaJson, fqSchemaId, submitterDID, endorser)},
+      vdrTools.prepareSchemaTxn(schemaJson, fqSchemaId, submitterDID, endorser),
       handler
     )
   }
@@ -100,7 +100,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
                                  endorser: Option[String])
                                 (handler: Try[PreparedTxn] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
-      {vdrTools.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser)},
+      vdrTools.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser),
       handler
     )
 
@@ -109,20 +109,20 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
                          endorsement: Array[Byte])
                         (handler: Try[SubmittedTxn] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
-      {vdrTools.submitTxn(preparedTxn, signature, endorsement)},
+      vdrTools.submitTxn(preparedTxn, signature, endorsement),
       handler
     )
 
 
   override def resolveSchema(fqSchemaId: FQSchemaId)(handler: Try[Schema] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
-      {vdrTools.resolveSchema(fqSchemaId)},
+      vdrTools.resolveSchema(fqSchemaId),
       handler
     )
 
   override def resolveCredDef(fqCredDefId: FQCredDefId)(handler: Try[CredDef] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
-      {vdrTools.resolveCredDef(fqCredDefId)},
+      vdrTools.resolveCredDef(fqCredDefId),
       handler
     )
 

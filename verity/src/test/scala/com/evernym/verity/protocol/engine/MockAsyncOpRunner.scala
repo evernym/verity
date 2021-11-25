@@ -15,7 +15,7 @@ trait MockAsyncOpRunner
 
   override protected def runAsyncOp(op: => Any): Unit = op
 
-  override protected def runFutureAsyncOp(op: => Future[Any]): Unit = op.onComplete{r => executeCallbackHandler(r)}
+  override protected def runFutureAsyncOp(fut: Future[Any]): Unit = fut.onComplete{r => executeCallbackHandler(r)}
 
   def postAllAsyncOpsCompleted(): Unit = ???
   def abortTransaction(): Unit = ???

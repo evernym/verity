@@ -12,8 +12,8 @@ trait BaseAccessController {
     asyncOpRunner.withAsyncOpRunner(asyncOp, cbHandler)
   }
 
-  def withFutureOpRunner[T](fut: Future[Any],
+  def withFutureOpRunner[T](op: => Future[Any],
                             cbHandler: Try[T] => Unit): Unit = {
-    asyncOpRunner.withFutureOpRunner(fut, cbHandler)
+    asyncOpRunner.withFutureOpRunner(op, cbHandler)
   }
 }

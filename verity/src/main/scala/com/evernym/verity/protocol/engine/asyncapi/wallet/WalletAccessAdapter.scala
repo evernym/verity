@@ -124,9 +124,9 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                             data:  String)
                            (handler: Try[SchemaCreatedResult] => Unit): Unit =
     withFutureOpRunner(
-      issuerCreateSchema(issuerDID, name, version, data).map { result =>
+      {issuerCreateSchema(issuerDID, name, version, data).map { result =>
         SchemaCreated(result.getSchemaId, result.getSchemaJson)
-      },
+      }},
       handleAsyncOpResult(handler)
     )
 
@@ -201,8 +201,7 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                            revocRegs: String)
                           (handler: Try[ProofVerificationResult] => Unit): Unit = {
     withFutureOpRunner(
-      AnoncredsWalletOpExecutor.verifyProof(
-        proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs),
+      {AnoncredsWalletOpExecutor.verifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)},
       handleAsyncOpResult(handler)
     )
   }

@@ -113,8 +113,8 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
     executeCallbackHandler(result)
   }
 
-  override def runFutureAsyncOp(fut: Future[Any]): Unit = {
-    fut.onComplete(r => executeCallbackHandler(r))
+  override def runFutureAsyncOp(op: => Future[Any]): Unit = {
+    op.onComplete(r => executeCallbackHandler(r))
   }
 
   def removeSegment(segmentKey: SegmentKey): SegmentKey = {

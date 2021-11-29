@@ -239,8 +239,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
           agentActorContext.poolConnManager,
           executionContextProvider.futureExecutionContext
         )
-      ),
-      Option(WALLET_ACTOR_ACTOR_DISPATCHER_NAME)
+      )
     ),
     passivateIdleEntityAfter = Option(
       passivateDuration(NON_PERSISTENT_WALLET_ACTOR_PASSIVATE_TIME_IN_SECONDS, 600.seconds)

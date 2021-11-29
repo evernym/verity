@@ -2,9 +2,7 @@ package com.evernym.verity.texter
 
 import java.net.HttpURLConnection._
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.util.Util._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.ConfigSvc
@@ -48,7 +46,7 @@ class OpenMarketDispatcherMEP (val appConfig: AppConfig)
       .build
   }
 
-  def sendMessage(smsInfo: SmsInfo): Future[Either[HandledErrorException, SmsSent]] = {
+  def sendMessage(smsInfo: SmsInfo): Future[SmsReqSent] = {
     val message = InvokeService(EndUser(smsInfo.to), Variables(Session(smsInfo.text)))
     val jsonEntity = DefaultMsgCodec.toJson(message)
     val target = client.target(sendMsgResource)
@@ -56,14 +54,13 @@ class OpenMarketDispatcherMEP (val appConfig: AppConfig)
       .post(Entity.entity(jsonEntity,
         MediaType.APPLICATION_JSON_TYPE))
     if (result.getStatus != HTTP_ACCEPTED)  {
-      Future.successful(Left(buildHandledError(result.getStatus.toString, Option(result.getStatusInfo.getStatusCode.toString),
-        Option(result.getStatusInfo.getReasonPhrase))))
+      Future.failed(new RuntimeException("unexpected http status: " + result.getStatusInfo.toString))
     } else {
       val msgId =
         result.getHeaders.asScala.find(_._1 == "X-Request-Id").map { h =>
           h._2.asScala.head.toString
         }
-      Future.successful(Right(SmsSent(msgId.getOrElse(EMPTY_STRING), providerId)))
+      Future.successful(SmsReqSent(msgId.getOrElse(EMPTY_STRING), providerId))
     }
   }
 

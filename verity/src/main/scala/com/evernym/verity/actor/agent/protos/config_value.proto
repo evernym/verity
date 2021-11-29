@@ -1,7 +1,5 @@
 syntax = "proto3";
 
-import "scalapb/scalapb.proto";
-
 package com.evernym.verity.actor.agent;
 
 message ConfigValue {

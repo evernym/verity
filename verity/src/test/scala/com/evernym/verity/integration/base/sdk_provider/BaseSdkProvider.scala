@@ -161,7 +161,7 @@ abstract class SdkBase(param: SdkParam,
     val jsonMsgBuilder = JsonMsgBuilder(createAgentMsg)
     val packedMsg = packFromLocalAgentKey(jsonMsgBuilder.jsonMsg, Set(KeyParam.fromVerKey(agencyVerKey)))
     val routedPackedMsg = prepareFwdMsg(agencyDID, agencyDID, packedMsg)
-    val receivedMsgParam = parseAndUnpackResponse[AgentCreated](sendPOST(routedPackedMsg))
+    val receivedMsgParam = parseAndUnpackResponse[AgentCreated](checkOKResponse(sendPOST(routedPackedMsg)))
     val agentCreated = receivedMsgParam.msg
     require(agentCreated.selfDID.trim.nonEmpty, "agent provisioning selfDID can't be empty")
     require(agentCreated.agentVerKey.trim.nonEmpty, "agent provisioning verKey can't be empty")
@@ -174,7 +174,7 @@ abstract class SdkBase(param: SdkParam,
     val jsonMsgBuilder = JsonMsgBuilder(msg)
     val packedMsg = packFromLocalAgentKey(jsonMsgBuilder.jsonMsg, Set(KeyParam.fromVerKey(agencyVerKey)))
     val routedPackedMsg = prepareFwdMsg(agencyDID, fwdToDID, packedMsg)
-    parseAndUnpackResponse[T](sendPOST(routedPackedMsg))
+    parseAndUnpackResponse[T](checkOKResponse(sendPOST(routedPackedMsg)))
   }
 
   protected def packForMyVerityAgent(msg: String): Array[Byte] = {
@@ -257,7 +257,6 @@ abstract class SdkBase(param: SdkParam,
   }
 
   protected def parseAndUnpackResponse[T: ClassTag](resp: HttpResponse): ReceivedMsgParam[T] = {
-    checkOKResponse(resp)
     val packedMsg = parseHttpResponseAsString(resp)
     unpackMsg[T](packedMsg.getBytes)
   }

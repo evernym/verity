@@ -6,7 +6,7 @@ import java.net.HttpURLConnection._
 import javax.ws.rs.client.{Client, ClientBuilder, Entity}
 import javax.ws.rs.core.MediaType
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.util2.Exceptions.{HandledErrorException, InternalServerErrorException, SmsSendingFailedException}
+import com.evernym.verity.util2.Exceptions.{InternalServerErrorException, SmsSendingFailedException}
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.http.common.ConfigSvc
@@ -52,7 +52,7 @@ class BandwidthDispatcher(val appConfig: AppConfig)
       replace(FORM_FEED, SPACE).replace(NULL_CHARACTER, SPACE).replaceAll(DOUBLE_QUOTE, DOUBLE_QUOTE_FOR_BANDWIDTH)
   }
 
-  def sendMessage(smsInfo: SmsInfo): Future[Either[HandledErrorException, SmsSent]] = {
+  def sendMessage(smsInfo: SmsInfo): Future[SmsReqSent] = {
     val message = removeSpecialCharacters(smsInfo.text)
     val jsonEntity = """{"receiptRequested":"""" + "all" + """","from":"""" + from +
       """","to":"""" + smsInfo.to + """","text" :"""" + message + """"}"""
@@ -67,15 +67,15 @@ class BandwidthDispatcher(val appConfig: AppConfig)
             result.getHeaders.asScala.find(_._1 == "Location").map { h =>
               h._2.asScala.head.toString.replaceAll(target.getUri.toString + FORWARD_SLASH, EMPTY_STRING)
             }
-          Future.successful(Right(SmsSent(msgId.getOrElse(EMPTY_STRING), providerId)))
+          Future.successful(SmsReqSent(msgId.getOrElse(EMPTY_STRING), providerId))
         case HTTP_UNAUTHORIZED =>
-          Future.successful(Left(new InternalServerErrorException(UNHANDLED.statusCode, Option(result.getStatusInfo.getReasonPhrase))))
+          Future.failed(new InternalServerErrorException(UNHANDLED.statusCode, Option(result.getStatusInfo.getReasonPhrase)))
         case _ =>
-          Future.successful(Left(new SmsSendingFailedException(Option(result.getStatusInfo.getReasonPhrase))))
+          Future.failed(new SmsSendingFailedException(Option(result.getStatusInfo.getReasonPhrase)))
       }
     } catch {
       case e: Exception =>
-        Future.successful(Left(new InternalServerErrorException(UNHANDLED.statusCode, Option(e.getMessage))))
+        Future.failed(new InternalServerErrorException(UNHANDLED.statusCode, Option(e.getMessage)))
     }
   }
 

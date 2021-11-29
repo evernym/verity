@@ -1,8 +1,5 @@
 syntax = "proto3";
 
-// Brought in from scalapb-runtime
-import "scalapb/scalapb.proto";
-
 package com.evernym.verity.actor;
 
 //This message is a wrapper message to store multiple 'events' (used in protocol actors)

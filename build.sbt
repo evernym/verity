@@ -47,7 +47,7 @@ val evernymDevRepo = DebianRepo(
 val libVdrToolsVer = "0.8.1"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libindy.so"),
-  NonMatchingLib("libvcx", "0.12.0-bionic~447", "libvcx.so")  // For integration testing ONLY
+  NonMatchingLib("libvcx", "0.12.0-bionic~500", "libvcx.so")  // For integration testing ONLY
 )
 
 //deb package dependencies versions
@@ -70,7 +70,7 @@ val sdnotifyVer     = "1.3"
 val scalatestVer    = "3.2.10"
 val mockitoVer      = "1.16.42"
 val veritySdkVer    = "0.5.0"
-val vcxWrapperVer   = "0.12.0.447"
+val vcxWrapperVer   = "0.12.0.500"
 
 
 // compiler plugin versions

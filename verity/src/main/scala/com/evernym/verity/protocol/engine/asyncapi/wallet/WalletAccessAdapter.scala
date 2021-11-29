@@ -5,7 +5,7 @@ import com.evernym.verity.config.ConfigConstants.SALT_WALLET_NAME
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
-import com.evernym.verity.protocol.container.asyncapis.BaseAsyncOpExecutorImpl
+import com.evernym.verity.protocol.container.asyncapis.BaseAsyncAccessImpl
 import com.evernym.verity.protocol.engine.ParticipantId
 import com.evernym.verity.protocol.engine.asyncapi.{AsyncOpRunner, AsyncResultHandler, BaseAccessController}
 import com.evernym.verity.util.HashAlgorithm.SHA256
@@ -29,7 +29,7 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
 
   extends WalletAccess
     with BaseAccessController
-    with BaseAsyncOpExecutorImpl
+    with BaseAsyncAccessImpl
     with AsyncResultHandler
     with FutureConverter {
 

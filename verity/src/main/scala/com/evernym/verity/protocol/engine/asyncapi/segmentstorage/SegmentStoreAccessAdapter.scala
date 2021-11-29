@@ -11,7 +11,7 @@ import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.encryptor.PersistentDataEncryptor
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
-import com.evernym.verity.protocol.container.asyncapis.BaseAsyncOpExecutorImpl
+import com.evernym.verity.protocol.container.asyncapis.BaseAsyncAccessImpl
 import com.evernym.verity.protocol.engine.ProtoRef
 import com.evernym.verity.protocol.engine.asyncapi.{AsyncOpRunner, BaseAccessController}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
@@ -29,7 +29,7 @@ class SegmentStoreAccessAdapter(storageAPI: StorageAPI,
                                    implicit val ec: ExecutionContext)
   extends SegmentStoreAccess
     with BaseAccessController
-    with BaseAsyncOpExecutorImpl {
+    with BaseAsyncAccessImpl {
   override def storeSegment(segmentAddress: SegmentAddress,
                             segmentKey: SegmentKey,
                             segment: Any,

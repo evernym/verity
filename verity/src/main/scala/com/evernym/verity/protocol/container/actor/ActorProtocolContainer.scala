@@ -288,7 +288,6 @@ class ActorProtocolContainer[
   }
 
   lazy val msgForwarder = new MsgForwarder
-  override val defaultReceiveTimeoutInSeconds: Int = 900
   override val entityCategory: String = PERSISTENT_PROTOCOL_CONTAINER
 
   override def serviceEndpoint: ServiceEndpoint = {

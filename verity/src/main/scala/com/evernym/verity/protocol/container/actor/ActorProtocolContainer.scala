@@ -400,8 +400,8 @@ class ActorProtocolContainer[
    */
   override protected def runFutureAsyncOp(op: => Future[Any]): Unit = {
     setNewReceiveBehaviour(toAsyncOpInProgressBehaviour, discardOld = false)
-    val result = op
     withHandleResp {
+      val result = op //given operation gets executed here
       val sndr = sender()
       result.onComplete {
         r => self.tell(AsyncOpResp(r), sndr)

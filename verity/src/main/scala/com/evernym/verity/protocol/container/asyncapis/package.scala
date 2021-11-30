@@ -1,14 +1,9 @@
 package com.evernym.verity.protocol.container
 
-import akka.actor.{Actor, ActorContext, ActorRef, Props}
+import akka.actor.{ActorContext, ActorRef}
 import akka.util.Timeout
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.config.ConfigConstants.ASYNC_OP_EXECUTOR_ACTOR_DISPATCHER_NAME
-import com.evernym.verity.protocol.container.actor.{AsyncAPIContext, AsyncOpResp}
-
-import java.util.UUID
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
+import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 
 package object asyncapis {
 

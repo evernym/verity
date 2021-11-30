@@ -18,14 +18,14 @@ unit-test:
     DD_ENV: "ci"
     DD_SERVICE: "verity"
   script:
-    - sbt test | tee target/verity-unit-tests.log | grep -v -e '^\[WARN\|ERROR\|TRACE\|INFO\|DEBUG'
+    - sbt test | tee verity/target/verity-unit-tests.log | grep -v -e '^\[WARN\|ERROR\|TRACE\|INFO\|DEBUG'
   after_script:
     - datadog-ci junit upload verity/target/test-reports
   artifacts:
     when: always
     paths:
       - verity/target/test-reports
-      - target/verity-unit-tests.log
+      - verity/target/verity-unit-tests.log
     reports:
 #      junit: verity/target/test-reports/TEST-*.xml
 

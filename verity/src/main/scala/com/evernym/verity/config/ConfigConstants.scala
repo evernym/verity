@@ -108,6 +108,7 @@ object ConfigConstants {
   val INFO_BIP_ENDPOINT_PORT = s"$INFO_BIP_ENDPOINT.port"
   val INFO_BIP_ENDPOINT_PATH_PREFIX = s"$INFO_BIP_ENDPOINT.path-prefix"
   val INFO_BIP_ENDPOINT_ACCESS_TOKEN = s"$INFO_BIP.access-token"
+  val INFO_BIP_ENDPOINT_SENDER_ID = s"$INFO_BIP.sender-id"
 
   private val LIB_INDY = s"$VERITY.lib-indy"
   val LIB_INDY_LIBRARY_DIR_LOCATION = s"$LIB_INDY.library-dir-location"

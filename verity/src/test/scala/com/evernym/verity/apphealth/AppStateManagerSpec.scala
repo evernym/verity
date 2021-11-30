@@ -1,7 +1,5 @@
 package com.evernym.verity.apphealth
 
-import akka.cluster.Cluster
-import akka.cluster.MemberStatus.{Down, Removed}
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.appStateManager.{AppStateDetailed, AppStateUpdateAPI, CauseDetail, DrainingStarted, ErrorEvent, EventDetail, ListeningSuccessful, ManualUpdate, MildSystemError, RecoverIfNeeded, SeriousSystemError, SuccessEvent}
@@ -231,8 +229,6 @@ class AppStateManagerSpec
 
     //this usually takes a long time, so the timeout time has been increased
   def switchToDraining()(implicit amt: AppStateManagerTestKit): Unit = {
-    kickOffUserInitiatedShutdown()
-
     AppStateUpdateAPI(system).publishEvent(SuccessEvent(
         DrainingStarted,
         CONTEXT_AGENT_SERVICE_DRAIN,
@@ -255,11 +251,6 @@ class AppStateManagerSpec
             CONTEXT_AGENT_SERVICE_DRAIN -> Set(CAUSE_DETAIL_DRAINING_STARTED))
         )
       }
-    }
-
-    val cluster = Cluster(system)
-    eventually(timeout(Span(15, Seconds)), interval(Span(200, Millis))) {
-      List(Down, Removed).contains(cluster.selfMember.status) shouldBe true
     }
   }
 

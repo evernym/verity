@@ -30,6 +30,7 @@ class InfoBipDirectSmsDispatcher(val appConfig: AppConfig,
   lazy val smsResourcePathPrefix: String = s"${appConfig.getStringReq(INFO_BIP_ENDPOINT_PATH_PREFIX)}"
   lazy val sendMsgResource: String = s"$webApiUrl/$smsResourcePathPrefix"
   lazy val accessToken: String = appConfig.getStringReq(INFO_BIP_ENDPOINT_ACCESS_TOKEN)
+  lazy val senderId: String = appConfig.getStringReq(INFO_BIP_ENDPOINT_SENDER_ID)
 
   def sendMessage(smsInfo: SmsInfo): Future[SmsReqSent] = {
     val headers = immutable.Seq(RawHeader("Authorization", "App " + accessToken))
@@ -68,7 +69,7 @@ class InfoBipDirectSmsDispatcher(val appConfig: AppConfig,
       {
         "messages":[
           {
-            "from":"InfoSMS",
+            "from":"$senderId",
             "destinations":[
               {"to":"${smsInfo.to}"}
             ],

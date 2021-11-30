@@ -19,4 +19,6 @@ deploy-k8s:
       $TRIGGERAPI_URL_VERITY_K8S_RELEASE
   tags:
     - docker-machine
+  environment:
+    name: verity-k8s-release
   needs: ["package" ,"publish-debian", "publish-docker"]

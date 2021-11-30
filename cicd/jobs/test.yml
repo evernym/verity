@@ -18,6 +18,7 @@ unit-test:
     DD_ENV: "ci"
     DD_SERVICE: "verity"
   script:
+    - mkdir -p verity/target
     - sbt test | tee verity/target/verity-unit-tests.log | grep -v -e '^\[WARN\|ERROR\|TRACE\|INFO\|DEBUG'
   after_script:
     - datadog-ci junit upload verity/target/test-reports

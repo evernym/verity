@@ -32,10 +32,10 @@ trait AsyncOpRunner {
     runAsyncOp(asyncOp)
   }
 
-  final def withFutureOpRunner[T](asyncOp: => Future[Any],
+  final def withFutureOpRunner[T](op: => Future[Any],
                                   cbHandler: Try[T] => Unit): Unit = {
     pushAsyncOpCallbackHandler(cbHandler)
-    runFutureAsyncOp(asyncOp)
+    runFutureAsyncOp(op)
   }
 
   import scala.language.existentials

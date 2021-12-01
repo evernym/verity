@@ -26,14 +26,14 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
 
   def getSchema(schemaId: String)(handler: Try[GetSchemaResp] => Unit): Unit = {
     withFutureOpRunner(
-      {getSchemaBase(Set(schemaId)).map { r => r(schemaId) } },
+      {getSchemaBase(Set(schemaId)).map { r => r(schemaId) }},
       handler
     )
   }
 
   def getCredDef(credDefId: String)(handler: Try[GetCredDefResp] => Unit): Unit = {
     withFutureOpRunner(
-      {getCredDefsBase(Set(credDefId)).map { r => r(credDefId) } },
+      {getCredDefsBase(Set(credDefId)).map { r => r(credDefId)} },
       handler
     )
   }
@@ -162,6 +162,4 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
   }
 
   override def walletAccess: WalletAccess = _walletAccess
-
-  override def accessRights: Set[AccessRight] = Set.empty
 }

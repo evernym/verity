@@ -7,7 +7,6 @@ import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgF
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessRight, AccessStoreTheirDiD, AccessVerKey, DEPRECATED_AccessSetupNewWallet}
 import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
@@ -69,8 +68,6 @@ object AgentProvisioningProtoDef
     new AgentProvisioningProtocol(context)
 
   override def initialState: State = State.Uninitialized()
-
-  override val requiredAccess: Set[AccessRight] = Set(DEPRECATED_AccessSetupNewWallet, AccessVerKey, AccessNewDid, AccessStoreTheirDiD)
 }
 
 trait ProtoMsg extends MsgBase

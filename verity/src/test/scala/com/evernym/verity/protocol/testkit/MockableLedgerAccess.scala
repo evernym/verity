@@ -17,7 +17,7 @@ import com.evernym.verity.vdr._
 import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 object MockableLedgerAccess {
   val MOCK_NO_DID = "MOCK_NO_DID"
@@ -65,7 +65,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
       else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
-      else if (ledgerAvailable) Try(TxnResp(submitterDID, None, None, "", None, 0, None))
+      else if (ledgerAvailable) Success(TxnResp(submitterDID, None, None, "", None, 0, None))
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
@@ -81,7 +81,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
       else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
-      else if (ledgerAvailable) Try(TxnResp(submitterDID, None, None, "", None, 0, None))
+      else if (ledgerAvailable) Success(TxnResp(submitterDID, None, None, "", None, 0, None))
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
@@ -163,6 +163,8 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
       Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
+
+  override val mockExecutionContext: ExecutionContext = executionContext
 }
 
 

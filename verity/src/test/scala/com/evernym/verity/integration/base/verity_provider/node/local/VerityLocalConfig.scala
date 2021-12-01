@@ -1,7 +1,7 @@
 package com.evernym.verity.integration.base.verity_provider.node.local
 
 import akka.persistence.journal.leveldb.SharedLeveldbJournal
-import com.evernym.verity.config.ConfigConstants.{LIB_INDY_LEDGER_POOL_NAME, LIB_INDY_LIBRARY_DIR_LOCATION, LIB_INDY_WALLET_TYPE}
+import com.evernym.verity.config.ConfigConstants.{LIB_INDY_LEDGER_POOL_NAME, LIB_VDRTOOLS_LIBRARY_DIR_LOCATION, LIB_VDRTOOLS_WALLET_TYPE}
 import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore}
 import com.typesafe.config.{Config, ConfigFactory}
 
@@ -85,8 +85,8 @@ object VerityLocalConfig {
   private def useDefaultWallet(tempDir: Path): Config = {
     ConfigFactory.parseString(
       s"""
-         |$LIB_INDY_WALLET_TYPE = "default"
-         |$LIB_INDY_LIBRARY_DIR_LOCATION  = "${tempDir.resolve("indy")}"
+         |$LIB_VDRTOOLS_WALLET_TYPE = "default"
+         |$LIB_VDRTOOLS_LIBRARY_DIR_LOCATION  = "${tempDir.resolve("indy")}"
          |""".stripMargin
     )
   }
@@ -112,18 +112,20 @@ object VerityLocalConfig {
   private def configureLibIndy(taaEnabled: Boolean, taaAutoAccept: Boolean): Config = {
     ConfigFactory.parseString(
       s"""
-         |verity.lib-indy {
+         |verity.lib-vdrtools {
          |  ledger {
-         |    transaction_author_agreement = {
-         |      agreements = {
-         |        "1.0.0" {
-         |          "digest" = "a0ab0aada7582d4d211bf9355f36482e5cb33eeb46502a71e6cc7fea57bb8305"
-         |          "mechanism" = "on_file"
-         |          "time-of-acceptance" = "2019-11-18"
+         |    indy {
+         |      transaction_author_agreement = {
+         |        agreements = {
+         |          "1.0.0" {
+         |            "digest" = "a0ab0aada7582d4d211bf9355f36482e5cb33eeb46502a71e6cc7fea57bb8305"
+         |            "mechanism" = "on_file"
+         |            "time-of-acceptance" = "2019-11-18"
+         |          }
          |        }
+         |        enabled = $taaEnabled
+         |        auto-accept = $taaAutoAccept
          |      }
-         |      enabled = $taaEnabled
-         |      auto-accept = $taaAutoAccept
          |    }
          |  }
          |}""".stripMargin

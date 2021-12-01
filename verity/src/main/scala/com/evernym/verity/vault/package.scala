@@ -2,7 +2,7 @@ package com.evernym.verity
 
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import org.hyperledger.indy.sdk.wallet.Wallet
+import com.evernym.vdrtools.wallet.Wallet
 
 package object vault {
 

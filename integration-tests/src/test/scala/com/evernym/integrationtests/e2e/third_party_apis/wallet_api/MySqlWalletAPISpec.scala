@@ -11,7 +11,7 @@ trait MySqlWalletAPISpec {
   override def walletStorageConfig: Config = {
     ConfigFactory.parseString(
       """
-        |verity.lib-indy.wallet.type = "mysql"
+        |verity.lib-vdrtools.wallet.type = "mysql"
         |""".stripMargin
     ).withFallback(
       ConfigFactory.parseFile(new File("integration-tests/src/test/resources/common/wallet-storage.conf"))

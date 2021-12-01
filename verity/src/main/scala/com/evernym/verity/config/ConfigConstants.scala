@@ -102,6 +102,20 @@ object ConfigConstants {
   val TWILIO_DEFAULT_NUMBER = s"$TWILIO.default-number"
   val TWILIO_APP_NAME = s"$TWILIO.app-name"
 
+  private val LIB_VDRTOOLS = s"$VERITY.lib-vdrtools"
+  val LIB_VDRTOOLS_LIBRARY_DIR_LOCATION = s"$LIB_VDRTOOLS.library-dir-location"
+  val LIB_VDRTOOLS_FLAVOR = s"$LIB_VDRTOOLS.flavor"
+
+  private val LIB_VDRTOOLS_WALLET = s"$LIB_VDRTOOLS.wallet"
+  val LIB_VDRTOOLS_WALLET_TYPE = s"$LIB_VDRTOOLS_WALLET.type"
+
+  private val LIB_VDRTOOLS_LEDGER = s"$LIB_VDRTOOLS.ledger"
+  val LIB_INDY_LEDGER = s"$LIB_VDRTOOLS_LEDGER.indy"
+  val LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION = s"$LIB_INDY_LEDGER.genesis-txn-file-location"
+  val LIB_INDY_LEDGER_POOL_NAME = s"$LIB_INDY_LEDGER.pool-name"
+  val LIB_INDY_LEDGER_TXN_PROTOCOL_VERSION = s"$LIB_INDY_LEDGER.txn-protocol-version"
+  val LIB_INDY_LEDGER_TAA = s"$LIB_INDY_LEDGER.transaction_author_agreement"
+
   private val INFO_BIP = s"$SMS_EXTERNAL_SVC.info-bip"
   val INFO_BIP_ENDPOINT = s"$INFO_BIP.endpoint"
   val INFO_BIP_ENDPOINT_HOST = s"$INFO_BIP_ENDPOINT.host"
@@ -110,18 +124,6 @@ object ConfigConstants {
   val INFO_BIP_ENDPOINT_ACCESS_TOKEN = s"$INFO_BIP.access-token"
   val INFO_BIP_ENDPOINT_SENDER_ID = s"$INFO_BIP.sender-id"
 
-  private val LIB_INDY = s"$VERITY.lib-indy"
-  val LIB_INDY_LIBRARY_DIR_LOCATION = s"$LIB_INDY.library-dir-location"
-  val LIB_INDY_FLAVOR = s"$LIB_INDY.flavor"
-
-  private val LIB_INDY_WALLET = s"$LIB_INDY.wallet"
-  val LIB_INDY_WALLET_TYPE = s"$LIB_INDY_WALLET.type"
-
-  private val LIB_INDY_LEDGER = s"$LIB_INDY.ledger"
-  val LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION = s"$LIB_INDY_LEDGER.genesis-txn-file-location"
-  val LIB_INDY_LEDGER_POOL_NAME = s"$LIB_INDY_LEDGER.pool-name"
-  val LIB_INDY_LEDGER_TXN_PROTOCOL_VERSION = s"$LIB_INDY_LEDGER.txn-protocol-version"
-  val LIB_INDY_LEDGER_TAA = s"$LIB_INDY_LEDGER.transaction_author_agreement"
   val LIB_INDY_LEDGER_TAA_AGREEMENTS = s"$LIB_INDY_LEDGER_TAA.agreements"
   val LIB_INDY_LEDGER_TAA_ENABLED = s"$LIB_INDY_LEDGER_TAA.enabled"
   val LIB_INDY_LEDGER_TAA_AUTO_ACCEPT = s"$LIB_INDY_LEDGER_TAA.auto-accept"

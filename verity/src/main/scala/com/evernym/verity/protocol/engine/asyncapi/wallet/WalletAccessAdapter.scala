@@ -14,8 +14,8 @@ import com.evernym.verity.util.{HashUtil, ParticipantUtil, Util}
 import com.evernym.verity.vault.operation_executor.{AnoncredsWalletOpExecutor, FutureConverter}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
-import org.hyperledger.indy.sdk.anoncreds.Anoncreds.issuerCreateSchema
-import org.hyperledger.indy.sdk.anoncreds.DuplicateMasterSecretNameException
+import com.evernym.vdrtools.anoncreds.Anoncreds.issuerCreateSchema
+import com.evernym.vdrtools.anoncreds.DuplicateMasterSecretNameException
 
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}

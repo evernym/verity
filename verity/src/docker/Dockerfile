@@ -28,7 +28,7 @@ RUN curl https://repo.corp.evernym.com/repo.corp.evenym.com-sig.key | apt-key ad
 # Install libvdrtools libraries
 RUN apt-get update && \
     apt-get install -y \
-        libvdrtools={LIBVDRTOOLS_VERSION}-bionic
+        libvdrtools=${LIBVDRTOOLS_VERSION}-bionic
 
 # cleanup and remove Evernym internal repo
 RUN apt-get autoremove -y && \

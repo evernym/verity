@@ -148,7 +148,7 @@ data:
     </configuration>
   ledgers.conf: |
     {{- if .Values.taa }}
-    verity.lib-vdrtools.ledger.transaction_author_agreement.agreements = {
+    verity.lib-vdrtools.ledger.indy.transaction_author_agreement.agreements = {
       {{- range .Values.taa }}
       "{{ .version }}" {
           "digest" = "{{ .digest }}"
@@ -157,6 +157,18 @@ data:
       }
       {{- end }}
     }
+    #THIS IS ADDED FOR BACKWARDS COMPATIBILTY, REMOVE AFTER VDR DEPLOY IS DONE
+    #BEGIN VDR BACKWARD COMPAT
+    verity.lib-indy.ledger.transaction_author_agreement.agreements = {
+      {{- range .Values.taa }}
+      "{{ .version }}" {
+          "digest" = "{{ .digest }}"
+          "mechanism" = "{{ .mechanism }}"
+          "time-of-acceptance" = "{{ .timeOfAcceptance }}"
+      }
+      {{- end }}
+    }
+    #END VDR BACKWARD COMPT
     {{- end }}
   custom.conf: |
 {{ .Values.customConfig | default "" | indent 4 }}

@@ -13,7 +13,7 @@ import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.BaseAsyncAccessImpl
 import com.evernym.verity.protocol.engine.ProtoRef
-import com.evernym.verity.protocol.engine.asyncapi.{AsyncOpRunner, BaseAccessController}
+import com.evernym.verity.protocol.engine.asyncapi.AsyncOpRunner
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
 import com.typesafe.scalalogging.Logger
@@ -28,20 +28,19 @@ class SegmentStoreAccessAdapter(storageAPI: StorageAPI,
                                    implicit val asyncOpRunner: AsyncOpRunner,
                                    implicit val ec: ExecutionContext)
   extends SegmentStoreAccess
-    with BaseAccessController
     with BaseAsyncAccessImpl {
   override def storeSegment(segmentAddress: SegmentAddress,
                             segmentKey: SegmentKey,
                             segment: Any,
                             retentionPolicy: Option[String]=None) (handler: Try[StoredSegment] => Unit): Unit =
-    withFutureOpRunner(
+    asyncOpRunner.withFutureOpRunner(
       {saveSegmentedState(segmentAddress, segmentKey, segment, retentionPolicy)},
       handler
     )
   override def withSegment[T](segmentAddress: SegmentAddress,
                               segmentKey: SegmentKey,
                               retentionPolicy: Option[String]=None) (handler: Try[Option[T]] => Unit): Unit =
-    withFutureOpRunner(
+    asyncOpRunner.withFutureOpRunner(
       {readSegmentedState(segmentAddress, segmentKey, retentionPolicy)},
       handler
     )
@@ -49,7 +48,7 @@ class SegmentStoreAccessAdapter(storageAPI: StorageAPI,
   override def removeSegment(segmentAddress: SegmentAddress,
                              segmentKey: SegmentKey,
                              retentionPolicy: Option[String]) (handler: Try[SegmentKey] => Unit): Unit = {
-    withFutureOpRunner(
+    asyncOpRunner.withFutureOpRunner(
       {runDeleteSegmentState(segmentAddress, segmentKey, retentionPolicy)},
       handler
     )

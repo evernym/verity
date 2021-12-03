@@ -145,6 +145,7 @@ abstract class SdkBase(param: SdkParam,
                        executionContext: ExecutionContext) extends Matchers {
 
   implicit val ec: ExecutionContext = executionContext
+  val futureTimeout: FiniteDuration = Duration(25, SECONDS)
   type ConnId = String
 
   def fetchAgencyKey(): AgencyPublicDid = {
@@ -239,7 +240,7 @@ abstract class SdkBase(param: SdkParam,
             payload
           )
         )
-      )
+      ).flatMap(_.toStrict(futureTimeout))
     )
   }
 
@@ -252,7 +253,7 @@ abstract class SdkBase(param: SdkParam,
           uri = actualPath,
           entity = HttpEntity.Empty
         )
-      )
+      ).flatMap(_.toStrict(futureTimeout))
     )
   }
 
@@ -271,7 +272,7 @@ abstract class SdkBase(param: SdkParam,
   }
 
   protected def awaitFut[T](fut: Future[T]): T = {
-    Await.result(fut, Duration(25, SECONDS))
+    Await.result(fut, futureTimeout)
   }
 
   def randomUUID(): String = UUID.randomUUID().toString

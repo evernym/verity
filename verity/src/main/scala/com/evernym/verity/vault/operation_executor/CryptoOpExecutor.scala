@@ -12,9 +12,9 @@ import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.service.WalletMsgHandler.handleGetVerKey
 import com.evernym.verity.vault.WalletExt
 import com.evernym.verity.vault.service._
-import org.hyperledger.indy.sdk.{InvalidParameterException, InvalidStructureException}
-import org.hyperledger.indy.sdk.crypto.Crypto
-import org.hyperledger.indy.sdk.wallet.WalletItemNotFoundException
+import com.evernym.vdrtools.{InvalidParameterException, InvalidStructureException}
+import com.evernym.vdrtools.crypto.Crypto
+import com.evernym.vdrtools.wallet.WalletItemNotFoundException
 
 import scala.concurrent.Future
 

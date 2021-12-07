@@ -1,4 +1,4 @@
-package com.evernym.verity.libindy.ledger
+package com.evernym.verity.vdrtools.ledger
 
 import akka.actor.ActorSystem
 import com.evernym.verity.util2.Status.StatusDetailException
@@ -18,8 +18,8 @@ import com.evernym.verity.util.{HashUtil, Util}
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
-import org.hyperledger.indy.sdk.pool.Pool
-import org.hyperledger.indy.sdk.pool.PoolJSONParameters.CreatePoolLedgerConfigJSONParameter
+import com.evernym.vdrtools.pool.Pool
+import com.evernym.vdrtools.pool.PoolJSONParameters.CreatePoolLedgerConfigJSONParameter
 
 import java.util.concurrent.TimeUnit
 import scala.collection.mutable
@@ -89,7 +89,7 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
       createPoolLedgerConfig()
       val ledgerTxnProtocolVer = getLedgerTxnProtocolVersion(appConfig)
       Pool.setProtocolVersion(ledgerTxnProtocolVer).get
-      // Start with an empty mutable Map, and add optional agency->libindy->ledger->pool-config
+      // Start with an empty mutable Map, and add optional agency->vdrtools->ledger->pool-config
       val poolConfig: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
       appConfig.getIntOption(ConfigConstants.LIB_INDY_LEDGER_POOL_CONFIG_TIMEOUT) match {
         case None =>

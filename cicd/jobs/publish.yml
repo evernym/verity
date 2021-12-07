@@ -58,7 +58,7 @@ publish-docker:
       "
     - >
       /kaniko/executor
-      --build-arg LIBINDY_VERSION=$LIBINDY_VERSION
+      --build-arg LIBVDRTOOLS_VERSION=$LIBVDRTOOLS_VERSION
       --build-arg EVERNYM_CERTIFICATE=$EVERNYM_ROOT_CA
       --context . $DRY_RUN $DOCKER_AWS_DESTINATIONS
       --destination $CI_REGISTRY_IMAGE:$VERITY_VERSION

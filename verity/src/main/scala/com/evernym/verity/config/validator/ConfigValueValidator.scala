@@ -2,7 +2,7 @@ package com.evernym.verity.config.validator
 
 import java.nio.file.{Files, Paths}
 
-import com.evernym.verity.config.ConfigConstants.{INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES, KEYSTORE_LOCATION, LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION, LIB_INDY_LIBRARY_DIR_LOCATION, VERITY}
+import com.evernym.verity.config.ConfigConstants.{INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES, KEYSTORE_LOCATION, LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION, LIB_VDRTOOLS_LIBRARY_DIR_LOCATION, VERITY}
 import com.evernym.verity.config.validator.base.{ConfigValidator, ConfigValidatorCreator}
 import com.evernym.verity.util.SubnetUtilsExt
 import com.typesafe.config.{Config, ConfigValueType}
@@ -77,7 +77,7 @@ class ConfigValueValidator (val config: Config) extends ConfigValidator {
     def validateAgencyConfigs(): Unit = {
       validateConfigs(Option(VERITY))
       validateAllowedCIDRNotationIpAddresses()
-      List(LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION, LIB_INDY_LIBRARY_DIR_LOCATION).foreach { confName =>
+      List(LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION, LIB_VDRTOOLS_LIBRARY_DIR_LOCATION).foreach { confName =>
         checkIfFileExistIfConfigured(confName)
       }
       checkIfResourceExistIfConfigured(KEYSTORE_LOCATION)

@@ -5,94 +5,106 @@ import com.evernym.verity.config.ConfigConstants.SALT_WALLET_NAME
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
-import com.evernym.verity.protocol.container.asyncapis.BaseAsyncOpExecutorImpl
+import com.evernym.verity.protocol.container.asyncapis.BaseAsyncAccessImpl
 import com.evernym.verity.protocol.engine.ParticipantId
-import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner, AsyncResultHandler, BaseAccessController}
+import com.evernym.verity.protocol.engine.asyncapi.{AsyncOpRunner, AsyncResultHandler}
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil._
 import com.evernym.verity.util.{HashUtil, ParticipantUtil, Util}
 import com.evernym.verity.vault.operation_executor.{AnoncredsWalletOpExecutor, FutureConverter}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
-import org.hyperledger.indy.sdk.anoncreds.Anoncreds.issuerCreateSchema
-import org.hyperledger.indy.sdk.anoncreds.DuplicateMasterSecretNameException
+import com.evernym.vdrtools.anoncreds.Anoncreds.issuerCreateSchema
+import com.evernym.vdrtools.anoncreds.DuplicateMasterSecretNameException
 
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
 class WalletAccessAdapter(protected val walletApi: WalletAPI,
                           protected val selfParticipantId: ParticipantId)
-                         (implicit val asyncOpRunner: AsyncOpRunner,
+                         (implicit val ec: ExecutionContext,
+                          implicit val asyncOpRunner: AsyncOpRunner,
                           implicit val wap: WalletAPIParam,
                           val asyncAPIContext: AsyncAPIContext)
 
   extends WalletAccess
-    with BaseAccessController
-    with BaseAsyncOpExecutorImpl
+    with BaseAsyncAccessImpl
     with AsyncResultHandler
     with FutureConverter {
 
   import WalletAccess._
 
-  def handleResult[T](handler: Try[T] => Unit): Try[T] => Unit = {
+  def handleAsyncOpResult[T](handler: Try[T] => Unit): Try[T] => Unit = {
     {t: Try[_] => handleResult(t, handler)}
   }
 
   def DEPRECATED_setupNewWallet(walletId: String,
                                 ownerDidPair: DidPair)
                                (handler: Try[DeprecatedWalletSetupResult] => Unit): Unit =
-    withAsyncOpRunner(
+    asyncOpRunner.withAsyncOpRunner(
       {walletApi.tell(SetupNewAgentWallet(Option(ownerDidPair)))(WalletAPIParam(walletId), senderActorRef)},
-      handleResult(handler)
+      handleAsyncOpResult(handler)
     )
 
   override def newDid(keyType: KeyType = KEY_ED25519)(handler: Try[NewKeyResult] => Unit): Unit =
-    withAsyncOpRunner(
+    asyncOpRunner.withAsyncOpRunner(
       {walletApi.tell(CreateDID(keyType))},
-      handleResult(handler)
+      handleAsyncOpResult(handler)
     )
 
   override def verKey(forDID: DidStr)(handler: Try[VerKeyResult] => Unit): Unit = {
-    withAsyncOpRunner(
+    asyncOpRunner.withAsyncOpRunner(
       {walletApi.tell(GetVerKey(forDID))},
-      handleResult(handler)
+      handleAsyncOpResult(handler)
     )
   }
 
   override def verKeyOpt(forDID: DidStr)(handler: Try[VerKeyOptResult] => Unit): Unit =
-    withAsyncOpRunner(
+    asyncOpRunner.withAsyncOpRunner(
       {walletApi.tell(GetVerKeyOpt(forDID))},
-      handleResult(handler)
+      handleAsyncOpResult(handler)
     )
 
   override def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE)
-                   (handler: Try[SignedMsgResult] => Unit): Unit =
-    withAsyncOpRunner(
-      {runSign(msg)},
-      handleResult(handler)
-    )
+                   (handler: Try[SignedMsgResult] => Unit): Unit = {
+    // currently only one sign type is supported
+    if (signType != SIGN_ED25519_SHA512_SINGLE) {
+      handleAsyncOpResult(handler)(Failure(InvalidSignType(signType)))
+    } else {
+      asyncOpRunner.withAsyncOpRunner(
+        {runSign(msg)},
+        handleAsyncOpResult(handler)
+      )
+    }
+  }
 
   override def verify(signer: ParticipantId,
                       msg: Array[Byte],
                       sig: Array[Byte],
                       verKeyUsed: Option[VerKeyStr] = None,
                       signType: SignType = SIGN_ED25519_SHA512_SINGLE)
-                     (handler: Try[VerifiedSigResult] => Unit): Unit =
-    withAsyncOpRunner(
-      {runVerify(signer, msg, sig, verKeyUsed, signType)},
-      handleResult(handler)
-    )
+                     (handler: Try[VerifiedSigResult] => Unit): Unit = {
+    // currently only one sign type is supported
+    if (signType != SIGN_ED25519_SHA512_SINGLE) {
+      handleAsyncOpResult(handler)(Failure(InvalidSignType(signType)))
+    } else {
+      asyncOpRunner.withAsyncOpRunner(
+        {walletApi.tell(VerifySignature(KeyParam.fromDID(signer), msg, sig, verKeyUsed))},
+        handleAsyncOpResult(handler)
+      )
+    }
+  }
 
   override def verify(msg: Array[Byte],
                       sig: Array[Byte],
                       verKeyUsed: VerKeyStr,
                       signType: SignType)
                      (handler: Try[VerifiedSigResult] => Unit): Unit =
-    withAsyncOpRunner(
+    asyncOpRunner.withAsyncOpRunner(
       // libindy currently supports only one VerKey per DID
       // we check the VerKey used belongs to the party who signed the message.
       {walletApi.tell(VerifySignature(KeyParam.fromVerKey(verKeyUsed), msg, sig))},
-      handleResult(handler)
+      handleAsyncOpResult(handler)
     )
 
 
@@ -100,9 +112,9 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                              verKey: VerKeyStr,
                              ignoreIfAlreadyExists: Boolean = false)
                             (handler: Try[TheirKeyStoredResult] => Unit): Unit =
-    withAsyncOpRunner(
+    asyncOpRunner.withAsyncOpRunner(
       {walletApi.tell(StoreTheirKey(did, verKey, ignoreIfAlreadyExists))},
-      handleResult(handler)
+      handleAsyncOpResult(handler)
     )
 
   override def createSchema(issuerDID:  DidStr,
@@ -110,9 +122,11 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                             version:  String,
                             data:  String)
                            (handler: Try[SchemaCreatedResult] => Unit): Unit =
-    withAsyncOpRunner(
-      {runCreateSchema(issuerDID, name, version, data)},
-      handleResult(handler)
+    asyncOpRunner.withFutureOpRunner(
+      {issuerCreateSchema(issuerDID, name, version, data).map { result =>
+        SchemaCreated(result.getSchemaId, result.getSchemaJson)
+      }},
+      handleAsyncOpResult(handler)
     )
 
   override def createCredDef(issuerDID: DidStr,
@@ -121,14 +135,15 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                              sigType:  Option[String],
                              revocationDetails: Option[String])
                             (handler: Try[CredDefCreatedResult] => Unit): Unit =
-    withAsyncOpRunner(
-      {runCreateCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails)},
-      handleResult(handler)
+    asyncOpRunner.withAsyncOpRunner(
+      {walletApi.tell(CreateCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails))},
+      handleAsyncOpResult(handler)
     )
 
   override def createCredOffer(credDefId: String)(handler: Try[CredOfferCreatedResult] => Unit): Unit =
-    withAsyncOpRunner({runCreateCredOffer(credDefId)},
-      handleResult(handler)
+    asyncOpRunner.withAsyncOpRunner(
+      {walletApi.tell(CreateCredOffer(credDefId))},
+      handleAsyncOpResult(handler)
     )
 
   override def createCredReq(credDefId: String,
@@ -136,17 +151,17 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                              credDefJson: String,
                              credOfferJson: String)
                             (handler: Try[CredReqCreatedResult] => Unit): Unit =
-    withAsyncOpRunner(
-      {runCreateCredReq(credDefId, proverDID, credDefJson, credOfferJson)},
-      handleResult(handler)
+    asyncOpRunner.withAsyncOpRunner(
+      {walletApi.tell(CreateCredReq(credDefId, proverDID, credDefJson, credOfferJson, masterSecretId))},
+      handleAsyncOpResult(handler)
     )
 
   override def createCred(credOfferJson: String, credReqJson: String, credValuesJson: String,
                           revRegistryId: String, blobStorageReaderHandle: Int)
                          (handler: Try[CredCreatedResult] => Unit): Unit =
-    withAsyncOpRunner(
-      {runCreateCred(credOfferJson, credReqJson, credValuesJson, revRegistryId, blobStorageReaderHandle)},
-      handleResult(handler)
+    asyncOpRunner.withAsyncOpRunner(
+      {walletApi.tell(CreateCred(credOfferJson, credReqJson, credValuesJson, revRegistryId, blobStorageReaderHandle))},
+      handleAsyncOpResult(handler)
     )
 
   override def storeCred(credId: String,
@@ -155,15 +170,15 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                          credJson: String,
                          revRegDefJson: String)
                         (handler: Try[CredStoredResult] => Unit): Unit =
-    withAsyncOpRunner(
-      {runStoreCred(credId, credDefJson, credReqMetadataJson, credJson, revRegDefJson)},
-      handleResult(handler)
+    asyncOpRunner.withAsyncOpRunner(
+      {walletApi.tell(StoreCred(credId, credReqMetadataJson, credJson, credDefJson, revRegDefJson))},
+      handleAsyncOpResult(handler)
     )
 
   override def credentialsForProofReq(proofRequest: String)(handler: Try[CredForProofResult] => Unit): Unit =
-    withAsyncOpRunner(
-      {runCredentialsForProofReq(proofRequest)},
-      handleResult(handler)
+    asyncOpRunner.withAsyncOpRunner(
+      {walletApi.tell(CredForProofReq(proofRequest))},
+      handleAsyncOpResult(handler)
     )
 
   override def createProof(proofRequest: String,
@@ -171,9 +186,9 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                            schemas: String,
                            credentialDefs: String, revStates: String)
                           (handler: Try[ProofCreatedResult] => Unit): Unit = {
-    withAsyncOpRunner(
-      {runCreateProof(proofRequest, usedCredentials, schemas, credentialDefs, revStates)},
-      handleResult(handler)
+    asyncOpRunner.withAsyncOpRunner(
+      {walletApi.tell(CreateProof(proofRequest, usedCredentials, schemas, credentialDefs, masterSecretId, revStates))},
+      handleAsyncOpResult(handler)
     )
   }
 
@@ -184,67 +199,48 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                            revocRegDefs: String,
                            revocRegs: String)
                           (handler: Try[ProofVerificationResult] => Unit): Unit = {
-    withAsyncOpRunner(
-      {runVerifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)},
-      handleResult(handler)
+    asyncOpRunner.withFutureOpRunner(
+      {AnoncredsWalletOpExecutor.verifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)},
+      handleAsyncOpResult(handler)
     )
   }
 
   override def signRequest(submitterDID: DidStr,
                            request: String)
                           (handler: Try[LedgerRequestResult] => Unit): Unit =
-    withAsyncOpRunner(
+    asyncOpRunner.withAsyncOpRunner(
       {runSignRequest(submitterDID, request)},
-      handleResult(handler)
+      handleAsyncOpResult(handler)
     )
 
   override def multiSignRequest(submitterDID: DidStr,
                                 request: String)
                                (handler: Try[LedgerRequestResult] => Unit): Unit =
-    withAsyncOpRunner(
+    asyncOpRunner.withAsyncOpRunner(
       {runMultiSignRequest(submitterDID, request)},
-      handleResult(handler)
+      handleAsyncOpResult(handler)
     )
-
-  override def accessRights: Set[AccessRight] = Set.empty
 
   private def getDIDFromParticipantId(participantId: ParticipantId): DidStr = {
     ParticipantUtil.DID(participantId)
   }
 
-  def runSign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE): Unit = {
-    // currently only one sign type is supported
-    if (signType != SIGN_ED25519_SHA512_SINGLE)
-      Future.failed(InvalidSignType(signType))
-    else {
+  //Allowed only for signType: SignType = SIGN_ED25519_SHA512_SINGLE
+  private def runSign(msg: Array[Byte]): Unit = {
       val did = getDIDFromParticipantId(selfParticipantId)
       walletApi.tell(SignMsg(KeyParam.fromDID(did), msg))
-    }
   }
 
-  def runSignRequest(submitterDID: DidStr, request: String): Unit = {
+  private def runSignRequest(submitterDID: DidStr, request: String): Unit = {
     val ledgerRequest = LedgerRequest(request)
     val submitter = Submitter(submitterDID, Some(wap))
     walletApi.tell(SignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq, senderActorRef)
   }
 
-  def runMultiSignRequest(submitterDID: DidStr, request: String): Unit = {
+  private def runMultiSignRequest(submitterDID: DidStr, request: String): Unit = {
     val ledgerRequest = LedgerRequest(request)
     val submitter = Submitter(submitterDID, Some(wap))
     walletApi.tell(MultiSignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq, senderActorRef)
-  }
-
-  def runVerify(signer: ParticipantId,
-                         msg: Array[Byte],
-                         sig: Array[Byte],
-                         verKeyUsed: Option[VerKeyStr] = None,
-                         signType: SignType = SIGN_ED25519_SHA512_SINGLE): Unit = {
-    // currently only one sign type is supported
-    if (signType != SIGN_ED25519_SHA512_SINGLE) {
-      Future.failed(InvalidSignType(signType))
-    } else {
-      walletApi.tell(VerifySignature(KeyParam.fromDID(signer), msg, sig, verKeyUsed))
-    }
   }
 
   //AnonCredRequestsAPI
@@ -258,73 +254,6 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
       case Failure(_: DuplicateMasterSecretNameException) => msIdHex    //already created
       case Failure(_: RuntimeException) => throw new RuntimeException("error during master secret creation")
     }
-  }
-
-  def runCreateSchema(issuerDID: DidStr,
-                      name:String,
-                      version: String,
-                      data: String): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec =>
-        issuerCreateSchema(issuerDID, name, version, data).map { result =>
-          SchemaCreated(result.getSchemaId, result.getSchemaJson)
-        }
-      }
-    )
-  }
-
-  def runCreateCredDef(issuerDID: DidStr,
-                       schemaJson: String,
-                       tag: String,
-                       sigType: Option[String]=None,
-                       revocationDetails: Option[String]=None): Unit =
-    walletApi.tell(CreateCredDef(issuerDID, schemaJson, tag, sigType, revocationDetails))
-
-  def runCreateCredOffer(credDefId: String): Unit = {
-    walletApi.tell(CreateCredOffer(credDefId))
-  }
-
-  def runCreateCredReq(credDefId: String, proverDID: DidStr, credDefJson: String, credOfferJson: String): Unit =
-    walletApi.tell(CreateCredReq(credDefId, proverDID,
-      credDefJson, credOfferJson, masterSecretId))
-
-  def runCreateCred(credOfferJson: String, credReqJson: String, credValuesJson: String,
-                    revRegistryId: String, blobStorageReaderHandle: Int): Unit = {
-    walletApi.tell(CreateCred(credOfferJson, credReqJson, credValuesJson,
-      revRegistryId, blobStorageReaderHandle))
-  }
-
-  def runStoreCred(credId: String,
-                   credReqMetadataJson: String,
-                   credJson: String,
-                   credDefJson: String,
-                   revRegDefJson: String): Unit = {
-    walletApi.tell(StoreCred(credId, credReqMetadataJson, credJson, credDefJson, revRegDefJson))
-  }
-
-  def runCredentialsForProofReq(proofRequest: String): Unit =
-    walletApi.tell(CredForProofReq(proofRequest))
-
-  def runCreateProof(proofRequest: String,
-                     usedCredentials: String,
-                     schemas: String,
-                     credentialDefs: String,
-                     revStates: String): Unit =
-    walletApi.tell(
-      CreateProof(proofRequest, usedCredentials, schemas, credentialDefs, masterSecretId, revStates)
-    )
-
-  def runVerifyProof(proofRequest: String,
-                     proof: String,
-                     schemas: String,
-                     credentialDefs: String,
-                     revocRegDefs: String,
-                     revocRegs: String): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec => AnoncredsWalletOpExecutor.verifyProof(
-        proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)
-      }
-    )
   }
 
   override def handleResult[T](result: Try[Any], handler: Try[T] => Unit): Unit = {

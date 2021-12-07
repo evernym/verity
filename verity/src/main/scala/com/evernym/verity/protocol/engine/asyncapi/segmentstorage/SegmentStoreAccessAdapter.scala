@@ -1,33 +1,59 @@
-package com.evernym.verity.protocol.container.asyncapis.segmentstorage
+package com.evernym.verity.protocol.engine.asyncapi.segmentstorage
 
 import akka.Done
 import akka.actor.ActorRef
-import akka.pattern.ask
 import akka.cluster.sharding.ClusterSharding
+import akka.pattern.ask
 import com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
+import com.evernym.verity.actor.segmentedstates._
 import com.evernym.verity.actor.{ForIdentifier, StorageInfo, StorageReferenceStored}
-import com.evernym.verity.actor.segmentedstates.{DeleteSegmentedState, GetSegmentedState, SaveSegmentedState, SegmentedStateStore, ValidationError}
 import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.encryptor.PersistentDataEncryptor
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
-import com.evernym.verity.protocol.container.asyncapis.BaseAsyncOpExecutorImpl
-import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAsyncOps, StoredSegment}
-import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner, BaseAccessController}
+import com.evernym.verity.protocol.container.asyncapis.BaseAsyncAccessImpl
 import com.evernym.verity.protocol.engine.ProtoRef
+import com.evernym.verity.protocol.engine.asyncapi.AsyncOpRunner
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.evernym.verity.storage_services.{BucketLifeCycleUtil, StorageAPI}
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessage
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
-class SegmentStoreAccessAPI(storageAPI: StorageAPI,
-                            protoRef: ProtoRef)
-                           (implicit val asyncAPIContext: AsyncAPIContext, val asyncOpRunner: AsyncOpRunner)
-  extends SegmentStoreAsyncOps
-    with BaseAccessController
-    with BaseAsyncOpExecutorImpl {
+class SegmentStoreAccessAdapter(storageAPI: StorageAPI,
+                                protoRef: ProtoRef)
+                               (implicit val asyncAPIContext: AsyncAPIContext,
+                                   implicit val asyncOpRunner: AsyncOpRunner,
+                                   implicit val ec: ExecutionContext)
+  extends SegmentStoreAccess
+    with BaseAsyncAccessImpl {
+  override def storeSegment(segmentAddress: SegmentAddress,
+                            segmentKey: SegmentKey,
+                            segment: Any,
+                            retentionPolicy: Option[String]=None) (handler: Try[StoredSegment] => Unit): Unit =
+    asyncOpRunner.withFutureOpRunner(
+      {saveSegmentedState(segmentAddress, segmentKey, segment, retentionPolicy)},
+      handler
+    )
+  override def withSegment[T](segmentAddress: SegmentAddress,
+                              segmentKey: SegmentKey,
+                              retentionPolicy: Option[String]=None) (handler: Try[Option[T]] => Unit): Unit =
+    asyncOpRunner.withFutureOpRunner(
+      {readSegmentedState(segmentAddress, segmentKey, retentionPolicy)},
+      handler
+    )
+
+  override def removeSegment(segmentAddress: SegmentAddress,
+                             segmentKey: SegmentKey,
+                             retentionPolicy: Option[String]) (handler: Try[SegmentKey] => Unit): Unit = {
+    asyncOpRunner.withFutureOpRunner(
+      {runDeleteSegmentState(segmentAddress, segmentKey, retentionPolicy)},
+      handler
+    )
+  }
+
 
   private val logger: Logger = LoggingUtil.getLoggerByClass(getClass)
   private val MAX_SEGMENT_SIZE = 399999
@@ -87,7 +113,7 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
             s"-- it is ${value.getClass.getSimpleName}"
           logger.error(msg)
           throw new RuntimeException("error during storing segment: " + msg)
-    }
+      }
   }
 
   private def saveSegmentedState(segmentAddress: SegmentAddress,
@@ -158,35 +184,8 @@ class SegmentStoreAccessAPI(storageAPI: StorageAPI,
     }
   }
 
-  /*the future handler is provided to the SegmentStoreAccessController where it is stashed for the executor to process*/
-  def runStoreSegment(segmentAddress: SegmentAddress,
-                      segmentKey: SegmentKey,
-                      segment: Any,
-                      retentionPolicy: Option[String]=None): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec: ExecutionContext => saveSegmentedState(segmentAddress, segmentKey, segment, retentionPolicy) }
-    )
-  }
-
-  /*the future handler is provided to the SegmentStoreAccessController where it is stashed for the executor to process*/
-  def runWithSegment[T](segmentAddress: SegmentAddress,
-                        segmentKey: SegmentKey,
-                        retentionPolicy: Option[String]=None): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec: ExecutionContext => readSegmentedState(segmentAddress, segmentKey, retentionPolicy) }
-    )
-  }
-
-  def runDeleteSegment(segmentAddress: SegmentAddress,
-                       segmentKey: SegmentKey,
-                       retentionPolicy: Option[String]=None): Unit = {
-    withAsyncOpExecutorActor(
-      { implicit ec: ExecutionContext => runDeleteSegmentState(segmentAddress, segmentKey, retentionPolicy) }
-    )
-  }
-
-  override def accessRights: Set[AccessRight] = Set.empty
 }
+
 
 case class BlobSegment(bucketName: String,
                        segmentAddress: SegmentAddress,

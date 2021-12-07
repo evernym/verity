@@ -2,7 +2,6 @@ package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, TypedMsgLike}
 import com.evernym.verity.protocol.engine.Scope.ProtocolScope
-import com.evernym.verity.protocol.engine.asyncapi.AccessRight
 import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateProtoDef
 
@@ -29,8 +28,6 @@ trait ProtocolDefinition[P, R, M, E, S, I] extends SegmentedStateProtoDef[S] {
   }
 
   val roles: Set[R] = Set.empty
-
-  val requiredAccess: Set[AccessRight] = Set.empty
 
   def create(context: ProtocolContextApi[P, R, M, E, S, I]): Protocol[P, R, M, E, S, I]
 

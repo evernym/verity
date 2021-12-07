@@ -6,7 +6,7 @@ import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.observability.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.util.JsonUtil.deserializeJsonStringToObject
 import com.evernym.verity.util2.Exceptions
-import org.hyperledger.indy.sdk.metrics.Metrics
+import com.evernym.vdrtools.metrics.Metrics
 
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
 import scala.concurrent.{ExecutionContext, Future}

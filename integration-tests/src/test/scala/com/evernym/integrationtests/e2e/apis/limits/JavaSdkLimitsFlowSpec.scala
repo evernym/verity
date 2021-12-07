@@ -8,5 +8,5 @@ import com.evernym.integrationtests.e2e.tag.annotation.Limits
 class JavaSdkLimitsFlowSpec extends LimitsFlowSpec {
 
   override def specifySdkType(env: IntegrationTestEnv): IntegrationTestEnv =
-    SdkFlowSpec.specifySdkForType("java", "0.4.1-fa1eaca7", env)
+    SdkFlowSpec.specifySdkForType("java", "0.5.0", env)
 }

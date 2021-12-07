@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
 import com.evernym.verity.protocol.engine.Nonce
-import org.hyperledger.indy.sdk.anoncreds.Anoncreds
+import com.evernym.vdrtools.anoncreds.Anoncreds
 
 import scala.util.{Failure, Success, Try}
 

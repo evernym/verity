@@ -1,4 +1,4 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.vdrtools
 
 import akka.actor.ActorRef
 import com.evernym.verity.actor.base.Done
@@ -28,6 +28,14 @@ class WalletAccessAPISpec
     AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
   implicit def asyncOpRunner: AsyncOpRunner = this
+  override def logger: Logger = getLoggerByName(getClass.getSimpleName)
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  override def executionContextProvider: ExecutionContextProvider = ecp
+  implicit val ec: ExecutionContext = executionContextProvider.futureExecutionContext
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
   val selfParticipantId: ParticipantId = {
     testWalletAPI.executeSync[WalletCreated.type](CreateWallet())
     val result = ParticipantUtil.participantId(
@@ -36,8 +44,6 @@ class WalletAccessAPISpec
     result
   }
 
-  val walletRights: Set[AccessRight] =
-    Set(AccessNewDid, AccessSign, AccessVerify, AccessVerKey, AccessPack, AccessUnPack, AccessStoreTheirDiD, AnonCreds)
   val walletAccess = new WalletAccessAdapter(walletAPI, selfParticipantId)
 
   val TEST_MSG: Array[Byte] = "test string".getBytes()
@@ -109,15 +115,9 @@ class WalletAccessAPISpec
 
   override def runAsyncOp(op: => Any): Unit = op
 
-  override def runFutureAsyncOp(op: => Future[Any]): Unit = op
+  override def runFutureAsyncOp(op: => Future[Any]): Unit =
+    op.onComplete{r => executeCallbackHandler(r)}
+
   override def abortTransaction(): Unit = {}
   def postAllAsyncOpsCompleted(): Unit = {}
-  override def logger: Logger = getLoggerByName(getClass.getSimpleName)
-  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
-  override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

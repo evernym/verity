@@ -10,7 +10,7 @@ import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.appStateManager.AppStateConstants.CONTEXT_AGENT_SERVICE_INIT
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, SeriousSystemError}
-import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
+import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
 import com.evernym.verity.util.healthcheck.AkkaPersistenceStorageChecker.Commands.GetState
 import com.evernym.verity.util.healthcheck.AkkaPersistenceStorageChecker.Replies.CurrentState
 import com.evernym.verity.util.healthcheck.AkkaPersistenceStorageChecker.States.Ready

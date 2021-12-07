@@ -21,7 +21,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import java.nio.file.Path
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.language.postfixOps
 
 

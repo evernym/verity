@@ -178,7 +178,7 @@ lazy val settings = Seq(
 lazy val testSettings = Seq (
   Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", (target.value / "test-reports" / name.value).toString),
   //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-o"),             // standard test output, a bit verbose
-  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD", "-u", (target.value / "test-reports").toString),  // summarized test output
+  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oDF", "-u", (target.value / "test-reports").toString),  // summarized test output
 
   //As part of clustering work, after integrating actor message serializer (kryo-akka in our case)
   // an issue was found related to class loading when we run 'sbt test'

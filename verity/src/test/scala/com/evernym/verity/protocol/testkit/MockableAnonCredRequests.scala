@@ -1,9 +1,7 @@
 package com.evernym.verity.protocol.testkit
 
-import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, ProofCreated, ProofVerifResult}
-import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.protocol.engine.asyncapi.wallet.{AnonCredRequests, CredCreatedResult, CredDefCreatedResult, CredForProofResult, CredOfferCreatedResult, CredReqCreatedResult, CredStoredResult, ProofCreatedResult, ProofVerificationResult, SchemaCreatedResult}
+import com.evernym.verity.protocol.engine.asyncapi.wallet._
 
 import scala.util.Try
 

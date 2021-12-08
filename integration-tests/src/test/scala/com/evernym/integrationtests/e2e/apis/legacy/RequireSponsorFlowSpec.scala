@@ -19,7 +19,7 @@ class RequireSponsorFlowSpec
 
   private def newPoolNameConfig(): Config = (new TestAppConfig)
     .config
-    .withValue("verity.lib-indy.ledger.pool-name", ConfigValueFactory.fromAnyRef("require-sponsor-pool"))
+    .withValue("verity.lib-vdrtools.ledger.pool-name", ConfigValueFactory.fromAnyRef("require-sponsor-pool"))
 
   override lazy val appConfig: AppConfig = new TestAppConfig(Some(newPoolNameConfig()))
 

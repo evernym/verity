@@ -8,7 +8,7 @@ import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter}
-import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
+import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult

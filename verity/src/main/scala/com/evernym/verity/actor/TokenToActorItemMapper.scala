@@ -24,6 +24,7 @@ import scala.concurrent.ExecutionContext
 object TokenToActorItemMapper {
   def getToken: String = TokenProvider.getNewToken
   def props(executionContext: ExecutionContext)(implicit appConfig: AppConfig): Props = Props(new TokenToActorItemMapper(appConfig, executionContext))
+  val defaultPassivationTimeout = 600
 }
 
 //cmds

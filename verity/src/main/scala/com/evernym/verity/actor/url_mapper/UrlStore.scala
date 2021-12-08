@@ -52,6 +52,7 @@ class UrlStore(val appConfig: AppConfig, executionContext: ExecutionContext) ext
 
 object UrlStore extends HasProps {
   def props(implicit appConfig: AppConfig, executionContext: ExecutionContext): Props = Props(new UrlStore(appConfig, executionContext))
+  val defaultPassivationTimeout = 600
 }
 
 //cmds

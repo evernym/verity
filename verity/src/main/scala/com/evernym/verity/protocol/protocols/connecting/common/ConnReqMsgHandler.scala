@@ -207,14 +207,14 @@ trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {
       val content = replaceVariables(offerConnMsg, Map(APP_URL_LINK -> url, REQUESTER_NAME -> senderName))
 
       val sendSmsFut = ctx.sendSMS(param.phoneNo, content)
-      handleSmsSentResp(sendSmsFut)
+      handleSmsReqResp(sendSmsFut)
     }
   }
 
-  private def handleSmsSentResp(sendSmsFut: Future[String])
-                               (implicit param: CreateAndSendTinyUrlParam): Unit = {
+  private def handleSmsReqResp(sendSmsFut: Future[String])
+                              (implicit param: CreateAndSendTinyUrlParam): Unit = {
     sendSmsFut.map { _ =>
-      logger.debug(s"[${param.uid}] invite sms sent successfully")
+      logger.debug(s"[${param.uid}] invite sms request sent successfully")
       updateMsgDeliveryStatus(param.uid, PHONE_NUMBER, MSG_DELIVERY_STATUS_SENT.statusCode, None)
     }.recover {
       case er: HandledErrorException =>

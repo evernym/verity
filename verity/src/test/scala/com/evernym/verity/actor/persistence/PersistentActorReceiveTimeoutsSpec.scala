@@ -273,7 +273,7 @@ object MockActor {
 import MockActor._
 
 
-class MockBaseActor(val appConfig: AppConfig, executionContext: ExecutionContext) extends BasePersistentActor {
+class MockBaseActor(val appConfig: AppConfig, executionContext: ExecutionContext) extends BasePersistentTimeoutActor {
 
   override def receiveCmd: Receive = {
     case ReceiveTimeoutQuestion() =>

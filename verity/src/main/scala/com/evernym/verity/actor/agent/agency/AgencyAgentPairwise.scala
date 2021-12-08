@@ -186,6 +186,10 @@ class AgencyAgentPairwise(val agentActorContext: AgentActorContext,
   }
 }
 
+object AgencyAgentPairwise {
+  val defaultPassivationTimeout = 600
+}
+
 trait AgencyAgentPairwiseStateImpl extends AgentStatePairwiseImplBase {
   def domainId: DomainId = agencyDIDReq
 }

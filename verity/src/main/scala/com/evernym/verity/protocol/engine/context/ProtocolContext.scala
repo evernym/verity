@@ -14,7 +14,7 @@ import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.events._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccess
-import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AsyncOpRunner}
+import com.evernym.verity.protocol.engine.asyncapi.AsyncOpRunner
 import com.evernym.verity.protocol.engine.box.{Box, BoxLike, SignalOutbox}
 import com.evernym.verity.protocol.engine.container.RecordsEvents
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
@@ -72,8 +72,6 @@ trait ProtocolContext[P,R,M,E,S,I]
   def sendsMsgs: SendsMsgs
 
   def sendSMS(toPhoneNumber: String, msg: String): Future[String] = sendsMsgs.sendSMS(toPhoneNumber, msg)
-
-  def grantedAccessRights: Set[AccessRight] = protocol.definition.requiredAccess
 
   /* This is set during initialization of the protocol. The policy will not change throughout the protocol.*/
   def dataRetentionPolicy: Option[RetentionPolicy] = backState.dataRetentionPolicy

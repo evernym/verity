@@ -2,12 +2,10 @@ package com.evernym.verity.texter
 
 import java.net.HttpURLConnection._
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.util.Util._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.ConfigSvc
-import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider
 
@@ -16,6 +14,7 @@ import javax.ws.rs.core.MediaType
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature
 
 import scala.collection.JavaConverters._
+import scala.concurrent.Future
 
 case class Session(TextMessage: String)
 case class Variables(session: Session)
@@ -23,9 +22,9 @@ case class EndUser(phoneNumber: String)
 case class InvokeService(endUser: EndUser, variables: Variables)
 
 
-trait OpenMarketMEPAPI extends SMSServiceProvider with ConfigSvc {
-
-  private val logger = getLoggerByName("OpenMarketMEPAPI")
+class OpenMarketDispatcherMEP (val appConfig: AppConfig)
+  extends SMSServiceProvider
+    with ConfigSvc {
 
   lazy val providerId = SMS_PROVIDER_ID_OPEN_MARKET
 
@@ -39,13 +38,15 @@ trait OpenMarketMEPAPI extends SMSServiceProvider with ConfigSvc {
   lazy val sendMsgResource: String = s"$webApiUrl/$baseResourcePrefix/$serviceId"
 
   lazy val client: Client = {
-    ClientBuilder.newBuilder
+    ClientBuilder
+      .newBuilder
       .register(classOf[ObjectMapper])
-      .register(classOf[JacksonJaxbJsonProvider]).build
+      .register(classOf[JacksonJaxbJsonProvider])
       .register(HttpAuthenticationFeature.basic(userName, password), 1)
+      .build
   }
 
-  def sendMessage(smsInfo: SmsInfo): Either[HandledErrorException, SmsSent] = {
+  def sendMessage(smsInfo: SmsInfo): Future[SmsReqSent] = {
     val message = InvokeService(EndUser(smsInfo.to), Variables(Session(smsInfo.text)))
     val jsonEntity = DefaultMsgCodec.toJson(message)
     val target = client.target(sendMsgResource)
@@ -53,15 +54,13 @@ trait OpenMarketMEPAPI extends SMSServiceProvider with ConfigSvc {
       .post(Entity.entity(jsonEntity,
         MediaType.APPLICATION_JSON_TYPE))
     if (result.getStatus != HTTP_ACCEPTED)  {
-      logger.error("error while sending sms with open market: " + result.getStatusInfo.toString)
-      Left(buildHandledError(result.getStatus.toString, Option(result.getStatusInfo.getStatusCode.toString),
-        Option(result.getStatusInfo.getReasonPhrase)))
+      Future.failed(new RuntimeException("unexpected http status: " + result.getStatusInfo.toString))
     } else {
       val msgId =
         result.getHeaders.asScala.find(_._1 == "X-Request-Id").map { h =>
           h._2.asScala.head.toString
         }
-      Right(SmsSent(msgId.getOrElse(EMPTY_STRING), providerId))
+      Future.successful(SmsReqSent(msgId.getOrElse(EMPTY_STRING), providerId))
     }
   }
 

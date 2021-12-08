@@ -39,27 +39,32 @@ object OAuthAccessTokenRefresherImplV1 {
       OAuthUtil.validateAuthData(Seq("url", "grant_type", "client_id", "client_secret"), params)
       val url = params("url")
       logger.info("[OAuth] about to send get access token request to: " + url)
-      val formData = Seq("grant_type", "client_id", "client_secret").map(attrName =>
-        attrName -> params(attrName)
-      ).toMap
+      val formData =
+        Seq("grant_type", "client_id", "client_secret")
+          .map(attrName => attrName -> params(attrName))
+          .toMap
       val request = HttpRequest(
         method = HttpMethods.POST,
         uri = url,
         entity = FormData(formData).toEntity
       )
       Http()
-        .singleRequest(request).flatMap { hr =>
-        Unmarshal(hr.entity).to[String].map { respMsg =>
-          if (hr.status == OK) {
-            val jsonObject = new JSONObject(respMsg)
-            val accessToken = jsonObject.getString("access_token")
-            val expiresIn = jsonObject.getInt("expires_in")
-            GetTokenSuccess(accessToken, Option(expiresIn), None)
-          } else {
-            GetTokenFailed(s"error response ('${hr.status.value}') received from '$url': $respMsg")
+        .singleRequest(request)
+        .flatMap { hr =>
+          Unmarshal(hr.entity).to[String].map { respMsg =>
+            if (hr.status == OK) {
+              val jsonObject = new JSONObject(respMsg)
+              val accessToken = jsonObject.getString("access_token")
+              val expiresIn = jsonObject.getInt("expires_in")
+              GetTokenSuccess(accessToken, Option(expiresIn), None)
+            } else {
+              GetTokenFailed(s"error response ('${hr.status.value}') received from '$url': $respMsg")
+            }
           }
+        }.recover {
+          case e: RuntimeException =>
+            GetTokenFailed(s"error while parsing get access token response from url '$url': ${e.getMessage}")
         }
-      }
     } catch {
       case e: RuntimeException =>
         Future.successful(GetTokenFailed(Exceptions.getErrorMsg(e)))

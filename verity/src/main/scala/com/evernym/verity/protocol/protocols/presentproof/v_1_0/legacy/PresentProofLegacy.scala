@@ -12,6 +12,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProblemReportCod
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Role.{Prover, Verifier}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults._
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0._
+import com.evernym.verity.util.OptionUtil
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -32,6 +33,7 @@ trait PresentProofLegacy
     case (s: StatesLegacy.ProposalSent   , _, RequestGiven(r)           ) => StatesLegacy.RequestReceived(s.data.addRequest(r))
     case (s: StatesLegacy.RequestReceived, _, PresentationUsed(p)       ) => StatesLegacy.Presented(s.data.addPresentation(p))
     case (s: StatesLegacy.RequestReceived, _, PresentationProposed(a, p)) => StatesLegacy.ProposalSent(s.data.addProposal(a, p))
+    case (s: StatesLegacy.Presented      , _, PresentationAck(a)        ) => StatesLegacy.Presented(s.data.addAck(a))
 
     //Verifier Events
     case (_: States.Initialized           , _, RequestUsed(r)          ) => StatesLegacy.initRequestSent(r)
@@ -39,6 +41,11 @@ trait PresentProofLegacy
     case (s: StatesLegacy.ProposalReceived, _, RequestUsed(r)          ) => StatesLegacy.RequestSent(s.data.addRequest(r))
     case (s: StatesLegacy.RequestSent     , _, PresentationGiven(p)    ) => StatesLegacy.Complete(s.data.addPresentation(p))
     case (s: StatesLegacy.RequestSent     , _, ProposeReceived(a, p)   ) => StatesLegacy.ProposalReceived(s.data.addProposal(a, p))
+    case (s: StatesLegacy.Complete        , _, AttributesGiven(ap)     ) => StatesLegacy.Complete(s.data.addAttributesPresented(ap))
+    case (s: StatesLegacy.Complete        , _, ResultsOfVerification(r)) => StatesLegacy.Complete(s.data.addVerificationResults(r))
+
+    //Common
+    case (s: HasData                      , _, Rejection(role, reason) ) => StatesLegacy.Rejected(s.data, Role.numToRole(role), OptionUtil.blankOption(reason))
   }
 
   def legacyProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {

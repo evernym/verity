@@ -15,14 +15,14 @@ import com.evernym.verity.config.ConfigConstants.TIMEOUT_GENERAL_ACTOR_ASK_TIMEO
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
-import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher}
 import com.evernym.verity.observability.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.registry.ProtocolRegistry
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.storage_services.StorageAPI
-import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsSent}
+import com.evernym.verity.texter.{DefaultSMSSender, SMSSender, SmsInfo, SmsReqSent}
 import com.evernym.verity.transports.http.AkkaHttpMsgSendingSvc
 import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util.Util
@@ -77,12 +77,12 @@ trait AgentActorContext
   private def createSmsSender(): SMSSender = {
     new SMSSender {
       implicit lazy val timeout: Timeout = Util.buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
-      val smsSender: ActorRef = system.actorOf(DefaultSMSSender.props(appConfig), "sms-sender")
+      val smsSender: ActorRef = system.actorOf(DefaultSMSSender.props(appConfig, futureExecutionContext), "sms-sender")
 
       override def sendMessage(smsInfo: SmsInfo): Future[Either[HandledErrorException, String]] = {
         val smsSendFut = smsSender ? smsInfo
         smsSendFut.map {
-          case _: SmsSent => Right("sms sent successfully")
+          case _: SmsReqSent => Right("sms request sent successfully")
           case er: HandledErrorException => Left(er)
           case x => Left(new SmsSendingFailedException(Option(x.toString)))
         }.recover {

@@ -1,5 +1,4 @@
 package com.evernym.verity.app_launcher
-
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.healthcheck.HealthChecker
 

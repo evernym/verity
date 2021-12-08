@@ -61,7 +61,6 @@ trait BasePersistentActor
     totalRecoveredEvents = totalRecoveredEvents + by
   }
 
-  val defaultReceiveTimeoutInSeconds = 600
   val entityCategory: String = PERSISTENT_ACTOR_BASE
 
   def emptyEventHandler(event: Any): Unit = {}
@@ -237,10 +236,6 @@ trait BasePersistentActor
 
   protected def normalizedEntityId: String = entityId.replace("$", "")
 
-  protected def entityReceiveTimeout: Duration = ConfigUtil.getReceiveTimeout(
-    appConfig, defaultReceiveTimeoutInSeconds,
-    normalizedEntityCategoryName, normalizedEntityType, normalizedEntityId)
-
   /**
    * configuration to decide if this persistent actor should use snapshot during recovery
    * @return
@@ -327,7 +322,6 @@ trait BasePersistentActor
   def postRecoveryCompleted(): Unit = {
     postActorRecoveryStarted = LocalDateTime.now
     metricsWriter.runWithSpan("postRecoveryCompleted", "BasePersistentActor", InternalSpan) {
-      context.setReceiveTimeout(entityReceiveTimeout)
       logger.debug("post actor recovery started", (LOG_KEY_PERSISTENCE_ID, persistenceId))
       basePostActorRecoveryCompleted()
     }
@@ -522,4 +516,17 @@ trait HasActorResponseTimeout {
 
 trait EventPersistenceEncryption {
   def persistenceEncryptionKey: String
+}
+
+trait BasePersistentTimeoutActor extends BasePersistentActor {
+  val defaultReceiveTimeoutInSeconds = 600
+
+  protected def entityReceiveTimeout: Duration = ConfigUtil.getReceiveTimeout(
+    appConfig, defaultReceiveTimeoutInSeconds,
+    normalizedEntityCategoryName, normalizedEntityType, normalizedEntityId)
+
+  override def postRecoveryCompleted(): Unit = {
+    super.postRecoveryCompleted()
+    context.setReceiveTimeout(this.entityReceiveTimeout)
+  }
 }

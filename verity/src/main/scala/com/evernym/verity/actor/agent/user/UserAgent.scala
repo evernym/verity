@@ -43,7 +43,7 @@ import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.ledger.TransactionAuthorAgreement
-import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
@@ -958,6 +958,7 @@ object UserAgent {
   final val COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG = "user-agent.mnd.msgs-payloads"
   final val COLLECTION_METRIC_MND_MSGS_DETAILS_TAG = "user-agent.mnd.msgs-details"
   final val COLLECTION_METRIC_MND_MSGS_DELIVERY_STATUS_TAG = "user-agent.mnd.msgs-delivery-status"
+  val defaultPassivationTimeout = 600
 }
 
 case class PairwiseConnSetExt(agentDID: DidStr, agentDIDVerKey: VerKeyStr, reqMsgContext: ReqMsgContext)

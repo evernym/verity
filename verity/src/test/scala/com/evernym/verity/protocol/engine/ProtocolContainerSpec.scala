@@ -14,7 +14,7 @@ import com.evernym.verity.protocol.protocols.tictactoe.{Accepted, State, TicTacT
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TestExecutionContextProvider
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 class ProtocolContainerSpec extends BasicSpec {
@@ -66,6 +66,8 @@ class ProtocolContainerSpec extends BasicSpec {
           override def urlShortening: UrlShorteningAccess = ???
 
           override def runAsyncOp(op: => Any): Unit = ???
+
+          override def runFutureAsyncOp(op: => Future[Any]): Unit = ???
 
           lazy val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
 

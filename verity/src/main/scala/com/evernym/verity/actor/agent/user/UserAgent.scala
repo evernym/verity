@@ -33,6 +33,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.configs._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.FwdReqMsg
+import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.{GetUpgradeInfo, UpgradeInfoMsgHelper}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.config.ConfigConstants.OUTBOX_OAUTH_RECEIVE_TIMEOUT
 import com.evernym.verity.config.ConfigUtil
@@ -118,6 +119,10 @@ class UserAgent(val agentActorContext: AgentActorContext,
       if amw.isMatched(MFV_0_5, MSG_TYPE_UPDATE_MSG_STATUS_BY_CONNS) ||
         amw.isMatched(MFV_0_6, MSG_TYPE_UPDATE_MSG_STATUS_BY_CONNS) =>
       handleUpdateMsgStatusByConns(UpdateMsgStatusByConnsMsgHelper.buildReqMsg(amw))
+
+    case amw: AgentMsgWrapper
+      if amw.isMatched(MFV_1_0, MSG_TYPE_GET_UPGRADE_INFO) =>
+      handleGetUpgradeInfo(UpgradeInfoMsgHelper.buildReqMsg(amw))
   }
 
   /**
@@ -769,6 +774,50 @@ class UserAgent(val agentActorContext: AgentActorContext,
     } else state.relationshipAgentDetails
     val reqFut = prepareAndSendGetMsgsReqMsgToPairwiseActor(getMsgsByConnsReq, filteredPairwiseConns)
     handleGetMsgsRespMsgFromPairwiseActor(reqFut, sndr)
+  }
+
+  def handleGetUpgradeInfo(gui: GetUpgradeInfo)(implicit reqMsgContext: ReqMsgContext): Unit = {
+    val sndr = sender()
+    val givenPairwiseDIDs = gui.pairwiseDIDs
+    validatePairwiseFromDIDs(givenPairwiseDIDs)
+    val filteredPairwiseConns = givenPairwiseDIDs.map(pd => state.relationshipAgentByForDid(pd))
+    val reqFut = prepareAndSendGetUpgradeInfoToPairwiseActor(filteredPairwiseConns)
+    handleGetUpgradeInfoRespMsgFromPairwiseActor(reqFut, sndr)
+  }
+
+  def prepareAndSendGetUpgradeInfoToPairwiseActor(filteredPairwiseConns: List[AgentDetail])
+                                                 (implicit reqMsgContext: ReqMsgContext):
+  Future[List[(String, PairwiseUpgradeInfo)]] = {
+
+    val result = Future.traverse(filteredPairwiseConns) { ad =>
+      agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(ad.agentKeyDID, GetPairwiseUpgradeInfo))
+        .map {
+          case tai: PairwiseUpgradeInfo => Option(ad.forDID, tai)
+          case aer: ActorErrorResp =>
+            logger.error(s"error occurred while getting upgrade info from connection " +
+              s"(connection did hash code ${ad.forDID.hashCode}): " + aer)
+            None
+        }
+    }
+    result.map(_.flatten)
+  }
+
+  def handleGetUpgradeInfoRespMsgFromPairwiseActor(respFut: Future[List[(String, PairwiseUpgradeInfo)]],
+                                                   sndr: ActorRef)
+                                                  (implicit reqMsgContext: ReqMsgContext): Unit = {
+    respFut.onComplete {
+      case Success(respMsgs) =>
+        val pairwiseResults = respMsgs.map { case (fromDID, respMsg) =>
+          fromDID -> respMsg
+        }.toMap
+        val getPairwiseUpgradeInfoResp = UpgradeInfoMsgHelper.buildRespMsg(pairwiseResults)(reqMsgContext.agentMsgContext)
+        val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
+          getPairwiseUpgradeInfoResp, reqMsgContext.wrapInBundledMsg)
+        val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
+        sendRespMsg("GetUpgradeInfoResp", rp, sndr)
+      case Failure(e) =>
+        handleException(e, sndr)
+    }
   }
 
   def handleInit(se: SetupEndpoint): Unit = {

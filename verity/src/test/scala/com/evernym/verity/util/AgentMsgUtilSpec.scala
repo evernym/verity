@@ -4,7 +4,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec.Document
 import com.evernym.verity.agentmsg.msgfamily.pairwise.CreateKeyReqMsg_MFV_0_6
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.protocol.engine
+import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.registry.{PinstIdResolution, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_V_0_6}
@@ -33,7 +33,7 @@ class AgentMsgUtilSpec extends BasicSpec {
 
     "when called toJson method for 0.5 native msg (with `@type` at the end)" - {
       "should be able to get json string" in {
-        DefaultMsgCodec.toJson(CreateKeyReqMsg_MFV_0_6("did1", "didverkey1")) shouldBe createKeyJson
+        DefaultMsgCodec.toJson(CreateKeyReqMsg_MFV_0_6(TypeDetail(MSG_TYPE_CREATE_KEY, MTV_1_0), "did1", "didverkey1")) shouldBe createKeyJson
       }
     }
 
@@ -48,7 +48,7 @@ class AgentMsgUtilSpec extends BasicSpec {
     "when called toJson method for 0.6 native msg (with `@type` at the end)" - {
       "should be able to get json string" in {
         val expectedJson = s"""{"forDID":"did1","forDIDVerKey":"didverkey1"}"""
-        DefaultMsgCodec.toJson(CreateKeyReqMsg_MFV_0_6("did1", "didverkey1")) shouldBe expectedJson
+        DefaultMsgCodec.toJson(CreateKeyReqMsg_MFV_0_6(TypeDetail(MSG_TYPE_CREATE_KEY, MTV_1_0), "did1", "didverkey1")) shouldBe expectedJson
       }
     }
 

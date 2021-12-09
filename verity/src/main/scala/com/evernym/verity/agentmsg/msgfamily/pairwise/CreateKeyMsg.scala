@@ -8,14 +8,14 @@ import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
-case class CreateKeyReqMsg_MFV_0_5(forDID: DidStr, forDIDVerKey: VerKeyStr) extends MsgBase {
+case class CreateKeyReqMsg_MFV_0_5(`@type`: TypeDetail, forDID: DidStr, forDIDVerKey: VerKeyStr) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("forDID", forDID)
     checkRequired("forDIDVerKey", forDIDVerKey)
   }
 }
 
-case class CreateKeyReqMsg_MFV_0_6(forDID: DidStr, forDIDVerKey: VerKeyStr) extends MsgBase {
+case class CreateKeyReqMsg_MFV_0_6(`@type`: TypeDetail,forDID: DidStr, forDIDVerKey: VerKeyStr) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("forDID", forDID)
     checkRequired("forDIDVerKey", forDIDVerKey)

@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.testkit
 import com.evernym.verity.actor.agent.relationship.Relationship
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.msg.{SetDataRetentionPolicy, SetDomainId, SetStorageId}
+import com.evernym.verity.protocol.engine.msg.{SetDataRetentionPolicy, SetStorageId}
 
 /**
   * It's important to test the actual objects we use in `main` as much as

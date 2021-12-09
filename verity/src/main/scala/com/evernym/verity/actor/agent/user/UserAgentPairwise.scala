@@ -141,6 +141,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     case mss: MsgSentSuccessfully                           => handleMsgSentSuccessfully(mss)
     case msf: MsgSendingFailed                              => handleMsgSendingFailed(msf)
     case GetOutboxParam(destId)                             => sendOutboxParam(destId)
+    case GetPairwiseUpgradeInfo                             => handleGetUpgradeInfo()
   }
 
   override final def receiveAgentEvent: Receive =
@@ -215,6 +216,14 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
   //TODO: not sure why we have this, we may wanna test and remove this if not needed
   val agentSpecificEventReceiver: Receive = {
     case _ =>
+  }
+
+  def handleGetUpgradeInfo(): Unit = {
+    val sndr = sender()
+    val theirAgencyDID = theirRoutingParam.routingTarget
+    theirAgencyEndpointFut(agencyDIDReq, theirAgencyDID, metricsWriter).map { cr =>
+      sndr ! PairwiseUpgradeInfo(theirAgencyDID, cr.getAgencyInfoReq(theirAgencyDID).endpointOpt.get)
+    }
   }
 
   def sendOutboxParam(destId: DestId): Unit = {
@@ -1104,3 +1113,6 @@ trait UserAgentPairwiseStateUpdateImpl
     updateStateWithOwnerAgentKey()
   }
 }
+
+case object GetPairwiseUpgradeInfo extends ActorMessage
+case class PairwiseUpgradeInfo(theirAgencyDID: DidStr, theirAgencyEndpoint: String) extends ActorMessage

@@ -49,8 +49,9 @@ trait AgentMsgSender
     }
   }
 
-  private def theirAgencyEndpointFut(localAgencyDID:DidStr, theirAgencyDID: DidStr,
-                                     mw: MetricsWriter): Future[CacheQueryResponse] = {
+  def theirAgencyEndpointFut(localAgencyDID:DidStr,
+                             theirAgencyDID: DidStr,
+                             mw: MetricsWriter): Future[CacheQueryResponse] = {
     val gad = GetAgencyIdentity(theirAgencyDID, getVerKey = false)
     getAgencyIdentityFut(localAgencyDID, gad, mw)
   }

@@ -28,6 +28,7 @@ import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util.Util
 import com.evernym.verity.vault.service.ActorWalletService
 import com.evernym.verity.vault.wallet_api.{StandardWalletAPI, WalletAPI}
+import com.evernym.verity.vdr.service.VDRTools
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Left
@@ -60,6 +61,7 @@ trait AgentActorContext
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, futureExecutionContext)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val storageAPI: StorageAPI = StorageAPI.loadFromConfig(appConfig, futureExecutionContext)
+  lazy val vdrTools: VDRTools = VDRTools("mockLibDirPath")
 
   //NOTE: this 'oAuthAccessTokenRefreshers' is only need here until we switch to the outbox solution
   val oAuthAccessTokenRefreshers: AccessTokenRefreshers = new AccessTokenRefreshers {

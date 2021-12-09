@@ -7,6 +7,7 @@ import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErr
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
+import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgProcessor, MsgRespConfig, ProcessTypedMsg, SendToProtocolActor}
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing._
@@ -220,9 +221,17 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
 
   def handleGetUpgradeInfo(): Unit = {
     val sndr = sender()
-    val theirAgencyDID = theirRoutingParam.routingTarget
-    theirAgencyEndpointFut(agencyDIDReq, theirAgencyDID, metricsWriter).map { cr =>
-      sndr ! PairwiseUpgradeInfo(theirAgencyDID, cr.getAgencyInfoReq(theirAgencyDID).endpointOpt.get)
+    if (theirDidDocUpdateStatus.latestTheirDidDocDetail.isEmpty) {
+      sndr ! NoUpgradeNeeded
+    } else {
+      val theirAgencyDID = theirRoutingParam.routingTarget
+      getAgencyIdentityFut(agencyDIDReq, GetAgencyIdentity(theirAgencyDID), metricsWriter).map { cr =>
+        sndr !
+          PairwiseUpgradeInfo(
+            theirAgencyDID,
+            cr.getAgencyInfoReq(theirAgencyDID).verKeyReq,
+            cr.getAgencyInfoReq(theirAgencyDID).endpointReq)
+      }
     }
   }
 
@@ -1115,4 +1124,7 @@ trait UserAgentPairwiseStateUpdateImpl
 }
 
 case object GetPairwiseUpgradeInfo extends ActorMessage
-case class PairwiseUpgradeInfo(theirAgencyDID: DidStr, theirAgencyEndpoint: String) extends ActorMessage
+case class PairwiseUpgradeInfo(theirAgencyDID: DidStr,
+                               theirAgencyVerKey: VerKeyStr,
+                               theirAgencyEndpoint: String) extends ActorMessage
+case object NoUpgradeNeeded extends ActorMessage

@@ -39,9 +39,9 @@ trait AgentMsgSender
   def msgSendingSvc: MsgSendingSvc
   def handleMsgDeliveryResult(mdr: MsgDeliveryResult): Unit
 
-  private def getAgencyIdentityFut(localAgencyDID: String, gad: GetAgencyIdentity,
-                                   mw: MetricsWriter): Future[CacheQueryResponse] = {
-
+  def getAgencyIdentityFut(localAgencyDID: String,
+                           gad: GetAgencyIdentity,
+                           mw: MetricsWriter): Future[CacheQueryResponse] = {
     mw.runWithSpan("getAgencyIdentityFut", "AgentMsgSender", InternalSpan) {
       val gadp = GetAgencyIdentityCacheParam(localAgencyDID, gad)
       val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER)
@@ -49,9 +49,9 @@ trait AgentMsgSender
     }
   }
 
-  def theirAgencyEndpointFut(localAgencyDID:DidStr,
-                             theirAgencyDID: DidStr,
-                             mw: MetricsWriter): Future[CacheQueryResponse] = {
+  private def theirAgencyEndpointFut(localAgencyDID:DidStr,
+                                     theirAgencyDID: DidStr,
+                                     mw: MetricsWriter): Future[CacheQueryResponse] = {
     val gad = GetAgencyIdentity(theirAgencyDID, getVerKey = false)
     getAgencyIdentityFut(localAgencyDID, gad, mw)
   }

@@ -793,6 +793,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
       agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(ad.agentKeyDID, GetPairwiseUpgradeInfo))
         .map {
           case tai: PairwiseUpgradeInfo => Option(ad.forDID, tai)
+          case NoUpgradeNeeded          => None
           case aer: ActorErrorResp =>
             logger.error(s"error occurred while getting upgrade info from connection " +
               s"(connection did hash code ${ad.forDID.hashCode}): " + aer)

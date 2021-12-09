@@ -40,20 +40,14 @@ class GetUpgradeInfoSpec
       "should be successful" in {
         val myPairwiseDid = holderSDK.myPairwiseRelationships(connId).myPairwiseDID
         val resp = holderSDK.getUpgradeInfo(GetUpgradeInfo(List(myPairwiseDid)))
-        resp.data.size shouldBe 1
-        val upgradeInfo = resp.data(myPairwiseDid)
-        upgradeInfo.theirAgencyDID shouldBe issuerSDK.agencyDID
-        upgradeInfo.theirAgencyEndpoint shouldBe issuerSDK.param.verityBaseUrl + "/agency/msg"
+        resp.data.size shouldBe 0
       }
     }
     "when tried to send 'GET_UPGRADE_INFO' (v1tov2migration 1.0) message with duplicate pairwise DIDs" - {
       "should be successful" in {
         val myPairwiseDid = holderSDK.myPairwiseRelationships(connId).myPairwiseDID
         val resp = holderSDK.getUpgradeInfo(GetUpgradeInfo(List(myPairwiseDid, myPairwiseDid)))
-        resp.data.size shouldBe 1
-        val upgradeInfo = resp.data(myPairwiseDid)
-        upgradeInfo.theirAgencyDID shouldBe issuerSDK.agencyDID
-        upgradeInfo.theirAgencyEndpoint shouldBe issuerSDK.param.verityBaseUrl + "/agency/msg"
+        resp.data.size shouldBe 0
       }
     }
     "when tried to send 'GET_UPGRADE_INFO' (v1tov2migration 1.0) message with invalid pairwise DID" - {

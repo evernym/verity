@@ -95,6 +95,7 @@ trait PairwiseConnStateBase
     case cc: ConnectionStatusUpdated =>
       (cc.theirDidDocDetail, cc.theirProvisionalDidDocDetail) match {
         case (Some(tdd: TheirDidDocDetail), None) =>
+          updateTheirDidDocUpdateStatus(tdd)
           val lrd = LegacyRoutingDetail(tdd.agencyDID, tdd.agentKeyDID, tdd.agentVerKey, tdd.agentKeyDlgProofSignature)
           updateLegacyRelationshipState(tdd.pairwiseDID, tdd.pairwiseDIDVerKey, lrd)
         case (None, Some(pdd: TheirProvisionalDidDocDetail)) =>
@@ -227,6 +228,15 @@ trait PairwiseConnStateBase
       case x => throw new RuntimeException("unsupported routing detail (for packed msg): " + x)
     }
   }
+
+  private def updateTheirDidDocUpdateStatus(tdd: TheirDidDocDetail): Unit = {
+    theirDidDocUpdateStatus = theirDidDocUpdateStatus.origTheirDidDocDetail match {
+      case None       => TheirDidDocUpdateStatus(Option(tdd), None)
+      case Some(orig) => TheirDidDocUpdateStatus(Option(orig), Option(tdd))
+    }
+  }
+
+  var theirDidDocUpdateStatus: TheirDidDocUpdateStatus = TheirDidDocUpdateStatus(None, None)
 }
 
 
@@ -235,3 +245,6 @@ trait PairwiseConnStateBase
  * for example: updating connection status, their did doc etc
  */
 trait PairwiseConnState extends PairwiseConnStateBase
+
+case class TheirDidDocUpdateStatus(origTheirDidDocDetail: Option[TheirDidDocDetail],
+                                   latestTheirDidDocDetail: Option[TheirDidDocDetail])

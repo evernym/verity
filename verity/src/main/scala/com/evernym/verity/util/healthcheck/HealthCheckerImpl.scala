@@ -95,7 +95,7 @@ class HealthCheckerImpl(val agentActorContext: AgentActorContext,
   }
 
   override def checkVDRToolsStatus: Future[ApiStatus] = {
-    agentActorContext.vdrTools.ping(List.empty).map{
+    agentActorContext.vdrAdapter.ping(List.empty).map{
       result =>
         val unreachable = result.status.filter(namespaceStatus => !namespaceStatus._2.reachable).keys
         if (unreachable.nonEmpty){

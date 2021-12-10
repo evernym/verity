@@ -243,7 +243,7 @@ abstract class SdkBase(param: SdkParam,
     )
   }
 
-  protected def sendGET(pathSuffix: String): HttpResponse = {
+  def sendGET(pathSuffix: String): HttpResponse = {
     val actualPath = param.verityBaseUrl + s"/$pathSuffix"
     awaitFut(
       Http().singleRequest(

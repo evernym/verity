@@ -7,11 +7,13 @@ import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractR
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.maintenance.{ExecutorStatus, GetExecutorStatus, GetManagerStatus, ManagerStatus, Reset, StartJob, StopJob}
+import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
+import com.evernym.verity.actor.agent.user.{GetPairwiseRoutingDIDs, GetPairwiseRoutingDIDsResp}
 import com.evernym.verity.actor.cluster_singleton.{ForActorStateCleanupManager, ForAgentRoutesMigrator, maintenance}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.maintenance.{GetMigrationStatus, MigrationStatusDetail}
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.{ConfigRefreshed, ForIdentifier, NodeConfigRefreshed, OverrideConfigOnAllNodes, OverrideNodeConfig, RefreshConfigOnAllNodes, RefreshNodeConfig}
+import com.evernym.verity.actor.{ActorMessage, ConfigRefreshed, ForIdentifier, NodeConfigRefreshed, OverrideConfigOnAllNodes, OverrideNodeConfig, RefreshConfigOnAllNodes, RefreshNodeConfig}
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 
@@ -255,6 +257,35 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
 //        }
     }
 
+
+  protected def sendToAgent(agentDID: String, cmd: ActorMessage): Future[Any] = {
+    platform.agentActorContext.agentMsgRouter.execute(
+      InternalMsgRouteParam(agentDID, cmd)
+    )
+  }
+
+
+  protected val v1ToV2MigrationRoutes: Route =
+    pathPrefix("v1tov2migration") {
+      pathPrefix("agent") {
+        pathPrefix(Segment) { agentDID =>
+          path("pairwiseRoutingDIDs") {
+            (get & pathEnd) {
+              parameters("totalItemsReceived".withDefault(0), "batchSize".withDefault(-1)) {
+                case (totalItems, batchSize) =>
+                  complete {
+                    sendToAgent(agentDID, GetPairwiseRoutingDIDs(totalItems, batchSize)).map[ToResponseMarshallable] {
+                      case s: GetPairwiseRoutingDIDsResp => handleExpectedResponse(s)
+                      case e => handleUnexpectedResponse(e)
+                    }
+                  }
+              }
+            }
+          }
+        }
+      }
+    }
+
   protected val maintenanceRoutes: Route =
     handleExceptions(exceptionHandler) {
       logRequestResult("agency-service") {
@@ -262,7 +293,10 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
           extractRequest { implicit req =>
             extractClientIP { implicit remoteAddress =>
               checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
-              actorStateCleanupMaintenanceRoutes ~ configMaintenanceRoutes ~ routeMigrationRoutes
+              actorStateCleanupMaintenanceRoutes ~
+                configMaintenanceRoutes ~
+                routeMigrationRoutes ~
+                v1ToV2MigrationRoutes
             }
           }
         }

@@ -138,6 +138,8 @@ class UserAgent(val agentActorContext: AgentActorContext,
     case GetOutboxParam(destId)                  => sendOutboxParam(destId, sender)
     case hck: HandleCreateKeyWithThisAgentKey    =>
       handleCreateKeyWithThisAgentKey(hck.thisAgentKey, hck.createKeyReqMsg)(hck.reqMsgContext)
+
+    case gp: GetPairwiseRoutingDIDs              => sendPairwiseAgentDIDs(gp)
   }
 
   override def handleSpecificSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = {
@@ -165,6 +167,14 @@ class UserAgent(val agentActorContext: AgentActorContext,
       //this is received for each new pairwise connection/actor that gets created
     case ads: AgentDetailSet               =>
       if (!isVAS) addRelationshipAgent(AgentDetail(ads.forDID, ads.agentKeyDID))
+  }
+
+  private def sendPairwiseAgentDIDs(gp: GetPairwiseRoutingDIDs): Unit = {
+    val ordered = state.relationshipAgents.values.map(_.agentKeyDID).toSeq.sorted
+    val batchSize = if (gp.batchSize > 0) gp.batchSize else ordered.size
+    val remaining = ordered.splitAt(gp.totalItemsReceived)._2
+    val batch = remaining.take(batchSize)
+    sender ! GetPairwiseRoutingDIDsResp(batch, remaining.size - batch.size)
   }
 
   def sendOutboxParam(destId: DestId, sndr: ActorRef): Unit = {
@@ -1075,3 +1085,6 @@ case class HandleCreateKeyWithThisAgentKey(thisAgentKey: NewKeyCreated, createKe
 //NOTE: the 'forUrl' is only needed in case anybody has registered more than one webhook
 // (ideally there shouldn't be more than one)
 case class GetTokenForUrl(forUrl: String, cmd: OAuthAccessTokenHolder.Cmd) extends ActorMessage
+
+case class GetPairwiseRoutingDIDs(totalItemsReceived: Int, batchSize: Int) extends ActorMessage
+case class GetPairwiseRoutingDIDsResp(pairwiseRoutingDIDs: Seq[String], totalRemainingItems: Int) extends ActorMessage

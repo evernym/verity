@@ -8,8 +8,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.actor.wallet.{CreateCredReq, CreateMasterSecret, CreateProof, CredForProofReq, CredForProofReqCreated, CredReqCreated, CredStored, MasterSecretCreated, ProofCreated, StoreCred}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_FAMILY_V1V2MIGRATION, MSG_TYPE_CREATE_KEY, MSG_TYPE_DETAIL_GET_MSGS, MSG_TYPE_DETAIL_UPDATE_MSG_STATUS, MSG_TYPE_GET_UPGRADE_INFO, MSG_TYPE_UPDATE_COM_METHOD}
-import com.evernym.verity.agentmsg.msgfamily.TypeDetail
+import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_FAMILY_V1V2MIGRATION, MSG_TYPE_DETAIL_GET_MSGS, MSG_TYPE_DETAIL_UPDATE_MSG_STATUS, MSG_TYPE_GET_UPGRADE_INFO, MSG_TYPE_UPDATE_COM_METHOD}
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateComMethodReqMsg
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateKeyReqMsg_MFV_0_6, GetMsgsReqMsg_MFV_0_6, GetMsgsRespMsg_MFV_0_6, KeyCreatedRespMsg_MFV_0_6, MsgStatusUpdatedRespMsg_MFV_0_6, UpdateMsgStatusReqMsg_MFV_0_6}
 import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.{GetUpgradeInfo, UpgradeInfoRespMsg_MFV_1_0}
@@ -21,7 +20,7 @@ import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerTxnExecut
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
-import com.evernym.verity.protocol.engine.Constants.{MFV_0_6, MFV_1_0, MTV_1_0}
+import com.evernym.verity.protocol.engine.Constants.{MFV_0_6, MFV_1_0}
 import com.evernym.verity.protocol.engine.ThreadId
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateCloudAgent, RequesterKeys}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
@@ -79,7 +78,7 @@ case class HolderSdk(param: SdkParam,
 
   def sendCreateNewKey(connId: String): PairwiseRel = {
     val myPairwiseKey = createNewKey()
-    val createKey = CreateKeyReqMsg_MFV_0_6(TypeDetail(MSG_TYPE_CREATE_KEY, MTV_1_0), myPairwiseKey.did, myPairwiseKey.verKey)
+    val createKey = CreateKeyReqMsg_MFV_0_6(myPairwiseKey.did, myPairwiseKey.verKey)
     val routedPackedMsg = packForMyVerityAgent(JsonMsgBuilder(createKey).jsonMsg)
     val receivedMsg = parseAndUnpackResponse[KeyCreatedRespMsg_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg)))
     val createdMsg = receivedMsg.msg

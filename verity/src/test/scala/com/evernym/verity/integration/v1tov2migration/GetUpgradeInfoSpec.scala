@@ -1,5 +1,7 @@
 package com.evernym.verity.integration.v1tov2migration
 
+import com.evernym.verity.actor.ConnectionStatusUpdated
+import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.GetUpgradeInfo
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.base.{CAS, EAS, VerityProviderBaseSpec}
@@ -26,13 +28,16 @@ class GetUpgradeInfoSpec
 
     issuerSDK.fetchAgencyKey()
     issuerSDK.provisionAgent_0_5()
+    issuerSDK.registerWebhookWithoutOAuth()
     issuerSDK.createKey_0_5(connId)
     val invitation = issuerSDK.sendConnReq_0_5(connId).md.inviteDetail
 
     holderSDK.fetchAgencyKey()
-    holderSDK.provisionAgent_0_5()
-    holderSDK.createKey_0_5(connId)
+    holderSDK.provisionAgent_0_6()
+    holderSDK.createKey_0_6(connId)
     holderSDK.sendConnReqAnswer_0_5(connId, invitation)
+
+    issuerSDK.expectMsgOnWebhook[ConnectionStatusUpdated](mpf = MPF_MSG_PACK)
   }
 
   "HolderSDK" - {

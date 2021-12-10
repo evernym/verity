@@ -33,7 +33,7 @@ class AgentMsgUtilSpec extends BasicSpec {
 
     "when called toJson method for 0.5 native msg (with `@type` at the end)" - {
       "should be able to get json string" in {
-        DefaultMsgCodec.toJson(CreateKeyReqMsg_MFV_0_6(TypeDetail(MSG_TYPE_CREATE_KEY, MTV_1_0), "did1", "didverkey1")) shouldBe createKeyJson
+        DefaultMsgCodec.toJson(CreateKeyReqMsg_MFV_0_6("did1", "didverkey1")) shouldBe createKeyJson
       }
     }
 
@@ -48,7 +48,7 @@ class AgentMsgUtilSpec extends BasicSpec {
     "when called toJson method for 0.6 native msg (with `@type` at the end)" - {
       "should be able to get json string" in {
         val expectedJson = s"""{"forDID":"did1","forDIDVerKey":"didverkey1"}"""
-        DefaultMsgCodec.toJson(CreateKeyReqMsg_MFV_0_6(TypeDetail(MSG_TYPE_CREATE_KEY, MTV_1_0), "did1", "didverkey1")) shouldBe expectedJson
+        DefaultMsgCodec.toJson(CreateKeyReqMsg_MFV_0_6("did1", "didverkey1")) shouldBe expectedJson
       }
     }
 

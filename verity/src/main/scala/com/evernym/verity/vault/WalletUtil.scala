@@ -16,7 +16,7 @@ import scala.concurrent.Future
 object WalletUtil {
 
   def buildWalletConfig(appConfig: AppConfig): WalletConfig = {
-    if (appConfig.getStringReq(ConfigConstants.LIB_INDY_WALLET_TYPE) == WALLET_TYPE_MYSQL) {
+    if (appConfig.getStringReq(ConfigConstants.LIB_VDRTOOLS_WALLET_TYPE) == WALLET_TYPE_MYSQL) {
       val readHost = appConfig.getStringReq(ConfigConstants.WALLET_STORAGE_READ_HOST)
       val writeHost = appConfig.getStringReq(ConfigConstants.WALLET_STORAGE_WRITE_HOST)
       val port = appConfig.getIntReq(ConfigConstants.WALLET_STORAGE_HOST_PORT)

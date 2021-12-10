@@ -1,4 +1,4 @@
-package com.evernym.verity.libindy.ledger
+package com.evernym.verity.vdrtools.ledger
 
 import akka.actor.ActorSystem
 import com.evernym.verity.util2.Exceptions.{InvalidValueException, MissingReqFieldException, NoResponseFromLedgerPoolServiceException}
@@ -11,7 +11,7 @@ import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.config.ConfigUtil.findTAAConfig
 import com.evernym.verity.config.{AppConfig, ConfigConstants, ConfigUtil}
 import com.evernym.verity.ledger._
-import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
+import com.evernym.verity.vdrtools.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.did.{DidPair, DidStr}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.{LedgerRequestResult, WalletAccess}
@@ -23,10 +23,10 @@ import com.evernym.verity.util.{TAAUtil, Util}
 import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger
-import org.hyperledger.indy.sdk.IndyException
-import org.hyperledger.indy.sdk.ledger.Ledger
-import org.hyperledger.indy.sdk.ledger.Ledger._
-import org.hyperledger.indy.sdk.pool.{LedgerNotFoundException, Pool}
+import com.evernym.vdrtools.IndyException
+import com.evernym.vdrtools.ledger.Ledger
+import com.evernym.vdrtools.ledger.Ledger._
+import com.evernym.vdrtools.pool.{LedgerNotFoundException, Pool}
 
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
 import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}

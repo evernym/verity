@@ -8,12 +8,12 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.actor.wallet.{CreateCredReq, CreateMasterSecret, CreateProof, CredForProofReq, CredForProofReqCreated, CredReqCreated, CredStored, MasterSecretCreated, ProofCreated, StoreCred}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_TYPE_DETAIL_GET_MSGS, MSG_TYPE_DETAIL_GET_MSGS_BY_CONNS, MSG_TYPE_DETAIL_UPDATE_MSG_STATUS, MSG_TYPE_UPDATE_COM_METHOD}
+import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_TYPE_DETAIL_GET_MSGS, MSG_TYPE_DETAIL_UPDATE_MSG_STATUS, MSG_TYPE_UPDATE_COM_METHOD}
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateComMethodReqMsg
-import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateKeyReqMsg_MFV_0_6, GetMsgsByConnsReqMsg_MFV_0_6, GetMsgsByConnsRespMsg_MFV_0_6, GetMsgsReqMsg_MFV_0_6, GetMsgsRespMsg_MFV_0_6, KeyCreatedRespMsg_MFV_0_6, MsgStatusUpdatedRespMsg_MFV_0_6, UpdateMsgStatusReqMsg_MFV_0_6}
+import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateKeyReqMsg_MFV_0_6, GetMsgsReqMsg_MFV_0_6, GetMsgsRespMsg_MFV_0_6, KeyCreatedRespMsg_MFV_0_6, MsgStatusUpdatedRespMsg_MFV_0_6, UpdateMsgStatusReqMsg_MFV_0_6}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer}
 import com.evernym.verity.constants.Constants.NO
-import com.evernym.verity.did.{DidPair, DidStr}
+import com.evernym.verity.did.DidPair
 import com.evernym.verity.integration.base.sdk_provider.MsgFamilyHelper.buildMsgTypeStr
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerTxnExecutor, Submitter}
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
@@ -336,66 +336,31 @@ case class HolderSdk(param: SdkParam,
   def expectMsgFromConn[T: ClassTag](connId: String,
                                      excludePayload: Option[String] = Option(NO),
                                      statusCodes: Option[List[String]] = Option(List(Status.MSG_STATUS_RECEIVED.statusCode)),
-                                     tryCount: Int = 1): ReceivedMsgParam[T] = {
+                                     ): ReceivedMsgParam[T] = {
     val msgType = buildMsgTypeStr
-    expectMsgFromConn(connId, msgType, excludePayload, statusCodes, tryCount)
+    expectMsgFromConn(connId, msgType, excludePayload, statusCodes)
   }
 
   def expectMsgFromConn[T: ClassTag](connId: String,
                                      msgTypeStr: String,
                                      excludePayload: Option[String],
-                                     statusCodes: Option[List[String]],
-                                     tryCount: Int): ReceivedMsgParam[T] = {
-    val getMsgs = GetMsgsReqMsg_MFV_0_6(excludePayload = excludePayload, statusCodes = statusCodes)
-    val getMsgsJson = JsonMsgUtil.createJsonString(MSG_TYPE_DETAIL_GET_MSGS, getMsgs)
-    val routedPackedMsg = packForMyPairwiseRel(connId, getMsgsJson)
-    val result = parseAndUnpackResponse[GetMsgsRespMsg_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg))).msg.msgs
-    val msg = result.find(m => m.`type` == msgTypeStr && statusCodes.forall(scs => scs.contains(m.statusCode)))
-    msg match {
-      case Some(m) if excludePayload.contains(NO) && m.payload.isDefined =>
-        unpackMsg(m.payload.get).copy(msgIdOpt = Option(m.uid))
-      case Some(m) if excludePayload.contains(NO) =>
-        throw new RuntimeException("expected message found without payload: " + m)
-      case None if tryCount < 20 =>
-        Thread.sleep(tryCount*50)
-        expectMsgFromConn(connId, msgTypeStr, excludePayload, statusCodes, tryCount+1)
-      case None =>
-        throw new RuntimeException("expected message not found: " + msgTypeStr)
+                                     statusCodes: Option[List[String]]): ReceivedMsgParam[T] = {
+    for (tryCount <- 1 to 20) {
+      val getMsgs = GetMsgsReqMsg_MFV_0_6(excludePayload = excludePayload, statusCodes = statusCodes)
+      val getMsgsJson = JsonMsgUtil.createJsonString(MSG_TYPE_DETAIL_GET_MSGS, getMsgs)
+      val routedPackedMsg = packForMyPairwiseRel(connId, getMsgsJson)
+      val result = parseAndUnpackResponse[GetMsgsRespMsg_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg))).msg.msgs
+      val msg = result.find(m => m.`type` == msgTypeStr && statusCodes.forall(scs => scs.contains(m.statusCode)))
+      msg match {
+        case Some(m) if excludePayload.contains(NO) && m.payload.isDefined =>
+          return unpackMsg(m.payload.get).copy(msgIdOpt = Option(m.uid))
+        case Some(m) if excludePayload.contains(NO) =>
+          throw new RuntimeException("expected message found without payload: " + m)
+        case _ =>
+          Thread.sleep(tryCount * 50)
+      }
     }
-  }
-
-  //this function/logic will only work for registered protocols (and not for legacy message types)
-  def expectMsg[T: ClassTag](pairwiseDIDs: Option[List[DidStr]] = None,
-                             msgIds: Option[List[MsgId]] = None,
-                             excludePayload: Option[String] = Option(NO),
-                             statusCodes: Option[List[String]] = Option(List(Status.MSG_STATUS_RECEIVED.statusCode)),
-                             tryCount: Int = 1): ReceivedMsgParam[T] = {
-    val msgType = buildMsgTypeStr
-    expectMsg(msgType, pairwiseDIDs, msgIds, excludePayload, statusCodes, tryCount)
-  }
-
-  def expectMsg[T: ClassTag](msgTypeStr: String,
-                             pairwiseDIDs: Option[List[DidStr]],
-                             msgIds: Option[List[MsgId]],
-                             excludePayload: Option[String],
-                             statusCodes: Option[List[String]],
-                             tryCount: Int): ReceivedMsgParam[T] = {
-    val getMsgs = GetMsgsByConnsReqMsg_MFV_0_6(pairwiseDIDs, msgIds, excludePayload, statusCodes)
-    val getMsgsJson = JsonMsgUtil.createJsonString(MSG_TYPE_DETAIL_GET_MSGS_BY_CONNS, getMsgs)
-    val routedPackedMsg = packForMyVerityAgent(getMsgsJson)
-    val result = parseAndUnpackResponse[GetMsgsByConnsRespMsg_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg))).msg.msgsByConns
-    val allMsgs = result.flatMap(_.msgs)
-    val msg = allMsgs.find(m => m.`type` == msgTypeStr && statusCodes.forall(scs => scs.contains(m.statusCode)))
-    msg match {
-      case Some(m) if excludePayload.contains(NO) && m.payload.isDefined =>
-        unpackMsg(m.payload.get).copy(msgIdOpt = Option(m.uid))
-      case Some(m) if excludePayload.contains(NO) =>
-        throw new RuntimeException("expected message found without payload: " + m)
-      case None if tryCount < 20 =>
-        Thread.sleep(tryCount*50)
-        expectMsgFromConn(msgTypeStr, excludePayload, statusCodes, tryCount+1)
-      case None => throw new RuntimeException("expected message not found: ")
-    }
+    throw new RuntimeException("expected message not found: " + msgTypeStr)
   }
 
   private def packForMyPairwiseRel(connId: String, msg: String): Array[Byte] = {

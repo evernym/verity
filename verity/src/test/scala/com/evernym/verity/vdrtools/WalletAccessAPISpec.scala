@@ -1,23 +1,21 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.vdrtools
 
 import akka.actor.ActorRef
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
-import com.evernym.verity.actor.wallet.{Close, CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.actor.wallet._
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
-import com.evernym.verity.protocol.container.asyncapis.wallet.WalletAccessAPI
-import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessPack, AccessRight, AccessSign, AccessStoreTheirDiD, AccessUnPack, AccessVerKey, AccessVerify, AnonCreds, AsyncOpRunner}
-import com.evernym.verity.protocol.engine.asyncapi.wallet.{InvalidSignType, WalletAccessController}
 import com.evernym.verity.protocol.engine.ParticipantId
+import com.evernym.verity.protocol.engine.asyncapi._
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{InvalidSignType, WalletAccessAdapter}
 import com.evernym.verity.testkit.{BasicSpec, HasDefaultTestWallet}
 import com.evernym.verity.util.{ParticipantUtil, TestExecutionContextProvider}
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 class WalletAccessAPISpec
@@ -30,6 +28,14 @@ class WalletAccessAPISpec
     AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
   implicit def asyncOpRunner: AsyncOpRunner = this
+  override def logger: Logger = getLoggerByName(getClass.getSimpleName)
+  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  override def executionContextProvider: ExecutionContextProvider = ecp
+  implicit val ec: ExecutionContext = executionContextProvider.futureExecutionContext
+  /**
+   * custom thread pool executor
+   */
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
   val selfParticipantId: ParticipantId = {
     testWalletAPI.executeSync[WalletCreated.type](CreateWallet())
     val result = ParticipantUtil.participantId(
@@ -38,9 +44,7 @@ class WalletAccessAPISpec
     result
   }
 
-  val walletRights: Set[AccessRight] =
-    Set(AccessNewDid, AccessSign, AccessVerify, AccessVerKey, AccessPack, AccessUnPack, AccessStoreTheirDiD, AnonCreds)
-  val walletAccess = new WalletAccessController(walletRights, new WalletAccessAPI(walletAPI, selfParticipantId))
+  val walletAccess = new WalletAccessAdapter(walletAPI, selfParticipantId)
 
   val TEST_MSG: Array[Byte] = "test string".getBytes()
   val INVALID_SIGN_TYPE = "Invalid sign type"
@@ -110,14 +114,10 @@ class WalletAccessAPISpec
   }
 
   override def runAsyncOp(op: => Any): Unit = op
+
+  override def runFutureAsyncOp(op: => Future[Any]): Unit =
+    op.onComplete{r => executeCallbackHandler(r)}
+
   override def abortTransaction(): Unit = {}
   def postAllAsyncOpsCompleted(): Unit = {}
-  override def logger: Logger = getLoggerByName(getClass.getSimpleName)
-  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
-  override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

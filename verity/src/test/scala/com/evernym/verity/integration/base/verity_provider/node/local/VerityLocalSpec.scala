@@ -37,7 +37,7 @@ class VerityLocalSpec extends BasicSpec with AgentReqBuilder with CommonSpecUtil
       }
 
       "should use default wallet type" in {
-        VerityLocalConfig.standard(tempDir,defaultPorts).getString("verity.lib-indy.wallet.type") should include ("default")
+        VerityLocalConfig.standard(tempDir,defaultPorts).getString("verity.lib-vdrtools.wallet.type") should include ("default")
       }
     }
   }

@@ -4,7 +4,6 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Scope
-import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessSign, AccessStoreTheirDiD, AccessVerKey, AccessVerify}
 import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.{ParameterName, Parameters, ProtocolDefinition}
 
@@ -14,8 +13,6 @@ object ConnectionsDef extends ProtocolDefinition[Connections, Role, Msg, Event, 
   override val initParamNames: Set[ParameterName] = Set(SELF_ID, OTHER_ID, DATA_RETENTION_POLICY)
 
   override val roles: Set[Role] = Set(Role.Inviter, Role.Invitee)
-
-  override val requiredAccess: Set[AccessRight] = Set(AccessVerKey, AccessSign, AccessVerify, AccessStoreTheirDiD)
 
   override def createInitMsg(p: Parameters): Control = Ctl.Init(p)
 

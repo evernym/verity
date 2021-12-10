@@ -1,15 +1,15 @@
-package com.evernym.verity.libindy.ledger
+package com.evernym.verity.vdrtools.ledger
 
 import akka.actor.ActorSystem
 import com.evernym.verity.util2.Exceptions.MissingReqFieldException
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{TransactionAuthorAgreement, TxnResp}
-import com.evernym.verity.libindy.ledger.LedgerTxnExecutorBase._
+import com.evernym.verity.vdrtools.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import org.hyperledger.indy.sdk.pool.Pool
+import com.evernym.vdrtools.pool.Pool
 
 import scala.concurrent.ExecutionContext
 

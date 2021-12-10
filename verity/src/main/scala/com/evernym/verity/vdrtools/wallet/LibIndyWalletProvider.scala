@@ -1,4 +1,4 @@
-package com.evernym.verity.libindy.wallet
+package com.evernym.verity.vdrtools.wallet
 
 import com.evernym.verity.actor.wallet.WalletCreated
 import com.evernym.verity.vault.operation_executor.FutureConverter
@@ -6,8 +6,8 @@ import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.vault.{WalletExt, _}
 import com.typesafe.scalalogging.Logger
-import org.hyperledger.indy.sdk.wallet._
-import org.hyperledger.indy.sdk.{IOException, InvalidStateException}
+import com.evernym.vdrtools.wallet._
+import com.evernym.vdrtools.{IOException, InvalidStateException}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future

@@ -10,3 +10,4 @@ we deviate.
 
 ## Index
 
+* [Logging](logging.md)

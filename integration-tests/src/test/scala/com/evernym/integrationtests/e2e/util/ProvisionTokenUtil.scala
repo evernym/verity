@@ -4,9 +4,9 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.ProvisionToken
 import com.evernym.verity.sdk.wallet.DefaultWalletConfig
 import com.evernym.verity.util.{Base64Util, TimeUtil}
-import org.hyperledger.indy.sdk.crypto.Crypto
-import org.hyperledger.indy.sdk.did.{Did, DidJSONParameters}
-import org.hyperledger.indy.sdk.wallet.Wallet
+import com.evernym.vdrtools.crypto.Crypto
+import com.evernym.vdrtools.did.{Did, DidJSONParameters}
+import com.evernym.vdrtools.wallet.Wallet
 
 import java.util.UUID
 

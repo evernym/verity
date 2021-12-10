@@ -7,7 +7,7 @@ import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter, TransactionAuthorAgreement}
-import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.testkit.HasDefaultTestWallet
@@ -15,8 +15,8 @@ import com.evernym.verity.util.OptionUtil
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
-import org.hyperledger.indy.sdk.ledger.Ledger._
-import org.hyperledger.indy.sdk.pool.Pool
+import com.evernym.vdrtools.ledger.Ledger._
+import com.evernym.vdrtools.pool.Pool
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 

@@ -10,7 +10,7 @@ import com.evernym.verity.config.{ConfigConstants, ConfigUtil}
 import com.evernym.verity.did.DidPair
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.ledger.{LedgerPoolConnManager, OpenConnException, TransactionAuthorAgreement}
-import com.evernym.verity.libindy.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.evernym.verity.testkit.util.LedgerUtil

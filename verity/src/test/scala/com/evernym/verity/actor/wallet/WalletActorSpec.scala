@@ -21,8 +21,8 @@ import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.JsonUtil.seqToJson
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.typesafe.scalalogging.Logger
-import org.hyperledger.indy.sdk.anoncreds.Anoncreds
-import org.hyperledger.indy.sdk.ledger.Ledger.buildGetNymRequest
+import com.evernym.vdrtools.anoncreds.Anoncreds
+import com.evernym.vdrtools.ledger.Ledger.buildGetNymRequest
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.duration.DurationInt

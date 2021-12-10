@@ -44,24 +44,22 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libIndyVer = "1.95.0~1624"
+val libVdrToolsVer = "0.8.1"
 val sharedLibDeps = Seq(
-  NonMatchingDistLib("libindy-async", libIndyVer, "libindy.so"),
-  NonMatchingDistLib("libnullpay-async", libIndyVer, "libnullpay.so"),
-  NonMatchingLib("libvcx-async-test", "0.11.0-bionic~9999", "libvcx.so")  // For integration testing ONLY
+  NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libindy.so"),
+  NonMatchingLib("libvcx", "0.12.0-bionic~502", "libvcx.so")  // For integration testing ONLY
 )
 
 //deb package dependencies versions
-val debPkgDepLibIndyMinVersion = libIndyVer
+val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 
 //dependency versions
-val indyWrapperVer  = "1.15.0-dev-1629"
-
+val vdrtoolsWrapperVer  = "0.8.1"
 val akkaVer         = "2.6.17"
 val akkaHttpVer     = "10.2.7"
 val akkaMgtVer      = "1.1.1"
 val alpAkkaVer      = "3.0.3"
-val kamonVer        = "2.2.3"
+val kamonVer        = "2.4.2"
 val kanelaAgentVer  = "1.0.13"
 val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
 val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
@@ -70,9 +68,12 @@ val sdnotifyVer     = "1.3"
 
 //test dependency versions
 val scalatestVer    = "3.2.10"
-val mockitoVer      = "1.16.46"
-val veritySdkVer    = "0.4.10-b1ecd34a"
-val vcxWrapperVer   = "0.12.0.1738"
+val mockitoVer      = "1.16.42"
+val veritySdkVer    = "0.5.0"
+val vcxWrapperVer   = "0.12.0.502"
+
+
+val flexmarkVer     = "0.62.2"
 
 // compiler plugin versions
 val silencerVersion = "1.7.5"
@@ -121,7 +122,7 @@ lazy val verity = (project in file("verity"))
     libraryDependencies ++= commonLibraryDependencies,
     // Conditionally download an unpack shared libraries
     update := update.dependsOn(updateSharedLibraries).value,
-    K8sTasks.init(debPkgDepLibIndyMinVersion)
+    K8sTasks.init(debPkgDepLibVdrToolsMinVersion)
   )
 
 lazy val integrationTests = (project in file("integration-tests"))
@@ -153,9 +154,9 @@ lazy val settings = Seq(
     "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
   ),
   resolvers += Resolver.mavenLocal,
-  resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public",
+//  resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public", // this shouldn't be necessay since we're publishing vdr-tools to maven central
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
-  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",
+//  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",
 
   Test / parallelExecution := false,
   Test / logBuffered := false,
@@ -175,10 +176,9 @@ lazy val settings = Seq(
 ) ++ Defaults.itSettings
 
 lazy val testSettings = Seq (
-  //TODO: with sbt 1.3.8 made below test report settings breaking, shall come back to this
-//  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", (target.value / "test-reports" / name.value).toString),
+  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", (target.value / "test-reports" / name.value).toString),
   //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-o"),             // standard test output, a bit verbose
-  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD", "-u", (target.value / "test-reports").toString),  // summarized test output
+  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oDF", "-u", (target.value / "test-reports").toString),  // summarized test output
 
   //As part of clustering work, after integrating actor message serializer (kryo-akka in our case)
   // an issue was found related to class loading when we run 'sbt test'
@@ -220,11 +220,10 @@ lazy val packageSettings = Seq (
   },
   Compile / resourceGenerators += SourceGenerator.writeVerityVersionConf(version).taskValue,
   Debian / packageArchitecture := "amd64",
-  // libindy provides libindy.so
+  // libvdrtools provides libvdrtools.so
   Debian / debianPackageDependencies ++= Seq(
     "default-jre",
-    s"libindy-async(>= $debPkgDepLibIndyMinVersion)",
-    s"libnullpay-async(>= $debPkgDepLibIndyMinVersion)"  // must be the same version as libindy
+    s"libvdrtools(>= $debPkgDepLibVdrToolsMinVersion)",
   ),
   Debian / debianPackageConflicts := Seq(
     "consumer-agent",
@@ -307,8 +306,8 @@ lazy val commonLibraryDependencies = {
     //other akka dependencies
     "com.twitter" %% "chill-akka" % "0.10.0",    //serialization/deserialization for akka remoting
 
-    //hyper-ledger indy dependencies
-    "org.hyperledger" % "indy" % indyWrapperVer,
+    //vdr tools dependencies
+    "com.evernym.vdrtools" % "vdr-tools" % vdrtoolsWrapperVer,
 
     //logging dependencies
     "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4",
@@ -341,7 +340,7 @@ lazy val commonLibraryDependencies = {
     "org.msgpack" %% "msgpack-scala" % "0.8.13",  //used by legacy pack/unpack operations
     "org.fusesource.jansi" % "jansi" % "2.4.0",    //used by protocol engine for customized logging
     "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
-    "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.5",  //used for libindy sync api calls
+    "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.5",  //used for libvdrtools sync api calls
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
     //"org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0",   //commented as seemed not used
 
@@ -358,6 +357,8 @@ lazy val commonLibraryDependencies = {
     "org.scalatest" %% "scalatest-shouldmatchers" % scalatestVer,
     "org.mockito" %% "mockito-scala-scalatest" % mockitoVer,
 
+    "com.vladsch.flexmark" % "flexmark-all" % flexmarkVer,
+
     akkaGrp %% "akka-testkit" % akkaVer,
     akkaGrp %% "akka-persistence-testkit" % akkaVer,
     akkaGrp %% "akka-http-testkit" % akkaHttpVer,
@@ -367,7 +368,7 @@ lazy val commonLibraryDependencies = {
     "org.abstractj.kalium" % "kalium" % "0.8.0",  // java binding for nacl
 
     "com.evernym.verity" % "verity-sdk" % veritySdkVer
-      exclude ("org.hyperledger", "indy"),
+      exclude ("com.evernym.vdrtools", "vdr-tools"),
 
     "net.glxn" % "qrgen" % "1.4", // QR code generator
     "com.google.guava" % "guava" % "31.0.1-jre",

@@ -1,22 +1,17 @@
 package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
-import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, ProofCreated, ProofVerifResult}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
-import com.evernym.verity.protocol.engine.asyncapi.wallet.{AnonCredRequests, CredCreatedResult, CredDefCreatedResult, CredForProofResult, CredOfferCreatedResult, CredReqCreatedResult, CredStoredResult, ProofCreatedResult, ProofVerificationResult, SchemaCreatedResult, WalletAccess}
+import com.evernym.verity.protocol.engine.asyncapi.wallet._
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.util.TestExecutionContextProvider
+import com.evernym.verity.util2.ExecutionContextProvider
 
 import java.util.UUID
-import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.config.AppConfig
-import com.evernym.verity.util.TestExecutionContextProvider
-
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 

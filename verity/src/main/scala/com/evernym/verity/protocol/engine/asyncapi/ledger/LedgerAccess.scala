@@ -22,14 +22,12 @@ trait LedgerAccess {
   def getCredDefs(credDefIds: Set[String])
                 (handler: Try[Map[String, GetCredDefResp]] => Unit): Unit
 
-  def writeSchema(submitterDID: DidStr, schemaJson: String)
-                 (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit
+  def writeSchema(submitterDID: DidStr, schemaJson: String)(handler: Try[TxnResp] => Unit): Unit
 
   def prepareSchemaForEndorsement(submitterDID: DidStr, schemaJson: String, endorserDID: DidStr)
                                  (handler: Try[LedgerRequest] => Unit): Unit
 
-  def writeCredDef(submitterDID: DidStr, credDefJson: String)
-                  (handler: Try[Either[StatusDetail, TxnResp]] => Unit): Unit
+  def writeCredDef(submitterDID: DidStr, credDefJson: String)(handler: Try[TxnResp] => Unit): Unit
 
   def prepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr)
                                   (handler: Try[LedgerRequest] => Unit): Unit

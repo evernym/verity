@@ -1,14 +1,14 @@
-package com.evernym.verity.libindy
+package com.evernym.verity.vdrtools
 
 import java.util.UUID
 
 import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.libindy.wallet.{LibIndyWalletExt, LibIndyWalletProvider}
+import com.evernym.verity.vdrtools.wallet.{LibIndyWalletExt, LibIndyWalletProvider}
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault.{WalletAlreadyExist, WalletAlreadyOpened}
-import org.hyperledger.indy.sdk.did.DidResults.CreateAndStoreMyDidResult
-import org.hyperledger.indy.sdk.did._
+import com.evernym.vdrtools.did.DidResults.CreateAndStoreMyDidResult
+import com.evernym.vdrtools.did._
 
 
 class LibIndyWalletProviderSpec extends BasicSpecWithIndyCleanup with CommonSpecUtil {

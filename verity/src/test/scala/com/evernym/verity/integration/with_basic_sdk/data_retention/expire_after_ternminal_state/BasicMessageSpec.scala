@@ -60,7 +60,7 @@ class BasicMessageSpec
     "when tried to send 'send-message' (basicmessage 1.0) message" - {
       "should be successful" in {
         issuerSDK.sendMsgForConn(firstConn, SendMessage(sent_time = "", content = "How are you?"))
-        issuerVerityEnv.checkBlobObjectCount("4d", 1)
+        issuerVerityEnv.checkBlobObjectCount("4d", 0)
       }
     }
   }

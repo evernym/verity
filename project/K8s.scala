@@ -13,7 +13,7 @@ import java.nio.file.Path
 import scala.collection.JavaConverters._
 
 object K8sTasks {
-  def init(libindyVer: String) = {
+  def init(libvdrtoolsVer: String) = {
     Seq(
       k8sDockerPackageDir := { target.value / "docker" },
       k8sConfigGenDir := { k8sDockerPackageDir.value / "configuration" },
@@ -85,7 +85,7 @@ object K8sTasks {
         val argsScript =
           s"""
             |export VERITY_VERSION="${version.value}"
-            |export LIBINDY_VERSION="$libindyVer"
+            |export LIBVDRTOOLS_VERSION="$libvdrtoolsVer"
             |""".stripMargin
 
         log.info(s"Writing args.env to -- $argFileDest")
@@ -133,7 +133,7 @@ object K8sConfigTemplateGen {
                                   |include "config-map/ledgers.conf"
                                   |include "config-map/usage-rules.conf"
                                   |include "config-map/metrics.conf"
-                                  |include "config-map/customer.conf"
+                                  |include "config-map/customers.conf"
                                   |include "config-map/sms-preferred-order.conf"
                                   |include "config-map/msg-types-for-alert-push-notif.conf"
                                   |include "config-map/custom.conf"""".stripMargin

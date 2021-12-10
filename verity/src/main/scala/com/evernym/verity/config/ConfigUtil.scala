@@ -107,7 +107,7 @@ object ConfigUtil {
 
   private def findSponsorConfig(lookupKey: String, lookupValue: String, appConfig: AppConfig): Option[SponsorDetails] =
       appConfig
-          .getObjectListOption(s"$PROVISIONING.sponsors")
+          .getObjectListOption(PROVISIONING_SPONSORS)
         .flatMap { seq =>
           seq
             .find { x =>

@@ -1,8 +1,5 @@
 syntax = "proto3";
 
-// Brought in from scalapb-runtime
-import "scalapb/scalapb.proto";
-
 package com.evernym.verity.msgoutbox.outbox;
 
 message RetryPolicy {

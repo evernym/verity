@@ -59,7 +59,7 @@ val akkaVer         = "2.6.17"
 val akkaHttpVer     = "10.2.7"
 val akkaMgtVer      = "1.1.1"
 val alpAkkaVer      = "3.0.3"
-val kamonVer        = "2.2.3"
+val kamonVer        = "2.4.2"
 val kanelaAgentVer  = "1.0.13"
 val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
 val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
@@ -178,7 +178,7 @@ lazy val settings = Seq(
 lazy val testSettings = Seq (
   Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-h", (target.value / "test-reports" / name.value).toString),
   //Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-o"),             // standard test output, a bit verbose
-  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD", "-u", (target.value / "test-reports").toString),  // summarized test output
+  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oDF", "-u", (target.value / "test-reports").toString),  // summarized test output
 
   //As part of clustering work, after integrating actor message serializer (kryo-akka in our case)
   // an issue was found related to class loading when we run 'sbt test'

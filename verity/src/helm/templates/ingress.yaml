@@ -25,6 +25,7 @@ metadata:
     alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "{{ .Values.ingress.healthcheckTimeoutSeconds }}"
     alb.ingress.kubernetes.io/unhealthy-threshold-count: "{{ .Values.ingress.unhealthyThresholdCount }}"
     alb.ingress.kubernetes.io/target-group-attributes: "deregistration_delay.timeout_seconds={{ .Values.ingress.deregistrationDelay }}"
+    alb.ingress.kubernetes.io/tags: "env={{ .Values.env }},service={{ .Values.service }}"
     external-dns.alpha.kubernetes.io/hostname: {{ .Values.vars.VERITY__ENDPOINT__HOST }}
 spec:
   rules:

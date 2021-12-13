@@ -165,8 +165,9 @@ trait MsgNotifierForStoredMsgs
 
     // check if override exist
     val msgTypeBasedTemplateOverride: Option[String] = sponsorId.flatMap { sponsorId =>
-      ConfigUtil.findSponsorConfigWithId(sponsorId, appConfig)
-        .flatMap(Try(_.pushMsgOverrides.getString(msgTypeBasedTemplateConfigName)).toOption)
+      ConfigUtil.findSponsorConfigWithId(sponsorId, appConfig).flatMap { sd =>
+        Try(sd.pushMsgOverrides.getString(msgTypeBasedTemplateConfigName)).toOption
+      }
     }
 
     // if no override use default

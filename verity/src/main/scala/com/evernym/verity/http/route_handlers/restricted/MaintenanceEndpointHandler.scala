@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.maintenance.{ExecutorStatus, GetExecutorStatus, GetManagerStatus, ManagerStatus, Reset, StartJob, StopJob}
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
-import com.evernym.verity.actor.agent.user.{GetPairwiseRoutingDIDs, GetPairwiseRoutingDIDsResp}
+import com.evernym.verity.actor.agent.user.{GetPairwiseConnDetail, GetPairwiseConnDetailResp, GetPairwiseRoutingDIDs, GetPairwiseRoutingDIDsResp}
 import com.evernym.verity.actor.cluster_singleton.{ForActorStateCleanupManager, ForAgentRoutesMigrator, maintenance}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.maintenance.{GetMigrationStatus, MigrationStatusDetail}
@@ -267,6 +267,7 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
 
   protected val v1ToV2MigrationRoutes: Route =
     pathPrefix("v1tov2migration") {
+
       pathPrefix("agent") {
         pathPrefix(Segment) { agentDID =>
           path("pairwiseRoutingDIDs") {
@@ -283,7 +284,21 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
             }
           }
         }
-      }
+      } ~
+        pathPrefix("connection") {
+          pathPrefix(Segment) { pairwiseAgentDID =>
+            path("diddoc") {
+              (get & pathEnd) {
+                complete {
+                  sendToAgent(pairwiseAgentDID, GetPairwiseConnDetail).map[ToResponseMarshallable] {
+                    case s: GetPairwiseConnDetailResp => handleExpectedResponse(s)
+                    case e => handleUnexpectedResponse(e)
+                  }
+                }
+              }
+            }
+          }
+        }
     }
 
   protected val maintenanceRoutes: Route =

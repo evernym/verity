@@ -7,6 +7,7 @@ import com.evernym.verity.actor.maintenance.SummaryData
 import com.evernym.verity.actor.persistence.recovery.base.BaseRecoverySpecLike
 import com.evernym.verity.actor.persistence.recovery.latest.verity2.vas.{AgencyAgentEventSetter, UserAgentEventSetter}
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
+import com.evernym.verity.actor.persistence.recovery.base.AgentIdentifiers._
 import com.evernym.verity.constants.ActorNameConstants.USER_AGENT_REGION_ACTOR_NAME
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup

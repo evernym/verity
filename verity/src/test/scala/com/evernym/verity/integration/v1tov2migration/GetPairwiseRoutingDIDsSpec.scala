@@ -1,16 +1,15 @@
 package com.evernym.verity.integration.v1tov2migration
 
-import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.actor.agent.user.GetPairwiseRoutingDIDsResp
 import com.evernym.verity.actor.{AgentDetailSet, AgentKeyCreated, OwnerDIDSet}
-import com.evernym.verity.actor.persistence.recovery.base.{AgentIdentifiers, BasePersistentStore}
+import com.evernym.verity.actor.persistence.recovery.base.AgentIdentifiers._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
-import com.evernym.verity.integration.base.verity_provider.node.local.VerityLocalNode
 import com.evernym.verity.integration.base.{EAS, VerityProviderBaseSpec}
+import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.ConfigFactory
@@ -20,9 +19,7 @@ import scala.concurrent.ExecutionContext
 
 class GetPairwiseRoutingDIDsSpec
   extends VerityProviderBaseSpec
-    with SdkProvider
-    with BasePersistentStore
-    with AgentIdentifiers {
+    with SdkProvider {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -104,9 +101,9 @@ class GetPairwiseRoutingDIDsSpec
   }
 
   private def getPairwiseDIDs(queryParam: String): GetPairwiseRoutingDIDsResp = {
-    val basePath = s"agency/internal/maintenance/v1tov2migration/agent/${mySelfRelAgentDIDPair.did}/pairwiseRoutingDIDs"
-    val apiResp = issuerRestSDK.sendGET(s"$basePath$queryParam")
-    val respString = issuerRestSDK.parseHttpResponseAsString(apiResp)
+    val urlSuffix = s"agency/internal/maintenance/v1tov2migration/agent/${mySelfRelAgentDIDPair.did}/pairwiseRoutingDIDs"
+    val apiResp = HttpUtil.sendGET(issuerRestSDK.buildFullUrl(s"$urlSuffix$queryParam"))
+    val respString = HttpUtil.parseHttpResponseAsString(apiResp)(futureExecutionContext)
     DefaultMsgCodec.fromJson[GetPairwiseRoutingDIDsResp](respString)
   }
 
@@ -118,17 +115,15 @@ class GetPairwiseRoutingDIDsSpec
     val pairwiseDIDEvents = (1 to 10).map { i =>
       AgentDetailSet(s"pairwiseDID$i", s"agentDID$i")
     }
-    storeAgentRoute(mySelfRelAgentDIDPair.did, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentPersistenceId.entityId)
-    addEventsToPersistentStorage(mySelfRelAgentPersistenceId, basicUserAgentEvents ++ pairwiseDIDEvents)
+    issuerEAS.persStoreTestKit.storeAgentRoute(mySelfRelAgentDIDPair.did, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentPersistenceId.entityId)
+    issuerEAS.persStoreTestKit.addEventsToPersistentStorage(mySelfRelAgentPersistenceId, basicUserAgentEvents ++ pairwiseDIDEvents)
   }
 
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
   override def executionContextProvider: ExecutionContextProvider = ecp
 
-  override implicit val system: ActorSystem = issuerEAS.nodes.head.asInstanceOf[VerityLocalNode].platform.actorSystem
-
-  lazy val TEST_KIT_CONFIG =
+  private val TEST_KIT_CONFIG =
     ConfigFactory.empty
       .withFallback(EventSourcedBehaviorTestKit.config)
       .withFallback(PersistenceTestKitSnapshotPlugin.config)

@@ -1,7 +1,6 @@
 package com.evernym.verity.integration.base.sdk_provider
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model._
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
@@ -9,7 +8,6 @@ import com.evernym.verity.actor.wallet._
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
 import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.engine._
@@ -36,6 +34,7 @@ import com.evernym.verity.observability.metrics.NoOpMetricsWriter
 import com.evernym.verity.protocol.engine.util.DIDDoc
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
+import com.evernym.verity.testkit.util.HttpUtil
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.matchers.should.Matchers
@@ -148,8 +147,8 @@ abstract class SdkBase(param: SdkParam,
   type ConnId = String
 
   def fetchAgencyKey(): AgencyPublicDid = {
-    val resp = checkOKResponse(sendGET("agency"))
-    val apd = parseHttpResponseAs[AgencyPublicDid](resp)
+    val resp = checkOKResponse(HttpUtil.sendGET(buildFullUrl("agency")))
+    val apd = HttpUtil.parseHttpResponseAs[AgencyPublicDid](resp)
     require(apd.DID.nonEmpty, "agency DID should not be empty")
     require(apd.verKey.nonEmpty, "agency verKey should not be empty")
     storeTheirKey(DidPair(apd.didPair.did, apd.didPair.verKey))
@@ -219,55 +218,20 @@ abstract class SdkBase(param: SdkParam,
   }
 
   protected def checkResponse(resp: HttpResponse, expected: StatusCode): HttpResponse = {
-    val json = parseHttpResponseAsString(resp)
+    val json = HttpUtil.parseHttpResponseAsString(resp)
     require(resp.status.intValue() == expected.intValue,
       s"http response '${resp.status}' was not equal to expected '${expected.value}': $json")
     resp
   }
 
   protected def sendPOST(payload: Array[Byte]): HttpResponse =
-    sendBinaryReqToUrl(payload, param.verityPackedMsgUrl)
+    HttpUtil.sendBinaryReqToUrl(payload, param.verityPackedMsgUrl)
 
-  protected def sendBinaryReqToUrl(payload: Array[Byte], url: String): HttpResponse = {
-    awaitFut(
-      Http().singleRequest(
-        HttpRequest(
-          method=HttpMethods.POST,
-          uri = url,
-          entity = HttpEntity(
-            ContentTypes.`application/octet-stream`,
-            payload
-          )
-        )
-      )
-    )
-  }
-
-  def sendGET(pathSuffix: String): HttpResponse = {
-    val actualPath = param.verityBaseUrl + s"/$pathSuffix"
-    awaitFut(
-      Http().singleRequest(
-        HttpRequest(
-          method=HttpMethods.GET,
-          uri = actualPath,
-          entity = HttpEntity.Empty
-        )
-      )
-    )
-  }
+  def buildFullUrl(suffix: String): String = param.verityBaseUrl + s"/$suffix"
 
   protected def parseAndUnpackResponse[T: ClassTag](resp: HttpResponse): ReceivedMsgParam[T] = {
-    val packedMsg = parseHttpResponseAsString(resp)
+    val packedMsg = HttpUtil.parseHttpResponseAsString(resp)
     unpackMsg[T](packedMsg.getBytes)
-  }
-
-  def parseHttpResponseAs[T: ClassTag](resp: HttpResponse): T = {
-    val respString = parseHttpResponseAsString(resp)
-    JacksonMsgCodec.fromJson[T](respString)
-  }
-
-  def parseHttpResponseAsString(resp: HttpResponse): String = {
-    awaitFut(resp.entity.dataBytes.runReduce(_ ++ _).map(_.utf8String))
   }
 
   protected def awaitFut[T](fut: Future[T]): T = {

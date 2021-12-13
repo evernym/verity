@@ -9,7 +9,6 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.{?=>, DIDDoc, ServiceFormatter}
-import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Create
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Msg.{Invitation, OutOfBandInvitation}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.ProblemReportCodes._

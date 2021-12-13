@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.maintenance.{ExecutorStatus, GetExecutorStatus, GetManagerStatus, ManagerStatus, Reset, StartJob, StopJob}
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
-import com.evernym.verity.actor.agent.user.{GetPairwiseConnDetail, GetPairwiseConnDetailResp, GetPairwiseRoutingDIDs, GetPairwiseRoutingDIDsResp}
+import com.evernym.verity.actor.agent.user.{GetPairwiseConnDetail, GetPairwiseConnDetailResp, GetPairwiseRoutingDIDs, GetPairwiseRoutingDIDsResp, GetWalletMigrationDetail, GetWalletMigrationDetailResp}
 import com.evernym.verity.actor.cluster_singleton.{ForActorStateCleanupManager, ForAgentRoutesMigrator, maintenance}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.maintenance.{GetMigrationStatus, MigrationStatusDetail}
@@ -304,21 +304,37 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
             }
           }
         } ~
-          pathPrefix("VAS" / "connection") {
-            pathPrefix(Segment) { pairwiseRoutingDID =>
-              path("diddoc") {
-                (post & entityAs[SetupMigratedConnection]) { smc =>
+        pathPrefix("VAS") {
+          pathPrefix("agent") {
+            pathPrefix(Segment) { agentDID =>
+              path("walletMigrationDetail") {
+                (get & pathEnd) {
                   complete {
-                    val connectionMigratorEntityId = smc.agent.agentDID + "-" + pairwiseRoutingDID
-                    sendToConnectionMigrator(connectionMigratorEntityId, smc).map[ToResponseMarshallable] {
-                      case Done => OK
+                    sendToAgent(agentDID, GetWalletMigrationDetail).map[ToResponseMarshallable] {
+                      case s: GetWalletMigrationDetailResp => handleExpectedResponse(s)
                       case e => handleUnexpectedResponse(e)
                     }
                   }
                 }
               }
             }
-          }
+          } ~
+            pathPrefix("connection") {
+              pathPrefix(Segment) { pairwiseRoutingDID =>
+                path("diddoc") {
+                  (post & entityAs[SetupMigratedConnection]) { smc =>
+                    complete {
+                      val connectionMigratorEntityId = smc.agent.agentDID + "-" + pairwiseRoutingDID
+                      sendToConnectionMigrator(connectionMigratorEntityId, smc).map[ToResponseMarshallable] {
+                        case Done => OK
+                        case e => handleUnexpectedResponse(e)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+        }
     }
 
   protected val maintenanceRoutes: Route =

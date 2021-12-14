@@ -224,10 +224,14 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     if (theirDidDocUpdateStatus.latestTheirDidDocDetail.isEmpty) {
       sndr ! NoUpgradeNeeded
     } else {
+      val direction =
+        if (theirDidDocUpdateStatus.origTheirDidDocDetail == theirDidDocUpdateStatus.latestTheirDidDocDetail) "v2tov1"
+        else "v1tov2"
       val theirAgencyDID = theirRoutingParam.routingTarget
       getAgencyIdentityFut(agencyDIDReq, GetAgencyIdentity(theirAgencyDID), metricsWriter).map { cr =>
         sndr !
           PairwiseUpgradeInfo(
+            direction,
             theirAgencyDID,
             cr.getAgencyInfoReq(theirAgencyDID).verKeyReq,
             cr.getAgencyInfoReq(theirAgencyDID).endpointReq)
@@ -1124,7 +1128,8 @@ trait UserAgentPairwiseStateUpdateImpl
 }
 
 case object GetPairwiseUpgradeInfo extends ActorMessage
-case class PairwiseUpgradeInfo(theirAgencyDID: DidStr,
+case class PairwiseUpgradeInfo(direction: String,
+                               theirAgencyDID: DidStr,
                                theirAgencyVerKey: VerKeyStr,
                                theirAgencyEndpoint: String) extends ActorMessage
 case object NoUpgradeNeeded extends ActorMessage

@@ -28,7 +28,7 @@ class GetUpgradeInfoSpec
 
     issuerSDK.fetchAgencyKey()
     issuerSDK.provisionAgent_0_5()
-    issuerSDK.registerWebhookWithoutOAuth()
+    issuerSDK.updateComMethod_0_5(issuerSDK.msgListener.webhookEndpoint)
     issuerSDK.createKey_0_5(connId)
     val invitation = issuerSDK.sendConnReq_0_5(connId).md.inviteDetail
 

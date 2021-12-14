@@ -42,8 +42,7 @@ etc
 ## How to "setup" Agency agent for various agent services
 ```
 cd <project-folder>
-source devops/scripts/run_verity/base.env
-sbt "project integrationTests" test:console
+GENESIS_TXN_FILE_LOCATION="target/genesis.txt" sbt "project integrationTests" test:console
 ```
 
 once you see sbt prompt, copy paste below code and press Enter

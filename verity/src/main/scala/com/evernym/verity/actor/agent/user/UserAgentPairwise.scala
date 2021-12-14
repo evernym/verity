@@ -221,7 +221,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
 
   def handleGetUpgradeInfo(): Unit = {
     val sndr = sender()
-    if (theirDidDocUpdateStatus.latestTheirDidDocDetail.isEmpty) {
+    if (theirDidDocUpdateStatus.origTheirDidDocDetail.isEmpty) {
       sndr ! NoUpgradeNeeded
     } else {
       val direction =

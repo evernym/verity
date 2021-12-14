@@ -231,7 +231,7 @@ trait PairwiseConnStateBase
 
   private def updateTheirDidDocUpdateStatus(tdd: TheirDidDocDetail): Unit = {
     theirDidDocUpdateStatus = theirDidDocUpdateStatus.origTheirDidDocDetail match {
-      case None       => TheirDidDocUpdateStatus(Option(tdd), None)
+      case None       => TheirDidDocUpdateStatus(None, Option(tdd))
       case Some(orig) => TheirDidDocUpdateStatus(Option(orig), Option(tdd))
     }
   }

@@ -311,7 +311,7 @@ lazy val commonLibraryDependencies = {
 
     //logging dependencies
     "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4",
-    "ch.qos.logback" % "logback-classic" % "1.2.6",
+    "ch.qos.logback" % "logback-classic" % "1.2.7",
     akkaGrp %% "akka-slf4j" % akkaVer,
 
     //kamon monitoring dependencies

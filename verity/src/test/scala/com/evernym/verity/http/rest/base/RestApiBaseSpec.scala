@@ -14,7 +14,7 @@ import com.evernym.verity.http.base.open.{AgentProvisioningSpec, AriesInvitation
 import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, RestrictedRestApiSpec}
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.http.route_handlers.open.RestAcceptedResponse
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent._
 import com.evernym.verity.testkit.mock.agent.MockEnv
@@ -23,6 +23,7 @@ import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
 
 import scala.reflect.ClassTag
+import scala.util.Try
 
 trait RestApiBaseSpec
   extends BasicSpecWithIndyCleanup
@@ -97,9 +98,10 @@ trait RestApiBaseSpec
     })
     lastPayload.isDefined shouldBe true
     val jsonMsgString = lastPayload.get
-
     val jsonMsg = new JSONObject(jsonMsgString)
-    val regInvite = jsonMsg.getJSONObject("inviteDetail")
+    val regInvite = Try(jsonMsg.getJSONObject("inviteDetail")).getOrElse(
+      throw new RuntimeException("unexpected message: " + jsonMsgString)
+    )
     val abrInvite = jsonMsg.getJSONObject("truncatedInviteDetail")
 
     regInvite.getString("connReqId") shouldBe abrInvite.getString("id")

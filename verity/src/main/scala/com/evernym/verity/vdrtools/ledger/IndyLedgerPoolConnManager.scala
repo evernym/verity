@@ -75,8 +75,10 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
         createPoolLedgerConfigJSONParameter.toJson).get
     } catch {
       case e: Exception =>
-        val errorMsg = "error while creating ledger " +
-          s"pool config file (detail => ${Exceptions.getErrorMsg(e)})"
+        val errorMsg = s"error while creating ledger pool config file " +
+          s"(genesisTxnFilePath: '$genesisTxnFilePath') " +
+          s"(detail => ${Exceptions.getErrorMsg(e)})"
+        logger.error(errorMsg)
         AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_LEDGER_OPERATION, e, Option(errorMsg)))
     }
   }
@@ -113,7 +115,6 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
       }
       // Convert the poolConfig from a mutable Map to an immutable Map and then to a JSON string
       val poolConfigJson = DefaultMsgCodec.toJson(poolConfig.toMap)
-
       val openFut = toFuture {
         Pool.openPoolLedger(configName, poolConfigJson)
       }

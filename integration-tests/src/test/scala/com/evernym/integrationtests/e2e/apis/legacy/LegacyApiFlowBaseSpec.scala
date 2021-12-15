@@ -32,7 +32,7 @@ import com.evernym.verity.testkit.util.http_listener.{PackedMsgHttpListener, Pus
 import com.evernym.verity.testkit.{AwaitResult, BasicSpecWithIndyCleanup, CancelGloballyAfterFailure}
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.evernym.verity.util._
-import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider, UrlParam}
+import com.evernym.verity.util2.{ExecutionContextProvider, UrlParam}
 import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
 import org.scalatest.concurrent.{Eventually, ScalaFutures}

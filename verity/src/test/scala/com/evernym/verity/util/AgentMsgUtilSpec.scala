@@ -4,7 +4,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec.Document
 import com.evernym.verity.agentmsg.msgfamily.pairwise.CreateKeyReqMsg_MFV_0_6
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
-import com.evernym.verity.protocol.engine
+import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.registry.{PinstIdResolution, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_V_0_6}

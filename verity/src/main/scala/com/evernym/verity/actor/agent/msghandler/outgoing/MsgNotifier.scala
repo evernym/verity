@@ -41,6 +41,7 @@ import com.evernym.verity.util2.Exceptions.HandledErrorException
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.util.Try
 
 
 trait MsgNotifier {
@@ -150,7 +151,7 @@ trait MsgNotifierForStoredMsgs
     }
   }
 
-  private def getPushNotifTextTemplate(msgType: String): String = {
+  private def getPushNotifTextTemplate(msgType: String, sponsorId: Option[String]): String = {
 
     val formattedMsgType = {
       msgType match {
@@ -161,7 +162,18 @@ trait MsgNotifierForStoredMsgs
       }
     }
     val msgTypeBasedTemplateConfigName = s"$formattedMsgType-new-msg-body-template"
-    val msgTypeBasedTemplate = appConfig.getStringOption(msgTypeBasedTemplateConfigName)
+
+    // check if override exist
+    val msgTypeBasedTemplateOverride: Option[String] = sponsorId.flatMap { sponsorId =>
+      ConfigUtil.findSponsorConfigWithId(sponsorId, appConfig).flatMap { sd =>
+        Try(sd.pushMsgOverrides.getString(msgTypeBasedTemplateConfigName)).toOption
+      }
+    }
+
+    // if no override use default
+    val msgTypeBasedTemplate = msgTypeBasedTemplateOverride.orElse(
+      appConfig.getStringOption(s"$PUSH_NOTIF.$msgTypeBasedTemplateConfigName")
+    )
 
     msgTypeBasedTemplate match {
       case Some(t: String) => t
@@ -252,7 +264,9 @@ trait MsgNotifierForStoredMsgs
         val logoUrl = mds.get(LOGO_URL_KEY).map(v => Map(LOGO_URL_KEY -> v)).getOrElse(Map.empty)
         val extraData = title ++ detail ++ name ++ logoUrl
 
-        val msgBodyTemplateToUse = getPushNotifTextTemplate(msg.getType)
+        val sponsorId: Option[String] = allComMethods.flatMap(_.sponsorId)
+
+        val msgBodyTemplateToUse = getPushNotifTextTemplate(msg.getType, sponsorId)
         val newExtraData = extraData ++ Map(PUSH_NOTIF_BODY_TEMPLATE -> msgBodyTemplateToUse)
 
         logger.debug(s"[${notifMsgDtl.uid}:${notifMsgDtl.msgType}] new messages notification: " + notifMsgDtl)

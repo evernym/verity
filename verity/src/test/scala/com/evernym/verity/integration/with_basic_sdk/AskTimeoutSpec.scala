@@ -1,7 +1,7 @@
 package com.evernym.verity.integration.with_basic_sdk
 
 import com.evernym.verity.actor.AgentCreated
-import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
+import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.integration.base.{VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.CreateEdgeAgent

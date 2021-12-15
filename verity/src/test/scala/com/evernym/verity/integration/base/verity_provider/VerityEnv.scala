@@ -101,7 +101,7 @@ case class VerityEnv(seed: String,
   def init(): Unit = {
     if (! isVerityBootstrapped) {
       nodes.headOption.foreach { node =>
-        VerityAdmin.bootstrapApplication(node.portProfile.http, node.appSeed, waitAtMost)
+        VerityAdmin.bootstrapApplication(node.portProfile.http, node.appSeed, waitAtMost, node.serviceParam.flatMap(_.ledgerTxnExecutor))
         isVerityBootstrapped = true
       }
     }

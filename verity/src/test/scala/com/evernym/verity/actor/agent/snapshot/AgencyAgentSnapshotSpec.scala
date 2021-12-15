@@ -1,7 +1,6 @@
 package com.evernym.verity.actor.agent.snapshot
 
-import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
-import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
+
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.KeyCreated
 import com.evernym.verity.actor.agent.agency.{AgencyAgentScaffolding, AgencyAgentState}
@@ -10,7 +9,7 @@ import com.evernym.verity.actor.agent.relationship.AnywiseRelationship
 import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_REGION_ACTOR_NAME
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.ExecutionContext
@@ -18,18 +17,16 @@ import scala.concurrent.ExecutionContext
 
 class AgencyAgentSnapshotSpec
   extends AgencyAgentScaffolding
-    with SnapshotSpecBase
+    with AgentSnapshotSpecBase
     with OverrideConfig {
 
-  override def overrideConfig: Option[Config] = Option(
+  override def specificConfig: Option[Config] = Option(
     ConfigFactory.parseString(
       """verity.persistent-actor.base.AgencyAgent.snapshot {
         after-n-events = 1
         keep-n-snapshots = 2
         delete-events-on-snapshots = false
       }""")
-    .withFallback(EventSourcedBehaviorTestKit.config)
-    .withFallback(PersistenceTestKitSnapshotPlugin.config)
   )
 
   agencySetupSpecs()
@@ -64,14 +61,14 @@ class AgencyAgentSnapshotSpec
     expectMsgType[PackedMsg]
   }
 
-  def checkKeyCreatedEvent(keyCreated: KeyCreated, expectedForDID: DID): Unit = {
+  def checkKeyCreatedEvent(keyCreated: KeyCreated, expectedForDID: DidStr): Unit = {
     keyCreated.forDID shouldBe expectedForDID
   }
 
   override def checkSnapshotState(snap: AgencyAgentState,
                                   protoInstancesSize: Int): Unit = {
     snap.isEndpointSet shouldBe true
-    snap.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair)
+    snap.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair.toAgentDidPair)
     snap.agentWalletId shouldBe Option(agencyAgentEntityId)
     snap.thisAgentKeyId shouldBe mockAgencyAdmin.agencyPublicDid.map(_.DID)
     snap.agencyDIDPair.map(_.DID) shouldBe snap.thisAgentKeyId
@@ -98,9 +95,4 @@ class AgencyAgentSnapshotSpec
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

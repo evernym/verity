@@ -1,9 +1,10 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessVerKey, AnonCreds, LedgerReadAccess, UrlShorteningAccess}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Role.{Holder, Issuer}
@@ -36,13 +37,6 @@ object IssueCredentialProtoDef extends ProtocolDefinition[IssueCredential, Role,
   )
 
   override def createInitMsg(params: Parameters): Control = Ctl.Init(params)
-
-  override val requiredAccess: Set[AccessRight] = Set(
-    AnonCreds,
-    LedgerReadAccess,
-    AccessVerKey,
-    UrlShorteningAccess
-  )
 }
 
 sealed trait Role

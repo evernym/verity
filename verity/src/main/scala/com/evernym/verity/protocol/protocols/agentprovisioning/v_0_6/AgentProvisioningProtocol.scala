@@ -1,18 +1,19 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_6
 
-import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.Status.{AGENT_ALREADY_CREATED, PROVISIONING_PROTOCOL_DEPRECATED}
-import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.DidPair
-import com.evernym.verity.actor.wallet.{AgentWalletSetupCompleted, TheirKeyStored}
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
+import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.DidPair
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{DeprecatedWalletSetupResult, TheirKeyStoredResult}
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
+import com.evernym.verity.protocol.engine.events.{ParameterStored, ProtocolInitialized}
+import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AskUserAgentCreator, HasAgentProvWallet}
 import com.evernym.verity.util.ParticipantUtil
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.{AGENT_ALREADY_CREATED, PROVISIONING_PROTOCOL_DEPRECATED}
 import com.typesafe.scalalogging.Logger
 
 import scala.util.{Failure, Success}
@@ -25,7 +26,6 @@ trait AgentProvisioningEvt
 
 class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String])
     extends Protocol[AgentProvisioningProtocol, Role, ProtoMsg, Any, State, String](AgentProvisioningProtoDef)
-      with HasLogger
       with HasAgentProvWallet {
 
   val logger: Logger = ctx.logger
@@ -92,15 +92,21 @@ class AgentProvisioningProtocol(val ctx: ProtocolContextApi[AgentProvisioningPro
     val fromDIDPair = DidPair(fromDID, fromDIDVerKey)
     val aws = oa.parameters.paramValueRequired(NEW_AGENT_WALLET_ID)
     prepareNewAgentWalletData(fromDIDPair, aws) {
-      case Success(awsc: AgentWalletSetupCompleted) =>
+      case Success(awsc: DeprecatedWalletSetupResult) =>
         ctx.wallet.storeTheirDid(fromDID, fromDIDVerKey, ignoreIfAlreadyExists = true) {
-          case Success(_: TheirKeyStored) =>
+          case Success(_: TheirKeyStoredResult) =>
             ctx.apply(RequesterPartiSet(ParticipantUtil.participantId(awsc.agentKey.did, Option(fromDID)))) //TODO: confirm if this is correct
             val provisionerPartiId = oa.parameters.paramValueRequired(AGENT_PROVISIONER_PARTICIPANT_ID)
             ctx.apply(ProvisionerPartiSet(provisionerPartiId))
             ctx.apply(AgentPairwiseKeyCreated(awsc.agentKey.did, awsc.agentKey.verKey))
             val endpointDetail = oa.parameters.paramValueRequired(CREATE_AGENT_ENDPOINT_SETUP_DETAIL_JSON)
-            ctx.signal(AskUserAgentCreator(fromDIDPair, awsc.agentKey.didPair, endpointDetail))
+            ctx.signal(
+              AskUserAgentCreator(
+                fromDIDPair,
+                awsc.agentKey.didPair,
+                endpointDetail
+              )
+            )
           case Failure(e) => throw e
         }
       case Failure(e) => throw e

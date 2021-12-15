@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent.msgsender
 
+import com.evernym.verity.actor.agent.HasGeneralCache
 import com.evernym.verity.util2.Exceptions._
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status._
@@ -7,14 +8,15 @@ import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
 import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.ledger.LedgerSvcException
-import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols.HasGeneralCache
 import com.evernym.verity.protocol.protocols.connecting.common.TheirRoutingParam
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.cache.AGENCY_IDENTITY_CACHE_FETCHER
 import com.evernym.verity.cache.base.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.GetAgencyIdentityCacheParam
-import com.evernym.verity.metrics.{InternalSpan, MetricsWriter}
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
+import com.evernym.verity.observability.logs.HasLogger
+import com.evernym.verity.observability.metrics.{InternalSpan, MetricsWriter}
 import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.util2.Exceptions
@@ -37,9 +39,9 @@ trait AgentMsgSender
   def msgSendingSvc: MsgSendingSvc
   def handleMsgDeliveryResult(mdr: MsgDeliveryResult): Unit
 
-  private def getAgencyIdentityFut(localAgencyDID: String, gad: GetAgencyIdentity,
-                                   mw: MetricsWriter): Future[CacheQueryResponse] = {
-
+  def getAgencyIdentityFut(localAgencyDID: String,
+                           gad: GetAgencyIdentity,
+                           mw: MetricsWriter): Future[CacheQueryResponse] = {
     mw.runWithSpan("getAgencyIdentityFut", "AgentMsgSender", InternalSpan) {
       val gadp = GetAgencyIdentityCacheParam(localAgencyDID, gad)
       val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER)
@@ -47,13 +49,14 @@ trait AgentMsgSender
     }
   }
 
-  private def theirAgencyEndpointFut(localAgencyDID:DID, theirAgencyDID: DID,
+  private def theirAgencyEndpointFut(localAgencyDID:DidStr,
+                                     theirAgencyDID: DidStr,
                                      mw: MetricsWriter): Future[CacheQueryResponse] = {
     val gad = GetAgencyIdentity(theirAgencyDID, getVerKey = false)
     getAgencyIdentityFut(localAgencyDID, gad, mw)
   }
 
-  private def handleRemoteAgencyEndpointNotFound(theirAgencyDID: DID): Exception = {
+  private def handleRemoteAgencyEndpointNotFound(theirAgencyDID: DidStr): Exception = {
     val errorMsg =
       "error while getting endpoint from ledger (" +
         "possible-causes: ledger pool not reachable/up/responding etc, " +
@@ -107,7 +110,7 @@ trait AgentMsgSender
 case class SendMsgParam(uid: MsgId,
                         msgType: String,
                         msg: Array[Byte],
-                        localAgencyDID: DID,
+                        localAgencyDID: DidStr,
                         theirRoutingParam: TheirRoutingParam,
                         isItARetryAttempt: Boolean)
 

@@ -1,12 +1,14 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
-import com.evernym.verity.protocol.didcomm.messages.{AdoptableProblemReport, ProblemDescription}
-import com.evernym.verity.protocol.engine.MsgFamily.QUALIFIER_FORMAT_HTTP
+import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName, QUALIFIER_FORMAT_HTTP}
+import com.evernym.verity.did.didcomm.v1.messages.{AdoptableProblemReport, MsgFamily, ProblemDescription}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.util.ServiceFormatted
 import com.evernym.verity.util.{Base64Util, MsgIdProvider}
 
 object OutOfBandMsgFamily extends MsgFamily {
@@ -34,11 +36,11 @@ object OutOfBandMsgFamily extends MsgFamily {
 
 sealed trait SignalMsg
 
-case class Identity(DID: DID, verKey: VerKey)
+case class Identity(DID: DidStr, verKey: VerKeyStr)
 
 object Signal {
-  case class ConnectionReused(`~thread`: Thread, relationship: DID) extends SignalMsg
-  case class MoveProtocol(protoRefStr: String, fromRelationship: DID, toRelationship: DID, threadId: ThreadId)
+  case class ConnectionReused(`~thread`: Thread, relationship: DidStr) extends SignalMsg
+  case class MoveProtocol(protoRefStr: String, fromRelationship: DidStr, toRelationship: DidStr, threadId: ThreadId)
   case class ProblemReport(description: ProblemDescription) extends AdoptableProblemReport with SignalMsg
   def buildProblemReport(description: String, code: String): Signal.ProblemReport = {
     Signal.ProblemReport(

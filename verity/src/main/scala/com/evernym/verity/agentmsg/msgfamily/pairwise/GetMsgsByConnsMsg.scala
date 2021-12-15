@@ -1,14 +1,16 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
+import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{DID, MsgBase}
-import com.evernym.verity.protocol.protocols.MsgDetail
+import com.evernym.verity.protocol.engine.MsgBase
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkOptionalNotEmpty
 
 
-case class GetMsgsByConnsReqMsg_MFV_0_5(pairwiseDIDs: Option[List[DID]] = None,
+case class GetMsgsByConnsReqMsg_MFV_0_5(pairwiseDIDs: Option[List[DidStr]] = None,
                                         uids: Option[List[String]] = None,
                                         excludePayload: Option[String] = None,
                                         statusCodes: Option[List[String]] = None) extends MsgBase {
@@ -17,7 +19,7 @@ case class GetMsgsByConnsReqMsg_MFV_0_5(pairwiseDIDs: Option[List[DID]] = None,
   }
 }
 
-case class GetMsgsByConnsReqMsg_MFV_0_6(pairwiseDIDs: Option[List[DID]] = None,
+case class GetMsgsByConnsReqMsg_MFV_0_6(pairwiseDIDs: Option[List[DidStr]] = None,
                                         uids: Option[List[String]] = None,
                                         excludePayload: Option[String] = None,
                                         statusCodes: Option[List[String]] = None) extends MsgBase {
@@ -27,12 +29,12 @@ case class GetMsgsByConnsReqMsg_MFV_0_6(pairwiseDIDs: Option[List[DID]] = None,
 }
 
 case class GetMsgsByConnsReqMsg(msgFamilyDetail: MsgFamilyDetail,
-                                pairwiseDIDs: Option[List[DID]] = None,
+                                pairwiseDIDs: Option[List[DidStr]] = None,
                                 excludePayload: Option[String] = None,
                                 uids: Option[List[String]] = None,
                                 statusCodes: Option[List[String]] = None)
 
-case class MsgsByPairwiseConn(pairwiseDID: DID, msgs: List[MsgDetail]) extends MsgBase
+case class MsgsByPairwiseConn(pairwiseDID: DidStr, msgs: List[MsgDetail]) extends MsgBase
 
 case class GetMsgsByConnsRespMsg_MFV_0_5(`@type`: TypeDetail, msgsByConns: List[MsgsByPairwiseConn]) extends MsgBase
 

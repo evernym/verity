@@ -2,10 +2,11 @@ package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.container.actor.Init
+import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine._
 import AgentProvisioningMsgFamily._
-import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AccessVerify}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOneDomain
 
@@ -19,8 +20,6 @@ object AgentProvisioningDefinition
   override val roles: Set[Role] = Set(Requester, Provisioner)
 
   override lazy val initParamNames: Set[String] = Set(SELF_ID, OTHER_ID, DATA_RETENTION_POLICY)
-
-  override val requiredAccess: Set[AccessRight] = Set(AccessVerify)
 
   override def createInitMsg(params: Parameters): Control = Init(params)
 

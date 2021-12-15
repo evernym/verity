@@ -8,16 +8,15 @@ import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.testkit.actor.{ActorSystemConfig, MockAppConfig, OverrideConfig, ProvidesMockPlatform}
 import com.evernym.verity.actor.testkit.checks.ChecksAkkaEvents
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.protocol.engine.{DID, VerKey}
 import com.evernym.verity.testkit.{BasicSpecBase, CleansUpIndyClientFirst}
 import com.typesafe.config.Config
 import org.iq80.leveldb.util.FileUtils
 import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
 
 import java.util.concurrent.TimeUnit
-import com.evernym.verity.actor.agent.DidPair
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.util2.ActorErrorResp
-import com.evernym.verity.metrics.{MetricsBackend, MetricsWriterExtension, TestMetricsBackend}
+import com.evernym.verity.observability.metrics.{MetricsWriterExtension, TestMetricsBackend}
 
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
@@ -36,17 +35,31 @@ object AkkaTestBasic extends ActorSystemConfig
  * @param did DID
  * @param verKey ver key
  */
-case class AgentDIDDetail(name: String, DIDSeed: String, did: DID, verKey: VerKey) {
+case class AgentDIDDetail(name: String, DIDSeed: String, did: DidStr, verKey: VerKeyStr) {
   def prepareAgencyIdentity: AgencyPublicDid = AgencyPublicDid(did, verKey)
-  def didPair = DidPair(did, verKey)
+  def didPair: DidPair = DidPair(did, verKey)
 }
 
 
-class TestAppConfig(newConfig: Option[Config] = None, clearValidators: Boolean = false) extends AppConfig {
-  if(clearValidators) {
+class TestAppConfig(newConfig: Option[Config] = None,
+                    clearValidators: Boolean = false,
+                    baseAsFallback: Boolean = true)
+  extends AppConfig {
+  if (clearValidators) {
     validatorCreators = List.empty
   }
-  setConfig(newConfig.getOrElse(getLoadedConfig))
+  if (baseAsFallback) {
+    setConfig(newConfig.map(cfg => cfg.withFallback(baseConfig)).getOrElse(baseConfig))
+  } else {
+    setConfig(newConfig.getOrElse(baseConfig))
+  }
+
+  def withFallback(fallback: Config): TestAppConfig = {
+    setConfig(config.withFallback(fallback))
+    this
+  }
+
+  lazy val baseConfig: Config = getLoadedConfig
 }
 object TestAppConfig {
   def apply(newConfig: Option[Config] = None, clearValidators: Boolean = false) =
@@ -103,12 +116,11 @@ trait HasBasicActorSystem extends OverrideConfig with MockAppConfig {
   lazy val (as, conf) = AkkaTestBasic.systemWithConfig(
     overrideConfig
   )
-  lazy val metricsBackend: MetricsBackend = new TestMetricsBackend
   implicit lazy val system: classic.ActorSystem = {
-    MetricsWriterExtension(as).updateMetricsBackend(metricsBackend)
+    MetricsWriterExtension(as).updateMetricsBackend(new TestMetricsBackend)
     as
   }
-  implicit override lazy val appConfig: AppConfig = new TestAppConfig(Option(conf))
+  implicit override lazy val appConfig: AppConfig = new TestAppConfig(Option(conf), baseAsFallback = false)
 }
 
 /**

@@ -1,14 +1,13 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_6
 
-import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.actor.wallet.NewKeyCreated
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.protocol.engine.asyncapi.wallet.NewKeyResult
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.InteractionType.OneParty
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.TestExecutionContextProvider
+import com.evernym.verity.util2.ExecutionContextProvider
 
 import scala.concurrent.ExecutionContext
 import scala.util.Success
@@ -39,7 +38,7 @@ class IssuerSetupSpec
     "happy path create of Issuer public identifier" in withOwner { s =>
 
       s.owner walletAccess new MockableWalletAccess(
-        mockNewDid = () => Success(NewKeyCreated("HSCj6zbP9BKYHSkF3hdPib", "9xXbnac6atQRyESyLWtnxFRwnTRCrLWEAA9rvJKp5Kt1"))
+        mockNewDid = () => Success(NewKeyResult("HSCj6zbP9BKYHSkF3hdPib", "9xXbnac6atQRyESyLWtnxFRwnTRCrLWEAA9rvJKp5Kt1"))
       )
 
       s.owner ~ Create()
@@ -75,4 +74,6 @@ class IssuerSetupSpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
+
 }

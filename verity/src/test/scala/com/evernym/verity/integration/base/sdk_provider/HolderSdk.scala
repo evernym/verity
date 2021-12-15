@@ -4,23 +4,24 @@ import akka.http.scaladsl.model.{HttpResponse, StatusCode}
 import akka.http.scaladsl.model.StatusCodes.OK
 import com.evernym.verity.actor.ComMethodUpdated
 import com.evernym.verity.util2.Status.StatusDetailException
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.actor.wallet.{CreateCredReq, CreateMasterSecret, CreateProof, CredForProofReq, CredForProofReqCreated, CredReqCreated, CredStored, MasterSecretCreated, ProofCreated, StoreCred}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_TYPE_DETAIL_GET_MSGS, MSG_TYPE_DETAIL_GET_MSGS_BY_CONNS, MSG_TYPE_DETAIL_UPDATE_MSG_STATUS, MSG_TYPE_UPDATE_COM_METHOD}
+import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_FAMILY_V1V2MIGRATION, MSG_TYPE_DETAIL_GET_MSGS, MSG_TYPE_DETAIL_UPDATE_MSG_STATUS, MSG_TYPE_GET_UPGRADE_INFO, MSG_TYPE_UPDATE_COM_METHOD}
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateComMethodReqMsg
-import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateKeyReqMsg_MFV_0_6, GetMsgsByConnsReqMsg_MFV_0_6, GetMsgsByConnsRespMsg_MFV_0_6, GetMsgsReqMsg_MFV_0_6, GetMsgsRespMsg_MFV_0_6, KeyCreatedRespMsg_MFV_0_6, MsgStatusUpdatedRespMsg_MFV_0_6, UpdateMsgStatusReqMsg_MFV_0_6}
+import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateKeyReqMsg_MFV_0_6, GetMsgsReqMsg_MFV_0_6, GetMsgsRespMsg_MFV_0_6, KeyCreatedRespMsg_MFV_0_6, MsgStatusUpdatedRespMsg_MFV_0_6, UpdateMsgStatusReqMsg_MFV_0_6}
+import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.{GetUpgradeInfo, UpgradeInfoRespMsg_MFV_1_0}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer}
 import com.evernym.verity.constants.Constants.NO
+import com.evernym.verity.did.DidPair
 import com.evernym.verity.integration.base.sdk_provider.MsgFamilyHelper.buildMsgTypeStr
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerTxnExecutor, Submitter}
-import com.evernym.verity.metrics.NoOpMetricsWriter
-import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.buildAttachment
-import com.evernym.verity.protocol.engine.Constants.MFV_0_6
-import com.evernym.verity.protocol.engine.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
-import com.evernym.verity.protocol.engine.{DID, DIDDoc, MsgId, ThreadId}
+import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
+import com.evernym.verity.protocol.engine.Constants.{MFV_0_6, MFV_1_0}
+import com.evernym.verity.protocol.engine.ThreadId
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateCloudAgent, RequesterKeys}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg.{ConnRequest, ConnResponse, Connection}
@@ -30,12 +31,14 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{AttIds, Availab
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.{Presentation, RequestPresentation}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProof.{credentialsToUse, extractAttachment}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
+import com.evernym.verity.observability.metrics.NoOpMetricsWriter
+import com.evernym.verity.protocol.engine.util.DIDDoc
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
-import java.util.UUID
 
+import java.util.UUID
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
@@ -50,26 +53,32 @@ import scala.util.{Failure, Success, Try}
 case class HolderSdk(param: SdkParam,
                      ledgerTxnExecutor: Option[LedgerTxnExecutor],
                      override val ec: ExecutionContext,
-                     wec: ExecutionContext,
                      oauthParam: Option[OAuthParam]=None
-                    ) extends SdkBase(param, ec, wec) {
+                    ) extends SdkBase(param, ec) {
   implicit val executionContext: ExecutionContext = ec
 
   def registerWebhook(updateComMethod: UpdateComMethodReqMsg): ComMethodUpdated = {
-      val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
-      val updateComMethodJson = JsonMsgUtil.createJsonString(typeStr, updateComMethod)
-      val routedPackedMsg = packForMyVerityAgent(updateComMethodJson)
-      parseAndUnpackResponse[ComMethodUpdated](checkOKResponse(sendPOST(routedPackedMsg))).msg
+    val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
+    val updateComMethodJson = JsonMsgUtil.createJsonString(typeStr, updateComMethod)
+    val routedPackedMsg = packForMyVerityAgent(updateComMethodJson)
+    parseAndUnpackResponse[ComMethodUpdated](checkOKResponse(sendPOST(routedPackedMsg))).msg
+  }
+
+  def getUpgradeInfo(gui: GetUpgradeInfo): UpgradeInfoRespMsg_MFV_1_0 = {
+    val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_V1V2MIGRATION, MFV_1_0, MSG_TYPE_GET_UPGRADE_INFO)
+    val getUpgradeInfoJson = JsonMsgUtil.createJsonString(typeStr, gui)
+    val routedPackedMsg = packForMyVerityAgent(getUpgradeInfoJson)
+    parseAndUnpackResponse[UpgradeInfoRespMsg_MFV_1_0](checkOKResponse(sendPOST(routedPackedMsg))).msg
   }
 
   def provisionVerityCloudAgent(): AgentCreated = {
-    val reqKeys = RequesterKeys(localAgentDidPair.DID, localAgentDidPair.verKey)
+    val reqKeys = RequesterKeys(localAgentDidPair.did, localAgentDidPair.verKey)
     provisionVerityAgentBase(CreateCloudAgent(reqKeys, None))
   }
 
   def sendCreateNewKey(connId: String): PairwiseRel = {
     val myPairwiseKey = createNewKey()
-    val createKey = CreateKeyReqMsg_MFV_0_6(myPairwiseKey.DID, myPairwiseKey.verKey)
+    val createKey = CreateKeyReqMsg_MFV_0_6(myPairwiseKey.did, myPairwiseKey.verKey)
     val routedPackedMsg = packForMyVerityAgent(JsonMsgBuilder(createKey).jsonMsg)
     val receivedMsg = parseAndUnpackResponse[KeyCreatedRespMsg_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg)))
     val createdMsg = receivedMsg.msg
@@ -335,77 +344,31 @@ case class HolderSdk(param: SdkParam,
   def expectMsgFromConn[T: ClassTag](connId: String,
                                      excludePayload: Option[String] = Option(NO),
                                      statusCodes: Option[List[String]] = Option(List(Status.MSG_STATUS_RECEIVED.statusCode)),
-                                     tryCount: Int = 1): ReceivedMsgParam[T] = {
+                                     ): ReceivedMsgParam[T] = {
     val msgType = buildMsgTypeStr
-    expectMsgFromConn(connId, msgType, excludePayload, statusCodes, tryCount)
+    expectMsgFromConn(connId, msgType, excludePayload, statusCodes)
   }
 
   def expectMsgFromConn[T: ClassTag](connId: String,
                                      msgTypeStr: String,
                                      excludePayload: Option[String],
-                                     statusCodes: Option[List[String]],
-                                     tryCount: Int): ReceivedMsgParam[T] = {
-    val getMsgs = GetMsgsReqMsg_MFV_0_6(excludePayload = excludePayload, statusCodes = statusCodes)
-    val getMsgsJson = JsonMsgUtil.createJsonString(MSG_TYPE_DETAIL_GET_MSGS, getMsgs)
-    val routedPackedMsg = packForMyPairwiseRel(connId, getMsgsJson)
-    val result = parseAndUnpackResponse[GetMsgsRespMsg_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg))).msg.msgs
-    val msg = result.find(m => m.`type` == msgTypeStr && statusCodes.forall(scs => scs.contains(m.statusCode)))
-    msg match {
-      case Some(m) if excludePayload.contains(NO) && m.payload.isDefined =>
-        unpackMsg(m.payload.get).copy(msgIdOpt = Option(m.uid))
-      case Some(m) if excludePayload.contains(NO) =>
-        throw new RuntimeException("expected message found without payload: " + m)
-      case None if tryCount < 20 =>
-        Thread.sleep(tryCount*50)
-        expectMsgFromConn(connId, msgTypeStr, excludePayload, statusCodes, tryCount+1)
-      case None =>
-        throw new RuntimeException("expected message not found: " + msgTypeStr)
+                                     statusCodes: Option[List[String]]): ReceivedMsgParam[T] = {
+    for (tryCount <- 1 to 20) {
+      val getMsgs = GetMsgsReqMsg_MFV_0_6(excludePayload = excludePayload, statusCodes = statusCodes)
+      val getMsgsJson = JsonMsgUtil.createJsonString(MSG_TYPE_DETAIL_GET_MSGS, getMsgs)
+      val routedPackedMsg = packForMyPairwiseRel(connId, getMsgsJson)
+      val result = parseAndUnpackResponse[GetMsgsRespMsg_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg))).msg.msgs
+      val msg = result.find(m => m.`type` == msgTypeStr && statusCodes.forall(scs => scs.contains(m.statusCode)))
+      msg match {
+        case Some(m) if excludePayload.contains(NO) && m.payload.isDefined =>
+          return unpackMsg(m.payload.get).copy(msgIdOpt = Option(m.uid))
+        case Some(m) if excludePayload.contains(NO) =>
+          throw new RuntimeException("expected message found without payload: " + m)
+        case _ =>
+          Thread.sleep(tryCount * 50)
+      }
     }
-  }
-
-  //this function/logic will only work for registered protocols (and not for legacy message types)
-  def expectMsg[T: ClassTag](pairwiseDIDs: Option[List[DID]] = None,
-                             msgIds: Option[List[MsgId]] = None,
-                             excludePayload: Option[String] = Option(NO),
-                             statusCodes: Option[List[String]] = Option(List(Status.MSG_STATUS_RECEIVED.statusCode)),
-                             tryCount: Int = 1): ReceivedMsgParam[T] = {
-    val msgType = buildMsgTypeStr
-    expectMsg(msgType, pairwiseDIDs, msgIds, excludePayload, statusCodes, tryCount)
-  }
-
-  def expectMsg[T: ClassTag](msgTypeStr: String,
-                             pairwiseDIDs: Option[List[DID]],
-                             msgIds: Option[List[MsgId]],
-                             excludePayload: Option[String],
-                             statusCodes: Option[List[String]],
-                             tryCount: Int): ReceivedMsgParam[T] = {
-    val getMsgs = GetMsgsByConnsReqMsg_MFV_0_6(pairwiseDIDs, msgIds, excludePayload, statusCodes)
-    val getMsgsJson = JsonMsgUtil.createJsonString(MSG_TYPE_DETAIL_GET_MSGS_BY_CONNS, getMsgs)
-    val routedPackedMsg = packForMyVerityAgent(getMsgsJson)
-    val result = parseAndUnpackResponse[GetMsgsByConnsRespMsg_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg))).msg.msgsByConns
-    val allMsgs = result.flatMap(_.msgs)
-    val msg = allMsgs.find(m => m.`type` == msgTypeStr && statusCodes.forall(scs => scs.contains(m.statusCode)))
-    msg match {
-      case Some(m) if excludePayload.contains(NO) && m.payload.isDefined =>
-        unpackMsg(m.payload.get).copy(msgIdOpt = Option(m.uid))
-      case Some(m) if excludePayload.contains(NO) =>
-        throw new RuntimeException("expected message found without payload: " + m)
-      case None if tryCount < 20 =>
-        Thread.sleep(tryCount*50)
-        expectMsgFromConn(msgTypeStr, excludePayload, statusCodes, tryCount+1)
-      case None => throw new RuntimeException("expected message not found: ")
-    }
-  }
-
-  private def packForMyPairwiseRel(connId: String, msg: String): Array[Byte] = {
-    val pairwiseRel = myPairwiseRelationships(connId)
-    val verityAgentPackedMsg = packFromMyPairwiseKey(connId, msg, Set(KeyParam.fromVerKey(pairwiseRel.myVerityAgentVerKey)))
-    prepareFwdMsg(agencyDID, pairwiseRel.myPairwiseDID, verityAgentPackedMsg)
-  }
-
-  private def packFromMyPairwiseKey(connId: String, msg: String, recipVerKeyParams: Set[KeyParam]): Array[Byte] = {
-    val relationship = myPairwiseRelationships(connId)
-    packMsg(msg, recipVerKeyParams, Option(KeyParam.fromVerKey(relationship.myPairwiseVerKey)))
+    throw new RuntimeException("expected message not found: " + msgTypeStr)
   }
 
   val masterSecretId: String = UUID.randomUUID().toString

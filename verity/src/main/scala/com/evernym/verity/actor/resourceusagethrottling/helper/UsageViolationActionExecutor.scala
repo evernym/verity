@@ -9,10 +9,10 @@ import com.evernym.verity.actor.resourceusagethrottling.{ENTITY_ID_GLOBAL, Entit
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants.SINGLETON_PARENT_PROXY
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.actor.resourceusagethrottling.helper.LogLevelValidator._
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil.{isUserIdCounterparty, isUserIdOwner}
-import com.evernym.verity.logging.ThrottledLogger
+import com.evernym.verity.observability.logs.ThrottledLogger
 import com.evernym.verity.util.SubnetUtilsExt
 import com.evernym.verity.util.Util._
 import com.typesafe.scalalogging.Logger
@@ -23,6 +23,8 @@ class UsageViolationActionExecutor(val as: ActorSystem, appConfig: AppConfig)
   //keep adding different supported action here
   override lazy val singletonParentProxyActor: Option[ActorRef] = Option(getActorRefFromSelection(SINGLETON_PARENT_PROXY, as)(appConfig))
   override lazy val instructions: Set[Instruction] = buildInstructions()
+
+  override def actorSystem: ActorSystem = as
 }
 
 
@@ -245,6 +247,9 @@ class BlockUserInstruction(val spar: ActorRef) extends Instruction {
 trait UsageViolationActionExecutorBase {
   def singletonParentProxyActor: Option[ActorRef]
   def instructions: Set[Instruction]
+  def actorSystem: ActorSystem
+
+  val resourceUsageRuleHelper: ResourceUsageRuleHelper = ResourceUsageRuleHelperExtension(actorSystem).get()
 
   def buildInstructions(): Set[Instruction] = {
     val singletonDependentInstructions = singletonParentProxyActor match {
@@ -261,7 +266,7 @@ trait UsageViolationActionExecutorBase {
 
   private def filterTasksToBeExecuted(actionId: String, violatedRule: ViolatedRule)
                              (implicit sender: ActorRef): Map[Instruction, InstructionDetail] = {
-    ResourceUsageRuleHelper.resourceUsageRules.actionRules.get(actionId) match {
+    resourceUsageRuleHelper.resourceUsageRules.actionRules.get(actionId) match {
       case Some (ar) =>
         ar.instructions.flatMap { case (instructionName, instructionDetail) =>
           instructions.find(_.name == instructionName).map { i: Instruction =>
@@ -288,7 +293,20 @@ trait UsageViolationActionExecutorBase {
   type TasksExecuted = Int
 }
 
-class UsageViolationActionExecutorValidator extends UsageViolationActionExecutorBase {
-  override lazy val singletonParentProxyActor: Option[ActorRef] = Some(ActorRef.noSender)
-  override lazy val instructions: Set[Instruction] = buildInstructions()
+class UsageViolationActionExecutorValidator {
+  lazy val singletonParentProxyActor: Option[ActorRef] = Some(ActorRef.noSender)
+  lazy val instructions: Set[Instruction] = buildInstructions()
+
+  def buildInstructions(): Set[Instruction] = {
+    val singletonDependentInstructions = singletonParentProxyActor match {
+      case Some(spp) => Set (
+        new WarnResourceInstruction(spp),
+        new WarnUserInstruction(spp),
+        new BlockResourceInstruction(spp),
+        new BlockUserInstruction(spp)
+      )
+      case None => Set.empty
+    }
+    Set(LogMsgInstruction) ++ singletonDependentInstructions
+  }
 }

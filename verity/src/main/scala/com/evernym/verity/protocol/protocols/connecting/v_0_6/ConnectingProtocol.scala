@@ -1,27 +1,30 @@
 package com.evernym.verity.protocol.protocols.connecting.v_0_6
 
-import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.Status.KEY_ALREADY_CREATED
-import com.evernym.verity.actor._
-import com.evernym.verity.actor.agent.AgentDetail
-import com.evernym.verity.actor.agent.msgsender.AgentMsgSender
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
-import com.evernym.verity.actor.wallet.{CreateNewKey, GetVerKey, GetVerKeyResp, NewKeyCreated, PackedMsg, StoreTheirKey, TheirKeyStored}
+import com.evernym.verity.actor.agent.{AgentDetail, MsgSendingFailed, MsgSentSuccessfully}
+import com.evernym.verity.actor.wallet._
+import com.evernym.verity.actor.{ActorMessage, AgentDetailSet, KeyCreated}
 import com.evernym.verity.agentmsg.msgfamily.AgentMsgContext
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
+import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol._
-import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg, UpdateMsgDeliveryStatus}
+import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
+import com.evernym.verity.protocol.engine.events.ParameterStored
+import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common._
-import com.evernym.verity.push_notification.PushNotifMsgBuilder
 import com.evernym.verity.util.MsgIdProvider
 import com.evernym.verity.util.Util._
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.KEY_ALREADY_CREATED
 import com.evernym.verity.vault._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -31,16 +34,12 @@ import scala.util.Left
 //noinspection ScalaDeprecation
 class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, ProtoMsg, Any, ConnectingState, String])
     extends Protocol[ConnectingProtocol,Role,ProtoMsg,Any,ConnectingState,String](ConnectingProtoDef)
-      with ConnectingProtocolBase[ConnectingProtocol,Role,ConnectingState,String]
-      with HasAppConfig
-      with AgentMsgSender
-      with MsgDeliveryResultHandler
-      with PushNotifMsgBuilder {
+      with ConnectingProtocolBase[ConnectingProtocol,Role,ConnectingState,String] {
 
   implicit lazy val futureExecutionContext: ExecutionContext = ctx.executionContext
 
-  lazy val myPairwiseDIDReq: DID = ctx.getState.myPairwiseDIDReq
-  lazy val myPairwiseVerKeyReq: VerKey = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq).verKey
+  lazy val myPairwiseDIDReq: DidStr = ctx.getState.myPairwiseDIDReq
+  lazy val myPairwiseVerKeyReq: VerKeyStr = getVerKeyReqViaCache(ctx.getState.myPairwiseDIDReq).verKey
 
   def initState(params: Seq[ParameterStored]): ConnectingState = {
     val seed = params.find(_.name == THIS_AGENT_WALLET_ID).get.value
@@ -134,7 +133,10 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
 
     val endpointDetail = ctx.getState.parameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)
     val fut = ctx.SERVICES_DEPRECATED.connectEndpointServiceProvider.setupCreateKeyEndpoint(
-      edgePairwiseKey.didPair, edgePairwiseKey.didPair, endpointDetail)
+      edgePairwiseKey.didPair,
+      edgePairwiseKey.didPair,
+      endpointDetail
+    )
     val kdp = getAgentKeyDlgProof(edgePairwiseKey.verKey, edgePairwiseKey.did,
       edgePairwiseKey.verKey)(walletAPI, wap)
     val ccamw = ConnReqMsgHelper.buildConnReqAgentMsgWrapper_MFV_0_6(kdp, cc.phoneNo, cc.includePublicDID, amw)
@@ -165,8 +167,14 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
     val event = AgentDetailSet(createKeyReqMsg.forDID, pairwiseKeyResult.did)
     ctx.apply(event)
     val endpointDetail = ctx.getState.parameters.paramValueRequired(CREATE_KEY_ENDPOINT_SETUP_DETAIL_JSON)
-    val fut = ctx.SERVICES_DEPRECATED.connectEndpointServiceProvider.setupCreateKeyEndpoint(
-      createKeyReqMsg.didPair, pairwiseKeyResult.didPair, endpointDetail)
+    val fut = ctx
+      .SERVICES_DEPRECATED
+      .connectEndpointServiceProvider
+      .setupCreateKeyEndpoint(
+        createKeyReqMsg.didPair,
+        pairwiseKeyResult.didPair,
+        endpointDetail
+      )
     val pm = processCreateKeyAfterEndpointSetup(createKeyReqMsg, pairwiseKeyResult)
     fut.map(_ => pm)
   }
@@ -190,7 +198,7 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
     checkIfKeyNotCreated(createKeymsg.forDID)
   }
 
-  private def checkIfKeyNotCreated(forDID: DID): Unit = {
+  private def checkIfKeyNotCreated(forDID: DidStr): Unit = {
     if (ctx.getState.agentDetail.exists(_.forDID == forDID)) {
       throw new BadRequestErrorException(KEY_ALREADY_CREATED.statusCode)
     }
@@ -240,14 +248,14 @@ class ConnectingProtocol(val ctx: ProtocolContextApi[ConnectingProtocol, Role, P
 
   lazy val inviteDetailVersion: String = "2.0"
 
-  override def getEncryptForDID: DID = ctx.getState.mySelfRelDIDReq
+  override def getEncryptForDID: DidStr = ctx.getState.mySelfRelDIDReq
 }
 
 
 /**
   * Signal
   */
-case class AskPairwiseCreator(fromDID: DID, pairwiseDID: DID, endpointDetailJson: String)
+case class AskPairwiseCreator(fromDID: DidStr, pairwiseDID: DidStr, endpointDetailJson: String)
 
 /**
  * Control Messages

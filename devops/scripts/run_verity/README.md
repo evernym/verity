@@ -24,6 +24,7 @@ completed, and those services are up and running.
 cd <project-folder>
 ```
 **Notes:**
+* Make sure `VERITY_JAR_LOCATION` in `base.env` points to correct verity assembly jar location/name.
 * Replace "**<cas/eas/vas>**" in below given examples with either "cas" or "eas" or "vas" accordingly
 
 ### to run multi node cluster
@@ -41,8 +42,7 @@ etc
 ## How to "setup" Agency agent for various agent services
 ```
 cd <project-folder>
-source devops/scripts/run_verity/base.env
-sbt "project integrationTests" test:console
+GENESIS_TXN_FILE_LOCATION="target/genesis.txt" sbt "project integrationTests" test:console
 ```
 
 once you see sbt prompt, copy paste below code and press Enter

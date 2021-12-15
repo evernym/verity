@@ -4,7 +4,7 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.SignalEnvelope
-import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry.DriverGen
 import com.evernym.verity.protocol.testkit.{ContainerNotFoundException, InteractionController, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.testkit.BasicFixtureSpec
@@ -173,4 +173,5 @@ class CoinFlipSpec extends TestsProtocolsImpl(CoinFlipDefinition) with BasicFixt
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }

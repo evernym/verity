@@ -7,7 +7,8 @@ import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperB
 //does event transformation (serialization, encryption etc) during persistence
 // and un-transformation during recovery
 case class PersistentEventAdapter[E](encryptionKey: String,
-                                     objectCodeMapper: ObjectCodeMapperBase)
+                                     objectCodeMapper: ObjectCodeMapperBase,
+                                     eventEncryptionSalt: String)
   extends EventAdapter[E,PersistentMsg]
     with PersistentAdapterBase {
 

@@ -1,13 +1,16 @@
 package com.evernym.verity.protocol.protocols
 
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
-import com.evernym.verity.protocol.engine.MsgFamily.EVERNYM_QUALIFIER
-import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry.DriverGen
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
 import com.evernym.verity.protocol.engine.util.?=>
@@ -58,6 +61,7 @@ class StateSegments2Spec extends TestsProtocolsImpl(PhoneBookProtoDef, Option(On
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }
 
 object TestObjects2 {

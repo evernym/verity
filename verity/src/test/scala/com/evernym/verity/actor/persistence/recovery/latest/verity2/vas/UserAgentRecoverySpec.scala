@@ -64,29 +64,29 @@ class UserAgentRecoverySpec
   }
 
   def assertUserAgentState(uas: UserAgentState): Unit = {
-    uas.publicIdentity shouldBe Option(publicKey.didPair)
+    uas.publicIdentity shouldBe Option(publicKey.didPair.toAgentDidPair)
     uas.sponsorRel shouldBe Option(sponsorRel)
-    uas.relationshipAgents shouldBe Map(myPairwiseRelDIDPair.DID -> AgentDetail(myPairwiseRelDIDPair.DID, myPairwiseRelAgentDIDPair.DID))
+    uas.relationshipAgents shouldBe Map(myPairwiseRelDIDPair.did -> AgentDetail(myPairwiseRelDIDPair.did, myPairwiseRelAgentDIDPair.did))
     uas.configs shouldBe Map("name" -> ConfigValue("name1", 1615697665879l), "logoUrl" -> ConfigValue("/logo_url.ico", 1615697665880l))
     uas.msgAndDelivery.isDefined shouldBe true    //add tests for actual 'msgAndDelivery' object
-    uas.thisAgentKeyId shouldBe Option(mySelfRelAgentDIDPair.DID)
-    uas.agencyDIDPair shouldBe Option(myAgencyAgentDIDPair)
+    uas.thisAgentKeyId shouldBe Option(mySelfRelAgentDIDPair.did)
+    uas.agencyDIDPair shouldBe Option(myAgencyAgentDIDPair.toAgentDidPair)
     uas.agentWalletId shouldBe Some(mySelfRelAgentEntityId)
     uas.relationship shouldBe Some(
       Relationship(
         SELF_RELATIONSHIP,
         "self",
         Some(DidDoc(
-          mySelfRelDIDPair.DID,
+          mySelfRelDIDPair.did,
           Some(AuthorizedKeys(Seq(
-            AuthorizedKey(mySelfRelAgentDIDPair.DID, mySelfRelAgentDIDPair.verKey, Set(CLOUD_AGENT_KEY)),
-            //TODO: the ver key belonging to 'mySelfRelDIDPair.DID' to replaced with 'requesterDIDPair.verKey'
+            AuthorizedKey(mySelfRelAgentDIDPair.did, mySelfRelAgentDIDPair.verKey, Set(CLOUD_AGENT_KEY)),
+            //TODO: the ver key belonging to 'mySelfRelDIDPair.did' to replaced with 'requesterDIDPair.verKey'
             // seems to be a bug, we should fix it
-            AuthorizedKey(mySelfRelDIDPair.DID, requesterDIDPair.verKey, Set(EDGE_AGENT_KEY, RECIP_KEY))
+            AuthorizedKey(mySelfRelDIDPair.did, requesterDIDPair.verKey, Set(EDGE_AGENT_KEY, RECIP_KEY))
           ))),
           Some(Endpoints(Seq(
             //TODO: shouldn't the auth key be the "cloud agent key id" instead of the "edge key id"?
-            EndpointADT(HttpEndpoint("webhook", "http://localhost:6001", Seq(mySelfRelDIDPair.DID), Option(PackagingContext("1.0"))))
+            EndpointADT(HttpEndpoint("webhook", "http://localhost:6001", Seq(mySelfRelDIDPair.did), Option(PackagingContext("1.0"))))
           )))
         )),
         Seq.empty
@@ -108,5 +108,5 @@ class UserAgentRecoverySpec
   )
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   override def executionContextProvider: ExecutionContextProvider = ecp
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

@@ -1,21 +1,20 @@
 package com.evernym.verity.integration.base.verity_provider.node.local
 
-import akka.actor.ActorRef
+import akka.actor.CoordinatedShutdown
 import akka.cluster.{Cluster, MemberStatus}
 import akka.cluster.MemberStatus.{Down, Removed, Up}
 import akka.testkit.TestKit
 import com.evernym.verity.actor.Platform
-import com.evernym.verity.actor.node_singleton.DrainNode
 import com.evernym.verity.app_launcher.HttpServer
 import com.evernym.verity.integration.base.verity_provider.PortProfile
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
 import com.typesafe.config.Config
+
 import java.nio.file.Path
-
 import com.evernym.verity.util2.ExecutionContextProvider
+import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 
-import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
@@ -41,33 +40,33 @@ case class VerityLocalNode(tmpDirPath: Path,
   }
 
   def stop(): Unit = {
-    //TODO: at this stage, sometimes actor system logs 'java.lang.IllegalStateException: Pool shutdown unexpectedly' exception,
-    // it doesn't impact the test in any way but should try to find and fix the root cause
-    stopUngracefully()
+    stopGracefully()
   }
 
   //is this really ungraceful shutdown?
-  private def stopUngracefully(): Unit = {
-    isAvailable = false
-    stopHttpServer()
-    stopActorSystem()
-  }
-
-  private def stopHttpServer(): Unit = {
-    val httpStopFut = httpServer.stop()
-    Await.result(httpStopFut, 30.seconds)
-  }
-
-  private def stopActorSystem(): Unit = {
-    val platformStopFut = platform.actorSystem.terminate()
-    Await.result(platformStopFut, 30.seconds)
-  }
+//  private def stopUngracefully(): Unit = {
+//    def stopHttpServer(): Unit = {
+//      val httpStopFut = httpServer.stop()
+//      Await.result(httpStopFut, 30.seconds)
+//    }
+//
+//    def stopActorSystem(): Unit = {
+//      val platformStopFut = platform.actorSystem.terminate()
+//      Await.result(platformStopFut, 30.seconds)
+//    }
+//
+//    isAvailable = false
+//    stopHttpServer()
+//    stopActorSystem()
+//  }
 
   private def stopGracefully(): Unit = {
-    //TODO: to find out why this one fails intermittently
     isAvailable = false
     val cluster = Cluster(platform.actorSystem)
-    platform.nodeSingleton.tell(DrainNode, ActorRef.noSender)
+
+    val result = CoordinatedShutdown(platform.actorSystem).run(UserInitiatedShutdown)
+
+    assert(result.isReadyWithin(20.seconds),"Coordinated shutdown failed")
     TestKit.awaitCond(isNodeShutdown(cluster), waitAtMost, 300.millis)
   }
 
@@ -104,3 +103,5 @@ case class VerityLocalNode(tmpDirPath: Path,
 
   start()
 }
+
+case object UserInitiatedShutdown extends CoordinatedShutdown.Reason

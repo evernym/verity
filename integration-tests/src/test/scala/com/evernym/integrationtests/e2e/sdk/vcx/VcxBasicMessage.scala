@@ -1,12 +1,13 @@
 package com.evernym.integrationtests.e2e.sdk.vcx
 
-import com.evernym.verity.protocol.engine.{DID, MsgFamily}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageMsgFamily
 import com.evernym.integrationtests.e2e.msg.VcxGetMsg.vcxPayloadObject
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces.UndefinedBasicMessage_1_0
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxBasicMessage.HolderBasicMessage
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider.Interaction
 import com.evernym.sdk.vcx.connection.ConnectionApi
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.utils.Context
 import org.json.JSONObject
@@ -14,7 +15,7 @@ import org.json.JSONObject
 trait VcxBasicMessage
   extends VcxHolds {
 
-  def basicMessage_1_0(forRelationship: DID,
+  def basicMessage_1_0(forRelationship: DidStr,
                        threadId: String,
                        content: String,
                        sent_time: String,
@@ -76,5 +77,5 @@ trait VcxBasicMessage
 }
 
 object VcxBasicMessage {
-  case class HolderBasicMessage(owningDid: DID, content: JSONObject, messageMsgId: String) extends Interaction
+  case class HolderBasicMessage(owningDid: DidStr, content: JSONObject, messageMsgId: String) extends Interaction
 }

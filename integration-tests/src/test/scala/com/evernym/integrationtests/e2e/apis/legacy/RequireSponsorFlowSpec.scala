@@ -4,7 +4,7 @@ import com.evernym.integrationtests.e2e.scenario.Scenario.isRunScenario
 import com.evernym.integrationtests.e2e.scenario.Scenario
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.{Config, ConfigValueFactory}
 import com.typesafe.scalalogging.Logger
@@ -19,7 +19,7 @@ class RequireSponsorFlowSpec
 
   private def newPoolNameConfig(): Config = (new TestAppConfig)
     .config
-    .withValue("verity.lib-indy.ledger.pool-name", ConfigValueFactory.fromAnyRef("require-sponsor-pool"))
+    .withValue("verity.lib-vdrtools.ledger.pool-name", ConfigValueFactory.fromAnyRef("require-sponsor-pool"))
 
   override lazy val appConfig: AppConfig = new TestAppConfig(Some(newPoolNameConfig()))
 

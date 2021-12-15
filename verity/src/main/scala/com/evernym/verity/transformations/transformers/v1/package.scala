@@ -17,13 +17,13 @@ package object v1 {
    * @return
    */
   def createPersistenceTransformerV1(persistenceEncryptionKey: String,
+                                     eventEncryptionSalt: String,
                                      objectCodeMapper: ObjectCodeMapperBase = DefaultObjectCodeMapper,
                                      schemaEvolutionTransformation: Any <=> Any = new IdentityTransformer
                                     ): Any <=> PersistentMsg = {
-
     schemaEvolutionTransformation andThen
       new ProtoBufTransformerV1(objectCodeMapper) andThen
-      new AESEncryptionTransformerV1(persistenceEncryptionKey) andThen
+      new AESEncryptionTransformerV1(persistenceEncryptionKey, eventEncryptionSalt) andThen
       new PersistenceTransformer(PERSISTENCE_TRANSFORMATION_ID_V1)
   }
 }

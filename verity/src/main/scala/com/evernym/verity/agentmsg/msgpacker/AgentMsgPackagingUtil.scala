@@ -11,11 +11,11 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdReqMsg_MFV_0_5, FwdReqMsg_MFV_1_0_1}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER, typeStrFromMsgType}
-import com.evernym.verity.protocol.engine.{DID, MsgFamilyQualifier, MsgName, VerKey}
 import com.evernym.verity.util.MessagePackUtil
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.metrics.{InternalSpan, MetricsWriter}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{COMMUNITY_QUALIFIER, EVERNYM_QUALIFIER, MsgFamilyQualifier, MsgName, typeStrFromMsgType}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
+import com.evernym.verity.observability.metrics.{InternalSpan, MetricsWriter}
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 import org.json.JSONObject
 
@@ -153,7 +153,7 @@ object AgentMsgPackagingUtil {
    * @return
    */
   def buildFwdJsonMsg(mpf: MsgPackFormat,
-                      toDID: DID,
+                      toDID: DidStr,
                       msg: Array[Byte],
                       msgQualifier: MsgFamilyQualifier=EVERNYM_QUALIFIER,
                       msgName: MsgName=MSG_TYPE_FWD,
@@ -178,8 +178,8 @@ object AgentMsgPackagingUtil {
     }
   }
 
-  def buildRoutingKeys(recipKey: VerKey,
-                       givenRoutingKeys: Seq[VerKey]): Seq[VerKey] = {
+  def buildRoutingKeys(recipKey: VerKeyStr,
+                       givenRoutingKeys: Seq[VerKeyStr]): Seq[VerKeyStr] = {
     if (givenRoutingKeys.contains(recipKey)) givenRoutingKeys
     else if (givenRoutingKeys.nonEmpty) Seq(recipKey) ++ givenRoutingKeys
     else givenRoutingKeys
@@ -197,7 +197,7 @@ object AgentMsgPackagingUtil {
   //TODO: come back to this and see if this requires any more refactoring
   def packMsgForRoutingKeys(msgPackFormat: MsgPackFormat,
                             msg: Array[Byte],
-                            routingKeys: Seq[VerKey],
+                            routingKeys: Seq[VerKeyStr],
                             msgType: String)
                            (implicit agentMsgTransformer: AgentMsgTransformer,
                             wap: WalletAPIParam,

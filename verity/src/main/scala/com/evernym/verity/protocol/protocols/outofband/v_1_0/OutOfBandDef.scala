@@ -1,9 +1,11 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.Scope.RelProvisioning
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 
 object OutOfBandDef extends ProtocolDefinition[OutOfBand, Role, Msg, OutOfBandEvent, State, String] {
   override val msgFamily: MsgFamily = OutOfBandMsgFamily

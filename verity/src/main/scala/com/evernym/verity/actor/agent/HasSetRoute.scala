@@ -4,7 +4,7 @@ package com.evernym.verity.actor.agent
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute, SetRoute}
 import com.evernym.verity.actor.persistence.AgentPersistentActor
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -29,7 +29,7 @@ trait HasSetRoute
    * @param agentKeyDID_DEPRECATED this is to make it backward compatible
    * @return Future
    */
-  def setRoute(forDID: DID, agentKeyDID_DEPRECATED: Option[DID]=None): Future[Any] = {
+  def setRoute(forDID: DidStr, agentKeyDID_DEPRECATED: Option[DidStr]=None): Future[Any] = {
     //NOTE: there is an issue with which DID we use during setting DID route
     //here is the ticket for more detail: VE-1108
     val routingDIDs = Set(forDID) ++ agentKeyDID_DEPRECATED
@@ -39,11 +39,11 @@ trait HasSetRoute
     Future.sequence(result).map(_.head)
   }
 
-  def getRoute(forDID: DID): Future[Any] = {
+  def getRoute(forDID: DidStr): Future[Any] = {
     agentActorContext.agentMsgRouter.execute(GetRoute(forDID))
   }
 
-  private def buildSetRoute(did: DID, actorTypeId: Int, entityId: String): SetRoute =
+  private def buildSetRoute(did: DidStr, actorTypeId: Int, entityId: String): SetRoute =
     SetRoute(did, ActorAddressDetail(actorTypeId, entityId))
 
 }

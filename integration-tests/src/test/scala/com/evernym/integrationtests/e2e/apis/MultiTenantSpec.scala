@@ -7,13 +7,13 @@ import com.evernym.integrationtests.e2e.flow._
 import com.evernym.integrationtests.e2e.scenario.Scenario.runScenario
 import com.evernym.integrationtests.e2e.scenario.{Scenario, ScenarioAppEnvironment}
 import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.WriteCredentialDefinitionV0_6
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.testkit.LedgerClient.buildLedgerUtil
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.util.StrUtil
-import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider, HasWalletExecutionContextProvider}
+import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider}
 import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.Eventually
 
@@ -60,7 +60,6 @@ class MultiTenantSpec
       lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
         appEnv.config,
         ecp.futureExecutionContext,
-        ecp.walletFutureExecutionContext,
         Option(appEnv.ledgerConfig.submitterDID),
         Option(appEnv.ledgerConfig.submitterSeed),
         appEnv.ledgerConfig.submitterRole,

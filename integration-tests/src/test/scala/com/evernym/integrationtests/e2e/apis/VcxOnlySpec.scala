@@ -11,7 +11,7 @@ import com.evernym.sdk.vcx.vcx.VcxApi
 import com.evernym.sdk.vcx.wallet.WalletApi
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.sdk.utils.ContextBuilder
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
@@ -64,7 +64,6 @@ class VcxOnlySpec
     lazy val ledgerUtil: LedgerUtil = buildLedgerUtil(
       appEnv.config,
       ecp.futureExecutionContext,
-      ecp.walletFutureExecutionContext,
       Option(appEnv.ledgerConfig.submitterDID),
       Option(appEnv.ledgerConfig.submitterSeed),
       appEnv.ledgerConfig.submitterRole,

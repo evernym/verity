@@ -9,8 +9,8 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CRED
 import com.evernym.verity.agentmsg.msgfamily.pairwise.ConnReqAcceptedMsg_MFV_0_6
 import com.evernym.verity.constants.Constants.{COM_METHOD_TYPE_FWD_PUSH, COM_METHOD_TYPE_PUSH, DEFAULT_INVITE_SENDER_LOGO_URL, DEFAULT_INVITE_SENDER_NAME}
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.AgentPackMsgUtil
 import com.evernym.verity.testkit.util.AgentPackMsgUtil.preparePackedRequestForAgent
@@ -41,11 +41,6 @@ class ConsumerAgentPairwiseBaseSpec_V_0_7 extends UserAgentPairwiseSpec_V_0_7 {
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 trait UserAgentPairwiseSpec_V_0_7
@@ -62,7 +57,7 @@ trait UserAgentPairwiseSpec_V_0_7
     createUserAgent_0_7()
   }
 
-  var agentPairwiseDID: DID = _
+  var agentPairwiseDID: DidStr = _
 
   val connId1New = "connIdNew1"
   val connId2New = "connIdNew2"
@@ -100,7 +95,7 @@ trait UserAgentPairwiseSpec_V_0_7
 
     s"when sent CREATE_KEY msg ($connId)" - {
       "should respond with KEY_CREATED msg" taggedAs (UNSAFE_IgnoreLog) in {
-        val msg = preparePairwiseCreateKey(mockEdgeAgent.cloudAgentDetailReq.DID, connId)
+        val msg = preparePairwiseCreateKey(mockEdgeAgent.cloudAgentDetailReq.did, connId)
         ua ! ProcessPackedMsg(msg, reqMsgContext)
         val pm = expectMsgType[PackedMsg]
         val resp = handlePairwiseKeyCreatedResp(pm, buildConnIdMap(connId))
@@ -119,7 +114,7 @@ trait UserAgentPairwiseSpec_V_0_7
     "when sent connection request msg" - {
       "should respond with connection request detail" taggedAs (UNSAFE_IgnoreLog) in {
         val msg = prepareCreateInvite(
-          mockEdgeAgent.pairwiseConnDetail(connId1New).myCloudAgentPairwiseDidPair.DID,
+          mockEdgeAgent.pairwiseConnDetail(connId1New).myCloudAgentPairwiseDidPair.did,
           Option(connId1New), includeKeyDlgProof = true)
         uap ! ProcessPackedMsg(msg, reqMsgContext)
         val pm = expectMsgType[PackedMsg]

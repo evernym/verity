@@ -3,7 +3,8 @@ package com.evernym.verity
 import com.evernym.verity.actor.agent.{MsgOrders, TypeFormat}
 import com.evernym.verity.agentmsg.msgcodec.MsgCodec
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
-import com.evernym.verity.protocol.engine.{MsgId, MsgType, ProtoDef, ThreadId}
+import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType}
+import com.evernym.verity.protocol.engine.{ProtoDef, ThreadId}
 
 package object agentmsg {
 

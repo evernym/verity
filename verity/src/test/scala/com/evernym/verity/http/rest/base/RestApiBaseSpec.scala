@@ -7,14 +7,14 @@ import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.headers.{RawHeader, `Content-Type`}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.util.ByteString
-import com.evernym.verity.actor.agent.{AgentActorContext, DidPair}
+import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.actor.wallet.{PackedMsg, SignMsg, SignedMsg}
 import com.evernym.verity.http.base.open.{AgentProvisioningSpec, AriesInvitationDecodingSpec, ProvisionRelationshipSpec, UpdateComMethodSpec}
 import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, RestrictedRestApiSpec}
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.http.route_handlers.open.RestAcceptedResponse
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent._
 import com.evernym.verity.testkit.mock.agent.MockEnv
@@ -23,6 +23,7 @@ import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
 
 import scala.reflect.ClassTag
+import scala.util.Try
 
 trait RestApiBaseSpec
   extends BasicSpecWithIndyCleanup
@@ -74,14 +75,20 @@ trait RestApiBaseSpec
   }
 
   def performWriteSchema(mockRestEnv: MockRestEnv, payload: ByteString): Unit = {
-    buildPostReq(s"/api/${mockRestEnv.myDID}/write-schema/0.6/${UUID.randomUUID.toString}",
-      HttpEntity.Strict(ContentTypes.`application/json`, payload),
-      Seq(RawHeader("X-API-key", s"${mockRestEnv.myDIDApiKey}"))
-    ) ~> epRoutes ~> check {
-      status shouldBe Accepted
-      header[`Content-Type`] shouldEqual Some(`Content-Type`(`application/json`))
-      responseTo[RestAcceptedResponse] shouldBe RestAcceptedResponse()
-    }
+    val (_, lastPayload) = withExpectNewRestMsgAtRegisteredEndpoint({
+      buildPostReq(s"/api/${mockRestEnv.myDID}/write-schema/0.6/${UUID.randomUUID.toString}",
+        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        Seq(RawHeader("X-API-key", s"${mockRestEnv.myDIDApiKey}"))
+      ) ~> epRoutes ~> check {
+        status shouldBe Accepted
+        header[`Content-Type`] shouldEqual Some(`Content-Type`(`application/json`))
+        responseTo[RestAcceptedResponse] shouldBe RestAcceptedResponse()
+      }
+    })
+    lastPayload.isDefined shouldBe true
+    val jsonMsgString = lastPayload.get
+    val jsonMsg = new JSONObject(jsonMsgString)
+    jsonMsg.getString("@type") shouldBe "did:sov:123456789abcdefghi1234;spec/write-schema/0.6/status-report"
   }
 
   def createConnectionRequest(mockRestEnv: MockRestEnv, connId: String, payload: ByteString): Unit = {
@@ -97,9 +104,10 @@ trait RestApiBaseSpec
     })
     lastPayload.isDefined shouldBe true
     val jsonMsgString = lastPayload.get
-
     val jsonMsg = new JSONObject(jsonMsgString)
-    val regInvite = jsonMsg.getJSONObject("inviteDetail")
+    val regInvite = Try(jsonMsg.getJSONObject("inviteDetail")).getOrElse(
+      throw new RuntimeException("unexpected message: " + jsonMsgString)
+    )
     val abrInvite = jsonMsg.getJSONObject("truncatedInviteDetail")
 
     regInvite.getString("connReqId") shouldBe abrInvite.getString("id")
@@ -144,7 +152,7 @@ trait RestApiBaseSpec
 
     val jsonObject = new JSONObject()
     jsonObject.put("@type", "did:sov:123456789abcdefghi1234;spec/connecting/0.6/CREATE_KEY")
-    jsonObject.put("forDID", le.myPairwiseDidPair.DID)
+    jsonObject.put("forDID", le.myPairwiseDidPair.did)
     jsonObject.put("forDIDVerKey", le.myPairwiseDidPair.verKey)
     val payload = ByteString(jsonObject.toString)
 
@@ -204,7 +212,7 @@ trait RestApiBaseSpec
   }
 
   def sendMsgWithOthersMsgForRel(mockRestEnv: MockRestEnv,
-                                 othersForRelDID: DID): Unit = {
+                                 othersForRelDID: DidStr): Unit = {
     val jsonObject = new JSONObject()
     jsonObject.put("@type", "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/basicmessage/1.0/send-message")
     jsonObject.put("content", s"basic message")
@@ -300,13 +308,13 @@ trait RestApiBaseSpec
 
 
 case class MockRestEnv(mockEnv: MockEnv) {
-  lazy val myDID: DID = mockEnv.edgeAgent.myDIDDetail.did
-  lazy val myDIDVerKey: VerKey = mockEnv.edgeAgent.myDIDDetail.verKey
+  lazy val myDID: DidStr = mockEnv.edgeAgent.myDIDDetail.did
+  lazy val myDIDVerKey: VerKeyStr = mockEnv.edgeAgent.myDIDDetail.verKey
   lazy val myDIDSignature: String = computeSignature(myDIDVerKey)
   lazy val myDIDApiKey = s"$myDIDVerKey:$myDIDSignature"
 
-  def connRelRoutingDID(connId: String): DID =
-    mockEnv.edgeAgent.pairwiseConnDetail(connId).myPairwiseDidPair.DID
+  def connRelRoutingDID(connId: String): DidStr =
+    mockEnv.edgeAgent.pairwiseConnDetail(connId).myPairwiseDidPair.did
 
   def connRelDIDApiKey(connId: String): String = {
     val pcd = mockEnv.edgeAgent.pairwiseConnDetail(connId).myPairwiseDidPair
@@ -314,7 +322,7 @@ case class MockRestEnv(mockEnv: MockEnv) {
     s"${pcd.verKey}:$signature"
   }
 
-  def computeSignature(verKey: VerKey): String = {
+  def computeSignature(verKey: VerKeyStr): String = {
     val signedMsg = mockEnv.edgeAgent.testWalletAPI.executeSync[SignedMsg](
       SignMsg(KeyParam.fromVerKey(verKey), verKey.getBytes))(mockEnv.edgeAgent.wap)
     Base58Util.encode(signedMsg.msg)

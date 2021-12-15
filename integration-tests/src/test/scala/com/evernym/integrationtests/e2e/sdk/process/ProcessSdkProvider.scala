@@ -3,10 +3,8 @@ package com.evernym.integrationtests.e2e.sdk.process
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider._
 import com.evernym.integrationtests.e2e.sdk.{BaseSdkProvider, ListeningSdkProvider}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
 import com.evernym.verity.sdk.protocols.relationship.v1_0.GoalCode
 import com.evernym.verity.sdk.utils.{AsJsonObject, Context}
-import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
 import java.io.{BufferedWriter, ByteArrayInputStream, File, FileWriter}
@@ -18,15 +16,22 @@ trait ProcessSdkProvider
   extends BaseSdkProvider
     with ListeningSdkProvider {
 
-  val logger: Logger = getLoggerByName(getClass.getName)
+  private def printErr(output: String): Unit = {
+    logger.warn(
+      s"""====================     ERROR    ====================
+         |$output
+         |====================  END ERROR   ====================""".stripMargin
+    )
+  }
 
-  private def printOut(output: String, outType: String = "OUTPUT"): Unit = {
+  private def printOut(output: String): Unit = {
     logger.debug(
-      s"""====================    ${outType.capitalize}    ====================
+      s"""====================    OUTPUT    ====================
          |$output
          |====================  END OUTPUT  ====================""".stripMargin
     )
   }
+
   private def printScript(script: String): Unit = {
     logger.debug(
       s"""==================== SCRIPT START ====================
@@ -91,20 +96,17 @@ trait ProcessSdkProvider
         )
         .getOrElse(throw new Exception("Unable to build process for sdk provider"))
 
-
-
         def printProcessOutput(): Unit = {
           val out = outBuffer.toString
           val err = errBuffer.toString
 
           if(out.nonEmpty) printOut(out)
-          if(err.nonEmpty) printOut(err, "ERROR")
-
+          if(err.nonEmpty) printErr(err)
         }
 
         if(code == 134) {
           printOut(outBuffer.toString)
-          printOut(errBuffer.toString, "ERROR")
+          printErr(errBuffer.toString)
           executeScript(tries+1, Some(new RuntimeException("Nonzero exit value: " + code)))
         }
         else if (code == sdkErrExitCode) {

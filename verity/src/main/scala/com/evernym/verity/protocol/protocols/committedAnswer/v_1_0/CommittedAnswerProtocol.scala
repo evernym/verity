@@ -5,11 +5,11 @@ package com.evernym.verity.protocol.protocols.committedAnswer.v_1_0
 // community to change it.
 
 import java.util.UUID
-
 import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming}
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.ProblemReportCodes._

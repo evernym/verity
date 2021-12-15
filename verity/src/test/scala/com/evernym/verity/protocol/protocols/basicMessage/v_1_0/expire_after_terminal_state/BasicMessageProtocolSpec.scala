@@ -5,8 +5,8 @@ import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.agentmsg.buildAgentMsg
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
-import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor.extractString
-import com.evernym.verity.protocol.didcomm.decorators.{Base64, AttachmentDescriptor => Attachment}
+import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.extractString
+import com.evernym.verity.did.didcomm.v1.decorators.{Base64, AttachmentDescriptor => Attachment}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Localization => l10n}
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Ctl._
@@ -179,6 +179,7 @@ class BasicMessageSpec
   }
 
   override val containerNames: Set[ContainerName] = Set(TestingVars.PARTICIPATOR, TestingVars.PARTICIPATOR)
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }
 
 object TestingVars {

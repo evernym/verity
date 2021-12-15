@@ -5,7 +5,8 @@ import com.evernym.integrationtests.e2e.msg.VcxGetMsg.{vcxPayloadArray, vcxPaylo
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces.UndefinedIssueCredential_1_0
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider.Interaction
 import com.evernym.sdk.vcx.credential.CredentialApi
-import com.evernym.verity.protocol.engine.{DID, MsgFamily}
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredMsgFamily
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.utils.Context
@@ -91,5 +92,5 @@ trait VcxIssueCredential
 }
 
 protected object VcxIssueCredential {
-  case class HolderIssuanceInteraction(owningDid: DID, offer: JSONArray, handle: Option[Int] = None) extends Interaction
+  case class HolderIssuanceInteraction(owningDid: DidStr, offer: JSONArray, handle: Option[Int] = None) extends Interaction
 }

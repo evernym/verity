@@ -71,8 +71,8 @@ trait UserWalletSetupHelper {
       val theirDidPair = CommonSpecUtil.generateNewDid()
       val fut1 = walletAPI.executeAsync[NewKeyCreated](CreateNewKey())
       val fut2 =
-        walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(theirDidPair.DID, theirDidPair.verKey)).map { _ =>
-          walletAPI.executeAsync[GetVerKeyOptResp](GetVerKeyOpt(theirDidPair.DID))
+        walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(theirDidPair.did, theirDidPair.verKey)).map { _ =>
+          walletAPI.executeAsync[GetVerKeyOptResp](GetVerKeyOpt(theirDidPair.did))
         }
       Future.sequence(Seq(fut1, fut2))
     }

@@ -4,7 +4,8 @@ import com.evernym.integrationtests.e2e.env.{SdkConfig, SdkType}
 import com.evernym.integrationtests.e2e.scenario.Scenario
 import com.evernym.integrationtests.e2e.sdk.process.{DotNetSdkProvider, NodeSdkProvider, PythonSdkProvider}
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
@@ -21,18 +22,21 @@ import com.evernym.verity.sdk.protocols.writecreddef.v0_6.{RevocationRegistryCon
 import com.evernym.verity.sdk.protocols.writeschema.v0_6.WriteSchemaV0_6
 import com.evernym.verity.sdk.utils.Context
 import com.evernym.verity.sdk.wallet.{DefaultWalletConfig, WalletConfig}
+import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
 import java.util.UUID
 
 
-case class RelData(alias: String, owningDID: DID, otherDID: Option[DID])
+case class RelData(alias: String, owningDID: DidStr, otherDID: Option[DidStr])
 
 trait VeritySdkProvider {
   def unsupportedProtocol(protocolName: String, msg: String): Nothing = {
     val error = s"Protocol - $protocolName - is not supported by the ${this.getClass.getSimpleName} provider -- $msg"
     throw new UnsupportedOperationException(error)
   }
+
+  val logger: Logger = getLoggerByName(getClass.getName)
 
   var publicDID: Option[String] = None
 
@@ -124,23 +128,23 @@ trait VeritySdkProvider {
                        proofAttrs: Array[ProposedAttribute],
                        proofPredicates: Array[ProposedPredicate]): PresentProofV1_0
 
-  def presentProof_1_0(forRelationship: DID,
+  def presentProof_1_0(forRelationship: DidStr,
                        threadId: String): PresentProofV1_0
 
-  def committedAnswer_1_0(forRelationship: DID,
+  def committedAnswer_1_0(forRelationship: DidStr,
                           questionText: String,
                           questionDescription: String,
                           validResponses: Seq[String],
                           requireSig: Boolean): CommittedAnswerV1_0
 
-  def committedAnswer_1_0(forRelationship: DID,
+  def committedAnswer_1_0(forRelationship: DidStr,
                           threadId: String,
                           answer: String): CommittedAnswerV1_0
 
-  def committedAnswer_1_0(forRelationship: DID,
+  def committedAnswer_1_0(forRelationship: DidStr,
                           threadId: String): CommittedAnswerV1_0
 
-  def basicMessage_1_0(forRelationship: DID,
+  def basicMessage_1_0(forRelationship: DidStr,
                        content: String,
                        sentTime: String,
                        localization: String): BasicMessageV1_0

@@ -13,15 +13,18 @@ import com.evernym.verity.actor.agent.msghandler.outgoing.JsonMsg
 import com.evernym.verity.actor.agent.msgrouter.RestMsgRouteParam
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.config.ConfigConstants.REST_API_ENABLED
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgType}
 import com.evernym.verity.http.LoggingRouteUtil.{incomingLogMsg, outgoingLogMsg}
 import com.evernym.verity.http.common.{ActorResponseHandler, StatusDetailResp}
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
-import com.evernym.verity.protocol.engine.{MsgFamily, MsgType, ProtoRef}
+import com.evernym.verity.protocol.engine.ProtoRef
 import com.evernym.verity.util.{ReqMsgContext, RestAuthContext, RestMsgContext}
 import com.evernym.verity.util2.{ActorErrorResp, Status}
 import org.json.JSONObject
+
+import scala.util.Try
 
 
 final case class `API-REQUEST-ID`(id: String) extends CustomHeader {
@@ -38,7 +41,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
 
   protected def checkIfRestApiEnabled(): Unit = {
     if (!restApiEnabled) {
-      logger.warn("received request on disabled REST api")
+      logger.info("received request on disabled REST api")
       throw new FeatureNotEnabledException(Status.NOT_IMPLEMENTED.statusCode, Option(Status.NOT_IMPLEMENTED.statusMsg))
     }
   }
@@ -86,7 +89,12 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
     entity(as[String]) { payload =>
       val msgType = extractMsgType(payload)
       checkMsgFamily(msgType, protoRef)
-      val restMsgContext: RestMsgContext = RestMsgContext(msgType, auth, Option(Thread(thid)), reqMsgContext)
+      val restMsgContext: RestMsgContext = RestMsgContext(
+        msgType,
+        auth,
+        Option(Thread(thid)),
+        reqMsgContext
+      )
 
       complete {
         platform.agentActorContext.agentMsgRouter.execute(RestMsgRouteParam(route, payload, restMsgContext))
@@ -174,7 +182,12 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
       DefaultMsgCodec.msgTypeFromDoc(DefaultMsgCodec.docFromStrUnchecked(payload))
     } catch {
       case e: Exception =>
-        logger.warn(s"Invalid payload. Exception: $e, Payload: $payload")
+        val sanitizedPayload = Try {
+          val jsonObject = new JSONObject(payload)
+          jsonObject.remove("phoneNumber")
+          jsonObject.toString
+        }.getOrElse(payload)
+        logger.warn(s"Invalid payload. Exception: $e, Payload: $sanitizedPayload")
         throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option("Invalid payload"))
     }
   }
@@ -200,7 +213,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   protected def checkMsgFamily(msgType: MsgType, protoRef: ProtoRef): Unit = {
-    if (msgType.protoRef != protoRef)
+    if (!protoRef.isInFamily(msgType))
       throw new BadRequestErrorException(Status.VALIDATION_FAILED.statusCode, Option("Invalid protocol family and/or version"))
   }
 

@@ -3,16 +3,18 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.ActorRef
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status.{ALREADY_EXISTS, MSG_DELIVERY_STATUS_FAILED, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED}
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.PayloadMetadata
+import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{GetMsgsMsgHelper, GetMsgsReqMsg, UpdateMsgStatusMsgHelper, UpdateMsgStatusReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
-import com.evernym.verity.metrics.InternalSpan
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
+import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
-import com.evernym.verity.protocol.engine.{DID, MsgId}
-import com.evernym.verity.protocol.protocols.{MsgDetail, StorePayloadParam}
 import com.evernym.verity.util.ReqMsgContext
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util2.MsgPayloadStoredEventBuilder
@@ -116,7 +118,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   def storeMsg(msgId: MsgId,
                msgName: String,
-               senderDID: DID,
+               senderDID: DidStr,
                msgStatusCode: String,
                sendMsg: Boolean,
                threadOpt: Option[Thread],
@@ -134,8 +136,8 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   def buildMsgStoredEventsV1(msgId: MsgId,
                              msgName: String,
-                             myPairwiseDID: DID,
-                             senderDID: DID,
+                             myPairwiseDID: DidStr,
+                             senderDID: DidStr,
                              sendMsg: Boolean,
                              threadOpt: Option[Thread],
                              refMsgId: Option[MsgId],
@@ -146,7 +148,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   def buildMsgStoredEventsV2(msgId: MsgId,
                              msgName: String,
-                             senderDID: DID,
+                             senderDID: DidStr,
                              statusCode: String,
                              sendMsg: Boolean,
                              threadOpt: Option[Thread],
@@ -173,14 +175,21 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   private def buildMsgCreatedEvt(msgId: MsgId,
                                  mType: String,
-                                 senderDID: DID,
+                                 senderDID: DidStr,
                                  sendMsg: Boolean,
                                  msgStatus: String,
                                  threadOpt: Option[Thread],
                                  LEGACY_refMsgId: Option[MsgId]=None): MsgCreated = {
     checkIfMsgAlreadyNotExists(msgId)
-    MsgHelper.buildMsgCreatedEvt(msgId, mType, senderDID, sendMsg,
-      msgStatus, threadOpt, LEGACY_refMsgId)
+    MsgHelper.buildMsgCreatedEvt(
+      msgId,
+      mType,
+      senderDID,
+      sendMsg,
+      msgStatus,
+      threadOpt,
+      LEGACY_refMsgId
+    )
   }
 
   private def buildPayloadEvent(msgId: MsgId,
@@ -223,3 +232,4 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
 case class GetMsgRespInternal(msgs: List[MsgDetail]) extends ActorMessage
 case class UpdateMsgStatusRespInternal(uids: List[MsgId]) extends ActorMessage
+case class StorePayloadParam(message: Array[Byte], metadata: Option[PayloadMetadata])

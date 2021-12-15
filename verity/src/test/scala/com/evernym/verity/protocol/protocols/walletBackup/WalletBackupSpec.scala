@@ -1,11 +1,12 @@
 package com.evernym.verity.protocol.protocols.walletBackup
 
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.{CanGenerateDid, CommonSpecUtil, TestAppConfig}
+import com.evernym.verity.actor.testkit.{CanGenerateDid, CommonSpecUtil}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
+import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.protocol.engine.journal.DebugProtocols
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
-import com.evernym.verity.protocol.engine.{DebugProtocols, VerKey}
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily._
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{SimpleProtocolSystem, TestsProtocolsImpl}
@@ -323,12 +324,15 @@ class WalletBackupSpec()
 
   def backupSignaledFromExporter(exporter: TestEnvir): WalletBackupBytes =
     Base64Util.getBase64Decoded((exporter expect signal[Restored]).wallet)
+
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }
 
 abstract class TestsWalletBackup extends TestsProtocolsImpl(WalletBackupProtoDef, Option(Bucket_2_Legacy)) {
 
   import com.evernym.verity.protocol.protocols.walletBackup.BackupSpecVars._
 
+  def appConfig: AppConfig
   def futureExecutionContext: ExecutionContext
 
   override val containerNames: Set[ContainerName] = Set(EXPORTER, PERSISTER, RECOVERER)
@@ -347,8 +351,8 @@ abstract class TestsWalletBackup extends TestsProtocolsImpl(WalletBackupProtoDef
 
     //FIXME JL to RM: we need to move this to the new testing approach (containers created indirectly)
     val containers = Map(
-      RECOVERER -> newContainer(s, futureExecutionContext, partiId = RECOVERY_VK),
-      PERSISTER -> newContainer(s, futureExecutionContext, partiId = p.participantId, pinstId = p.pinstId, recorder = Some(p.eventRecorder))
+      RECOVERER -> newContainer(s, futureExecutionContext, appConfig, partiId = RECOVERY_VK),
+      PERSISTER -> newContainer(s, futureExecutionContext, appConfig, partiId = p.participantId, pinstId = p.pinstId, recorder = Some(p.eventRecorder))
     )
 
     Scenario(RECOVERER, PERSISTER)
@@ -362,7 +366,7 @@ object BackupSpecVars extends CanGenerateDid {
   val EXPORTER = "exporter"
   val PERSISTER = "persister"
   val RECOVERER = "recoverer"
-  val RECOVERY_VK: VerKey = generateNewDid().verKey
+  val RECOVERY_VK: VerKeyStr = generateNewDid().verKey
   val DD_ADDRESS = "456"
   val CLOUD_ADDRESS = "789"
   val BACKUP_INIT_PARAMS: BackupInitParams = BackupInitParams(RECOVERY_VK, DD_ADDRESS, CLOUD_ADDRESS.getBytes())

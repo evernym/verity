@@ -6,7 +6,6 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.http.base.AgentReqBuilder
 import com.evernym.verity.integration.base.verity_provider.PortProfile
-import com.evernym.verity.integration.base.verity_provider.node.local.VerityLocalConfig.defaultPorts
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.typesafe.config.Config
@@ -18,6 +17,8 @@ class VerityLocalSpec extends BasicSpec with AgentReqBuilder with CommonSpecUtil
   override def appConfig: AppConfig = testAppConfig
 
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+
+  val defaultPorts: PortProfile = PortProfile(9002, 2552, 8552, 9095)
 
   override def deleteFiles: Boolean = false
 
@@ -36,7 +37,7 @@ class VerityLocalSpec extends BasicSpec with AgentReqBuilder with CommonSpecUtil
       }
 
       "should use default wallet type" in {
-        VerityLocalConfig.standard(tempDir,defaultPorts).getString("verity.lib-indy.wallet.type") should include ("default")
+        VerityLocalConfig.standard(tempDir,defaultPorts).getString("verity.lib-vdrtools.wallet.type") should include ("default")
       }
     }
   }
@@ -49,10 +50,10 @@ class VerityLocalSpec extends BasicSpec with AgentReqBuilder with CommonSpecUtil
     "should be able to start multiple verity applications" ignore {
       val v1_dir = tempDir.resolve("v1")
       assert(v1_dir.toFile.mkdir())
-      val v1 = LocalVerity(v1_dir, "11111111111111111111111111111111", PortProfile(9002, 2552, 8552), ecp)
+      val v1 = LocalVerity(v1_dir, "11111111111111111111111111111111", PortProfile(9002, 2552, 8552, 9095), ecp)
       val v2_dir = tempDir.resolve("v2")
       assert(v2_dir.toFile.mkdir())
-      val v2 = LocalVerity(v2_dir, "11111111111111111111111111111111", PortProfile(9003, 2553, 8553), ecp)
+      val v2 = LocalVerity(v2_dir, "11111111111111111111111111111111", PortProfile(9003, 2553, 8553, 9095), ecp)
     }
   }
 }

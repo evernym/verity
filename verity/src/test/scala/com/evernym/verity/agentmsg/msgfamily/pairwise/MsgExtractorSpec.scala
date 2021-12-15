@@ -6,12 +6,12 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.{AgentMsgSpecBase, DefaultMsgCodec}
 import com.evernym.verity.protocol.engine
-import com.evernym.verity.protocol.engine.ProtocolRegistry.Entry
-import com.evernym.verity.protocol.engine.{PinstIdResolution, ProtocolRegistry}
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry.Entry
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_V_0_6}
 import com.evernym.verity.testkit.{AwaitResult, BasicSpec}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.protocol.engine.registry.{PinstIdResolution, ProtocolRegistry}
 
 import scala.concurrent.ExecutionContext
 
@@ -28,7 +28,7 @@ class MsgExtractorSpec
 
   //TODO GENERAL CONVERSION from PackedMsg to native (case class) and visa versa
 
-  implicit val protoReg: ProtocolRegistry[_] = engine.ProtocolRegistry(Entry(ConnectingProtoDef_V_0_6, PinstIdResolution.DEPRECATED_V0_1))
+  implicit val protoReg: ProtocolRegistry[_] = ProtocolRegistry(Entry(ConnectingProtoDef_V_0_6, PinstIdResolution.DEPRECATED_V0_1))
 
   val typ = "both"
 
@@ -141,10 +141,5 @@ class MsgExtractorSpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = executionContext
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 

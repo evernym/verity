@@ -3,16 +3,15 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.testkit.EventFilter
 import com.evernym.verity.util2.{ExecutionContextProvider, Status}
-import com.evernym.verity.actor.{ActorMessage, ForIdentifier, ItemUpdated, ShardUtil}
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier, HasAppConfig, ItemUpdated, ShardUtil}
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.base.{Done, Ping, Stop}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
-import com.evernym.verity.protocol.engine.MsgId
-import com.evernym.verity.protocol.protocols.HasAppConfig
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.Status
 import com.typesafe.config.{Config, ConfigFactory}

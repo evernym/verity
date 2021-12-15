@@ -9,9 +9,7 @@ import com.evernym.verity.actor.cluster_singleton.watcher.ActorWatcher.itemManag
 import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
 import com.evernym.verity.actor.itemmanager.ItemConfigManager.versionedItemManagerEntityId
 import com.evernym.verity.actor.itemmanager._
-import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
-import com.evernym.verity.config.AppConfig
 import com.typesafe.config.Config
 import org.scalatest.time.{Millis, Seconds, Span}
 
@@ -97,6 +95,8 @@ class TimeBasedMovingItemManagerSpec
         expectMsgPF() {
           case ItemCmdResponse(ItemDetailResponse(ITEM_ID_1, ITEM_STATUS_ACTIVE|ITEM_STATUS_MIGRATED, _, Some(ORIG_ITEM_DETAIL)), senderEntityId) =>
             checkItemContainerEntityId(senderEntityId)
+          //previous item container's storage cleaned
+          case ItemContainerStaleOrConfigNotYetSet =>
         }
 
         //the item in the latest container should be always in active state
@@ -141,6 +141,8 @@ class TimeBasedMovingItemManagerSpec
         expectMsgPF() {
           case ItemCmdResponse(ItemDetailResponse(ITEM_ID_1, ITEM_STATUS_ACTIVE|ITEM_STATUS_MIGRATED, _, Some(UPDATED_ITEM_DETAIL)), senderEntityId) =>
             checkItemContainerEntityId(senderEntityId)
+          //previous item container's storage cleaned
+          case ItemContainerStaleOrConfigNotYetSet =>
         }
 
         sendExternalCmdToItemManager(itemManagerEntityId1, GetItem(ITEM_ID_1))
@@ -162,6 +164,8 @@ class TimeBasedMovingItemManagerSpec
         expectMsgPF() {
           case ItemCmdResponse(ItemDetailResponse(ITEM_ID_2, ITEM_STATUS_ACTIVE|ITEM_STATUS_MIGRATED, _, None), senderEntityId) =>
             checkItemContainerEntityId(senderEntityId)
+          //previous item container's storage cleaned
+          case ItemContainerStaleOrConfigNotYetSet =>
         }
 
         sendExternalCmdToItemManager(itemManagerEntityId1, GetItem(ITEM_ID_2))
@@ -210,13 +214,16 @@ class TimeBasedMovingItemManagerSpec
         }
         //Note: and then previous obsolete container should have cleaned up its storage
         val item2PostMigrationContainerEntityId = getLastKnownItemContainerEntityId(ITEM_ID_2)
-        eventually(timeout(Span(15, Seconds)), interval(Span(200, Millis))) {
+        eventually(timeout(Span(15, Seconds)), interval(Span(50, Millis))) {
           sendExternalCmdToItemContainer(item2PostMigrationContainerEntityId, GetState)
           expectMsgPF() {
             case ics: ItemContainerState
               if ics.migratedContainers.nonEmpty &&
                 ics.migratedContainers.get(item2OriginalContainerEntityId).exists(_.isStorageCleaned) =>
                   //previous item container's storage cleaned
+            case ItemContainerStaleOrConfigNotYetSet =>
+              // this is when the new item container also gets migrated to another newer one
+              // (because for test, the item container mapper uses a very short retention window)
           }
         }
       }

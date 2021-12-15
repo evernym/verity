@@ -1,9 +1,10 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
 import akka.http.scaladsl.model.Uri
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Ctl.Reuse
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil.{isThreadedInviteId, parseThreadedInviteId}
@@ -35,8 +36,7 @@ class OutOfBand(val ctx: ProtocolContextApi[OutOfBand, Role, Msg, OutOfBandEvent
   def handleHandshakeReuse(m: Msg.HandshakeReuse): Any = {
     if (m.`~thread` == null || m.`~thread`.pthid == null) {
       ctx.send(Msg.buildProblemReport(s"Message $m has invalid '~thread` field", "invalid-reuse-message"))
-    }
-    else {
+    } else {
       ctx.apply(ConnectionReuseRequested())
       val resp = Msg.HandshakeReuseAccepted(m.`~thread`)
       ctx.send(resp)

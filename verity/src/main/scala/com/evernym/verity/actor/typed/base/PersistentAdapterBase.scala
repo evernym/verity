@@ -8,9 +8,9 @@ import com.evernym.verity.transformations.transformers.v1.{PERSISTENCE_TRANSFORM
 trait PersistentAdapterBase {
   def encryptionKey: String
   def objectCodeMapper: ObjectCodeMapperBase
+  def eventEncryptionSalt: String
 
   protected lazy val persistenceTransformer: Any <=> PersistentMsg = persistenceTransformerV1
-
   /**
    * lookup/searches an appropriate transformer based on given input
    *
@@ -37,7 +37,7 @@ trait PersistentAdapterBase {
    * persistence transformer, optimized compared to legacy event/state transformers
    */
   private lazy val persistenceTransformerV1: Any <=> PersistentMsg =
-    createPersistenceTransformerV1(encryptionKey, persistentObjectMapper, schemaEvolTransformation)
+    createPersistenceTransformerV1(encryptionKey, eventEncryptionSalt, persistentObjectMapper, schemaEvolTransformation)
 
 
   //maps events to a unique code to be used during recovery to

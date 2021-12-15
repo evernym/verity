@@ -2,13 +2,17 @@ package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.actor.agent.relationship.Relationship
-import com.evernym.verity.metrics.{MetricsWriter, NoOpMetricsWriter}
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
+import com.evernym.verity.observability.metrics.{MetricsWriter, NoOpMetricsWriter}
 import com.evernym.verity.protocol.container.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
+import com.evernym.verity.protocol.engine.box.BoxLike
+import com.evernym.verity.protocol.engine.container.{ProtocolContainer, RecordsEvents}
 import com.evernym.verity.protocol.engine.journal.JournalContext
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.typesafe.scalalogging.Logger
@@ -40,7 +44,7 @@ case class ProtocolContainerElements[P,R,M,E,S,I](system: SimpleProtocolSystem,
   *
   * @tparam E Event type
   */
-class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[P,R,M,E,S,I], ec: ExecutionContext)(implicit tag: ClassTag[M])
+class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[P,R,M,E,S,I], ec: ExecutionContext, ac: AppConfig)(implicit tag: ClassTag[M])
   extends {
     val pinstId = pce.pinstId
     val definition = pce.definition
@@ -75,6 +79,8 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
   val segmentStore: SegmentStoreAccess = new MockStorageService(system)
   implicit val asyncOpRunner = this
 
+  implicit val e: ExecutionContext = this.executionContext
+
   def registerWithSystem(): Unit = pce.system.register(this)
 
   override def createServices: Option[Services] = None
@@ -107,6 +113,10 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
     executeCallbackHandler(result)
   }
 
+  override def runFutureAsyncOp(op: => Future[Any]): Unit = {
+    op.onComplete(r => executeCallbackHandler(r))
+  }
+
   def removeSegment(segmentKey: SegmentKey): SegmentKey = {
     // this is a hack to delete segment without directly invoking the api
     // (as that causes it to be in non stable state)
@@ -119,6 +129,8 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
   }
 
   override def executionContext: ExecutionContext = ec
+
+  override def serviceKeyDidFormat: Boolean = ac.getBooleanReq(SERVICE_KEY_DID_FORMAT)
 }
 
 trait Logs {

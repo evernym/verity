@@ -1,26 +1,27 @@
 package com.evernym.verity.actor.wallet
 
-import java.util.UUID
-import akka.pattern.pipe
 import akka.actor.{ActorRef, NoSerializationVerificationNeeded, Stash}
+import akka.pattern.pipe
+import com.evernym.verity.actor.ActorMessage
+import com.evernym.verity.actor.agent.PayloadMetadata
+import com.evernym.verity.actor.base.CoreActor
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
+import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter}
+import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.metrics.InternalSpan
+import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
 import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.util2.Status.{INVALID_VALUE, StatusDetail, UNHANDLED}
-import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.config.AppConfig
-import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest, Submitter}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
-import com.evernym.verity.actor.agent.{DidPair, PayloadMetadata}
-import com.evernym.verity.actor.base.CoreActor
-import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
-import com.evernym.verity.metrics.InternalSpan
-import com.evernym.verity.protocol.engine.asyncapi.wallet.SignatureResult
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.vault
 import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.operation_executor.DidOpExecutor.buildErrorDetail
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
 import com.evernym.verity.vault.{KeyParam, WalletDoesNotExist, WalletExt, WalletProvider}
 import com.typesafe.scalalogging.Logger
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -30,88 +31,111 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
 
   implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
-  override def receiveCmd: Receive = preInitReceiver orElse openWalletCallbackReceiver
+  override def receiveCmd: Receive = stateUninitialized
 
   /**
    * during actor 'preStart' lifecycle hook, it asynchronously calls 'generateWalletParamAsync'
    * and as part of callback it sends 'SetWalletParam' command back to this actor
    * to update the state accordingly
+   *
    * @return
    */
-  def preInitReceiver: Receive = {
-    case swp: SetWalletParam  =>
+  def stateUninitialized: Receive = {
+    case swp: SetWalletParam =>
       walletParamOpt = Option(swp.wp)
       wmpOpt = Option(WalletMsgParam(walletProvider, swp.wp, Option(poolManager)))
       openWalletIfExists()
+    case sw: SetWallet =>
+      handleSetWallet(sw)
+    case _: WalletCommand => stash()
   }
 
-  /**
-   * in this receiver it will only entertain 'CreateWallet' or 'SetupNewAgentWallet' command
-   * @return
-   */
-  def postInitReceiver: Receive = {
+  def stateWalletNotOpened: Receive = {
     case cmd: CreateWallet =>
-      logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
-      val sndr = sender()
-      val fut = WalletMsgHandler.handleCreateWalletAsync()
-      sendRespWhenResolved(cmd.id, sndr, fut)
-        .map { _ =>
-          openWalletIfExists()
-        }
-
+      handleCreateWallet(cmd)
     case snw: SetupNewAgentWallet =>
-      val sndr = sender()
-      setNewReceiveBehaviour(openWalletCallbackReceiver)
-      WalletMsgHandler.handleCreateWalletAsync().map { _ =>
-        openWalletIfExists()
-        self.tell(snw, sndr)
-      }
+      handleSetupNewAgentWalletOnStateWalletIsNotOpened(snw)
+    case sw: SetWallet =>
+      handleSetWallet(sw)
+    case _: WalletCommand => stash()
   }
 
   /**
    * as part of 'openWalletIfExists' function call, it calls open wallet async api
    * and as part of it's callback, it sends 'SetWallet' command back to this actor
    * to update the state accordingly
-   * @return
    */
-  def openWalletCallbackReceiver: Receive = {
+  def stateWalletIsOpening: Receive = {
+    case util.Failure(vault.WalletAlreadyOpened(_)) =>
+      setNewReceiveBehaviour(stateWalletNotOpened)
     case sw: SetWallet =>
-      sw.wallet match {
-        case Some(w) =>
-          walletExtOpt = Option(w)
-          setNewReceiveBehaviour(postOpenWalletReceiver)
-        case None =>
-          setNewReceiveBehaviour(postInitReceiver orElse openWalletCallbackReceiver)
-      }
-      unstashAll()
-    case _: WalletCommand => stash()
+      handleSetWallet(sw)
+    case _: WalletCommand =>
+      stash()
   }
 
   /**
    * will entertain wallet commands only if wallet is already opened
-   * @return
+   *
    */
-  def postOpenWalletReceiver: Receive = {
+  def stateReady: Receive = {
     case snaw: SetupNewAgentWallet =>
-      handleSetupNewAgentWallet(snaw)
+      handleSetupNewAgentWalletOnStateReady(snaw)
 
     case _: CreateWallet if walletExtOpt.isDefined =>
       sender ! WalletAlreadyCreated
 
-    case cmd: WalletCommand if walletExtOpt.isDefined =>    //only entertain commands extending 'WalletCommand'
+    case cmd: WalletCommand if walletExtOpt.isDefined => //only entertain commands extending 'WalletCommand'
       val sndr = sender()
       logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
       sendRespWhenResolved(cmd.id, sndr, WalletMsgHandler.executeAsync(cmd))
   }
 
-  private def handleSetupNewAgentWallet(snw: SetupNewAgentWallet): Unit = {
+
+  private def handleSetWallet(sw: SetWallet): Unit = {
+    sw.wallet match {
+      case Some(w) =>
+        walletExtOpt = Option(w)
+        setNewReceiveBehaviour(stateReady)
+      case None =>
+        setNewReceiveBehaviour(stateWalletNotOpened)
+    }
+    unstashAll()
+  }
+
+  /**
+   *there is some code duplicate in two following methods,
+   * but state changing looks better inside handle method against a function that combines repeating code
+   */
+
+  private def handleCreateWallet(cmd: CreateWallet): Unit = {
+    setNewReceiveBehaviour(stateWalletIsOpening)
+    val sndr = sender()
+    logger.debug(s"[$actorId] [${cmd.id}] wallet op started: " + cmd)
+    val fut = WalletMsgHandler.handleCreateWalletAsync()
+    sendRespWhenResolved(cmd.id, sndr, fut)
+      .map { _ =>
+        openWalletIfExists()
+      }
+  }
+
+  private def handleSetupNewAgentWalletOnStateWalletIsNotOpened(snw: SetupNewAgentWallet): Unit = {
+    setNewReceiveBehaviour(stateWalletIsOpening)
+    val sndr = sender()
+    WalletMsgHandler.handleCreateWalletAsync().map { _ =>
+      openWalletIfExists()
+      self.tell(snw, sndr)
+    }
+  }
+
+  private def handleSetupNewAgentWalletOnStateReady(snw: SetupNewAgentWallet): Unit = {
     val sndr = sender()
     logger.debug(s"[$actorId] [${snw.id}] wallet op started: " + snw)
     val ownerKeyFut =
       snw.ownerDidPair match {
         case Some(odp) =>
           WalletMsgHandler
-            .executeAsync(StoreTheirKey(odp.DID, odp.verKey))
+            .executeAsync(StoreTheirKey(odp.did, odp.verKey))
             .mapTo[TheirKeyStored].map(_.didPair)
         case None =>
           WalletMsgHandler
@@ -160,10 +184,10 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
       openWallet()
         .map(w => SetWallet(Option(w)))
         .recover {
-          case _ @ (_: WalletDoesNotExist)  =>
+          case _@(_: WalletDoesNotExist) =>
             SetWallet(None)
           case e =>
-            logger.error(s"unexpected error occurred while trying to open wallet: " + e.getMessage)
+            logger.error(s"unexpected error occurred while trying to open wallet: " + e.getMessage + e.getClass.getName)
             throw e
         }.pipeTo(self)
     }
@@ -199,6 +223,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
 
   implicit def walletExt: WalletExt = walletExtOpt.getOrElse(
     throw new RuntimeException("wallet not opened"))
+
   implicit lazy val walletParam: WalletParam = walletParamOpt.getOrElse(
     throw new RuntimeException("wallet param not computed"))
   implicit lazy val wmp: WalletMsgParam = wmpOpt.getOrElse(
@@ -211,7 +236,7 @@ trait WalletCommand extends ActorMessage {
   //overridden to make sure if this codebase is logging this wallet command anywhere
   // it doesn't log any critical/private information
   val name: String = getClass.getSimpleName
-  val id: String = UUID.randomUUID().toString  //only for logging purposes
+  val id: String = UUID.randomUUID().toString //only for logging purposes
 }
 
 //NOTE:
@@ -232,21 +257,21 @@ case class CreateWallet() extends WalletCommand
 
 case class SetupNewAgentWallet(ownerDidPair: Option[DidPair]) extends WalletCommand
 
-case class CreateNewKey(DID: Option[DID] = None, seed: Option[String] = None) extends WalletCommand
+case class CreateNewKey(DID: Option[DidStr] = None, seed: Option[String] = None) extends WalletCommand
 
 case class CreateDID(keyType: String) extends WalletCommand
 
-case class StoreTheirKey(theirDID: DID, theirDIDVerKey: VerKey, ignoreIfAlreadyExists: Boolean=false)
+case class StoreTheirKey(theirDID: DidStr, theirDIDVerKey: VerKeyStr, ignoreIfAlreadyExists: Boolean = false)
   extends WalletCommand
 
-case class GetVerKeyOpt(did: DID, getKeyFromPool: Boolean = false) extends WalletCommand
+case class GetVerKeyOpt(did: DidStr, getKeyFromPool: Boolean = false) extends WalletCommand
 
-case class GetVerKey(did: DID, getKeyFromPool: Boolean = false) extends WalletCommand
+case class GetVerKey(did: DidStr, getKeyFromPool: Boolean = false) extends WalletCommand
 
 case class SignMsg(keyParam: KeyParam, msg: Array[Byte]) extends WalletCommand
 
 case class VerifySignature(keyParam: KeyParam, challenge: Array[Byte],
-                           signature: Array[Byte], verKeyUsed: Option[VerKey]=None)
+                           signature: Array[Byte], verKeyUsed: Option[VerKeyStr] = None)
   extends WalletCommand
 
 case class PackMsg(msg: Array[Byte], recipVerKeyParams: Set[KeyParam], senderVerKeyParam: Option[KeyParam])
@@ -262,7 +287,7 @@ case class LegacyUnpackMsg(msg: Array[Byte], fromVerKeyParam: Option[KeyParam], 
 
 case class CreateMasterSecret(masterSecretId: String) extends WalletCommand
 
-case class CreateCredDef(issuerDID: DID,
+case class CreateCredDef(issuerDID: DidStr,
                          schemaJson: String,
                          tag: String,
                          sigType: Option[String],
@@ -270,7 +295,7 @@ case class CreateCredDef(issuerDID: DID,
 
 case class CreateCredOffer(credDefId: String) extends WalletCommand
 
-case class CreateCredReq(credDefId: String, proverDID: DID,
+case class CreateCredReq(credDefId: String, proverDID: DidStr,
                          credDefJson: String, credOfferJson: String, masterSecretId: String)
   extends WalletCommand
 
@@ -301,42 +326,62 @@ trait Reply extends ActorMessage
 case class WalletCmdErrorResponse(sd: StatusDetail) extends Reply
 
 trait WalletCmdSuccessResponse extends Reply
+
 case class AgentWalletSetupCompleted(ownerDidPair: DidPair, agentKey: NewKeyCreated) extends WalletCmdSuccessResponse
 
 trait WalletCreatedBase extends WalletCmdSuccessResponse
+
 case object WalletCreated extends WalletCreatedBase
+
 case object WalletAlreadyCreated extends WalletCreatedBase
-case class NewKeyCreated(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse {
+
+case class NewKeyCreated(did: DidStr, verKey: VerKeyStr) extends WalletCmdSuccessResponse {
   def didPair: DidPair = DidPair(did, verKey)
 }
-case class GetVerKeyOptResp(verKey: Option[VerKey]) extends WalletCmdSuccessResponse
-case class GetVerKeyResp(verKey: VerKey) extends WalletCmdSuccessResponse
-case class TheirKeyStored(did: DID, verKey: VerKey) extends WalletCmdSuccessResponse {
+
+case class GetVerKeyOptResp(verKey: Option[VerKeyStr]) extends WalletCmdSuccessResponse
+
+case class GetVerKeyResp(verKey: VerKeyStr) extends WalletCmdSuccessResponse
+
+case class TheirKeyStored(did: DidStr, verKey: VerKeyStr) extends WalletCmdSuccessResponse {
   def didPair: DidPair = DidPair(did, verKey)
 }
+
 case class VerifySigResult(verified: Boolean) extends WalletCmdSuccessResponse
-case class SignedMsg(msg: Array[Byte], fromVerKey: VerKey) extends WalletCmdSuccessResponse {
+
+case class SignedMsg(msg: Array[Byte], fromVerKey: VerKeyStr) extends WalletCmdSuccessResponse {
   def signatureResult: SignatureResult = SignatureResult(msg, fromVerKey)
 }
+
 case class MasterSecretCreated(ms: String) extends WalletCmdSuccessResponse
+
 case class CredOfferCreated(offer: String) extends WalletCmdSuccessResponse
+
 case class CredDefCreated(credDefId: String, credDefJson: String) extends WalletCmdSuccessResponse
+
 case class CredReqCreated(credReqJson: String, credReqMetadataJson: String) extends WalletCmdSuccessResponse
+
 case class CredCreated(cred: String) extends WalletCmdSuccessResponse
+
 case class CredStored(cred: String) extends WalletCmdSuccessResponse
+
 case class CredForProofReqCreated(cred: String) extends WalletCmdSuccessResponse
+
 case class ProofCreated(proof: String) extends WalletCmdSuccessResponse
+
 case class ProofVerifResult(result: Boolean) extends WalletCmdSuccessResponse
-case class PackedMsg(msg: Array[Byte], metadata: Option[PayloadMetadata]=None)
+
+case class PackedMsg(msg: Array[Byte], metadata: Option[PayloadMetadata] = None)
   extends WalletCmdSuccessResponse
 
 case class UnpackedMsg(msg: Array[Byte],
-                       senderVerKey: Option[VerKey],
-                       recipVerKey: Option[VerKey]) extends WalletCmdSuccessResponse {
+                       senderVerKey: Option[VerKeyStr],
+                       recipVerKey: Option[VerKeyStr]) extends WalletCmdSuccessResponse {
   def msgString: String = new String(msg)
 }
+
 object UnpackedMsg {
-  def apply(msg: String, senderVerKey: Option[VerKey] = None, recipVerKey: Option[VerKey]=None): UnpackedMsg =
+  def apply(msg: String, senderVerKey: Option[VerKeyStr] = None, recipVerKey: Option[VerKeyStr] = None): UnpackedMsg =
     UnpackedMsg(msg.getBytes, senderVerKey, recipVerKey)
 }
 

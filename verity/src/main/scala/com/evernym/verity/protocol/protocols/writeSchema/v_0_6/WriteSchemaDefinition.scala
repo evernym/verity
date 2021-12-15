@@ -1,10 +1,11 @@
 package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.container.actor.Init
-import com.evernym.verity.protocol.engine.asyncapi.{AccessRight, AnonCreds, LedgerReadAccess, LedgerWriteAccess}
+import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.State.Undefined
 
 object WriteSchemaDefinition extends WriteSchemaDefTrait
@@ -18,8 +19,6 @@ trait WriteSchemaDefTrait extends ProtocolDefinition[WriteSchema, Role, Msg, Any
   override def createInitMsg(params: Parameters): Control = Init(params)
 
   override val initParamNames: Set[ParameterName] = Set(SELF_ID, MY_ISSUER_DID, DEFAULT_ENDORSER_DID)
-
-  override val requiredAccess: Set[AccessRight] = Set(AnonCreds, LedgerReadAccess, LedgerWriteAccess)
 
   override def supportedMsgs: ProtoReceive = {
     case _: SchemaControl =>

@@ -1,8 +1,10 @@
 package com.evernym.verity.protocol.protocols.tictactoe
 
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
-import com.evernym.verity.protocol.engine.ProtocolRegistry.DriverGen
-import com.evernym.verity.protocol.engine.{DebugProtocols, SignalEnvelope}
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry.DriverGen
+import com.evernym.verity.protocol.engine.SignalEnvelope
+import com.evernym.verity.protocol.engine.journal.DebugProtocols
 import com.evernym.verity.protocol.protocols.tictactoe.Board.{O, X}
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeMsgFamily.{AcceptOffer, MakeOffer, _}
 import com.evernym.verity.protocol.testkit.DSL.signal
@@ -17,7 +19,7 @@ import scala.language.postfixOps
 
 
 class TicTacToeSpec
-  extends ProtocolTestKit(TicTacToeProtoDef, Implicits.global)
+  extends ProtocolTestKit(TicTacToeProtoDef, Implicits.global, new TestAppConfig())
     with BasicSpec
     with SpecHelper
     with DebugProtocols {

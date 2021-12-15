@@ -11,7 +11,7 @@ import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.actor.testkit.{AkkaTestBasic, TestAppConfig}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
@@ -273,7 +273,7 @@ object MockActor {
 import MockActor._
 
 
-class MockBaseActor(val appConfig: AppConfig, executionContext: ExecutionContext) extends BasePersistentActor {
+class MockBaseActor(val appConfig: AppConfig, executionContext: ExecutionContext) extends BasePersistentTimeoutActor {
 
   override def receiveCmd: Receive = {
     case ReceiveTimeoutQuestion() =>

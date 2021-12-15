@@ -1,17 +1,16 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_6
 
 import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessRight}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 
 object IssuerSetupDefinition extends ProtocolDefinition[IssuerSetup, Role, Msg, Event, State, String] {
 
   override val msgFamily: MsgFamily = IssuerSetupMsgFamily
 
   override def scope: Scope.ProtocolScope = Scope.Agent
-
-  override val requiredAccess: Set[AccessRight] = Set(AccessNewDid)
 
   override val roles: Set[Role] = Role.roles
 

@@ -3,7 +3,7 @@ package com.evernym.verity.actor.persistence
 import akka.persistence.{DeleteMessagesFailure, DeleteMessagesSuccess}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
-import com.evernym.verity.metrics.CustomMetrics.{AS_SERVICE_DYNAMODB_MESSAGE_DELETE_ATTEMPT_COUNT, AS_SERVICE_DYNAMODB_MESSAGE_DELETE_FAILED_COUNT, AS_SERVICE_DYNAMODB_MESSAGE_DELETE_SUCCEED_COUNT}
+import com.evernym.verity.observability.metrics.CustomMetrics.{AS_SERVICE_DYNAMODB_MESSAGE_DELETE_ATTEMPT_COUNT, AS_SERVICE_DYNAMODB_MESSAGE_DELETE_FAILED_COUNT, AS_SERVICE_DYNAMODB_MESSAGE_DELETE_SUCCEED_COUNT}
 
 import scala.concurrent.duration.{SECONDS, _}
 import scala.util.Random

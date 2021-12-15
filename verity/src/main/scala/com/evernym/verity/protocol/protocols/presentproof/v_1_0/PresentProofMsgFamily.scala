@@ -2,10 +2,12 @@ package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
-import com.evernym.verity.protocol.didcomm.messages.{AdoptableAck, AdoptableProblemReport, ProblemDescription}
+import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
+import com.evernym.verity.did.didcomm.v1.messages.{AdoptableAck, AdoptableProblemReport, MsgFamily, ProblemDescription}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.InviteShortened
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
 object PresentProofMsgFamily
   extends MsgFamily {

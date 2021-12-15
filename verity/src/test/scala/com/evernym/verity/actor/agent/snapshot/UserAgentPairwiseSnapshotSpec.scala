@@ -1,7 +1,5 @@
 package com.evernym.verity.actor.agent.snapshot
 
-import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
-import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.{ForIdentifier, KeyCreated}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
@@ -12,7 +10,7 @@ import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.constants.ActorNameConstants.USER_AGENT_PAIRWISE_REGION_ACTOR_NAME
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.typesafe.config.{Config, ConfigFactory}
@@ -23,7 +21,7 @@ class UserAgentPairwiseSnapshotSpec
   extends BasicSpec
     with UserAgentPairwiseSpecScaffolding
     with PersistentActorSpec
-    with SnapshotSpecBase
+    with AgentSnapshotSpecBase
     with OverrideConfig {
 
   override def beforeAll(): Unit = {
@@ -32,15 +30,13 @@ class UserAgentPairwiseSnapshotSpec
     createUserAgent()
   }
 
-  override def overrideConfig: Option[Config] = Option(
+  override def specificConfig: Option[Config] = Option(
     ConfigFactory.parseString(
       """verity.persistent-actor.base.UserAgentPairwise.snapshot {
         after-n-events = 1
         keep-n-snapshots = 2
         delete-events-on-snapshots = false
       }""")
-      .withFallback(EventSourcedBehaviorTestKit.config)
-      .withFallback(PersistenceTestKitSnapshotPlugin.config)
   )
 
   "UserAgentPairwise actor" - {
@@ -83,7 +79,7 @@ class UserAgentPairwiseSnapshotSpec
     userAgentPairwiseEntityId = addressDetail.get.address
   }
 
-  def checkKeyCreatedEvent(keyCreated: KeyCreated, expectedForDID: DID): Unit = {
+  def checkKeyCreatedEvent(keyCreated: KeyCreated, expectedForDID: DidStr): Unit = {
     keyCreated.forDID shouldBe expectedForDID
   }
 
@@ -91,14 +87,14 @@ class UserAgentPairwiseSnapshotSpec
                                   protoInstancesSize: Int): Unit = {
     val myDIDDetail = mockEdgeAgent.pairwiseConnDetail(connId1).myPairwiseDidPair
 
-    state.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair)
+    state.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair.toAgentDidPair)
     state.agentWalletId shouldBe Option(userAgentEntityId)
     state.thisAgentKeyId.isDefined shouldBe true
-    state.thisAgentKeyId.contains(myDIDDetail.DID) shouldBe false
+    state.thisAgentKeyId.contains(myDIDDetail.did) shouldBe false
 
     state.relationshipReq.name shouldBe "pairwise"
     state.relationshipReq.myDidDoc.isDefined shouldBe true
-    state.relationshipReq.myDidDoc_!.did shouldBe myDIDDetail.DID
+    state.relationshipReq.myDidDoc_!.did shouldBe myDIDDetail.did
 
     //this is found only for pairwise actors and only for those protocols
     // which starts (the first message) from self-relationship actor and then
@@ -121,9 +117,4 @@ class UserAgentPairwiseSnapshotSpec
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

@@ -2,7 +2,7 @@ package com.evernym.verity.texter
 
 class TwilioServiceProviderSpec extends ServiceProviderBaseSpec {
 
-  lazy val service = new TwilioSmsSvc(appConfig)
+  lazy val service = new TwilioDispatcher(appConfig)
 
   "Twilio service provider" - {
     "when asked to normalize phone number with leading plus symbol" - {

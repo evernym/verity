@@ -2,13 +2,14 @@ package com.evernym.verity.http.route_handlers
 
 import akka.pattern.ask
 import com.evernym.verity.actor.Platform
-import com.evernym.verity.actor.agent.{AgentActorContext, DidPair}
+import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.agency.{AgencyAgentDetail, AgencyIdUtil, GetAgencyAgentDetail}
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.appStateManager.{AppStateEvent, AppStateRequest, AppStateUpdateAPI}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.did.DidPair
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.scalalogging.Logger

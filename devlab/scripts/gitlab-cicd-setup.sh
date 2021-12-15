@@ -22,15 +22,25 @@ export ENDPOINT="s3server"
 # Ledger Pool
 export POOL_HOST="indy-pool"
 export TAA_ENABLE="true"
+export LIB_INDY_LEDGER_TAA_ENABLED="true"
+export LIB_INDY_LEDGER_TAA_AUTO_ACCEPT="true"
+
+# dynamoDb
+export DYNAMODB_HOST="dynamodb"
+export DYNAMODB_PORT="8000"
+export DYNAMODB_ENDPOINT="$DYNAMODB_HOST:$DYNAMODB_PORT"
 
 # For MYSQL docker container service
+export MYSQL_HOST="mysql"
 export MYSQL_ROOT_PASSWORD="root"
 export MYSQL_DATABASE="wallet"
 export MYSQL_USER="msuser"
 export MYSQL_PASSWORD="mspassword"
 
 # For yourls service
-export YOURLS_SITE="http://yourls:8080"
+export YOURLS_HOST="yourls"
+export YOURLS_PORT="8080"
+export YOURLS_SITE="http://$YOURLS_HOST:$YOURLS_PORT"
 export YOURLS_USER="yourlsuser"
 export YOURLS_PASS="yourlspass"
 

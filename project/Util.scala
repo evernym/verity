@@ -1,16 +1,16 @@
-import java.io.File
-import java.nio.file.Files
-import java.util.Optional
 import com.typesafe.sbt.packager.linux.LinuxPackageMapping
 import com.typesafe.sbt.packager.linux.LinuxPlugin.autoImport.packageMapping
 import sbt.Def.Classpath
-import sbt.{file, _}
 import sbt.internal.inc.classpath.ClasspathUtil
 import sbt.internal.inc.{Analysis, LastModified, Stamps}
+import sbt.{file, _}
 import sbtassembly.MergeStrategy
 import xsbti.compile.analysis._
 import xsbti.compile.{CompileAnalysis, PreviousResult}
 
+import java.io.File
+import java.nio.file.Files
+import java.util.Optional
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.{Duration, MILLISECONDS, SECONDS, _}
@@ -29,7 +29,7 @@ object Util {
     if (!shouldTruncate) {
       cur
     } else {
-      System.out.println("Truncating timestamps...")
+      println("Truncating timestamps...")
       def truncateMtime(s: Stamp): Stamp = s match {
         case mtime: LastModified =>
           val truncated = SECONDS.toMillis(MILLISECONDS.toSeconds(mtime.value))
@@ -80,16 +80,6 @@ object Util {
     val dirs = children.filter(_.isDirectory)
     val childDirs = dirs.flatMap(dirsContaining(filter))
     if (children.exists(f => f.isFile && filter(f))) directory :: childDirs  else childDirs
-  }
-
-  def addDeps(deps:Seq[ModuleID], modifyDepTagForDeps:Seq[String], tags:String ): Seq[ModuleID] ={
-    deps.map { dep =>
-      if(modifyDepTagForDeps contains dep.name){
-        dep.organization % dep.name % dep.revision % tags
-      } else {
-        dep
-      }
-    }
   }
 
   def searchForAdditionalJars(dependencies: Classpath, jarNames: Seq[String]): Seq[(File, String)] = {
@@ -155,16 +145,18 @@ object Util {
     }
   }
 
-  lazy val cloudrepoUsername: String = sys.env.getOrElse("IO_CLOUDREPO_ACCOUNT_USER", "")
-  lazy val cloudrepoPassword: String = sys.env.getOrElse("IO_CLOUDREPO_ACCOUNT_PASSWORD", "")
+  def listClassFiles(classDirectory: File*): Seq[String] = {
+    PathFinder(classDirectory) ** "*.class" getPaths()
+  }
 
-  def conditionallyAddArtifact(artifact : sbt.Def.Initialize[sbt.librarymanagement.Artifact], taskDef : sbt.Def.Initialize[sbt.Task[java.io.File]]) : sbt.Def.SettingsDefinition = {
-    if (cloudrepoUsername != "" &&  cloudrepoPassword != "") {
-      println("Adding artifact " + artifact + " produced during task " + taskDef)
-      addArtifact(artifact, taskDef)
-    } else {
-      println("Skip publishing " + taskDef + " artifacts")
-      sbt.Def.SettingsDefinition.wrapSettingsDefinition(Seq.empty)
-    }
+  def scoverageFilterProtobufPattern(classDirectories: File*): String = {
+    Util.listClassFiles(classDirectories:_*)
+      .filter(_.endsWith("Lens.class"))
+      .map{ p =>
+        val t = p.split('$').dropRight(1).mkString("","$", ".*")
+          .split('/').last
+        ".*"+t
+      }
+      .mkString(";")
   }
 }

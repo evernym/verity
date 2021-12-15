@@ -10,6 +10,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.plain.PlainWeb
 import com.evernym.verity.msgoutbox.outbox.{Outbox, OutboxIdParam, msg_packager}
 import com.evernym.verity.msgoutbox.{ComMethod, ComMethodId, MsgId, RecipPackaging}
 import com.evernym.verity.actor.typed.BehaviourSpecBase
+import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -135,8 +136,8 @@ class PlainWebhookSenderSpec
     }
   }
 
-  lazy val outboxId = outboxIdParam.outboxId
-  lazy val outboxIdParam = OutboxIdParam("relId-recipId-default")
+  lazy val outboxId = outboxIdParam.entityId.toString
+  lazy val outboxIdParam = OutboxIdParam("relId", "recipId", "default")
   lazy val outboxPersistenceId = PersistenceId(TypeKey.name, outboxId).id
 
   def sendMsgToWebhookSender(msgId: MsgId,
@@ -157,7 +158,8 @@ class PlainWebhookSenderSpec
       comMethod.routePackaging,
       testMsgPackagers)
 
-    val packager = msg_packager.Packager(msgPackagingParam, msgStoreParam)
+    val salt = appConfig.getStringReq(SALT_EVENT_ENCRYPTION)
+    val packager = msg_packager.Packager(msgPackagingParam, testMsgRepository, salt)
     val sender = PlainWebhookSender(
       dispatchParam,
       packager,
@@ -168,5 +170,4 @@ class PlainWebhookSenderSpec
   }
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

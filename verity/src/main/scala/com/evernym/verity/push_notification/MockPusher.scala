@@ -6,7 +6,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Sink, Source}
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.config.ConfigConstants.MCM_SEND_MSG
 import com.evernym.verity.util2.UrlParam
 import com.typesafe.scalalogging.Logger
@@ -26,7 +26,7 @@ class MockPusher(val appConfig: AppConfig, executionContext: ExecutionContext) e
 
 
   lazy val sendToEndpointEnabled: Boolean =
-    AppConfigWrapper.config.getBoolean(MCM_SEND_MSG)
+    appConfig.config.getBoolean(MCM_SEND_MSG)
 
   def push(notifParam: PushNotifParam)
           (implicit system: ActorSystem): Future[PushNotifResponse] = {

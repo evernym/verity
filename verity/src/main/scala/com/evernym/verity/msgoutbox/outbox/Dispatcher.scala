@@ -4,7 +4,8 @@ import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.ActorRef
 import akka.actor.typed.scaladsl.ActorContext
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
-import com.evernym.verity.msgoutbox.{Authentication, ComMethod, ComMethodId, MsgId, VerKey, WalletId}
+import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.msgoutbox.{Authentication, ComMethod, ComMethodId, MessageRepository, MsgId, WalletId}
 import com.evernym.verity.msgoutbox.outbox.States.MsgDeliveryAttempt
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.AUTH_TYPE_OAUTH2
@@ -12,11 +13,10 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.{OAuthAc
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.{DispatcherType, MsgPackagingParam, MsgStoreParam, MsgTransportParam}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.plain.PlainWebhookDispatcher
 import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
-import com.evernym.verity.msgoutbox.outbox.msg_store.MsgStore
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.MsgTransports
-import com.typesafe.config.Config
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.{FiniteDuration, MILLISECONDS}
 
 
 //one instance gets created for each outbox at the time of outbox actor start
@@ -24,16 +24,16 @@ import scala.concurrent.ExecutionContext
 // * updating dispatcher whenever outbox communication details changes
 // * dispatching messages via the current dispatcher set
 
-class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
+class Dispatcher(val outboxActorContext: ActorContext[Outbox.Cmd],
                  accessTokenRefreshers: AccessTokenRefreshers,
-                 config: Config,
-                 msgStore: ActorRef[MsgStore.Cmd],
+                 eventEncryptionSalt: String,
+                 msgRepository: MessageRepository,
                  msgPackagers: MsgPackagers,
                  msgTransports: MsgTransports,
                  executionContext: ExecutionContext) {
 
-  def dispatch(msgId: MsgId, deliveryAttempts: Map[String, MsgDeliveryAttempt]): Unit = {
-    currentDispatcher.dispatch(msgId, deliveryAttempts)
+  def dispatch(msgId: MsgId, deliveryAttempts: Map[String, MsgDeliveryAttempt], config: OutboxConfig): Unit = {
+    currentDispatcher.dispatch(msgId, deliveryAttempts, config)
   }
 
   def ack(msgId: MsgId): Unit = {
@@ -43,8 +43,9 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
   //NOTE: this is the initial logic
   // and it may/will have to change as we integrate/support more scenarios/dispatchers
   def updateDispatcher(walletId: WalletId,
-                       senderVerKey: VerKey,
-                       comMethods: Map[ComMethodId, ComMethod]): Unit = {
+                       senderVerKey: VerKeyStr,
+                       comMethods: Map[ComMethodId, ComMethod],
+                       oauthReceiveTimeoutMs: Long): Unit = {
     dispatcherType =
       comMethods
         .find(_._2.typ == COM_METHOD_TYPE_HTTP_ENDPOINT)
@@ -53,7 +54,7 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
             case None =>
               createPlainWebhookDispatcher(comMethodId, comMethod, walletId, senderVerKey)
             case Some(auth) if auth.`type` == AUTH_TYPE_OAUTH2 =>
-              createOAuthWebhookDispatcher(comMethodId, comMethod, walletId, senderVerKey, auth)
+              createOAuthWebhookDispatcher(comMethodId, comMethod, walletId, senderVerKey, auth, oauthReceiveTimeoutMs)
             case Some(auth) =>
               throw new RuntimeException("authentication type not supported: " + auth.`type`)
           }
@@ -63,13 +64,13 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
   private def createPlainWebhookDispatcher(comMethodId: ComMethodId,
                                            comMethod: ComMethod,
                                            walletId: WalletId,
-                                           senderVerKey: VerKey): DispatcherType = {
+                                           senderVerKey: VerKeyStr): DispatcherType = {
     new PlainWebhookDispatcher(
       outboxActorContext,
-      config,
+      eventEncryptionSalt,
       comMethodId,
       comMethod,
-      MsgStoreParam(msgStore),
+      msgRepository,
       MsgPackagingParam(
         walletId,
         senderVerKey,
@@ -83,15 +84,16 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
   private def createOAuthWebhookDispatcher(comMethodId: ComMethodId,
                                            comMethod: ComMethod,
                                            walletId: WalletId,
-                                           senderVerKey: VerKey,
-                                           auth: Authentication): DispatcherType = {
+                                           senderVerKey: VerKeyStr,
+                                           auth: Authentication,
+                                           oauthReceiveTimeoutMs: Long): DispatcherType = {
     val uniqueOAuthAccessTokenHolderId = "oauth-access-token-holder-" + comMethodId
 
     val oAuthAccessTokenHolder = outboxActorContext.child(uniqueOAuthAccessTokenHolderId) match {
       case None =>
         outboxActorContext.spawn(
           OAuthAccessTokenHolder(
-            config,
+            FiniteDuration(oauthReceiveTimeoutMs, MILLISECONDS),
             auth.data,
             accessTokenRefreshers.refreshers(auth.version)
           ),
@@ -109,10 +111,10 @@ class Dispatcher(outboxActorContext: ActorContext[Outbox.Cmd],
     new OAuthWebhookDispatcher(
       outboxActorContext,
       oAuthAccessTokenHolder,
-      config,
+      eventEncryptionSalt,
       comMethodId,
       comMethod,
-      MsgStoreParam(msgStore),
+      msgRepository,
       MsgPackagingParam(
         walletId,
         senderVerKey,

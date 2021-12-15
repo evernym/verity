@@ -6,7 +6,8 @@ import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces.UndefinedPresent
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxPresentProof.HolderProofInteraction
 import com.evernym.integrationtests.e2e.sdk.vcx.VcxSdkProvider.Interaction
 import com.evernym.sdk.vcx.proof.DisclosedProofApi
-import com.evernym.verity.protocol.engine.{DID, MsgFamily}
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProofMsgFamily
 import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate, ProposedAttribute, ProposedPredicate}
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
@@ -49,7 +50,7 @@ trait VcxPresentProof
                        proofPredicate: Array[Predicate],
                        byInvitation: Boolean = false): PresentProofV1_0 = throw new NotImplementedError
 
-  def presentProof_1_0(forRelationship: DID, threadId: String): PresentProofV1_0 = {
+  def presentProof_1_0(forRelationship: DidStr, threadId: String): PresentProofV1_0 = {
     new UndefinedPresentProof_1_0 {
       override def acceptRequest(context: Context): Unit = {
         val i = interaction(threadId).asInstanceOf[HolderProofInteraction]
@@ -141,5 +142,5 @@ trait VcxPresentProof
 }
 
 object VcxPresentProof {
-  case class HolderProofInteraction(owningDid: DID, request: JSONObject, handle: Option[Int] = None) extends Interaction
+  case class HolderProofInteraction(owningDid: DidStr, request: JSONObject, handle: Option[Int] = None) extends Interaction
 }

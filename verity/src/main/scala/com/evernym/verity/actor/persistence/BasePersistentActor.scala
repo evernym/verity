@@ -7,7 +7,7 @@ import akka.event.LoggingReceive
 import akka.persistence._
 import akka.util.Timeout
 import com.evernym.agency.common.actor.{TransformedEvent, TransformedMultiEvents}
-import com.evernym.verity.util2.{Exceptions, HasExecutionContextProvider}
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Exceptions._
 import com.evernym.verity.util2.Status.UNSUPPORTED_MSG_TYPE
 import com.evernym.verity.actor._
@@ -18,12 +18,12 @@ import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
-import com.evernym.verity.metrics.CustomMetrics._
+import com.evernym.verity.observability.metrics.CustomMetrics._
 import com.evernym.verity.protocol.engine.MultiEvent
 import com.evernym.verity.util.Util._
 import com.evernym.verity.actor.persistence.transformer_registry.HasTransformationRegistry
-import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.metrics.InternalSpan
+import com.evernym.verity.observability.logs.LoggingUtil
+import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.transformations.transformers.<=>
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
@@ -61,7 +61,6 @@ trait BasePersistentActor
     totalRecoveredEvents = totalRecoveredEvents + by
   }
 
-  val defaultReceiveTimeoutInSeconds = 600
   val entityCategory: String = PERSISTENT_ACTOR_BASE
 
   def emptyEventHandler(event: Any): Unit = {}
@@ -147,7 +146,7 @@ trait BasePersistentActor
     } catch {
       case e: Exception =>
         val allEventNames = events.map(_.getClass.getSimpleName).mkString(", ")
-        val errorMsg = s"error during persisting actor event $allEventNames: ${Exceptions.getErrorMsg(e)}"
+        val errorMsg = s"[$persistenceId] error during persisting actor event $allEventNames: ${Exceptions.getErrorMsg(e)}"
         trackPersistenceFailure()
         handlePersistenceFailure(e, errorMsg)
     }
@@ -237,10 +236,6 @@ trait BasePersistentActor
 
   protected def normalizedEntityId: String = entityId.replace("$", "")
 
-  protected def entityReceiveTimeout: Duration = ConfigUtil.getReceiveTimeout(
-    appConfig, defaultReceiveTimeoutInSeconds,
-    normalizedEntityCategoryName, normalizedEntityType, normalizedEntityId)
-
   /**
    * configuration to decide if this persistent actor should use snapshot during recovery
    * @return
@@ -313,7 +308,7 @@ trait BasePersistentActor
         s"totalRecoveredEvents: $totalRecoveredEvents, " +
         s"timeTakenInMillis: $millis)"
       if (millis > warnRecoveryTime) logger.warn(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
-      else logger.debug(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
+      else logger.info(actorRecoveryMsg, (LOG_KEY_PERSISTENCE_ID, persistenceId))
 
       publishAppStateEvent(RecoverIfNeeded(CONTEXT_EVENT_RECOVERY))
       postRecoveryCompleted()
@@ -327,7 +322,6 @@ trait BasePersistentActor
   def postRecoveryCompleted(): Unit = {
     postActorRecoveryStarted = LocalDateTime.now
     metricsWriter.runWithSpan("postRecoveryCompleted", "BasePersistentActor", InternalSpan) {
-      context.setReceiveTimeout(entityReceiveTimeout)
       logger.debug("post actor recovery started", (LOG_KEY_PERSISTENCE_ID, persistenceId))
       basePostActorRecoveryCompleted()
     }
@@ -382,7 +376,7 @@ trait BasePersistentActor
       event
     } catch {
       case e: Exception =>
-        val errorMsg = s"error while undoing persisted event transformation (persistence-id: $persistenceId)"
+        val errorMsg = s"[$persistenceId] error while undoing persisted event transformation"
         handleUndoTransformFailure(e, errorMsg)
         logger.error(Exceptions.getStackTraceAsSingleLineString(e))
         throw e
@@ -393,10 +387,10 @@ trait BasePersistentActor
     try {
       receiveEvent(evt)
       postEventHandlerApplied()
-      logger.trace("event recovered", (LOG_KEY_PERSISTENCE_ID, persistenceId), ("event", evt.getClass.getSimpleName))
+      logger.trace(s"[$persistenceId] event recovered", ("event", evt.getClass.getSimpleName))
     } catch {
       case e: Exception =>
-        logger.error(s"[$persistenceId] event not handled by event receiver: ${e.getMessage}", (LOG_KEY_PERSISTENCE_ID, persistenceId), ("event", evt.getClass.getSimpleName))
+        logger.error(s"[$persistenceId] event not handled by event receiver: ${e.getMessage}", ("event", evt.getClass.getSimpleName))
         logger.error(Exceptions.getStackTraceAsSingleLineString(e))
         throw e
     }
@@ -419,15 +413,11 @@ trait BasePersistentActor
 
   def handleErrorEventParam(errorEventParam: ErrorEvent): Unit = {
     publishAppStateEvent(errorEventParam)
-    throw errorEventParam.cause
+    log.error(errorEventParam.cause.getMessage)
   }
 
   def handlePersistenceFailure(cause: Throwable, errorMsg: String): Unit = {
     handleErrorEventParam(ErrorEvent(SeriousSystemError, CONTEXT_EVENT_PERSIST, cause, Option(errorMsg)))
-  }
-
-  def handleRecoveryFailure(cause: Throwable, errorMsg: String): Unit = {
-    handleErrorEventParam(ErrorEvent(SeriousSystemError, CONTEXT_EVENT_RECOVERY, cause, Option(errorMsg)))
   }
 
   def handleUndoTransformFailure(cause: Throwable, errorMsg: String): Unit = {
@@ -436,40 +426,39 @@ trait BasePersistentActor
 
   override def onPersistFailure(cause: Throwable, event: Any, seqNr: Long): Unit = {
     val errorMsg =
-      s"actor persist event (${event.getClass}) failed (" +
-        "possible-causes: database not reachable/up/responding, required tables are not created etc, " +
-        s"persistence-id: $persistenceId, " +
-        s"error-msg: ${cause.getMessage})"
+      s"[$persistenceId] actor persist event (${event.getClass.getSimpleName}) failed (" +
+        s"error-msg: ${cause.getMessage}, " +
+        s"possible-causes: $JOURNAL_ERROR_POSSIBLE_CAUSE)"
+
     trackPersistenceFailure()
     handlePersistenceFailure(cause, errorMsg)
   }
 
   override def onPersistRejected(cause: Throwable, event: Any, seqNr: Long): Unit = {
     val errorMsg =
-      s"actor persist event (${event.getClass}) rejected (" +
-        "possible-causes: database not reachable/up/responding, required tables are not created etc, " +
-        s"persistence-id: $persistenceId, " +
-        s"error-msg: ${cause.getMessage})"
+      s"[$persistenceId] " +
+        s"actor persist event (${event.getClass.getSimpleName}) rejected (" +
+        s"error-msg: ${cause.getMessage}, " +
+        s"possible-causes: $JOURNAL_ERROR_POSSIBLE_CAUSE)"
+
     trackPersistenceFailure()
     handlePersistenceFailure(cause, errorMsg)
   }
 
-  final override def onRecoveryFailure(cause: Throwable, event: Option[Any]): Unit = {
+  override def onRecoveryFailure(cause: Throwable, event: Option[Any]): Unit = {
     event match {
-      case Some(_) =>
-        val errorMsg = "actor not able to start (" +
-          "possible-causes: unknown, "+
-          s"persistence-id: $persistenceId, " +
-          s"error-msg: ${cause.getMessage})"
-        handleRecoveryFailure(cause, errorMsg)
+      case Some(event) =>
+        logger.error(s"[$persistenceId] error while applying event ${event.getClass.getSimpleName}: ${Exceptions.getStackTraceAsSingleLineString(cause)}")
       case None =>
-        val errorMsg = "actor not able to start (" +
-          "possible-causes: database not reachable/up/responding, required tables are not created etc, " +
-          s"persistence-id: $persistenceId, " +
-          s"error-msg: ${cause.getMessage})"
-        handleRecoveryFailure(cause, errorMsg)
+        logger.error(s"[$persistenceId] error while actor recovery, " +
+          s"possible-causes: $JOURNAL_ERROR_POSSIBLE_CAUSE " +
+          s"(error message: ${Exceptions.getStackTraceAsSingleLineString(cause)})"
+        )
     }
   }
+
+  private val JOURNAL_ERROR_POSSIBLE_CAUSE =
+    "database not reachable/responding, required tables are not created, permission issues etc"
 
   def receiveActorInitSpecificCmd: Receive = PartialFunction.empty
 
@@ -527,4 +516,17 @@ trait HasActorResponseTimeout {
 
 trait EventPersistenceEncryption {
   def persistenceEncryptionKey: String
+}
+
+trait BasePersistentTimeoutActor extends BasePersistentActor {
+  val defaultReceiveTimeoutInSeconds = 600
+
+  protected def entityReceiveTimeout: Duration = ConfigUtil.getReceiveTimeout(
+    appConfig, defaultReceiveTimeoutInSeconds,
+    normalizedEntityCategoryName, normalizedEntityType, normalizedEntityId)
+
+  override def postRecoveryCompleted(): Unit = {
+    super.postRecoveryCompleted()
+    context.setReceiveTimeout(this.entityReceiveTimeout)
+  }
 }

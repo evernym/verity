@@ -30,7 +30,7 @@ project/plugins/project/
 
 # Mac OS
 .DS_Store
-/doc/code/mxgraph-parse/.vscode/
+**/.vscode/
 
 # akka diagnostics
 **/akka-diagnostics/*

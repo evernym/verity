@@ -1,9 +1,10 @@
-image: registry.gitlab.com/evernym/containers/build-verity:d87c31e1
+image: registry.gitlab.com/evernym/containers/build-verity:6cfa6200
 
 variables:
   MASTER_PROJECT_ID: "327"
   indyNodeVersion: "1.12.4"
   sovtokenVersion: "1.0.9"
+  TRIGGERAPI_URL_VERITY_K8S_RELEASE: "https://gitlab.com/api/v4/projects/28139975/trigger/pipeline"
   TRIGGERAPI_URL_VERITY_RELEASE: "https://gitlab.corp.evernym.com/api/v4/projects/688/trigger/pipeline"
   # TRIGGERAPI_REF_VERITY_RELEASE: "auto-deploy"
 
@@ -11,13 +12,22 @@ stages:
   - check
   - test
   - package
+  - build-test-harness
+  - acceptance
   - publish
   - deploy
 
 include:
+  - '/cicd/jobs/common.yml'
   - '/cicd/jobs/check.yml'
   - '/cicd/jobs/test.yml'
   - '/cicd/jobs/package.yml'
+  - '/cicd/jobs/interop.yml'
   - '/cicd/jobs/publish.yml'
   - '/cicd/jobs/deploy.yml'
-  
+  - template: Security/SAST.gitlab-ci.yml 
+  - template: Security/Secret-Detection.gitlab-ci.yml
+ 
+spotbugs-sast:
+  variables:
+    FAIL_NEVER: 1

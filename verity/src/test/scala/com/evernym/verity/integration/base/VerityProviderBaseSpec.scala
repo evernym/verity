@@ -15,13 +15,6 @@ import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextPr
 import scala.language.postfixOps
 import scala.util.Random
 
-
-//TODO: below are list of known (there might be more) "global singleton objects"
-// which may/will cause issues sooner or later
-// if try to use multi node cluster in single JVM (like what this VerityProviderBaseSpec does)
-//    1. AppConfigWrapper
-//    2. MetricsReader and KamonPrometheusMetricsReporter
-
 /**
  * base class for specs to use LocalVerity
  */
@@ -125,6 +118,7 @@ trait VerityProviderBaseSpec
 
     val appTypeConfig = MULTI_NODE_CLUSTER_CONFIG.withFallback {
       appType match {
+        case EAS => EAS_DEFAULT_CONFIG
         case CAS => CAS_DEFAULT_CONFIG
         case VAS => VAS_DEFAULT_CONFIG
       }
@@ -160,13 +154,20 @@ trait VerityProviderBaseSpec
       |""".stripMargin
   )
 
+  private val EAS_DEFAULT_CONFIG = ConfigFactory.parseString(
+    """
+      |akka {
+      |  sharding-region-name {
+      |    user-agent = "EnterpriseAgent"
+      |    user-agent-pairwise = "EnterpriseAgentPairwise"
+      |  }
+      |}
+      |""".stripMargin
+  )
+
   private val MULTI_NODE_CLUSTER_CONFIG = ConfigFactory.parseString(
     s"""
-      |verity.app-state-manager.state.draining {
-      |  delay-before-leave = 5
-      |  delay-between-status-checks = 1
-      |  max-status-check-count = 20
-      |}
+      |
       |""".stripMargin
   )
   def executionContextProvider: ExecutionContextProvider
@@ -175,3 +176,4 @@ trait VerityProviderBaseSpec
 trait AppType
 case object CAS extends AppType
 case object VAS extends AppType
+case object EAS extends AppType

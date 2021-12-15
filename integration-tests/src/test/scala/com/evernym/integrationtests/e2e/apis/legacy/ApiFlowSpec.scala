@@ -3,7 +3,7 @@ package com.evernym.integrationtests.e2e.apis.legacy
 import com.evernym.integrationtests.e2e.scenario.Scenario._
 import com.evernym.integrationtests.e2e.scenario.Scenario
 import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.scalalogging.Logger
 

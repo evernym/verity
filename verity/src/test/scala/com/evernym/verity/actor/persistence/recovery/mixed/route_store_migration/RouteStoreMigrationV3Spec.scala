@@ -10,7 +10,7 @@ import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.constants.ActorNameConstants.{ACTOR_TYPE_AGENCY_AGENT_ACTOR, ACTOR_TYPE_AGENCY_AGENT_PAIRWISE_ACTOR, ACTOR_TYPE_USER_AGENT_ACTOR, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, ROUTE_REGION_ACTOR_NAME}
 import com.evernym.verity.constants.Constants.YES
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
@@ -43,7 +43,7 @@ class RouteStoreMigrationV3Spec
 
   //checks migration status completeness only for those legacy routing actors
   // belonging to given routes
-  def checkIfMigrationCompleted(routes: Map[DID, ActorAddressDetail]): Unit = {
+  def checkIfMigrationCompleted(routes: Map[DidStr, ActorAddressDetail]): Unit = {
     eventually(timeout(Span(10, Seconds))) {
       routes.foreach { case (r, aad) =>
         platform.routeRegion ! ForIdentifier(r, GetStoredRoute)
@@ -78,15 +78,15 @@ class RouteStoreMigrationV3Spec
     ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR
   )
 
-  lazy val routingDataForLegacyActors: Map[DID, ActorAddressDetail] =
+  lazy val routingDataForLegacyActors: Map[DidStr, ActorAddressDetail] =
     createRoutingData(100 + Random.nextInt(200))
 
-  def createRoutingData(totalRoutes: Int): Map[DID, ActorAddressDetail] =
+  def createRoutingData(totalRoutes: Int): Map[DidStr, ActorAddressDetail] =
     (1 to totalRoutes).map { _ =>
       val didPair = CommonSpecUtil.generateNewDid()
       val index = Random.nextInt(entityTypes.size-1)
       val actorType = entityTypes(index)
-      didPair.DID -> ActorAddressDetail(actorType, didPair.DID)
+      didPair.did -> ActorAddressDetail(actorType, didPair.did)
     }.toMap
 
   override def overrideSpecificConfig: Option[Config] = Option{
@@ -119,5 +119,5 @@ class RouteStoreMigrationV3Spec
   /**
    * custom thread pool executor
    */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
+  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

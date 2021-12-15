@@ -3,6 +3,7 @@ syntax = "proto3";
 // Brought in from scalapb-runtime
 import "scalapb/scalapb.proto";
 import "outbox-common.proto";
+import "outbox/outbox-config.proto";
 
 package com.evernym.verity.msgoutbox.outbox.Events;
 
@@ -12,6 +13,13 @@ message OutboxParamUpdated {
     string senderVerKey = 2;
     // map of comMethodId and ComMethod
     map<string, ComMethod> comMethods = 3;
+}
+
+message MetadataStored {
+    option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.Event";
+    string relId = 1;
+    string recipId = 2;
+    string destId = 3;
 }
 
 message MsgAdded {
@@ -38,4 +46,9 @@ message MsgSendingFailed {
 message MsgRemoved {
     option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.Event";
     string msgId = 1;
+}
+
+message ConfigUpdated {
+    option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.Event";
+    OutboxConfig config = 1 [(scalapb.field).no_box = true];
 }

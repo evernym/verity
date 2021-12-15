@@ -4,7 +4,7 @@ import com.evernym.verity.vault.WalletExt
 import com.evernym.verity.actor.wallet._
 
 import scala.concurrent.ExecutionContext
-import org.hyperledger.indy.sdk.anoncreds.Anoncreds
+import com.evernym.vdrtools.anoncreds.Anoncreds
 
 import scala.concurrent.Future
 

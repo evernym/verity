@@ -1,8 +1,10 @@
 package com.evernym.verity.protocol.protocols.walletBackup.legacy
 
+import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi, VerKey}
+import com.evernym.verity.protocol.engine.Protocol
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily.{BackupMsg, _}
 import com.evernym.verity.protocol.protocols.walletBackup.{BackupState, State => S, _}
@@ -30,10 +32,18 @@ trait WalletBackupLegacy extends Protocol[WalletBackup, Role, BackupMsg, BackupE
   def legacyApplyEvt: ApplyEvent = {
     case (s: S.ReadyToPersistBackup    , _ , BackupStored(w)              ) => S.ReadyToPersistBackup(s.vk, Some(w.toByteArray))
     case (_: S.ReadyToPersistBackup    , _ , RecoveredBackup()            ) => ctx.getState
+    case (s: S, _, e) =>
+      //NOTE:
+      // As of today this protocol is not used, but a scheduled job was trying to spin up this older protocol
+      // and it was causing unhandled error which was changing app state to Sick unnecessarily.
+      // This block is to handle those older events which is no more backward compatible with new code
+      logger.warn(s"[${definition.protoRef.toString}] unhandled event '${e.getClass.getSimpleName}' in state: '${s.getClass.getSimpleName}' " +
+        s"(this is known issue for very old non-backward compatible 'wallet-backup' protocol events)")
+      s
   }
 
   //TODO: This is a duplicate function - in WalletBackup.scala
-  def backupDup(vk: VerKey, wallet: Any): Unit = {
+  def backupDup(vk: VerKeyStr, wallet: Any): Unit = {
     val w: WalletBackupBytes = wallet match {
       case w: WalletBackupBytes => ctx.logger.debug("byte array received - newer expectation is base64 encoded str"); w
       case w: WalletBackupEncoded => ctx.logger.debug("received base64 encoded string"); getBase64Decoded(w)
@@ -54,7 +64,7 @@ trait WalletBackupLegacy extends Protocol[WalletBackup, Role, BackupMsg, BackupE
     }
   }
 
-  def recoverBackupLegacy(blobAddress: VerKey, r: Role, w: Option[WalletBackupBytes]=None): Unit = {
+  def recoverBackupLegacy(blobAddress: VerKeyStr, r: Role, w: Option[WalletBackupBytes]=None): Unit = {
     def restored(b: WalletBackupBytes): Restored = Restored(getBase64Encoded(b))
 
     ctx.withSegment[BackupStored](blobAddress) {

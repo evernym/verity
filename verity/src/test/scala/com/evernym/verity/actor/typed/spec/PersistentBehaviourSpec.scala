@@ -1,24 +1,30 @@
 package com.evernym.verity.actor.typed.spec
 
 import akka.Done
-import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.NoSerializationVerificationNeeded
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.cluster.sharding.ShardRegion.EntityId
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityContext, EntityTypeKey}
 import akka.pattern.StatusReply
-import akka.persistence.typed.PersistenceId
+import akka.persistence.typed.{PersistenceId, RecoveryCompleted}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.typed.spec.Events._
 import com.evernym.verity.actor.typed.BehaviourSpecBase
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
 import com.evernym.verity.actor.typed.base.PersistentEventAdapter
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.scalalogging.Logger
 import scalapb.GeneratedMessageCompanion
 
 import java.util.UUID
+import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
+
+import scala.concurrent.duration._
 
 
 class PersistentBehaviourSpec
@@ -49,7 +55,7 @@ class PersistentBehaviourSpec
         val entityId = openNewAccount("mock-user")
         val prob = createTestProbe[StatusReply[Done]]()
         accountRegion ! ShardingEnvelope(entityId, Commands.Stop(prob.ref))
-        prob.expectMessage(StatusReply.Ack)
+        prob.expectNoMessage(5.seconds)
         val state = getState(entityId)
         state shouldBe States.Opened("mock-user", 0)
       }
@@ -110,15 +116,16 @@ class PersistentBehaviourSpec
   }
 
   lazy val sharding: ClusterSharding = ClusterSharding(system)
+  lazy val appConfig: AppConfig = new TestAppConfig()
   lazy val accountRegion: ActorRef[ShardingEnvelope[Cmd]] = sharding.init(Entity(Account.TypeKey) { entityContext =>
-    Account(entityContext)
+    Account(entityContext, appConfig)
   })
 
 }
 
 object Account {
 
-  trait Cmd
+  trait Cmd extends ActorMessage
   object Commands {
     case class Open(name: String, balance: Double, replyTo: ActorRef[StatusReply[Done]]) extends Cmd
     case class Credit(amount: Double, replyTo: ActorRef[StatusReply[Done]]) extends Cmd
@@ -128,7 +135,7 @@ object Account {
     case class Stop(replyTo: ActorRef[StatusReply[Done]]) extends Cmd
   }
 
-  trait State
+  trait State extends NoSerializationVerificationNeeded
   object States {
     case object Empty extends State
     case class Opened(name: String, balance: Double) extends State
@@ -137,11 +144,12 @@ object Account {
 
   val TypeKey: EntityTypeKey[Cmd] = EntityTypeKey("Account")
 
-  def apply(entityContext: EntityContext[Cmd]): Behavior[Cmd] = {
+  def apply(entityContext: EntityContext[Cmd], appConfig: AppConfig): Behavior[Cmd] = {
     val persistenceId = PersistenceId(TypeKey.name, entityContext.entityId)
+    val salt = appConfig.getStringReq(SALT_EVENT_ENCRYPTION)
     EventSourcedBehavior
       .withEnforcedReplies(persistenceId, States.Empty, commandHandler, eventHandler)
-      .eventAdapter(new PersistentEventAdapter(entityContext.entityId, TestObjectCodeMapper))
+      .eventAdapter(PersistentEventAdapter(entityContext.entityId, TestObjectCodeMapper, salt))
       .receiveSignal(signalHandler(persistenceId))
   }
 
@@ -172,20 +180,25 @@ object Account {
     case (st: State, Commands.GetState(replyTo)) =>
       Effect.reply(replyTo)(st)
 
-    case (_: State, Commands.Stop(replyTo)) =>
-      Behaviors.stopped
-      Effect.reply(replyTo)(StatusReply.Ack)
+    case (_: State, Commands.Stop(_)) =>
+      Effect
+        .stop()
+        .thenNoReply()
+
   }
 
   private def signalHandler(persistenceId: PersistenceId): PartialFunction[(State, Signal), Unit] = {
-    case (_: State, PostStop) => logger.debug(s"[$persistenceId] behaviour stopped")
+    case (_: State, RecoveryCompleted) =>
+      logger.debug(s"[$persistenceId] recovered")
+    case (_: State, PostStop) =>
+      logger.debug(s"[$persistenceId] behaviour stopped")
   }
 
   private val eventHandler: (State, Any) => State = {
-    case (States.Empty, Events.Opened(name, balance)) => States.Opened(name, balance)
-    case (cs:States.Opened, Events.Credited(amount))  => cs.copy(balance = cs.balance + amount)
-    case (cs:States.Opened, Events.Debited(amount))   => cs.copy(balance = cs.balance - amount)
-    case (st:States.Opened, Events.Closed())          => States.Closed(st.name, st.balance)
+    case (States.Empty,     Events.Opened(name, balance)) => States.Opened(name, balance)
+    case (cs:States.Opened, Events.Credited(amount))      => cs.copy(balance = cs.balance + amount)
+    case (cs:States.Opened, Events.Debited(amount))       => cs.copy(balance = cs.balance - amount)
+    case (st:States.Opened, Events.Closed())              => States.Closed(st.name, st.balance)
   }
 }
 

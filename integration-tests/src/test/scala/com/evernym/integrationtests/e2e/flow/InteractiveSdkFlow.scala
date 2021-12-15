@@ -1,8 +1,8 @@
 package com.evernym.integrationtests.e2e.flow
 
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.StatusCodes.MovedPermanently
-import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
+import akka.http.scaladsl.model.StatusCodes.{MovedPermanently, OK}
+import akka.http.scaladsl.model.{HttpEntity, HttpMethods, HttpRequest, Uri}
 import com.evernym.integrationtests.e2e.TestConstants
 import com.evernym.integrationtests.e2e.msg.JSONObjectUtil.threadId
 import com.evernym.integrationtests.e2e.scenario.{ApplicationAdminExt, Scenario}
@@ -12,10 +12,10 @@ import com.evernym.integrationtests.e2e.util.ProvisionTokenUtil.genTokenOpt
 import com.evernym.sdk.vcx.VcxException
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
-import com.evernym.verity.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.protocol.engine.Constants.`@TYPE`
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.RestrictionBuilder
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
@@ -29,6 +29,7 @@ import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
+import org.scalatest.time.{Millis, Seconds, Span}
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
@@ -189,7 +190,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
     val receiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
     s"[$issuerName] write issuer DID to ledger" taggedAs UNSAFE_IgnoreLog in {
-      val (issuerDID, issuerVerkey): (DID, VerKey) = currentIssuerId(issuerSdk, receiverSdk)
+      val (issuerDID, issuerVerkey): (DidStr, VerKeyStr) = currentIssuerId(issuerSdk, receiverSdk)
       issuerSdk.publicDID = Some(issuerDID)
 
       ledgerUtil.bootstrapNewDID(issuerDID, issuerVerkey, "ENDORSER")
@@ -244,16 +245,58 @@ trait InteractiveSdkFlow extends MetricsFlow {
     assert(result.contains(logoUrl))
   }
 
-  def resolveShortInviteUrl(shortInviteUrl: String)(implicit scenario: Scenario): String = {
+  def checkShortInviteUrl(shortInviteUrl: String, inviteUrl: String)(implicit scenario: Scenario): Unit = {
     val fut = Http()(scenario.actorSystem).singleRequest(
       HttpRequest(
         method = HttpMethods.GET,
         uri = shortInviteUrl,
       ))
     val response = Await.result(fut, 10.seconds)
-    response.status shouldBe MovedPermanently
-    response.getHeader("Location").get.value
+    response.status match {
+      case MovedPermanently =>
+        response.getHeader("Location").get.value shouldBe inviteUrl
+      case OK =>
+        val respString = response.entity.asInstanceOf[HttpEntity.Strict].getData().utf8String
+        new JSONObject(respString) // checking that we go valid JSON
+      case s => fail(s"Un-expected response status: $s")
+    }
   }
+
+  def writeSchemaWithEndorserDid(sdk: VeritySdkProvider,
+                                 ledgerUtil: LedgerUtil,
+                                 schemaName: String,
+                                 endorserDid: String,
+                                 schemaVersion: String,
+                                 schemaAttrs: String*)
+                                (implicit scenario: Scenario): Unit = {
+    writeSchemaWithEndorserDid(sdk, sdk, ledgerUtil, schemaName, endorserDid, schemaVersion, schemaAttrs: _*)
+  }
+
+  def writeSchemaWithEndorserDid(issuerSdk: VeritySdkProvider,
+                                 msgReceiverSdkProvider: VeritySdkProvider,
+                                 ledgerUtil: LedgerUtil,
+                                 schemaName: String,
+                                 endorserDid: String,
+                                 schemaVersion: String,
+                                 schemaAttrs: String*)
+                                (implicit scenario: Scenario): Unit = {
+    val issuerName = issuerSdk.sdkConfig.name
+    s"get write schema $schemaName transaction for $issuerName" - {
+
+      val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
+
+      s"[$issuerName] use write-schema protocol" in {
+        val schema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
+        schema.write(issuerSdk.context, endorserDid)
+
+        var schemaId = ""
+        msgReceiverSdk.expectMsg("status-report") {resp =>
+          resp shouldBe an[JSONObject]
+        }
+      }
+    }
+  }
+
 
   def writeSchema(sdk: VeritySdkProvider,
                   ledgerUtil: LedgerUtil,
@@ -289,8 +332,10 @@ trait InteractiveSdkFlow extends MetricsFlow {
         issuerSdk.updateData(s"$schemaName-$schemaVersion-id",schemaId)
       }
       s"[$issuerName] check schema is on ledger" in {
-        val (issuerDID, _): (DID, VerKey) = currentIssuerId(issuerSdk, msgReceiverSdk)
-        ledgerUtil.checkSchemaOnLedger(issuerDID, schemaName, schemaVersion)
+        val (issuerDID, _): (DidStr, VerKeyStr) = currentIssuerId(issuerSdk, msgReceiverSdk)
+        eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+          ledgerUtil.checkSchemaOnLedger(issuerDID, schemaName, schemaVersion)
+        }
       }
     }
   }
@@ -345,7 +390,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
       s"[$issuerName] use write-schema protocol before issuer DID is on ledger" in {
         val receiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
-        val (issuerDID, issuerVerkey): (DID, VerKey) = currentIssuerId(issuerSdk, receiverSdk)
+        val (issuerDID, issuerVerkey): (DidStr, VerKeyStr) = currentIssuerId(issuerSdk, receiverSdk)
         val endorserDidOnLedger = Try {
           ledgerUtil.checkDidOnLedger(issuerDID, issuerVerkey, "ENDORSER")
           true
@@ -429,6 +474,49 @@ trait InteractiveSdkFlow extends MetricsFlow {
     }
   }
 
+  def writeCredDefWithEndorserDid(sdk: VeritySdkProvider,
+                                  credDefName: String,
+                                  credTag: String,
+                                  revocation: RevocationRegistryConfig,
+                                  schemaName: String,
+                                  endorserDid: String,
+                                  schemaVersion: String,
+                                  ledgerUtil: LedgerUtil
+                                 )
+                                 (implicit scenario: Scenario): Unit = {
+    writeCredDefWithEndorserDid(sdk, sdk, credDefName, credTag, revocation, schemaName, endorserDid, schemaVersion, ledgerUtil)
+  }
+
+  def writeCredDefWithEndorserDid(issuerSdk: VeritySdkProvider,
+                                  msgReceiverSdkProvider: VeritySdkProvider,
+                                  credDefName: String,
+                                  credTag: String,
+                                  revocation: RevocationRegistryConfig,
+                                  schemaName: String,
+                                  endorserDid: String,
+                                  schemaVersion: String,
+                                  ledgerUtil: LedgerUtil
+                                 )
+                                 (implicit scenario: Scenario): Unit = {
+
+    val issuerName = issuerSdk.sdkConfig.name
+
+    val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
+
+    s"get credential def ($credDefName) transaction for $issuerName" - {
+      s"[$issuerName] use write-cred-def protocol" taggedAs UNSAFE_IgnoreLog in {
+        val schemaId = issuerSdk.data_!(s"$schemaName-$schemaVersion-id")
+        issuerSdk.writeCredDef_0_6(credDefName, schemaId, Some(credTag), Some(revocation))
+          .write(issuerSdk.context, endorserDid)
+
+        var credDefId = ""
+        msgReceiverSdk.expectMsg("status-report", Some(credDefTimeout.max(scenario.timeout))) { resp =>
+          resp shouldBe an[JSONObject]
+        }
+      }
+    }
+  }
+
   def connect_1_0(inviter: ApplicationAdminExt,
                   invitee: ApplicationAdminExt,
                   connectionId: String,
@@ -482,7 +570,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
             // check shortInviteURL.
             val shortInviteUrl = msg.getString("shortInviteURL")
-            resolveShortInviteUrl(shortInviteUrl) shouldBe inviteUrl
+            checkShortInviteUrl(shortInviteUrl, inviteUrl)
 
             msg.getJSONObject("~thread").getString("thid") shouldBe threadId
           }
@@ -581,7 +669,8 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
             // check shortInviteURL.
             val shortInviteUrl = msg.getString("shortInviteURL")
-            resolveShortInviteUrl(shortInviteUrl) shouldBe inviteUrl
+
+            checkShortInviteUrl(shortInviteUrl, inviteUrl)
 
             msg.getJSONObject("~thread").getString("thid") shouldBe threadId
 
@@ -1038,7 +1127,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       }
 
       s"[$verifierName] start present-proof using byInvitation" in {
-        val (issuerDID, _): (DID, VerKey) = currentIssuerId(verifierSdk, verifierMsgReceiver)
+        val (issuerDID, _): (DidStr, VerKeyStr) = currentIssuerId(verifierSdk, verifierMsgReceiver)
 
         val restriction = RestrictionBuilder
           .blank()
@@ -1181,7 +1270,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$verifierName] request a proof presentation" in {
         val forRel = verifierSdk.relationship_!(relationshipId).owningDID
 
-        val (issuerDID, _): (DID, VerKey) = currentIssuerId(verifierSdk, verifierMsgReceiver)
+        val (issuerDID, _): (DidStr, VerKeyStr) = currentIssuerId(verifierSdk, verifierMsgReceiver)
 
         val restriction = RestrictionBuilder
           .blank()
@@ -1276,7 +1365,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$verifierName] fails to request a proof presentation" in {
         val forRel = verifierSdk.relationship_!(relationshipId).owningDID
 
-        val (issuerDID, _): (DID, VerKey) = currentIssuerId(verifierSdk, verifierMsgReceiver)
+        val (issuerDID, _): (DidStr, VerKeyStr) = currentIssuerId(verifierSdk, verifierMsgReceiver)
 
         val restriction = RestrictionBuilder
           .blank()
@@ -1327,7 +1416,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$verifierName] request a proof presentation" in {
         val forRel = verifierSdk.relationship_!(relationshipId).owningDID
 
-        val (issuerDID, _): (DID, VerKey) = currentIssuerId(verifierSdk, verifierMsgReceiver)
+        val (issuerDID, _): (DidStr, VerKeyStr) = currentIssuerId(verifierSdk, verifierMsgReceiver)
 
         val restriction = RestrictionBuilder
           .blank()
@@ -1689,7 +1778,7 @@ object InteractiveSdkFlow {
   }
 
   def currentIssuerId(issuerSdk: VeritySdkProvider,
-                      msgReceiverSdk: VeritySdkProvider with MsgReceiver)(implicit scenario: Scenario): (DID, VerKey) = {
+                      msgReceiverSdk: VeritySdkProvider with MsgReceiver)(implicit scenario: Scenario): (DidStr, VerKeyStr) = {
     var did = ""
     var verkey = ""
     issuerSdk.issuerSetup_0_6.currentPublicIdentifier(issuerSdk.context)

@@ -1,11 +1,14 @@
 package com.evernym.verity.actor.agent
 
-import akka.actor.{Actor, ActorRef, ActorSystem}
+import akka.actor.{ActorRef, ActorSystem}
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.ForIdentifier
+import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
+import com.evernym.verity.observability.logs.HasLogger
 import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, _}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.registry.{LaunchesProtocol, PinstIdPair, ProtocolRegistry}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -14,7 +17,7 @@ trait ActorLaunchesProtocol
   extends LaunchesProtocol
   with HasExecutionContextProvider {
 
-  this: Actor with HasActorResponseTimeout with HasLogger =>
+  this: CoreActor with HasActorResponseTimeout with HasLogger =>
 
   private implicit val executionContext: ExecutionContext = futureExecutionContext
 
@@ -34,21 +37,21 @@ trait ActorLaunchesProtocol
     val sndr = sender()
     try {
       stateDetailsFor(ipr.protoRef).map { paramMapper =>
-        logger.debug(s"init params received")
+        logger.debug(s"[$actorId] init params received")
         val parameters = ipr.stateKeys.map(paramMapper)
         sndr ! ProtocolCmd(InitProtocol(domainId, parameters, sponsorRel), None)
-        logger.debug(s"init params sent")
+        logger.debug(s"[$actorId] init params sent")
       }.recover {
         case e: MatchError =>
-          logger.error(s"init param not found: " + e.getMessage, e)
+          logger.error(s"[$actorId] init param not found: " + e.getMessage, e)
           throw e
         case e: RuntimeException =>
-          logger.error(s"init params construction failed: " + e.getMessage, e)
+          logger.error(s"[$actorId] init params construction failed: " + e.getMessage, e)
           throw e
       }
     } catch {
       case e: RuntimeException =>
-        logger.error(s"init params retrieval/preparation/sending failed: "  + e.getMessage, e)
+        logger.error(s"[$actorId] init params retrieval/preparation/sending failed: "  + e.getMessage, e)
         throw e
     }
   }

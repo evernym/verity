@@ -2,12 +2,13 @@ package com.evernym.verity.integration.base.sdk_provider.msg_listener
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.StatusCodes.{OK, Unauthorized}
 import akka.http.scaladsl.model.headers.HttpCredentials
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, StatusCode}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.server.directives.RouteDirectives
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.integration.base.sdk_provider.{OAuthParam, V1OAuthParam, V2OAuthParam}
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 
@@ -35,22 +36,37 @@ trait MsgListenerBase[T]
 
   def port: Int
   def msgRoute: Route
-  def checkAuthToken: Boolean
+
+  protected var checkAuthToken: Boolean = false
+  protected var responseStatus: StatusCode = OK
+  protected var responseStatusCount: Map[StatusCode, Int] = Map.empty
+
   lazy val logger: Logger = getLoggerByName("MsgListener")
 
   lazy val webhookEndpoint = s"http://localhost:$port/$webhookEndpointPath"
 
   protected lazy val webhookEndpointPath: String = "webhook"
   protected lazy val queue: LinkedBlockingDeque[T] = new LinkedBlockingDeque[T]()
-  protected def receiveMsg(msg: T): Unit = queue.add(msg)
+
+  def addToQueue(msg: T): Unit = queue.add(msg)
 
   protected def startHttpServer(): Unit = {
     Http().newServerAt("localhost", port).bind(edgeRoute)
   }
 
-  private def edgeRoute: Route =
-    (if (rejectMessages) RouteDirectives.reject else msgRoute) ~
-      (if (checkAuthToken) oAuthAccessTokenRoute else RouteDirectives.reject)
+  private def edgeRoute: Route = msgRoute ~ oAuthAccessTokenRoute
+
+  def setCheckAuth(value: Boolean): Unit = {
+    checkAuthToken = value
+  }
+
+  def setResponseCode(value: StatusCode): Unit = {
+    responseStatus = value
+  }
+
+  def getResponseCodeCount(value: StatusCode): Int = {
+    responseStatusCount.getOrElse(value, 0)
+  }
 
   def resetPlainMsgsCounter: ReceivedMsgCounter = {
     val curCount = _plainMsgsSinceLastReset
@@ -70,11 +86,17 @@ trait MsgListenerBase[T]
     ReceivedMsgCounter(_plainMsgsSinceLastReset, _authedMsgSinceLastReset, curCount)
   }
 
-  def setRejectMessages(value: Boolean): Unit = {
-    rejectMessages = value
+  def handleIncomingMsg(data: T, cred: Option[HttpCredentials]): StatusCode = {
+    if (checkAuthToken && ! hasValidToken(cred)) {
+      Unauthorized
+    } else {
+      if (! checkAuthToken) _plainMsgsSinceLastReset = _plainMsgsSinceLastReset + 1
+      if (responseStatus == OK) addToQueue(data)
+      val curCount = responseStatusCount.getOrElse(responseStatus, 0)
+      responseStatusCount += responseStatus -> (curCount + 1)
+      responseStatus
+    }
   }
-
-  private var rejectMessages = false
 
   protected var _plainMsgsSinceLastReset: Int = 0
 
@@ -83,12 +105,18 @@ trait MsgListenerBase[T]
 
 trait HasOAuthSupport {
   def port: Int
-  def tokenExpiresInDuration: Option[FiniteDuration]
+  def oAuthParam: Option[OAuthParam]
 
   lazy val oAuthAccessTokenEndpoint = s"http://localhost:$port/$oAuthAccessTokenEndpointPath"
 
-  private lazy val tokenExpiresInSeconds: Long = tokenExpiresInDuration.map(_.toSeconds).getOrElse(10l)
+  private lazy val tokenExpiresInSeconds: Long = oAuthParam match {
+    case Some(V1OAuthParam(tokenExpiresInDuration)) => tokenExpiresInDuration.toSeconds
+    case _                                          => 10L
+  }
+
   private lazy val oAuthAccessTokenEndpointPath: String = "access-token"
+
+  def accessTokenRefreshCount: Int = _tokenRefreshCount
 
   protected lazy val oAuthAccessTokenRoute: Route =
     logRequestResult("access-token") {
@@ -107,10 +135,9 @@ trait HasOAuthSupport {
       }
     }
 
-
   protected def hasValidToken(cred: Option[HttpCredentials]): Boolean = {
     val isAuthed = cred match {
-      case Some(c) => token.map(_.value).contains(c.token())
+      case Some(c) => token.exists(_.isValid(c.token()))
       case None    => false
     }
     if (isAuthed) _authedMsgSinceLastReset = _authedMsgSinceLastReset + 1
@@ -119,17 +146,25 @@ trait HasOAuthSupport {
   }
 
   private def refreshToken(): Unit = {
-    token = Option(Token(UUID.randomUUID().toString, LocalDateTime.now().plusSeconds(tokenExpiresInSeconds)))
+    token = Option(Token(UUID.randomUUID().toString, Option(LocalDateTime.now().plusSeconds(tokenExpiresInSeconds))))
+    _tokenRefreshCount += 1
   }
 
-
-  private var token: Option[Token] = None
+  private var token: Option[Token] = oAuthParam match {
+    case Some(V2OAuthParam(token)) => Option(Token(token, None))
+    case _                         => None
+  }
+  private var _tokenRefreshCount = 0
   protected var _authedMsgSinceLastReset: Int = 0
   protected var _failedAuthedMsgSinceLastReset: Int = 0
 
 }
 
-case class Token(value: String, expiresAt: LocalDateTime)
+case class Token(value: String, expiresAt: Option[LocalDateTime]) {
+  def isValid(giveToken: String): Boolean = {
+    giveToken == value && expiresAt.forall(e => LocalDateTime.now().isBefore(e))
+  }
+}
 
 case class ReceivedMsgCounter(plainMsgsBeforeLastReset: Int,
                               authedMsgsBeforeLastReset: Int,

@@ -11,12 +11,13 @@ import com.evernym.verity.util2.ExecutionContextProvider
 
 object Main extends App {
   //do config validations (this should be the very first thing to do)
-  AppConfigWrapper.init()
+  val appConfig = new AppConfigWrapper
+  appConfig.init()
 
-  val ecp: ExecutionContextProvider = new ExecutionContextProvider(AppConfigWrapper)
+  val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
 
   //create platform (actor system and region actors etc)
-  val platform = PlatformBuilder.build(ecp)
+  val platform = PlatformBuilder.build(ecp, appConfig)
 
   //start akka management server (if enabled, by default it is turned off)
   platform.startExtensionIfEnabled(AkkaManagement, AKKA_MNGMNT_HTTP_ENABLED)(_.start())

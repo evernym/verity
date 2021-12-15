@@ -1,7 +1,9 @@
 package com.evernym.verity.protocol.protocols.coinflip
 
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.protocol.engine.{Protocol, ProtocolContextApi}
+import com.evernym.verity.protocol.engine.Protocol
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import org.scalatest.PrivateMethodTester
 import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
 import com.evernym.verity.testkit.BasicFixtureSpec
@@ -69,4 +71,5 @@ class CoinFlipEvilSpec extends TestsProtocolsImpl(EvilCoinFlipDefinition) with B
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
 }

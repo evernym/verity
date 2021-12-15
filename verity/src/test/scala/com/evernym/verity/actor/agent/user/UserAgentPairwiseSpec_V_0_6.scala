@@ -7,10 +7,10 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CRED_OFFER, MSG_TYPE_DETAIL_CONN_REQ_ACCEPTED, getNewMsgUniqueId}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.ConnReqAcceptedMsg_MFV_0_6
-import com.evernym.verity.actor.agent.Thread
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.msgpacker.PackMsgParam
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.AgentPackMsgUtil
 import com.evernym.verity.testkit.util.AgentPackMsgUtil.preparePackedRequestForAgent
@@ -44,11 +44,6 @@ class ConsumerAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 class EnterpriseAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
@@ -70,11 +65,6 @@ class EnterpriseAgentPairwiseBaseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 class VerityAgentPairwiseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
@@ -92,11 +82,6 @@ class VerityAgentPairwiseSpec_V_0_6 extends UserAgentPairwiseSpec_V_0_6 {
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }
 
 
@@ -116,7 +101,7 @@ trait UserAgentPairwiseSpec_V_0_6
     updateComMethod(COM_METHOD_TYPE_HTTP_ENDPOINT, "localhost:7000")
   }
 
-  var agentPairwiseDID: DID = _
+  var agentPairwiseDID: DidStr = _
 
   val connId1New = "connIdNew1"
   val connId2New = "connIdNew2"
@@ -143,7 +128,7 @@ trait UserAgentPairwiseSpec_V_0_6
 
     s"when sent CREATE_KEY msg ($connId)" - {
       "should respond with KEY_CREATED msg" taggedAs (UNSAFE_IgnoreLog) in {
-        val msg = preparePairwiseCreateKey(mockEdgeAgent.cloudAgentDetailReq.DID, connId)
+        val msg = preparePairwiseCreateKey(mockEdgeAgent.cloudAgentDetailReq.did, connId)
         ua ! ProcessPackedMsg(msg, reqMsgContext)
         val pm = expectMsgType[PackedMsg]
         val resp = handlePairwiseKeyCreatedResp(pm, buildConnIdMap(connId))
@@ -162,7 +147,7 @@ trait UserAgentPairwiseSpec_V_0_6
     "when sent connection request msg" - {
       "should respond with connection request detail" taggedAs (UNSAFE_IgnoreLog) in {
         val msg = prepareCreateInvite(
-          mockEdgeAgent.pairwiseConnDetail(connId1New).myCloudAgentPairwiseDidPair.DID,
+          mockEdgeAgent.pairwiseConnDetail(connId1New).myCloudAgentPairwiseDidPair.did,
           Option(connId1New), includeKeyDlgProof = true)
         uap ! ProcessPackedMsg(msg, reqMsgContext)
         val pm = expectMsgType[PackedMsg]

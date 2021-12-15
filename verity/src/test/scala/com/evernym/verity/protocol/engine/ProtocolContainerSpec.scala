@@ -1,18 +1,20 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.util2.ServiceEndpoint
-import com.evernym.verity.metrics.{MetricsWriter, NoOpMetricsWriter}
+import com.evernym.verity.observability.metrics.{MetricsWriter, NoOpMetricsWriter}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
+import com.evernym.verity.protocol.engine.container.{ProtocolContainer, RecordsEvents}
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
 import com.evernym.verity.protocol.protocols.tictactoe.State.Offered
 import com.evernym.verity.protocol.protocols.tictactoe.{Accepted, State, TicTacToe, TicTacToeProtoDef, Role => TicTacToeRole}
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TestExecutionContextProvider
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 class ProtocolContainerSpec extends BasicSpec {
@@ -65,7 +67,11 @@ class ProtocolContainerSpec extends BasicSpec {
 
           override def runAsyncOp(op: => Any): Unit = ???
 
+          override def runFutureAsyncOp(op: => Future[Any]): Unit = ???
+
           lazy val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
+
+          override def serviceKeyDidFormat: Boolean = TestExecutionContextProvider.testAppConfig.getBooleanReq(SERVICE_KEY_DID_FORMAT)
         }
 
         val container = new TestProtocolContainer[TicTacToe, TicTacToeRole, Any, Any, State, String](TicTacToeProtoDef)

@@ -10,7 +10,6 @@ import com.evernym.verity.actor.Platform
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.appStateManager.GetCurrentState
 import com.evernym.verity.actor.appStateManager.state.{AppState, ListeningState}
-import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.app_launcher.{DefaultAgentActorContext, HttpServer, PlatformBuilder}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.route_handlers.HttpRouteHandler
@@ -22,7 +21,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import java.nio.file.Path
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.language.postfixOps
 
 
@@ -48,14 +47,14 @@ object LocalVerity {
 
     val config = buildStandardVerityConfig(verityNodeParam)
     val appConfig = new AppConfigWrapper(config)
-
     val platform = initializeApp(appConfig, verityNodeParam.serviceParam, ecp)
-
-    val httpServer = new HttpServer(platform, new HttpRouteHandler(platform, ecp.futureExecutionContext).endpointRoutes, ecp.futureExecutionContext)
+    val httpServer = new HttpServer(
+      platform,
+      new HttpRouteHandler(platform, ecp.futureExecutionContext).endpointRoutes,
+      ecp.futureExecutionContext
+    )
     httpServer.start()
-
     waitTillUp(platform.appStateManager)
-
     httpServer
   }
 
@@ -91,7 +90,7 @@ object LocalVerity {
 
   class Starter(appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider) {
     class MockDefaultAgentActorContext(override val appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider)
-      extends DefaultAgentActorContext(executionContextProvider) {
+      extends DefaultAgentActorContext(executionContextProvider, appConfig) {
 
       implicit val executor: ExecutionContextExecutor = system.dispatcher
       override lazy val poolConnManager: LedgerPoolConnManager = {
@@ -104,6 +103,7 @@ object LocalVerity {
 
     val platform: Platform = PlatformBuilder.build(
       executionContextProvider,
+      appConfig,
       Option(new MockDefaultAgentActorContext(appConfig, serviceParam, executionContextProvider))
     )
   }

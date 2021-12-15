@@ -79,8 +79,6 @@ sealed trait HasData {
 
 object StatesLegacy {
   // Common States
-  case class Uninitialized() extends State
-  case class Initialized(data: StateDataLegacy) extends State
   case class ProblemReported(data: StateDataLegacy, problemDescription: String) extends State with HasData
   case class Rejected(data: StateDataLegacy, whoRejected: Role, reasonGiven: Option[String]) extends State with HasData
 

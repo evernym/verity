@@ -1,10 +1,9 @@
 package com.evernym.verity.actor.testkit
 
 import java.util.concurrent.TimeUnit
-
-import com.evernym.verity.actor.agent.DidPair
 import com.evernym.verity.actor.wallet.{CreateWallet, WalletCreated}
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.did.DidPair
 import com.evernym.verity.testkit.LegacyWalletAPI
 import com.evernym.verity.testkit.util.TestUtil
 import com.evernym.verity.util.Base58Util
@@ -20,8 +19,6 @@ object CommonSpecUtil extends CommonSpecUtil {
 }
 
 trait CommonSpecUtil extends CanGenerateDid {
-
-  import com.evernym.verity.util.Util._
 
   val CONN_ID = "connId"
   val phoneNo: String = "+14045943696"

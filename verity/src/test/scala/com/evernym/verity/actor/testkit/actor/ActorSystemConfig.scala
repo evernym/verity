@@ -105,8 +105,11 @@ trait ActorSystemConfig {
           allow-java-serialization = off
 
           //NOTE: below config is to test message serialization/deserialization in testing environment to catch any related issues early
-          serialize-messages = on
+          //TODO: once we fix root cause behind serialization issue, then we should turn this on again.
+          serialize-messages = off
         }
+
+        coordinated-shutdown.phases.before-service-unbind.timeout = 1 s
       }
       """
     val baseConfig = ConfigFactory.parseString(baseConfigStr)

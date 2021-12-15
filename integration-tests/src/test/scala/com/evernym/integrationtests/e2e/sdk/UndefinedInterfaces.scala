@@ -67,6 +67,10 @@ object UndefinedInterfaces {
     override def writeMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
 
     override def getThreadId: String = throw new NotImplementedError
+
+    override def write(context: Context, endorserDID: String): Unit = throw new NotImplementedError
+    override def writeMsg(context: Context, endorserDID: String): JSONObject = throw new NotImplementedError
+    override def writeMsgPacked(context: Context, endorserDID: String): Array[Byte] = throw new NotImplementedError
   }
 
   class UndefinedWriteCredentialDefinition_0_6 extends WriteCredentialDefinitionV0_6 {
@@ -75,6 +79,10 @@ object UndefinedInterfaces {
     override def writeMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
 
     override def getThreadId: String = throw new NotImplementedError
+
+    override def write(context: Context, endorserDID: String): Unit = throw new NotImplementedError
+    override def writeMsg(context: Context, endorserDID: String): JSONObject = throw new NotImplementedError
+    override def writeMsgPacked(context: Context, endorserDID: String): Array[Byte] = throw new NotImplementedError
   }
 
 

@@ -3,12 +3,11 @@ package com.evernym.verity.actor.base
 import java.time.LocalDateTime
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import com.evernym.verity.actor.appStateManager.{AppStateEvent, AppStateUpdateAPI}
-import com.evernym.verity.constants.ActorNameConstants.DEFAULT_ENTITY_TYPE
 import com.evernym.verity.actor.{ActorMessage, ExceptionHandler}
-import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.metrics.CustomMetrics.{AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX, AS_AKKA_ACTOR_TYPE_PREFIX}
+import com.evernym.verity.observability.metrics.CustomMetrics.{AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX, AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX, AS_AKKA_ACTOR_TYPE_PREFIX}
 import com.evernym.verity.util2.Exceptions
-import com.evernym.verity.metrics.{MetricsWriter, MetricsWriterExtension}
+import com.evernym.verity.observability.logs.LoggingUtil
+import com.evernym.verity.observability.metrics.{MetricsWriter, MetricsWriterExtension}
 import com.typesafe.scalalogging.Logger
 
 /**
@@ -80,7 +79,7 @@ trait CoreActor
     if (recordStartCountMetrics)
       metricsWriter.gaugeIncrement(
         s"$AS_AKKA_ACTOR_TYPE_PREFIX.$AS_AKKA_ACTOR_STARTED_COUNT_SUFFIX",
-        tags = Map("entity-type"-> entityTypeTagName))
+        tags = Map("entity-type"-> entityIdentity.entityType))
     log.debug(s"[$actorId]: in pre start")
     beforeStart()
     super.preStart()
@@ -90,7 +89,7 @@ trait CoreActor
     if (recordStopCountMetrics)
       metricsWriter.gaugeIncrement(
         s"$AS_AKKA_ACTOR_TYPE_PREFIX.$AS_AKKA_ACTOR_STOPPED_COUNT_SUFFIX",
-        tags = Map("entity-type"-> entityTypeTagName)
+        tags = Map("entity-type"-> entityIdentity.entityType)
       )
     log.debug(s"[$actorId]: in post stop")
     afterStop()
@@ -101,7 +100,7 @@ trait CoreActor
     if (recordRestartCountMetrics)
       metricsWriter.gaugeIncrement(
         s"$AS_AKKA_ACTOR_TYPE_PREFIX.$AS_AKKA_ACTOR_RESTARTED_COUNT_SUFFIX",
-        tags = Map("entity-type"-> entityTypeTagName)
+        tags = Map("entity-type"-> entityIdentity.entityType)
       )
     log.debug(s"[$actorId]: in pre restart")
     logCrashReason(reason, message)
@@ -144,11 +143,9 @@ trait CoreActor
 
   def actorDetail: ActorDetail = ActorDetail(entityType, entityId, actorId)
 
-  def entityTypeTagName: String = if (entityType == DEFAULT_ENTITY_TYPE) s"$entityType-$entityId" else entityType
-
-  val recordStartCountMetrics = true
-  val recordRestartCountMetrics = true
-  val recordStopCountMetrics = true
+  val recordStartCountMetrics = false
+  val recordRestartCountMetrics = false
+  val recordStopCountMetrics = false
 
   def publishAppStateEvent (event: AppStateEvent): Unit = {
     AppStateUpdateAPI(context.system).publishEvent(event)

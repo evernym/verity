@@ -3,7 +3,7 @@ package com.evernym.integrationtests.e2e.sdk.process
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.sdk.UndefinedInterfaces._
 import com.evernym.integrationtests.e2e.sdk.process.ProcessSdkProvider.{InterpreterEnv, MapAsJsonObject, TokenAsJsonObject, sdkErrExitCode}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
@@ -158,6 +158,8 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     new UndefinedWriteSchema_0_6 {
       override def write(ctx: Context): Unit =
         executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq))
+      override def write(ctx: Context, endorserDid: String): Unit =
+        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq), Seq(endorserDid))
     }
   }
 
@@ -168,10 +170,12 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     new UndefinedWriteCredentialDefinition_0_6 {
       override def write(ctx: Context): Unit =
         executeCmd(ctx, "WriteCredentialDefinition", this.version, "write", Seq(name, schemaId, tag, revocationDetails.orNull))
+      override def write(ctx: Context, endorserDid: String): Unit =
+        executeCmd(ctx, "WriteCredentialDefinition", this.version, "write", Seq(name, schemaId, tag, revocationDetails.orNull), Seq(endorserDid))
     }
   }
 
-  override def basicMessage_1_0(forRelationship: DID, content: String, sentTime: String, localization: String): BasicMessageV1_0 = {
+  override def basicMessage_1_0(forRelationship: DidStr, content: String, sentTime: String, localization: String): BasicMessageV1_0 = {
     new UndefinedBasicMessage_1_0{
       override def message(ctx: Context): Unit = {
         executeCmd(
@@ -185,7 +189,7 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     }
   }
 
-  override def committedAnswer_1_0(forRelationship: DID,
+  override def committedAnswer_1_0(forRelationship: DidStr,
                                    questionText: String,
                                    questionDescription: String,
                                    validResponses: Seq[String],
@@ -202,12 +206,12 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
       }
     }
 
-  override def committedAnswer_1_0(forRelationship: DID,
+  override def committedAnswer_1_0(forRelationship: DidStr,
                                    threadId: String,
                                    answerStr: String): CommittedAnswerV1_0 = throw new NotImplementedError
 
-  override def committedAnswer_1_0(forRelationship: DID,
-                               threadId: String): CommittedAnswerV1_0 =
+  override def committedAnswer_1_0(forRelationship: DidStr,
+                                   threadId: String): CommittedAnswerV1_0 =
     new UndefinedCommittedAnswer_1_0 {
       override def status(ctx: Context): Unit = {
         executeCmd(
@@ -290,7 +294,7 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
       )
   }
 
-  override def presentProof_1_0(forRelationship: DID, threadId: String): PresentProofV1_0 =
+  override def presentProof_1_0(forRelationship: DidStr, threadId: String): PresentProofV1_0 =
     new UndefinedPresentProof_1_0 {
       override def status(ctx: Context): Unit =
         executeCmd(ctx, "PresentProof", this.version, "status", Seq(forRelationship, threadId))

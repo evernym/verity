@@ -60,5 +60,5 @@ object TypeSafeConfigExperiments extends App {
     |""".stripMargin
 
   val c = ConfigFactory.parseString(t)
-  println(c.toString)
+  println(c.resolve().root().render())
 }

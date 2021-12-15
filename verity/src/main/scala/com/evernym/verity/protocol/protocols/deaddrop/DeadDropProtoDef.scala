@@ -1,12 +1,15 @@
 package com.evernym.verity.protocol.protocols.deaddrop
 
-import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.protocol._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_DEAD_DROP_STORE_DATA
-import com.evernym.verity.protocol.container.actor.ProtoMsg
+import com.evernym.verity.constants.InitParamConstants._
+import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.protocol._
+import com.evernym.verity.protocol.engine.Scope
 import com.evernym.verity.protocol.engine.Scope.ProtocolScope
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
 import com.evernym.verity.util2.{Base64Encoded, Signature}
@@ -23,10 +26,11 @@ case class DeadDropEntry(address: String, data: Base64Encoded) extends DeadDropS
 
 
 /** Protocol Messages */
+trait ProtoMsg extends MsgBase
 sealed trait DeadDropProtoMsg extends ProtoMsg
 
 case class Add(payload: DeadDropPayload) extends DeadDropProtoMsg  //FIXME today this is sent from Driver
-case class Retrieve(recoveryVerKey: VerKey, address: String, locator: String, locatorSignature: Signature) extends DeadDropProtoMsg
+case class Retrieve(recoveryVerKey: VerKeyStr, address: String, locator: String, locatorSignature: Signature) extends DeadDropProtoMsg
 case class Ack() extends DeadDropProtoMsg
 case class Nack() extends DeadDropProtoMsg
 case class DeadDropRetrieveResult(entry: Option[DeadDropEntry]) extends DeadDropProtoMsg
@@ -44,7 +48,7 @@ case class StoreData(payload: DeadDropPayload) extends DeadDropCtrlMsg with HasM
   def msgFamily: MsgFamily = DeadDropMsgFamily
 }
 
-case class GetData(recoveryVerKey: VerKey, address: String, locator: String, locatorSignature: Signature) extends DeadDropCtrlMsg
+case class GetData(recoveryVerKey: VerKeyStr, address: String, locator: String, locatorSignature: Signature) extends DeadDropCtrlMsg
 
 object DeadDropProtoDef
   extends ProtocolDefinition[DeadDropProtocol, Role, DeadDropProtoMsg, DeadDropEvt, DeadDropState, String] {

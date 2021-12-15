@@ -5,7 +5,7 @@ import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.actor.wallet.GetVerKeyResp
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.{GetVerKeyByDIDParam, KeyParam, WalletExt}
-import org.hyperledger.indy.sdk.IndyException
+import com.evernym.vdrtools.IndyException
 
 import scala.concurrent.ExecutionContext
 import scala.language.implicitConversions

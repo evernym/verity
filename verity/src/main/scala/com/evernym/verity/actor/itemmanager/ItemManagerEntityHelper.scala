@@ -11,19 +11,21 @@ class ItemManagerEntityHelper(entityId: EntityId,
                               entityType: String,
                               system: ActorSystem[Nothing]) {
 
-  var isAlreadyAdded = false
+  var isAlreadyRegistered = false
+  var isAlreadyUnregistered = false
 
   def register(): Unit = {
-    if (! isAlreadyAdded) {
+    if (! isAlreadyRegistered) {
       system.eventStream.tell(Publish(SingletonProxyEvent(ForEntityItemWatcher(AddItem(entityId, entityType)))))
-      isAlreadyAdded = true
+      isAlreadyRegistered = true
     }
   }
 
   def deregister(): Unit = {
-    if (isAlreadyAdded) {
+    if (! isAlreadyUnregistered) {
       system.eventStream.tell(Publish(SingletonProxyEvent(ForEntityItemWatcher(RemoveItem(entityId, entityType)))))
-      isAlreadyAdded = false
+      isAlreadyUnregistered = true
+      isAlreadyRegistered = false
     }
   }
 }

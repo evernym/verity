@@ -1,6 +1,6 @@
 package com.evernym.verity.testkit.util
 
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import org.abstractj.kalium.keys.SigningKey
 import org.iq80.leveldb.util.FileUtils
 

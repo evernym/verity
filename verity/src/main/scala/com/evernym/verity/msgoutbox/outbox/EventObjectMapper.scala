@@ -1,6 +1,6 @@
 package com.evernym.verity.msgoutbox.outbox
 
-import com.evernym.verity.msgoutbox.outbox.Events.{MsgAdded, MsgRemoved, MsgSendingFailed, MsgSentSuccessfully, OutboxParamUpdated}
+import com.evernym.verity.msgoutbox.outbox.Events.{ConfigUpdated, MetadataStored, MsgAdded, MsgRemoved, MsgSendingFailed, MsgSentSuccessfully, OutboxParamUpdated}
 import com.evernym.verity.actor.persistence.object_code_mapper.ObjectCodeMapperBase
 import scalapb.GeneratedMessageCompanion
 
@@ -12,6 +12,8 @@ object EventObjectMapper extends ObjectCodeMapperBase{
     2 -> MsgAdded,
     3 -> MsgSentSuccessfully,
     4 -> MsgSendingFailed,
-    5 -> MsgRemoved
+    5 -> MsgRemoved,
+    6 -> MetadataStored,
+    7 -> ConfigUpdated
   )
 }

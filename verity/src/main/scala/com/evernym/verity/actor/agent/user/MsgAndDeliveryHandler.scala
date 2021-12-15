@@ -4,13 +4,15 @@ import akka.actor.Actor.Receive
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.{Evt, MsgAnswered, MsgCreated, MsgDeliveryStatusUpdated, MsgDetailAdded, MsgExpirationTimeUpdated, MsgPayloadStored, MsgReceivedOrdersDetail, MsgStatusUpdated, MsgThreadDetail}
-import com.evernym.verity.actor.agent.{AgentCommon, Msg, Thread}
+import com.evernym.verity.did.didcomm.v1.Thread
+import com.evernym.verity.actor.agent.{AgentCommon, Msg}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.UpdateMsgStatusReqMsg
-import com.evernym.verity.protocol.engine.{DID, MsgId}
 import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import MsgHelper._
 import com.evernym.verity.actor.agent.user.msgstore.MsgStore
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.util.Util.checkIfDIDLengthIsValid
 
 trait MsgAndDeliveryHandler { this: AgentCommon =>
@@ -93,7 +95,7 @@ object MsgHelper {
 
   def buildMsgCreatedEvt(msgId: MsgId,
                          mType: String,
-                         senderDID: DID,
+                         senderDID: DidStr,
                          sendMsg: Boolean,
                          msgStatus: String,
                          threadOpt: Option[Thread],

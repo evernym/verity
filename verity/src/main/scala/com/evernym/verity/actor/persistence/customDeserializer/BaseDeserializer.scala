@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.persistence.customDeserializer
 
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
 
 /**

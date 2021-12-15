@@ -19,7 +19,9 @@ import scala.concurrent.ExecutionContext
  *
  * @param agentActorContext
  */
-class KeyValueMapper(executionContext: ExecutionContext)(implicit val agentActorContext: AgentActorContext) extends KeyValueMapperBase {
+class KeyValueMapper(executionContext: ExecutionContext)
+                    (implicit val agentActorContext: AgentActorContext)
+  extends KeyValueMapperBase {
 
   override val receiveSpecificEvent: Receive = {
     case _ =>

@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.actor.wallet.PackedMsg
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
@@ -15,6 +15,7 @@ import scala.concurrent.ExecutionContext
 
 
 class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eventually {
+
   import mockEdgeAgent.v_0_6_req._
   import mockEdgeAgent.v_0_6_resp._
 
@@ -31,7 +32,7 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
 
     "Agent provisioning 0.6" - {
 
-      var pairwiseDID: DID = null
+      var pairwiseDID: DidStr = null
 
       "when sent GetLocalAgencyDIDDetail command" - {
         "should respond with agency DID detail" in {
@@ -65,7 +66,7 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
           val fromDID = mockEdgeAgent.myDIDDetail.did
           val fromDIDVerKey = mockEdgeAgent.getVerKeyFromWallet(fromDID)
           val msg = prepareCreateAgentMsg(
-            mockEdgeAgent.agencyPairwiseAgentDetailReq.DID,
+            mockEdgeAgent.agencyPairwiseAgentDetailReq.did,
             fromDID, fromDIDVerKey)
           aap ! ProcessPackedMsg(msg, reqMsgContext)
           expectMsgType[PackedMsg]
@@ -74,7 +75,7 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
 
       "when sent connection request msg" - {
         "should respond with connection request detail" in {
-          val msg = prepareCreateInvite(mockEdgeAgent.agencyPairwiseAgentDetailReq.DID, None)
+          val msg = prepareCreateInvite(mockEdgeAgent.agencyPairwiseAgentDetailReq.did, None)
           aap ! ProcessPackedMsg(msg, reqMsgContext)
           expectMsgType[PackedMsg]
         }
@@ -82,11 +83,11 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
 
       "when sent create agent msg after connecting" - {
         "should respond with error agent already created" taggedAs (UNSAFE_IgnoreAkkaEvents) in {
-          eventually (timeout(Span(5, Seconds))) {
+          eventually(timeout(Span(5, Seconds))) {
             val fromDID = mockEdgeAgent.myDIDDetail.did
             val fromDIDVerKey = mockEdgeAgent.getVerKeyFromWallet(fromDID)
             val msg = prepareCreateAgentMsg(
-              mockEdgeAgent.agencyPairwiseAgentDetailReq.DID,
+              mockEdgeAgent.agencyPairwiseAgentDetailReq.did,
               fromDID, fromDIDVerKey)
             aap ! ProcessPackedMsg(msg, reqMsgContext)
             expectError(AGENT_ALREADY_CREATED.statusCode)
@@ -95,7 +96,7 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
       }
 
       "when tried to restart actor" - {
-        "should be successful and respond" taggedAs (UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
+        "should be successful and respond" taggedAs(UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
           restartPersistentActor(aap)
         }
       }
@@ -103,15 +104,11 @@ class AgencyAgentPairwiseSpec_V_0_6 extends AgencyAgentPairwiseSpecBase with Eve
   }
 
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+
   /**
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

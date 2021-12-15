@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+
+import "sponsor_rel.proto";
+
+package com.evernym.verity.actor.agent;
+
+message AgentDetailRecorded {
+    option (scalapb.message).extends = "com.evernym.verity.actor.metrics.activity_tracker.ActivityEvent";
+    string domainId = 1;
+    SponsorRel sponsorRel = 2;
+}
+
+message AgentActivityRecorded {
+    option (scalapb.message).extends = "com.evernym.verity.actor.metrics.activity_tracker.ActivityEvent";
+    string stateKey = 1;
+    string timestamp = 2;
+    string activityType = 3;
+    string relId = 4;
+}
+
+
+//---- legacy events (kept for backward compatibility
+message WindowRules {
+    string frequency = 1;
+    string behavior = 2;
+}
+
+message LegacyWindowActivityDefined {
+    option (scalapb.message).extends = "com.evernym.verity.actor.metrics.activity_tracker.ActivityEvent";
+    repeated WindowRules windows = 1;
+}
+
+message LegacyAgentActivityRecorded {
+    option (scalapb.message).extends = "com.evernym.verity.actor.metrics.activity_tracker.ActivityEvent";
+    string domainId = 1;
+    string timestamp = 2;
+    SponsorRel sponsorRel = 3;
+    string activityType = 4;
+    string relId = 5;
+    string stateKey = 6;
+}

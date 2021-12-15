@@ -1,7 +1,5 @@
 package com.evernym.verity.actor.agent.snapshot
 
-import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
-import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.agency.agent_provisioning.AgencyAgentPairwiseSpecBase
 import com.evernym.verity.actor.agent.agency.{AgencyAgentPairwiseState, GetLocalAgencyIdentity}
@@ -10,7 +8,7 @@ import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.actor.{AgencyPublicDid, KeyCreated, agentRegion}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.constants.ActorNameConstants.AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.ExecutionContext
@@ -18,24 +16,22 @@ import scala.concurrent.ExecutionContext
 
 class AgencyAgentPairwiseSnapshotSpec
   extends AgencyAgentPairwiseSpecBase
-    with SnapshotSpecBase
+    with AgentSnapshotSpecBase
     with OverrideConfig {
 
-  override def overrideConfig: Option[Config] = Option(
+  override def specificConfig: Option[Config] = Option(
     ConfigFactory.parseString(
       """verity.persistent-actor.base.AgencyAgentPairwise.snapshot {
         after-n-events = 1
         keep-n-snapshots = 2
         delete-events-on-snapshots = true
       }""")
-    .withFallback(EventSourcedBehaviorTestKit.config)
-    .withFallback(PersistenceTestKitSnapshotPlugin.config)
   )
 
   import mockEdgeAgent.v_0_5_req._
   import mockEdgeAgent.v_0_5_resp._
 
-  var pairwiseDID: DID = _
+  var pairwiseDID: DidStr = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -79,13 +75,13 @@ class AgencyAgentPairwiseSnapshotSpec
     setPairwiseEntityId(pairwiseDID)
   }
 
-  def checkKeyCreatedEvent(keyCreated: KeyCreated, expectedForDID: DID): Unit = {
+  def checkKeyCreatedEvent(keyCreated: KeyCreated, expectedForDID: DidStr): Unit = {
     keyCreated.forDID shouldBe expectedForDID
   }
 
   override def checkSnapshotState(snap: AgencyAgentPairwiseState,
-                         protoInstancesSize: Int): Unit = {
-    snap.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair)
+                                  protoInstancesSize: Int): Unit = {
+    snap.agencyDIDPair shouldBe mockAgencyAdmin.agencyPublicDid.map(_.didPair.toAgentDidPair)
     snap.agentWalletId shouldBe Option(agencyAgentEntityId)
     snap.thisAgentKeyId should not be mockAgencyAdmin.agencyPublicDid.map(_.DID)
     snap.agencyDIDPair.map(_.DID) should not be snap.thisAgentKeyId
@@ -102,19 +98,17 @@ class AgencyAgentPairwiseSnapshotSpec
   }
 
   override type StateType = AgencyAgentPairwiseState
+
   override def regionActorName: String = AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME
+
   override def actorEntityId: String = agencyAgentPairwiseEntityId
 
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
+
   /**
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

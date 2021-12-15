@@ -5,7 +5,7 @@ import com.evernym.verity.actor.msg_tracer.resp_time_tracker._
 import com.evernym.verity.actor.base.{AlreadyDone, Done}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.{METRICS_LATENCY_RECORDING_HISTOGRAM, METRICS_LATENCY_RECORDING_SPAN}
-import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}
+import com.evernym.verity.observability.metrics.{MetricsUnit, MetricsWriter}
 
 /**
  * class responsible to keep state related to one msg tracking

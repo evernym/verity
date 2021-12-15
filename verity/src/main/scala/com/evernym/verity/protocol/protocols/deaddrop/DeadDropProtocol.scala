@@ -2,13 +2,14 @@ package com.evernym.verity.protocol.protocols.deaddrop
 
 import com.evernym.verity.protocol._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.?=>
-import com.evernym.verity.protocol.engine.{InitParamBase, Protocol, ProtocolContextApi, Roster}
+import com.evernym.verity.protocol.engine.{InitParamBase, Protocol}
 import com.evernym.verity.protocol.protocols.deaddrop.Role.Empty
 import com.evernym.verity.util.Base64Util.{getBase64Decoded, getBase64Encoded}
 import com.google.protobuf.ByteString
 import org.apache.commons.codec.digest.DigestUtils
-import org.hyperledger.indy.sdk.crypto.Crypto
+import com.evernym.vdrtools.crypto.Crypto
 
 import scala.util.{Failure, Success}
 

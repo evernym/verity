@@ -1,10 +1,9 @@
 package com.evernym.verity.actor.agent.relationship
 
-import com.evernym.verity.util2.HasWalletExecutionContextProvider
 import com.evernym.verity.actor.wallet.{GetVerKeyOpt, GetVerKeyOptResp}
 import com.evernym.verity.actor.agent.AuthKey
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.connecting.common.{LegacyRoutingDetail, RoutingDetail}
 import com.evernym.verity.util.Util.buildAgencyEndpoint
 import com.evernym.verity.vault.AgentWalletAPI
@@ -15,28 +14,28 @@ import scala.concurrent.{ExecutionContext, Future}
 case class DidDocBuilder(executionContext: ExecutionContext, didDoc: DidDoc = DidDoc())
                         (implicit didDocBuilderParam: DidDocBuilderParam) {
 
-  private implicit def futureWalletExecutionContext: ExecutionContext = executionContext
+  private implicit def futureExecutionContext: ExecutionContext = executionContext
 
 
-  def withDid(did: DID): DidDocBuilder = {
+  def withDid(did: DidStr): DidDocBuilder = {
     copy(didDoc = didDoc.copy(did = did))
   }
 
   def withAuthKey(authKeyId: KeyId,
-                  authVerKey: VerKey,
+                  authVerKey: VerKeyStr,
                   tags: Set[Tags] = Set.empty): DidDocBuilder = {
     withAuthKeyRoutingDetail(authKeyId, authVerKey, tags, None)
   }
 
   def withAuthKeyAndEndpointDetail(authKeyId: KeyId,
-                                   authVerKey: VerKey,
+                                   authVerKey: VerKeyStr,
                                    tags: Set[Tags] = Set.empty,
                                    routingDetail: Either[LegacyRoutingDetail, RoutingDetail]): DidDocBuilder = {
     withAuthKeyRoutingDetail(authKeyId, authVerKey, tags, Some(routingDetail))
   }
 
   private def withAuthKeyRoutingDetail(authKeyId: KeyId,
-                                       authVerKey: VerKey,
+                                       authVerKey: VerKeyStr,
                                        tags: Set[Tags] = Set.empty,
                                        routingDetail: Option[Either[LegacyRoutingDetail, RoutingDetail]]=None): DidDocBuilder = {
     val newAuthKey = prepareAuthorizedKey(authKeyId, authVerKey, tags)
@@ -88,7 +87,7 @@ case class DidDocBuilder(executionContext: ExecutionContext, didDoc: DidDoc = Di
   }
 
   private def prepareAuthorizedKey(keyId: KeyId,
-                                   verKey: VerKey,
+                                   verKey: VerKeyStr,
                                    agentKeyTags: Set[Tags] = Set.empty): AuthorizedKey = {
     val verKeyOpt = Option(verKey)
     verKeyOpt match {

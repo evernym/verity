@@ -118,7 +118,7 @@ trait ItemManagerBase
 
   def recordMetrics(): Unit = {
     itemManagerState.foreach { ims =>
-      import com.evernym.verity.metrics.CustomMetrics._
+      import com.evernym.verity.observability.metrics.CustomMetrics._
       metricsWriter.gaugeUpdate(AS_USER_AGENT_PAIRWISE_WATCHER_TOTAL_CONTAINER_COUNT,
         ims.totalEverAllocatedContainers, Map(TAG_KEY_ID -> entityId))
     }

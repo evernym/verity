@@ -4,7 +4,7 @@ import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKi
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.{EventSourcedBehaviorTestKit, PersistenceTestKit, SnapshotTestKit}
 import com.evernym.verity.integration.base.PortProvider
-import com.evernym.verity.metrics.{MetricsWriterExtension, TestMetricsBackend}
+import com.evernym.verity.observability.metrics.{MetricsWriterExtension, TestMetricsBackend}
 import com.typesafe.config.{Config, ConfigFactory}
 
 
@@ -12,7 +12,9 @@ abstract class BehaviourSpecBase
   extends ScalaTestWithActorTestKit(
     ActorTestKit(
       "TestSystem",
-      TypedTestKit.config.withFallback(TypedTestKit.clusterConfig)
+      TypedTestKit.clusterConfig
+        .withFallback(TypedTestKit.serializationConfig)
+        .withFallback(TypedTestKit.testKitConfig)
     )
   ) {
 
@@ -28,12 +30,12 @@ abstract class EventSourcedBehaviourSpecBase
 
 object TypedTestKit {
 
-  val config: Config = ConfigFactory.empty
+  val testKitConfig: Config = ConfigFactory.empty
     .withFallback(EventSourcedBehaviorTestKit.config)
     .withFallback(PersistenceTestKitSnapshotPlugin.config)
 
   def clusterConfig: Config = {
-    val randomPort = PortProvider.generateUnusedPort(2000)
+    val randomPort = PortProvider.getFreePort
 
     ConfigFactory.parseString(
       s"""
@@ -58,4 +60,27 @@ object TypedTestKit {
     }
     """)
   }
+
+  val serializationConfig: Config = ConfigFactory.parseString(
+    """
+      |akka.actor {
+      |  serialize-messages = on    # to make sure commands/reply messages are tested for remote serialization
+      |  allow-java-serialization = off
+      |
+      |  serializers {
+      |    protoser = "com.evernym.verity.actor.serializers.ProtoBufSerializer"
+      |  }
+      |
+      |  serialization-bindings {
+      |    "com.evernym.verity.actor.PersistentMsg" = protoser
+      |    "com.evernym.verity.actor.ActorMessage" = kryo-akka
+      |  }
+      |}
+      |
+      |akka.persistence.testkit {
+      |     events.serialize = on
+      |     snapshots.serialize = on
+      |}
+      |""".stripMargin)
+
 }

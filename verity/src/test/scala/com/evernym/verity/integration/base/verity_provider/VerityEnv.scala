@@ -4,9 +4,6 @@ import akka.cluster.MemberStatus
 import akka.cluster.MemberStatus.{Down, Removed, Up}
 import akka.testkit.TestKit
 import com.evernym.verity.integration.base.PortProvider
-import com.evernym.verity.util2.HasExecutionContextProvider
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
 import com.evernym.verity.testkit.mock.blob_store.MockBlobStore
@@ -91,7 +88,7 @@ case class VerityEnv(seed: String,
   }
 
   def checkBlobObjectCount(keyStartsWith: String, expectedCount: Int, bucketName: String = "local-blob-store"): Unit = {
-    eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+    eventually(timeout(Span(15, Seconds)), interval(Span(100, Millis))) {
       mockBlobStore.getBlobObjectCount(keyStartsWith, bucketName) shouldBe expectedCount
     }
   }
@@ -104,7 +101,7 @@ case class VerityEnv(seed: String,
   def init(): Unit = {
     if (! isVerityBootstrapped) {
       nodes.headOption.foreach { node =>
-        VerityAdmin.bootstrapApplication(node.portProfile.http, node.appSeed, waitAtMost)
+        VerityAdmin.bootstrapApplication(node.portProfile.http, node.appSeed, waitAtMost, node.serviceParam.flatMap(_.ledgerTxnExecutor))
         isVerityBootstrapped = true
       }
     }
@@ -123,13 +120,14 @@ case class VerityEnvUrlProvider(private val _nodes: Seq[VerityNode]) {
 
 object PortProfile {
   def random(): PortProfile = {
-    val arteryPort    = PortProvider.generateUnusedPort(2000)
-    val akkaMgmtPort  = PortProvider.generateUnusedPort(8000)
-    val httpPort      = PortProvider.generateUnusedPort(9000)
-    PortProfile(httpPort, arteryPort, akkaMgmtPort)
+    val arteryPort      = PortProvider.getFreePort
+    val akkaMgmtPort    = PortProvider.getFreePort
+    val httpPort        = PortProvider.getFreePort
+    val prometheusPort  = PortProvider.getFreePort
+    PortProfile(httpPort, arteryPort, akkaMgmtPort, prometheusPort)
   }
 }
 
-case class PortProfile(http: Int, artery: Int, akkaManagement: Int) {
-  def ports: Seq[Int] = Seq(http, artery, akkaManagement)
+case class PortProfile(http: Int, artery: Int, akkaManagement: Int, prometheusPort: Int) {
+  def ports: Seq[Int] = Seq(http, artery, akkaManagement, prometheusPort)
 }

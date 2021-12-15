@@ -2,11 +2,14 @@ package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_6
 
 import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.container.actor.{Init, ProtoMsg}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.asyncapi.{AccessNewDid, AccessRight, AccessStoreTheirDiD, AccessVerKey, DEPRECATED_AccessSetupNewWallet}
-import com.evernym.verity.protocol.engine.{MsgName, _}
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
+import com.evernym.verity.protocol.engine.msg.Init
+import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.agentprovisioning.common.{AgentCreationCompleted, AskUserAgentCreator}
 
 object AgentProvisioningMsgFamily extends MsgFamily {
@@ -48,11 +51,8 @@ object AgentProvisioningProtoDef
     new AgentProvisioningProtocol(context)
 
   override def initialState: State = State.Uninitialized()
-
-  override val requiredAccess: Set[AccessRight] = Set(DEPRECATED_AccessSetupNewWallet, AccessVerKey, AccessNewDid, AccessStoreTheirDiD)
 }
 
-case class CreateAgentReqMsg_MFV_0_6(fromDID: DID, fromDIDVerKey: VerKey) extends ProtoMsg
-
-
-case class AgentCreatedRespMsg_MFV_0_6(withPairwiseDID: DID, withPairwiseDIDVerKey: VerKey) extends ProtoMsg
+trait ProtoMsg extends MsgBase
+case class CreateAgentReqMsg_MFV_0_6(fromDID: DidStr, fromDIDVerKey: VerKeyStr) extends ProtoMsg
+case class AgentCreatedRespMsg_MFV_0_6(withPairwiseDID: DidStr, withPairwiseDIDVerKey: VerKeyStr) extends ProtoMsg

@@ -2,13 +2,12 @@ package com.evernym.verity.texter
 
 class OpenMarketServiceProviderSpec extends ServiceProviderBaseSpec {
 
-  lazy val service = new OpenMarketSmsSvc(appConfig)
+  lazy val service = new OpenMarketDispatcherMEP(appConfig)
 
   "OpenMarket service provider" - {
 
     "when asked to normalize phone number with leading plus symbol" - {
       "should be able to replace plus with two leading zeros" in {
-        val service = new OpenMarketSmsSvc(appConfig)
         service.getNormalizedPhoneNumber("+44123456780") shouldBe "0044123456780"
       }
     }

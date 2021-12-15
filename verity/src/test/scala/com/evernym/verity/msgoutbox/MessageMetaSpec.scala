@@ -3,7 +3,6 @@ package com.evernym.verity.msgoutbox
 import akka.actor.typed.ActorRef
 import akka.cluster.sharding.typed.ShardingEnvelope
 import akka.cluster.sharding.typed.scaladsl.Entity
-import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta._
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.Commands
@@ -18,8 +17,8 @@ import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
-import java.util.UUID
 
+import java.util.UUID
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
@@ -49,18 +48,18 @@ class MessageMetaSpec
 
       "when sent Get command" - {
         "should respond with MsgNotAdded message" in {
-          val probe = createTestProbe[StatusReply[GetMsgReply]]()
+          val probe = createTestProbe[GetMsgReply]()
           messageMetaRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
-          probe.expectMessage(StatusReply.success(MsgNotYetAdded))
+          probe.expectMessage(MsgNotYetAdded)
         }
       }
 
       "when sent Add command" - {
         "should be successful" in {
-          val probe = createTestProbe[StatusReply[AddMsgReply]]()
+          val probe = createTestProbe[AddMsgReply]()
           messageMetaRegion ! ShardingEnvelope(msgId,
             Commands.Add("credOffer", retentionPolicy.configString, Set(outboxId), None, None, probe.ref))
-          probe.expectMessage(StatusReply.success(MsgAdded))
+          probe.expectMessage(MsgAdded)
           persTestKit.persistedInStorage(msgPersistenceId).size shouldBe 1
         }
       }
@@ -70,37 +69,29 @@ class MessageMetaSpec
 
       "when sent Add command" - {
         "should respond with MsgAlreadyAdded message" in {
-          val probe = createTestProbe[StatusReply[AddMsgReply]]()
+          val probe = createTestProbe[AddMsgReply]()
           messageMetaRegion ! ShardingEnvelope(msgId,
             Commands.Add("credOffer", retentionPolicy.configString, Set(outboxId), None, None, probe.ref))
-          probe.expectMessage(StatusReply.success(MsgAlreadyAdded))
+          probe.expectMessage(MsgAlreadyAdded)
         }
       }
 
       "when sent Get command" - {
         "should respond with Message with payload" in {
-          val probe = createTestProbe[StatusReply[GetMsgReply]]()
+          val probe = createTestProbe[GetMsgReply]()
           messageMetaRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
-          val msg = probe.expectMessageType[StatusReply[Msg]].getValue
+          val msg = probe.expectMessageType[Replies.Msg]
           msg.`type` shouldBe "credOffer"
           msg.legacyData shouldBe None
           msg.payload.isEmpty shouldBe true
         }
       }
 
-      "when sent Stop command" - {
-        "should be stopped" in {
-          val probe = createTestProbe()
-          messageMetaRegion ! ShardingEnvelope(msgId, Commands.TimedOut)
-          probe.expectNoMessage()
-        }
-      }
-
       "when sent Get command again" - {
         "should respond with Message" in {
-          val probe = createTestProbe[StatusReply[GetMsgReply]]()
+          val probe = createTestProbe[GetMsgReply]()
           messageMetaRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
-          val msg = probe.expectMessageType[StatusReply[Msg]].getValue
+          val msg = probe.expectMessageType[Replies.Msg]
           msg.`type` shouldBe "credOffer"
           msg.legacyData shouldBe None
           msg.payload.isEmpty shouldBe true
@@ -109,9 +100,9 @@ class MessageMetaSpec
 
       "when sent GetDeliveryStatus(outbox-id) command" - {
         "should respond with empty delivery status" in {
-          val probe = createTestProbe[StatusReply[MsgDeliveryStatus]]()
+          val probe = createTestProbe[MsgDeliveryStatus]()
           messageMetaRegion ! ShardingEnvelope(msgId, Commands.GetDeliveryStatus(probe.ref))
-          val msgDeliveryStatus = probe.expectMessageType[StatusReply[MsgDeliveryStatus]].getValue
+          val msgDeliveryStatus = probe.expectMessageType[MsgDeliveryStatus]
           msgDeliveryStatus.outboxDeliveryStatus.size shouldBe 1
         }
       }
@@ -131,9 +122,9 @@ class MessageMetaSpec
 
       "when sent GetDeliveryStatus command" - {
         "should respond with undelivered status" in {
-          val probe = createTestProbe[StatusReply[MsgDeliveryStatus]]()
+          val probe = createTestProbe[MsgDeliveryStatus]()
           messageMetaRegion ! ShardingEnvelope(msgId, Commands.GetDeliveryStatus(probe.ref))
-          val msgDeliveryStatus = probe.expectMessageType[StatusReply[MsgDeliveryStatus]].getValue
+          val msgDeliveryStatus = probe.expectMessageType[MsgDeliveryStatus]
           val outboxDeliveryStatus = msgDeliveryStatus.outboxDeliveryStatus.get(outboxId)
           outboxDeliveryStatus.isDefined shouldBe true
           outboxDeliveryStatus.get.status shouldBe Status.MSG_DELIVERY_STATUS_PENDING.statusCode
@@ -186,9 +177,9 @@ class MessageMetaSpec
 
       "when sent GetDeliveryStatus(outbox-id) command" - {
         "should respond with delivered status" in {
-          val probe = createTestProbe[StatusReply[MsgDeliveryStatus]]()
+          val probe = createTestProbe[MsgDeliveryStatus]()
           messageMetaRegion ! ShardingEnvelope(msgId, Commands.GetDeliveryStatus(probe.ref))
-          val msgDeliveryStatus = probe.expectMessageType[StatusReply[MsgDeliveryStatus]].getValue
+          val msgDeliveryStatus = probe.expectMessageType[MsgDeliveryStatus]
           val outboxDeliveryStatus = msgDeliveryStatus.outboxDeliveryStatus.get(outboxId)
           outboxDeliveryStatus.isDefined shouldBe true
           outboxDeliveryStatus.get.status shouldBe Status.MSG_DELIVERY_STATUS_SENT.statusCode
@@ -203,9 +194,9 @@ class MessageMetaSpec
 
       "when send Get command" - {
         "should still respond with Message" in {
-          val probe = createTestProbe[StatusReply[Reply]]()
+          val probe = createTestProbe[Reply]()
           messageMetaRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
-          val msg = probe.expectMessageType[StatusReply[Msg]].getValue
+          val msg = probe.expectMessageType[Replies.Msg]
           msg.`type` shouldBe "credOffer"
           msg.legacyData shouldBe None
           msg.payload.isEmpty shouldBe true
@@ -222,19 +213,11 @@ class MessageMetaSpec
         }
       }
 
-      "when sent Stop command again" - {
-        "should be stopped" in {
-          val probe = createTestProbe()
-          messageMetaRegion ! ShardingEnvelope(msgId, Commands.TimedOut)
-          probe.expectNoMessage()
-        }
-      }
-
       "when send Get command again" - {
         "should still respond with Message" in {
-          val probe = createTestProbe[StatusReply[Reply]]()
+          val probe = createTestProbe[Reply]()
           messageMetaRegion ! ShardingEnvelope(msgId, Commands.Get(probe.ref))
-          val msg = probe.expectMessageType[StatusReply[Msg]].getValue
+          val msg = probe.expectMessageType[Replies.Msg]
           msg.`type` shouldBe "credOffer"
           msg.legacyData shouldBe None
           msg.payload.isEmpty shouldBe true
@@ -262,17 +245,16 @@ class MessageMetaSpec
     sharding.init(Entity(Outbox.TypeKey) { entityContext =>
       Outbox(
         entityContext,
-        appConfig.config.withFallback(SNAPSHOT_CONFIG),
+        appConfig.withFallback(SNAPSHOT_CONFIG).config,
         testAccessTokenRefreshers,
         testRelResolver,
-        testMsgStore,
         testMsgPackagers,
         testMsgTransports,
-        executionContext
+        executionContext,
+        testMsgRepository
       )
     })
 
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureWalletExecutionContext: ExecutionContext = ecp.walletFutureExecutionContext
 }

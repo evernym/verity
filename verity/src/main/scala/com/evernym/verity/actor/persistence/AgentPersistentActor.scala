@@ -1,8 +1,8 @@
 package com.evernym.verity.actor.persistence
 
+import com.evernym.verity.actor.HasAppConfig
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.protocol.protocols.HasAppConfig
 
 
 /**

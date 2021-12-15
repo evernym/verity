@@ -1,9 +1,11 @@
 package com.evernym.verity.protocol.protocols.committedAnswer.v_1_0
 
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.didcomm.messages.ProblemDescription
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, ProblemDescription}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{Timing => BaseTiming}
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.Ctl.Init
 

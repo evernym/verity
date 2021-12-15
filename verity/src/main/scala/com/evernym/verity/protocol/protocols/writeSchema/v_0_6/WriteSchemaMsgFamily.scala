@@ -1,7 +1,11 @@
 package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkOptionalNotEmpty, checkRequired, checkValidDID}
 
 object WriteSchemaMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.EVERNYM_QUALIFIER
@@ -41,11 +45,15 @@ case class NeedsEndorsement(schemaId: String, schemaJson: String) extends Signal
  * Control Messages
  */
 trait SchemaControl extends Control with MsgBase
-case class Write(name: String, version: String, attrNames: Seq[String]) extends Msg with SchemaControl {
+case class Write(name: String, version: String, attrNames: Seq[String], endorserDID: Option[DidStr]=None) extends Msg with SchemaControl {
   override def validate(): Unit = {
     checkRequired("name", name)
     checkRequired("version", version)
     checkRequired("attrNames", attrNames)
+    checkOptionalNotEmpty("endorserDID", endorserDID)
+    endorserDID.foreach{ endorser =>
+      checkValidDID("endorserDID", endorser)
+    }
   }
 }
 

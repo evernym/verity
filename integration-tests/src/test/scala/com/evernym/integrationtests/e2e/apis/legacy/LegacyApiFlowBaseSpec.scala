@@ -20,10 +20,10 @@ import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.constants.Constants._
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
-import com.evernym.verity.protocol.engine.MsgId
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.testkit.agentmsg._
 import com.evernym.verity.testkit.util.AssertionUtil.expectMsgType
@@ -32,7 +32,7 @@ import com.evernym.verity.testkit.util.http_listener.{PackedMsgHttpListener, Pus
 import com.evernym.verity.testkit.{AwaitResult, BasicSpecWithIndyCleanup, CancelGloballyAfterFailure}
 import com.evernym.verity.util.TimeZoneUtil.getCurrentUTCZonedDateTime
 import com.evernym.verity.util._
-import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider, HasWalletExecutionContextProvider, UrlParam}
+import com.evernym.verity.util2.{ExecutionContextProvider, UrlParam}
 import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
@@ -63,7 +63,6 @@ trait LegacyApiFlowBaseSpec
     appConfig,
     None,
     executionContextProvider.futureExecutionContext,
-    executionContextProvider.walletFutureExecutionContext,
     taa = ConfigUtil.findTAAConfig(appConfig, "1.0.0"),
     genesisTxnPath = Some(testEnv.ledgerConfig.genesisFilePath)
   )
@@ -661,7 +660,7 @@ trait LegacyApiFlowBaseSpec
             AgentMsgPackagingContext(MPF_MSG_PACK, MTV_1_0, packForAgencyRoute = true)
           eventually (timeout(Span(10, Seconds)), interval(Span(2, Seconds))) {
             val pairwiseDIDs = connsIds.map { cids =>
-              mockClientAgent.pairwiseConnDetails.filter(cids.contains).values.map(_.myPairwiseDidPair.DID).toList
+              mockClientAgent.pairwiseConnDetails.filter(cids.contains).values.map(_.myPairwiseDidPair.did).toList
             }
 
             val gmr = expectMsgType[MsgsByConns_MFV_0_5](getMsgsFromConns_MPV_0_5(pairwiseDIDs))
@@ -704,7 +703,7 @@ trait LegacyApiFlowBaseSpec
           val msgUidsByPairwiseDIDs = connIds.map { connId =>
             val con = mockClientAgent.pairwiseConnDetail(connId)
             val connMsgUids = msgsByConns(connId).map(_._2.uid).toList
-            PairwiseMsgUids(con.myPairwiseDidPair.DID, connMsgUids)
+            PairwiseMsgUids(con.myPairwiseDidPair.did, connMsgUids)
           }.toList
           val umr = updateMsgStatusByConns(statusCode, msgUidsByPairwiseDIDs)
         }

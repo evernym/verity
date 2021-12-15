@@ -54,15 +54,6 @@ prepare_jars(){
 
   pushd ${PROJECT_DIR} > /dev/null
 
-  #  Build integration jar if it don't exist
-  if find ${PROJECT_DIR}/integration-tests/target/scala-2.12 -name '*.jar' 2>/dev/null  | grep -q '.'; then
-    appendToLogWithDashLinePrefix "integration test jar found and ready"
-  else
-    appendToLogWithDashLinePrefix "creating integration test jar..."
-    sbt "project integrationTests" assembly >> ${PROGRESS_LOG_FILE_PATH}
-    delete_indy_client_dir
-  fi
-
   # check if source code changed
   source_code_changed=$(isSourceCodeChanged)
   appendToProgressLog "is source code changed: ${source_code_changed}"
@@ -118,7 +109,7 @@ create_dynamodb_tables() {
     appendToLogWithDashLinePrefix "dynamodb event config: ${createEventTable}"
     appendToLogWithDashLinePrefix "dynamodb snapshot config: ${createSnapShotTable}"
 
-    dynamodbEndpoint="${DYNAMODB_ENDPOINT:-localhost:8000}" # get endpoint from env variable: DYNAMODB_ENDPOINT if set or just localhost
+    dynamodbEndpoint="${DYNAMODB_HOST:-localhost}:${DYNAMODB_PORT:-8000}" # get host from env variable: DYNAMODB_HOST if set or just localhost
 
     # shellcheck disable=SC2046
     retry 3 'check-dynamodb' nc -vz $(echo "${dynamodbEndpoint}" | tr ":" " ") > /dev/null

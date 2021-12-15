@@ -4,22 +4,22 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import akka.actor.ActorRef
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException}
-import com.evernym.verity.util2.HasWalletExecutionContextProvider
+import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status.{ALREADY_EXISTS, INVALID_VALUE, SIGNATURE_VERIF_FAILED}
 import com.evernym.verity.actor.wallet.{WalletCmdErrorResponse, WalletCommand}
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
-import com.evernym.verity.logging.LoggingUtil
-import com.evernym.verity.metrics.CustomMetrics.{AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT, AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT}
-import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}
+import com.evernym.verity.observability.metrics.CustomMetrics.{AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT, AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT}
+import com.evernym.verity.observability.logs.LoggingUtil
+import com.evernym.verity.observability.metrics.{MetricsUnit, MetricsWriter}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 
-trait WalletService extends HasWalletExecutionContextProvider {
+trait WalletService extends HasExecutionContextProvider {
 
-  implicit def executionContext: ExecutionContext = futureWalletExecutionContext
+  implicit def executionContext: ExecutionContext = futureExecutionContext
 
   def metricsWriter : MetricsWriter
 

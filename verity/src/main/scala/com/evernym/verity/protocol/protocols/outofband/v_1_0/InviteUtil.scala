@@ -1,22 +1,23 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
-import com.evernym.verity.actor.wallet.GetVerKeyResp
-import com.evernym.verity.config.AppConfigWrapper
-import com.evernym.verity.protocol.didcomm.decorators.AttachmentDescriptor
+import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncapi.wallet.VerKeyResult
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
+import com.evernym.verity.protocol.engine.util.{DIDDoc, ServiceFormatted, ServiceFormatter}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvitation
 import com.evernym.verity.util.Base58Util
-import com.evernym.verity.config.ConfigConstants._
 
 import scala.util.{Failure, Success, Try}
 
 object InviteUtil {
-  def withServiced(agencyVerKey: Option[VerKey], ctx: ProtocolContextApi[_, _, _, _, _, _])
+  def withServiced(agencyVerKey: Option[VerKeyStr], ctx: ProtocolContextApi[_, _, _, _, _, _])
                   (handler: Try[Vector[ServiceFormatted]] =>Unit): Unit = {
     (agencyVerKey, ctx.getRoster.selfId) match {
       case (Some(agencyVerKey), Some(did)) =>
         ctx.wallet.verKey(did) {
-          case Success(GetVerKeyResp(verKey: VerKey)) =>
+          case Success(VerKeyResult(verKey: VerKeyStr)) =>
             handler(Success(
               DIDDoc(
                 did,
@@ -37,22 +38,24 @@ object InviteUtil {
   }
 
   def buildInviteWithThreadedId(protoRef: ProtoRef,
-                                relationshipId: DID,
+                                relationshipId: DidStr,
                                 threadId: ThreadId,
                                 agentName: Option[String],
                                 logoUrl: Option[String],
-                                publicDid: Option[DID],
+                                publicDid: Option[DidStr],
                                 service: Vector[ServiceFormatted],
                                 attachment: AttachmentDescriptor,
                                 goalCode: Option[String],
-                                goal: Option[String]): OutOfBandInvitation = {
+                                goal: Option[String],
+                                serviceKeyDidFormat: Boolean
+                               ): OutOfBandInvitation = {
     val id = buildThreadedInviteId(protoRef, relationshipId, threadId)
     OutOfBandInvitation(
       agentName.getOrElse(""),
       goalCode,
       goal,
       Vector(attachment),
-      if (AppConfigWrapper.getBooleanReq(SERVICE_KEY_DID_FORMAT)) for (s <- service) yield ServiceFormatter(s).toDidKeyFormat() else service,
+      if (serviceKeyDidFormat) for (s <- service) yield ServiceFormatter(s).toDidKeyFormat() else service,
       logoUrl,
       publicDid.map("did:sov:"+_),
       id
@@ -60,7 +63,7 @@ object InviteUtil {
   }
 
 
-  case class ThreadedInviteIdDecoded(ver: String, protoRefStr: String, relationshipId: DID, threadId: ThreadId)
+  case class ThreadedInviteIdDecoded(ver: String, protoRefStr: String, relationshipId: DidStr, threadId: ThreadId)
   val delimiter = '$'
   val encodeVer = "v1"
   /*
@@ -68,12 +71,11 @@ object InviteUtil {
   for the this encoded data to be opaque but the data is not a secret.
    */
   def buildThreadedInviteId(protoRef: ProtoRef,
-                            relationshipId: DID,
+                            relationshipId: DidStr,
                             threadId: ThreadId): String = {
     val preCodedId = s"$encodeVer$delimiter$protoRef$delimiter$relationshipId$delimiter$threadId"
     val encoded = Base58Util.encode(preCodedId.getBytes())
     s"${encoded.substring(0, 7)}-${encoded.substring(7, 16)}-${encoded.substring(16, 25)}-${encoded.substring(25, 34)}-${encoded.substring(34)}"
-
   }
 
   def isThreadedInviteId(id: String): Boolean = {
@@ -103,7 +105,6 @@ object InviteUtil {
           Failure(new Exception("Unable to extract 4 elements from ThreadedInviteId"))
       }
       .map{x =>
-        val s = x(0)
         ThreadedInviteIdDecoded(x(0), x(1), x(2), x(3))
       }
   }

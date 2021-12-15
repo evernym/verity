@@ -1,3 +1,4 @@
+import DevEnvironmentTasks.agentJars
 import K8sConfigTemplateGen.genConfig
 import com.typesafe.config.{ConfigFactory, ConfigObject, ConfigOrigin, ConfigValue, ConfigValueType, ConfigUtil => TypesafeUtil}
 import sbt.Keys._
@@ -12,7 +13,7 @@ import java.nio.file.Path
 import scala.collection.JavaConverters._
 
 object K8sTasks {
-  def init(addedJars: Seq[String], libindyVer: String) = {
+  def init(libvdrtoolsVer: String) = {
     Seq(
       k8sDockerPackageDir := { target.value / "docker" },
       k8sConfigGenDir := { k8sDockerPackageDir.value / "configuration" },
@@ -41,8 +42,8 @@ object K8sTasks {
         log.info(s"Found main assembly jar: $assemblyFile")
 
         val additionalJars = searchForAdditionalJars(
-          (assembly / externalDependencyClasspath).value,
-          addedJars
+          (Compile / dependencyClasspath).value,
+          agentJars.value
         )
 
         additionalJars.foreach(j => log.info(s"Found additional jar: ${j._1}"))
@@ -84,7 +85,7 @@ object K8sTasks {
         val argsScript =
           s"""
             |export VERITY_VERSION="${version.value}"
-            |export LIBINDY_VERSION="$libindyVer"
+            |export LIBVDRTOOLS_VERSION="$libvdrtoolsVer"
             |""".stripMargin
 
         log.info(s"Writing args.env to -- $argFileDest")
@@ -127,11 +128,14 @@ object K8sConfigTemplateGen {
         collectIncludes(explicitIncludes)
       ).sorted
 
-    collection.mkString("", "\n", "\n\n") + """include "config-map/sponsors.conf"
+    collection.mkString("", "\n", "\n\n") + """
+                                  |include "config-map/sponsors.conf"
                                   |include "config-map/ledgers.conf"
                                   |include "config-map/usage-rules.conf"
                                   |include "config-map/metrics.conf"
-                                  |include "config-map/customer.conf"
+                                  |include "config-map/customers.conf"
+                                  |include "config-map/sms-preferred-order.conf"
+                                  |include "config-map/msg-types-for-alert-push-notif.conf"
                                   |include "config-map/custom.conf"""".stripMargin
   }
 

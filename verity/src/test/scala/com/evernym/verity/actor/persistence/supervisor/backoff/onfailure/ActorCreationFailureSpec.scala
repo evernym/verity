@@ -11,6 +11,9 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Milliseconds, Seconds, Span}
 
+//This test confirms that if any exception occurs during actor creation itself
+// it will be stopped by the default supervisor strategy
+// and 'onFailure' supervisor strategy doesn't change that behavior (as it only reacts to 'Restart' directive)
 
 class ActorCreationFailureSpec
   extends ActorSpec
@@ -26,16 +29,19 @@ class ActorCreationFailureSpec
   val intervalVal: PatienceConfiguration.Interval = interval(Span(100, Milliseconds))
 
   "OnFailure BackoffSupervised actor" - {
-    "when throws an unhandled exception" - {
+    "when throws an unhandled exception during actor creation" - {
       "should be stopped" in {
         EventFilter.error(pattern = "purposefully throwing exception", occurrences = 1) intercept {
           mockSupervised ! Ping(sendAck = true)
           expectNoMessage()
         }
 
-        // Supervisor should be stopped because the child was stopped
-        mockSupervised ! GetCurrentChild
-        expectNoMessage()
+        // Supervised actor should have been stopped
+        // because exception occurred during actor creation itself
+        eventually(timeoutVal, intervalVal) {
+          mockSupervised ! GetCurrentChild
+          expectNoMessage()
+        }
       }
     }
   }
@@ -45,6 +51,7 @@ class ActorCreationFailureSpec
        verity.persistent-actor.base.supervisor {
           enabled = true
           backoff {
+            strategy = OnFailure
             min-seconds = 1
             max-seconds = 2
             random-factor = 0

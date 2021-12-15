@@ -4,7 +4,7 @@ import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, ConfigLoad
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.actor.appStateManager.AppStateUpdateAPI.handleError
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, SeriousSystemError}
 import com.evernym.verity.config.validator.DefaultConfigValidatorCreator
@@ -94,4 +94,4 @@ trait AppConfig extends ConfigReaderHelper {
 
 }
 
-object AppConfigWrapper extends AppConfig
+class AppConfigWrapper extends AppConfig

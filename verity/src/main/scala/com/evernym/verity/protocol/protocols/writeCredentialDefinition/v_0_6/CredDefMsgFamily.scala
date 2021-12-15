@@ -1,7 +1,11 @@
 package com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6
 
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkOptionalNotEmpty, checkRequired, checkValidDID}
 import org.json.JSONObject
 
 object CredDefMsgFamily extends MsgFamily {
@@ -56,11 +60,19 @@ case class RevocationDetails(support_revocation: Boolean, tails_file: String, ma
  */
 trait CredDefControl extends Control
 case class InitMsg() extends CredDefControl
-case class Write(name: String, schemaId: String, tag: Option[String], revocationDetails: Option[RevocationDetails]) extends Msg with CredDefControl {
+case class Write(name: String,
+                 schemaId: String,
+                 tag: Option[String],
+                 revocationDetails: Option[RevocationDetails],
+                 endorserDID: Option[DidStr]=None) extends Msg with CredDefControl {
   override def validate(): Unit = {
     checkRequired("name", name)
     checkRequired("schemaId", schemaId)
     checkOptionalNotEmpty("tag", tag)
+    checkOptionalNotEmpty("endorserDID", endorserDID)
+    endorserDID.foreach{ endorser =>
+      checkValidDID("endorserDID", endorser)
+    }
   }
 }
 

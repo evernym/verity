@@ -1,8 +1,10 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0.expire_after_days
 
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants._
-import com.evernym.verity.protocol.didcomm.decorators.PleaseAck
+import com.evernym.verity.did.didcomm.v1.decorators.PleaseAck
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.OfferCred
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0._
@@ -436,7 +438,7 @@ class IssueCredentialSpec
       val threadedInviteId = InviteUtil.parseThreadedInviteId(
         inviteObj.getString("@id")
       ).get
-      threadedInviteId.protoRefStr shouldBe protoDef.msgFamily.protoRef.toString
+      threadedInviteId.protoRefStr shouldBe protoDef.protoRef.toString
       threadedInviteId.relationshipId shouldBe issuer.did_!
       threadedInviteId.threadId shouldBe issuer.currentInteraction.get.threadId.get
 
@@ -526,7 +528,7 @@ class IssueCredentialSpec
       val threadedInviteId = InviteUtil.parseThreadedInviteId(
         inviteObj.getString("@id")
       ).get
-      threadedInviteId.protoRefStr shouldBe protoDef.msgFamily.protoRef.toString
+      threadedInviteId.protoRefStr shouldBe protoDef.protoRef.toString
       threadedInviteId.relationshipId shouldBe issuer.did_!
       threadedInviteId.threadId shouldBe issuer.currentInteraction.get.threadId.get
 
@@ -605,5 +607,7 @@ class IssueCredentialSpec
       issuer expect state[State.ProblemReported]
     }
   }
+
+  override def appConfig: AppConfig = new TestAppConfig()
 
 }

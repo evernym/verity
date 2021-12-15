@@ -5,8 +5,9 @@ import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
-import com.evernym.verity.protocol.engine.ProtocolRegistry._
-import com.evernym.verity.protocol.engine.{DIDDoc, SignalEnvelope}
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry._
+import com.evernym.verity.protocol.engine.SignalEnvelope
+import com.evernym.verity.protocol.engine.util.DIDDoc
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Ctl.{Accept, TheirDidDocUpdated, TheirDidUpdated}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Role.{Invitee, Inviter}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.UpdateTheirDid
@@ -131,12 +132,12 @@ class ConnectionsSpec extends TestsProtocolsImpl(ConnectionsDef)
 
   lazy val inviterDIDDoc: DIDDoc = {
     val dd = generateNewDid(Option("11111111111111111111111111111111"))
-    DIDDoc(dd.DID, dd.verKey, "http://localhost:9001/agency/msg", Vector.empty)
+    DIDDoc(dd.did, dd.verKey, "http://localhost:9001/agency/msg", Vector.empty)
   }
 
   lazy val inviteeDIDDoc: DIDDoc = {
     val dd = generateNewDid(Option("22222222222222222222222222222222"))
-    DIDDoc(dd.DID, dd.verKey, "http://localhost:9002/agency/msg", Vector.empty)
+    DIDDoc(dd.did, dd.verKey, "http://localhost:9002/agency/msg", Vector.empty)
   }
 
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp

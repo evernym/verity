@@ -1,13 +1,15 @@
 package com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6
 
-import com.evernym.verity.actor.wallet.CredDefCreated
-import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
-import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.container.actor.Init
+import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
+import com.evernym.verity.protocol.engine.asyncapi.wallet.CredDefCreatedResult
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
+import com.evernym.verity.protocol.engine.events.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.Role.Writer
@@ -60,14 +62,16 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
             sigType=None,
             revocationDetails=Some(revocationDetails)
           ) {
-            case Success(credDefCreated: CredDefCreated) =>
+            case Success(credDefCreated: CredDefCreatedResult) =>
               ctx.ledger.writeCredDef(submitterDID, credDefCreated.credDefJson) {
                 case Success(_) =>
                   ctx.apply(CredDefWritten(credDefCreated.credDefId))
                   ctx.signal(StatusReport(credDefCreated.credDefId))
                 case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
                   ctx.logger.warn(e.toString)
-                  val endorserDID = init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
+                  val endorserDID = m.endorserDID.getOrElse(
+                    init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
+                  )
                   if (endorserDID.nonEmpty) {
                     ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefCreated.credDefJson, endorserDID) {
                       case Success(ledgerRequest) =>
@@ -96,7 +100,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
     ctx.signal(ProblemReport(e.toString))
   }
 
-  def _submitterDID(init: State.Initialized): DID =
+  def _submitterDID(init: State.Initialized): DidStr =
     init
     .parameters
     .initParams
@@ -104,7 +108,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
     .map(_.value)
     .getOrElse(throw MissingIssuerDID)
 
-  def missingVkOrEndorserErr(did: DID, e: LedgerRejectException): Boolean =
+  def missingVkOrEndorserErr(did: DidStr, e: LedgerRejectException): Boolean =
     e.msg.contains(s"verkey for $did cannot be found") || e.msg.contains("Not enough ENDORSER signatures")
 
   def initialize(params: Seq[ParameterStored]): Roster[Role] = {

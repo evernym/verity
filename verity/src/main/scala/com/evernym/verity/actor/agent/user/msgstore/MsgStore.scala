@@ -1,20 +1,21 @@
 package com.evernym.verity.actor.agent.user.msgstore
 
-import java.time.ZonedDateTime
-import java.time.temporal.ChronoUnit
-import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException}
-import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, MSG_DELIVERY_STATUS_SENT, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED, MSG_STATUS_REVIEWED, MSG_STATUS_SENT}
 import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.user.{MsgHelper, msgstore}
 import com.evernym.verity.actor.agent._
-import com.evernym.verity.actor.agent.user.MsgHelper
 import com.evernym.verity.agentmsg.msgfamily.pairwise.GetMsgsReqMsg
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.Constants.YES
-import com.evernym.verity.metrics.CustomMetrics._
-import com.evernym.verity.metrics.{MetricsUnit, MetricsWriter}
-import com.evernym.verity.protocol.engine.{MsgId, MsgName, RefMsgId}
-import com.evernym.verity.protocol.protocols.MsgDetail
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
+import com.evernym.verity.did.didcomm.v1.{Thread, ThreadBase}
+import com.evernym.verity.observability.metrics.CustomMetrics._
+import com.evernym.verity.observability.metrics.{MetricsUnit, MetricsWriter}
+import com.evernym.verity.protocol.engine.RefMsgId
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException}
+import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, MSG_DELIVERY_STATUS_SENT, MSG_STATUS_CREATED, MSG_STATUS_RECEIVED, MSG_STATUS_REVIEWED, MSG_STATUS_SENT}
 import org.slf4j.LoggerFactory
 
 import java.time.ZonedDateTime
@@ -90,7 +91,16 @@ class MsgStore(appConfig: AppConfig,
       val payloadWrapper = if (gmr.excludePayload.contains(YES)) None else msgAndDelivery.msgPayloads.get(uid)
       val payload = payloadWrapper.map(_.msg)
       MsgParam(
-        MsgDetail(uid, msg.`type`, msg.senderDID, msg.statusCode, msg.refMsgId, msg.thread, payload, Set.empty),
+        msgstore.MsgDetail(
+          uid,
+          msg.`type`,
+          msg.senderDID,
+          msg.statusCode,
+          msg.refMsgId,
+          ThreadBase.convertOpt(msg.thread),
+          payload,
+          Set.empty
+        ),
         msg.creationTimeInMillis
       )
     }
@@ -115,7 +125,7 @@ class MsgStore(appConfig: AppConfig,
       removeExtraMsgsToAccommodateNewMsg()
     }
     val receivedOrders = mc.thread.map(th => th.receivedOrders.map(ro => ro.from -> ro.order).toMap).getOrElse(Map.empty)
-    val msgThread = mc.thread.map(th => Thread(
+    val msgThread = mc.thread.map(th => com.evernym.verity.actor.agent.Thread(
       Evt.getOptionFromValue(th.id),
       Evt.getOptionFromValue(th.parentId),
       Option(th.senderOrder),
@@ -401,3 +411,13 @@ case class AccumulatedMsgs(msgs: List[MsgDetail], totalPayloadSize: Int) {
     AccumulatedMsgs(msgs :+ next.msgDetail, totalPayloadSize + next.payloadSize)
   }
 }
+
+case class MsgDetail(uid: MsgId, `type`: String, senderDID: DidStr, statusCode: String,
+                     refMsgId: Option[String], thread: Option[Thread],
+                     payload: Option[Array[Byte]], deliveryDetails: Set[DeliveryStatus]) {
+
+  override def toString: String = s"uid=$uid, type=${`type`}, senderDID=$senderDID, " +
+    s"statusCode=$statusCode, thread=$thread, refMsgId=$refMsgId"
+}
+
+case class DeliveryStatus(to: String, statusCode: String, statusDetail: Option[String], lastUpdatedDateTime: String)

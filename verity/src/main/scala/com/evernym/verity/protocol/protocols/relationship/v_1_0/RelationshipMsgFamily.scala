@@ -1,10 +1,14 @@
 package com.evernym.verity.protocol.protocols.relationship.v_1_0
 
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.didcomm.messages.ProblemDescription
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, ProblemDescription}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.InviteShortened
+import com.evernym.verity.protocol.engine.util.ServiceFormatted
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkRequired, throwInvalidFieldProtocolEngineException}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandMsgFamily
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Init
 import com.evernym.verity.util.Util.isPhoneNumberInValidFormat
@@ -42,11 +46,11 @@ object RelationshipMsgFamily extends MsgFamily {
 
 sealed trait SignalMsg
 
-case class Identity(DID: DID, verKey: VerKey)
+case class Identity(DID: DidStr, verKey: VerKeyStr)
 
 object Signal {
   case class CreatePairwiseKey() extends SignalMsg
-  case class Created(did: DID, verKey: VerKey) extends SignalMsg
+  case class Created(did: DidStr, verKey: VerKeyStr) extends SignalMsg
   case class Invitation(inviteURL: String, shortInviteURL: Option[String], invitationId: String) extends SignalMsg
   case class SendSMSInvite(invitationId: String, inviteURL: String, senderName: String, phoneNo: String) extends SignalMsg
   case class SMSInvitationSent(invitationId: String)
@@ -70,13 +74,13 @@ object Msg {
 
   case class Invitation(label: String,
                         serviceEndpoint: ServiceEndpoint,
-                        recipientKeys: Vector[VerKey],
-                        routingKeys: Option[Vector[VerKey]],
+                        recipientKeys: Vector[VerKeyStr],
+                        routingKeys: Option[Vector[VerKeyStr]],
                         profileUrl: Option[String],
                         `@type`: String = MsgFamily.typeStrFromMsgType(MsgFamily.COMMUNITY_QUALIFIER, "connections", "1.0", "invitation"),
                         `@id`: String = MsgIdProvider.getNewMsgId) extends BaseInvitation {
 
-    def routingKeys_! : Vector[VerKey] = routingKeys.getOrElse(Vector.empty)
+    def routingKeys_! : Vector[VerKeyStr] = routingKeys.getOrElse(Vector.empty)
   }
 
   case class OutOfBandInvitation(label: String,
@@ -94,9 +98,9 @@ object Msg {
 sealed trait State
 object State {
   case class Uninitialized() extends State
-  case class Initialized(agencyVerKey: String, label: String, logoUrl: String, publicDid: DID) extends State
-  case class KeyCreationInProgress(label: String, agencyVerKey: String, profileUrl: String, publicDid: DID) extends State
-  case class Created(label: String, did: DID, verKey: VerKey, agencyVerKey: String, profileUrl: String, publicDid: DID) extends State
+  case class Initialized(agencyVerKey: String, label: String, logoUrl: String, publicDid: DidStr) extends State
+  case class KeyCreationInProgress(label: String, agencyVerKey: String, profileUrl: String, publicDid: DidStr) extends State
+  case class Created(label: String, did: DidStr, verKey: VerKeyStr, agencyVerKey: String, profileUrl: String, publicDid: DidStr) extends State
 }
 
 sealed trait Ctl extends Control with MsgBase
@@ -104,7 +108,7 @@ sealed trait Ctl extends Control with MsgBase
 object Ctl {
   case class Init(params: Parameters) extends Ctl
   case class Create(label: Option[String], logoUrl: Option[String]) extends Ctl
-  case class KeyCreated(did: DID, verKey: VerKey) extends Ctl
+  case class KeyCreated(did: DidStr, verKey: VerKeyStr) extends Ctl
   case class SMSSent(invitationId: String, longInviteUrl: String, shortInviteUrl: String) extends Ctl
   case class SMSSendingFailed(invitationId: String, reason: String) extends Ctl
 
@@ -115,7 +119,7 @@ object Ctl {
     override def validate() {
       checkRequired("phoneNumber", phoneNumber)
       if (!isPhoneNumberInValidFormat(phoneNumber))
-        throwInvalidReqFieldProtocolEngineException(
+        throwInvalidFieldProtocolEngineException(
           "phoneNumber",
           Some("Phone number provided is not in valid international format.")
         )
@@ -125,7 +129,7 @@ object Ctl {
     override def validate() {
       checkRequired("phoneNumber", phoneNumber)
       if (!isPhoneNumberInValidFormat(phoneNumber))
-        throwInvalidReqFieldProtocolEngineException(
+        throwInvalidFieldProtocolEngineException(
           "phoneNumber",
           Some("Phone number provided is not in valid international format.")
         )

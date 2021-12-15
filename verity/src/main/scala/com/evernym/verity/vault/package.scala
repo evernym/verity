@@ -1,8 +1,8 @@
 package com.evernym.verity
 
-import com.evernym.verity.protocol.engine.{DID, VerKey}
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.vault.wallet_api.WalletAPI
-import org.hyperledger.indy.sdk.wallet.Wallet
+import com.evernym.vdrtools.wallet.Wallet
 
 package object vault {
 
@@ -34,13 +34,13 @@ package object vault {
     def walletAPIParam: WalletAPIParam = WalletAPIParam(walletId)
   }
 
-  case class GetVerKeyByDIDParam(did: DID, getKeyFromPool: Boolean)
+  case class GetVerKeyByDIDParam(did: DidStr, getKeyFromPool: Boolean)
 
   object KeyParam {
     def fromVerKey(verKey: String): KeyParam = KeyParam(Left(verKey))
-    def fromDID(did: DID, getKeyFromPool: Boolean = false): KeyParam = KeyParam(Right(GetVerKeyByDIDParam(did, getKeyFromPool)))
+    def fromDID(did: DidStr, getKeyFromPool: Boolean = false): KeyParam = KeyParam(Right(GetVerKeyByDIDParam(did, getKeyFromPool)))
   }
-  case class KeyParam(verKeyParam: Either[VerKey, GetVerKeyByDIDParam])
+  case class KeyParam(verKeyParam: Either[VerKeyStr, GetVerKeyByDIDParam])
 
   case class SealParam(keyParam: KeyParam)
 

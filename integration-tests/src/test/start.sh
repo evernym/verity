@@ -57,14 +57,10 @@ start_process() {
   export VERITY_DYNAMODB_JOURNAL_TABLE=${eventTableName}
   export VERITY_DYNAMODB_SNAPSHOT_TABLE=${snapShotTableName}
 
-  ## integration jar
-  integrationJar="$(find ${PROJECT_DIR}/integration-tests/target/scala-2.12 -name '*.jar')"
-  appendToProgressLog "         integrationJar: ${integrationJar}"
-
   ## setup (including integration jars to have level db dependency available to this verity jar)
   echo "`(TZ=":UTC" date '+%FT%H:%M:%S')` starting..." >> "$verityLogFileName"
   jarFile="$(find ${PROJECT_DIR}/verity/target/scala-2.12 -name 'verity-assembly*.jar')"
-  kanelaAgentJar="${PROJECT_DIR}/integration-tests/lib/kanela-agent-1.0.10.jar"
+  kanelaAgentJar="${PROJECT_DIR}/integration-tests/lib/kanela-agent.jar"
   startCmd="java -javaagent:$kanelaAgentJar -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=${JDWP_PORT} -Dlogback.statusListenerClass=ch.qos.logback.core.status.OnConsoleStatusListener -cp ${jarFile}:${integrationJar}:${PROJECT_DIR}/verity/src/main/resources:${PROJECT_DIR}/integration-tests/src/test/resources/common:${PROJECT_DIR}/integration-tests/src/test/resources/${appTypeName} ${main} >> $verityLogFileName 2>&1 &"
   envStr="$(env)"
   appendToProgressLog "         Environment Vars: ${envStr}"

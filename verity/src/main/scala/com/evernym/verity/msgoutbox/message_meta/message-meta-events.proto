@@ -27,8 +27,9 @@ message LegacyMsgData {
 message MsgActivityRecorded {
     option (scalapb.message).extends = "com.evernym.verity.msgoutbox.message_meta.MessageMeta.Event";
     string outboxId = 1;
-    string deliveryStatus = 2;
-    MsgActivity msgActivity = 3;
+    bool isProcessed = 2;
+    string deliveryStatus = 3;
+    MsgActivity msgActivity = 4;
 }
 
 message MsgActivity {

@@ -1,46 +1,39 @@
 .publish-common:
-  stage: publish
   cache:
     paths:
       - $CI_PROJECT_DIR/.sbt/
       - $CI_PROJECT_DIR/.ivy2/
+
+publish-debian:
+  stage: publish
+  extends:
+    - .publish-common
+    - .main-or-manual-rule
+  needs:
+    - package
   tags:
     - docker-machine
-
-.publish-common-debian:
   script:
     - cd $CI_PROJECT_DIR
     - export debianPackage=`ls verity/target/verity-application_*.deb`
-    - curl -u $KRK_USERNAME:$KRK_PASSWORD --fail -X POST https://$KRK_HOST/repo/$KRK_DEV_REPO/upload -F file=@$debianPackage --cacert "$EVERNYM_CERTIFICATE"
+    - >
+      curl
+      -u $KRK_USERNAME:$KRK_PASSWORD
+      --fail
+      -X POST https://$KRK_HOST/repo/$KRK_DEV_REPO/upload
+      -F file=@$debianPackage
+      --cacert "$EVERNYM_CERTIFICATE"
 
-publish-deb:
-  extends:
-    - .publish-common
-    - .publish-common-debian
-  dependencies:
-    - package
-  only:
-    refs:
-      - main@evernym/verity/verity
-
-publish-deb-manual:
-  extends:
-    - .publish-common
-    - .publish-common-debian
-  dependencies:
-    - package-manual
-  only:
-    refs:
-      - master
-      - main
-      - tags
-      - merge_requests
-  when: manual
-
-.publish-common-docker:
+publish-docker:
+  stage: publish
   image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
+  extends:
+    - .publish-common
+    - .main-or-manual-rule
+  needs:
+    - package
   script:
     # Make Kaniko trust Evernym's internal CA
     - cat "$EVERNYM_CERTIFICATE" >> /kaniko/ssl/certs/ca-certificates.crt
@@ -56,48 +49,40 @@ publish-deb-manual:
       $CI_REGISTRY
       $CI_REGISTRY_USER
       $CI_REGISTRY_PASSWORD
-      $AWS_DEV_ECR_REGISTRY
+      $AWS_ECR_REGISTRY
       > /kaniko/.docker/config.json
-    #- if [ "$CI_COMMIT_REF_NAME" == "master" ]; then DRY_RUN=""; else DRY_RUN="--no-push"; fi
     - >
-      if [ "$INCLUDE_DOCKER_AWS_DESTINATIONS" = "true" ]; then
-        DOCKER_AWS_DESTINATIONS="--destination $AWS_DEV_ECR_REGISTRY/verity:$VERITY_VERSION
-                                 --destination $AWS_DEV_ECR_REGISTRY/verity:latest" ;
-      else DOCKER_AWS_DESTINATIONS=""; fi
+      DOCKER_AWS_DESTINATIONS="
+      --destination $AWS_ECR_REGISTRY/verity:$VERITY_VERSION
+      --destination $AWS_ECR_REGISTRY/verity:latest
+      "
     - >
       /kaniko/executor
-      --build-arg LIBINDY_VERSION=$LIBINDY_VERSION
-      --build-arg EVERNYM_CERTIFICATE=$EVERNYM_CERTIFICATE
+      --build-arg LIBVDRTOOLS_VERSION=$LIBVDRTOOLS_VERSION
+      --build-arg EVERNYM_CERTIFICATE=$EVERNYM_ROOT_CA
       --context . $DRY_RUN $DOCKER_AWS_DESTINATIONS
       --destination $CI_REGISTRY_IMAGE:$VERITY_VERSION
       --destination $CI_REGISTRY_IMAGE:latest
   tags:
     - large
+    - docker-machine
 
-publish-docker:
+publish-helm:
+  stage: publish
   extends:
     - .publish-common
-    - .publish-common-docker
-  dependencies:
-    - package
-  rules:
-    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main"
-      variables:
-        INCLUDE_DOCKER_AWS_DESTINATIONS: "true"
-    - if: $CI_PROJECT_NAMESPACE == "dev/verity" && $CI_COMMIT_REF_NAME == "master"
-      variables:
-        INCLUDE_DOCKER_AWS_DESTINATIONS: "false"
-
-publish-docker-manual:
-  extends:
-    - .publish-common
-    - .publish-common-docker
-  dependencies:
-    - package-manual
-  only:
-    refs:
-      - master
-      - main
-      - tags
-      - merge_requests
-  when: manual
+    - .main-or-manual-rule
+  variables:
+    DEFINED_CHANGES: "verity/src/helm/**/* "
+  needs:
+    - package-helm
+  tags:
+    - docker-machine
+    - micro
+  script:
+    - >
+      curl
+      --request POST
+      --user gitlab-ci-token:$CI_JOB_TOKEN
+      --form "chart=@$(find ${CI_PROJECT_DIR}/verity/target/helm -type f -name '*.tgz')"
+      "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/api/stable/charts"

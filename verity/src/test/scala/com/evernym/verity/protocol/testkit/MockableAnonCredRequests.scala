@@ -1,20 +1,18 @@
 package com.evernym.verity.protocol.testkit
 
-import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, ProofCreated, ProofVerifResult}
-import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
-import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.protocol.engine.asyncapi.wallet.AnonCredRequests
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.protocol.engine.asyncapi.wallet._
 
 import scala.util.Try
 
 object MockableAnonCredRequests {
   val basic = new AnonCredRequests {
 
-    override def createSchema(issuerDID: DID,
+    override def createSchema(issuerDID: DidStr,
                               name: String,
                               version: String,
                               data: String)
-                             (handler: Try[SchemaCreated] => Unit): Unit = {
+                             (handler: Try[SchemaCreatedResult] => Unit): Unit = {
       val schemaId = "2hoqvcwupRTUNkXn6ArYzs:2:test-licence:4.4.4"
       val schemaJson =
         s"""
@@ -27,15 +25,15 @@ object MockableAnonCredRequests {
              "seqNo":2471
            }
            """.stripMargin
-      handler(Try(SchemaCreated(schemaId, schemaJson)))
+      handler(Try(SchemaCreatedResult(schemaId, schemaJson)))
     }
 
-    override def createCredDef(issuerDID: DID,
+    override def createCredDef(issuerDID: DidStr,
                                schemaJson: String,
                                tag: String,
                                sigType: Option[String],
                                revocationDetails: Option[String])
-                              (handler: Try[CredDefCreated] => Unit): Unit = {
+                              (handler: Try[CredDefCreatedResult] => Unit): Unit = {
       val cred_def_id = "2hoqvcwupRTUNkXn6ArYzs:3:CL:2471"
       val cred_def_json = """
         {
@@ -59,12 +57,12 @@ object MockableAnonCredRequests {
         }
         """.stripMargin
 
-      handler(Try(CredDefCreated(cred_def_id, cred_def_json)))
+      handler(Try(CredDefCreatedResult(cred_def_id, cred_def_json)))
     }
 
-    override def createCredOffer(credDefId: String)(handler: Try[CredOfferCreated] => Unit): Unit =
+    override def createCredOffer(credDefId: String)(handler: Try[CredOfferCreatedResult] => Unit): Unit =
       handler(Try(
-        CredOfferCreated(s"""
+        CredOfferCreatedResult(s"""
         {
         	"schema_id": "<schema-id>",
         	"cred_def_id": "$credDefId",
@@ -72,9 +70,9 @@ object MockableAnonCredRequests {
         	"key_correctness_proof" : "<key_correctness_proof>"
         }""".stripMargin)))
 
-    override def createCredReq(credDefId: String, proverDID: DID, credDefJson: String, credOfferJson: String)
-                              (handler: Try[CredReqCreated] => Unit): Unit =
-      handler(Try(CredReqCreated(
+    override def createCredReq(credDefId: String, proverDID: DidStr, credDefJson: String, credOfferJson: String)
+                              (handler: Try[CredReqCreatedResult] => Unit): Unit =
+      handler(Try(CredReqCreatedResult(
         s"""
         {
           "prover_did" : <prover-DID>,
@@ -92,8 +90,8 @@ object MockableAnonCredRequests {
       )))
 
     override def createCred(credOfferJson: String, credReqJson: String, credValuesJson: String, revRegistryId: String, blobStorageReaderHandle: Int)
-                           (handler: Try[CredCreated] => Unit): Unit = handler(Try(
-      CredCreated(s"""
+                           (handler: Try[CredCreatedResult] => Unit): Unit = handler(Try(
+      CredCreatedResult(s"""
         {
           "schema_id": <schema_id>,
           "cred_def_id": <cred_def_id>,
@@ -108,13 +106,13 @@ object MockableAnonCredRequests {
                   credJson: String,
                   credDefJson: String,
                   revRegDefJson: String)
-                 (handler: Try[CredStored] => Unit): Unit = handler(Try(
-      CredStored(Option(credId).getOrElse("cred-id"))
+                 (handler: Try[CredStoredResult] => Unit): Unit = handler(Try(
+      CredStoredResult(Option(credId).getOrElse("cred-id"))
     ))
 
     override def credentialsForProofReq(proofRequest: String)
-                                       (handler: Try[CredForProofReqCreated] => Unit): Unit = handler(Try(
-      CredForProofReqCreated(
+                                       (handler: Try[CredForProofResult] => Unit): Unit = handler(Try(
+      CredForProofResult(
       s"""{
          |   "attrs":{
          |      "attr1_referent":[
@@ -181,12 +179,12 @@ object MockableAnonCredRequests {
     )))
 
     override def createProof(proofRequest: String, usedCredentials: String, schemas: String, credentialDefs: String, revStates: String)
-                            (handler: Try[ProofCreated] => Unit): Unit = handler(Try(
-      ProofCreated("""{"proof":{},"requested_proof":{"revealed_attrs":{"attr1_referent":{"sub_proof_index":0,"raw":"Alex","encoded":"99262857098057710338306967609588410025648622308394250666849665532448612202874"}},"self_attested_attrs":{"attr3_referent":"8-800-300"},"unrevealed_attrs":{"attr2_referent":{"sub_proof_index":0}},"predicates":{"predicate1_referent":{"sub_proof_index":0}}},"identifiers":[{"schema_id":"NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0","cred_def_id":"NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1","rev_reg_id":null,"timestamp":null}]}""")
+                            (handler: Try[ProofCreatedResult] => Unit): Unit = handler(Try(
+      ProofCreatedResult("""{"proof":{},"requested_proof":{"revealed_attrs":{"attr1_referent":{"sub_proof_index":0,"raw":"Alex","encoded":"99262857098057710338306967609588410025648622308394250666849665532448612202874"}},"self_attested_attrs":{"attr3_referent":"8-800-300"},"unrevealed_attrs":{"attr2_referent":{"sub_proof_index":0}},"predicates":{"predicate1_referent":{"sub_proof_index":0}}},"identifiers":[{"schema_id":"NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0","cred_def_id":"NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1","rev_reg_id":null,"timestamp":null}]}""")
     ))
 
     override def verifyProof(proofRequest: String, proof: String, schemas: String, credentialDefs: String, revocRegDefs: String, revocRegs: String)
-                            (handler: Try[ProofVerifResult] => Unit): Unit = handler(Try(ProofVerifResult(true)))
+                            (handler: Try[ProofVerificationResult] => Unit): Unit = handler(Try(ProofVerificationResult(true)))
   }
 
 }

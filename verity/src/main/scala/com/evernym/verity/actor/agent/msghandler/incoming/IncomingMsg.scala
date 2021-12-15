@@ -1,13 +1,18 @@
 package com.evernym.verity.actor.agent.msghandler.incoming
 
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.agent.{MsgPackFormat, Thread, ThreadContextDetail, TypeFormat}
+import com.evernym.verity.actor.agent.{MsgPackFormat, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_PLAIN
 import com.evernym.verity.actor.agent.msghandler.{MsgParam, MsgRespConfig}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.msgpacker.{AgentMessageWrapper, AgentMsgWrapper}
-import com.evernym.verity.protocol.engine.MsgFamily._
+import com.evernym.verity.did.{DidStr, VerKeyStr}
+import com.evernym.verity.did.didcomm.v1.Thread
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.EVERNYM_QUALIFIER
+import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.registry.UnsupportedMessageType
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 import com.evernym.verity.protocol.protocols.protocolRegistry
 import com.evernym.verity.util.{ReqMsgContext, RestMsgContext}
 
@@ -20,7 +25,7 @@ case class IncomingMsgParam(givenMsg: Any, msgType: MsgType) extends MsgParam {
 
   override def supportedTypes: List[Class[_]] = List(classOf[AgentMsgWrapper], classOf[ProcessRestMsg])
 
-  def senderVerKey: Option[VerKey] = givenMsg match {
+  def senderVerKey: Option[VerKeyStr] = givenMsg match {
     case amw: AgentMsgWrapper   => amw.senderVerKey
     case rmp: ProcessRestMsg    => Option(rmp.restMsgContext.auth.verKey)
     case _                      => throw unsupportedMsgTypeException
@@ -66,8 +71,10 @@ case class IncomingMsgParam(givenMsg: Any, msgType: MsgType) extends MsgParam {
     throw new RuntimeException("message pack version required, but not available")
   )
 
-  def unsupportedMsgTypeException = new UnsupportedMessageType(givenMsg.getClass.getSimpleName,
-    protocolRegistry.entries.map(_.protoDef.msgFamily.protoRef))
+  def unsupportedMsgTypeException = new UnsupportedMessageType(
+    givenMsg.getClass.getSimpleName,
+    protocolRegistry.entries.map(_.protoDef.protoRef)
+  )
 }
 
 /**
@@ -90,14 +97,16 @@ case class MsgForRelationship(domainId: DomainId,
 
 
 case class ProcessPackedMsg(packedMsg: PackedMsg, reqMsgContext: ReqMsgContext, msgThread: Option[Thread]=None)
-  extends MsgBase with ActorMessage {
+  extends MsgBase
+    with ActorMessage {
   override def validate(): Unit = {
     checkRequired("packedMsg", packedMsg)
   }
 }
 
 case class ProcessRestMsg(msg: String, restMsgContext: RestMsgContext)
-  extends MsgBase with ActorMessage {
+  extends MsgBase
+    with ActorMessage {
   override def validate(): Unit = {
     checkRequired("msg", msg)
   }
@@ -109,7 +118,7 @@ case class ProcessRestMsg(msg: String, restMsgContext: RestMsgContext)
  * @param msg
  * @param forRel
  */
-case class ControlMsg(msg: MsgBase, forRel: Option[DID]=None)
+case class ControlMsg(msg: MsgBase, forRel: Option[DidStr]=None)
 
 case class ProcessSignalMsg(smp: SignalMsgParam,
                             protoRef: ProtoRef,

@@ -4,7 +4,7 @@ import akka.actor.Props
 import akka.event.Logging.{DebugLevel, ErrorLevel, InfoLevel, LogLevel, WarningLevel}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.base.{CoreActorExtended, Done}
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
 
 package object logging {

@@ -6,14 +6,17 @@ import akka.util.Timeout
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Exceptions.HandledErrorException
 import com.evernym.verity.actor.{ActorMessage, AddDetail, ForIdentifier, ForToken}
-import com.evernym.verity.actor.agent.{DidPair, SetupAgentEndpoint, SetupCreateKeyEndpoint}
+import com.evernym.verity.actor.agent.{SetupAgentEndpoint, SetupCreateKeyEndpoint}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.ConfigConstants.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.constants.ActorNameConstants.TOKEN_TO_ACTOR_ITEM_MAPPER_REGION_ACTOR_NAME
 import com.evernym.verity.constants.Constants.DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
+import com.evernym.verity.did.DidPair
+import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.protocol.Control
+import com.evernym.verity.protocol.engine.container.ProtocolContainer
 import com.evernym.verity.protocol.engine.util.getNewActorIdFromSeed
-import com.evernym.verity.protocol.engine.{MsgId, PinstId, ProtoRef, ProtocolContainer}
+import com.evernym.verity.protocol.engine.{PinstId, ProtoRef}
 import com.evernym.verity.protocol.legacy.services.{AgentEndpointServiceProvider, CreateAgentEndpointDetail, CreateKeyEndpointDetail, CreateKeyEndpointServiceProvider, LegacyProtocolServicesImpl, TokenToActorMappingProvider}
 import com.evernym.verity.util.TokenProvider
 import com.evernym.verity.util.Util.buildDuration
@@ -59,15 +62,27 @@ extends TokenToActorMappingProvider
    */
   def setupCreateKeyEndpoint(forDIDPair: DidPair, agentKeyDIDPair: DidPair, endpointDetailJson: String): Future[Any] = {
     val endpointDetail = DefaultMsgCodec.fromJson[CreateKeyEndpointDetail](endpointDetailJson)
-    val cmd = SetupCreateKeyEndpoint(agentKeyDIDPair, forDIDPair, endpointDetail.ownerDID,
-      endpointDetail.ownerAgentKeyDidPair, endpointDetail.ownerAgentActorEntityId, Option(getProtocolIdDetail))
+    val cmd = SetupCreateKeyEndpoint(
+      agentKeyDIDPair.toAgentDidPair,
+      forDIDPair.toAgentDidPair,
+      endpointDetail.ownerDID,
+      endpointDetail.ownerAgentKeyDidPair.map(_.toAgentDidPair),
+      endpointDetail.ownerAgentActorEntityId,
+      Option(getProtocolIdDetail)
+    )
     sendCmdToRegionActor(endpointDetail.regionTypeName, newEndpointActorEntityId, cmd)
   }
 
   def setupNewAgentEndpoint(forDIDPair: DidPair, agentKeyDIDPair: DidPair, endpointDetailJson: String): Future[Any] = {
     val endpointSetupDetail = DefaultMsgCodec.fromJson[CreateAgentEndpointDetail](endpointDetailJson)
-    sendCmdToRegionActor(endpointSetupDetail.regionTypeName, endpointSetupDetail.entityId,
-      SetupAgentEndpoint(forDIDPair, agentKeyDIDPair))
+    sendCmdToRegionActor(
+      endpointSetupDetail.regionTypeName,
+      endpointSetupDetail.entityId,
+      SetupAgentEndpoint(
+        forDIDPair.toAgentDidPair,
+        agentKeyDIDPair.toAgentDidPair
+      )
+    )
   }
 
   //NOTE: this method is used to compute entity id of the new pairwise actor this protocol will use

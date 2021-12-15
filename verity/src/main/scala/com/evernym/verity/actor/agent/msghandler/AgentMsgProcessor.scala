@@ -1,29 +1,26 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import akka.actor.ActorRef
-import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
-import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.util2.{ActorErrorResp, Status}
+import com.evernym.verity.actor.{ActorMessage, HasAppConfig}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.actor.agent.msghandler.AgentMsgProcessor.{PACKED_MSG_LIMIT, PAYLOAD_ERROR, REST_LIMIT}
-import com.evernym.verity.actor.agent.{ActorLaunchesProtocol, HasAgentActivity, MsgPackFormat, PayloadMetadata, ProtocolEngineExceptionHandler, ProtocolRunningInstances, SponsorRel, Thread, ThreadContextDetail, TypeFormat}
-import com.evernym.verity.actor.agent.msghandler.incoming.{IncomingMsgParam, MsgForRelationship, ProcessPackedMsg, ProcessRestMsg, ProcessSignalMsg, STOP_GAP_MsgTypeMapper}
-import com.evernym.verity.actor.agent.msghandler.outgoing.{JsonMsg, OutgoingMsg, OutgoingMsgContext, OutgoingMsgParam, ProtocolSyncRespMsg, SendSignalMsg}
+import com.evernym.verity.actor.agent.msghandler.incoming._
+import com.evernym.verity.actor.agent.msghandler.outgoing._
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam, PackedMsgRouteParam}
 import com.evernym.verity.actor.agent.relationship.AuthorizedKeyLike
 import com.evernym.verity.actor.agent.user.ComMethodDetail
+import com.evernym.verity.actor.agent.{ActorLaunchesProtocol, HasAgentActivity, MsgPackFormat, PayloadMetadata, ProtocolEngineExceptionHandler, ProtocolRunningInstances, SponsorRel, ThreadContextDetail, TypeFormat}
 import com.evernym.verity.actor.base.{CoreActorExtended, DoNotRecordLifeCycleMetrics, Done}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.{ChildEvent, HasMsgProgressTracker, MsgEvent, TrackingIdParam}
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
-import com.evernym.verity.actor.resourceusagethrottling.{RESOURCE_TYPE_MESSAGE, UserId}
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageCommon
+import com.evernym.verity.actor.resourceusagethrottling.{RESOURCE_TYPE_MESSAGE, UserId}
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.agentmsg.AgentMsgBuilder.createAgentMsg
 import com.evernym.verity.agentmsg.AgentJsonMsg
+import com.evernym.verity.agentmsg.AgentMsgBuilder.createAgentMsg
 import com.evernym.verity.agentmsg.msgcodec.MsgCodecException
-import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
@@ -31,24 +28,29 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWra
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.MSG_LIMITS
 import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
-import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
-import com.evernym.verity.logging.LoggingUtil
+import com.evernym.verity.did.{DidStr, VerKeyStr}
+import com.evernym.verity.did.didcomm.v1.Thread
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId, MsgType, TypedMsgLike}
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
-import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, InitProtocolReq, MsgEnvelope, ServiceDecorator}
+import com.evernym.verity.observability.logs.{HasLogger, LoggingUtil}
+import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, InitProtocolReq, MsgEnvelope}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, DID, DomainId, HasLogger, MsgFamily, MsgId, MsgName, MsgType, Parameter, ParticipantId, PinstId, PinstIdPair, ProtoDef, ProtoRef, ProtocolOutgoingMsg, ProtocolRegistry, RelationshipId, ThreadId, TypedMsg, TypedMsgLike, UnsupportedMessageType, VerKey}
+import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.registry.{PinstIdPair, ProtocolRegistry, UnsupportedMessageType}
 import com.evernym.verity.protocol.protocols
-import com.evernym.verity.protocol.protocols.HasAppConfig
-import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.AgentCreated
 import com.evernym.verity.protocol.protocols.connecting.common.GetInviteDetail
-import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.PushToken
+import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}
 import com.evernym.verity.push_notification.PushNotifData
+import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
 import com.evernym.verity.util2.{ActorErrorResp, Status}
-import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
+import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 
@@ -120,10 +122,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     case psrp: ProtocolSyncRespMsg    => handleProtocolSyncRespMsg(psrp)
 
     //pinst -> actor protocol container (send method) -> this actor
-    case ProtocolOutgoingMsg(sd: ServiceDecorator, _, _, rmId, _, pDef, tcd) =>
-      handleProtocolServiceDecorator(sd, rmId, pDef, tcd)
-
-    //pinst -> actor protocol container (send method) -> this actor
     case pom: ProtocolOutgoingMsg     => handleProtocolOutgoingMsg(pom)
 
     //pinst -> actor driver (sendToForwarder method) -> this actor [to be sent to edge agent]
@@ -169,8 +167,17 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    */
   def handleProtocolOutgoingMsg(pom: ProtocolOutgoingMsg): Unit = {
     logger.trace(s"sending protocol outgoing message: $pom")
-    handleOutgoingMsg(OutgoingMsg(pom.msg, pom.to, pom.from, pom.pinstId,
-      pom.protoDef, pom.threadContextDetail, Option(pom.requestMsgId)))
+    handleOutgoingMsg(
+      OutgoingMsg(
+        pom.msg,
+        pom.to,
+        pom.from,
+        pom.pinstId,
+        pom.protoDef,
+        pom.threadContextDetail,
+        Option(pom.requestMsgId)
+      )
+    )
   }
 
   def handleOutgoingMsg[A](om: OutgoingMsg[A], isSignalMsg: Boolean=false): Unit = {
@@ -376,22 +383,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     }
   }
 
-  def handleProtocolServiceDecorator(sd: ServiceDecorator,
-                                     requestMsgId: MsgId,
-                                     protoDef: ProtoDef,
-                                     tcd: ThreadContextDetail): Unit = {
-    val agentMsg: AgentJsonMsg = createAgentMsg(sd.msg, protoDef,
-      tcd, Option(TypeFormat.STANDARD_TYPE_FORMAT))
-
-    sd match {
-      case pushToken: PushToken =>
-        val pnd = PushNotifData(requestMsgId, agentMsg.msgType.msgName, sendAsAlertPushNotif = true, Map.empty,
-          Map("type" -> agentMsg.msgType.msgName, "msg" -> agentMsg.jsonStr))
-        sendToAgentActor(SendPushNotif(Set(sd.deliveryMethod), pnd, Some(pushToken.msg.sponsorId)))
-      case x => throw new RuntimeException("unsupported Service Decorator: " + x)
-    }
-  }
-
   def handleProcessPackedMsg(implicit ppm: ProcessPackedMsg): Unit = {
     recordArrivedRoutingEvent(ppm.reqMsgContext.id, ppm.reqMsgContext.startTime,
       ppm.reqMsgContext.clientIpAddress.map(cip => s"fromIpAddress: $cip").getOrElse(""))
@@ -403,7 +394,14 @@ class AgentMsgProcessor(val appConfig: AppConfig,
       recordRoutingChildEvent(ppm.reqMsgContext.id, childEventWithDetail(s"packed msg unpacked", sndr))
       logger.debug(s"incoming unpacked (mpf: ${amw.msgPackFormat}) msg: " + amw)
       preMsgProcessing(amw.msgType, amw.senderVerKey)(ppm.reqMsgContext)
-      self.tell(ProcessUnpackedMsg(amw, ppm.msgThread, ppm.reqMsgContext), sndr)
+      self.tell(
+        ProcessUnpackedMsg(
+          amw,
+          ppm.msgThread,
+          ppm.reqMsgContext
+        ),
+        sndr
+      )
     }.recover {
       case e: RuntimeException =>
         recordRoutingChildEvent(ppm.reqMsgContext.id,
@@ -447,7 +445,10 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     val amw = imp.msgToBeProcessed
     implicit val reqMsgContext: ReqMsgContext = buildReqMsgContext(amw, prm.restMsgContext.reqMsgContext)
     try {
-      extractMsgAndSendToProtocol(imp, prm.restMsgContext.thread)(prm.restMsgContext.reqMsgContext)
+      extractMsgAndSendToProtocol(
+        imp,
+        prm.restMsgContext.thread
+      )(prm.restMsgContext.reqMsgContext)
     } catch  {
       case e @ (_: NotFoundErrorException) =>
         forwardToAgentActor(UnhandledMsg(amw, reqMsgContext, e))
@@ -670,7 +671,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   }
 
   def extract(imp: IncomingMsgParam, msgRespDetail: Option[MsgRespConfig], msgThread: Option[Thread]=None):
-  (TypedMsg, ThreadId, Option[DID], Option[MsgRespConfig]) = try {
+  (TypedMsg, ThreadId, Option[DidStr], Option[MsgRespConfig]) = try {
     val m = msgExtractor.extract(imp.msgToBeProcessed, imp.msgPackFormatReq, imp.msgType)
     val tmsg = TypedMsg(m.msg, imp.msgType)
     val thId = msgThread.flatMap(_.thid).getOrElse(m.meta.threadId)
@@ -830,7 +831,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    * @param msgType message type
    * @param senderVerKey message sender ver key
    */
-  private def preMsgProcessing(msgType: MsgType, senderVerKey: Option[VerKey])(implicit reqMsgContext: ReqMsgContext): Unit = {
+  private def preMsgProcessing(msgType: MsgType, senderVerKey: Option[VerKeyStr])(implicit reqMsgContext: ReqMsgContext): Unit = {
     val userId = param.userIdForResourceUsageTracking(senderVerKey)
     reqMsgContext.clientIpAddress.foreach { ipAddress =>
       addUserResourceUsage(RESOURCE_TYPE_MESSAGE, getResourceName(msgType), ipAddress, userId)
@@ -874,7 +875,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   var msgRespContext: Option[MsgRespContext] = None
 
   override def getPinstId(protoDef: ProtoDef): Option[PinstId] =
-    param.protoInstances.flatMap(_.instances.get(protoDef.msgFamily.protoRef.toString))
+    param.protoInstances.flatMap(_.instances.get(protoDef.protoRef.toString))
   override def contextualId: Option[String] = Option(param.thisAgentAuthKey.keyId)
   override def domainId: DomainId = param.domainId
 
@@ -892,7 +893,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
 }
 
 /**
- * a parameter whose value depend's on individual agent actor's type/state
+ * a parameter whose value depends on individual agent actor's type/state
  */
 case class StateParam(agentActorRef: ActorRef,
                       domainId: DomainId,
@@ -903,10 +904,10 @@ case class StateParam(agentActorRef: ActorRef,
                       sponsorRel: Option[SponsorRel],
                       protoInitParams: ProtoRef => PartialFunction[String, Parameter],
                       selfParticipantId: ParticipantId,
-                      senderParticipantId: Option[VerKey] => ParticipantId,
+                      senderParticipantId: Option[VerKeyStr] => ParticipantId,
                       allowedUnAuthedMsgTypes: Set[MsgType],
-                      allAuthedKeys: Set[VerKey],
-                      userIdForResourceUsageTracking: Option[VerKey] => Option[UserId],
+                      allAuthedKeys: Set[VerKeyStr],
+                      userIdForResourceUsageTracking: Option[VerKeyStr] => Option[UserId],
                       trackingIdParam: TrackingIdParam)
 
 case class ProcessUnpackedMsg(amw: AgentMsgWrapper,
@@ -949,13 +950,13 @@ case class SendPushNotif(pcms: Set[ComMethodDetail],
 case class SendMsgToMyDomain(om: OutgoingMsgParam,
                              msgId: MsgId,
                              msgName: MsgName,
-                             senderDID: DID,
+                             senderDID: DidStr,
                              threadOpt: Option[Thread]) extends ActorMessage
 
 case class SendMsgToTheirDomain(om: OutgoingMsgParam,
                                 msgId: MsgId,
                                 msgName: MsgName,
-                                senderDID: DID,
+                                senderDID: DidStr,
                                 threadOpt: Option[Thread]) extends ActorMessage
 
 case class SendUnStoredMsgToMyDomain(omp: OutgoingMsgParam, msgId: MsgId, msgName: String) extends ActorMessage
@@ -966,7 +967,7 @@ case class SendUnStoredMsgToMyDomain(omp: OutgoingMsgParam, msgId: MsgId, msgNam
  * @param isSyncReq determines if the incoming request expects a synchronous response
  * @param packForVerKey determines if the outgoing/signal messages should be packed with this ver key instead
  */
-case class MsgRespConfig(isSyncReq:Boolean, packForVerKey: Option[VerKey]=None)
+case class MsgRespConfig(isSyncReq:Boolean, packForVerKey: Option[VerKeyStr]=None)
 
 /**
  * used to store information related to incoming msg which will be used during outgoing/signal message processing
@@ -975,7 +976,7 @@ case class MsgRespConfig(isSyncReq:Boolean, packForVerKey: Option[VerKey]=None)
  *                      'wallet backup restore' message
  * @param senderActorRef actor reference (of waiting http connection) to which the response needs to be sent
  */
-case class MsgRespContext(senderPartiId: ParticipantId, packForVerKey: Option[VerKey]=None, senderActorRef:Option[ActorRef]=None)
+case class MsgRespContext(senderPartiId: ParticipantId, packForVerKey: Option[VerKeyStr]=None, senderActorRef:Option[ActorRef]=None)
 
 case class SendToProtocolActor(pinstIdPair: PinstIdPair,
                                msgEnvelope: Any,
@@ -996,7 +997,7 @@ object AgentMsgProcessor {
   val REST_LIMIT = "rest-limit"
   val PACKED_MSG_LIMIT = "packed-msg-limit"
 
-  def checkIfMsgSentByAuthedMsgSenders(allAuthKeys:Set[VerKey], msgSenderVerKey: VerKey): Unit = {
+  def checkIfMsgSentByAuthedMsgSenders(allAuthKeys:Set[VerKeyStr], msgSenderVerKey: VerKeyStr): Unit = {
     if (allAuthKeys.nonEmpty && ! allAuthKeys.contains(msgSenderVerKey)) {
       throw new UnauthorisedErrorException
     }

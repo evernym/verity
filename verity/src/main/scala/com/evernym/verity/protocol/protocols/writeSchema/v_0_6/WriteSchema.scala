@@ -1,12 +1,14 @@
 package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
-import com.evernym.verity.actor.{ParameterStored, ProtocolInitialized}
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.container.actor.Init
-import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
+import com.evernym.verity.protocol.engine.asyncapi.wallet.SchemaCreatedResult
+import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
+import com.evernym.verity.protocol.engine.events.{ParameterStored, ProtocolInitialized}
+import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Role.Writer
@@ -47,14 +49,16 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
     ctx.apply(RequestReceived(m.name, m.version, m.attrNames))
     val submitterDID = _submitterDID(init)
     ctx.wallet.createSchema(submitterDID, m.name, m.version, seqToJson(m.attrNames)) {
-      case Success(schemaCreated: SchemaCreated) =>
+      case Success(schemaCreated: SchemaCreatedResult) =>
         ctx.ledger.writeSchema(submitterDID, schemaCreated.schemaJson) {
           case Success(_) =>
             ctx.apply(SchemaWritten(schemaCreated.schemaId))
             ctx.signal(StatusReport(schemaCreated.schemaId))
           case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
             ctx.logger.warn(e.toString)
-            val endorserDID = init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
+            val endorserDID = m.endorserDID.getOrElse(
+              init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
+            )
             if (endorserDID.nonEmpty) {
               ctx.ledger.prepareSchemaForEndorsement(submitterDID, schemaCreated.schemaJson, endorserDID) {
                 case Success(ledgerRequest) =>
@@ -80,7 +84,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
     ctx.signal(ProblemReport(e.toString))
   }
 
-  def _submitterDID(init: State.Initialized): DID =
+  def _submitterDID(init: State.Initialized): DidStr =
     init
       .parameters
       .initParams
@@ -88,7 +92,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
       .map(_.value)
       .getOrElse(throw MissingIssuerDID)
 
-  def missingVkOrEndorserErr(did: DID, e: LedgerRejectException): Boolean =
+  def missingVkOrEndorserErr(did: DidStr, e: LedgerRejectException): Boolean =
     e.msg.contains(s"verkey for $did cannot be found") || e.msg.contains("Not enough ENDORSER signatures")
 
   def initialize(params: Seq[ParameterStored]): Roster[Role] = {

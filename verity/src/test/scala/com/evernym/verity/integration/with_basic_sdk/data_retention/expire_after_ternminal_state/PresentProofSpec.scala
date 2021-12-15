@@ -1,8 +1,7 @@
 package com.evernym.verity.integration.with_basic_sdk.data_retention.expire_after_ternminal_state
 
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
-import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.with_basic_sdk.data_retention.DataRetentionBaseSpec
@@ -46,9 +45,9 @@ class PresentProofSpec
 
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
-  lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv, executionContext, ecp.walletFutureExecutionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
+  lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv, executionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor, executionContext)
 
   val issuerHolderConn = "connId1"
   val verifierHolderConn = "connId2"

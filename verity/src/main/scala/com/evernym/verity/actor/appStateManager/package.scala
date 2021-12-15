@@ -104,9 +104,6 @@ package object appStateManager {
 
   case object StartDraining extends AppStateEvent
 
-
-  case object GetHeartbeat extends AppStateRequest
-
   case object GetEvents extends AppStateRequest
 
   case object GetCurrentState extends AppStateRequest

@@ -1,10 +1,14 @@
 package com.evernym.verity.agentmsg.msgcodec
 
-import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat, Thread}
+import com.evernym.verity.actor.agent.{MsgOrders, MsgPackFormat}
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor.JsonStr
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
 import com.evernym.verity.agentmsg.AgentJsonMsg
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId, MsgType}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry
 
 import scala.reflect.ClassTag
 
@@ -141,7 +145,7 @@ trait MsgCodec {
 case class MsgPlusMeta(msg: Any, meta: MsgMetadata)
 
 
-case class MsgMetadata(msgId: Option[MsgId], msgThread: Thread, forRelationship: Option[DID]) {
+case class MsgMetadata(msgId: Option[MsgId], msgThread: Thread, forRelationship: Option[DidStr]) {
   def threadId: ThreadId = msgThread.thid.getOrElse(msgId.getOrElse(DEFAULT_THREAD_ID))
 }
 

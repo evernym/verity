@@ -2,6 +2,8 @@ package com.evernym.verity.msgoutbox.dispatchers.webhook.oauth
 
 import akka.actor.typed.ActorRef
 import com.evernym.verity.actor.typed.BehaviourSpecBase
+import com.evernym.verity.config.ConfigConstants.OUTBOX_OAUTH_RECEIVE_TIMEOUT
+import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.msgoutbox.base.MockOAuthAccessTokenRefresher
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.{GetToken, UpdateParams}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Replies.{AuthToken, GetTokenFailed}
@@ -9,6 +11,8 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAcc
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
+
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
 
 
 class OAuthAccessTokenHolderSpec
@@ -19,15 +23,21 @@ class OAuthAccessTokenHolderSpec
   "OAuth access token holder" - {
     "when asked for token for first time" - {
       "should be successful" in {
+        val prevRefreshCount = MockOAuthAccessTokenRefresher.tokenRefreshCount
+
         val testProbe = createTestProbe[OAuthAccessTokenHolder.Reply]()
-        val oAuthAccessTokenHolder = buildOAuthAccessTokenHolder(tokenExpiresInSeconds = 5)
+        val oAuthAccessTokenHolder = buildOAuthAccessTokenHolder(tokenExpiresInSeconds = 60)
 
         oAuthAccessTokenHolder ! GetToken(testProbe.ref)
         val tokenReceived1 = testProbe.expectMessageType[AuthToken]
+        MockOAuthAccessTokenRefresher.tokenRefreshCount shouldBe prevRefreshCount + 1
+
+        Thread.sleep(4000)
 
         oAuthAccessTokenHolder ! GetToken(testProbe.ref)
         val tokenReceived2 = testProbe.expectMessageType[AuthToken]
         tokenReceived2 shouldBe tokenReceived1
+        MockOAuthAccessTokenRefresher.tokenRefreshCount shouldBe prevRefreshCount + 1
       }
     }
 
@@ -127,9 +137,12 @@ class OAuthAccessTokenHolderSpec
       "shallTimeout"          -> shallTimeoutString,
       "shallFail"             -> shallFailString
     )
+    val timeout = ConfigReadHelper(config)
+      .getDurationOption(OUTBOX_OAUTH_RECEIVE_TIMEOUT)
+      .getOrElse(FiniteDuration(30, SECONDS))
     spawn(
       OAuthAccessTokenHolder(
-        config,
+        timeout,
         data,
         MockOAuthAccessTokenRefresher()
       )
@@ -138,7 +151,7 @@ class OAuthAccessTokenHolderSpec
 
   lazy val defaultConfig: Config = ConfigFactory.parseString {
     """
-      |verity.outbox.oauth-token-holder.receive-timeout = 5s
+      |verity.outbox.oauth-token-holder.receive-timeout = 2s
       |""".stripMargin
   }
 }

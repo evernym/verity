@@ -2,7 +2,8 @@ package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
 import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
 import com.evernym.verity.constants.InitParamConstants.{OTHER_ID, SELF_ID}
-import com.evernym.verity.protocol.engine.{Parameter, Parameters, Roster}
+import com.evernym.verity.protocol.engine.context.Roster
+import com.evernym.verity.protocol.engine.{Parameter, Parameters}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredential._

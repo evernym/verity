@@ -1,8 +1,5 @@
 syntax = "proto3";
 
-// Brought in from scalapb-runtime
-import "scalapb/scalapb.proto";
-
 // We need this proto buf message definition for backward compatibility (for existing persisted events).
 // These are the old messages that was serialized (accidentally) by java serialization.
 // These messages should not be used for any new events and only exists for existing event deserialization.

@@ -1,9 +1,9 @@
 package com.evernym.verity.protocol.protocols.updateConfigs.v_0_6
 
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.agent.user.GetConfigs
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.{GetStatus, InitMsg, SendConfig, Update}
@@ -19,7 +19,7 @@ class UpdateConfigs(val ctx: ProtocolContextApi[UpdateConfigs, Role, ProtoMsg, E
     case c: SendConfig => handleSendConfig(c)
   }
 
-  def handleGetStatus(): Unit = ctx.signal(GetConfigs(Set(NAME_KEY, LOGO_URL_KEY)))
+  def handleGetStatus(): Unit = ctx.signal(Sig.GetConfigs(Set(NAME_KEY, LOGO_URL_KEY)))
 
   def handleSendConfig(c: SendConfig): Unit = {
     val configs = c.configs.map(cd => Config(cd.name, cd.value))
@@ -28,7 +28,7 @@ class UpdateConfigs(val ctx: ProtocolContextApi[UpdateConfigs, Role, ProtoMsg, E
 
   def handleUpdateRequest(m: Update): Unit = {
     ctx.signal(UpdateConfig(m.configs))
-    ctx.signal(GetConfigs(Set(NAME_KEY, LOGO_URL_KEY)))
+    ctx.signal(Sig.GetConfigs(Set(NAME_KEY, LOGO_URL_KEY)))
   }
 
   override def applyEvent: ApplyEvent = ???

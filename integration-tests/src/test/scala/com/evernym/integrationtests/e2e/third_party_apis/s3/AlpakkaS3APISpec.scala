@@ -1,20 +1,20 @@
 package com.evernym.integrationtests.e2e.third_party_apis.s3
 
-import java.util.UUID
-
 import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.alpakka.s3.BucketAccess.{AccessGranted, NotExists}
 import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.storage_services.aws_s3.S3AlpakkaApi
 import com.evernym.verity.testkit.BasicAsyncSpec
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.Logger
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.ScalaFutures
 
+import java.util.UUID
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -30,7 +30,49 @@ class AlpakkaS3APISpec
 
   val logger: Logger = getLoggerByClass(classOf[AlpakkaS3APISpec])
 
-  val appConfig = new TestAppConfig
+  val testConfig: String =
+    """
+      |verity.blob-store {
+      |  bucket-name = "blob-store"
+      |  storage-service = "com.evernym.verity.storage_services.aws_s3.S3AlpakkaApi"
+      |  local-store-path = ""
+      |}
+      |
+      |alpakka.s3 {
+      |
+      |  buffer = "memory"
+      |
+      |  aws {
+      |    credentials {
+      |      provider = static
+      |
+      |      access-key-id = "accessKey1"
+      |      access-key-id = ${?S3_ACCESS_KEY_ID}
+      |
+      |      secret-access-key = "verySecretKey1"
+      |      secret-access-key = ${?S3_SECRET_KEY}
+      |    }
+      |
+      |    region {
+      |      provider = static
+      |      default-region = "us-west-2"
+      |    }
+      |  }
+      |
+      |  # path-style-access has a deprecation warning but the pipleine needs it to pass
+      |  //TODO: Move to access-style instead of path-style-access
+      |  //  access-style = virtual
+      |  path-style-access = true
+      |  endpoint-url = "http://localhost:8001"
+      |//  endpoint-url = "http://{bucket}.localhost:8001" // Used for 'access-style'
+      |  endpoint-url = ${?BLOB_S3_ENDPOINT}
+      |
+      |}
+      |""".stripMargin
+
+  val appConfig = new TestAppConfig(Some{
+    ConfigFactory.parseString(testConfig).resolve()
+  })
   lazy implicit val system: ActorSystem = ActorSystem("alp-akka-s3", appConfig.config)
 
   val DEV_S3_BUCKET: String = appConfig.config.getConfig("verity.blob-store").getString("bucket-name")
@@ -47,7 +89,6 @@ class AlpakkaS3APISpec
 
     "when asked to check if bucket exists" - {
       "should respond with NotExists" in {
-        val s3Settings = alpAkkaS3API.s3Settings
         alpAkkaS3API checkIfBucketExists UUID.randomUUID.toString map { _ shouldBe NotExists }
       }
 
@@ -109,6 +150,29 @@ class AlpakkaS3APISpec
 
       "should do succeed in downloading" in {
         alpAkkaS3API get(newBucketName, newId) map { data => checkArrayEquality(Option(newId.getBytes), data)}
+      }
+
+      "when override config is present" - {
+        "it should take precedence" in {
+          val overrideConfig: Config = ConfigFactory.parseString(
+            """
+              |aws {
+              |  region {
+              |    default-region = "eu-central-1"
+              |  }
+              |}
+              |""".stripMargin
+          )
+
+          val testAlpAkkaS3API: S3AlpakkaApi = StorageAPI.loadFromConfig(
+            appConfig,
+            TestExecutionContextProvider.ecp.futureExecutionContext,
+            overrideConfig = overrideConfig
+          ).asInstanceOf[S3AlpakkaApi]
+
+          // should be the region from override config and not from main config.
+          testAlpAkkaS3API.s3Settings.s3RegionProvider.getRegion.toString shouldBe "eu-central-1"
+        }
       }
     }
   }

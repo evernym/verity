@@ -7,7 +7,7 @@ import com.evernym.verity.constants.ActorNameConstants.ITEM_CONTAINER_REGION_ACT
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier}
 import com.evernym.verity.actor.itemmanager.ItemCommonType.{ItemContainerEntityId, ItemId, ItemManagerEntityId}
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.logging.LoggingUtil.getLoggerByClass
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.typesafe.scalalogging.Logger
 
 
@@ -67,7 +67,7 @@ class ItemManagerTaskExecutor(val appConfig: AppConfig, val itemManagerEntityId:
   }
 
   def recordMetrics(): Unit = {
-    import com.evernym.verity.metrics.CustomMetrics._
+    import com.evernym.verity.observability.metrics.CustomMetrics._
     metricsWriter.gaugeUpdate(AS_USER_AGENT_PAIRWISE_WATCHER_ACTIVE_CONTAINER_COUNT,
       responses.size, Map(TAG_KEY_ID -> itemManagerEntityId))
   }

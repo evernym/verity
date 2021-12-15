@@ -4,6 +4,7 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.KeyCreated
 import com.evernym.verity.actor.persistence.object_code_mapper.DefaultObjectCodeMapper
+import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.transformations.transformers.legacy._
 import com.evernym.verity.transformations.transformers.v1._
@@ -63,7 +64,7 @@ class TransformerSpec extends ActorSpec with BasicSpec {
           val event = KeyCreated("forDID")
           val input = TransParam(event, Option(DefaultObjectCodeMapper.codeFromObject(event)))
           val transParam = LegacyJavaSerializationTransformer.execute(input)
-          val transformer = new LegacyAESEncryptionTransformer("secret")
+          val transformer = new LegacyAESEncryptionTransformer("secret", appConfig.getStringReq(SALT_EVENT_ENCRYPTION))
           val transformed = transformer.execute(transParam)
           val untransformed = transformer.undo(transformed)
           untransformed.code shouldBe transParam.code
@@ -78,7 +79,7 @@ class TransformerSpec extends ActorSpec with BasicSpec {
           val event = KeyCreated("forDID")
           val input = TransParam(event, Option(DefaultObjectCodeMapper.codeFromObject(event)))
           val javaSerialized = LegacyJavaSerializationTransformer.execute(input)
-          val aesEncryptionTransformer = new LegacyAESEncryptionTransformer("secret")
+          val aesEncryptionTransformer = new LegacyAESEncryptionTransformer("secret", appConfig.getStringReq(SALT_EVENT_ENCRYPTION))
           val transParam = aesEncryptionTransformer.execute(javaSerialized)
           val transformer = new LegacyEventPersistenceTransformer(LEGACY_PERSISTENCE_TRANSFORMATION_ID)
           val transformed = transformer.execute(transParam)
@@ -107,7 +108,7 @@ class TransformerSpec extends ActorSpec with BasicSpec {
     "LegacyEventCompositeTransformer" - {
       "should work properly" in {
 
-        val compositeTransformer = createLegacyEventTransformer("secret", DefaultObjectCodeMapper)
+        val compositeTransformer = createLegacyEventTransformer("secret", appConfig, DefaultObjectCodeMapper)
 
         val event = KeyCreated("forDID")
         val transformed = compositeTransformer.execute(event)
@@ -118,7 +119,7 @@ class TransformerSpec extends ActorSpec with BasicSpec {
     }
 
     "persistence transformer v1" - {
-      val compositeTransformer = createPersistenceTransformerV1("secret")
+      val compositeTransformer = createPersistenceTransformerV1("secret", appConfig.getStringReq(SALT_EVENT_ENCRYPTION))
 
       val event = KeyCreated("forDID")
       val transformed = compositeTransformer.execute(event)

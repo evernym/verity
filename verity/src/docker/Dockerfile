@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 
-ARG LIBINDY_VERSION
+ARG LIBVDRTOOLS_VERSION
 ARG EVERNYM_CERTIFICATE
 
 WORKDIR /root
@@ -25,11 +25,10 @@ RUN curl https://repo.corp.evernym.com/repo.corp.evenym.com-sig.key | apt-key ad
     add-apt-repository "deb https://repo.corp.evernym.com/deb evernym-agency-dev-ubuntu main" && \
     add-apt-repository "deb https://repo.corp.evernym.com/deb evernym-ubuntu main"
 
-# Install libindy libraries
+# Install libvdrtools libraries
 RUN apt-get update && \
     apt-get install -y \
-        libindy-async=${LIBINDY_VERSION}-bionic \
-        libnullpay-async=${LIBINDY_VERSION}-bionic
+        libvdrtools=${LIBVDRTOOLS_VERSION}-bionic
 
 # cleanup and remove Evernym internal repo
 RUN apt-get autoremove -y && \
@@ -44,14 +43,9 @@ ADD jars/*.jar /usr/lib/verity-application/
 # copy static Verity configuration files
 ADD configuration/* /etc/verity/verity-application/
 
-# Run script that bootstraps Verity
-ADD scripts/bootstrap.sh /usr/local/bin/bootstrap.sh
-CMD [ "/usr/bin/java", \
-"-javaagent:/usr/lib/verity-application/kanela-agent.jar", \
-"-Dlogback.statusListenerClass=ch.qos.logback.core.status.OnConsoleStatusListener", \
-"-cp", \
-"/etc/verity/verity-application:/etc/verity/verity-application/config-map:/usr/lib/verity-application/verity-assembly.jar", \
-"com.evernym.verity.Main" \
-]
+# Add entrypoint script
+ADD scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+CMD [ "/usr/local/bin/entrypoint.sh" ]
 
 EXPOSE 9000

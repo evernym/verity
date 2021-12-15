@@ -7,17 +7,23 @@ import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.scenario.Scenario
 import com.evernym.verity.sdk.handlers.Handlers
 import com.evernym.verity.sdk.utils.Context
+import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.Interval
 import org.scalatest.time.{Millis, Span}
 
+import scala.collection.mutable
 import scala.concurrent.duration.Duration
 import scala.language.postfixOps
 
 trait MsgReceiver extends Eventually {
   def shouldExpectMsg(): Boolean = true
   def shouldCheckMsg(): Boolean = true
+
+  def logger: Logger
+
+  val unCheckedMsgs: mutable.Map[String, JSONObject] = mutable.Map()
 
   final def expectMsgOnly(expectedName: String)
                          (implicit scenario: Scenario): Unit = {
@@ -32,54 +38,70 @@ trait MsgReceiver extends Eventually {
                       max: Option[Duration] = None)
                      (check: JSONObject => Unit)
                      (implicit scenario: Scenario): Unit = {
-    checkAndExpectMsg(Some(expectedName), max)(check)
+    assertAndExpectMsg(Some(expectedName), max)(check)
   }
+
   final def checkMsg(max: Option[Duration] = None)
                     (check: JSONObject => Unit)
                     (implicit scenario: Scenario): Unit = {
-    checkAndExpectMsg(None, max)(check)
+    assertAndExpectMsg(None, max)(check)
   }
-  private def checkAndExpectMsg(expectedName: Option[String],
-                                max: Option[Duration] = None)
-                               (check: JSONObject => Unit)
-                               (implicit scenario: Scenario): Unit = {
-    def expecting: String = expectedName.map(x=>s"(expecting: $x) ").getOrElse("")
-    def lastReceived(msg: JSONObject): String = s"(last received: ${msg.getString(`@TYPE`)})"
 
-    if(shouldExpectMsg()){
-      val waitTimeout = max.getOrElse(scenario.timeout)
+  private def assertName(expectedName: String, msg: JSONObject): Boolean = {
+    try {
+      msg.getString(`@TYPE`)
+        .endsWith(expectedName)
+    } catch {
+      case _: Exception =>
+        false
+    }
+  }
 
-      var msg = new JSONObject().put(`@TYPE`, "UnreceivedType")
-
-      eventually(timeout(waitTimeout), Interval(Span(200, Millis))) {
+  private def assertMsg(expectedName: Option[String], msg: JSONObject, check: JSONObject => Unit): Option[JSONObject] = {
+    if (shouldCheckMsg()) {
+      if (expectedName.forall(assertName(_, msg))) {
         try {
-          msg = expectMsg(waitTimeout)
-        }
-        catch {
-          case e: Exception =>
-            throw new Exception(
-              s"msg not received $expecting-- ${e.getMessage} ${lastReceived(msg)}"
-            )
-        }
-
-        if(shouldCheckMsg()) {
-          val msgType = try {
-            msg.getString(`@TYPE`)
-          } catch {
-            case e: Exception =>
-              throw new Exception(s"Unable to get message type for $expecting-- ${msg.toString()} ${lastReceived(msg)}")
-          }
-          expectedName.foreach { x =>
-            assert (
-              msgType.endsWith(x),
-              s"Unexpected message name -- $msgType is not $expecting-- ${msg.toString(2)} ${lastReceived(msg)}"
-            )
-          }
           check(msg)
         }
+        catch {
+          case t: Throwable =>
+            logger.warn("check on message failed: " + t.getMessage)
+            throw t
+        }
+        Some(msg)
+      } else None
+    } else Some(msg)
+  }
+
+  private def assertAndExpectMsg(expectedName: Option[String],
+                                 max: Option[Duration] = None)
+                                (check: JSONObject => Unit)
+                                (implicit scenario: Scenario): Unit = {
+    if (shouldExpectMsg()) {
+      val waitTimeout = max.getOrElse(scenario.timeout)
+
+      eventually(timeout(waitTimeout), Interval(Span(200, Millis))) {
+        unCheckedMsgs
+          .find(o => assertMsg(expectedName, o._2, check).isDefined)
+          .map { m =>
+            unCheckedMsgs.remove(m._1)
+            m
+          }
+          .orElse {
+            val m = expectMsg(waitTimeout)
+            val mPair = (m.getString("@id"), m)
+            unCheckedMsgs.put(mPair._1, mPair._2)
+            None
+          }
+          .orElse {
+            throw new Exception(
+              s"msg not received yet --  (expecting: $expectedName) -- Know messages ${unCheckedMsgs}"
+            )
+          }
       }
     }
   }
+
   protected def expectMsg(max: Duration): JSONObject
   def context: Context
 }
@@ -88,7 +110,22 @@ trait ListeningSdkProvider extends MsgReceiver {
   protected var listener: Listener = _
   private val queue: LinkedBlockingDeque[JSONObject] = new LinkedBlockingDeque[JSONObject]()
 
-  def receiveMsg(msg: JSONObject): Unit = queue.offerFirst(msg)
+  def logger: Logger
+
+  def receiveMsg(msg: JSONObject): Unit = {
+    queue.offerFirst(msg)
+    logReceivedMsg(msg)
+  }
+
+  def logReceivedMsg(msg: JSONObject): Unit = {
+    val msgType = msg.optString(`@TYPE`, "untyped")
+    if (msgType.endsWith("problem-report") || msgType == "untyped"){
+      logger.info(s"SDK Listener received message '$msgType': ${msg.toString}")
+    } else {
+      logger.info(s"SDK Listener received message '$msgType'")
+    }
+
+  }
 
   def expectMsg(max: Duration): JSONObject = {
     val m = Option {

@@ -13,7 +13,7 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgcodec.DecodingException
 import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
 import com.evernym.verity.http.common.ConfigSvc
-import com.evernym.verity.logging.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
 
@@ -49,14 +49,14 @@ case class FirebasePushNotifSuccessResponse(
   extends FirebasePushNotifCommonResponse
 
 
-class FirebasePusher(serviceParam: FirebasePushServiceParam, executionContext: ExecutionContext)
+class FirebasePusher(serviceParam: FirebasePushServiceParam, executionContext: ExecutionContext, ac: AppConfig)
   extends PushServiceProvider
     with ConfigSvc {
 
   implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   lazy val logger: Logger = getLoggerByName("FirebasePusher")
-  lazy val appConfig: AppConfig = AppConfigWrapper
+  lazy val appConfig: AppConfig = ac
 
   override lazy val comMethodPrefix= "FCM"
 

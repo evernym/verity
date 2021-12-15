@@ -1,19 +1,19 @@
 package com.evernym.verity.push_notification
 
 
+import com.evernym.verity.actor.HasAppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.agent.msghandler.outgoing.NotifyMsgDetail
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.protocol.engine.DID
-import com.evernym.verity.protocol.protocols.HasAppConfig
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.util.Util.replaceVariables
 
 
 trait PushNotifMsgBuilder extends HasAppConfig {
 
   //edge DID (can be main DID or pairwise DIDs) for which msg is received and corresponding push notif is being sent
-  def msgRecipientDID: DID
+  def msgRecipientDID: DidStr
 
   lazy val msgTypesForAlertingPushNotificationOpt: Option[Set[String]] =
     appConfig.getStringSetOption(PUSH_NOTIF_MSG_TYPES_FOR_ALERT_PUSH_MSGS)

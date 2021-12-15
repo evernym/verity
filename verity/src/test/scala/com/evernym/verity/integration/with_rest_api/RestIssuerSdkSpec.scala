@@ -3,7 +3,7 @@ package com.evernym.verity.integration.with_rest_api
 import akka.http.scaladsl.model.StatusCodes.Accepted
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
-import com.evernym.verity.actor.agent.{Thread => MsgThread}
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestion
@@ -19,8 +19,6 @@ import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{Write, StatusRep
 import com.typesafe.config.{Config, ConfigFactory}
 import java.util.UUID
 
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.util.TestExecutionContextProvider
 
 import scala.concurrent.ExecutionContext
@@ -36,14 +34,14 @@ class RestIssuerSdkSpec
   lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
+  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, executionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
 
   override def beforeAll(): Unit = {
     super.beforeAll()
     issuerRestSDK.fetchAgencyKey()
     issuerRestSDK.provisionVerityEdgeAgent()    //this sends a packed message (not REST api call)
-    issuerRestSDK.registerWebhook()             //this sends a packed message (not REST api call)
+    issuerRestSDK.registerWebhook()
   }
 
   var lastReceivedThread: Option[MsgThread] = None

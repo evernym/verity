@@ -12,7 +12,7 @@ import com.evernym.verity.actor.agent.msgrouter.Route
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
 import com.evernym.verity.actor.itemmanager.{ItemContainer, ItemManager}
-import com.evernym.verity.actor.metrics.{ActivityTracker, CollectionsMetricCollector, LibindyMetricsCollector}
+import com.evernym.verity.actor.metrics.{CollectionsMetricCollector, LibindyMetricsCollector}
 import com.evernym.verity.actor.msg_tracer.MsgTracingRegionActors
 import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
@@ -20,19 +20,21 @@ import com.evernym.verity.actor.segmentedstates.SegmentedStateStore
 import com.evernym.verity.actor.url_mapper.UrlStore
 import com.evernym.verity.actor.wallet.WalletActor
 import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.container.actor.ActorProtocol
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util._
-
 import java.time.ZoneId
+import java.util.concurrent.TimeUnit
+
 import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyService, SysServiceNotifier, SysShutdownProvider, SysShutdownService}
+import com.evernym.verity.actor.metrics.activity_tracker.ActivityTracker
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.typed.base.UserGuardian
-import com.evernym.verity.libindy.Libraries
-
+import com.evernym.verity.vdrtools.Libraries
+import com.evernym.verity.util.healthcheck.HealthChecker
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -45,6 +47,8 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
   implicit def agentActorContext: AgentActorContext = aac
   implicit def appConfig: AppConfig = agentActorContext.appConfig
   implicit def actorSystem: ActorSystem = agentActorContext.system
+
+  def healthChecker: HealthChecker = HealthChecker(aac, aac.system, executionContextProvider.futureExecutionContext)
 
   implicit lazy val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS,
     DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
@@ -91,12 +95,21 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       Props(
         new AgencyAgent(
           agentActorContext,
-          executionContextProvider.futureExecutionContext,
-          executionContextProvider.walletFutureExecutionContext
+          executionContextProvider.futureExecutionContext
         )
       ),
       Option(AGENCY_AGENT_ACTOR_DISPATCHER_NAME)
-    )
+    ),
+    passivateIdleEntityAfter = Some(FiniteDuration(
+      ConfigUtil.getReceiveTimeout(
+        appConfig,
+        AgencyAgent.defaultPassivationTimeout,
+        PERSISTENT_ACTOR_BASE,
+        AGENCY_AGENT_REGION_ACTOR_NAME,
+        null
+      ).toSeconds,
+      TimeUnit.SECONDS
+    ))
   )
 
   //agency agent actor for pairwise connection
@@ -106,12 +119,21 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       Props(
         new AgencyAgentPairwise(
           agentActorContext,
-          executionContextProvider.futureExecutionContext,
-          executionContextProvider.walletFutureExecutionContext
+          executionContextProvider.futureExecutionContext
         )
       ),
       Option(AGENCY_AGENT_PAIRWISE_ACTOR_DISPATCHER_NAME)
-    )
+    ),
+    passivateIdleEntityAfter = Some(FiniteDuration(
+      ConfigUtil.getReceiveTimeout(
+        appConfig,
+        AgencyAgentPairwise.defaultPassivationTimeout,
+        PERSISTENT_ACTOR_BASE,
+        AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME,
+        null
+      ).toSeconds,
+      TimeUnit.SECONDS
+    ))
   )
 
   //agent actor
@@ -122,12 +144,21 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
         new UserAgent(
           agentActorContext,
           collectionsMetricsCollector,
-          executionContextProvider.futureExecutionContext,
-          executionContextProvider.walletFutureExecutionContext
+          executionContextProvider.futureExecutionContext
         )
       ),
       Option(USER_AGENT_ACTOR_DISPATCHER_NAME)
-    )
+    ),
+    passivateIdleEntityAfter = Some(FiniteDuration(
+      ConfigUtil.getReceiveTimeout(
+        appConfig,
+        UserAgent.defaultPassivationTimeout,
+        PERSISTENT_ACTOR_BASE,
+        USER_AGENT_REGION_ACTOR_NAME,
+        null
+      ).toSeconds,
+      TimeUnit.SECONDS
+    ))
   )
 
   //agent actor for pairwise connection
@@ -138,12 +169,21 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
         new UserAgentPairwise(
           agentActorContext,
           collectionsMetricsCollector,
-          executionContextProvider.futureExecutionContext,
-          executionContextProvider.walletFutureExecutionContext
+          executionContextProvider.futureExecutionContext
         )
       ),
       Option(USER_AGENT_PAIRWISE_ACTOR_DISPATCHER_NAME)
-    )
+    ),
+    passivateIdleEntityAfter = Some(FiniteDuration(
+      ConfigUtil.getReceiveTimeout(
+        appConfig,
+        UserAgentPairwise.defaultPassivationTimeout,
+        PERSISTENT_ACTOR_BASE,
+        USER_AGENT_PAIRWISE_REGION_ACTOR_NAME,
+        null
+      ).toSeconds,
+      TimeUnit.SECONDS
+    ))
   )
 
   object agencyAgent extends ShardActorObject {
@@ -176,7 +216,18 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
         )
       ),
       Option(ACTIVITY_TRACKER_ACTOR_DISPATCHER_NAME)
-  ))
+    ),
+    passivateIdleEntityAfter = Some(FiniteDuration(
+      ConfigUtil.getReceiveTimeout(
+        appConfig,
+        ActivityTracker.defaultPassivationTimeout,
+        PERSISTENT_ACTOR_BASE,
+        ACTIVITY_TRACKER_REGION_ACTOR_NAME,
+        null
+      ).toSeconds,
+      TimeUnit.SECONDS
+    ))
+  )
 
   //wallet actor
   val walletActorRegion: ActorRef = createNonPersistentRegion(
@@ -188,8 +239,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
           agentActorContext.poolConnManager,
           executionContextProvider.futureExecutionContext
         )
-      ),
-      Option(WALLET_ACTOR_ACTOR_DISPATCHER_NAME)
+      )
     ),
     passivateIdleEntityAfter = Option(
       passivateDuration(NON_PERSISTENT_WALLET_ACTOR_PASSIVATE_TIME_IN_SECONDS, 600.seconds)
@@ -201,7 +251,17 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
     TOKEN_TO_ACTOR_ITEM_MAPPER_REGION_ACTOR_NAME,
     TokenToActorItemMapper.props(executionContextProvider.futureExecutionContext)(agentActorContext.appConfig),
     forTokenShardIdExtractor,
-    forTokenEntityIdExtractor
+    forTokenEntityIdExtractor,
+    Some(FiniteDuration(
+      ConfigUtil.getReceiveTimeout(
+        appConfig,
+        TokenToActorItemMapper.defaultPassivationTimeout,
+        PERSISTENT_ACTOR_BASE,
+        TOKEN_TO_ACTOR_ITEM_MAPPER_REGION_ACTOR_NAME,
+        null
+      ).toSeconds,
+      TimeUnit.SECONDS
+    ))
   )
 
   object tokenToActorItemMapper extends ShardActorObject {
@@ -218,7 +278,17 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
     URL_STORE_REGION_ACTOR_NAME,
     UrlStore.props(agentActorContext.appConfig, executionContextProvider.futureExecutionContext),
     forUrlMapperShardIdExtractor,
-    forUrlMapperEntityIdExtractor
+    forUrlMapperEntityIdExtractor,
+    passivateIdleEntityAfter = Some(FiniteDuration(
+      ConfigUtil.getReceiveTimeout(
+        appConfig,
+        UrlStore.defaultPassivationTimeout,
+        PERSISTENT_ACTOR_BASE,
+        URL_STORE_REGION_ACTOR_NAME,
+        null
+      ).toSeconds,
+      TimeUnit.SECONDS
+    ))
   )
 
   object urlStore extends ShardActorObject {
@@ -235,23 +305,67 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
     val actionExecutor = new UsageViolationActionExecutor(actorSystem, appConfig)
     createPersistentRegion(
       RESOURCE_USAGE_TRACKER_REGION_ACTOR_NAME,
-      ResourceUsageTracker.props(agentActorContext.appConfig, actionExecutor, executionContextProvider.futureExecutionContext))
+      ResourceUsageTracker.props(agentActorContext.appConfig, actionExecutor, executionContextProvider.futureExecutionContext),
+      passivateIdleEntityAfter = Some(FiniteDuration(
+        ConfigUtil.getReceiveTimeout(
+          appConfig,
+          ResourceUsageTracker.defaultPassivationTimeout,
+          PERSISTENT_ACTOR_BASE,
+          RESOURCE_USAGE_TRACKER_REGION_ACTOR_NAME,
+          null
+        ).toSeconds,
+        TimeUnit.SECONDS
+      ))
+    )
   }
 
   //other region actors
 
   val routeRegion: ActorRef =
-    createPersistentRegion(ROUTE_REGION_ACTOR_NAME, Route.props(executionContextProvider.futureExecutionContext))
+    createPersistentRegion(
+      ROUTE_REGION_ACTOR_NAME,
+      Route.props(executionContextProvider.futureExecutionContext),
+      passivateIdleEntityAfter = Some(FiniteDuration(
+        ConfigUtil.getReceiveTimeout(
+          appConfig,
+          Route.defaultPassivationTimeout,
+          PERSISTENT_ACTOR_BASE,
+          ROUTE_REGION_ACTOR_NAME,
+          null
+        ).toSeconds,
+        TimeUnit.SECONDS
+      ))
+    )
 
   val itemManagerRegion: ActorRef =
     createPersistentRegion(
       ITEM_MANAGER_REGION_ACTOR_NAME,
-      ItemManager.props(executionContextProvider.futureExecutionContext)
+      ItemManager.props(executionContextProvider.futureExecutionContext),
+      passivateIdleEntityAfter = Some(FiniteDuration(
+        ConfigUtil.getReceiveTimeout(
+          appConfig,
+          ItemManager.defaultPassivationTimeout,
+          PERSISTENT_ACTOR_BASE,
+          ITEM_MANAGER_REGION_ACTOR_NAME,
+          null
+        ).toSeconds,
+        TimeUnit.SECONDS
+      ))
     )
   val itemContainerRegion: ActorRef =
     createPersistentRegion(
       ITEM_CONTAINER_REGION_ACTOR_NAME,
-      ItemContainer.props(executionContextProvider.futureExecutionContext)
+      ItemContainer.props(executionContextProvider.futureExecutionContext),
+      passivateIdleEntityAfter = Some(FiniteDuration(
+        ConfigUtil.getReceiveTimeout(
+          appConfig,
+          ItemContainer.defaultPassivationTimeout,
+          PERSISTENT_ACTOR_BASE,
+          ITEM_CONTAINER_REGION_ACTOR_NAME,
+          null
+        ).toSeconds,
+        TimeUnit.SECONDS
+      ))
     )
 
   // protocol region actors
@@ -261,7 +375,18 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       val ap = ActorProtocol(e.protoDef)
       val region = createProtoActorRegion(
         ap.typeName,
-        ap.props(agentActorContext, executionContextProvider.futureExecutionContext))
+        ap.props(agentActorContext, executionContextProvider.futureExecutionContext),
+        passivateIdleEntityAfter = Some(FiniteDuration(
+          ConfigUtil.getReceiveTimeout(
+            appConfig,
+            ActorProtocol.defaultPassivationTimeout,
+            ActorProtocol.entityCategory,
+            ap.typeName,
+            null
+          ).toSeconds,
+          TimeUnit.SECONDS
+        ))
+      )
       ap.typeName -> region
     }.toMap
 
@@ -270,10 +395,21 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
   val segmentedStateRegions: Map[String, ActorRef] = agentActorContext.protocolRegistry
     .entries.filter(_.protoDef.segmentStoreStrategy.isDefined)
     .map { e =>
-      val typeName = SegmentedStateStore.buildTypeName(e.protoDef.msgFamily.protoRef)
+      val typeName = SegmentedStateStore.buildTypeName(e.protoDef.protoRef)
       val region = createPersistentRegion(
         typeName,
-        SegmentedStateStore.props(agentActorContext.appConfig, executionContextProvider.futureExecutionContext))
+        SegmentedStateStore.props(agentActorContext.appConfig, executionContextProvider.futureExecutionContext),
+        passivateIdleEntityAfter = Some(FiniteDuration(
+          ConfigUtil.getReceiveTimeout(
+            appConfig,
+            SegmentedStateStore.defaultPassivationTimeout,
+            PERSISTENT_ACTOR_BASE,
+            typeName,
+            null
+          ).toSeconds,
+          TimeUnit.SECONDS
+        ))
+      )
       typeName -> region
     }.toMap
 
@@ -330,6 +466,11 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       case None           => defaultDurationInSeconds
     }
   }
+
+  val appStateCoordinator = new AppStateCoordinator(
+    appConfig,
+    actorSystem,
+    appStateManager)(agentActorContext.futureExecutionContext)
 }
 
 trait PlatformServices {

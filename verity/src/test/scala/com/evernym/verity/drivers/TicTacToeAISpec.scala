@@ -4,7 +4,7 @@ import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.protocols.tictactoe.Board.{CellValue, O, X}
-import com.evernym.verity.protocol.engine.ProtocolRegistry._
+import com.evernym.verity.protocol.engine.registry.ProtocolRegistry._
 import com.evernym.verity.protocol.protocols.tictactoe.{Board, State, TicTacToeProtoDef}
 import com.evernym.verity.util.{TestExecutionContextProvider, intTimes}
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeMsgFamily.{MakeMove, MakeOffer}
@@ -19,7 +19,7 @@ import scala.util.Random
 // NOTE: Tests are attempted many times due to the random nature of TicTacToeAI.
 // Covering all possible scenarios is impractical, though TODO: we probably want to add deterministic tests as well.
 
-class TicTacToeAISpec extends ProtocolTestKit(TicTacToeProtoDef, Implicits.global) with BasicSpec {
+class TicTacToeAISpec extends ProtocolTestKit(TicTacToeProtoDef, Implicits.global, new TestAppConfig()) with BasicSpec {
 
   lazy val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
 

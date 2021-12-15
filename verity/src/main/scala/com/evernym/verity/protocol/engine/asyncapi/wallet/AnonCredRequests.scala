@@ -1,57 +1,55 @@
 package com.evernym.verity.protocol.engine.asyncapi.wallet
 
-import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, ProofCreated, ProofVerifResult}
-import com.evernym.verity.protocol.container.asyncapis.wallet.SchemaCreated
-import com.evernym.verity.protocol.engine.DID
+import com.evernym.verity.did.DidStr
 
 import scala.util.Try
 
 trait AnonCredRequests {
 
-  def createSchema(issuerDID: DID,
+  def createSchema(issuerDID: DidStr,
                    name: String,
                    version: String,
                    data: String)
-                  (handler: Try[SchemaCreated] => Unit): Unit
+                  (handler: Try[SchemaCreatedResult] => Unit): Unit
 
-  def createCredDef(issuerDID: DID,
+  def createCredDef(issuerDID: DidStr,
                     schemaJson: String,
                     tag: String,
                     sigType: Option[String]=None,
                     revocationDetails: Option[String]=None)
-                   (handler: Try[CredDefCreated] => Unit): Unit
+                   (handler: Try[CredDefCreatedResult] => Unit): Unit
 
-  def createCredOffer(credDefId: String)(handler: Try[CredOfferCreated] => Unit): Unit
+  def createCredOffer(credDefId: String)(handler: Try[CredOfferCreatedResult] => Unit): Unit
 
   def createCredReq(credDefId: String,
-                    proverDID: DID,
+                    proverDID: DidStr,
                     credDefJson: String,
                     credOfferJson: String)
-                   (handler: Try[CredReqCreated] => Unit): Unit
+                   (handler: Try[CredReqCreatedResult] => Unit): Unit
 
   def createCred(credOfferJson: String,
                  credReqJson: String,
                  credValuesJson: String,
                  revRegistryId: String,
                  blobStorageReaderHandle: Int)
-                (handler: Try[CredCreated] => Unit): Unit
+                (handler: Try[CredCreatedResult] => Unit): Unit
 
   def storeCred(credId: String,
                 credDefJson: String,
                 credReqMetadataJson: String,
                 credJson: String,
                 revRegDefJson: String)
-               (handler: Try[CredStored] => Unit): Unit
+               (handler: Try[CredStoredResult] => Unit): Unit
 
   def credentialsForProofReq(proofRequest: String)
-                            (handler: Try[CredForProofReqCreated] => Unit): Unit
+                            (handler: Try[CredForProofResult] => Unit): Unit
 
   def createProof(proofRequest: String,
                   usedCredentials: String,
                   schemas: String,
                   credentialDefs: String,
                   revStates: String)
-                 (handler: Try[ProofCreated] => Unit): Unit
+                 (handler: Try[ProofCreatedResult] => Unit): Unit
 
   def verifyProof(proofRequest: String,
                   proof: String,
@@ -59,6 +57,6 @@ trait AnonCredRequests {
                   credentialDefs: String,
                   revocRegDefs: String,
                   revocRegs: String)
-                 (handler: Try[ProofVerifResult] => Unit): Unit
+                 (handler: Try[ProofVerificationResult] => Unit): Unit
 
 }

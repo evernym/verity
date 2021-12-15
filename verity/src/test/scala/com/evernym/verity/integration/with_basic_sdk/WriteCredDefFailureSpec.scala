@@ -1,6 +1,5 @@
 package com.evernym.verity.integration.with_basic_sdk
 
-import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
@@ -28,7 +27,7 @@ class WriteCredDefFailureSpec
   override lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new DummyLedgerTxnExecutor(executionContext))
 
   lazy val issuerVerityApp = VerityEnvBuilder.default().build(VAS)
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext, ecp.walletFutureExecutionContext)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext)
   var schemaId: String = ""
 
   override def beforeAll(): Unit = {

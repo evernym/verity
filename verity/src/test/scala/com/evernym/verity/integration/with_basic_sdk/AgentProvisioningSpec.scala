@@ -4,7 +4,6 @@ import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.util.TestExecutionContextProvider
 
@@ -21,8 +20,8 @@ class AgentProvisioningSpec
   lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
   lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, ecp.walletFutureExecutionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext, ecp.walletFutureExecutionContext)
+  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
+  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
 
 
   "IssuerSDK" - {
@@ -44,8 +43,7 @@ class AgentProvisioningSpec
 
     "when tried to register a webhook" - {
       "should be successful" in {
-        val comMethodUpdated = issuerSDK.registerWebhook()
-        comMethodUpdated.id.nonEmpty shouldBe true
+        issuerSDK.registerWebhook()
       }
     }
 

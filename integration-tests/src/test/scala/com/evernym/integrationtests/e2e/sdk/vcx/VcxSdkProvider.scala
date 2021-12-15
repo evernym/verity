@@ -7,8 +7,10 @@ import com.evernym.integrationtests.e2e.sdk.{BaseSdkProvider, MsgReceiver}
 import com.evernym.sdk.vcx.utils.UtilsApi
 import com.evernym.sdk.vcx.vcx.VcxApi
 import com.evernym.sdk.vcx.wallet.WalletApi
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.{DID, MsgFamily}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.ConnectionsMsgFamily
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
@@ -19,6 +21,7 @@ import com.evernym.verity.sdk.protocols.updateendpoint.v0_6.UpdateEndpointV0_6
 import com.evernym.verity.sdk.protocols.writecreddef.v0_6.{RevocationRegistryConfig, WriteCredentialDefinitionV0_6}
 import com.evernym.verity.sdk.protocols.writeschema.v0_6.WriteSchemaV0_6
 import com.evernym.verity.sdk.utils.Context
+import com.typesafe.scalalogging.Logger
 import org.json.{JSONArray, JSONException, JSONObject}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.Interval
@@ -32,9 +35,9 @@ protected trait VcxHolds {
   def interaction(key: String): Interaction = interactionMsg(key)
   def updateInteraction(kv: (String, Interaction)): Unit = interactionMsg = interactionMsg + kv
 
-  private var conHandlesMap: Map[DID, Int] = Map.empty
-  def connectionHandle(did: DID): Int = conHandlesMap(did)
-  def addConnectionHandle(kv: (DID, Int)): Unit = conHandlesMap = conHandlesMap + kv
+  private var conHandlesMap: Map[DidStr, Int] = Map.empty
+  def connectionHandle(did: DidStr): Int = conHandlesMap(did)
+  def addConnectionHandle(kv: (DidStr, Int)): Unit = conHandlesMap = conHandlesMap + kv
 
   private var injectedMsg: Option[JSONObject] = None
   def injectMsg(msg: JSONObject): Unit = injectedMsg = Some(msg)
@@ -61,7 +64,7 @@ protected trait VcxHolds {
   }
 }
 
-case class VcxMsgMetaData(did: Option[DID], senderDid: DID, msgType: String, msgId: String)
+case class VcxMsgMetaData(did: Option[DidStr], senderDid: DidStr, msgType: String, msgId: String)
 case class VcxMsg(msg: JSONObject, meta: VcxMsgMetaData) {
 
   def payloadMsgType: Option[String] = try {
@@ -98,6 +101,9 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
   with Eventually {
 
   override def sdkType: String = "VCX"
+
+//  override val logger: Logger = getLoggerByName(getClass.getName)
+
 
   lazy val ariesSupportedMsgs = Set(
     ConnectionsMsgFamily.msgType("response")
@@ -211,6 +217,7 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
           }
           assert(msg.isDefined)
           interaction(msg.get)
+            .put("@id", msg.get.meta.msgId)
         }
     }
   }
@@ -306,7 +313,7 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
                                    autoIssue: Boolean = false,
                                    byInvitation: Boolean = false): IssueCredentialV1_0 = ???
 
-  override def basicMessage_1_0(forRelationship: DID,
+  override def basicMessage_1_0(forRelationship: DidStr,
                                 content: String,
                                 sentTime: String,
                                 localization: String): BasicMessageV1_0 = ???

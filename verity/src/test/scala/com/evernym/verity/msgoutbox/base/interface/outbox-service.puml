@@ -1,0 +1,37 @@
+@startuml
+skinparam monochrome reverse
+
+== Send Message ==
+Client -> "OutboxService (interface)": sendMessage
+"OutboxService (interface)" -> "RelResolver (interface)": resolveOutbox
+"RelResolver (interface)" -> "OutboxService (interface)": resolved outbox data
+"OutboxService (interface)" -> "MessageRepository (interface)": createMessage
+"MessageRepository (interface)" -> "MsgStore (actor)": StorePayload
+"MsgStore (actor)" -> "MessageRepository (interface)": PayloadStored
+"MessageRepository (interface)" -> "MessageMeta (actor)": Add
+"MessageMeta (actor)" -> "MessageRepository (interface)": MsgAdded
+"MessageRepository (interface)" -> "OutboxService (interface)": msgId
+"OutboxService (interface)" -> "Outbox (actor)": add
+alt outbox is initialized
+	"Outbox (actor)" -> "OutboxService (interface)": MsgAdded
+else outbox not initialized
+	"Outbox (actor)" -> "OutboxService (interface)": Not Initialized
+	"OutboxService (interface)" -> "Outbox (actor)": Init
+	"Outbox (actor)" -> "OutboxService (interface)": MsgAdded
+end
+"OutboxService (interface)" -> Client: msgId
+
+== Get Messages ==
+Client -> "OutboxService (interface)": getMessages
+"OutboxService (interface)" -> "RelResolver (interface)": resolveOutbox
+"RelResolver (interface)" -> "OutboxService (interface)": resolved outbox data
+"OutboxService (interface)" -> "Outbox (actor)": GetDeliveryStatus
+"Outbox (actor)" -> "MessageRepository (interface)": get(ids)
+"MessageRepository (interface)" -> "Outbox (actor)": messages with metadata
+"Outbox (actor)" -> "Wallet (actor)": encrypt(msgs)
+"Wallet (actor)" -> "Outbox (actor)": encrypted messages
+"Outbox (actor)" -> "OutboxService (interface)": map msgId -> message
+"OutboxService (interface)" -> Client: composed response
+
+
+@enduml

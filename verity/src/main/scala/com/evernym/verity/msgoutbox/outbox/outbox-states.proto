@@ -3,11 +3,19 @@ syntax = "proto3";
 // Brought in from scalapb-runtime
 import "scalapb/scalapb.proto";
 import "outbox-common.proto";
+import "outbox/outbox-config.proto";
 
 package com.evernym.verity.msgoutbox.outbox.States;
 
 message Uninitialized {
     option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.State";
+    OutboxConfig config = 1 [(scalapb.field).no_box = true];
+}
+
+message MetadataReceived {
+    option (scalapb.message).extends = "com.evernym.verity.msgoutbox.outbox.Outbox.State";
+    Metadata metadata = 1;
+    OutboxConfig config = 2 [(scalapb.field).no_box = true];
 }
 
 message Initialized {
@@ -20,6 +28,10 @@ message Initialized {
 
     // map of msgId and Message
     map<string, Message> messages = 4;
+
+    Metadata metadata = 5;
+
+    OutboxConfig config = 6 [(scalapb.field).no_box = true];
 }
 
 message Message {
@@ -35,4 +47,10 @@ message Message {
 message MsgDeliveryAttempt {
     int32 successCount = 1;
     int32 failedCount = 2;
+}
+
+message Metadata {
+    string relId = 1;
+    string recipId = 2;
+    string destId = 3;
 }

@@ -46,6 +46,20 @@ scopes:
 * `Integration` -- Tools and libraries required to build and run integration tests.
 * `IntegrationSDK` -- Tools and libraries to required to build and run integration tests on specific SDKs.
 
+### Lightbend Integration
+There is one object in the project that requires dependencies form Lightbend Commercial
+(see `verity/src/main/scala/com/evernym/verity/metrics/backend/LightbendTelemetryMetricsBackend.scala`).
+
+**Use Lightbend Commercial**:
+* Get your credential token form Lightbend at: https://www.lightbend.com/account/lightbend-platform/credentials
+* Put the credential token in a local file at $HOME/.sbt/lightbend_cred.txt
+   * Note: $HOME/.sbt/lightbend_cred.txt should only have the credential token and **NOT** full URL as shown in the above page. Should look like `lln2VuiZnVOumJ6RK_U0OMZ1S_IPGWgBda82Iy87hfCtFyEu` (Not a real token)
+
+**Intellij Exclusion**
+
+SBT will automatically exclude the Lightbend Object when the credential token is not available **BUT** Intellij is not so smart. It most must be manually excluded. This can be easily done via this setting in Intellij -- `File | Settings | Build, Execution, Deployment | Compiler | Excludes`
+
+
 ## Development Tasks
 
 ### Compile
@@ -83,7 +97,7 @@ See details here: [integration-tests/README.md](integration-tests/README.md)
 ## Development Process
 All developers are expected to do the following:
 
-1. Keep the default branch (i.e. master) stable
+1. Keep the default branch (i.e. main) stable
 2. Follow TDD principles to produce sufficient test coverage
 3. When collaborating with other team members, prepend 'wip-' to a branch name if
    a branch is not ready to be vetted/tested by GitLab CI/CD pipelines. Doing so

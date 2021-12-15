@@ -51,7 +51,7 @@ import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.CreateKeyEndpointDetail
 import com.evernym.verity.protocol.protocols.connecting.common.{ConnReqReceived, SendMsgToRegisteredEndpoint}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.PublicIdentifierCreated
-import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl
+import com.evernym.verity.protocol.protocols.relationship.v_1_0.{Ctl, RelationshipDef}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.CreatePairwiseKey
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily.{ProvideRecoveryDetails, RecoveryKeyRegistered}
 import com.evernym.verity.push_notification.PusherUtil
@@ -144,6 +144,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
     case hck: HandleCreateKeyWithThisAgentKey    =>
       handleCreateKeyWithThisAgentKey(hck.thisAgentKey, hck.createKeyReqMsg)(hck.reqMsgContext)
 
+    case GetDomainDetail                         => sendDomainDetail()
     case gp: GetPairwiseRoutingDIDs              => sendPairwiseAgentDIDs(gp)
   }
 
@@ -172,6 +173,15 @@ class UserAgent(val agentActorContext: AgentActorContext,
       //this is received for each new pairwise connection/actor that gets created
     case ads: AgentDetailSet               =>
       if (!isVAS) addRelationshipAgent(AgentDetail(ads.forDID, ads.agentKeyDID))
+  }
+
+  private def sendDomainDetail(): Unit = {
+    val sndr = sender()
+    stateDetailsFor.map { protoInitParams =>
+      val paramMapper = protoInitParams(RelationshipDef.protoRef)
+      val parameters = RelationshipDef.initParamNames.map(paramMapper)
+      sndr ! GetDomainDetailResp(agentWalletIdReq, domainId, relationshipId, parameters)
+    }
   }
 
   private def sendPairwiseAgentDIDs(gp: GetPairwiseRoutingDIDs): Unit = {
@@ -1136,5 +1146,11 @@ case class HandleCreateKeyWithThisAgentKey(thisAgentKey: NewKeyCreated, createKe
 // (ideally there shouldn't be more than one)
 case class GetTokenForUrl(forUrl: String, cmd: OAuthAccessTokenHolder.Cmd) extends ActorMessage
 
+//v1 to v2 migration related commands
 case class GetPairwiseRoutingDIDs(totalItemsReceived: Int, batchSize: Int) extends ActorMessage
 case class GetPairwiseRoutingDIDsResp(pairwiseRoutingDIDs: Seq[String], totalRemainingItems: Int) extends ActorMessage
+case object GetDomainDetail extends ActorMessage
+case class GetDomainDetailResp(walletId: String,
+                               domainId: DidStr,
+                               relationshipId: Option[RelationshipId],
+                               relationshipProtocolParams: Set[Parameter]) extends ActorMessage

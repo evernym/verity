@@ -1,16 +1,15 @@
 package com.evernym.verity.integration.v1tov2migration
 
-import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.actor.agent.user.{GetPairwiseConnDetailResp, PairwiseDidDoc}
-import com.evernym.verity.actor.persistence.recovery.base.{AgentIdentifiers, BasePersistentStore}
+import com.evernym.verity.actor.persistence.recovery.base.AgentIdentifiers._
 import com.evernym.verity.actor.{AgentDetailSet, AgentKeyCreated, AgentKeyDlgProofSet, MsgAnswered, MsgCreated, OwnerDIDSet, OwnerSetForAgent, TheirAgencyIdentitySet, TheirAgentDetailSet, TheirAgentKeyDlgProofSet}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.constants.ActorNameConstants.{ACTOR_TYPE_USER_AGENT_ACTOR, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
-import com.evernym.verity.integration.base.verity_provider.node.local.VerityLocalNode
 import com.evernym.verity.integration.base.{EAS, VerityProviderBaseSpec}
+import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.ConfigFactory
@@ -20,9 +19,7 @@ import scala.concurrent.ExecutionContext
 
 class GetPairwiseDidDocSpec
   extends VerityProviderBaseSpec
-    with SdkProvider
-    with BasePersistentStore
-    with AgentIdentifiers {
+    with SdkProvider {
 
   override def beforeAll(): Unit = {
     //set up data
@@ -39,8 +36,8 @@ class GetPairwiseDidDocSpec
     "when asked for pairwise did doc" - {
       "should respond with correct data" in {
         val basePath = s"agency/internal/maintenance/v1tov2migration/connection/${myPairwiseRelDIDPair.did}/diddoc"
-        val apiResp = issuerRestSDK.sendGET(s"$basePath")
-        val respString = issuerRestSDK.parseHttpResponseAsString(apiResp)
+        val apiResp = HttpUtil.sendGET(issuerRestSDK.buildFullUrl(s"$basePath"))
+        val respString = HttpUtil.parseHttpResponseAsString(apiResp)(futureExecutionContext)
         val resp = DefaultMsgCodec.fromJson[GetPairwiseConnDetailResp](respString)
 
         resp.connAnswerStatusCode shouldBe "MS-104"
@@ -67,8 +64,8 @@ class GetPairwiseDidDocSpec
       OwnerDIDSet(mySelfRelDIDPair.did, mySelfRelDIDPair.verKey),
       AgentKeyCreated(mySelfRelAgentDIDPair.did, mySelfRelAgentDIDPair.verKey)
     )
-    storeAgentRoute(mySelfRelAgentDIDPair.did, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentPersistenceId.entityId)
-    addEventsToPersistentStorage(mySelfRelAgentPersistenceId, basicUserAgentEvents)
+    issuerEAS.persStoreTestKit.storeAgentRoute(mySelfRelAgentDIDPair.did, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentPersistenceId.entityId)
+    issuerEAS.persStoreTestKit.addEventsToPersistentStorage(mySelfRelAgentPersistenceId, basicUserAgentEvents)
   }
 
   def setupUserAgentPairwise(): Unit = {
@@ -83,26 +80,23 @@ class GetPairwiseDidDocSpec
       TheirAgentKeyDlgProofSet(theirPairwiseRelAgentDIDPair.did, theirPairwiseRelAgentDIDPair.verKey,"dummy-signature"),
       TheirAgencyIdentitySet(theirAgencyAgentDIDPair.did, theirAgencyAgentDIDPair.verKey,"0.0.0.1:9000/agency/msg")
     )
-    storeAgentRoute(myPairwiseRelDIDPair.did, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
-    addEventsToPersistentStorage(myPairwiseRelAgentPersistenceId, basicUserAgentPairwiseEvents)
-    createWallet(mySelfRelAgentEntityId)
-    createNewKey(mySelfRelAgentEntityId, Option(myPairwiseRelAgentKeySeed))
-    storeTheirKey(mySelfRelAgentEntityId, myPairwiseRelDIDPair)
-    storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelDIDPair)
-    storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelAgentDIDPair)
-    storeTheirKey(mySelfRelAgentEntityId, theirAgencyAgentDIDPair)
-    closeWallet(mySelfRelAgentEntityId)
+    issuerEAS.persStoreTestKit.storeAgentRoute(myPairwiseRelDIDPair.did, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
+    issuerEAS.persStoreTestKit.addEventsToPersistentStorage(myPairwiseRelAgentPersistenceId, basicUserAgentPairwiseEvents)
+    issuerEAS.persStoreTestKit.createWallet(mySelfRelAgentEntityId)
+    issuerEAS.persStoreTestKit.createNewKey(mySelfRelAgentEntityId, Option(myPairwiseRelAgentKeySeed))
+    issuerEAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, myPairwiseRelDIDPair)
+    issuerEAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelDIDPair)
+    issuerEAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelAgentDIDPair)
+    issuerEAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, theirAgencyAgentDIDPair)
+    issuerEAS.persStoreTestKit.closeWallet(mySelfRelAgentEntityId)
   }
 
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
   override def executionContextProvider: ExecutionContextProvider = ecp
 
-  override implicit val system: ActorSystem = issuerEAS.nodes.head.asInstanceOf[VerityLocalNode].platform.actorSystem
-
-  lazy val TEST_KIT_CONFIG =
+  private val TEST_KIT_CONFIG =
     ConfigFactory.empty
       .withFallback(EventSourcedBehaviorTestKit.config)
       .withFallback(PersistenceTestKitSnapshotPlugin.config)
-
 }

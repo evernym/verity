@@ -257,7 +257,11 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
       state.theirAgentAuthKeyReq.verKey
     )
 
-    sndr ! GetPairwiseConnDetailResp(state.getConnectionStatus.answerStatusCode, myPairwiseDidDoc, theirPairwiseDidDoc)
+    sndr ! GetPairwiseConnDetailResp(
+      state.getConnectionStatus.answerStatusCode,
+      myPairwiseDidDoc,
+      theirPairwiseDidDoc
+    )
   }
 
 

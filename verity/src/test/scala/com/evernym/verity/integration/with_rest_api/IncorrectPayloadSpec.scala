@@ -10,6 +10,7 @@ import com.evernym.verity.protocol.engine.ThreadId
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Offer
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
+import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory}
 import org.json.JSONObject
@@ -60,7 +61,7 @@ class IncorrectPayloadSpec
           jsonObject.put("auto_issue", "true").toString   //sending string "true" instead of boolean true
         }
         val httpResp = issuerRestSDK.sendMsgForConn(issuerHolderConn, credOffer, applyToJsonMsg = jsonModifier, expectedRespStatus = BadRequest)
-        val restErrorResp = issuerRestSDK.parseHttpResponseAs[RestErrorResponse](httpResp)
+        val restErrorResp = HttpUtil.parseHttpResponseAs[RestErrorResponse](httpResp)
         restErrorResp shouldBe RestErrorResponse(INVALID_VALUE.statusCode, "field 'auto_issue' has invalid value")
       }
     }
@@ -73,6 +74,7 @@ class IncorrectPayloadSpec
       """.stripMargin
     )
 
+  implicit val futExecutionContext: ExecutionContext = futureExecutionContext
   /**
    * custom thread pool executor
    */

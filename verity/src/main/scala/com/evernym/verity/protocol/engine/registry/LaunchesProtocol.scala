@@ -64,13 +64,13 @@ trait LaunchesProtocol {
   protected def pinstIdForMsg(msg: TypedMsgLike, relationshipId: Option[RelationshipId],
                                  threadId: ThreadId): Option[PinstIdPair] = {
     protocolRegistry.entryForMsg(msg)
-      .map(e => registry.PinstIdPair(pinstIdForProtoDef(msg, relationshipId, threadId, e.protoDef, e.pinstIdResol), e.protoDef))
+      .map(e => PinstIdPair(pinstIdForProtoDef(msg, relationshipId, threadId, e.protoDef, e.pinstIdResol), e.protoDef))
   }
 
   protected def pinstIdForMsg_!(tms: TypedMsgLike, relationshipId: Option[RelationshipId],
                                    threadId: ThreadId): PinstIdPair = {
     val entry = protocolRegistry.entryForMsg_!(tms)
-    registry.PinstIdPair(pinstIdForProtoDef(tms, relationshipId, threadId, entry.protoDef, entry.pinstIdResol), entry.protoDef)
+    PinstIdPair(pinstIdForProtoDef(tms, relationshipId, threadId, entry.protoDef, entry.pinstIdResol), entry.protoDef)
   }
 
   private def typedMsgPair(m: Any): TypedMsgPair = {

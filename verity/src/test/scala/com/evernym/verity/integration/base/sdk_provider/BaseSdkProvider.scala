@@ -1,7 +1,6 @@
 package com.evernym.verity.integration.base.sdk_provider
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
@@ -48,6 +47,7 @@ import com.evernym.verity.testkit.agentmsg.{CreateInviteResp_MFV_0_5, InviteAcce
 import com.evernym.verity.testkit.util.{AcceptConnReq_MFV_0_6, AgentCreated_MFV_0_5, AgentCreated_MFV_0_6, ComMethodUpdated_MFV_0_5, ConnReqAccepted_MFV_0_6, ConnReq_MFV_0_6, Connect_MFV_0_5, Connected_MFV_0_5, CreateAgent_MFV_0_5, CreateAgent_MFV_0_6, CreateKey_MFV_0_5, CreateKey_MFV_0_6, CreateMsg_MFV_0_5, InviteMsgDetail_MFV_0_5, MsgCreated_MFV_0_5, MsgsSent_MFV_0_5, SignUp_MFV_0_5, SignedUp_MFV_0_5, TestComMethod, UpdateComMethod_MFV_0_5}
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
+import com.evernym.verity.testkit.util.HttpUtil
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.matchers.should.Matchers
@@ -163,8 +163,8 @@ abstract class SdkBase(param: SdkParam,
   type ConnId = String
 
   def fetchAgencyKey(): AgencyPublicDid = {
-    val resp = checkOKResponse(sendGET("agency"))
-    val apd = parseHttpResponseAs[AgencyPublicDid](resp)
+    val resp = checkOKResponse(HttpUtil.sendGET(buildFullUrl("agency")))
+    val apd = HttpUtil.parseHttpResponseAs[AgencyPublicDid](resp)
     require(apd.DID.nonEmpty, "agency DID should not be empty")
     require(apd.verKey.nonEmpty, "agency verKey should not be empty")
     storeTheirKey(DidPair(apd.didPair.did, apd.didPair.verKey))
@@ -272,35 +272,9 @@ abstract class SdkBase(param: SdkParam,
   }
 
   protected def sendPOST(payload: Array[Byte]): HttpResponse =
-    sendBinaryReqToUrl(payload, param.verityPackedMsgUrl)
+    HttpUtil.sendBinaryReqToUrl(payload, param.verityPackedMsgUrl)
 
-  protected def sendBinaryReqToUrl(payload: Array[Byte], url: String): HttpResponse = {
-    awaitFut(
-      Http().singleRequest(
-        HttpRequest(
-          method=HttpMethods.POST,
-          uri = url,
-          entity = HttpEntity(
-            ContentTypes.`application/octet-stream`,
-            payload
-          )
-        )
-      )
-    )
-  }
-
-  def sendGET(pathSuffix: String): HttpResponse = {
-    val actualPath = param.verityBaseUrl + s"/$pathSuffix"
-    awaitFut(
-      Http().singleRequest(
-        HttpRequest(
-          method=HttpMethods.GET,
-          uri = actualPath,
-          entity = HttpEntity.Empty
-        )
-      )
-    )
-  }
+  def buildFullUrl(suffix: String): String = param.verityBaseUrl + s"/$suffix"
 
   protected def parseAndUnpackResponse[T: ClassTag](resp: HttpResponse)
                                                    (implicit mpf: MsgPackFormat = MPF_INDY_PACK): ReceivedMsgParam[T] = {

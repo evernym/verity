@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.persistence.recovery.base
 
+import akka.actor.ActorSystem
 import akka.persistence.testkit.{PersistenceTestKitSnapshotPlugin, SnapshotMeta}
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.actor.agent.msgrouter.RoutingAgentUtil
@@ -10,7 +11,7 @@ import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.actor.testkit.actor.MockAppConfig
 import com.evernym.verity.actor.testkit.HasTestActorSystem
 import com.evernym.verity.actor.wallet.{Close, CreateDID, CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
-import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, LegacyRouteSet, MappingAdded, PersistentMsg, RouteSet}
+import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, LegacyRouteSet, MappingAdded, PersistentMsg, PersistentMultiEventMsg, RouteSet}
 import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.constants.ActorNameConstants._
@@ -19,10 +20,17 @@ import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED255
 import com.evernym.verity.transformations.transformers.v1._
 import com.evernym.verity.transformations.transformers.legacy._
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
+import com.evernym.verity.protocol.engine.MultiEvent
 import com.evernym.verity.testkit.HasTestWalletAPI
 import com.evernym.verity.transformations.transformers.{<=>, legacy, v1}
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.config.{Config, ConfigFactory}
+
+import scala.concurrent.ExecutionContext
+
+class PersistentStoreTestKit(val system: ActorSystem,
+                             val futureExecutionContext: ExecutionContext)
+  extends BasePersistentStore
 
 /**
  * common/base code to store events and adding data to wallet store
@@ -97,8 +105,9 @@ trait BasePersistentStore
   def getEvents(pp: PersistenceIdParam, encryptionKey: Option[String]=None): Seq[Any] = {
     val events = persTestKit.persistedInStorage(pp.toString)
     val transformer = getTransformerFor(pp, encryptionKey)
-    events.map { e =>
-      transformer.undo(e.asInstanceOf[PersistentMsg])
+    events.map {
+      case pm: PersistentMsg => transformer.undo(pm)
+      case pme: PersistentMultiEventMsg => MultiEvent(pme.events.map(transformer.undo))
     }
   }
 

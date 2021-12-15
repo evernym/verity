@@ -6,6 +6,7 @@ import com.evernym.verity.actor.agent.agency._
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.ANYWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship.Tags.EDGE_AGENT_KEY
 import com.evernym.verity.actor.agent.relationship._
+import com.evernym.verity.actor.persistence.recovery.base.AgentIdentifiers._
 import com.evernym.verity.actor.cluster_singleton.{ForKeyValueMapper, GetValue}
 import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.persistence.{GetPersistentActorDetail, PersistentActorDetail}

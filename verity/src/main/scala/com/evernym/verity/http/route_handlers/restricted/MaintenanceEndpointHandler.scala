@@ -12,12 +12,14 @@ import com.evernym.verity.actor.agent.user.{GetPairwiseConnDetail, GetPairwiseCo
 import com.evernym.verity.actor.cluster_singleton.{ForActorStateCleanupManager, ForAgentRoutesMigrator, maintenance}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.maintenance.{GetMigrationStatus, MigrationStatusDetail}
+import com.evernym.verity.actor.maintenance.v1tov2migration.SetupMigratedConnection
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.{ActorMessage, ConfigRefreshed, ForIdentifier, NodeConfigRefreshed, OverrideConfigOnAllNodes, OverrideNodeConfig, RefreshConfigOnAllNodes, RefreshNodeConfig}
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 
 import scala.concurrent.Future
+
 
 trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
 
@@ -264,6 +266,9 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
     )
   }
 
+  protected def sendToConnectionMigrator(entityId: String, cmd: ActorMessage): Future[Any] = {
+    platform.connectionMigrator ? ForIdentifier(entityId, cmd)
+  }
 
   protected val v1ToV2MigrationRoutes: Route =
     pathPrefix("v1tov2migration") {
@@ -298,7 +303,22 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
               }
             }
           }
-        }
+        } ~
+          pathPrefix("VAS" / "connection") {
+            pathPrefix(Segment) { pairwiseRoutingDID =>
+              path("diddoc") {
+                (post & entityAs[SetupMigratedConnection]) { smc =>
+                  complete {
+                    val connectionMigratorEntityId = smc.agent.agentDID + "-" + pairwiseRoutingDID
+                    sendToConnectionMigrator(connectionMigratorEntityId, smc).map[ToResponseMarshallable] {
+                      case Done => OK
+                      case e => handleUnexpectedResponse(e)
+                    }
+                  }
+                }
+              }
+            }
+          }
     }
 
   protected val maintenanceRoutes: Route =

@@ -33,6 +33,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProof.{cr
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 import com.evernym.verity.observability.metrics.NoOpMetricsWriter
 import com.evernym.verity.protocol.engine.util.DIDDoc
+import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.KeyParam
@@ -116,7 +117,7 @@ case class HolderSdk(param: SdkParam,
     val connReq = ConnRequest(label = connId, createConnectionObject(updatedPairwiseRel))
     val jsonMsgBuilder = JsonMsgBuilder(connReq)
     val packedMsg = packForTheirVerityAgent(connId, jsonMsgBuilder.jsonMsg, "conn-req")
-    val httpResp = sendBinaryReqToUrl(packedMsg, updatedPairwiseRel.theirServiceEndpoint)
+    val httpResp = HttpUtil.sendBinaryReqToUrl(packedMsg, updatedPairwiseRel.theirServiceEndpoint)
     (httpResp, jsonMsgBuilder.thread)
   }
 
@@ -130,7 +131,7 @@ case class HolderSdk(param: SdkParam,
     val jsonMsgBuilder = JsonMsgBuilder(msg, threadOpt)
     val msgType = jsonMsgBuilder.msgFamily.msgType(msg.getClass)
     val packedMsg = packForTheirVerityAgent(connId: String, jsonMsgBuilder.jsonMsg, msgType.msgName)
-    checkResponse(sendBinaryReqToUrl(packedMsg, myPairwiseRel.theirServiceEndpoint), expectedRespStatus)
+    checkResponse(HttpUtil.sendBinaryReqToUrl(packedMsg, myPairwiseRel.theirServiceEndpoint), expectedRespStatus)
   }
 
   def sendCredRequest(connId: String,

@@ -26,6 +26,7 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete,
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{ConnectionInvitation, Create, OutOfBandInvitation}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{Created, Invitation}
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResult
+import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
@@ -372,7 +373,7 @@ case class IssuerRestSDK(param: SdkParam,
     val threadId = threadOpt.flatMap(_.thid).getOrElse(UUID.randomUUID.toString)
     val url = s"${param.verityRestApiUrl}/$route/${msgFamily.name}/${msgFamily.version}/$threadId" +
       queryParamOpt.map(qp => s"?$qp").getOrElse("")
-    val resp = parseHttpResponseAsString(sendGetJsonReqToUrl(url, routeApiKey))
+    val resp = HttpUtil.parseHttpResponseAsString(sendGetJsonReqToUrl(url, routeApiKey))
     val jsonObject = new JSONObject(resp)
     val resultResp = DefaultMsgCodec.fromJson[T](jsonObject.getJSONObject("result").toString)
     RestGetResponse(resultResp, jsonObject.getString("status"))

@@ -11,7 +11,6 @@ import com.evernym.verity.observability.metrics.CustomMetrics._
 import com.evernym.verity.observability.metrics.MetricsWriter
 import com.evernym.verity.vault.WalletUtil.generateWalletParamSync
 import com.evernym.verity.vault._
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.scalalogging.Logger

@@ -143,6 +143,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     case msf: MsgSendingFailed                              => handleMsgSendingFailed(msf)
     case GetOutboxParam(destId)                             => sendOutboxParam(destId)
     case GetPairwiseUpgradeInfo                             => handleGetUpgradeInfo()
+    case GetPairwiseConnDetail                              => sendPairwiseConnDetail()
   }
 
   override final def receiveAgentEvent: Receive =
@@ -238,6 +239,27 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
       }
     }
   }
+
+  def sendPairwiseConnDetail(): Unit = {
+    val sndr = sender()
+
+    val myPairwiseDidDoc = PairwiseDidDoc(
+      state.myDid_!,
+      state.myDidAuthKeyReq.verKey,
+      state.thisAgentKeyDIDReq,
+      state.thisAgentVerKeyReq
+    )
+
+    val theirPairwiseDidDoc = PairwiseDidDoc(
+      state.theirDid_!,
+      state.theirDidAuthKeyReq.verKeyOpt.getOrElse(""),
+      state.theirAgentAuthKeyReq.keyId,
+      state.theirAgentAuthKeyReq.verKey
+    )
+
+    sndr ! GetPairwiseConnDetailResp(state.getConnectionStatus.answerStatusCode, myPairwiseDidDoc, theirPairwiseDidDoc)
+  }
+
 
   def sendOutboxParam(destId: DestId): Unit = {
     if (destId == DESTINATION_ID_DEFAULT) {
@@ -1126,6 +1148,17 @@ trait UserAgentPairwiseStateUpdateImpl
     updateStateWithOwnerAgentKey()
   }
 }
+
+case object GetPairwiseConnDetail extends ActorMessage
+
+case class GetPairwiseConnDetailResp(connAnswerStatusCode: String,
+                                     myDidDoc: PairwiseDidDoc,
+                                     theirDidDoc: PairwiseDidDoc) extends ActorMessage
+
+case class PairwiseDidDoc(pairwiseDID: DidStr,
+                          pairwiseDIDVerKey: VerKeyStr,
+                          pairwiseAgentDID: DidStr,
+                          pairwiseAgentVerKey: VerKeyStr)
 
 case object GetPairwiseUpgradeInfo extends ActorMessage
 case class PairwiseUpgradeInfo(direction: String,

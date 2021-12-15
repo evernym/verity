@@ -99,7 +99,7 @@ class HealthCheckerImpl(val agentActorContext: AgentActorContext,
       result =>
         val unreachable = result.status.filter(namespaceStatus => !namespaceStatus._2.reachable).keys
         if (unreachable.nonEmpty){
-          ApiStatus(status = false, s"Unreachable namespaces ${unreachable.toString()}")
+          ApiStatus(status = false, s"Unreachable VDRs namespaces ${unreachable.toString()}")
         } else {
           ApiStatus(status = true, "OK")
         }

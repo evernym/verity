@@ -22,6 +22,7 @@ spec:
     metadata:
       labels:
         app: {{ template "verity.fullname" . }}
+        revision: {{ .Release.Revision | quote }}
         actorSystemName: verity
         tags.datadoghq.com/service: {{ .Values.service }}
         tags.datadoghq.com/env: {{ .Values.env }}
@@ -48,16 +49,18 @@ spec:
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: topology.kubernetes.io/zone
-        whenUnsatisfiable: ScheduleAnyway
+        whenUnsatisfiable: DoNotSchedule
         labelSelector:
           matchLabels:
             app: {{ template "verity.fullname" . }}
+            revision: {{ .Release.Revision | quote }}
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
-        whenUnsatisfiable: ScheduleAnyway
+        whenUnsatisfiable: DoNotSchedule
         labelSelector:
           matchLabels:
             app: {{ template "verity.fullname" . }}
+            revision: {{ .Release.Revision | quote }}
       terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
       containers:
       - name: {{ template "verity.fullname" . }}

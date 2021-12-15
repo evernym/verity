@@ -33,6 +33,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.configs._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.FwdReqMsg
+import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.{GetUpgradeInfo, UpgradeInfoMsgHelper}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper}
 import com.evernym.verity.config.ConfigConstants.OUTBOX_OAUTH_RECEIVE_TIMEOUT
 import com.evernym.verity.config.ConfigUtil
@@ -118,6 +119,10 @@ class UserAgent(val agentActorContext: AgentActorContext,
       if amw.isMatched(MFV_0_5, MSG_TYPE_UPDATE_MSG_STATUS_BY_CONNS) ||
         amw.isMatched(MFV_0_6, MSG_TYPE_UPDATE_MSG_STATUS_BY_CONNS) =>
       handleUpdateMsgStatusByConns(UpdateMsgStatusByConnsMsgHelper.buildReqMsg(amw))
+
+    case amw: AgentMsgWrapper
+      if amw.isMatched(MFV_1_0, MSG_TYPE_GET_UPGRADE_INFO) =>
+      handleGetUpgradeInfo(UpgradeInfoMsgHelper.buildReqMsg(amw))
   }
 
   /**
@@ -138,6 +143,8 @@ class UserAgent(val agentActorContext: AgentActorContext,
     case GetOutboxParam(destId)                  => sendOutboxParam(destId, sender)
     case hck: HandleCreateKeyWithThisAgentKey    =>
       handleCreateKeyWithThisAgentKey(hck.thisAgentKey, hck.createKeyReqMsg)(hck.reqMsgContext)
+
+    case gp: GetPairwiseRoutingDIDs              => sendPairwiseAgentDIDs(gp)
   }
 
   override def handleSpecificSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = {
@@ -165,6 +172,14 @@ class UserAgent(val agentActorContext: AgentActorContext,
       //this is received for each new pairwise connection/actor that gets created
     case ads: AgentDetailSet               =>
       if (!isVAS) addRelationshipAgent(AgentDetail(ads.forDID, ads.agentKeyDID))
+  }
+
+  private def sendPairwiseAgentDIDs(gp: GetPairwiseRoutingDIDs): Unit = {
+    val ordered = state.relationshipAgents.values.map(_.agentKeyDID).toSeq.sorted
+    val batchSize = if (gp.batchSize > 0) gp.batchSize else ordered.size
+    val remaining = ordered.splitAt(gp.totalItemsReceived)._2
+    val batch = remaining.take(batchSize)
+    sender ! GetPairwiseRoutingDIDsResp(batch, remaining.size - batch.size)
   }
 
   def sendOutboxParam(destId: DestId, sndr: ActorRef): Unit = {
@@ -771,6 +786,51 @@ class UserAgent(val agentActorContext: AgentActorContext,
     handleGetMsgsRespMsgFromPairwiseActor(reqFut, sndr)
   }
 
+  def handleGetUpgradeInfo(gui: GetUpgradeInfo)(implicit reqMsgContext: ReqMsgContext): Unit = {
+    val sndr = sender()
+    val givenPairwiseDIDs = gui.pairwiseDIDs
+    validatePairwiseFromDIDs(givenPairwiseDIDs)
+    val filteredPairwiseConns = givenPairwiseDIDs.map(pd => state.relationshipAgentByForDid(pd))
+    val reqFut = prepareAndSendGetUpgradeInfoToPairwiseActor(filteredPairwiseConns)
+    handleGetUpgradeInfoRespMsgFromPairwiseActor(reqFut, sndr)
+  }
+
+  def prepareAndSendGetUpgradeInfoToPairwiseActor(filteredPairwiseConns: List[AgentDetail])
+                                                 (implicit reqMsgContext: ReqMsgContext):
+  Future[List[(String, PairwiseUpgradeInfo)]] = {
+
+    val result = Future.traverse(filteredPairwiseConns) { ad =>
+      agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(ad.agentKeyDID, GetPairwiseUpgradeInfo))
+        .map {
+          case tai: PairwiseUpgradeInfo => Option(ad.forDID, tai)
+          case NoUpgradeNeeded          => None
+          case aer: ActorErrorResp =>
+            logger.error(s"error occurred while getting upgrade info from connection " +
+              s"(connection did hash code ${ad.forDID.hashCode}): " + aer)
+            None
+        }
+    }
+    result.map(_.flatten)
+  }
+
+  def handleGetUpgradeInfoRespMsgFromPairwiseActor(respFut: Future[List[(String, PairwiseUpgradeInfo)]],
+                                                   sndr: ActorRef)
+                                                  (implicit reqMsgContext: ReqMsgContext): Unit = {
+    respFut.onComplete {
+      case Success(respMsgs) =>
+        val pairwiseResults = respMsgs.map { case (fromDID, respMsg) =>
+          fromDID -> respMsg
+        }.toMap
+        val getPairwiseUpgradeInfoResp = UpgradeInfoMsgHelper.buildRespMsg(pairwiseResults)(reqMsgContext.agentMsgContext)
+        val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
+          getPairwiseUpgradeInfoResp, reqMsgContext.wrapInBundledMsg)
+        val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
+        sendRespMsg("GetUpgradeInfoResp", rp, sndr)
+      case Failure(e) =>
+        handleException(e, sndr)
+    }
+  }
+
   def handleInit(se: SetupEndpoint): Unit = {
     val evt = OwnerDIDSet(se.ownerDID, se.ownerDIDVerKey)
     writeAndApply(evt)
@@ -1075,3 +1135,6 @@ case class HandleCreateKeyWithThisAgentKey(thisAgentKey: NewKeyCreated, createKe
 //NOTE: the 'forUrl' is only needed in case anybody has registered more than one webhook
 // (ideally there shouldn't be more than one)
 case class GetTokenForUrl(forUrl: String, cmd: OAuthAccessTokenHolder.Cmd) extends ActorMessage
+
+case class GetPairwiseRoutingDIDs(totalItemsReceived: Int, batchSize: Int) extends ActorMessage
+case class GetPairwiseRoutingDIDsResp(pairwiseRoutingDIDs: Seq[String], totalRemainingItems: Int) extends ActorMessage

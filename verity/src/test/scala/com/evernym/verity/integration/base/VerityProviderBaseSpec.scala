@@ -118,6 +118,7 @@ trait VerityProviderBaseSpec
 
     val appTypeConfig = MULTI_NODE_CLUSTER_CONFIG.withFallback {
       appType match {
+        case EAS => EAS_DEFAULT_CONFIG
         case CAS => CAS_DEFAULT_CONFIG
         case VAS => VAS_DEFAULT_CONFIG
       }
@@ -153,6 +154,17 @@ trait VerityProviderBaseSpec
       |""".stripMargin
   )
 
+  private val EAS_DEFAULT_CONFIG = ConfigFactory.parseString(
+    """
+      |akka {
+      |  sharding-region-name {
+      |    user-agent = "EnterpriseAgent"
+      |    user-agent-pairwise = "EnterpriseAgentPairwise"
+      |  }
+      |}
+      |""".stripMargin
+  )
+
   private val MULTI_NODE_CLUSTER_CONFIG = ConfigFactory.parseString(
     s"""
       |
@@ -164,3 +176,4 @@ trait VerityProviderBaseSpec
 trait AppType
 case object CAS extends AppType
 case object VAS extends AppType
+case object EAS extends AppType

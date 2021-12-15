@@ -59,8 +59,8 @@ val akkaVer         = "2.6.17"
 val akkaHttpVer     = "10.2.7"
 val akkaMgtVer      = "1.1.1"
 val alpAkkaVer      = "3.0.3"
-val kamonVer        = "2.2.3"
-val kanelaAgentVer  = "1.0.13"
+val kamonVer        = "2.4.2"
+val kanelaAgentVer  = "1.0.14"
 val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
 val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
                                   // around base64 decoding etc, should look into it.
@@ -83,8 +83,8 @@ val COMPILE_TIME_ONLY = "compileonly"
 val CompileOnly = config(COMPILE_TIME_ONLY)
 
 val majorNum = "2"
-val minorNum = "16"
-val patchNum = "1"
+val minorNum = "17"
+val patchNum = "0"
 
 // I'm not sure why setting this keys don't resolve in all
 // other scopes but it does not so we re-resolve it commonSettings
@@ -311,7 +311,7 @@ lazy val commonLibraryDependencies = {
 
     //logging dependencies
     "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4",
-    "ch.qos.logback" % "logback-classic" % "1.2.6",
+    "ch.qos.logback" % "logback-classic" % "1.2.7",
     akkaGrp %% "akka-slf4j" % akkaVer,
 
     //kamon monitoring dependencies

@@ -8,9 +8,10 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.actor.wallet.{CreateCredReq, CreateMasterSecret, CreateProof, CredForProofReq, CredForProofReqCreated, CredReqCreated, CredStored, MasterSecretCreated, ProofCreated, StoreCred}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_TYPE_DETAIL_GET_MSGS, MSG_TYPE_DETAIL_UPDATE_MSG_STATUS, MSG_TYPE_UPDATE_COM_METHOD}
+import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, MSG_FAMILY_V1V2MIGRATION, MSG_TYPE_DETAIL_GET_MSGS, MSG_TYPE_DETAIL_UPDATE_MSG_STATUS, MSG_TYPE_GET_UPGRADE_INFO, MSG_TYPE_UPDATE_COM_METHOD}
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateComMethodReqMsg
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateKeyReqMsg_MFV_0_6, GetMsgsReqMsg_MFV_0_6, GetMsgsRespMsg_MFV_0_6, KeyCreatedRespMsg_MFV_0_6, MsgStatusUpdatedRespMsg_MFV_0_6, UpdateMsgStatusReqMsg_MFV_0_6}
+import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.{GetUpgradeInfo, UpgradeInfoRespMsg_MFV_1_0}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer}
 import com.evernym.verity.constants.Constants.NO
 import com.evernym.verity.did.DidPair
@@ -19,7 +20,7 @@ import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerTxnExecut
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
-import com.evernym.verity.protocol.engine.Constants.MFV_0_6
+import com.evernym.verity.protocol.engine.Constants.{MFV_0_6, MFV_1_0}
 import com.evernym.verity.protocol.engine.ThreadId
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateCloudAgent, RequesterKeys}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
@@ -57,10 +58,17 @@ case class HolderSdk(param: SdkParam,
   implicit val executionContext: ExecutionContext = ec
 
   def registerWebhook(updateComMethod: UpdateComMethodReqMsg): ComMethodUpdated = {
-      val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
-      val updateComMethodJson = JsonMsgUtil.createJsonString(typeStr, updateComMethod)
-      val routedPackedMsg = packForMyVerityAgent(updateComMethodJson)
-      parseAndUnpackResponse[ComMethodUpdated](checkOKResponse(sendPOST(routedPackedMsg))).msg
+    val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_CONFIGS, MFV_0_6, MSG_TYPE_UPDATE_COM_METHOD)
+    val updateComMethodJson = JsonMsgUtil.createJsonString(typeStr, updateComMethod)
+    val routedPackedMsg = packForMyVerityAgent(updateComMethodJson)
+    parseAndUnpackResponse[ComMethodUpdated](checkOKResponse(sendPOST(routedPackedMsg))).msg
+  }
+
+  def getUpgradeInfo(gui: GetUpgradeInfo): UpgradeInfoRespMsg_MFV_1_0 = {
+    val typeStr = typeStrFromMsgType(EVERNYM_QUALIFIER, MSG_FAMILY_V1V2MIGRATION, MFV_1_0, MSG_TYPE_GET_UPGRADE_INFO)
+    val getUpgradeInfoJson = JsonMsgUtil.createJsonString(typeStr, gui)
+    val routedPackedMsg = packForMyVerityAgent(getUpgradeInfoJson)
+    parseAndUnpackResponse[UpgradeInfoRespMsg_MFV_1_0](checkOKResponse(sendPOST(routedPackedMsg))).msg
   }
 
   def provisionVerityCloudAgent(): AgentCreated = {
@@ -361,17 +369,6 @@ case class HolderSdk(param: SdkParam,
       }
     }
     throw new RuntimeException("expected message not found: " + msgTypeStr)
-  }
-
-  private def packForMyPairwiseRel(connId: String, msg: String): Array[Byte] = {
-    val pairwiseRel = myPairwiseRelationships(connId)
-    val verityAgentPackedMsg = packFromMyPairwiseKey(connId, msg, Set(KeyParam.fromVerKey(pairwiseRel.myVerityAgentVerKey)))
-    prepareFwdMsg(agencyDID, pairwiseRel.myPairwiseDID, verityAgentPackedMsg)
-  }
-
-  private def packFromMyPairwiseKey(connId: String, msg: String, recipVerKeyParams: Set[KeyParam]): Array[Byte] = {
-    val relationship = myPairwiseRelationships(connId)
-    packMsg(msg, recipVerKeyParams, Option(KeyParam.fromVerKey(relationship.myPairwiseVerKey)))
   }
 
   val masterSecretId: String = UUID.randomUUID().toString

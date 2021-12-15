@@ -7,6 +7,7 @@ import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErr
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
+import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
 import com.evernym.verity.actor.agent.msghandler.{AgentMsgProcessor, MsgRespConfig, ProcessTypedMsg, SendToProtocolActor}
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing._
@@ -141,6 +142,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     case mss: MsgSentSuccessfully                           => handleMsgSentSuccessfully(mss)
     case msf: MsgSendingFailed                              => handleMsgSendingFailed(msf)
     case GetOutboxParam(destId)                             => sendOutboxParam(destId)
+    case GetPairwiseUpgradeInfo                             => handleGetUpgradeInfo()
   }
 
   override final def receiveAgentEvent: Receive =
@@ -215,6 +217,26 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
   //TODO: not sure why we have this, we may wanna test and remove this if not needed
   val agentSpecificEventReceiver: Receive = {
     case _ =>
+  }
+
+  def handleGetUpgradeInfo(): Unit = {
+    val sndr = sender()
+    if (theirDidDocUpdateStatus.origTheirDidDocDetail.isEmpty) {
+      sndr ! NoUpgradeNeeded
+    } else {
+      val direction =
+        if (theirDidDocUpdateStatus.origTheirDidDocDetail == theirDidDocUpdateStatus.latestTheirDidDocDetail) "v2tov1"
+        else "v1tov2"
+      val theirAgencyDID = theirRoutingParam.routingTarget
+      getAgencyIdentityFut(agencyDIDReq, GetAgencyIdentity(theirAgencyDID), metricsWriter).map { cr =>
+        sndr !
+          PairwiseUpgradeInfo(
+            direction,
+            theirAgencyDID,
+            cr.getAgencyInfoReq(theirAgencyDID).verKeyReq,
+            cr.getAgencyInfoReq(theirAgencyDID).endpointReq)
+      }
+    }
   }
 
   def sendOutboxParam(destId: DestId): Unit = {
@@ -1104,3 +1126,10 @@ trait UserAgentPairwiseStateUpdateImpl
     updateStateWithOwnerAgentKey()
   }
 }
+
+case object GetPairwiseUpgradeInfo extends ActorMessage
+case class PairwiseUpgradeInfo(direction: String,
+                               theirAgencyDID: DidStr,
+                               theirAgencyVerKey: VerKeyStr,
+                               theirAgencyEndpoint: String) extends ActorMessage
+case object NoUpgradeNeeded extends ActorMessage

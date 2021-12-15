@@ -356,7 +356,10 @@ case class AgencyInfo(verKey: Option[Either[StatusDetail, VerKeyStr]], endpoint:
   def verKeyErrorOpt: Option[StatusDetail] = verKey.flatMap(leftOption)
 
   def verKeyReq: VerKeyStr = verKeyOpt.getOrElse(
-    throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode, Option("agent not yet created")))
+    throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("agent ver key not found")))
+
+  def endpointReq: String = endpointOpt.getOrElse(
+    throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("agent endpoint not found")))
 
   def isErrorInFetchingVerKey: Boolean = verKey.exists(_.isLeft)
   def isErrorInFetchingEndpoint: Boolean = endpoint.exists(_.isLeft)

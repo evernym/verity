@@ -75,14 +75,20 @@ trait RestApiBaseSpec
   }
 
   def performWriteSchema(mockRestEnv: MockRestEnv, payload: ByteString): Unit = {
-    buildPostReq(s"/api/${mockRestEnv.myDID}/write-schema/0.6/${UUID.randomUUID.toString}",
-      HttpEntity.Strict(ContentTypes.`application/json`, payload),
-      Seq(RawHeader("X-API-key", s"${mockRestEnv.myDIDApiKey}"))
-    ) ~> epRoutes ~> check {
-      status shouldBe Accepted
-      header[`Content-Type`] shouldEqual Some(`Content-Type`(`application/json`))
-      responseTo[RestAcceptedResponse] shouldBe RestAcceptedResponse()
-    }
+    val (_, lastPayload) = withExpectNewRestMsgAtRegisteredEndpoint({
+      buildPostReq(s"/api/${mockRestEnv.myDID}/write-schema/0.6/${UUID.randomUUID.toString}",
+        HttpEntity.Strict(ContentTypes.`application/json`, payload),
+        Seq(RawHeader("X-API-key", s"${mockRestEnv.myDIDApiKey}"))
+      ) ~> epRoutes ~> check {
+        status shouldBe Accepted
+        header[`Content-Type`] shouldEqual Some(`Content-Type`(`application/json`))
+        responseTo[RestAcceptedResponse] shouldBe RestAcceptedResponse()
+      }
+    })
+    lastPayload.isDefined shouldBe true
+    val jsonMsgString = lastPayload.get
+    val jsonMsg = new JSONObject(jsonMsgString)
+    jsonMsg.getString("@type") shouldBe "did:sov:123456789abcdefghi1234;spec/write-schema/0.6/status-report"
   }
 
   def createConnectionRequest(mockRestEnv: MockRestEnv, connId: String, payload: ByteString): Unit = {

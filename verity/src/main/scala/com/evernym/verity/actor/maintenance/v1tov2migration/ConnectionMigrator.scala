@@ -61,7 +61,10 @@ class ConnectionMigrator(appConfig: AppConfig,
   private def setupUserAgentPairwiseState(smc: SetupMigratedConnection): Future[Any] = {
 
     Future {
-      //TODO: finalize this
+      //below logic is to make sure it deterministically calculates the same
+      // pairwise actor entity id for given 'agent' + 'pairwise DID' combination
+      // to avoid creating lots of stale actors if migration script is
+      // executed multiple times.
       val pairwiseAgentActorEntityId =
         UUID
           .nameUUIDFromBytes((smc.agent.agentDID + smc.connection.myDidDoc.pairwiseDID).getBytes())
@@ -121,7 +124,10 @@ class ConnectionMigrator(appConfig: AppConfig,
     }
   }
 
-  //TODO: fix TODOs mentioned in below method
+  //relationship protocol is supposed to be long living protocol
+  // and hence setting it up as well to avoid any issues in future
+  // when any new functionality is added to relationship protocol
+  // and expected to work for all existing relationships.
   private def setupRelationshipProtocolState(myDidDoc: MyPairwiseDidDoc,
                                              dd: GetDomainDetailResp): Future[Any] = {
     Future {
@@ -129,7 +135,8 @@ class ConnectionMigrator(appConfig: AppConfig,
         .find(RelationshipDef.protoRef)
         .map { entry =>
 
-          //TODO: is this OK?
+          //using pairwise DID as seed to calculate threadId deterministically
+          // in case it has to be used by the customer later on
           val threadId = UUID.nameUUIDFromBytes(myDidDoc.pairwiseDID.getBytes()).toString
 
           val pinstId = entry.pinstIdResol.resolve(

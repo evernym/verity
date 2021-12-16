@@ -2,7 +2,7 @@ package com.evernym.verity.testkit.util
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequest, HttpResponse}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethod, HttpMethods, HttpRequest, HttpResponse}
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 
@@ -12,11 +12,11 @@ import scala.reflect.ClassTag
 
 object HttpUtil {
 
-  def sendBinaryReqToUrl(payload: Array[Byte], url: String): HttpResponse = {
+  def sendBinaryReqToUrl(payload: Array[Byte], url: String, method:HttpMethod = HttpMethods.POST): HttpResponse = {
     awaitFut(
       Http().singleRequest(
         HttpRequest(
-          method=HttpMethods.POST,
+          method=method,
           uri = url,
           entity = HttpEntity(
             ContentTypes.`application/octet-stream`,
@@ -27,11 +27,11 @@ object HttpUtil {
     )
   }
 
-  def sendJsonReqToUrl(payload: String, url: String): HttpResponse = {
+  def sendJsonReqToUrl(payload: String, url: String, method:HttpMethod = HttpMethods.POST): HttpResponse = {
     awaitFut(
       Http().singleRequest(
         HttpRequest(
-          method=HttpMethods.POST,
+          method=method,
           uri = url,
           entity = HttpEntity(
             ContentTypes.`application/json`,

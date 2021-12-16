@@ -9,7 +9,7 @@ import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE
 import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseInterface
 import com.evernym.verity.actor.agent.{EncryptionParamBuilder, MsgPackFormat}
-import com.evernym.verity.actor.{ConnectionCompleted, ConnectionStatusUpdated, TheirDidDocDetail, TheirProvisionalDidDocDetail}
+import com.evernym.verity.actor.{ConnectionCompleted, ConnectionStatusUpdated, TheirDidDocDetail, TheirProvisionalDidDocDetail, TheirRoutingUpdated}
 import com.evernym.verity.agentmsg.msgpacker._
 import com.evernym.verity.constants.Constants.GET_AGENCY_VER_KEY_FROM_POOL
 import com.evernym.verity.actor.agent.PayloadMetadata
@@ -95,9 +95,15 @@ trait PairwiseConnStateBase
     case cc: ConnectionStatusUpdated =>
       (cc.theirDidDocDetail, cc.theirProvisionalDidDocDetail) match {
         case (Some(tdd: TheirDidDocDetail), None) =>
-          updateTheirDidDocUpdateStatus(tdd)
           val lrd = LegacyRoutingDetail(tdd.agencyDID, tdd.agentKeyDID, tdd.agentVerKey, tdd.agentKeyDlgProofSignature)
           updateLegacyRelationshipState(tdd.pairwiseDID, tdd.pairwiseDIDVerKey, lrd)
+          updateTheirRouting(
+            TheirRouting(
+              tdd.agentKeyDID,
+              tdd.agentVerKey,
+              tdd.agencyDID
+            )
+          )
         case (None, Some(pdd: TheirProvisionalDidDocDetail)) =>
           val rd = RoutingDetail(pdd.verKey, pdd.endpoint, pdd.routingKeys.toVector)
           updateRelationshipState(pdd.did, pdd.verKey, rd)
@@ -113,6 +119,38 @@ trait PairwiseConnStateBase
         cc.theirAgentDIDVerKey,
         cc.theirAgentKeyDlgProofSignature)
       updateLegacyRelationshipState(cc.theirEdgeDID, "", lrd)
+
+      //below event is related to v1 to v2 migration only
+    case tru: TheirRoutingUpdated =>
+      val updatedDidDoc = state.relationship.flatMap(_.theirDidDoc.map { tdd =>
+        val updatedEndpointSeq: Seq[EndpointADT] = tdd.endpoints_!.endpoints.map(_.endpointADTX).map {
+          case lep: LegacyRoutingServiceEndpoint =>
+            lep.copy(
+              agencyDID = tru.agencyDID,
+              agentKeyDID = tru.routingPairwiseDID,
+              agentVerKey = tru.routingPairwiseVerKey,
+              authKeyIds = Seq(tru.routingPairwiseDID)
+            )
+          case ep: RoutingServiceEndpoint => ep
+          case _ => throw new MatchError("unsupported endpoint matched")
+        }.map(EndpointADT.apply)
+        val newAuthKeys =
+          Seq(AuthorizedKey(tru.routingPairwiseDID, tru.routingPairwiseVerKey, Set(EDGE_AGENT_KEY, AGENT_KEY_TAG)))
+        val updatedEndpoints = Endpoints(updatedEndpointSeq)
+        val updateAuthKeys = AuthorizedKeys(tdd.getAuthorizedKeys.keys.filterNot(_.keyId == tru.routingPairwiseDID) ++ newAuthKeys)
+        tdd
+          .update(_.authorizedKeys := updateAuthKeys)   //keeping old and new auth keys to satisfy constraints in endpoints
+          .update(_.endpoints := updatedEndpoints)
+          .update(_.authorizedKeys := AuthorizedKeys(newAuthKeys))  //updated the new auth keys post endpoint update
+      })
+      updateRelationshipBase(relationshipState.update(_.thoseDidDocs.setIfDefined(updatedDidDoc.map(Seq(_)))))
+      updateTheirRouting(
+        TheirRouting(
+          tru.routingPairwiseDID,
+          tru.routingPairwiseVerKey,
+          tru.agencyDID
+        )
+      )
   }
 
   def wap: WalletAPIParam
@@ -229,14 +267,24 @@ trait PairwiseConnStateBase
     }
   }
 
-  private def updateTheirDidDocUpdateStatus(tdd: TheirDidDocDetail): Unit = {
-    theirDidDocUpdateStatus = theirDidDocUpdateStatus.origTheirDidDocDetail match {
-      case None       => TheirDidDocUpdateStatus(None, Option(tdd))
-      case Some(orig) => TheirDidDocUpdateStatus(Option(orig), Option(tdd))
+  private def updateTheirRouting(newRoute: TheirRouting): Unit = {
+    theirRoutingUpdateStatus =
+      (theirRoutingUpdateStatus.original, theirRoutingUpdateStatus.latest) match {
+        case (None,       None) =>
+          //first time regular update
+          TheirRoutingUpdateStatus(None, Option(newRoute))
+        case (None,       Some(latest)) if latest != newRoute =>
+          //migrate the routing (to point to VAS)
+          TheirRoutingUpdateStatus(Some(latest), Option(newRoute))
+        case (Some(_), Some(latest)) if latest != newRoute =>
+          //undo routing changes (to point back to EAS)
+          theirRoutingUpdateStatus.copy(latest = Option(newRoute))
+        case _  =>
+          theirRoutingUpdateStatus
     }
   }
 
-  var theirDidDocUpdateStatus: TheirDidDocUpdateStatus = TheirDidDocUpdateStatus(None, None)
+  var theirRoutingUpdateStatus: TheirRoutingUpdateStatus = TheirRoutingUpdateStatus(None, None)
 }
 
 
@@ -246,5 +294,11 @@ trait PairwiseConnStateBase
  */
 trait PairwiseConnState extends PairwiseConnStateBase
 
-case class TheirDidDocUpdateStatus(origTheirDidDocDetail: Option[TheirDidDocDetail],
-                                   latestTheirDidDocDetail: Option[TheirDidDocDetail])
+case class TheirRoutingUpdateStatus(original: Option[TheirRouting],
+                                    latest: Option[TheirRouting]) {
+  def isOrigAndLatestSame: Boolean = original == latest
+}
+
+case class TheirRouting(routingPairwiseDID: DidStr,
+                        routingPairwiseVerKey: VerKeyStr,
+                        agencyDID: DidStr)

@@ -30,8 +30,8 @@ object WalletUtil {
 
   //TODO: there are some code duplicate in below methods, see if we can fix it
   def generateWalletParamAsync(walletId: String,
-                          appConfig: AppConfig,
-                          walletProvider: WalletProvider)
+                               appConfig: AppConfig,
+                               walletProvider: WalletProvider)
                               (implicit ec: ExecutionContext): Future[WalletParam] = {
     //TODO: should try to avoid this wallet config creating again and again
     val walletConfig = buildWalletConfig(appConfig)
@@ -39,9 +39,9 @@ object WalletUtil {
   }
 
   private def generateWalletParamAsync(walletId: String,
-                          appConfig: AppConfig,
-                          walletProvider: WalletProvider,
-                          walletConfig: WalletConfig)
+                                       appConfig: AppConfig,
+                                       walletProvider: WalletProvider,
+                                       walletConfig: WalletConfig)
                                       (implicit ec: ExecutionContext): Future[WalletParam] = {
     val walletName = getWalletName(walletId, appConfig)
     walletProvider.generateKeyAsync(Option(getWalletKeySeed(walletId, appConfig))).map { key =>
@@ -57,9 +57,9 @@ object WalletUtil {
   }
 
   def generateWalletParamSync(walletId: String,
-                               appConfig: AppConfig,
-                               walletProvider: WalletProvider,
-                               walletConfig: WalletConfig): WalletParam = {
+                              appConfig: AppConfig,
+                              walletProvider: WalletProvider,
+                              walletConfig: WalletConfig): WalletParam = {
     val walletName = getWalletName(walletId, appConfig)
     val key = walletProvider.generateKeySync(Option(getWalletKeySeed(walletId, appConfig)))
     WalletParam(walletId, walletName, key, walletConfig)

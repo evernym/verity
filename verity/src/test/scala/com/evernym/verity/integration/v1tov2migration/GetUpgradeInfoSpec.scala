@@ -1,10 +1,17 @@
 package com.evernym.verity.integration.v1tov2migration
 
+import akka.http.scaladsl.model.HttpMethods
+import akka.http.scaladsl.model.StatusCodes.OK
 import com.evernym.verity.actor.ConnectionStatusUpdated
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
+import com.evernym.verity.actor.agent.user.UpdateTheirRouting
+import com.evernym.verity.actor.persistence.recovery.base.AgentIdentifiers._
+import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.GetUpgradeInfo
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
-import com.evernym.verity.integration.base.{CAS, EAS, VerityProviderBaseSpec}
+import com.evernym.verity.integration.base.{CAS, EAS, VAS, VerityProviderBaseSpec}
+import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
+import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
 
@@ -15,52 +22,109 @@ class GetUpgradeInfoSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build(EAS)
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
+  lazy val issuerVAS = VerityEnvBuilder.default().build(VAS)
+  lazy val issuerEAS = VerityEnvBuilder.default().build(EAS)
+  lazy val holderCAS = VerityEnvBuilder.default().build(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+  lazy val issuerSDKVAS = setupIssuerSdk(issuerVAS, executionContext)
+  lazy val issuerSDKEAS = setupIssuerSdk(issuerEAS, executionContext)
+  lazy val holderSDKCAS = setupHolderSdk(holderCAS, defaultSvcParam.ledgerTxnExecutor, executionContext)
 
   val connId = "connId1"
+  var invitation: InviteDetail = null
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+    issuerSDKVAS.fetchAgencyKey()
 
-    issuerSDK.fetchAgencyKey()
-    issuerSDK.provisionAgent_0_5()
-    issuerSDK.updateComMethod_0_5(issuerSDK.msgListener.webhookEndpoint)
-    issuerSDK.createKey_0_5(connId)
-    val invitation = issuerSDK.sendConnReq_0_5(connId).md.inviteDetail
+    issuerSDKEAS.fetchAgencyKey()
+    issuerSDKEAS.provisionAgent_0_5()
+    issuerSDKEAS.updateComMethod_0_5(issuerSDKEAS.msgListener.webhookEndpoint)
+    issuerSDKEAS.createKey_0_5(connId)
+    invitation = issuerSDKEAS.sendConnReq_0_5(connId).md.inviteDetail
 
-    holderSDK.fetchAgencyKey()
-    holderSDK.provisionAgent_0_6()
-    holderSDK.createKey_0_6(connId)
-    holderSDK.sendConnReqAnswer_0_5(connId, invitation)
+    holderSDKCAS.fetchAgencyKey()
+    holderSDKCAS.provisionAgent_0_6()
+    holderSDKCAS.createKey_0_6(connId)
+    holderSDKCAS.sendConnReqAnswer_0_5(connId, invitation)
 
-    issuerSDK.expectMsgOnWebhook[ConnectionStatusUpdated](mpf = MPF_MSG_PACK)
+    issuerSDKEAS.expectMsgOnWebhook[ConnectionStatusUpdated](mpf = MPF_MSG_PACK)
   }
 
   "HolderSDK" - {
     "when tried to send 'GET_UPGRADE_INFO' (v1tov2migration 1.0) message" - {
       "should be successful" in {
-        val myPairwiseDid = holderSDK.myPairwiseRelationships(connId).myPairwiseDID
-        val resp = holderSDK.getUpgradeInfo(GetUpgradeInfo(List(myPairwiseDid)))
+        val myPairwiseDid = holderSDKCAS.myPairwiseRelationships(connId).myPairwiseDID
+        val resp = holderSDKCAS.getUpgradeInfo(GetUpgradeInfo(List(myPairwiseDid)))
         resp.data.size shouldBe 0
       }
     }
+
     "when tried to send 'GET_UPGRADE_INFO' (v1tov2migration 1.0) message with duplicate pairwise DIDs" - {
       "should be successful" in {
-        val myPairwiseDid = holderSDK.myPairwiseRelationships(connId).myPairwiseDID
-        val resp = holderSDK.getUpgradeInfo(GetUpgradeInfo(List(myPairwiseDid, myPairwiseDid)))
+        val myPairwiseDid = holderSDKCAS.myPairwiseRelationships(connId).myPairwiseDID
+        val resp = holderSDKCAS.getUpgradeInfo(GetUpgradeInfo(List(myPairwiseDid, myPairwiseDid)))
         resp.data.size shouldBe 0
       }
     }
+
     "when tried to send 'GET_UPGRADE_INFO' (v1tov2migration 1.0) message with invalid pairwise DID" - {
       "should fail" in {
         val ex = intercept[RuntimeException] {
-          holderSDK.getUpgradeInfo(GetUpgradeInfo(List("garbage")))
+          holderSDKCAS.getUpgradeInfo(GetUpgradeInfo(List("garbage")))
         }
         ex.getMessage.contains("no pairwise connection found with these DIDs: garbage") shouldBe true
+      }
+    }
+
+    "when tried to update their did doc" - {
+      "should be successful" in {
+        val myPairwiseDid = holderSDKCAS.myPairwiseRelationships(connId).myPairwiseDID
+
+        val utr = UpdateTheirRouting(
+          theirPairwiseRelDIDPair.did,
+          theirPairwiseRelDIDPair.verKey,
+          issuerSDKVAS.agencyDID,
+          issuerSDKVAS.agencyVerKey)
+        val jsonReq = DefaultMsgCodec.toJson(utr)
+        val apiUrl = holderSDKCAS.buildFullUrl(s"agency/internal/maintenance/v1tov2migration/CAS/connection/$myPairwiseDid/routing")
+        val resp = HttpUtil.sendJsonReqToUrl(jsonReq, apiUrl, method = HttpMethods.PUT)
+        resp.status shouldBe OK
+      }
+    }
+
+    "when tried to send 'GET_UPGRADE_INFO' post did doc update" - {
+      "should respond with upgraded info" in {
+        val myPairwiseDid = holderSDKCAS.myPairwiseRelationships(connId).myPairwiseDID
+        val resp = holderSDKCAS.getUpgradeInfo(GetUpgradeInfo(List(myPairwiseDid)))
+        resp.data.size shouldBe 1
+        resp.data(myPairwiseDid).direction shouldBe "v1tov2"
+      }
+    }
+
+    "when tried to update their did doc back to original" - {
+      "should be successful" in {
+        val myPairwiseDid = holderSDKCAS.myPairwiseRelationships(connId).myPairwiseDID
+
+        val utr = UpdateTheirRouting(
+          invitation.senderDetail.agentKeyDlgProof.get.agentDID,
+          invitation.senderDetail.agentKeyDlgProof.get.agentDelegatedKey,
+          invitation.senderAgencyDetail.DID,
+          invitation.senderAgencyDetail.verKey)
+        val jsonReq = DefaultMsgCodec.toJson(utr)
+        val apiUrl = holderSDKCAS.buildFullUrl(s"agency/internal/maintenance/v1tov2migration/" +
+          s"CAS/connection/$myPairwiseDid/routing")
+        val resp = HttpUtil.sendJsonReqToUrl(jsonReq, apiUrl, method = HttpMethods.PUT)
+        resp.status shouldBe OK
+      }
+    }
+
+    "when tried to send 'GET_UPGRADE_INFO' post did doc update undo" - {
+      "should respond no data for upgrade" in {
+        val myPairwiseDid = holderSDKCAS.myPairwiseRelationships(connId).myPairwiseDID
+        val resp = holderSDKCAS.getUpgradeInfo(GetUpgradeInfo(List(myPairwiseDid)))
+        resp.data.size shouldBe 1
+        resp.data(myPairwiseDid).direction shouldBe "v2tov1"
       }
     }
   }

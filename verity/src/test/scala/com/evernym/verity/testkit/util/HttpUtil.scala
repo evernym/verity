@@ -7,12 +7,15 @@ import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.duration.{Duration, SECONDS}
+import scala.concurrent.duration.{Duration, FiniteDuration, SECONDS}
 import scala.reflect.ClassTag
 
 object HttpUtil {
 
-  def sendBinaryReqToUrl(payload: Array[Byte], url: String, method:HttpMethod = HttpMethods.POST): HttpResponse = {
+  val futureTimeout: FiniteDuration = Duration(25, SECONDS)
+
+
+  def sendBinaryReqToUrl(payload: Array[Byte], url: String, method:HttpMethod = HttpMethods.POST)(implicit ec: ExecutionContext): HttpResponse = {
     awaitFut(
       Http().singleRequest(
         HttpRequest(
@@ -23,11 +26,11 @@ object HttpUtil {
             payload
           )
         )
-      )
+      ).flatMap(_.toStrict(futureTimeout))
     )
   }
 
-  def sendJsonReqToUrl(payload: String, url: String, method:HttpMethod = HttpMethods.POST): HttpResponse = {
+  def sendJsonReqToUrl(payload: String, url: String, method:HttpMethod = HttpMethods.POST)(implicit ec: ExecutionContext): HttpResponse = {
     awaitFut(
       Http().singleRequest(
         HttpRequest(
@@ -38,11 +41,11 @@ object HttpUtil {
             payload
           )
         )
-      )
+      ).flatMap(_.toStrict(futureTimeout))
     )
   }
 
-  def sendGET(url: String): HttpResponse = {
+  def sendGET(url: String)(implicit ec: ExecutionContext): HttpResponse = {
     awaitFut(
       Http().singleRequest(
         HttpRequest(
@@ -50,7 +53,7 @@ object HttpUtil {
           uri = url,
           entity = HttpEntity.Empty
         )
-      )
+      ).flatMap(_.toStrict(futureTimeout))
     )
   }
 
@@ -66,7 +69,7 @@ object HttpUtil {
   }
 
   protected def awaitFut[T](fut: Future[T]): T = {
-    Await.result(fut, Duration(25, SECONDS))
+    Await.result(fut, futureTimeout)
   }
 
   implicit val actorSystem: ActorSystem = ActorSystemVanilla("http")

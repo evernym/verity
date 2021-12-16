@@ -88,7 +88,7 @@ class GetUpgradeInfoSpec
           issuerSDKVAS.agencyVerKey)
         val jsonReq = DefaultMsgCodec.toJson(utr)
         val apiUrl = holderSDKCAS.buildFullUrl(s"agency/internal/maintenance/v1tov2migration/CAS/connection/$myPairwiseDid/routing")
-        val resp = HttpUtil.sendJsonReqToUrl(jsonReq, apiUrl, method = HttpMethods.PUT)
+        val resp = HttpUtil.sendJsonReqToUrl(jsonReq, apiUrl, method = HttpMethods.PUT)(futureExecutionContext)
         resp.status shouldBe OK
       }
     }
@@ -114,7 +114,7 @@ class GetUpgradeInfoSpec
         val jsonReq = DefaultMsgCodec.toJson(utr)
         val apiUrl = holderSDKCAS.buildFullUrl(s"agency/internal/maintenance/v1tov2migration/" +
           s"CAS/connection/$myPairwiseDid/routing")
-        val resp = HttpUtil.sendJsonReqToUrl(jsonReq, apiUrl, method = HttpMethods.PUT)
+        val resp = HttpUtil.sendJsonReqToUrl(jsonReq, apiUrl, method = HttpMethods.PUT)(futureExecutionContext)
         resp.status shouldBe OK
       }
     }

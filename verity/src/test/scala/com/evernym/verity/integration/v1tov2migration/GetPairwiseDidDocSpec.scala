@@ -36,7 +36,7 @@ class GetPairwiseDidDocSpec
     "when asked for pairwise did doc" - {
       "should respond with correct data" in {
         val basePath = s"agency/internal/maintenance/v1tov2migration/connection/${myPairwiseRelDIDPair.did}/diddoc"
-        val apiResp = HttpUtil.sendGET(issuerRestSDK.buildFullUrl(s"$basePath"))
+        val apiResp = HttpUtil.sendGET(issuerRestSDK.buildFullUrl(s"$basePath"))(futureExecutionContext)
         val respString = HttpUtil.parseHttpResponseAsString(apiResp)(futureExecutionContext)
         val resp = DefaultMsgCodec.fromJson[GetPairwiseConnDetailResp](respString)
 

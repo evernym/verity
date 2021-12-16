@@ -102,7 +102,7 @@ class GetPairwiseRoutingDIDsSpec
 
   private def getPairwiseDIDs(queryParam: String): GetPairwiseRoutingDIDsResp = {
     val urlSuffix = s"agency/internal/maintenance/v1tov2migration/agent/${mySelfRelAgentDIDPair.did}/pairwiseRoutingDIDs"
-    val apiResp = HttpUtil.sendGET(issuerRestSDK.buildFullUrl(s"$urlSuffix$queryParam"))
+    val apiResp = HttpUtil.sendGET(issuerRestSDK.buildFullUrl(s"$urlSuffix$queryParam"))(futureExecutionContext)
     val respString = HttpUtil.parseHttpResponseAsString(apiResp)(futureExecutionContext)
     DefaultMsgCodec.fromJson[GetPairwiseRoutingDIDsResp](respString)
   }

@@ -49,7 +49,7 @@ class ConnectionMigrationSpec
         // collect required data to be used in connection migration
         val verity1ConnDetail = {
           val urlSuffix = s"agency/internal/maintenance/v1tov2migration/connection/${myPairwiseRelDIDPair.did}/diddoc"
-          val apiResp = HttpUtil.sendGET(verity1IssuerRestSDK.buildFullUrl(s"$urlSuffix"))
+          val apiResp = HttpUtil.sendGET(verity1IssuerRestSDK.buildFullUrl(s"$urlSuffix"))(futureExecutionContext)
           val respString = HttpUtil.parseHttpResponseAsString(apiResp)(futureExecutionContext)
           val resp = DefaultMsgCodec.fromJson[GetPairwiseConnDetailResp](respString)
           resp.myDidDoc shouldBe
@@ -70,7 +70,7 @@ class ConnectionMigrationSpec
         }
 
         val casAgencyDetail = {
-          val apiResp = HttpUtil.sendGET(verity1HolderSDK.buildFullUrl("agency"))
+          val apiResp = HttpUtil.sendGET(verity1HolderSDK.buildFullUrl("agency"))(futureExecutionContext)
           val respString = HttpUtil.parseHttpResponseAsString(apiResp)(futureExecutionContext)
           DefaultMsgCodec.fromJson[AgencyPublicDid](respString)
         }
@@ -90,9 +90,9 @@ class ConnectionMigrationSpec
         )
         val jsonReq = DefaultMsgCodec.toJson(smc)
         val urlSuffix = s"agency/internal/maintenance/v1tov2migration/VAS/connection/${myPairwiseRelDIDPair.did}/diddoc"
-        HttpUtil.sendJsonReqToUrl(jsonReq, verity2IssuerRestSDK.buildFullUrl(s"$urlSuffix"))
+        HttpUtil.sendJsonReqToUrl(jsonReq, verity2IssuerRestSDK.buildFullUrl(s"$urlSuffix"))(futureExecutionContext)
         checkPersistedEvents(smc)
-        HttpUtil.sendJsonReqToUrl(jsonReq, verity2IssuerRestSDK.buildFullUrl(s"$urlSuffix"))
+        HttpUtil.sendJsonReqToUrl(jsonReq, verity2IssuerRestSDK.buildFullUrl(s"$urlSuffix"))(futureExecutionContext)
         checkPersistedEvents(smc)
       }
     }

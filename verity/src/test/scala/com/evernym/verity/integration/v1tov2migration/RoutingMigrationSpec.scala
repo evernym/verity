@@ -48,9 +48,9 @@ class RoutingMigrationSpec
         val jsonReq = DefaultMsgCodec.toJson(utr)
         val apiUrl = verity1HolderSDK.buildFullUrl(s"agency/internal/maintenance/v1tov2migration/CAS/connection/${myPairwiseRelDIDPair.did}/routing")
 
-        HttpUtil.sendJsonReqToUrl(jsonReq, apiUrl, method = HttpMethods.PUT)
+        HttpUtil.sendJsonReqToUrl(jsonReq, apiUrl, method = HttpMethods.PUT)(futureExecutionContext)
         totalPairwiseEvents().count(_.isInstanceOf[TheirRoutingUpdated]) shouldBe 1
-        HttpUtil.sendJsonReqToUrl(jsonReq, apiUrl, method = HttpMethods.PUT)
+        HttpUtil.sendJsonReqToUrl(jsonReq, apiUrl, method = HttpMethods.PUT)(futureExecutionContext)
         totalPairwiseEvents().count(_.isInstanceOf[TheirRoutingUpdated]) shouldBe 1
       }
     }

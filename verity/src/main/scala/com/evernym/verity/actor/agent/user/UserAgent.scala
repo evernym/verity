@@ -66,6 +66,9 @@ import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_t
 import com.evernym.verity.msgoutbox.outbox.Outbox.DESTINATION_ID_DEFAULT
 import com.evernym.verity.observability.metrics.MetricsUnit
 import com.evernym.verity.util2.ActorErrorResp
+import com.evernym.verity.vault.WalletUtil.generateWalletParamAsync
+import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
+import org.json.JSONObject
 
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{ExecutionContext, Future}
@@ -144,6 +147,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
     case hck: HandleCreateKeyWithThisAgentKey    =>
       handleCreateKeyWithThisAgentKey(hck.thisAgentKey, hck.createKeyReqMsg)(hck.reqMsgContext)
 
+    case GetWalletMigrationDetail                => sendGetWalletMigrationDetail()
     case GetDomainDetail                         => sendDomainDetail()
     case gp: GetPairwiseRoutingDIDs              => sendPairwiseAgentDIDs(gp)
   }
@@ -173,6 +177,17 @@ class UserAgent(val agentActorContext: AgentActorContext,
       //this is received for each new pairwise connection/actor that gets created
     case ads: AgentDetailSet               =>
       if (!isVAS) addRelationshipAgent(AgentDetail(ads.forDID, ads.agentKeyDID))
+  }
+
+  private def sendGetWalletMigrationDetail(): Unit = {
+    val sndr = sender()
+    generateWalletParamAsync(agentWalletIdReq, appConfig, LibIndyWalletProvider).map { wp =>
+      sndr !
+        GetWalletMigrationDetailResp(
+          new JSONObject(wp.walletConfig.buildConfig(agentWalletIdReq)),
+          new JSONObject(wp.walletConfig.buildCredentials(wp.encryptionKey))
+        )
+    }
   }
 
   private def sendDomainDetail(): Unit = {
@@ -1154,3 +1169,6 @@ case class GetDomainDetailResp(walletId: String,
                                domainId: DidStr,
                                relationshipId: Option[RelationshipId],
                                relationshipProtocolParams: Set[Parameter]) extends ActorMessage
+case object GetWalletMigrationDetail extends ActorMessage
+case class GetWalletMigrationDetailResp(config: JSONObject,
+                                        credential: JSONObject) extends ActorMessage

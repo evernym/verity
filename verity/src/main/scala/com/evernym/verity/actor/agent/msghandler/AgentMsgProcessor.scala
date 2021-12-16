@@ -24,13 +24,13 @@ import com.evernym.verity.agentmsg.msgcodec.MsgCodecException
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
-import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, ParseParam, UnpackParam}
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, MsgFamilyDetail, ParseParam, UnpackParam}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.MSG_LIMITS
 import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.did.didcomm.v1.Thread
-import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EvernymQualifier, MsgName}
 import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId, MsgType, TypedMsgLike}
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
@@ -53,10 +53,11 @@ import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
+import org.json.JSONObject
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
-import scala.util.{Failure, Left, Success}
+import scala.util.{Failure, Left, Success, Try}
 
 
 //Protocol msg flow with this AgentMsgProcessor in between
@@ -283,7 +284,10 @@ class AgentMsgProcessor(val appConfig: AppConfig,
                       msgSpecificRecipVerKey: Option[KeyParam]=None): Future[OutgoingMsgParam] = {
     logger.debug(s"packing outgoing message: $omp to $msgPackFormat (msgSpecificRecipVerKeyOpt: $msgSpecificRecipVerKey)")
     val toDID = ParticipantUtil.agentId(toParticipantId)
-    val recipKeys = Set(msgSpecificRecipVerKey.getOrElse(KeyParam.fromDID(toDID)))
+    val toDIDVerKey = param.theirDidAuthKey.filter(_.keyId == toDID).flatMap(_.verKeyOpt)
+    val recipKeys = Set(msgSpecificRecipVerKey.getOrElse(
+      toDIDVerKey.map(KeyParam.fromVerKey).getOrElse(KeyParam.fromDID(toDID))
+    ))
     msgExtractor.packAsync(msgPackFormat, omp.jsonMsg_!(), recipKeys).map { packedMsg =>
       OutgoingMsgParam(packedMsg, omp.metadata.map(x => x.copy(msgPackFormatStr = msgPackFormat.toString)))
     }
@@ -772,9 +776,15 @@ class AgentMsgProcessor(val appConfig: AppConfig,
           val msgId = MsgUtil.newMsgId
           recordInMsgEvent(reqMsgContext.id, MsgEvent(msgId, fwdMsg.msgFamilyDetail.msgType.toString))
           // flow diagram: fwd.edge, step 9 -- store outgoing msg.
-          sendToAgentActor(SendMsgToMyDomain(
-            OutgoingMsgParam(PackedMsg(fwdMsg.`@msg`), None),
-            msgId, fwdMsg.fwdMsgType.getOrElse(MSG_TYPE_UNKNOWN), ParticipantUtil.DID(param.selfParticipantId), None))
+          sendToAgentActor(
+            SendMsgToMyDomain(
+              OutgoingMsgParam(PackedMsg(fwdMsg.`@msg`), None),
+              msgId,
+              fwdMsg.fwdMsgType.getOrElse(MSG_TYPE_UNKNOWN),
+              ParticipantUtil.DID(param.selfParticipantId),
+              None
+            )
+          )
           recordOutMsgEvent(reqMsgContext.id, MsgEvent(msgId, fwdMsg.fwdMsgType.getOrElse("unknown"),
             s"packed msg sent to agent actor to be forwarded to edge agent"))
           sndr.tell(Done, self)
@@ -792,37 +802,77 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    * @param amw agent message wrapper
    * @return
    */
-  private def extractInternalPayload(amw: AgentMsgWrapper): Option[InternalPayload] = {
+  private def extractInternalPayload(amw: AgentMsgWrapper): Option[InternalEncryptedPayload] = {
     if (amw.isMatched(MFV_0_5, CREATE_MSG_TYPE_GENERAL)) {
       val msg = amw.tailAgentMsgs.head
       val createMsgReq = amw.headAgentMsg.convertTo[CreateMsgReqMsg_MFV_0_5]
       val msgDetail = msg.convertTo[GeneralCreateMsgDetail_MFV_0_5]
-      Option(InternalPayload(msgDetail.`@msg`, createMsgReq.thread))
+      Option(InternalEncryptedPayload(msgDetail.`@msg`, createMsgReq.thread))
     } else if (amw.isMatched(MFV_0_6, MSG_TYPE_SEND_REMOTE_MSG)) {
       val srm = SendRemoteMsgHelper.buildReqMsg(amw)
-      Option(InternalPayload(srm.`@msg`, srm.threadOpt))
+      Option(InternalEncryptedPayload(srm.`@msg`, srm.threadOpt))
     } else if (
       amw.isMatched(MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FORWARD) ||
         amw.isMatched(MSG_FAMILY_ROUTING, MFV_1_0, MSG_TYPE_FWD) ||
         amw.isMatched(MFV_0_5, MSG_TYPE_FWD)) {
       val fwdMsg = FwdMsgHelper.buildReqMsg(amw)
       if (isFwdForThisAgent(fwdMsg)) {
-        Option(InternalPayload(fwdMsg.`@msg`, None))
+        Option(InternalEncryptedPayload(fwdMsg.`@msg`, None))
       } else None
     } else None
   }
 
   private def internalPayloadWrapper(amw: AgentMsgWrapper): Future[Option[InternalDecryptedMsg]] =
     extractInternalPayload(amw) match {
-      case Some(ip) =>
+      case Some(ip: InternalEncryptedPayload) =>
         msgExtractor.unpackAsync(PackedMsg(ip.payload))
           .map { internalAMW =>
             Option(InternalDecryptedMsg(internalAMW, ip.thread))
           }.recover {
-          case _: Exception =>
-            None
+            case _: Exception =>
+              None
+          }
+
+      case None =>
+        amw.headAgentMsg.msgFamilyDetail match {
+          //this is to support unpacking of structured messages (committed-answer and question-answer)
+          // received by migrated connection
+          case MsgFamilyDetail(EvernymQualifier,"0.5","0.5","Answer"|"type",Some("1.0"),true) =>
+
+            val msgJsonObject = new JSONObject(amw.headAgentMsg.msg)
+            val internalMsgStr = msgJsonObject.getString("@msg")
+            val internalMsgJsonObject = new JSONObject(internalMsgStr)
+
+            val msgFamilyDetail = {
+              val msgType = {
+                val typ = internalMsgJsonObject.getString("@type")
+                MsgFamily.msgTypeFromTypeStr(typ)
+              }
+              MsgFamilyDetail(
+                msgType.familyQualifier,
+                msgType.familyName,
+                msgType.familyVersion,
+                msgType.msgName,
+                None
+              )
+            }
+            val msgThread = Try {
+              val thread = internalMsgJsonObject.getJSONObject("~thread")
+              Option(Thread(thid = Option(thread.getString("thId"))))
+            }.getOrElse(None)
+
+            val updatedAgentMsg = amw.headAgentMsg.copy(msg = internalMsgStr, msgFamilyDetail = msgFamilyDetail)
+            Future.successful(
+              Option(
+                InternalDecryptedMsg(
+                  amw.copy(agentBundledMsg = amw.agentBundledMsg.copy(msgs = List(updatedAgentMsg))),
+                  msgThread
+                )
+              )
+            )
+          case _ =>
+            Future.successful(None)
         }
-      case None => Future.successful(None)
     }
 
   /**
@@ -884,7 +934,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
 
   override def trackingIdParam: TrackingIdParam = param.trackingIdParam
 
-  lazy val thisAgentKeyParam: KeyParam = KeyParam(Left(param.thisAgentAuthKey.verKey))
+  lazy val thisAgentKeyParam: KeyParam = KeyParam.fromVerKey(param.thisAgentAuthKey.verKey)
   lazy val msgExtractor: MsgExtractor = new MsgExtractor(thisAgentKeyParam, walletAPI, futureExecutionContext)(WalletAPIParam(param.agentWalletId), appConfig)
 
   //NOTE: 2 minutes seems to be sufficient (or may be more) for any
@@ -899,6 +949,7 @@ case class StateParam(agentActorRef: ActorRef,
                       domainId: DomainId,
                       relationshipId: Option[RelationshipId],
                       thisAgentAuthKey: AuthorizedKeyLike,
+                      theirDidAuthKey: Option[AuthorizedKeyLike],
                       agentWalletId: String,
                       protoInstances: Option[ProtocolRunningInstances],
                       sponsorRel: Option[SponsorRel],
@@ -982,7 +1033,7 @@ case class SendToProtocolActor(pinstIdPair: PinstIdPair,
                                msgEnvelope: Any,
                                sndr: ActorRef) extends ActorMessage
 
-case class InternalPayload(payload: Array[Byte], thread: Option[Thread])
+case class InternalEncryptedPayload(payload: Array[Byte], thread: Option[Thread])
 
 /**
  *

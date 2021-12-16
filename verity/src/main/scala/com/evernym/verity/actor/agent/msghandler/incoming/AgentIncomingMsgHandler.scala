@@ -101,6 +101,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
         state.domainId,
         state.relationshipId,
         state.thisAgentAuthKeyReq,
+        state.theirDidAuthKey,
         state.agentWalletIdReq,
         state.protoInstances,
         sponsorRel,

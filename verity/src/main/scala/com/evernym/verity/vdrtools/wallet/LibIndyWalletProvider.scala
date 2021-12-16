@@ -34,9 +34,11 @@ object LibIndyWalletProvider
 
   def createSync(id: String, encryptionKey: String, walletConfig: WalletConfig): WalletCreated.type = {
     try {
+      val config = walletConfig.buildConfig(id)
+      val cred = walletConfig.buildCredentials(encryptionKey)
       Wallet.createWallet(
-        walletConfig.buildConfig(id),
-        walletConfig.buildCredentials(encryptionKey)).get
+        config,
+        cred).get
       WalletCreated
     } catch handleWalletEx(id) andThen { throw _ }
   }

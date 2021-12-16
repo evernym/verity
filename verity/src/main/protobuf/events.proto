@@ -508,3 +508,10 @@ message AuthKeyAdded {
     string keyId = 1;
     string verKey = 2;
 }
+
+message TheirRoutingUpdated {
+    string routingPairwiseDID = 1;
+    string routingPairwiseVerKey = 2;
+    string agencyDID = 3;
+    string agencyVerKey = 4;
+}

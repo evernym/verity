@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.agent
 
 import akka.actor.typed.Behavior
+import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -28,6 +29,8 @@ import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util.Util
 import com.evernym.verity.vault.service.ActorWalletService
 import com.evernym.verity.vault.wallet_api.{StandardWalletAPI, WalletAPI}
+import com.evernym.verity.vdr.{VDRActorAdapter, VDRAdapter}
+import com.evernym.verity.vdr.service.{IndyLedger, VDRTools, VDRToolsConfig, VDRToolsFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Left
@@ -60,6 +63,9 @@ trait AgentActorContext
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, futureExecutionContext)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val storageAPI: StorageAPI = StorageAPI.loadFromConfig(appConfig, futureExecutionContext)
+  lazy val vdrTools: VDRTools = VDRTools("mockLibDirPath")
+  //TODO: it should be replaced with real implementation in future
+  lazy val vdrAdapter: VDRAdapter = createMockVDRAdapter({_ => vdrTools})
 
   //NOTE: this 'oAuthAccessTokenRefreshers' is only need here until we switch to the outbox solution
   val oAuthAccessTokenRefreshers: AccessTokenRefreshers = new AccessTokenRefreshers {
@@ -91,6 +97,15 @@ trait AgentActorContext
       }
     }
   }
+
+  private def createMockVDRAdapter(vdrToolsFactory: VDRToolsFactory)(implicit ec: ExecutionContext, as: ActorSystem): VDRActorAdapter = {
+    new VDRActorAdapter(vdrToolsFactory, new VDRToolsConfig(
+      "/usr/lib",
+      List(IndyLedger(List("indy:sovrin", "sov"), "genesis1-path", None))),
+      None
+    )(ec, as.toTyped)
+  }
+
 }
 
 

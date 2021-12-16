@@ -19,6 +19,8 @@ class MockHealthChecker extends HealthChecker{
   override def checkLiveness: Future[Unit] = Future.successful((): Unit)
 
   override def checkLedgerPoolStatus: Future[ApiStatus] = Future.successful(ApiStatus(true, "OK"))
+
+  override def checkVDRToolsStatus: Future[ApiStatus] = Future.successful(ApiStatus(true, "OK"))
 }
 
 trait ApiHealthCheckSpec {this: EdgeEndpointBaseSpec =>

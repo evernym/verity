@@ -3,6 +3,7 @@ package com.evernym.verity.actor.persistence.recovery.base
 import akka.actor.ActorSystem
 import akka.persistence.testkit.{PersistenceTestKitSnapshotPlugin, SnapshotMeta}
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
+import com.evernym.vdrtools.wallet.Wallet
 import com.evernym.verity.actor.agent.msgrouter.RoutingAgentUtil
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
@@ -24,9 +25,12 @@ import com.evernym.verity.protocol.engine.MultiEvent
 import com.evernym.verity.testkit.HasTestWalletAPI
 import com.evernym.verity.transformations.transformers.{<=>, legacy, v1}
 import com.evernym.verity.vault.WalletAPIParam
+import com.evernym.verity.vault.WalletUtil.{buildWalletConfig, generateWalletParamSync}
+import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 class PersistentStoreTestKit(val system: ActorSystem,
                              val futureExecutionContext: ExecutionContext)
@@ -45,6 +49,7 @@ trait BasePersistentStore
   lazy val agentRouteStoreEncKey = appConfig.getStringReq(ConfigConstants.SECRET_ROUTING_AGENT)
 
   def createWallet(walletId: String): Unit = {
+    Try(deleteWallet(walletId))
     testWalletAPI.executeSync[WalletCreated.type](CreateWallet())(WalletAPIParam(walletId))
   }
 
@@ -66,6 +71,14 @@ trait BasePersistentStore
 
   def closeWallet(walletId: String): Done.type = {
     testWalletAPI.executeSync[Done.type](Close())(WalletAPIParam(walletId))
+  }
+
+  private def deleteWallet(walletId: String): Unit = {
+    val walletConfig = buildWalletConfig(testAppConfig)
+    val walletParam = generateWalletParamSync(walletId, testAppConfig, LibIndyWalletProvider)
+    val config = walletConfig.buildConfig(walletParam.walletName)
+    val cred = walletConfig.buildCredentials(walletParam.encryptionKey)
+    Wallet.deleteWallet(config, cred).get()
   }
 
   def storeAgentRoute(agentDID: DidStr, actorTypeId: Int, address: EntityId)

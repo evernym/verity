@@ -2,6 +2,7 @@ package com.evernym.verity.util.healthcheck
 
 import akka.actor.ActorSystem
 import com.evernym.verity.actor.agent.AgentActorContext
+import com.evernym.verity.vdr.service.VDRTools
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -19,6 +20,8 @@ trait HealthChecker {
   def checkBlobStorageStatus: Future[ApiStatus]
 
   def checkLedgerPoolStatus: Future[ApiStatus]
+
+  def checkVDRToolsStatus: Future[ApiStatus]
 
   def checkLiveness: Future[Unit]
 }

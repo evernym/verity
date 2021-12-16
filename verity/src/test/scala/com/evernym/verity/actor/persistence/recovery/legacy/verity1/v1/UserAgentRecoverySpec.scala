@@ -5,6 +5,7 @@ import com.evernym.verity.actor.agent.{AgentDetail, ConfigValue}
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.SELF_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY}
 import com.evernym.verity.actor.agent.relationship._
+import com.evernym.verity.actor.persistence.recovery.base.AgentIdentifiers._
 import com.evernym.verity.actor.agent.user.UserAgentState
 import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.persistence.recovery.legacy.verity1.{AgencyAgentEventSetter, UserAgentEventSetter}

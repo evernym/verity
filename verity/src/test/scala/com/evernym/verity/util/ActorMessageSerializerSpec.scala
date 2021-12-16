@@ -10,8 +10,6 @@ import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TestMessages.{TestMessage1, TestMessage2}
 import com.twitter.chill.akka.AkkaSerializer
 
-import scala.concurrent.ExecutionContext
-
 
 class ActorMessageSerializerSpec extends ActorSpec with BasicSpec {
 

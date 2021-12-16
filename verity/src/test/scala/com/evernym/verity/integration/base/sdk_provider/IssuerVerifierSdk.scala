@@ -5,6 +5,7 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequ
 import akka.http.scaladsl.model.StatusCodes.{Accepted, OK}
 import akka.http.scaladsl.model.headers.RawHeader
 import com.evernym.verity.actor.ComMethodUpdated
+import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_PLAIN}
 import com.evernym.verity.actor.wallet.{SignMsg, SignedMsg}
@@ -25,6 +26,7 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete,
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{ConnectionInvitation, Create, OutOfBandInvitation}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{Created, Invitation}
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResult
+import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
@@ -118,7 +120,8 @@ abstract class VeritySdkBase(param: SdkParam,
   }
 
   def msgListener: MsgListenerBase[_]
-  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T]
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS),
+                                      mpf: MsgPackFormat = MPF_INDY_PACK): ReceivedMsgParam[T]
   def resetPlainMsgsCounter: ReceivedMsgCounter = msgListener.resetPlainMsgsCounter
   def resetAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetAuthedMsgsCounter
   def resetFailedAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetFailedAuthedMsgsCounter
@@ -214,14 +217,17 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
    * @tparam T expected message type
    * @return
    */
-  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T] = {
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS),
+                                      mpf: MsgPackFormat = MPF_INDY_PACK): ReceivedMsgParam[T] = {
+    implicit val msgPackFormat: MsgPackFormat = mpf
     val msg = msgListener.expectMsg(timeout)
     try {
       unpackMsg(msg)
     } catch {
       case _: UnexpectedMsgException =>
         //TODO: This is temporary workaround to fix the intermittent failure around message ordering
-        // should analyze it and see if there is any better way to fix it
+        // should analyze it and see if there is any better way to fix it.
+        logger.info("other message found, to be re-queued: ")
         msgListener.addToQueue(msg)
         expectMsgOnWebhook(timeout)
     }
@@ -367,7 +373,7 @@ case class IssuerRestSDK(param: SdkParam,
     val threadId = threadOpt.flatMap(_.thid).getOrElse(UUID.randomUUID.toString)
     val url = s"${param.verityRestApiUrl}/$route/${msgFamily.name}/${msgFamily.version}/$threadId" +
       queryParamOpt.map(qp => s"?$qp").getOrElse("")
-    val resp = parseHttpResponseAsString(sendGetJsonReqToUrl(url, routeApiKey))
+    val resp = HttpUtil.parseHttpResponseAsString(sendGetJsonReqToUrl(url, routeApiKey))
     val jsonObject = new JSONObject(resp)
     val resultResp = DefaultMsgCodec.fromJson[T](jsonObject.getJSONObject("result").toString)
     RestGetResponse(resultResp, jsonObject.getString("status"))
@@ -418,14 +424,16 @@ case class IssuerRestSDK(param: SdkParam,
    * @tparam T
    * @return
    */
-  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS)): ReceivedMsgParam[T] = {
+  def expectMsgOnWebhook[T: ClassTag](timeout: Duration = Duration(60, SECONDS),
+                                      mpf: MsgPackFormat = MPF_PLAIN): ReceivedMsgParam[T] = {
     val msg = msgListener.expectMsg(timeout)
     try {
       ReceivedMsgParam(msg)
     } catch {
       case _: UnexpectedMsgException =>
-        //TODO: This is temporary workaround to fix the intermittent failure around message ordering
+        //TODO: This is temporary workaround to fix the intermittent failure around message ordering.
         // should analyze it and see if there is any better way to fix it
+        logger.info("other message found, to be re-queued: " + msg)
         msgListener.addToQueue(msg)
         expectMsgOnWebhook(timeout)
     }

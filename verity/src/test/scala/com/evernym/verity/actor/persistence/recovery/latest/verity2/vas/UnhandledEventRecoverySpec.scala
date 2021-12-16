@@ -2,6 +2,7 @@ package com.evernym.verity.actor.persistence.recovery.latest.verity2.vas
 
 import akka.actor.{Actor, ActorRef, Props}
 import com.evernym.verity.actor.SignedUp
+import com.evernym.verity.actor.persistence.recovery.base.AgentIdentifiers._
 import com.evernym.verity.actor.appStateManager.AppStateEvent
 import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec
 import com.evernym.verity.actor.persistence.GetPersistentActorDetail

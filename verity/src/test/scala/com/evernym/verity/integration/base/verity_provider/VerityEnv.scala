@@ -3,9 +3,11 @@ package com.evernym.verity.integration.base.verity_provider
 import akka.cluster.MemberStatus
 import akka.cluster.MemberStatus.{Down, Removed, Up}
 import akka.testkit.TestKit
+import com.evernym.verity.actor.persistence.recovery.base.PersistentStoreTestKit
 import com.evernym.verity.integration.base.PortProvider
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
+import com.evernym.verity.integration.base.verity_provider.node.local.VerityLocalNode
 import com.evernym.verity.testkit.mock.blob_store.MockBlobStore
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
@@ -101,13 +103,15 @@ case class VerityEnv(seed: String,
   def init(): Unit = {
     if (! isVerityBootstrapped) {
       nodes.headOption.foreach { node =>
-        VerityAdmin.bootstrapApplication(node.portProfile.http, node.appSeed, waitAtMost)
+        VerityAdmin.bootstrapApplication(node.portProfile.http, node.appSeed, waitAtMost, node.serviceParam.flatMap(_.ledgerTxnExecutor))
         isVerityBootstrapped = true
       }
     }
   }
 
   init()
+
+  lazy val persStoreTestKit = new PersistentStoreTestKit(nodes.head.asInstanceOf[VerityLocalNode].platform.actorSystem, ec)
 }
 
 case class VerityEnvUrlProvider(private val _nodes: Seq[VerityNode]) {

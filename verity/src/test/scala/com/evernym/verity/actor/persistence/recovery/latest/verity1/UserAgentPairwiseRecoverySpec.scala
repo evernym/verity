@@ -4,6 +4,7 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.relationship.RelationshipTypeEnum.PAIRWISE_RELATIONSHIP
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, CLOUD_AGENT_KEY, EDGE_AGENT_KEY, OWNER_AGENT_KEY}
 import com.evernym.verity.actor.agent.relationship._
+import com.evernym.verity.actor.persistence.recovery.base.AgentIdentifiers._
 import com.evernym.verity.actor.agent.user.UserAgentPairwiseState
 import com.evernym.verity.actor.agent.ConnectionStatus
 import com.evernym.verity.actor.persistence.recovery.base.BaseRecoveryActorSpec

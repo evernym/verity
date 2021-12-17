@@ -47,7 +47,7 @@ trait LibVcxProvider
 
   lazy val isTaaEnabled: Boolean =
     appConfig
-      .getBooleanOption("verity.lib-indy.ledger.transaction_author_agreement.enabled")
+      .getBooleanOption("verity.lib-vdrtools.ledger.transaction_author_agreement.enabled")
       .getOrElse(false)
 
   lazy val ledgerUtil = new LedgerUtil(

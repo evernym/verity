@@ -34,6 +34,7 @@ import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitatio
 import com.evernym.verity.observability.metrics.NoOpMetricsWriter
 import com.evernym.verity.protocol.engine.util.DIDDoc
 import com.evernym.verity.testkit.util.HttpUtil
+import com.evernym.verity.testkit.util.HttpUtil._
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.KeyParam

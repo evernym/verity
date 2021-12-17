@@ -80,7 +80,10 @@ class ConnectionMigrationSpec
           Agent(verity2IssuerRestSDK.verityAgentDidPair.did, verity2IssuerRestSDK.verityAgentDidPair.verKey),
           Connection(
             "MS-104",
-            MyPairwiseDidDoc(verity1ConnDetail.myDidDoc.pairwiseDID, verity1ConnDetail.myDidDoc.pairwiseDIDVerKey),
+            MyPairwiseDidDoc(
+              verity1ConnDetail.myDidDoc.pairwiseDID,
+              verity1ConnDetail.myDidDoc.pairwiseDIDVerKey
+            ),
             TheirPairwiseDidDoc(
               verity1ConnDetail.theirDidDoc.pairwiseDID, verity1ConnDetail.theirDidDoc.pairwiseDIDVerKey,
               verity1ConnDetail.theirDidDoc.pairwiseAgentDID, verity1ConnDetail.theirDidDoc.pairwiseAgentVerKey,

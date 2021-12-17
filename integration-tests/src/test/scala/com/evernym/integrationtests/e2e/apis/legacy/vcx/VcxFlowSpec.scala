@@ -35,7 +35,7 @@ class VcxFlowSpec
       "Issuer" - {
         "when tried to provision" - {
           "should be successful" in {
-            provisionIssuer(issuer, eas.endpoint.toString, agencyAdminEnv.enterpriseAgencyAdmin.agencyIdentity.didPair, issuerProtocolVersion)
+            provisionIssuer(issuer, eas.endpoint.toString, agencyAdminEnv.easAgencyDidPar, issuerProtocolVersion)
           }
         }
 
@@ -66,7 +66,7 @@ class VcxFlowSpec
       "Holder" - {
         "when tried to provision" - {
           "should be successful" in {
-            provisionHolder(holder, cas.endpoint.toString, agencyAdminEnv.consumerAgencyAdmin.agencyIdentity.didPair, holderProtocolVersion)
+            provisionHolder(holder, cas.endpoint.toString, agencyAdminEnv.casAgencyDidPar, holderProtocolVersion)
           }
         }
         "when tried to accept invitation" - {

@@ -42,13 +42,10 @@ trait LibVcxProvider
     with Eventually {
 
   def appConfig: AppConfig
-  val genesisTxnFilePath: String = "target/genesis.txt"
+  def genesisTxnFilePath: String
   implicit val executionContext: ExecutionContext
 
-  lazy val isTaaEnabled: Boolean =
-    appConfig
-      .getBooleanOption("verity.lib-vdrtools.ledger.transaction_author_agreement.enabled")
-      .getOrElse(false)
+  lazy val isTaaEnabled: Boolean = true
 
   lazy val ledgerUtil = new LedgerUtil(
     appConfig,
@@ -111,7 +108,7 @@ trait LibVcxProvider
 
       CredentialDefApi.credentialDefGetCredentialDefId(credDefHandle).get()
     }
-    IssuerSetup(schemaId, credDefId)
+    IssuerSetup(sourceId, schemaId, credDefId)
   }
 
   def createConnection(identityOwnerName: IdentityOwnerName,
@@ -133,12 +130,6 @@ trait LibVcxProvider
       val inviteId = inviteJsonObject.getString("id")
       val acceptResult = ConnectionApi.vcxConnectionAcceptConnectionInvite(inviteId, invite, null).get()
       idOwner.updateConnectionHandle(connId, acceptResult.getConnectionHandle)
-
-      //      eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
-      //        ConnectionApi.vcxConnectionUpdateState(acceptResult.getConnectionHandle).get()
-      //        val curState = ConnectionApi.connectionGetState(acceptResult.getConnectionHandle).get()
-      //        curState shouldBe 4
-      //      }
     }
   }
 
@@ -348,22 +339,6 @@ trait LibVcxProvider
     }
   }
 
-  //  private def withExtractedMsg(receivedMsg: ReceivedMsg): ReceivedMsg = {
-  //    try {
-  //      if (receivedMsg.msgTypeName == "credential-offer") {
-  //        val jsonArray = new JSONArray(receivedMsg.msg)
-  //        val msg = jsonArray.getJSONObject(0).toString
-  //        receivedMsg.copy(msg = msg)
-  //      } else {
-  //        receivedMsg
-  //      }
-  //    } catch {
-  //      case e: RuntimeException =>
-  //        e.printStackTrace()
-  //        throw e
-  //    }
-  //  }
-
   def updateMessageStatus(pairwiseDID: String, msgId: String) : Unit = {
     val data = prepareUpdateMessageRequest(pairwiseDID, msgId)
     UtilsApi.vcxUpdateMessages("MS-106", data).get()
@@ -527,4 +502,4 @@ case class CreateCredDefParam(name: String)
 
 case class ExpectedMsg[T](uid: String, msg: T, msgStr: String, thread: Option[com.evernym.verity.actor.agent.Thread])
 
-case class IssuerSetup(schemaId: String, credDefId: String)
+case class IssuerSetup(sourceId: String, schemaId: String, credDefId: String)

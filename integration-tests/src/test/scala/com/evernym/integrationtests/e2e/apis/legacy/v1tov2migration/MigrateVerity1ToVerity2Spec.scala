@@ -30,8 +30,6 @@ import scala.concurrent.ExecutionContext
 
 //NOTE: This test is not yet fully automatic, it depends on verity-migration to be done externally.
 // Keeping it to be used locally to verity the migration.
-// When we start this test, it does show some configuration resolution error in the test logs,
-// although it doesn't impact the test in any way, but we should see if it can be fixed.
 
 class MigrateVerity1ToVerity2Spec
   extends VerityProviderBaseSpec

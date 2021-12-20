@@ -1,7 +1,6 @@
 package com.evernym.verity.integration.base.sdk_provider
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
@@ -10,7 +9,6 @@ import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgParseUtil}
 import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.engine._
@@ -47,7 +45,7 @@ import com.evernym.verity.testkit.agentmsg.{CreateInviteResp_MFV_0_5, InviteAcce
 import com.evernym.verity.testkit.util.{AcceptConnReq_MFV_0_6, AgentCreated_MFV_0_5, AgentCreated_MFV_0_6, ComMethodUpdated_MFV_0_5, ConnReqAccepted_MFV_0_6, ConnReq_MFV_0_6, Connect_MFV_0_5, Connected_MFV_0_5, CreateAgent_MFV_0_5, CreateAgent_MFV_0_6, CreateKey_MFV_0_5, CreateKey_MFV_0_6, CreateMsg_MFV_0_5, InviteMsgDetail_MFV_0_5, MsgCreated_MFV_0_5, MsgsSent_MFV_0_5, SignUp_MFV_0_5, SignedUp_MFV_0_5, TestComMethod, UpdateComMethod_MFV_0_5}
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
-import com.evernym.verity.testkit.util.HttpUtil
+import com.evernym.verity.testkit.util.HttpUtil._
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.matchers.should.Matchers
@@ -55,8 +53,8 @@ import org.scalatest.matchers.should.Matchers
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 import scala.collection.JavaConverters._
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.duration.{Duration, FiniteDuration, SECONDS}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.FiniteDuration
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
@@ -163,8 +161,8 @@ abstract class SdkBase(param: SdkParam,
   type ConnId = String
 
   def fetchAgencyKey(): AgencyPublicDid = {
-    val resp = checkOKResponse(HttpUtil.sendGET(buildFullUrl("agency")))
-    val apd = HttpUtil.parseHttpResponseAs[AgencyPublicDid](resp)
+    val resp = checkOKResponse(sendGET(buildFullUrl("agency")))
+    val apd = parseHttpResponseAs[AgencyPublicDid](resp)
     require(apd.DID.nonEmpty, "agency DID should not be empty")
     require(apd.verKey.nonEmpty, "agency verKey should not be empty")
     storeTheirKey(DidPair(apd.didPair.did, apd.didPair.verKey))
@@ -259,20 +257,8 @@ abstract class SdkBase(param: SdkParam,
     ReceivedMsgParam(jsonMsg)
   }
 
-  protected def checkOKResponse(resp: HttpResponse): HttpResponse = {
-    checkResponse(resp, OK)
-  }
-
-  protected def checkResponse(resp: HttpResponse, expected: StatusCode): HttpResponse = {
-    require(resp.status.intValue() == expected.intValue, {
-      val json = parseHttpResponseAsString(resp)
-      s"http response '${resp.status}' was not equal to expected '${expected.value}': $json"
-    })
-    resp
-  }
-
-  protected def sendPOST(payload: Array[Byte]): HttpResponse =
-    HttpUtil.sendBinaryReqToUrl(payload, param.verityPackedMsgUrl)
+  protected def sendPOST(payload: Array[Byte])(implicit ec: ExecutionContext): HttpResponse =
+    sendBinaryReqToUrl(payload, param.verityPackedMsgUrl)
 
   def buildFullUrl(suffix: String): String = param.verityBaseUrl + s"/$suffix"
 
@@ -280,19 +266,6 @@ abstract class SdkBase(param: SdkParam,
                                                    (implicit mpf: MsgPackFormat = MPF_INDY_PACK): ReceivedMsgParam[T] = {
     val packedMsg = awaitFut(Unmarshal(resp.entity).to[Array[Byte]])
     unpackMsg[T](packedMsg)
-  }
-
-  def parseHttpResponseAs[T: ClassTag](resp: HttpResponse): T = {
-    val respString = parseHttpResponseAsString(resp)
-    JacksonMsgCodec.fromJson[T](respString)
-  }
-
-  def parseHttpResponseAsString(resp: HttpResponse): String = {
-    awaitFut(Unmarshal(resp.entity).to[String])
-  }
-
-  protected def awaitFut[T](fut: Future[T]): T = {
-    Await.result(fut, Duration(25, SECONDS))
   }
 
   def randomUUID(): String = UUID.randomUUID().toString

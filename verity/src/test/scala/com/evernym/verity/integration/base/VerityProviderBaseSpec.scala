@@ -3,15 +3,18 @@ package com.evernym.verity.integration.base
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
-import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore, VerityEnv}
 import com.evernym.verity.integration.base.verity_provider.node.local.{ServiceParam, VerityLocalNode}
+import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore, VerityEnv}
+import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
-import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest.{BeforeAndAfterAll, Suite}
-import java.nio.file.{Files, Path}
-
 import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider}
+import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.scalalogging.Logger
+import org.scalatest.{BeforeAndAfterAll, Suite, fullstacks}
 
+import java.nio.file.{Files, Path}
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.Random
 
@@ -41,6 +44,8 @@ trait VerityProviderBaseSpec
 
     def withServiceParam(param: ServiceParam): VerityEnvBuilder = copy(serviceParam = Option(param))
     def withConfig(config: Config): VerityEnvBuilder = copy(overriddenConfig = Option(config))
+
+    private val logger: Logger = LoggingUtil.getLoggerByName("VerityEnvBuilder")
 
     def build(appType: AppType): VerityEnv = {
       val tmpDir = randomTmpDirPath()
@@ -78,10 +83,34 @@ trait VerityProviderBaseSpec
       }
 
       if (verityNodes.isEmpty) throw new RuntimeException("at least one node needed for a verity environment")
-      val verityEnv = VerityEnv(appSeed, verityNodes, futureExecutionContext)
-      allVerityEnvs = allVerityEnvs :+ verityEnv
-      verityEnv
+
+
+      logger.info(s"[rg-00] start nodes ${portProfiles.map(_.artery)}")
+      implicit val ec = futureExecutionContext
+      try {
+        logger.info("[rg-00] start await nodes")
+        startVerityNodes(verityNodes, VerityEnv.START_MAX_TIMEOUT)
+        val verityEnv = VerityEnv(appSeed, verityNodes, futureExecutionContext)
+        allVerityEnvs = allVerityEnvs :+ verityEnv
+        verityEnv
+      }
+      catch {
+        case e: Exception =>
+          logger.warn(s"Start nodes failed: ${e.getMessage} ${e.getStackTrace.mkString("", "\n", "")}")
+          logger.info(s"[rg-00] Stop nodes...")
+          Await.result(Future.sequence(verityNodes.map(_.stop())), VerityEnv.STOP_MAX_TIMEOUT)
+          logger.info("[rg-00] Nodes stopped")
+          throw e
+      }
     }
+
+    private def startVerityNodes(verityNodes: Seq[VerityNode], maxStartTimeout: FiniteDuration)(implicit ec: ExecutionContext): Unit = {
+      val otherNodes = verityNodes.drop(1)
+      Await.result(verityNodes.head.start(), maxStartTimeout)
+      Await.result(Future.sequence(otherNodes.map(_.start())), maxStartTimeout)
+      logger.info(s"[rg-00] Nodes ${verityNodes.map(_.portProfile.artery)} started")
+    }
+
   }
 
   //default service param to be used for all verity instances
@@ -104,7 +133,10 @@ trait VerityProviderBaseSpec
 
   override def afterAll(): Unit = {
     super.afterAll()
-    allVerityEnvs.foreach(_.nodes.foreach(_.stop()))
+    val future = Future.sequence(
+      allVerityEnvs.flatMap(e => e.nodes).map(_.stop()(futureExecutionContext))
+    )(Seq.canBuildFrom, futureExecutionContext)
+    Await.result(future, VerityEnv.STOP_MAX_TIMEOUT)
   }
 
   private def randomChar(): Char = {

@@ -9,12 +9,15 @@ import com.evernym.verity.app_launcher.HttpServer
 import com.evernym.verity.integration.base.verity_provider.PortProfile
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
+import com.evernym.verity.observability.logs.LoggingUtil
 import com.typesafe.config.Config
 
 import java.nio.file.Path
 import com.evernym.verity.util2.ExecutionContextProvider
+import com.typesafe.scalalogging.Logger
 import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 
@@ -30,38 +33,57 @@ case class VerityLocalNode(tmpDirPath: Path,
   private var _httpServer: HttpServer = _
 
   def httpServer: HttpServer = _httpServer
+
   def platform: Platform = httpServer.platform
 
-  def start(): Unit = {
-    if (! isAvailable) {
-      _httpServer = startVerityInstance()
-      isAvailable = true
+  private val logger: Logger = LoggingUtil.getLoggerByName("VerityLocalNode")
+
+  def start()(implicit ec: ExecutionContext): Future[Unit] = {
+    logger.info(s"[rg-00] start verity instance ${portProfile.artery}")
+    if (!isAvailable) {
+      Future {
+        startVerityInstance()
+      } map {
+        srv =>
+          _httpServer = srv
+          isAvailable = true
+          logger.info(s"[rg-00] verity instance ${portProfile.artery} started")
+      }
+    } else {
+      Future.successful(())
     }
   }
 
-  def stop(): Unit = {
-    stopGracefully()
+  def stop()(implicit ec: ExecutionContext): Future[Unit] = {
+    Future {
+      stopGracefully()
+    }
   }
 
   //is this really ungraceful shutdown?
-//  private def stopUngracefully(): Unit = {
-//    def stopHttpServer(): Unit = {
-//      val httpStopFut = httpServer.stop()
-//      Await.result(httpStopFut, 30.seconds)
-//    }
-//
-//    def stopActorSystem(): Unit = {
-//      val platformStopFut = platform.actorSystem.terminate()
-//      Await.result(platformStopFut, 30.seconds)
-//    }
-//
-//    isAvailable = false
-//    stopHttpServer()
-//    stopActorSystem()
-//  }
+  //  private def stopUngracefully(): Unit = {
+  //    def stopHttpServer(): Unit = {
+  //      val httpStopFut = httpServer.stop()
+  //      Await.result(httpStopFut, 30.seconds)
+  //    }
+  //
+  //    def stopActorSystem(): Unit = {
+  //      val platformStopFut = platform.actorSystem.terminate()
+  //      Await.result(platformStopFut, 30.seconds)
+  //    }
+  //
+  //    isAvailable = false
+  //    stopHttpServer()
+  //    stopActorSystem()
+  //  }
 
   private def stopGracefully(): Unit = {
     isAvailable = false
+    //TODO: need to resolve this
+    if (platform == null){
+      logger.warn(s"[rg-00] stopGracefully called, but it seems like node was not be started, node ${portProfile.artery}")
+      return
+    }
     val cluster = Cluster(platform.actorSystem)
 
     val result = CoordinatedShutdown(platform.actorSystem).run(UserInitiatedShutdown)
@@ -86,7 +108,7 @@ case class VerityLocalNode(tmpDirPath: Path,
    * @return
    */
   def checkIfNodeIsUp(otherNodesStatus: Map[VerityNode, List[MemberStatus]] = Map.empty): Boolean = {
-    require(! otherNodesStatus.keySet.map(_.portProfile.artery).contains(portProfile.artery),
+    require(!otherNodesStatus.keySet.map(_.portProfile.artery).contains(portProfile.artery),
       "otherNodesStatus should not contain current node")
 
     val cluster = Cluster(platform.actorSystem)
@@ -95,13 +117,13 @@ case class VerityLocalNode(tmpDirPath: Path,
         val otherMember = cluster.state.members.find(_.address.toString.contains(otherNode.portProfile.artery.toString))
         otherMember match {
           case None if expectedStatus.contains(Down) || expectedStatus.contains(Removed) => true
-          case None     => false
+          case None => false
           case Some(om) => expectedStatus.contains(om.status)
         }
       }
   }
 
-  start()
+  //start()
 }
 
 case object UserInitiatedShutdown extends CoordinatedShutdown.Reason

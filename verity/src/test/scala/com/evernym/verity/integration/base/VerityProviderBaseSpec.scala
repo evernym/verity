@@ -8,7 +8,7 @@ import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedE
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider}
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
 import com.typesafe.scalalogging.Logger
 import org.scalatest.{BeforeAndAfterAll, Suite, fullstacks}
 
@@ -27,6 +27,8 @@ trait VerityProviderBaseSpec
     with BeforeAndAfterAll
     with HasExecutionContextProvider {
     this: Suite =>
+
+  val localVerityBaseConfig: ConfigMergeable = ConfigFactory.load()
 
   object VerityEnvBuilder {
 
@@ -106,8 +108,8 @@ trait VerityProviderBaseSpec
 
     private def startVerityNodes(verityNodes: Seq[VerityNode], maxStartTimeout: FiniteDuration)(implicit ec: ExecutionContext): Unit = {
       val otherNodes = verityNodes.drop(1)
-      Await.result(verityNodes.head.start(), maxStartTimeout)
-      Await.result(Future.sequence(otherNodes.map(_.start())), maxStartTimeout)
+      Await.result(verityNodes.head.start(localVerityBaseConfig), maxStartTimeout)
+      Await.result(Future.sequence(otherNodes.map(_.start(localVerityBaseConfig))), maxStartTimeout)
       logger.info(s"[rg-00] Nodes ${verityNodes.map(_.portProfile.artery)} started")
     }
 

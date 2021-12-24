@@ -17,9 +17,9 @@ import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedE
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
-import com.typesafe.config.{Config, ConfigFactory}
-import java.nio.file.Path
+import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
 
+import java.nio.file.Path
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.language.postfixOps
@@ -38,6 +38,24 @@ object LocalVerity {
             portProfile: PortProfile,
             ecp: ExecutionContextProvider): HttpServer = {
     LocalVerity(VerityNodeParam(tempDir, appSeed, portProfile), ecp)
+  }
+
+  def apply(baseConfig: ConfigMergeable,
+            verityNodeParam: VerityNodeParam,
+            ecp: ExecutionContextProvider,
+            bootstrapApp: Boolean,
+            trackMessageProgress: Boolean): HttpServer = {
+    val config = buildStandardVerityConfig(verityNodeParam, baseConfig)
+    val appConfig = new AppConfigWrapper(config)
+    val platform = initializeApp(appConfig, verityNodeParam.serviceParam, ecp)
+    val httpServer = new HttpServer(
+      platform,
+      new HttpRouteHandler(platform, ecp.futureExecutionContext).endpointRoutes,
+      ecp.futureExecutionContext
+    )
+    httpServer.start()
+    waitTillUp(platform.appStateManager)
+    httpServer
   }
 
   def apply(verityNodeParam: VerityNodeParam,
@@ -77,6 +95,11 @@ object LocalVerity {
     buildCustomVerityConfigOnly(verityNodeParam)
       .withFallback(ConfigFactory.load())
   }
+  def buildStandardVerityConfig(verityNodeParam: VerityNodeParam, baseConfig: ConfigMergeable): Config = {
+    buildCustomVerityConfigOnly(verityNodeParam)
+      .withFallback(baseConfig)
+  }
+
 
   private def waitTillUp(appStateManager: ActorRef): Unit = {
     TestKit.awaitCond(isListening(appStateManager), waitAtMost, 200.millis)

@@ -77,7 +77,7 @@ class IssuerSetupSpec
   "Verity Admin" - {
     "when restarted verity apps" - {
       "should be successful" in {
-        issuerVerityEnv.restartAllNodes()
+        issuerVerityEnv.restartAllNodes(localVerityBaseConfig)
         issuerSDK.fetchAgencyKey()
       }
     }

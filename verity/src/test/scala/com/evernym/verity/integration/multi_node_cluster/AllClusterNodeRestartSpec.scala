@@ -47,7 +47,7 @@ class AllClusterNodeRestartSpec
 
       "when try to restart all nodes" - {
         "should be successful" in {
-          val restartFutures = verityEnv.availableNodes.map(n => n.restart()(executionContext))
+          val restartFutures = verityEnv.availableNodes.map(n => n.restart(localVerityBaseConfig)(executionContext))
           val future = Future.sequence(restartFutures)(Seq.canBuildFrom, executionContext)
           assert(future.isReadyWithin(25.seconds), "Cluster restart failed")
           eventually(timeout(Span(30, Seconds)), interval(Span(100, Millis))) {

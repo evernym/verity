@@ -10,7 +10,7 @@ import com.evernym.verity.integration.base.verity_provider.PortProfile
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
 import com.evernym.verity.observability.logs.LoggingUtil
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigMergeable}
 
 import java.nio.file.Path
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -38,11 +38,11 @@ case class VerityLocalNode(tmpDirPath: Path,
 
   private val logger: Logger = LoggingUtil.getLoggerByName("VerityLocalNode")
 
-  def start()(implicit ec: ExecutionContext): Future[Unit] = {
+  def start(baseConfig: ConfigMergeable)(implicit ec: ExecutionContext): Future[Unit] = {
     logger.info(s"[rg-00] start verity instance ${portProfile.artery}")
     if (!isAvailable) {
       Future {
-        startVerityInstance()
+        startVerityInstance(baseConfig)
       } map {
         srv =>
           _httpServer = srv
@@ -80,7 +80,7 @@ case class VerityLocalNode(tmpDirPath: Path,
   private def stopGracefully(): Unit = {
     isAvailable = false
     //TODO: need to resolve this
-    if (platform == null){
+    if (!isAvailable){
       logger.warn(s"[rg-00] stopGracefully called, but it seems like node was not be started, node ${portProfile.artery}")
       return
     }
@@ -96,8 +96,8 @@ case class VerityLocalNode(tmpDirPath: Path,
     List(Removed, Down).contains(cluster.selfMember.status)
   }
 
-  private def startVerityInstance(): HttpServer = {
-    LocalVerity(verityNodeParam, ecp, bootstrapApp = false)
+  private def startVerityInstance(baseConfig: ConfigMergeable): HttpServer = {
+    LocalVerity(baseConfig, verityNodeParam, ecp, bootstrapApp = false, trackMessageProgress = true)
   }
 
   /**

@@ -21,7 +21,6 @@ import java.io.File
 import java.nio.file.{Files, Path}
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
-import scala.util.Random
 
 object Constants {
   final val ENVIRONMENT_CONF_FILE_NAME = "environment.conf"

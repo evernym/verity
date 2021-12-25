@@ -16,7 +16,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, MsgFamilyName, MsgFamilyVersion, typeStrFromMsgType}
-import com.evernym.verity.did.{DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.integration.base.PortProvider
 import com.evernym.verity.integration.base.sdk_provider.msg_listener.{JsonMsgListener, MsgListenerBase, PackedMsgListener, ReceivedMsgCounter}
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
@@ -27,6 +27,7 @@ import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{ConnectionI
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{Created, Invitation}
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResult
 import com.evernym.verity.testkit.util.HttpUtil
+import com.evernym.verity.testkit.util.HttpUtil._
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault.KeyParam
 import org.json.JSONObject
@@ -125,6 +126,9 @@ abstract class VeritySdkBase(param: SdkParam,
   def resetPlainMsgsCounter: ReceivedMsgCounter = msgListener.resetPlainMsgsCounter
   def resetAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetAuthedMsgsCounter
   def resetFailedAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetFailedAuthedMsgsCounter
+
+  implicit val executionContext: ExecutionContext
+
 }
 
 /**
@@ -310,6 +314,10 @@ case class IssuerRestSDK(param: SdkParam,
     sendMsgForConn(connId, ConnectionInvitation(), thread)
     val receivedMsg = expectMsgOnWebhook[Invitation]()
     receivedMsg.msg
+  }
+
+  def updateMyPairwiseRelationships(connId: String, did: DidStr, verKey: VerKeyStr): Unit = {
+    myPairwiseRelationships += (connId -> PairwiseRel(None, Option(DidPair(did, verKey))))
   }
 
   def sendMsg(msg: Any,

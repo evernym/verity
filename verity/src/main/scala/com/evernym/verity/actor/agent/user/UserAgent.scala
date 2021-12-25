@@ -184,7 +184,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
     generateWalletParamAsync(agentWalletIdReq, appConfig, LibIndyWalletProvider).map { wp =>
       sndr !
         GetWalletMigrationDetailResp(
-          new JSONObject(wp.walletConfig.buildConfig(agentWalletIdReq)),
+          new JSONObject(wp.walletConfig.buildConfig(wp.walletName)),
           new JSONObject(wp.walletConfig.buildCredentials(wp.encryptionKey))
         )
     }

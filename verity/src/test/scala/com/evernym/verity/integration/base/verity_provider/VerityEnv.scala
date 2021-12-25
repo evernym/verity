@@ -111,6 +111,8 @@ case class VerityEnv(seed: String,
 
   init()
 
+  lazy val endpointProvider: VerityEnvUrlProvider = VerityEnvUrlProvider(nodes)
+
   lazy val persStoreTestKit = new PersistentStoreTestKit(nodes.head.asInstanceOf[VerityLocalNode].platform.actorSystem, ec)
 }
 

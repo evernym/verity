@@ -1044,4 +1044,6 @@ case class AgencyAdminEnvironment (scenario: Scenario,
                                    ecp: ExecutionContextProvider) {
   val consumerAgencyAdmin = new ConsumerAgencyAdminExt(scenario, casVerityInstance, ecp)
   val enterpriseAgencyAdmin = new EnterpriseAgencyAdminExt(scenario, easVerityInstance, ecp)
+  lazy val casAgencyDidPar = consumerAgencyAdmin.agencyIdentity.didPair
+  lazy val easAgencyDidPar = enterpriseAgencyAdmin.agencyIdentity.didPair
 }

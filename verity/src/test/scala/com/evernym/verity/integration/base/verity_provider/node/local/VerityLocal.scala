@@ -73,9 +73,13 @@ object LocalVerity {
     }
   }
 
-  def buildStandardVerityConfig(verityNodeParam: VerityNodeParam): Config = {
+  def buildStandardVerityConfig(verityNodeParam: VerityNodeParam, test: Option[String]): Config = {
+    val cf = test match {
+      case Some(value) => ConfigFactory.load()
+      case None => ConfigFactory.load()
+    }
     buildCustomVerityConfigOnly(verityNodeParam)
-      .withFallback(ConfigFactory.load())
+      .withFallback(cf)
   }
 
   private def waitTillUp(appStateManager: ActorRef): Unit = {

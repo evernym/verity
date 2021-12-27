@@ -4,7 +4,7 @@ import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.vdr.service.{IndyLedger, VDRToolsConfig}
 import com.typesafe.config.ConfigFactory
 
-class VDRToolsConfigSpec
+class VdrToolsConfigSpec
   extends BasicSpec {
 
   "VDRToolsConfig object" - {

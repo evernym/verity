@@ -5,4 +5,10 @@ package object vdr {
   type FQSchemaId = String
   type FQCredDefId = String
   type FQDid = String
+
+  type Did = String
+  type Schema = String
+  type CredDef = String
+  type TxnResult = String
+  type TxnSpecificParams = String
 }

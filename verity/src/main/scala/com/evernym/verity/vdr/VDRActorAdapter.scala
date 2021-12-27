@@ -1,16 +1,15 @@
 package com.evernym.verity.vdr
 
+import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.{ActorRef, ActorSystem}
-import akka.actor.typed.scaladsl.AskPattern._
 import akka.util.Timeout
+import com.evernym.vdrtools.vdr.VdrResults.PreparedTxnResult
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.vdr.service.VDRAdapterUtil._
-import com.evernym.verity.vdr.service.{VDRActor, VDRToolsConfig, VDRToolsFactory}
+import com.evernym.verity.vdr.service.{PingResult, VDRActor, VDRToolsConfig, VDRToolsFactory}
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.{ExecutionContext, Future}
-
 
 //creates and interacts with VDRActor
 class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory,
@@ -25,61 +24,53 @@ class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory,
 
   private implicit val defaultTimeout: Timeout = apiTimeout.getOrElse(Timeout(5, TimeUnit.SECONDS))
 
-  override def ping(namespaces: List[Namespace]): Future[PingResult] = {
+  override def ping(namespaces: List[Namespace]): Future[Map[String, PingResult]] = {
     vdrActorRef
       .ask(ref => VDRActor.Commands.Ping(namespaces, ref))
       .flatMap(reply => Future.fromTry(reply.resp))
-      .map(resp => buildPingResult(resp))
   }
 
-  override def prepareSchemaTxn(schemaJson: String,
-                                fqSchemaId: FQSchemaId,
-                                submitterDID: DidStr,
-                                endorser: Option[String]): Future[PreparedTxn] = {
+  override def prepareSchemaTxn(txnSpecificParams: TxnSpecificParams,
+                                submitterDid: DidStr,
+                                endorser: Option[String]): Future[PreparedTxnResult] = {
     vdrActorRef
-      .ask(ref => VDRActor.Commands.PrepareSchemaTxn(schemaJson, fqSchemaId, submitterDID, endorser, ref))
+      .ask(ref => VDRActor.Commands.PrepareSchemaTxn(txnSpecificParams, submitterDid, endorser, ref))
       .flatMap(reply => Future.fromTry(reply.preparedTxn))
-      .map(resp => buildPreparedTxn(resp))
   }
 
-  override def prepareCredDefTxn(credDefJson: String,
-                                 fqCredDefId: FQCredDefId,
-                                 submitterDID: DidStr,
-                                 endorser: Option[String]): Future[PreparedTxn] = {
+  override def prepareCredDefTxn(txnSpecificParams: TxnSpecificParams,
+                                 submitterDid: DidStr,
+                                 endorser: Option[String]): Future[PreparedTxnResult] = {
     vdrActorRef
-      .ask(ref => VDRActor.Commands.PrepareCredDefTxn(credDefJson,fqCredDefId, submitterDID, endorser , ref))
+      .ask(ref => VDRActor.Commands.PrepareCredDefTxn(txnSpecificParams, submitterDid, endorser, ref))
       .flatMap(reply => Future.fromTry(reply.preparedTxn))
-      .map(resp => buildPreparedTxn(resp))
   }
 
-  override def submitTxn(preparedTxn: PreparedTxn,
+  override def submitTxn(namespace: Namespace,
+                         txnBytes: Array[Byte],
+                         signatureSpec: String,
                          signature: Array[Byte],
-                         endorsement: Array[Byte]): Future[SubmittedTxn] = {
+                         endorsement: String): Future[TxnResult] = {
     vdrActorRef
-      .ask(ref => VDRActor.Commands.SubmitTxn(buildVDRPreparedTxn(preparedTxn), signature, endorsement, ref))
+      .ask(ref => VDRActor.Commands.SubmitTxn(namespace, txnBytes, signatureSpec, signature, endorsement, ref))
       .flatMap(reply => Future.fromTry(reply.preparedTxn))
-      .map(_ => SubmittedTxn())
   }
 
   override def resolveSchema(schemaId: FQSchemaId): Future[Schema] = {
     vdrActorRef
       .ask(ref => VDRActor.Commands.ResolveSchema(schemaId, ref))
       .flatMap(reply => Future.fromTry(reply.resp))
-      .map(resp => buildSchema(resp))
-
   }
 
   override def resolveCredDef(credDefId: FQCredDefId): Future[CredDef] = {
     vdrActorRef
-      .ask(ref=> VDRActor.Commands.ResolveCredDef(credDefId, ref))
+      .ask(ref => VDRActor.Commands.ResolveCredDef(credDefId, ref))
       .flatMap(reply => Future.fromTry(reply.resp))
-      .map(resp => buildCredDef(resp))
   }
 
-  override def resolveDID(fqDid: FQDid): Future[DidDoc] = {
+  override def resolveDID(fqDid: FQDid): Future[Did] = {
     vdrActorRef
       .ask(ref => VDRActor.Commands.ResolveDID(fqDid, ref))
       .flatMap(reply => Future.fromTry(reply.resp))
-      .map(resp => buildDidDoc(resp))
   }
 }

@@ -7,30 +7,32 @@ import com.typesafe.config.Config
 import scala.collection.JavaConverters._
 
 object VDRToolsConfig {
-
+  // todo subject to change
   def apply(config: Config): VDRToolsConfig = {
-    val toolsConfigReader = ConfigReadHelper(config.getConfig("verity.vdr-tools"))
-    val libLocation = toolsConfigReader.getStringReq("library-dir-location")
 
     val ledgers: List[Ledger] = config.getObjectList("verity.vdrs").asScala.toList.map { vdrObject =>
       val vdrConfigReadHelper = ConfigReadHelper(vdrObject.toConfig)
       vdrConfigReadHelper.getStringReq("type") match {
-        case "indy-ledger" =>
+        case "indy" =>
           IndyLedger(
             vdrConfigReadHelper.getStringListReq("namespaces"),
-            vdrConfigReadHelper.getStringReq("genesis-txn-file-location"),
+            vdrConfigReadHelper.getStringReq("genesis-txn-file-location"), // todo read file
             vdrConfigReadHelper.getConfigOption("taa").map { taaConfig =>
-              val hash = taaConfig.getString("hash")
-              TAAConfig(hash)
+              val text = taaConfig.getString("hash")
+              val version = taaConfig.getString("version")
+              val taaDigest = taaConfig.getString("taaDigest")
+              val accMechType = taaConfig.getString("accMechType")
+              val time = taaConfig.getString("time")
+              TaaConfig(text, version, taaDigest, accMechType, time)
             }
           )
       }
     }
-    VDRToolsConfig(libLocation, ledgers)
+    VDRToolsConfig(ledgers)
   }
 }
 
-case class VDRToolsConfig(libraryDirLocation: String, ledgers: List[Ledger]) {
+case class VDRToolsConfig( ledgers: List[Ledger]) {
   def validate(): Unit = {
     if (ledgers.isEmpty) {
       throw new RuntimeException("[VDR] no ledger configs found")
@@ -46,7 +48,5 @@ case class VDRToolsConfig(libraryDirLocation: String, ledgers: List[Ledger]) {
 sealed trait Ledger {
   def namespaces: List[Namespace]
 }
-case class IndyLedger(namespaces: List[Namespace], genesisTxnFilePath: String, taaConfig: Option[TAAConfig])
+case class IndyLedger(namespaces: List[Namespace], genesisTxnFilePath: String, taaConfig: Option[TaaConfig])
   extends Ledger
-
-case class TAAConfig(hash: String)    //TODO: few more parameters may come here

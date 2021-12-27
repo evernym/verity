@@ -7,16 +7,16 @@ import com.evernym.verity.vdr.service._
 import scala.concurrent.{ExecutionContext, Future}
 
 //in-memory version of VDRTools to be used in tests (unit/integration)
-class TestVDRTools(implicit ec: ExecutionContext)
-  extends VDRTools {
+class TestVdrTools(implicit ec: ExecutionContext)
+  extends VdrTools {
 
   //TODO: as we add/integrate actual VDR apis and their tests,
   // this class should evolve to reflect the same for its test implementation
 
-  override def registerIndyLedger(namespaces: List[Namespace],
+  override def registerIndyLedger(namespaceList: List[Namespace],
                                   genesisTxnFilePath: String,
                                   taaConfig: Option[TAAConfig]): Future[VDR_LedgerRegistered] = {
-    ledgerRegistry = ledgerRegistry.withNewLedger(TestIndyLedger(namespaces, genesisTxnFilePath, taaConfig))
+    ledgerRegistry = ledgerRegistry.withNewLedger(TestIndyLedger(namespaceList, genesisTxnFilePath, taaConfig))
     Future.successful(VDR_LedgerRegistered())
   }
 

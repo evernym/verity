@@ -27,7 +27,8 @@ case class VerityLocalNode(tmpDirPath: Path,
                            otherNodeArteryPorts: Seq[Int],
                            serviceParam: Option[ServiceParam],
                            overriddenConfig: Option[Config],
-                           ecp: ExecutionContextProvider) extends VerityNode {
+                           ecp: ExecutionContextProvider,
+                           baseConfig: ConfigMergeable) extends VerityNode {
 
   var isAvailable: Boolean = false
   private var _httpServer: HttpServer = _
@@ -38,11 +39,11 @@ case class VerityLocalNode(tmpDirPath: Path,
 
   private val logger: Logger = LoggingUtil.getLoggerByName("VerityLocalNode")
 
-  def start(baseConfig: ConfigMergeable)(implicit ec: ExecutionContext): Future[Unit] = {
+  def start()(implicit ec: ExecutionContext): Future[Unit] = {
     logger.info(s"[rg-00] start verity instance ${portProfile.artery}")
     if (!isAvailable) {
       Future {
-        startVerityInstance(baseConfig)
+        startVerityInstance()
       } map {
         srv =>
           _httpServer = srv
@@ -96,7 +97,7 @@ case class VerityLocalNode(tmpDirPath: Path,
     List(Removed, Down).contains(cluster.selfMember.status)
   }
 
-  private def startVerityInstance(baseConfig: ConfigMergeable): HttpServer = {
+  private def startVerityInstance(): HttpServer = {
     LocalVerity(baseConfig, verityNodeParam, ecp, bootstrapApp = false, trackMessageProgress = true)
   }
 

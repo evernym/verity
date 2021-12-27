@@ -18,11 +18,11 @@ trait VerityNode {
   def serviceParam: Option[ServiceParam]
   def overriddenConfig: Option[Config]
 
-  def start(baseConfig: ConfigMergeable)(implicit ec: ExecutionContext): Future[Unit]
+  def start()(implicit ec: ExecutionContext): Future[Unit]
   def stop()(implicit ec: ExecutionContext): Future[Unit]
 
-  def restart(baseConfig: ConfigMergeable)(implicit ec: ExecutionContext): Future[Unit] = {
-    stop() flatMap {_ => start(baseConfig)}
+  def restart()(implicit ec: ExecutionContext): Future[Unit] = {
+    stop() flatMap {_ => start()}
   }
 
   def checkIfNodeIsUp(otherNodesStatus: Map[VerityNode, List[MemberStatus]] = Map.empty): Boolean

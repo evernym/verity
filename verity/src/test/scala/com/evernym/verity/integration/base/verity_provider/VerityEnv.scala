@@ -73,12 +73,12 @@ case class VerityEnv(seed: String,
     require(index >=0 && index < nodes.size, s"invalid index: $index")
   }
 
-  def startNodeAtIndex(index: Int, baseConfig: ConfigMergeable): Unit = {
-    Await.result(nodes(index).start(baseConfig), VerityEnv.START_MAX_TIMEOUT)
+  def startNodeAtIndex(index: Int): Unit = {
+    Await.result(nodes(index).start(), VerityEnv.START_MAX_TIMEOUT)
   }
 
-  def restartNodeAtIndex(index: Int, baseConfig: ConfigMergeable): Unit = {
-    Await.result(nodes(index).restart(baseConfig),  VerityEnv.MAX_RESTART_TIMEOUT)
+  def restartNodeAtIndex(index: Int): Unit = {
+    Await.result(nodes(index).restart(),  VerityEnv.MAX_RESTART_TIMEOUT)
   }
 
   def stopAllNodes(): Unit = {
@@ -86,8 +86,8 @@ case class VerityEnv(seed: String,
     Await.result(future, VerityEnv.STOP_MAX_TIMEOUT)
   }
 
-  def restartAllNodes(baseConfig: ConfigMergeable, maxTimeout: FiniteDuration = VerityEnv.MAX_RESTART_TIMEOUT): Unit = {
-    val future = Future.sequence(nodes.map(_.restart(baseConfig)))
+  def restartAllNodes(maxTimeout: FiniteDuration = VerityEnv.MAX_RESTART_TIMEOUT): Unit = {
+    val future = Future.sequence(nodes.map(_.restart()))
     Await.result(future, maxTimeout)
   }
 

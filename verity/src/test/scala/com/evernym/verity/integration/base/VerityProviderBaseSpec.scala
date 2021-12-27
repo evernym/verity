@@ -28,9 +28,9 @@ trait VerityProviderBaseSpec
     with HasExecutionContextProvider {
     this: Suite =>
 
-  val localVerityBaseConfig: ConfigMergeable = ConfigFactory.load()
 
   object VerityEnvBuilder {
+    val localVerityBaseConfig: ConfigMergeable = ConfigFactory.load()
 
     def empty: VerityEnvBuilder = VerityEnvBuilder(0, None, None)
 
@@ -43,6 +43,8 @@ trait VerityProviderBaseSpec
   case class VerityEnvBuilder(nodeCount: Int,
                               serviceParam: Option[ServiceParam] = None,
                               overriddenConfig: Option[Config] = None) {
+
+    import VerityEnvBuilder.localVerityBaseConfig
 
     def withServiceParam(param: ServiceParam): VerityEnvBuilder = copy(serviceParam = Option(param))
     def withConfig(config: Config): VerityEnvBuilder = copy(overriddenConfig = Option(config))
@@ -80,7 +82,8 @@ trait VerityProviderBaseSpec
           otherNodesArteryPorts,
           multiNodeServiceParam,
           multiNodeClusterConfig,
-          executionContextProvider
+          executionContextProvider,
+          localVerityBaseConfig
         )
       }
 
@@ -108,8 +111,8 @@ trait VerityProviderBaseSpec
 
     private def startVerityNodes(verityNodes: Seq[VerityNode], maxStartTimeout: FiniteDuration)(implicit ec: ExecutionContext): Unit = {
       val otherNodes = verityNodes.drop(1)
-      Await.result(verityNodes.head.start(localVerityBaseConfig), maxStartTimeout)
-      Await.result(Future.sequence(otherNodes.map(_.start(localVerityBaseConfig))), maxStartTimeout)
+      Await.result(verityNodes.head.start(), maxStartTimeout)
+      Await.result(Future.sequence(otherNodes.map(_.start())), maxStartTimeout)
       logger.info(s"[rg-00] Nodes ${verityNodes.map(_.portProfile.artery)} started")
     }
 

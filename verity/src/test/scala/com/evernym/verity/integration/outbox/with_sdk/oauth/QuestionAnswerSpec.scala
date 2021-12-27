@@ -90,8 +90,8 @@ class QuestionAnswerSpec
   "VerityAdmin" - {
     "when restarts verity instances" - {
       "should be successful" in {
-        issuerVerityEnv.restartAllNodes(localVerityBaseConfig)
-        holderVerityEnv.restartAllNodes(localVerityBaseConfig)
+        issuerVerityEnv.restartAllNodes()
+        holderVerityEnv.restartAllNodes()
         issuerSDK.fetchAgencyKey()
         holderSDK.fetchAgencyKey()
       }

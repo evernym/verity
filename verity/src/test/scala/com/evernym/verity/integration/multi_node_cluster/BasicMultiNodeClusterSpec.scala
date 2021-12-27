@@ -86,7 +86,7 @@ class BasicMultiNodeClusterSpec
 
       "when started first seed node" - {
         "should be successful" in {
-          verityEnv.startNodeAtIndex(0, localVerityBaseConfig)
+          verityEnv.startNodeAtIndex(0)
           verityEnv.availableNodes.size shouldBe 1
         }
       }

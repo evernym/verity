@@ -156,7 +156,7 @@ object LocalVerity {
   }
 }
 
-class AppConfigWrapper(config: Config) extends AppConfig {
+class AppConfigWrapper(var config: Config) extends AppConfig {
   DEPRECATED_setConfigWithoutValidation(config)
 }
 

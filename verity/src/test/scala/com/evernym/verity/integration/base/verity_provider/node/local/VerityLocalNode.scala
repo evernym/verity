@@ -80,7 +80,7 @@ case class VerityLocalNode(tmpDirPath: Path,
   private def stopGracefully(): Unit = {
     isAvailable = false
     //TODO: need to resolve this
-    if (!isAvailable){
+    if (httpServer == null){
       logger.warn(s"[rg-00] stopGracefully called, but it seems like node was not be started, node ${portProfile.artery}")
       return
     }

@@ -22,7 +22,7 @@ trait AppConfig extends ConfigReaderHelper {
   val logger: Logger = getLoggerByClass(classOf[AppConfig])
   var validatorCreators: List[ConfigValidatorCreator] = DefaultConfigValidatorCreator.getAllValidatorCreators
 
-  var config : Config = _
+  var config : Config
 
   init()
 
@@ -94,4 +94,4 @@ trait AppConfig extends ConfigReaderHelper {
 
 }
 
-class AppConfigWrapper extends AppConfig
+class AppConfigWrapper(var config: Config) extends AppConfig

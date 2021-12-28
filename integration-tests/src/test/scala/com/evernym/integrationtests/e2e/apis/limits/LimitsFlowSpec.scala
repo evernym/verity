@@ -49,11 +49,11 @@ class LimitsFlowSpec
 
   private val numOfAttrs = 125
   private val credDef10x20 = "cred_def_10x20_attrs"
+  private val credDef10x17800 = "cred_def_10x17800_attrs"
   private val credDef125x20 = "cred_def_10x22K_attrs"
   private val credDef125x200 = "cred_def_125x20_attrs"
-  private val credDef125x1300 = "cred_def_125x1300_attrs"
-  private val credDef10x17K = "cred_def_10x17k_attrs"
-  private val credDef125x1400 = "cred_def_125x1400_attrs"
+  private val credDef125x1360 = "cred_def_125x1360_attrs"
+  private val credDef125x1480 = "cred_def_125x1480_attrs"
   private def attr20(i: Int): String = f"attr567890123456_$i%03d"
 
   runScenario("sdkFlow")( Scenario(
@@ -207,9 +207,10 @@ class LimitsFlowSpec
       "0.1",
       ledgerUtil
     )
+
     writeCredDef(
       sdk,
-      credDef10x17K,
+      credDef10x17800,
       "tag",
       WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
       schemaName10attrs,
@@ -248,16 +249,17 @@ class LimitsFlowSpec
 
     writeCredDef(
       sdk,
-      credDef125x1300,
+      credDef125x1360,
       "tag",
       WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
       schemaName125attrs,
       "0.1",
       ledgerUtil
     )
+
     writeCredDef(
       sdk,
-      credDef125x1400,
+      credDef125x1480,
       "tag",
       WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
       schemaName125attrs,
@@ -352,9 +354,9 @@ class LimitsFlowSpec
 
       val str20char = "1234567890abcdefghij"
       val str200char = str20char*10
-      val str1300char = str20char*65
-      val str1400char = str20char*70
-      val str17Kchar = str20char*850
+      val str1360char = str20char*68
+      val str1480char = str20char*74
+      val str17800char = str20char*890
 
       issueCredential_1_0(
         apps(verity1),
@@ -369,8 +371,8 @@ class LimitsFlowSpec
         apps(verity1),
         apps(cas1),
         connectionId,
-        (1 to 10).map { i => attr20(i) -> str17Kchar }.toMap,
-        credDef10x17K,
+        (1 to 10).map { i => attr20(i) -> str17800char }.toMap,
+        credDef10x17800,
         "tag"
       )
 
@@ -396,8 +398,8 @@ class LimitsFlowSpec
         apps(verity1),
         apps(cas1),
         connectionId,
-        (1 to numOfAttrs).map { i => attr20(i) -> str1300char }.toMap,
-        credDef125x1300,
+        (1 to numOfAttrs).map { i => attr20(i) -> str1360char }.toMap,
+        credDef125x1360,
         "tag"
       )
       val issuerSdk = apps(verity1).sdks.head
@@ -406,8 +408,8 @@ class LimitsFlowSpec
         issuerSdk,
         holderSdk,
         connectionId,
-        (1 to numOfAttrs).map { i => s"attr$i" -> str1400char }.toMap,
-        credDef125x1400,
+        (1 to numOfAttrs).map { i => s"attr$i" -> str1480char }.toMap,
+        credDef125x1480,
         "tag",
         "Payload size is too big"
       )

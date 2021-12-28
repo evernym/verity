@@ -87,6 +87,48 @@ trait SdkProvider { this: BasicSpec =>
                     ): HolderSdk =
     HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, executionContext, oauthParam)
 
+  def setupIssuerSdkAsync(verityEnv: Future[VerityEnv], executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): Future[IssuerSdk] =
+    verityEnv.map(env => setupIssuerSdk(env, executionContext, oauthParam))(executionContext)
+  def setupIssuerRestSdkAsync(verityEnv: Future[VerityEnv], executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): Future[IssuerRestSDK] =
+    verityEnv.map(env => setupIssuerRestSdk(env, executionContext, oauthParam))(executionContext)
+  def setupVerifierSdkAsync(verityEnv: Future[VerityEnv], executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): Future[VerifierSdk] =
+    verityEnv.map(env => setupVerifierSdk(env, executionContext, oauthParam))(executionContext)
+
+
+  def setupHolderSdkAsync(
+                      verityEnv: Future[VerityEnv],
+                      ledgerTxnExecutor: LedgerTxnExecutor,
+                      executionContext: ExecutionContext
+                    ): Future[HolderSdk] = {
+    verityEnv.map {
+      env => setupHolderSdk(env, ledgerTxnExecutor, executionContext)
+    }(executionContext)
+  }
+
+
+  def setupHolderSdkAsync(
+                      verityEnv: Future[VerityEnv],
+                      ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                      executionContext: ExecutionContext
+                    ): Future[HolderSdk] =
+    verityEnv.map(env => setupHolderSdk(env, ledgerTxnExecutor, executionContext))(executionContext)
+
+
+  def setupHolderSdkAsync(
+                      verityEnv: Future[VerityEnv],
+                      oauthParam: OAuthParam,
+                      executionContext: ExecutionContext,
+                    ): Future[HolderSdk] =
+    verityEnv.map(env => setupHolderSdk(env, oauthParam, executionContext))(executionContext)
+
+  def setupHolderSdkAsync(
+                      verityEnv: Future[VerityEnv],
+                      ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                      oauthParam: Option[OAuthParam],
+                      executionContext: ExecutionContext,
+                    ): Future[HolderSdk] =
+    verityEnv.map(env => setupHolderSdk(env, ledgerTxnExecutor, oauthParam, executionContext))(executionContext)
+
   private def buildSdkParam(verityEnv: VerityEnv): SdkParam = {
     SdkParam(VerityEnvUrlProvider(verityEnv.nodes))
   }

@@ -2,13 +2,13 @@ package com.evernym.verity.integration.with_basic_sdk
 
 import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, ComMethodAuthentication, UpdateComMethodReqMsg}
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
-import com.evernym.verity.integration.base.sdk_provider.{SdkProvider, V1OAuthParam}
+import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider, V1OAuthParam}
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
 
 
@@ -19,14 +19,27 @@ class ComMethodUpdateSpec
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
+  lazy val issuerVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
+  lazy val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext, Option(V1OAuthParam(5.seconds)))
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, V1OAuthParam(5.seconds), executionContext)
+  lazy val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext, Option(V1OAuthParam(5.seconds)))
+  lazy val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, V1OAuthParam(5.seconds), executionContext)
+
+  var issuerSDK: IssuerSdk = _
+  var holderSDK: HolderSdk = _
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
+
+  override protected def beforeAll(): Unit = {
+    super.beforeAll()
+
+    val f1 = issuerSDKFut
+    val f2 = holderSDKFut
+
+    issuerSDK = Await.result(f1, SDK_BUILD_TIMEOUT)
+    holderSDK = Await.result(f2, SDK_BUILD_TIMEOUT)
+  }
 
   "IssuerSDK" - {
 

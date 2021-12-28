@@ -2,7 +2,7 @@ package com.evernym.verity.integration.with_basic_sdk.out_of_band.without_attach
 
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
-import com.evernym.verity.integration.base.sdk_provider.SdkProvider
+import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider}
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.OfferCred
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
@@ -10,7 +10,7 @@ import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 =>
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.util.TestExecutionContextProvider
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext}
 
 
 //Holder1 connects with an Issuer via an OOB invitation.
@@ -23,12 +23,16 @@ class ReuseInvitationSpec
 
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
+  lazy val issuerVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
+  lazy val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
-  lazy val holderSDK1 = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
-  lazy val holderSDK2 = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+  lazy val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
+  lazy val holderSDK1Fut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, executionContext)
+  lazy val holderSDK2Fut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, executionContext)
+
+  var issuerSDK: IssuerSdk = _
+  var holderSDK1: HolderSdk = _
+  var holderSDK2: HolderSdk = _
 
   val oobIssuerHolderConn1 = "connId1"
   val oobIssuerHolderConn2 = "connId2"
@@ -42,6 +46,15 @@ class ReuseInvitationSpec
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+
+    val f1 = issuerSDKFut
+    val f2 = holderSDK1Fut
+    val f3 = holderSDK2Fut
+
+    issuerSDK = Await.result(f1, SDK_BUILD_TIMEOUT)
+    holderSDK1 = Await.result(f2, SDK_BUILD_TIMEOUT)
+    holderSDK2 = Await.result(f3, SDK_BUILD_TIMEOUT)
+
     provisionEdgeAgent(issuerSDK)
     provisionCloudAgent(holderSDK1)
     provisionCloudAgent(holderSDK2)

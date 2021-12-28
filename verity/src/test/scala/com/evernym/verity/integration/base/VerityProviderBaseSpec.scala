@@ -29,6 +29,10 @@ trait VerityProviderBaseSpec
     this: Suite =>
 
 
+  val ENV_BUILD_TIMEOUT = 1 minute
+  val SDK_BUILD_TIMEOUT = 1 minute
+
+
   object VerityEnvBuilder {
     val localVerityBaseConfig: ConfigMergeable = ConfigFactory.load()
 
@@ -51,7 +55,13 @@ trait VerityProviderBaseSpec
 
     private val logger: Logger = LoggingUtil.getLoggerByName("VerityEnvBuilder")
 
+    def buildAsync(appType: AppType)(implicit ec: ExecutionContext = futureExecutionContext): Future[VerityEnv] = Future{buildVerityEnv(appType)}
+
     def build(appType: AppType): VerityEnv = {
+      buildVerityEnv(appType)
+    }
+
+    private def buildVerityEnv(appType: AppType): VerityEnv = {
       val tmpDir = randomTmpDirPath()
       val totalNodeCount = nodeCount
       val multiNodeServiceParam = if (totalNodeCount > 1) {
@@ -101,7 +111,7 @@ trait VerityProviderBaseSpec
       }
       catch {
         case e: Exception =>
-          logger.warn(s"Start nodes failed: ${e.getMessage} ${e.getStackTrace.mkString("", "\n", "")}")
+          logger.warn(s"Start nodes failed: ${e.getMessage} ${e.getStackTrace.mkString("", System.lineSeparator(), "")}")
           logger.info(s"[rg-00] Stop nodes...")
           Await.result(Future.sequence(verityNodes.map(_.stop())), VerityEnv.STOP_MAX_TIMEOUT)
           logger.info("[rg-00] Nodes stopped")

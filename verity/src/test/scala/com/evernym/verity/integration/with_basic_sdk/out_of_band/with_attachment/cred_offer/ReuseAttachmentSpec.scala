@@ -3,7 +3,8 @@ package com.evernym.verity.integration.with_basic_sdk.out_of_band.with_attachmen
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.did.didcomm.v1.messages.ProblemDescription
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
-import com.evernym.verity.integration.base.sdk_provider.SdkProvider
+import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider, VerifierSdk}
+import com.evernym.verity.integration.base.verity_provider.VerityEnv
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, ProblemReport => IssueCredProblemReport}
@@ -21,7 +22,7 @@ import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 import com.evernym.verity.util2.ExecutionContextProvider
 import org.json.JSONObject
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext}
 
 
 //Holder connects with Issuer via a "cred offer attached OOB invitation" and responds to the attached message.
@@ -37,13 +38,20 @@ class ReuseAttachmentSpec
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
-  lazy val verifierVerityEnv = VerityEnvBuilder.default().build(VAS)
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
+  lazy val issuerVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
+  lazy val verifierVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
+  lazy val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
-  lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv, executionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+  lazy val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
+  lazy val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnvFut, executionContext)
+  lazy val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, executionContext)
+
+  var issuerVerityEnv: VerityEnv = _
+  var verifierVerityEnv: VerityEnv = _
+
+  var issuerSDK: IssuerSdk = _
+  var verifierSDK: VerifierSdk = _
+  var holderSDK: HolderSdk = _
 
   val oobIssuerHolderConn = "connId1"
   val oobVerifierHolderConn = "connId2"
@@ -62,10 +70,24 @@ class ReuseAttachmentSpec
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+
+    val f1 = issuerVerityEnvFut
+    val f2 = verifierVerityEnvFut
+
+    issuerVerityEnv = Await.result(f1, ENV_BUILD_TIMEOUT)
+    verifierVerityEnv = Await.result(f2, ENV_BUILD_TIMEOUT)
+
+    val f3 = issuerSDKFut
+    val f4 = verifierSDKFut
+    val f5 = holderSDKFut
+
+    issuerSDK = Await.result(f3, SDK_BUILD_TIMEOUT)
+    verifierSDK = Await.result(f4, SDK_BUILD_TIMEOUT)
+    holderSDK = Await.result(f5, SDK_BUILD_TIMEOUT)
+
     provisionEdgeAgent(issuerSDK)
     provisionEdgeAgent(verifierSDK)
     provisionCloudAgent(holderSDK)
-
     setupIssuer(issuerSDK)
     schemaId = writeSchema(issuerSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
     credDefId = writeCredDef(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))

@@ -19,6 +19,14 @@ class PurposefulErrorsFilter extends TurboFilter {
       t.getMessage.contains(searchStr) ||
         isAPurposefulThrowable(t.getCause)
     }
+//the code above may produce NPE with call t.getMessage, there  is fix
+//    if(t == null) false
+//    else {
+//      if (t.getMessage != null)
+//        t.getMessage.contains(searchStr) || isAPurposefulThrowable(t.getCause)
+//      else
+//        isAPurposefulThrowable(t.getCause)
+//    }
 
   }
 

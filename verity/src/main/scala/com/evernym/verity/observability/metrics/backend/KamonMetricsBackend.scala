@@ -42,6 +42,8 @@ class KamonMetricsBackend(system: ActorSystem) extends MetricsBackend {
 
   override def setup(): Unit = {
     //Kamon.init(system.settings.config.withOnlyPath("kamon"))
+    /* Synchronized call is needed because otherwise it can produce error
+    since we use parallel building of VerityEnv in unit-integration tests */
     KamonMetricsBackend.runKamonInitSync(system.settings.config.withOnlyPath("kamon"))
   }
 

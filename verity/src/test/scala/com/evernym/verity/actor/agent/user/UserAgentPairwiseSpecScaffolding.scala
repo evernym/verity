@@ -82,6 +82,12 @@ trait UserAgentPairwiseSpecScaffolding
     true
   }
 
+  def updateAgencyDid(): Unit = {
+    mockEdgeAgent.agencyPublicDid = mockAgencyAdmin.agencyPublicDid
+    mockRemoteEdgeAgent.agencyPublicDid = mockAgencyAdmin.agencyPublicDid
+    mockRemoteEdgeCloudAgent.agencyPublicDid = mockAgencyAdmin.agencyPublicDid
+  }
+
   def checkPushNotif(expectSilentPushNotif: Boolean, expectAlertingPushNotif: Boolean, oldPushMsgCount: Int): Boolean = {
     if (expectSilentPushNotif) checkIfSilentPushNotifSent()
     else if (expectAlertingPushNotif) checkIfAlertingPushNotifSent()

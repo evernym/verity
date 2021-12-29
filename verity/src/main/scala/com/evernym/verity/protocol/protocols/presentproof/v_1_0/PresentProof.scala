@@ -647,6 +647,9 @@ object PresentProof {
     val stateName: String = curState.getClass.getSimpleName
     val errorMsg = s"Unexpected '$msgName' message in current state '$stateName"
     ctx.send(Msg.buildProblemReport(errorMsg, unexpectedMessage))
+    ctx.signal(
+      Sig.buildProblemReport(errorMsg, unexpectedMessage)
+    )
   }
 
   def rejectableState(state: State): Boolean = {

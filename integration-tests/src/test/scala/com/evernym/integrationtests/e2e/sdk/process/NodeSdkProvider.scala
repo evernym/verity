@@ -23,6 +23,7 @@ import com.evernym.verity.sdk.utils.{AsJsonObject, Context}
 
 import java.lang
 import java.nio.file.Path
+import java.util.UUID
 import scala.sys.process.Process
 
 class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
@@ -149,10 +150,13 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def writeSchema_0_6(name: String, ver: String, attrs: String*): WriteSchemaV0_6 =
     new UndefinedWriteSchema_0_6 {
+      val threadId = UUID.randomUUID.toString
+
       override def write(ctx: Context): Unit =
-        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq, None))
+        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq, threadId))
       override def write(ctx: Context, endorserDid: String): Unit =
-        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq, None), Seq(endorserDid))
+        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq, threadId), Seq(endorserDid))
+      override def getThreadId: String = threadId
     }
 
   override def writeCredDef_0_6(name: String,
@@ -160,15 +164,18 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                                 tag: Option[String],
                                 revocationDetails: Option[RevocationRegistryConfig]): WriteCredentialDefinitionV0_6 =
     new UndefinedWriteCredentialDefinition_0_6 {
+      val threadId = UUID.randomUUID.toString
+
       override def write(ctx: Context): Unit =
         executeCmd(
           ctx,
           "WriteCredentialDefinition",
           this.version,
           "write",
-          Seq(name, schemaId, tag, revocationDetails.orNull, None))
+          Seq(name, schemaId, tag, revocationDetails.orNull, threadId))
       override def write(ctx: Context, endorserDid: String): Unit =
-        executeCmd(ctx, "WriteCredentialDefinition", this.version, "write", Seq(name, schemaId, tag, revocationDetails.orNull, None), Seq(endorserDid))
+        executeCmd(ctx, "WriteCredentialDefinition", this.version, "write", Seq(name, schemaId, tag, revocationDetails.orNull, threadId), Seq(endorserDid))
+      override def getThreadId: String = threadId
     }
 
   override def basicMessage_1_0(forRelationship: DidStr,
@@ -176,14 +183,17 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                                 sentTime: String,
                                 localization: String): BasicMessageV1_0 = {
     new UndefinedBasicMessage_1_0 {
+      val threadId = UUID.randomUUID.toString
+
       override def message(ctx: Context): Unit =
         executeCmd(
           ctx,
           "BasicMessage",
           this.version,
           "message",
-          Seq(forRelationship, None, content, sentTime, localization)
+          Seq(forRelationship, threadId, content, sentTime, localization)
         )
+      override def getThreadId: String = threadId
     }
   }
 
@@ -194,14 +204,16 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                                    validResponses: Seq[String],
                                    requireSig: Boolean): CommittedAnswerV1_0 =
     new UndefinedCommittedAnswer_1_0 {
+      val threadId = UUID.randomUUID.toString
       override def ask(ctx: Context): Unit =
         executeCmd(
           ctx,
           "CommittedAnswer",
           this.version,
           "ask",
-          Seq(forRelationship, None, questionText, None, questionDescription, validResponses, requireSig)
+          Seq(forRelationship, threadId, questionText, None, questionDescription, validResponses, requireSig)
         )
+      override def getThreadId: String = threadId
     }
 
 
@@ -269,15 +281,19 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                                    price: String = "0",
                                    autoIssue: Boolean = false,
                                    byInvitation: Boolean = false): IssueCredentialV1_0 = new UndefinedIssueCredential_1_0 {
+    val threadId = UUID.randomUUID.toString
+
     override def offerCredential(ctx: Context): Unit = {
       executeCmd(
         ctx,
         "IssueCredential",
         this.version,
         "offerCredential",
-        Seq(forRelationship, None, credDefId, credValues, comment, price, autoIssue, byInvitation)
+        Seq(forRelationship, threadId, credDefId, credValues, comment, price, autoIssue, byInvitation)
       )
     }
+
+    override def getThreadId: String = threadId
 
   }
 
@@ -298,15 +314,19 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                                 proofPredicate: Array[Predicate],
                                 byInvitation: Boolean = false): PresentProofV1_0 =  {
     new UndefinedPresentProof_1_0 {
+      val threadId = UUID.randomUUID.toString
+
       override def request(ctx: Context): Unit = {
         executeCmd(
           ctx,
           "PresentProof",
           this.version,
           "request",
-          Seq(forRelationship, None, name, proofAttrs.toSeq, proofPredicate.toSeq, byInvitation)
+          Seq(forRelationship, threadId, name, proofAttrs.toSeq, proofPredicate.toSeq, byInvitation)
         )
       }
+
+      override def getThreadId: String = threadId
     }
   }
 

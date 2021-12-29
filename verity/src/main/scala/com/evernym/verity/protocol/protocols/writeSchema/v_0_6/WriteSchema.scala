@@ -30,6 +30,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
     case (_, _, c: Init) => ctx.apply(ProtocolInitialized(c.parametersStored.toSeq))
     case (s: State.Initialized, _, m: Write) =>
       writeSchemaToLedger(m, s)
+    case _ => ctx.signal(ProblemReport("Unexpected message in current state"))
   }
 
   override def applyEvent: ApplyEvent = {

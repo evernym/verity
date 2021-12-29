@@ -235,15 +235,19 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
     writeSchemaJson.put("attrNames", attrs.toArray)
 
     new UndefinedWriteSchema_0_6 {
+      val threadId = UUID.randomUUID.toString
+
       override def write(ctx: Context): Unit = {
         logger.debug(s"write schema json: ${writeSchemaJson.toString}")
-        sendHttpPostReq(context, writeSchemaJson.toString, ProtoRef("write-schema", "0.6"), Option(UUID.randomUUID.toString))
+        sendHttpPostReq(context, writeSchemaJson.toString, ProtoRef("write-schema", "0.6"), Option(threadId))
       }
       override def write(ctx: Context, endorserDid: String): Unit = {
         writeSchemaJson.put("endorserDid", endorserDid)
         logger.debug(s"write schema json: ${writeSchemaJson.toString}")
-        sendHttpPostReq(context, writeSchemaJson.toString, ProtoRef("write-schema", "0.6"), Option(UUID.randomUUID.toString))
+        sendHttpPostReq(context, writeSchemaJson.toString, ProtoRef("write-schema", "0.6"), Option(threadId))
       }
+
+      override def getThreadId: String = threadId
     }
   }
 
@@ -263,15 +267,19 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
     }
 
     new UndefinedWriteCredentialDefinition_0_6 {
+      val threadId = UUID.randomUUID.toString
+
       override def write(ctx: Context): Unit = {
         logger.debug(s"write cred def json: ${writeCredDefJson.toString}")
-        sendHttpPostReq(context, writeCredDefJson.toString, ProtoRef("write-cred-def", "0.6"), Option(UUID.randomUUID.toString))
+        sendHttpPostReq(context, writeCredDefJson.toString, ProtoRef("write-cred-def", "0.6"), Option(threadId))
       }
       override def write(ctx: Context, endorserDid: String): Unit = {
         writeCredDefJson.put("endorserDid", endorserDid)
         logger.debug(s"write cred def json: ${writeCredDefJson.toString}")
-        sendHttpPostReq(context, writeCredDefJson.toString, ProtoRef("write-cred-def", "0.6"), Option(UUID.randomUUID.toString))
+        sendHttpPostReq(context, writeCredDefJson.toString, ProtoRef("write-cred-def", "0.6"), Option(threadId))
       }
+
+      override def getThreadId: String = threadId
     }
   }
 
@@ -288,10 +296,14 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
     askJson.put("localization", new JSONObject().put("locale", localization))
 
     new UndefinedBasicMessage_1_0 {
+      val threadId = UUID.randomUUID.toString
+
       override def message(ctx: Context): Unit = {
         logger.debug(s"basicmessage message json: ${askJson.toString}")
-        sendHttpPostReq(context, askJson.toString, ProtoRef("basicmessage", "1.0"), Option(UUID.randomUUID.toString))
+        sendHttpPostReq(context, askJson.toString, ProtoRef("basicmessage", "1.0"), Option(threadId))
       }
+
+      override def getThreadId: String = threadId
     }
   }
 
@@ -316,10 +328,14 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
     askJson.put("signature_required", requireSig)
 
     new UndefinedCommittedAnswer_1_0 {
+      val threadId = UUID.randomUUID.toString
+
       override def ask(ctx: Context): Unit = {
         logger.debug(s"committedanswer ask json: ${askJson.toString}")
-        sendHttpPostReq(context, askJson.toString, ProtoRef("committedanswer", "1.0"), Option(UUID.randomUUID.toString))
+        sendHttpPostReq(context, askJson.toString, ProtoRef("committedanswer", "1.0"), Option(threadId))
       }
+
+      override def getThreadId: String = threadId
     }
   }
 
@@ -422,10 +438,14 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
     createJson.put("label", label)
 
     new UndefinedRelationship_1_0 {
+      val threadId = UUID.randomUUID.toString
+
       override def create(context: Context): Unit = {
         logger.debug(s"relationship create json: ${createJson.toString}")
-        sendHttpPostReq(context, createJson.toString, ProtoRef("relationship", "1.0"), None)
+        sendHttpPostReq(context, createJson.toString, ProtoRef("relationship", "1.0"), Option(threadId))
       }
+
+      override def getThreadId: String = threadId
     }
   }
 
@@ -488,10 +508,14 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
     credOfferJson.put("by_invitation", byInvitation)
 
     new UndefinedIssueCredential_1_0 {
+      val threadId = UUID.randomUUID.toString
+
       override def offerCredential(context: Context): Unit = {
         logger.debug(s"send credential offer json: ${credOfferJson.toString}")
-        sendHttpPostReq(context, credOfferJson.toString, ProtoRef("issue-credential", "1.0"), Option(UUID.randomUUID.toString))
+        sendHttpPostReq(context, credOfferJson.toString, ProtoRef("issue-credential", "1.0"), Option(threadId))
       }
+
+      override def getThreadId: String = threadId
     }
   }
 
@@ -538,10 +562,14 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
     proofReqJson.put("by_invitation", byInvitation)
 
     new UndefinedPresentProof_1_0 {
+      val threadId: String = UUID.randomUUID.toString
+
       override def request(ctx: Context): Unit = {
         logger.debug(s"present proof request json: ${proofReqJson.toString}")
-        sendHttpPostReq(context, proofReqJson.toString, ProtoRef("present-proof", "1.0"), Option(UUID.randomUUID.toString))
+        sendHttpPostReq(context, proofReqJson.toString, ProtoRef("present-proof", "1.0"), Option(threadId))
       }
+
+      override def getThreadId: String = threadId
     }
   }
 

@@ -32,6 +32,8 @@ trait VerityProviderBaseSpec
   val ENV_BUILD_TIMEOUT = 1 minute
   val SDK_BUILD_TIMEOUT = 1 minute
 
+  implicit def contextClassLoader: ClassLoader = Thread.currentThread().getContextClassLoader
+
 
   object VerityEnvBuilder {
     val localVerityBaseConfig: ConfigMergeable = ConfigFactory.load()

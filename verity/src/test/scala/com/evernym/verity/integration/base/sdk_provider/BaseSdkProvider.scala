@@ -49,13 +49,16 @@ import scala.reflect.ClassTag
 import scala.util.Try
 
 
-trait SdkProvider { this: BasicSpec =>
+trait SdkProvider {
+  this: BasicSpec =>
 
-  def setupIssuerSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): IssuerSdk =
+  def setupIssuerSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam] = None): IssuerSdk =
     IssuerSdk(buildSdkParam(verityEnv), executionContext, oauthParam)
-  def setupIssuerRestSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): IssuerRestSDK =
+
+  def setupIssuerRestSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam] = None): IssuerRestSDK =
     IssuerRestSDK(buildSdkParam(verityEnv), executionContext, oauthParam)
-  def setupVerifierSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): VerifierSdk =
+
+  def setupVerifierSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam] = None): VerifierSdk =
     VerifierSdk(buildSdkParam(verityEnv), executionContext, oauthParam)
 
   def setupHolderSdk(
@@ -87,47 +90,66 @@ trait SdkProvider { this: BasicSpec =>
                     ): HolderSdk =
     HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, executionContext, oauthParam)
 
-  def setupIssuerSdkAsync(verityEnv: Future[VerityEnv], executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): Future[IssuerSdk] =
-    verityEnv.map(env => setupIssuerSdk(env, executionContext, oauthParam))(executionContext)
-  def setupIssuerRestSdkAsync(verityEnv: Future[VerityEnv], executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): Future[IssuerRestSDK] =
-    verityEnv.map(env => setupIssuerRestSdk(env, executionContext, oauthParam))(executionContext)
-  def setupVerifierSdkAsync(verityEnv: Future[VerityEnv], executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): Future[VerifierSdk] =
-    verityEnv.map(env => setupVerifierSdk(env, executionContext, oauthParam))(executionContext)
+  def setupIssuerSdkAsync(verityEnv: Future[VerityEnv],
+                          executionContext: ExecutionContext,
+                          oauthParam: Option[OAuthParam] = None)(implicit ctxLoader: ClassLoader): Future[IssuerSdk] =
+    verityEnv.map(env => {
+      Thread.currentThread().setContextClassLoader(ctxLoader)
+      setupIssuerSdk(env, executionContext, oauthParam)
+    })(executionContext)
+
+  def setupIssuerRestSdkAsync(verityEnv: Future[VerityEnv],
+                              executionContext: ExecutionContext,
+                              oauthParam: Option[OAuthParam] = None)(implicit ctxLoader: ClassLoader): Future[IssuerRestSDK] =
+    verityEnv.map(env => {
+      Thread.currentThread().setContextClassLoader(ctxLoader)
+      setupIssuerRestSdk(env, executionContext, oauthParam)
+    })(executionContext)
+
+  def setupVerifierSdkAsync(verityEnv: Future[VerityEnv],
+                            executionContext: ExecutionContext,
+                            oauthParam: Option[OAuthParam] = None)(implicit ctxLoader: ClassLoader): Future[VerifierSdk] =
+    verityEnv.map(env => {
+      Thread.currentThread().setContextClassLoader(ctxLoader)
+      setupVerifierSdk(env, executionContext, oauthParam)
+    })(executionContext)
 
 
-  def setupHolderSdkAsync(
-                      verityEnv: Future[VerityEnv],
-                      ledgerTxnExecutor: LedgerTxnExecutor,
-                      executionContext: ExecutionContext
-                    ): Future[HolderSdk] = {
+  def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
+                          ledgerTxnExecutor: LedgerTxnExecutor,
+                          executionContext: ExecutionContext)(implicit ctxLoader: ClassLoader): Future[HolderSdk] = {
     verityEnv.map {
+      Thread.currentThread().setContextClassLoader(ctxLoader)
       env => setupHolderSdk(env, ledgerTxnExecutor, executionContext)
     }(executionContext)
   }
 
 
-  def setupHolderSdkAsync(
-                      verityEnv: Future[VerityEnv],
-                      ledgerTxnExecutor: Option[LedgerTxnExecutor],
-                      executionContext: ExecutionContext
-                    ): Future[HolderSdk] =
-    verityEnv.map(env => setupHolderSdk(env, ledgerTxnExecutor, executionContext))(executionContext)
+  def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
+                          ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                          executionContext: ExecutionContext)(implicit ctxLoader: ClassLoader): Future[HolderSdk] =
+    verityEnv.map(env => {
+      Thread.currentThread().setContextClassLoader(ctxLoader)
+      setupHolderSdk(env, ledgerTxnExecutor, executionContext)
+    })(executionContext)
 
 
-  def setupHolderSdkAsync(
-                      verityEnv: Future[VerityEnv],
-                      oauthParam: OAuthParam,
-                      executionContext: ExecutionContext,
-                    ): Future[HolderSdk] =
-    verityEnv.map(env => setupHolderSdk(env, oauthParam, executionContext))(executionContext)
+  def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
+                          oauthParam: OAuthParam,
+                          executionContext: ExecutionContext)(implicit ctxLoader: ClassLoader): Future[HolderSdk] =
+    verityEnv.map(env => {
+      Thread.currentThread().setContextClassLoader(ctxLoader)
+      setupHolderSdk(env, oauthParam, executionContext)
+    })(executionContext)
 
-  def setupHolderSdkAsync(
-                      verityEnv: Future[VerityEnv],
-                      ledgerTxnExecutor: Option[LedgerTxnExecutor],
-                      oauthParam: Option[OAuthParam],
-                      executionContext: ExecutionContext,
-                    ): Future[HolderSdk] =
-    verityEnv.map(env => setupHolderSdk(env, ledgerTxnExecutor, oauthParam, executionContext))(executionContext)
+  def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
+                          ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                          oauthParam: Option[OAuthParam],
+                          executionContext: ExecutionContext)(implicit ctxLoader: ClassLoader): Future[HolderSdk] =
+    verityEnv.map(env => {
+      Thread.currentThread().setContextClassLoader(ctxLoader)
+      setupHolderSdk(env, ledgerTxnExecutor, oauthParam, executionContext)
+    })(executionContext)
 
   private def buildSdkParam(verityEnv: VerityEnv): SdkParam = {
     SdkParam(VerityEnvUrlProvider(verityEnv.nodes))
@@ -181,6 +203,7 @@ trait SdkProvider { this: BasicSpec =>
 
 /**
  * a base sdk class for issuer/holder sdk
+ *
  * @param param sdk parameters
  */
 abstract class SdkBase(param: SdkParam,
@@ -232,7 +255,7 @@ abstract class SdkBase(param: SdkParam,
    *
    * @param recipDID recipient of fwd msg
    * @param fwdToDID destination of the given 'msg'
-   * @param msg the message to be sent
+   * @param msg      the message to be sent
    * @return
    */
   protected def prepareFwdMsg(recipDID: DidStr, fwdToDID: DidStr, msg: Array[Byte]): Array[Byte] = {
@@ -242,8 +265,8 @@ abstract class SdkBase(param: SdkParam,
   }
 
   protected def packMsg(msg: String,
-                      recipVerKeyParams: Set[KeyParam],
-                      senderKeyParam: Option[KeyParam]): Array[Byte] = {
+                        recipVerKeyParams: Set[KeyParam],
+                        senderKeyParam: Option[KeyParam]): Array[Byte] = {
     val msgBytes = msg.getBytes()
     val pm = testWalletAPI.executeSync[PackedMsg](
       PackMsg(msgBytes, recipVerKeyParams, senderKeyParam))
@@ -274,7 +297,7 @@ abstract class SdkBase(param: SdkParam,
     awaitFut(
       Http().singleRequest(
         HttpRequest(
-          method=HttpMethods.POST,
+          method = HttpMethods.POST,
           uri = url,
           entity = HttpEntity(
             ContentTypes.`application/octet-stream`,
@@ -290,7 +313,7 @@ abstract class SdkBase(param: SdkParam,
     awaitFut(
       Http().singleRequest(
         HttpRequest(
-          method=HttpMethods.GET,
+          method = HttpMethods.GET,
           uri = actualPath,
           entity = HttpEntity.Empty
         )
@@ -317,6 +340,7 @@ abstract class SdkBase(param: SdkParam,
   }
 
   def randomUUID(): String = UUID.randomUUID().toString
+
   def randomSeed(): String = randomUUID().replace("-", "")
 
   implicit val walletAPIParam: WalletAPIParam = WalletAPIParam(UUID.randomUUID().toString)
@@ -343,11 +367,15 @@ abstract class SdkBase(param: SdkParam,
   def agencyPublicDid: AgencyPublicDid = agencyPublicDidOpt.getOrElse(
     throw new RuntimeException("agency key is not yet fetched")
   )
+
   def verityAgentDidPair: DidPair = verityAgentDidPairOpt.getOrElse(
     throw new RuntimeException("verity agent not yet created")
   )
+
   def agencyDID: DidStr = agencyPublicDid.DID
+
   def agencyVerKey: VerKeyStr = agencyPublicDid.verKey
+
   def myLocalAgentVerKey: VerKeyStr = localAgentDidPair.verKey
 
   protected lazy val testAppConfig = new TestAppConfig()
@@ -361,6 +389,7 @@ abstract class SdkBase(param: SdkParam,
 
   /**
    * checks message orders (sender and received)
+   *
    * @param threadOpt
    * @param expectedSenderOrder
    * @param expectedReceivedOrder assuming two participants as of now
@@ -372,7 +401,7 @@ abstract class SdkBase(param: SdkParam,
       val theirDID = myPairwiseRelationships(connId).theirDIDDoc.get.getDID
       theirDID -> count
     }
-      threadOpt.flatMap(_.sender_order) shouldBe Some(expectedSenderOrder)
+    threadOpt.flatMap(_.sender_order) shouldBe Some(expectedSenderOrder)
     threadOpt.map(_.received_orders) shouldBe Some(receivedOrderByDid)
   }
 }
@@ -382,16 +411,23 @@ case class PairwiseRel(myLocalAgentDIDPair: Option[DidPair] = None,
                        theirDIDDoc: Option[DIDDoc] = None) {
 
   def myLocalAgentDIDPairReq: DidPair = myLocalAgentDIDPair.getOrElse(throw new RuntimeException("my pairwise key not exists"))
+
   def myPairwiseDID: DidStr = myLocalAgentDIDPairReq.did
+
   def myPairwiseVerKey: VerKeyStr = myLocalAgentDIDPairReq.verKey
 
   def myVerityAgentDIDPairReq: DidPair = verityAgentDIDPair.getOrElse(throw new RuntimeException("verity agent key not exists"))
+
   def myVerityAgentDID: DidStr = myVerityAgentDIDPairReq.did
+
   def myVerityAgentVerKey: VerKeyStr = myVerityAgentDIDPairReq.verKey
 
   def theirDIDDocReq: DIDDoc = theirDIDDoc.getOrElse(throw new RuntimeException("their DIDDoc not exists"))
+
   def theirAgentVerKey: VerKeyStr = theirDIDDocReq.verkey
+
   def theirRoutingKeys: Vector[VerKeyStr] = theirDIDDocReq.routingKeys
+
   def theirServiceEndpoint: ServiceEndpoint = theirDIDDocReq.endpoint
 
   def withProvisionalTheirDidDoc(invitation: Invitation): PairwiseRel = {
@@ -399,7 +435,7 @@ case class PairwiseRel(myLocalAgentDIDPair: Option[DidPair] = None,
       throw new RuntimeException("invalid url: " + invitation.inviteURL)
     )
     val didDoc = DIDDoc(
-      theirServiceDetail.verKey,    //TODO: come back to this if assigning ver key as id starts causing issues
+      theirServiceDetail.verKey, //TODO: come back to this if assigning ver key as id starts causing issues
       theirServiceDetail.verKey,
       theirServiceDetail.serviceEndpoint,
       theirServiceDetail.routingKeys
@@ -464,17 +500,18 @@ object ReceivedMsgParam {
 
 /**
  *
- * @param msg the received message
- * @param msgIdOpt message id used by verity agent to uniquely identify a message
- *                 (this will be only available for messages retrieved from CAS/EAS)
+ * @param msg       the received message
+ * @param msgIdOpt  message id used by verity agent to uniquely identify a message
+ *                  (this will be only available for messages retrieved from CAS/EAS)
  * @param threadOpt received message's thread
  * @tparam T
  */
 case class ReceivedMsgParam[T: ClassTag](msg: T,
                                          jsonMsgStr: String,
                                          msgIdOpt: Option[MsgId] = None,
-                                         threadOpt: Option[MsgThread]=None) {
+                                         threadOpt: Option[MsgThread] = None) {
   def msgId: MsgId = msgIdOpt.getOrElse(throw new RuntimeException("msgId not available in received message"))
+
   def threadIdOpt: Option[ThreadId] = threadOpt.flatMap(_.thid)
 }
 
@@ -484,6 +521,7 @@ case class SdkParam(verityEnvUrlProvider: VerityEnvUrlProvider) {
   /**
    * will provide verity url of one of the available (started) nodes
    * in round robin fashion
+   *
    * @return
    */
   private def verityUrl: String = {
@@ -495,10 +533,13 @@ case class SdkParam(verityEnvUrlProvider: VerityEnvUrlProvider) {
     }
     verityUrls(lastVerityUrlUsedIndex)
   }
+
   var lastVerityUrlUsedIndex: Int = -1
 
   def verityBaseUrl: String = s"$verityUrl"
+
   def verityPackedMsgUrl: String = s"$verityUrl/agency/msg"
+
   def verityRestApiUrl: String = s"$verityUrl/api"
 }
 
@@ -521,7 +562,7 @@ object JsonMsgBuilder {
 case class JsonMsgBuilder(private val givenMsg: Any,
                           private val threadOpt: Option[MsgThread],
                           private val forRelId: Option[DidStr],
-                          private val applyToJsonMsg: String => String = { msg => msg}) {
+                          private val applyToJsonMsg: String => String = { msg => msg }) {
 
   lazy val thread = threadOpt.getOrElse(MsgThread(Option(UUID.randomUUID().toString)))
   lazy val threadId = thread.thid.getOrElse(throw new RuntimeException("thread id not available"))
@@ -530,8 +571,8 @@ case class JsonMsgBuilder(private val givenMsg: Any,
     val basicMsg = createJsonString(givenMsg, msgFamily)
     val threadedMsg = withThreadIdAdded(basicMsg, thread)
     val relationshipMsg = forRelId match {
-      case Some(did)  => addForRel(did, threadedMsg)
-      case None       => threadedMsg
+      case Some(did) => addForRel(did, threadedMsg)
+      case None => threadedMsg
     }
     applyToJsonMsg(relationshipMsg)
   }
@@ -606,7 +647,7 @@ object MsgFamilyHelper {
     val protoDefOpt =
       protoDefs
         .find { pd =>
-          Try (pd.msgFamily.lookupAllMsgName(clazz).nonEmpty).getOrElse(false)
+          Try(pd.msgFamily.lookupAllMsgName(clazz).nonEmpty).getOrElse(false)
         }
     protoDefOpt.map(_.msgFamily)
   }
@@ -622,7 +663,9 @@ object MsgFamilyHelper {
 case class TheirServiceDetail(verKey: VerKeyStr, routingKeys: Vector[VerKeyStr], serviceEndpoint: ServiceEndpoint)
 
 trait OAuthParam
+
 case class V1OAuthParam(tokenExpiresDuration: FiniteDuration) extends OAuthParam
+
 case class V2OAuthParam(fixedToken: String) extends OAuthParam
 
 class UnexpectedMsgException(msg: String) extends RuntimeException(msg)

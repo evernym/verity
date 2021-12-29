@@ -231,7 +231,7 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
       case _: UnexpectedMsgException =>
         //TODO: This is temporary workaround to fix the intermittent failure around message ordering
         // should analyze it and see if there is any better way to fix it.
-        logger.info("other message found, to be re-queued: ")
+        logger.info("other message found, to be re-queued")
         msgListener.addToQueue(msg)
         expectMsgOnWebhook(timeout)
     }

@@ -19,6 +19,8 @@ class VcxFlowSpec
   with IntegrationEnv
   with SetupFlow {
 
+  //override lazy val isTaaEnabled: Boolean = false
+
   runIssuerHolderFlowSpec("1.0", "1.0")
   runIssuerHolderFlowSpec("1.0", "2.0")
   runIssuerHolderFlowSpec("2.0", "1.0")

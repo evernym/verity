@@ -7,10 +7,12 @@ from urllib.request import urlopen
 
 interval = 2
 
+
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
-def test_genesis_is_avaiable(tries, interval_sec):
+
+def test_genesis_is_available(tries, interval_sec):
     for t in range(0, tries):
         if t > 0:
             time.sleep(interval_sec)
@@ -23,6 +25,7 @@ def test_genesis_is_avaiable(tries, interval_sec):
     eprint("Failed to retrieve genesis file after " + str(tries) +" try(s)")
     return False
 
+
 def main():
     parser = argparse.ArgumentParser(description='Health check for verity-pool')
     parser.add_argument("-w", "--wait", help="wait for healthy state", action="store_true")
@@ -32,7 +35,7 @@ def main():
     if args.wait:
         tries = 30
 
-    state = test_genesis_is_avaiable(tries, interval)
+    state = test_genesis_is_available(tries, interval)
 
     health = "healthy" if state else "unhealthy"
 
@@ -48,6 +51,7 @@ def main():
         ]
     }
     print(json.dumps(status))
+
 
 if __name__ == "__main__":
     main()

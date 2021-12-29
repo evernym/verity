@@ -24,15 +24,11 @@ case class MockEnv(name: String,
 object MockEnvUtil {
 
   def buildMockCloudAgent(mockAgencyEdgeAgent: MockEdgeAgent, executionContext: ExecutionContext): MockCloudAgent = {
-    val mcea = new MockCloudAgent(executionContext, mockAgencyEdgeAgent.agencyEndpoint, mockAgencyEdgeAgent.appConfig)
-    mcea.agencyPublicDid = Option(mockAgencyEdgeAgent.myDIDDetail.prepareAgencyIdentity)
-    mcea
+    new MockCloudAgent(executionContext, mockAgencyEdgeAgent.agencyEndpoint, mockAgencyEdgeAgent.appConfig)
   }
 
   def buildMockEdgeAgent(mockAgencyEdgeAgent: MockEdgeAgent, executionContext: ExecutionContext): MockEdgeAgent = {
-    val mcea = new MockEdgeAgent(mockAgencyEdgeAgent.agencyEndpoint, mockAgencyEdgeAgent.appConfig, executionContext)
-    mcea.agencyPublicDid = Option(mockAgencyEdgeAgent.myDIDDetail.prepareAgencyIdentity)
-    mcea
+    new MockEdgeAgent(mockAgencyEdgeAgent.agencyEndpoint, mockAgencyEdgeAgent.appConfig, executionContext)
   }
 
   def buildNewEnv(name: String, appConfig: AppConfig, cloudAgentUrl: String, executionContext: ExecutionContext): MockEnv = {

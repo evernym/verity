@@ -29,7 +29,6 @@ import org.scalatest.time.{Millis, Seconds, Span}
 import java.util.UUID
 import com.evernym.verity.util2.ExecutionContextProvider
 
-import java.time.Instant
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.{Duration, SECONDS}
@@ -64,9 +63,7 @@ trait LibVcxProvider
                       agencyDidPair: DidPair,
                       protocolVersion: String): Unit = {
     val idOwner = provisionIssuerBase(identityOwnerName, verityEndpoint, agencyDidPair, protocolVersion)
-    withTAAAccepted(identityOwnerName) { _ =>
-      ledgerUtil.bootstrapNewDID(idOwner.sdkToRemoteDID, idOwner.sdkToRemoteVerKey)
-    }
+    ledgerUtil.bootstrapNewDID(idOwner.sdkToRemoteDID, idOwner.sdkToRemoteVerKey)
   }
 
   def provisionHolder(identityOwnerName: IdentityOwnerName,
@@ -81,7 +78,7 @@ trait LibVcxProvider
                   sourceId: String,
                   createSchemaParam: CreateSchemaParam,
                   credDefParam: CreateCredDefParam): IssuerSetup = {
-    val schemaId: String = withTAAAccepted(identityOwnerName) { _ =>
+    val schemaId: String = withVcxIdentityOwner(identityOwnerName) { idOwner =>
       val schemaHandle =
         SchemaApi.schemaCreate(
           sourceId,
@@ -94,7 +91,7 @@ trait LibVcxProvider
       SchemaApi.schemaGetSchemaId(schemaHandle).get()
     }
 
-    val credDefId = withTAAAccepted(identityOwnerName) { _ =>
+    val credDefId = withVcxIdentityOwner(identityOwnerName) { idOwner =>
       val credDefHandle =
         CredentialDefApi.credentialDefCreate(
           sourceId,
@@ -167,23 +164,6 @@ trait LibVcxProvider
     val minor = 100 + random.nextInt(100)
     val path  = 200 + random.nextInt(100)
     s"$major.$minor.$path"
-  }
-
-  def withTAAAccepted[R](forOwnerName: IdentityOwnerName)(f: IdentityOwner => R): R = {
-    withVcxIdentityOwner(forOwnerName) { owner =>
-      if (isTaaEnabled) {
-        val agreement = new JSONObject(UtilsApi.getLedgerAuthorAgreement.get())
-        val acceptMechanism = "at_submission"
-        UtilsApi.setActiveTxnAuthorAgreementMeta(
-          agreement.getString("text"),
-          agreement.getString("version"),
-          null,
-          acceptMechanism,
-          Instant.now.getEpochSecond
-        )
-      }
-      f(owner)
-    }
   }
 
   def sendMessage[T: ClassTag](fromOwnerName: IdentityOwnerName,
@@ -284,14 +264,28 @@ trait LibVcxProvider
     }
   }
 
+  def upgradeConnection(fromOwnerName: IdentityOwnerName,
+                        connId: String,
+                        data: String): Unit = {
+    withConnection(fromOwnerName, connId) { (idOwner, connHandle) =>
+      ConnectionApi.connectionUpgrade(connHandle, data).get()
+    }
+  }
+
+  def getPairwiseDID(fromOwnerName: IdentityOwnerName,
+                     connId: String): String = {
+    withConnection(fromOwnerName, connId) { (idOwner, connHandle) =>
+      ConnectionApi.connectionGetPwDid(connHandle).get()
+    }
+  }
 
   def expectMsg[T: ClassTag](idOwnerName: IdentityOwnerName,
                              fromConn: String,
                              legacyMsgTypeName: Option[String] = None): ExpectedMsg[T] = {
     withConnection(idOwnerName, fromConn) { (_, connHandle) =>
       val expectedPairwiseDID = ConnectionApi.connectionGetPwDid(connHandle).get()
-
-      eventually(timeout(Span(15, Seconds)), interval(Span(100, Millis))) {
+      val expectedMsgTypeStr = Try(buildMsgTypeStr)
+      eventually(timeout(Span(15, Seconds)), interval(Span(1000, Millis))) {
         val getMsgResult = UtilsApi.vcxGetMessages("MS-103", null, s"$expectedPairwiseDID").get()
         val jsonArray = new JSONArray(getMsgResult).asScala
         val pairwiseMsgsOpt = jsonArray.find { obj =>
@@ -314,8 +308,10 @@ trait LibVcxProvider
           legacyMsgTypeName.contains(rm.msgTypeName) ||
             Try {
               val receivedMsg = new JSONObject(rm.msg)
-              val expectedMsgTypeStr = buildMsgTypeStr
-              receivedMsg.getString("@type") == expectedMsgTypeStr
+              val receivedMsgType = receivedMsg.getString("@type")
+              legacyMsgTypeName.contains(receivedMsgType) ||
+                expectedMsgTypeStr.map(_ == receivedMsgType)
+                  .getOrElse(false)
             }.getOrElse(false)
         }
         expectedMsg.isDefined shouldBe true
@@ -416,6 +412,24 @@ trait LibVcxProvider
     val walletName = UUID.randomUUID().toString
     val walletKey = "test-password"
 
+    val indyPoolNetwork = new JSONObject()
+    val namespaceList = new JSONArray()
+    namespaceList.put("sov")
+    indyPoolNetwork.put("genesis_path", genesisTxnFilePath)
+    indyPoolNetwork.put("namespace_list", namespaceList)
+
+    if (isTaaEnabled) {
+      val indyTAAConfigJson = new JSONObject()
+      indyTAAConfigJson.put("text", "TAA for sandbox ledger")
+      indyTAAConfigJson.put("version", "1.0.0")
+      indyTAAConfigJson.put("acc_mech_type", "at_submission")
+      indyTAAConfigJson.put("time", java.time.Instant.now().getEpochSecond)
+
+      indyPoolNetwork.put("taa_config", indyTAAConfigJson)
+    }
+
+    val poolNetworks = new JSONArray()
+    poolNetworks.put(indyPoolNetwork)
     val provisionConfig: JSONObject = new JSONObject(specificConfig.toString)
       .put("agency_url", verityEndpoint)
       .put("agency_did", agencyDidPair.did)
@@ -425,10 +439,11 @@ trait LibVcxProvider
       .put("pool_name", UUID.randomUUID().toString)
       .put("name", s"verity-integration-test")
       .put("logo", s"https://robohash.org/${UUID.randomUUID()}.png")
-      .put("path", genesisTxnFilePath)
       .put("protocol_type", protocolVersion)
+      .put("pool_networks", poolNetworks)
 
     val config = new JSONObject(UtilsApi.vcxAgentProvisionAsync(provisionConfig.toString()).get())
+
     val idOwner = IdentityOwner(config)
     vcxConfigMapping += identityOwnerName -> IdentityOwner(config)
     idOwner

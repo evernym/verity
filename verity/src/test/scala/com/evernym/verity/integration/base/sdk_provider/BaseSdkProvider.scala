@@ -416,6 +416,15 @@ trait LegacySdkBase_0_5 { this: SdkBase =>
                            (implicit mpf: MsgPackFormat = MPF_MSG_PACK): InviteAcceptedResp_MFV_0_5 = {
     val myPairwiseRel = myPairwiseRelationships(connId)
 
+    myPairwiseRelationships += (connId ->
+      myPairwiseRel.copy(theirDIDDoc = Option(DIDDoc(
+        inviteDetail.senderDetail.DID,
+        inviteDetail.senderDetail.verKey,
+        inviteDetail.senderAgencyDetail.endpoint,
+        Vector(inviteDetail.senderDetail.agentKeyDlgProof.get.agentDelegatedKey,
+          inviteDetail.senderAgencyDetail.verKey)
+      )))
+      )
     val keyDlgProof = Util
       .getAgentKeyDlgProof(
         myPairwiseRel.myPairwiseVerKey,
@@ -484,7 +493,15 @@ trait LegacySdkBase_0_6 { this: SdkBase =>
 
   def sendConnReqAnswer_0_6(connId: String, inviteDetail: InviteDetail): ConnReqAccepted_MFV_0_6 = {
     val myPairwiseRel = myPairwiseRelationships(connId)
-
+    myPairwiseRelationships += (connId ->
+      myPairwiseRel.copy(theirDIDDoc = Option(DIDDoc(
+        inviteDetail.senderDetail.DID,
+        inviteDetail.senderDetail.verKey,
+        inviteDetail.senderAgencyDetail.endpoint,
+        Vector(inviteDetail.senderDetail.agentKeyDlgProof.get.agentDelegatedKey,
+          inviteDetail.senderAgencyDetail.verKey)
+      )))
+      )
     val keyDlgProof = Util
       .getAgentKeyDlgProof(
         myPairwiseRel.myPairwiseVerKey,

@@ -6,9 +6,9 @@ package object vdr {
   type FQCredDefId = String
   type FQDid = String
 
-  type Did = String
-  type Schema = String
-  type CredDef = String
+  type VdrDid = String
+  type VdrSchema = String
+  type VdrCredDef = String
   type TxnResult = String
   type TxnSpecificParams = String
 }

@@ -31,7 +31,6 @@ class VdrToolsConfigSpec
               |""".stripMargin
           )
         )
-        vdrToolsConfig.libraryDirLocation shouldBe "/usr/lib"
         vdrToolsConfig.ledgers shouldBe List (
           IndyLedger(List("indy:sovrin", "sov"), "/path", None)
         )

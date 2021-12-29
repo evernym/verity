@@ -3,7 +3,7 @@ package com.evernym.verity.vdr.service
 import akka.actor.ActorInitializationException
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
-import com.evernym.vdrtools.vdr.VdrResults.PreparedTxnResult
+import com.evernym.vdrtools.vdr.VdrResults.{PingResult, PreparedTxnResult}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.vdr.service.VDRActor.Commands._
@@ -59,13 +59,13 @@ object VDRActor {
 
     case class PrepareTxnResp(preparedTxn: Try[PreparedTxnResult]) extends Reply
 
-    case class SubmitTxnResp(preparedTxn: Try[TxnResult]) extends Reply
+    case class SubmitTxnResp(txnResult: Try[TxnResult]) extends Reply
 
-    case class ResolveSchemaResp(resp: Try[Schema]) extends Reply
+    case class ResolveSchemaResp(resp: Try[VdrSchema]) extends Reply
 
-    case class ResolveCredDefResp(resp: Try[CredDef]) extends Reply
+    case class ResolveCredDefResp(resp: Try[VdrCredDef]) extends Reply
 
-    case class ResolveDIDResp(resp: Try[Did]) extends Reply
+    case class ResolveDIDResp(resp: Try[DidStr]) extends Reply
   }
 
   //implementation of above typed interface

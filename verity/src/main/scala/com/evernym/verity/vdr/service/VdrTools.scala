@@ -1,6 +1,7 @@
 package com.evernym.verity.vdr.service
 
-import com.evernym.vdrtools.vdr.VdrResults.PreparedTxnResult
+import com.evernym.vdrtools.vdr.VdrParams.CacheOptions
+import com.evernym.vdrtools.vdr.VdrResults.{PingResult, PreparedTxnResult}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.vdr._
 
@@ -8,22 +9,22 @@ import scala.concurrent.Future
 
 trait VdrTools {
 
-  def ping(namespaceList: List[String]): Future[Map[String, PingResult]]
+  def ping(namespaceList: List[Namespace]): Future[Map[String, PingResult]]
 
-  def resolveDid(fqDid: FQDid): Future[Did]
+  def resolveDid(fqDid: FQDid): Future[VdrDid]
 
   def resolveDid(fqDid: FQDid,
-                 cacheOptions: CacheOptions): Future[Did]
+                 cacheOptions: CacheOptions): Future[VdrDid]
 
-  def resolveSchema(fqSchemaId: FQSchemaId): Future[Schema]
+  def resolveSchema(fqSchemaId: FQSchemaId): Future[VdrSchema]
 
   def resolveSchema(fqSchemaId: FQSchemaId,
-                    cacheOptions: CacheOptions): Future[Schema]
+                    cacheOptions: CacheOptions): Future[VdrSchema]
 
-  def resolveCredDef(fqCredDefId: FQCredDefId): Future[CredDef]
+  def resolveCredDef(fqCredDefId: FQCredDefId): Future[VdrCredDef]
 
   def resolveCredDef(fqCredDefId: FQCredDefId,
-                     cacheOptions: CacheOptions): Future[CredDef]
+                     cacheOptions: CacheOptions): Future[VdrCredDef]
 
   def prepareDid(txnSpecificParams: TxnSpecificParams,
                  submitterDid: DidStr,
@@ -49,18 +50,3 @@ trait VdrTools {
   def submitQuery(namespace: Namespace,
                   query: String): Future[TxnResult]
 }
-
-// Todo: this classes will be introduced in future version of vdrtools
-case class TaaConfig(text: String,
-                     version: String,
-                     taaDigest: String,
-                     accMechType: String,
-                     time: String)
-
-case class CacheOptions(noCache: Boolean,
-                        noUpdate: Boolean,
-                        noStore: Boolean,
-                        minFresh: Int)
-
-case class PingResult( code: String,
-                       message: String)

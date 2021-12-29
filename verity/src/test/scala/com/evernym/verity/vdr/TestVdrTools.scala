@@ -1,5 +1,8 @@
 package com.evernym.verity.vdr
 
+import com.evernym.vdrtools.vdr.VdrParams.{CacheOptions, TaaConfig}
+import com.evernym.vdrtools.vdr.VdrResults
+import com.evernym.vdrtools.vdr.VdrResults.PreparedTxnResult
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.vdr.service._
@@ -7,63 +10,83 @@ import com.evernym.verity.vdr.service._
 import scala.concurrent.{ExecutionContext, Future}
 
 //in-memory version of VDRTools to be used in tests (unit/integration)
-class TestVdrTools(implicit ec: ExecutionContext)
+class TestVdrTools(ledgerRegistry: TestLedgerRegistry)(implicit ec: ExecutionContext)
   extends VdrTools {
 
   //TODO: as we add/integrate actual VDR apis and their tests,
   // this class should evolve to reflect the same for its test implementation
 
-  override def registerIndyLedger(namespaceList: List[Namespace],
-                                  genesisTxnFilePath: String,
-                                  taaConfig: Option[TAAConfig]): Future[VDR_LedgerRegistered] = {
-    ledgerRegistry = ledgerRegistry.withNewLedger(TestIndyLedger(namespaceList, genesisTxnFilePath, taaConfig))
-    Future.successful(VDR_LedgerRegistered())
-  }
-
-  override def ping(namespaces: List[Namespace]): Future[VDR_PingResult] = {
+  override def ping(namespaces: List[Namespace]): Future[Map[String, VdrResults.PingResult]] = {
     val allNamespaces = if (namespaces.isEmpty) ledgerRegistry.ledgers.flatMap(_.namespaces) else namespaces
-    Future.successful(VDR_PingResult(allNamespaces.map(n => n -> PingStatus(reachable = true)).toMap))
+    Future.successful(allNamespaces.map(n => n -> new VdrResults.PingResult("SUCCESS", "OK")).toMap)
   }
 
-  override def prepareSchemaTxn(schemaJson: String,
-                                fqSchemaId: String,
-                                submitterDid: DidStr,
-                                endorser: Option[String]): Future[VDR_PreparedTxn] = {
+  override def prepareSchema(txnSpecificParams: TxnSpecificParams,
+                             submitterDid: DidStr,
+                             endorser: Option[String]): Future[PreparedTxnResult] = {
     forLedger(submitterDid) { ledger: InMemLedger =>
       ledger.prepareSchemaTxn(schemaJson, fqSchemaId, submitterDid, endorser)
     }
   }
 
-  override def prepareCredDefTxn(credDefJson: String,
-                                 fqCredDefId: String,
-                                 submitterDID: DidStr,
-                                 endorser: Option[String]): Future[VDR_PreparedTxn] = {
-    forLedger(submitterDID) { ledger: InMemLedger =>
-      ledger.prepareCredDefTxn(credDefJson,fqCredDefId,submitterDID, endorser)
+  override def prepareCredDef(txnSpecificParams: TxnSpecificParams,
+                              submitterDid: DidStr,
+                              endorser: Option[String]): Future[PreparedTxnResult] = {
+    forLedger(submitterDid) { ledger: InMemLedger =>
+      ledger.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser)
     }
   }
 
-  override def submitTxn(preparedTxn: VDR_PreparedTxn,
+  override def submitTxn(namespace: Namespace,
+                         txnBytes: Array[Byte],
+                         signatureSpec: String,
                          signature: Array[Byte],
-                         endorsement: Array[Byte]): Future[VDR_SubmittedTxn] = {
+                         endorsement: String): Future[TxnResult] = {
     withLedger(preparedTxn.context) { ledger: InMemLedger =>
       ledger.submitTxn(preparedTxn, signature, endorsement)
     }
   }
 
-  override def resolveSchema(schemaId: FQSchemaId): Future[VDR_Schema] = {
+  def submitRawTxn(namespace: Namespace,
+                   txnBytes: Array[Byte]): Future[TxnResult] = ???
+
+  def submitQuery(namespace: Namespace,
+                  query: String): Future[TxnResult] = ???
+
+  override def resolveSchema(schemaId: FQSchemaId): Future[VdrSchema] = {
     forLedger(schemaId) { ledger: InMemLedger =>
       ledger.resolveSchema(schemaId)
     }
   }
 
-  override def resolveCredDef(credDefId: FQCredDefId): Future[VDR_CredDef] = {
+  override def resolveSchema(schemaId: FQSchemaId,
+                             cacheOptions: CacheOptions): Future[VdrSchema] = {
+    forLedger(schemaId) { ledger: InMemLedger =>
+      ledger.resolveSchema(schemaId)
+    }
+  }
+
+  override def resolveCredDef(credDefId: FQCredDefId): Future[VdrCredDef] = {
     forLedger(credDefId) { ledger: InMemLedger =>
       ledger.resolveCredDef(credDefId)
     }
   }
 
-  override def resolveDID(fqDid: FQDid): Future[VDR_DidDoc] = {
+  override def resolveCredDef(credDefId: FQCredDefId,
+                              cacheOptions: CacheOptions): Future[VdrCredDef] = {
+    forLedger(credDefId) { ledger: InMemLedger =>
+      ledger.resolveCredDef(credDefId)
+    }
+  }
+
+  override def resolveDid(fqDid: FQDid): Future[VdrDid] = {
+    forLedger(fqDid) { ledger: InMemLedger =>
+      ledger.resolveDid(fqDid)
+    }
+  }
+
+  override def resolveDid(fqDid: FQDid,
+                          cacheOptions: CacheOptions): Future[VdrDid] = {
     forLedger(fqDid) { ledger: InMemLedger =>
       ledger.resolveDid(fqDid)
     }
@@ -86,18 +109,18 @@ class TestVdrTools(implicit ec: ExecutionContext)
       )
       Future.successful(f(ledger))
     } catch {
-      case ex: RuntimeException  => Future.failed(ex)
+      case ex: RuntimeException => Future.failed(ex)
     }
   }
 
   private def withLedger[T](id: String)(f: InMemLedger => T): Future[T] = {
     ledgerRegistry.ledgers.find(_.id == id) match {
       case Some(ledger) => Future.successful(f(ledger))
-      case None         => Future.failed(new RuntimeException("ledger not found with id: " + id))
+      case None => Future.failed(new RuntimeException("ledger not found with id: " + id))
     }
   }
 
-  private var ledgerRegistry: TestLedgerRegistry = TestLedgerRegistry(List.empty)
+  //private var ledgerRegistry: TestLedgerRegistry = TestLedgerRegistry(List.empty)
 }
 
 //TODO: refactor this to some common utility etc
@@ -128,12 +151,13 @@ case class TestLedgerRegistry(ledgers: List[InMemLedger]) {
 //base interface for any VDR (for testing purposes only)
 trait InMemLedger {
   def id: String
+
   def namespaces: List[Namespace]
 
   def prepareSchemaTxn(schemaJson: String,
                        fqSchemaId: FQSchemaId,
-                       submitterDid: DidStr,
-                       endorser: Option[String]): VDR_PreparedTxn = {
+                       submitterDid: VdrDid,
+                       endorser: Option[String]): PreparedTxnResult = {
     TestFQIdentifier(fqSchemaId, namespaces)
     val schema = TestVDRSchema(fqSchemaId, schemaJson)
     val jsonPayload = JacksonMsgCodec.toJson(schema)
@@ -142,8 +166,8 @@ trait InMemLedger {
 
   def prepareCredDefTxn(credDefJson: String,
                         fQCredDefId: FQCredDefId,
-                        submitterDID: DidStr,
-                        endorser: Option[String]): VDR_PreparedTxn = {
+                        submitterDID: VdrDid,
+                        endorser: Option[String]): PreparedTxnResult = {
     TestFQIdentifier(fQCredDefId, namespaces)
     val credDef = TestVDRCredDef(fQCredDefId, extractSchemaId(credDefJson), credDefJson)
     val jsonPayload = JacksonMsgCodec.toJson(credDef)
@@ -152,7 +176,7 @@ trait InMemLedger {
 
   def submitTxn(preparedTxn: VDR_PreparedTxn,
                 signature: Array[Byte],
-                endorsement: Array[Byte]): VDR_SubmittedTxn = {
+                endorsement: Array[Byte]): TxnResult = {
     val node = JacksonMsgCodec.docFromStrUnchecked(new String(preparedTxn.bytesToSign))
     node.get("payloadType").asText() match {
       case "schema" =>
@@ -169,18 +193,18 @@ trait InMemLedger {
     VDR_SubmittedTxn()
   }
 
-  def resolveSchema(schemaId: FQSchemaId): VDR_Schema = {
+  def resolveSchema(schemaId: FQSchemaId): VdrSchema = {
     val data = schemas.getOrElse(schemaId, throw new RuntimeException("schema not found for given id: " + schemaId))
     VDR_Schema(schemaId, data)
   }
 
-  def resolveCredDef(credDefId: FQCredDefId): VDR_CredDef = {
+  def resolveCredDef(credDefId: FQCredDefId): VdrCredDef = {
     val data = credDefs.getOrElse(credDefId, throw new RuntimeException("cred def not found for given id: " + credDefId))
     val cd = JacksonMsgCodec.fromJson[TestVDRCredDef](new String(data))
     VDR_CredDef(credDefId, cd.schemaId, data)
   }
 
-  def resolveDid(fqDid: FQDid): VDR_DidDoc = {
+  def resolveDid(fqDid: FQDid): VdrDid = {
     val data = didDocs.getOrElse(fqDid, throw new RuntimeException("did doc not found for given id: " + fqDid))
     val dd = JacksonMsgCodec.fromJson[TestVDRDidDoc](new String(data))
     VDR_DidDoc(fqDid, dd.verKey, dd.endpoint)
@@ -204,8 +228,8 @@ trait InMemLedger {
 }
 
 case class TestIndyLedger(namespaces: List[Namespace],
-                          genesisTxnFilePath: String,
-                          taaConfig: Option[TAAConfig])
+                          genesisTxnData: String,
+                          taaConfig: Option[TaaConfig])
   extends InMemLedger {
   override def id: String = namespaces.mkString("-")
 }
@@ -218,10 +242,12 @@ case class TestVDRSchema(schemaId: FQSchemaId, json: String)
   extends TestPayloadBase {
   override val payloadType: String = "schema"
 }
+
 case class TestVDRCredDef(credDefId: FQCredDefId, schemaId: FQSchemaId, json: String)
   extends TestPayloadBase {
   override val payloadType: String = "creddef"
 }
+
 case class TestVDRDidDoc(id: FQDid, verKey: VerKeyStr, endpoint: Option[String])
   extends TestPayloadBase {
   override val payloadType: String = "diddoc"

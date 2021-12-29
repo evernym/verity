@@ -1,5 +1,7 @@
 package com.evernym.verity.vdr.service
 
+import com.evernym.vdrtools.vdr.VdrParams.TaaConfig
+
 import scala.concurrent.Future
 
 trait VdrToolsBuilder {

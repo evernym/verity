@@ -1,34 +1,65 @@
 package com.evernym.verity.vdr
 
-import com.evernym.vdrtools.vdr.VdrResults.PreparedTxnResult
-import com.evernym.verity.did.DidStr
-import com.evernym.verity.vdr.service.PingResult
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 
 import scala.concurrent.Future
 
 //interface to be used by verity code to interact with VDR/Ledger services
 trait VDRAdapter {
 
-  def ping(namespaces: List[Namespace]): Future[Map[String, PingResult]]
+  def ping(namespaces: List[Namespace]): Future[PingResult]
 
-  def prepareSchemaTxn(txnSpecificParams: TxnSpecificParams,
-                       submitterDid: DidStr,
-                       endorser: Option[String]): Future[PreparedTxnResult]
+  def prepareSchemaTxn(schemaJson: String,
+                       fqSchemaId: FQSchemaId,
+                       submitterDID: VdrDid,
+                       endorser: Option[String]): Future[PreparedTxn]
 
-  def prepareCredDefTxn(txnSpecificParams: TxnSpecificParams,
-                        submitterDid: DidStr,
-                        endorser: Option[String]): Future[PreparedTxnResult]
 
-  def submitTxn(namespace: Namespace,
-                txnBytes: Array[Byte],
-                signatureSpec: String,
+
+  def prepareCredDefTxn(credDefJson: String,
+                        fqCredDefId: FQCredDefId,
+                        submitterDID: VdrDid,
+                        endorser: Option[String]): Future[PreparedTxn]
+
+  def submitTxn(preparedTxn: PreparedTxn,
                 signature: Array[Byte],
-                endorsement: String): Future[TxnResult]
+                endorsement: Array[Byte]): Future[SubmittedTxn]
 
   def resolveSchema(schemaId: FQSchemaId): Future[Schema]
 
   def resolveCredDef(credDefId: FQCredDefId): Future[CredDef]
 
-  def resolveDID(fqDid: FQDid): Future[Did]
+  def resolveDID(fqDid: FQDid): Future[DidDoc]
 }
+
+
+case class LedgerStatus(reachable: Boolean)
+
+case class PingResult(status: Map[Namespace, LedgerStatus])
+
+case class PreparedTxn(namespace: String,
+                       signatureSpec: SignatureSpec,
+                       txnBytes: Array[Byte],
+                       bytesToSign: Array[Byte],
+                       endorsementSpec: EndorsementSpec)
+
+case class SubmittedTxn(response: String)
+
+case class Schema(fqId: FQSchemaId, json: String)
+
+case class CredDef(fqId: FQCredDefId, schemaId: FQSchemaId, json: String)
+
+case class DidDoc(fqId: FQDid, verKey: VerKeyStr, endpoint: Option[String])
+
+trait SignatureSpec
+
+case object NoSignature extends SignatureSpec
+
+case class Spec(data: String) extends SignatureSpec
+
+trait EndorsementSpec
+
+case object NoEndorsement extends EndorsementSpec
+
+case class Endorsement(data: String) extends EndorsementSpec
 

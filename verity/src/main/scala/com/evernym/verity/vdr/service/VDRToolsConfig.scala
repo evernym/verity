@@ -1,5 +1,6 @@
 package com.evernym.verity.vdr.service
 
+import com.evernym.vdrtools.vdr.VdrParams.TaaConfig
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.vdr.Namespace
 import com.typesafe.config.Config
@@ -18,12 +19,19 @@ object VDRToolsConfig {
             vdrConfigReadHelper.getStringListReq("namespaces"),
             vdrConfigReadHelper.getStringReq("genesis-txn-file-location"), // todo read file
             vdrConfigReadHelper.getConfigOption("taa").map { taaConfig =>
-              val text = taaConfig.getString("hash")
-              val version = taaConfig.getString("version")
-              val taaDigest = taaConfig.getString("taaDigest")
-              val accMechType = taaConfig.getString("accMechType")
-              val time = taaConfig.getString("time")
-              TaaConfig(text, version, taaDigest, accMechType, time)
+              val conf = ConfigReadHelper(taaConfig)
+              val text = conf.getStringOption("hash")
+              val version = conf.getStringOption("version")
+              val taaDigest = conf.getStringOption("taaDigest")
+              val accMechType = conf.getStringReq("accMechType")
+              val time = conf.getStringReq("time")
+              // todo add TAA config validation
+              if (text.isDefined && version.isDefined) {
+                new TaaConfig(text.get, version.get, accMechType, time)
+              }
+              else {
+                new TaaConfig(taaDigest.get, accMechType, time)
+              }
             }
           )
       }
@@ -32,7 +40,7 @@ object VDRToolsConfig {
   }
 }
 
-case class VDRToolsConfig( ledgers: List[Ledger]) {
+case class VDRToolsConfig(ledgers: List[Ledger]) {
   def validate(): Unit = {
     if (ledgers.isEmpty) {
       throw new RuntimeException("[VDR] no ledger configs found")
@@ -42,11 +50,13 @@ case class VDRToolsConfig( ledgers: List[Ledger]) {
       throw new RuntimeException("[VDR] ledgers can not have shared namespaces")
     }
   }
+
   validate()
 }
 
 sealed trait Ledger {
   def namespaces: List[Namespace]
 }
+
 case class IndyLedger(namespaces: List[Namespace], genesisTxnFilePath: String, taaConfig: Option[TaaConfig])
   extends Ledger

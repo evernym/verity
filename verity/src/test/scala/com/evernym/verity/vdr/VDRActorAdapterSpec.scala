@@ -353,9 +353,11 @@ class VDRActorAdapterSpec
   }
 
   def createVDRActorAdapter(ledgers: List[Ledger]): VDRActorAdapter = {
+
     testVDRTools = new TestVdrTools
-    val testVDRToolsFactory = { _: VDRToolsFactoryParam => testVDRTools }
-    val vdrToolsConfig = VDRToolsConfig("/usr/lib", ledgers)
+    val testVdrToolsBuilder = new TestVdrToolsBuilder()
+    val testVDRToolsFactory = { ()  => testVdrToolsBuilder }
+    val vdrToolsConfig = VDRToolsConfig(ledgers)
     new VDRActorAdapter(testVDRToolsFactory, vdrToolsConfig, None)(ec, system.toTyped)
   }
 

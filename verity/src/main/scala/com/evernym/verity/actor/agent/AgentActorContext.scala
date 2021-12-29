@@ -63,9 +63,8 @@ trait AgentActorContext
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, futureExecutionContext)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val storageAPI: StorageAPI = StorageAPI.loadFromConfig(appConfig, futureExecutionContext)
-  //TODO: it should be replaced with real implementation in future
-  lazy val vdrToolsBuilder: VdrToolsBuilder = new VdrToolsBuilderImpl()
-  lazy val vdrAdapter: VDRAdapter = createMockVDRAdapter(vdrToolsBuilder)
+  lazy val vdrBuilderFactory: VDRToolsFactory = () => new VdrToolsBuilderImpl
+  lazy val vdrAdapter: VDRAdapter = createMockVDRAdapter(vdrBuilderFactory)
 
   //NOTE: this 'oAuthAccessTokenRefreshers' is only need here until we switch to the outbox solution
   val oAuthAccessTokenRefreshers: AccessTokenRefreshers = new AccessTokenRefreshers {

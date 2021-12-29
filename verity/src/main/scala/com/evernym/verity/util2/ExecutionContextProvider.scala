@@ -3,7 +3,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.{VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE, VERITY_WALLET_FUTURE_THREAD_POOL_SIZE}
 import kamon.instrumentation.executor.ExecutorInstrumentation
 
-import java.util.concurrent.Executors
+import java.util.concurrent.{Executors, ThreadFactory}
 import scala.concurrent.ExecutionContext
 
 trait HasExecutionContextProvider {
@@ -13,9 +13,9 @@ trait HasExecutionContextProvider {
   def futureExecutionContext: ExecutionContext
 }
 
-class ExecutionContextProvider(val appConfig: AppConfig) {
-  private lazy val defaultFutureThreadPoolSize: Option[Int] =
-    appConfig.getIntOption(VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE)
+class ExecutionContextProvider(val appConfig: AppConfig, threadFactory: Option[ThreadFactory] = None) {
+  private lazy val defaultFutureThreadPoolSize: Option[Int] = Some(8)
+    //appConfig.getIntOption(VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE)
 
   /**
    * custom thread pool executor
@@ -24,7 +24,12 @@ class ExecutionContextProvider(val appConfig: AppConfig) {
     {
       ExecutorInstrumentation.instrumentExecutionContext(
         defaultFutureThreadPoolSize match {
-          case Some(size) => ExecutionContext.fromExecutor(Executors.newFixedThreadPool(size))
+          case Some(size) =>
+            threadFactory.map {
+              tf => ExecutionContext.fromExecutor(Executors.newFixedThreadPool(size, tf))
+            }getOrElse {
+              ExecutionContext.fromExecutor(Executors.newFixedThreadPool(size))
+            }
           case _          => ExecutionContext.fromExecutor(null)
         },
         "future-thread-executor")

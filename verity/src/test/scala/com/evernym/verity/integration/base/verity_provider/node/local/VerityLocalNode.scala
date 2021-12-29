@@ -43,6 +43,7 @@ case class VerityLocalNode(tmpDirPath: Path,
     logger.info(s"[rg-00] start verity instance ${portProfile.artery}")
     if (!isAvailable) {
       Future {
+        logger.info(s"[rg-01] Future class loader is ${Thread.currentThread().getContextClassLoader}")
         startVerityInstance()
       } map {
         srv =>

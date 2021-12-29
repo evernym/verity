@@ -92,34 +92,30 @@ trait SdkProvider {
 
   def setupIssuerSdkAsync(verityEnv: Future[VerityEnv],
                           executionContext: ExecutionContext,
-                          oauthParam: Option[OAuthParam] = None)(implicit ctxLoader: ClassLoader): Future[IssuerSdk] =
+                          oauthParam: Option[OAuthParam] = None): Future[IssuerSdk] =
     verityEnv.map(env => {
-      Thread.currentThread().setContextClassLoader(ctxLoader)
       setupIssuerSdk(env, executionContext, oauthParam)
     })(executionContext)
 
   def setupIssuerRestSdkAsync(verityEnv: Future[VerityEnv],
                               executionContext: ExecutionContext,
-                              oauthParam: Option[OAuthParam] = None)(implicit ctxLoader: ClassLoader): Future[IssuerRestSDK] =
+                              oauthParam: Option[OAuthParam] = None): Future[IssuerRestSDK] =
     verityEnv.map(env => {
-      Thread.currentThread().setContextClassLoader(ctxLoader)
       setupIssuerRestSdk(env, executionContext, oauthParam)
     })(executionContext)
 
   def setupVerifierSdkAsync(verityEnv: Future[VerityEnv],
                             executionContext: ExecutionContext,
-                            oauthParam: Option[OAuthParam] = None)(implicit ctxLoader: ClassLoader): Future[VerifierSdk] =
+                            oauthParam: Option[OAuthParam] = None): Future[VerifierSdk] =
     verityEnv.map(env => {
-      Thread.currentThread().setContextClassLoader(ctxLoader)
       setupVerifierSdk(env, executionContext, oauthParam)
     })(executionContext)
 
 
   def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
                           ledgerTxnExecutor: LedgerTxnExecutor,
-                          executionContext: ExecutionContext)(implicit ctxLoader: ClassLoader): Future[HolderSdk] = {
+                          executionContext: ExecutionContext): Future[HolderSdk] = {
     verityEnv.map {
-      Thread.currentThread().setContextClassLoader(ctxLoader)
       env => setupHolderSdk(env, ledgerTxnExecutor, executionContext)
     }(executionContext)
   }
@@ -127,27 +123,24 @@ trait SdkProvider {
 
   def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
                           ledgerTxnExecutor: Option[LedgerTxnExecutor],
-                          executionContext: ExecutionContext)(implicit ctxLoader: ClassLoader): Future[HolderSdk] =
+                          executionContext: ExecutionContext): Future[HolderSdk] =
     verityEnv.map(env => {
-      Thread.currentThread().setContextClassLoader(ctxLoader)
       setupHolderSdk(env, ledgerTxnExecutor, executionContext)
     })(executionContext)
 
 
   def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
                           oauthParam: OAuthParam,
-                          executionContext: ExecutionContext)(implicit ctxLoader: ClassLoader): Future[HolderSdk] =
+                          executionContext: ExecutionContext): Future[HolderSdk] =
     verityEnv.map(env => {
-      Thread.currentThread().setContextClassLoader(ctxLoader)
       setupHolderSdk(env, oauthParam, executionContext)
     })(executionContext)
 
   def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
                           ledgerTxnExecutor: Option[LedgerTxnExecutor],
                           oauthParam: Option[OAuthParam],
-                          executionContext: ExecutionContext)(implicit ctxLoader: ClassLoader): Future[HolderSdk] =
+                          executionContext: ExecutionContext): Future[HolderSdk] =
     verityEnv.map(env => {
-      Thread.currentThread().setContextClassLoader(ctxLoader)
       setupHolderSdk(env, ledgerTxnExecutor, oauthParam, executionContext)
     })(executionContext)
 

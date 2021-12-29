@@ -49,7 +49,7 @@ class LimitsFlowSpec
 
   private val numOfAttrs = 125
   private val credDef10x20 = "cred_def_10x20_attrs"
-  private val credDef10x17800 = "cred_def_10x17800_attrs"
+  private val credDef10x18K = "cred_def_10x18K_attrs"
   private val credDef125x20 = "cred_def_10x22K_attrs"
   private val credDef125x200 = "cred_def_125x20_attrs"
   private val credDef125x1360 = "cred_def_125x1360_attrs"
@@ -210,7 +210,7 @@ class LimitsFlowSpec
 
     writeCredDef(
       sdk,
-      credDef10x17800,
+      credDef10x18K,
       "tag",
       WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
       schemaName10attrs,
@@ -356,7 +356,7 @@ class LimitsFlowSpec
       val str200char = str20char*10
       val str1360char = str20char*68
       val str1480char = str20char*74
-      val str17800char = str20char*890
+      val str18Kchar = str20char*900
 
       issueCredential_1_0(
         apps(verity1),
@@ -371,8 +371,8 @@ class LimitsFlowSpec
         apps(verity1),
         apps(cas1),
         connectionId,
-        (1 to 10).map { i => attr20(i) -> str17800char }.toMap,
-        credDef10x17800,
+        (1 to 10).map { i => attr20(i) -> str18Kchar }.toMap,
+        credDef10x18K,
         "tag"
       )
 

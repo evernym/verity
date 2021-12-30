@@ -14,24 +14,21 @@ trait HasExecutionContextProvider {
 }
 
 class ExecutionContextProvider(val appConfig: AppConfig, threadFactory: Option[ThreadFactory] = None) {
-  private lazy val defaultFutureThreadPoolSize: Option[Int] =
-    appConfig.getIntOption(VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE)
+  private lazy val defaultFutureThreadPoolSize: Int =
+    appConfig.getIntOption(VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE).getOrElse(8)
 
   /**
    * custom thread pool executor
    */
   lazy val futureExecutionContext: ExecutionContext =
     {
+      val threadPool = threadFactory match {
+        case Some(tf) => Executors.newFixedThreadPool(defaultFutureThreadPoolSize, tf)
+        case None => Executors.newFixedThreadPool(defaultFutureThreadPoolSize)
+      }
       ExecutorInstrumentation.instrumentExecutionContext(
-        defaultFutureThreadPoolSize match {
-          case Some(size) =>
-            threadFactory.map {
-              tf => ExecutionContext.fromExecutor(Executors.newFixedThreadPool(size, tf))
-            }getOrElse {
-              ExecutionContext.fromExecutor(Executors.newFixedThreadPool(size))
-            }
-          case _          => ExecutionContext.fromExecutor(null)
-        },
-        "future-thread-executor")
+        ExecutionContext.fromExecutor(threadPool),
+        "future-thread-executor"
+      )
     }
 }

@@ -24,18 +24,6 @@ class BasicMessageSpec
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val issuerVerityEnvFut =
-    VerityEnvBuilder
-      .default()
-      .withServiceParam(buildSvcParam)
-      .withConfig(DATA_RETENTION_CONFIG)
-      .buildAsync(VAS)
-
-  lazy val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
-
-  lazy val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
-  lazy val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, ledgerTxnExecutor, executionContext)
-
   var issuerVerityEnv: VerityEnv = _
   var holderVerityEnv: VerityEnv = _
 
@@ -48,17 +36,23 @@ class BasicMessageSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val f1 = issuerVerityEnvFut
-    val f2 = holderVerityEnvFut
+    val issuerVerityEnvFut =
+      VerityEnvBuilder
+        .default()
+        .withServiceParam(buildSvcParam)
+        .withConfig(DATA_RETENTION_CONFIG)
+        .buildAsync(VAS)
 
-    issuerVerityEnv = Await.result(f1, ENV_BUILD_TIMEOUT)
-    holderVerityEnv = Await.result(f2, ENV_BUILD_TIMEOUT)
+    val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
 
-    val f3 = issuerSDKFut
-    val f4 = holderSDKFut
+    val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, ledgerTxnExecutor, executionContext)
 
-    issuerSDK = Await.result(f3, SDK_BUILD_TIMEOUT)
-    holderSDK = Await.result(f4, SDK_BUILD_TIMEOUT)
+    issuerVerityEnv = Await.result(issuerVerityEnvFut, ENV_BUILD_TIMEOUT)
+    holderVerityEnv = Await.result(holderVerityEnvFut, ENV_BUILD_TIMEOUT)
+
+    issuerSDK = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
+    holderSDK = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)
 
     issuerSDK.fetchAgencyKey()
     issuerSDK.provisionVerityEdgeAgent()

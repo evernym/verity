@@ -26,14 +26,6 @@ class PresentProofSpec
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
-  lazy val verifierVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
-  lazy val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
-
-  lazy val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext)
-  lazy val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnv, executionContext)
-  lazy val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
-
   var issuerSDK: IssuerSdk = _
   var verifierSDK: VerifierSdk = _
   var holderSDK: HolderSdk = _
@@ -52,13 +44,17 @@ class PresentProofSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val f1 = issuerSDKFut
-    val f2 = verifierSDKFut
-    val f3 = holderSDKFut
+    val issuerVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
+    val verifierVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
+    val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
 
-    issuerSDK = Await.result(f1, SDK_BUILD_TIMEOUT)
-    verifierSDK = Await.result(f2, SDK_BUILD_TIMEOUT)
-    holderSDK = Await.result(f3, SDK_BUILD_TIMEOUT)
+    val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext)
+    val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnv, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+
+    issuerSDK   = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
+    verifierSDK = Await.result(verifierSDKFut, SDK_BUILD_TIMEOUT)
+    holderSDK   = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)
 
     provisionEdgeAgent(issuerSDK)
     provisionEdgeAgent(verifierSDK)

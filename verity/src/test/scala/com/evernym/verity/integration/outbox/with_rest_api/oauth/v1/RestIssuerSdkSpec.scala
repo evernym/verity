@@ -31,23 +31,20 @@ class RestIssuerSdkSpec
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).buildAsync(VAS)
-  lazy val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
-
-  lazy val issuerRestSDKFut = setupIssuerRestSdkAsync(issuerVerityEnv, executionContext, Option(V1OAuthParam(5.seconds)))
-  lazy val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
   var issuerRestSDK: IssuerRestSDK = _
   var holderSDK: HolderSdk = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val f1 = issuerRestSDKFut
-    val f2 = holderSDKFut
+    val issuerVerityEnv = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).buildAsync(VAS)
+    val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
 
+    val issuerRestSDKFut = setupIssuerRestSdkAsync(issuerVerityEnv, executionContext, Option(V1OAuthParam(5.seconds)))
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
 
-    issuerRestSDK = Await.result(f1, SDK_BUILD_TIMEOUT)
-    holderSDK = Await.result(f2, SDK_BUILD_TIMEOUT)
+    issuerRestSDK = Await.result(issuerRestSDKFut, SDK_BUILD_TIMEOUT)
+    holderSDK = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)
 
     issuerRestSDK.msgListener.accessTokenRefreshCount shouldBe 0
     issuerRestSDK.resetPlainMsgsCounter.plainMsgsBeforeLastReset shouldBe 0

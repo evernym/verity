@@ -38,14 +38,6 @@ class ReuseAttachmentSpec
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val issuerVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
-  lazy val verifierVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
-  lazy val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
-
-  lazy val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
-  lazy val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnvFut, executionContext)
-  lazy val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, executionContext)
-
   var issuerVerityEnv: VerityEnv = _
   var verifierVerityEnv: VerityEnv = _
 
@@ -71,19 +63,21 @@ class ReuseAttachmentSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val f1 = issuerVerityEnvFut
-    val f2 = verifierVerityEnvFut
+    val issuerVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
+    val verifierVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
+    val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
 
-    issuerVerityEnv = Await.result(f1, ENV_BUILD_TIMEOUT)
-    verifierVerityEnv = Await.result(f2, ENV_BUILD_TIMEOUT)
+    val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
+    val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnvFut, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, executionContext)
 
-    val f3 = issuerSDKFut
-    val f4 = verifierSDKFut
-    val f5 = holderSDKFut
+    issuerVerityEnv = Await.result(issuerVerityEnvFut, ENV_BUILD_TIMEOUT)
+    verifierVerityEnv = Await.result(verifierVerityEnvFut, ENV_BUILD_TIMEOUT)
 
-    issuerSDK = Await.result(f3, SDK_BUILD_TIMEOUT)
-    verifierSDK = Await.result(f4, SDK_BUILD_TIMEOUT)
-    holderSDK = Await.result(f5, SDK_BUILD_TIMEOUT)
+
+    issuerSDK = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
+    verifierSDK = Await.result(verifierSDKFut, SDK_BUILD_TIMEOUT)
+    holderSDK = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)
 
     provisionEdgeAgent(issuerSDK)
     provisionEdgeAgent(verifierSDK)

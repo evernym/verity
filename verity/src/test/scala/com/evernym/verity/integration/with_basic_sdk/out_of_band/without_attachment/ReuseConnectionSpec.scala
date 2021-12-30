@@ -28,12 +28,6 @@ class ReuseConnectionSpec
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val issuerVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
-  lazy val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
-
-  lazy val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
-  lazy val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, executionContext)
-
   var issuerSDK: IssuerSdk = _
   var holderSDK: HolderSdk = _
 
@@ -50,11 +44,13 @@ class ReuseConnectionSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val f1 = issuerSDKFut
-    val f2 = holderSDKFut
+    val issuerVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
+    val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
+    val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, executionContext)
 
-    issuerSDK = Await.result(f1, SDK_BUILD_TIMEOUT)
-    holderSDK = Await.result(f2, SDK_BUILD_TIMEOUT)
+    issuerSDK = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
+    holderSDK = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)
 
     provisionEdgeAgent(issuerSDK)
     provisionCloudAgent(holderSDK)

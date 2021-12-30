@@ -21,14 +21,6 @@ class ConnectionAcceptanceSpec
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
-  lazy val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
-
-  lazy val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext)
-
-  lazy val holderSDK1Fut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
-  lazy val holderSDK2Fut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
-
   var issuerSDK: IssuerSdk = _
   var holderSDK1: HolderSdk = _
   var holderSDK2: HolderSdk = _
@@ -36,13 +28,16 @@ class ConnectionAcceptanceSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val f1 = issuerSDKFut
-    val f2 = holderSDK1Fut
-    val f3 = holderSDK2Fut
+    val issuerVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
+    val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
 
-    issuerSDK = Await.result(f1, SDK_BUILD_TIMEOUT)
-    holderSDK1 = Await.result(f2, SDK_BUILD_TIMEOUT)
-    holderSDK2 = Await.result(f3, SDK_BUILD_TIMEOUT)
+    val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext)
+    val holderSDK1Fut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+    val holderSDK2Fut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+
+    issuerSDK = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
+    holderSDK1 = Await.result(holderSDK1Fut, SDK_BUILD_TIMEOUT)
+    holderSDK2 = Await.result(holderSDK2Fut, SDK_BUILD_TIMEOUT)
 
     issuerSDK.fetchAgencyKey()
     issuerSDK.provisionVerityEdgeAgent()

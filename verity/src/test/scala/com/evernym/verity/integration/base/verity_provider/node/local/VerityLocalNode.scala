@@ -99,7 +99,7 @@ case class VerityLocalNode(tmpDirPath: Path,
   }
 
   private def startVerityInstance(): HttpServer = {
-    LocalVerity(baseConfig, verityNodeParam, ecp, bootstrapApp = false, trackMessageProgress = true)
+    LocalVerity(verityNodeParam, ecp, Some(baseConfig))
   }
 
   /**

@@ -40,30 +40,10 @@ object LocalVerity {
     LocalVerity(VerityNodeParam(tempDir, appSeed, portProfile), ecp)
   }
 
-  def apply(baseConfig: ConfigMergeable,
-            verityNodeParam: VerityNodeParam,
-            ecp: ExecutionContextProvider,
-            bootstrapApp: Boolean,
-            trackMessageProgress: Boolean): HttpServer = {
-    val config = buildStandardVerityConfig(verityNodeParam, baseConfig)
-    val appConfig = new AppConfigWrapper(config)
-    val platform = initializeApp(appConfig, verityNodeParam.serviceParam, ecp)
-    val httpServer = new HttpServer(
-      platform,
-      new HttpRouteHandler(platform, ecp.futureExecutionContext).endpointRoutes,
-      ecp.futureExecutionContext
-    )
-    httpServer.start()
-    waitTillUp(platform.appStateManager)
-    httpServer
-  }
-
   def apply(verityNodeParam: VerityNodeParam,
             ecp: ExecutionContextProvider,
-            bootstrapApp: Boolean = true,
-            trackMessageProgress: Boolean = true): HttpServer = {
-
-    val config = buildStandardVerityConfig(verityNodeParam)
+            baseConfig: Option[ConfigMergeable] = None): HttpServer = {
+    val config = buildStandardVerityConfig(verityNodeParam, baseConfig.getOrElse(ConfigFactory.load()))
     val appConfig = new AppConfigWrapper(config)
     val platform = initializeApp(appConfig, verityNodeParam.serviceParam, ecp)
     val httpServer = new HttpServer(
@@ -91,10 +71,6 @@ object LocalVerity {
     }
   }
 
-  def buildStandardVerityConfig(verityNodeParam: VerityNodeParam): Config = {
-    buildCustomVerityConfigOnly(verityNodeParam)
-      .withFallback(ConfigFactory.load())
-  }
   def buildStandardVerityConfig(verityNodeParam: VerityNodeParam, baseConfig: ConfigMergeable): Config = {
     buildCustomVerityConfigOnly(verityNodeParam)
       .withFallback(baseConfig)

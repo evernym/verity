@@ -11,7 +11,7 @@ import com.evernym.verity.util2.ExecutionContextProvider
 
 object Main extends App {
   //do config validations (this should be the very first thing to do)
-  val appConfig = new AppConfigWrapper(null)
+  val appConfig = new AppConfigWrapper
   appConfig.init()
 
   val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)

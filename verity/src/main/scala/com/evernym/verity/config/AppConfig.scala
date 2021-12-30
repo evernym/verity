@@ -94,4 +94,6 @@ trait AppConfig extends ConfigReaderHelper {
 
 }
 
-class AppConfigWrapper(var config: Config) extends AppConfig
+class AppConfigWrapper extends AppConfig {
+  override var config: Config = _
+}

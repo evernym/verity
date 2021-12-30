@@ -58,9 +58,15 @@ trait VerityProviderBaseSpec
     private val logger: Logger = LoggingUtil.getLoggerByName("VerityEnvBuilder")
 
     def buildAsync(appType: AppType)(implicit ec: ExecutionContext = futureExecutionContext): Future[VerityEnv] = {
-      val nodes = createNodes(appType)
-      if (nodes.isEmpty) throw new RuntimeException("at least one node needed for a verity environment")
-      createEnvAsync(nodes, nodes.head.appSeed)
+      Future {
+        createNodes(appType)
+      } flatMap {
+        nodes =>
+        if (nodes.isEmpty) throw new RuntimeException("at least one node needed for a verity environment")
+        createEnvAsync(nodes, nodes.head.appSeed)
+      } recover {
+        case e: Throwable => throw e
+      }
     }
 
     def build(appType: AppType): VerityEnv = {

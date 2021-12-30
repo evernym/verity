@@ -14,8 +14,8 @@ trait HasExecutionContextProvider {
 }
 
 class ExecutionContextProvider(val appConfig: AppConfig, threadFactory: Option[ThreadFactory] = None) {
-  private lazy val defaultFutureThreadPoolSize: Option[Int] = Some(8)
-    //appConfig.getIntOption(VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE)
+  private lazy val defaultFutureThreadPoolSize: Option[Int] =
+    appConfig.getIntOption(VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE)
 
   /**
    * custom thread pool executor

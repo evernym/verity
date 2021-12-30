@@ -4,10 +4,10 @@ import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.integration.base.sdk_provider.SdkProvider
+import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider}
 import com.evernym.verity.util.TestExecutionContextProvider
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext}
 
 
 class AgentProvisioningSpec
@@ -17,11 +17,21 @@ class AgentProvisioningSpec
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
+  var issuerSDK: IssuerSdk = _
+  var holderSDK: HolderSdk = _
 
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+  override protected def beforeAll(): Unit = {
+    super.beforeAll()
+    val issuerVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
+    val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
+
+    val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+
+    issuerSDK = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
+    holderSDK = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)
+
+  }
 
 
   "IssuerSDK" - {

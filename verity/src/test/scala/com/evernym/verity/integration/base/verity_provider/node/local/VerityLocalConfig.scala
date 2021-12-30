@@ -183,6 +183,7 @@ object VerityLocalConfig {
                  taaAutoAccept: Boolean = true,
                  sharedEventStore: Option[SharedEventStore]=None): Config = {
     val parts = Seq(
+      testMetricsBackend(),
       useLevelDBPersistence(tempDir, sharedEventStore),
       useDefaultWallet(tempDir),
       useCustomPort(port, otherNodeArteryPorts),
@@ -198,6 +199,13 @@ object VerityLocalConfig {
     )
 
     parts.fold(ConfigFactory.empty())(_.withFallback(_).resolve())
+  }
+
+  def testMetricsBackend() : Config = {
+    ConfigFactory.parseString(
+      """
+        |verity.metrics.backend = "com.evernym.verity.observability.metrics.TestMetricsBackend"
+        |""".stripMargin)
   }
 
   def standard(tempDir: Path,

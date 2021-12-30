@@ -1,7 +1,7 @@
 package com.evernym.verity.integration.with_basic_sdk
 
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
-import com.evernym.verity.integration.base.sdk_provider.SdkProvider
+import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider, VerifierSdk}
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
@@ -16,7 +16,7 @@ import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 =>
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util.TestExecutionContextProvider
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext}
 
 
 class PresentProofSpec
@@ -26,13 +26,9 @@ class PresentProofSpec
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
-  lazy val verifierVerityEnv = VerityEnvBuilder.default().build(VAS)
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
-
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
-  lazy val verifierSDK = setupVerifierSdk(verifierVerityEnv, executionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+  var issuerSDK: IssuerSdk = _
+  var verifierSDK: VerifierSdk = _
+  var holderSDK: HolderSdk = _
 
   val issuerHolderConn = "connId1"
   val verifierHolderConn = "connId2"
@@ -47,6 +43,19 @@ class PresentProofSpec
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+
+    val issuerVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
+    val verifierVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
+    val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
+
+    val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext)
+    val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnv, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+
+    issuerSDK   = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
+    verifierSDK = Await.result(verifierSDKFut, SDK_BUILD_TIMEOUT)
+    holderSDK   = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)
+
     provisionEdgeAgent(issuerSDK)
     provisionEdgeAgent(verifierSDK)
     provisionCloudAgent(holderSDK)

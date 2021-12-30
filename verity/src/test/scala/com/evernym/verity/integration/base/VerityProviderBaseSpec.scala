@@ -190,9 +190,10 @@ trait VerityProviderBaseSpec
 
   override def afterAll(): Unit = {
     super.afterAll()
+    implicit val ec = futureExecutionContext
     val future = Future.sequence(
-      allVerityEnvs.flatMap(e => e.nodes).map(_.stop()(futureExecutionContext))
-    )(Seq.canBuildFrom, futureExecutionContext)
+      allVerityEnvs.flatMap(e => e.nodes).map(_.stop())
+    )
     Await.result(future, VerityEnv.STOP_MAX_TIMEOUT)
   }
 

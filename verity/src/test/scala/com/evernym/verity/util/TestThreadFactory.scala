@@ -9,15 +9,16 @@ class TestThreadFactory(namePrefix: String, group: ThreadGroup, classLoader: Cla
   private val count = new AtomicLong()
   private val logger = LoggingUtil.getLoggerByClass(getClass)
 
-  def this(namePrefix: String) {
-    this(namePrefix, null, Thread.currentThread().getContextClassLoader)
-  }
-
   override def newThread(target: Runnable): Thread = {
-    val thread = new Thread(group, target, namePrefix + "-" + count.incrementAndGet)
+    val thread = new Thread(group, new RunnableWithClassLoader(target, classLoader), namePrefix + "-" + count.incrementAndGet)
     logger.info(s"[rg-01] created thread $thread, with contextClassLoader: $classLoader")
-    thread.setContextClassLoader(classLoader)
-    logger.info(s"$thread class loader is ${thread.getContextClassLoader}")
     thread
   }
 }
+class RunnableWithClassLoader(target: Runnable, classLoader: ClassLoader) extends Runnable {
+  override def run(): Unit = {
+    Thread.currentThread().setContextClassLoader(classLoader)
+    target.run()
+  }
+}
+

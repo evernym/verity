@@ -10,8 +10,8 @@ class DIDKey(did: String) extends DIDMethod with SelfValidated {
   override val identifier: String = did.split(":").length match {
     case 3 => {
       did.split(":")(3)
-    }                                     // 237 is 0xed, is the multicodec for Ed25519 public keys
-    case 1 => "z"+Base58Util.encode(concat(Array(237.toByte), Base58Util.decode(did).getOrElse(
+    }                                     // 237 is 0xed01, is the multicodec for Ed25519 public keys
+    case 1 => "z"+Base58Util.encode(concat(Array(237.toByte), Array(1.toByte), Base58Util.decode(did).getOrElse(
       throw new InvalidDidKeyFormatException(did))))
     case _ => throw new InvalidDidKeyFormatException(did)
   }

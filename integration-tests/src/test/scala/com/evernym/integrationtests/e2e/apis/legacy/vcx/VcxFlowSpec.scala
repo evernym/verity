@@ -1,12 +1,25 @@
 package com.evernym.integrationtests.e2e.apis.legacy.vcx
 
+import com.evernym.integrationtests.e2e.apis.legacy.base.{CreateCredDefParam, CreateSchemaParam}
+import com.evernym.integrationtests.e2e.env.EnvUtils.IntegrationEnv
+import com.evernym.integrationtests.e2e.flow.SetupFlow
 import com.evernym.sdk.vcx.vcx.VcxApi
+import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Msg.Message
 import com.evernym.verity.util2.ExecutionContextProvider
+import org.scalatest.concurrent.Eventually
+
+import scala.concurrent.ExecutionContext
 
 
 class VcxFlowSpec
-  extends BaseVcxFlowSpec {
+  extends BaseVcxFlowSpec
+  with Eventually
+  with TempDir
+  with IntegrationEnv
+  with SetupFlow {
+
+  //override lazy val isTaaEnabled: Boolean = false
 
   runIssuerHolderFlowSpec("1.0", "1.0")
   runIssuerHolderFlowSpec("1.0", "2.0")
@@ -24,7 +37,7 @@ class VcxFlowSpec
       "Issuer" - {
         "when tried to provision" - {
           "should be successful" in {
-            provisionIssuer(issuer, eas, agencyAdminEnv.enterpriseAgencyAdmin, issuerProtocolVersion)
+            provisionIssuer(issuer, eas.endpoint.toString, agencyAdminEnv.easAgencyDidPar, issuerProtocolVersion)
           }
         }
 
@@ -55,12 +68,12 @@ class VcxFlowSpec
       "Holder" - {
         "when tried to provision" - {
           "should be successful" in {
-            provisionHolder(holder, cas, agencyAdminEnv.consumerAgencyAdmin, holderProtocolVersion)
+            provisionHolder(holder, cas.endpoint.toString, agencyAdminEnv.casAgencyDidPar, holderProtocolVersion)
           }
         }
         "when tried to accept invitation" - {
           "should be successful" in {
-            acceptInvitation(holder, issuerHolderConn1, invitation)
+            acceptInvitationLegacy(holder, issuerHolderConn1, invitation)
           }
         }
       }
@@ -84,8 +97,8 @@ class VcxFlowSpec
       "Holder" - {
         "when tried to get new received message" - {
           "should find message sent from issuer" in {
-            val msg = expectMsg[Message](holder, issuerHolderConn1)
-            msg.content shouldBe "How are you?"
+            val expectedMsg = expectMsg[Message](holder, issuerHolderConn1)
+            expectedMsg.msg.content shouldBe "How are you?"
           }
         }
 
@@ -99,8 +112,8 @@ class VcxFlowSpec
       "Issuer" - {
         "when tried to get new received message" - {
           "should find message sent from holder" in {
-            val msg = expectMsg[Message](issuer, issuerHolderConn1)
-            msg.content shouldBe "I am fine"
+            val expectedMsg = expectMsg[Message](issuer, issuerHolderConn1)
+            expectedMsg.msg.content shouldBe "I am fine"
           }
         }
       }
@@ -115,4 +128,5 @@ class VcxFlowSpec
 
   lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   override def executionContextProvider: ExecutionContextProvider = ecp
+  override implicit val executionContext: ExecutionContext = ecp.futureExecutionContext
 }

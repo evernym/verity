@@ -11,10 +11,10 @@ import scala.concurrent.ExecutionContext
 
 class AgencyAgentSetupHelper {
 
-  def setupAgencyAgent(str: String): Unit = {
-    setupAgencyAgent(UrlParam(str))
+  def setupAgencyAgent(url: String, seedOpt: Option[String]=None): Unit = {
+    setupAgencyAgent(UrlParam(url), seedOpt)
   }
-  def setupAgencyAgent(up: UrlParam): Unit = {
+  def setupAgencyAgent(up: UrlParam, seedOpt: Option[String]): Unit = {
     val agencyAgent: AgentMsgSenderHttpWrapper = new AgentMsgSenderHttpWrapper {
       def urlParam: UrlParam = up
       override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
@@ -26,7 +26,7 @@ class AgencyAgentSetupHelper {
           appConfig
         )
     }
-    agencyAgent.setupAgency()
+    agencyAgent.setupAgency(seedOpt orElse Option("0000000000000000000000000000" + up.port.toString.padTo(4, '0')))
   }
 
   def bootstrapAgencyAgentToLedger(str: String): Unit = {

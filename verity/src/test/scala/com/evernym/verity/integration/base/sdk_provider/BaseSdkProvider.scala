@@ -1,16 +1,15 @@
 package com.evernym.verity.integration.base.sdk_provider
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model._
-import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
+import akka.http.scaladsl.unmarshalling.Unmarshal
+import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.actor.AgencyPublicDid
+import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
-import com.evernym.verity.agentmsg.msgpacker.AgentMsgPackagingUtil
+import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgParseUtil}
 import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.AgentCreated
@@ -20,22 +19,33 @@ import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitatio
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.testkit.{BasicSpec, LegacyWalletAPI}
-import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util.{Base64Util, MessagePackUtil, Util}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
-import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
+import com.evernym.verity.agentmsg.msgfamily.{BundledMsg_MFV_0_5, ConfigDetail, TypeDetail}
+import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CONN_REQ, CREATE_MSG_TYPE_CONN_REQ_ANSWER, MSG_TYPE_CREATE_KEY, MSG_TYPE_CREATE_MSG, MSG_TYPE_DETAIL_ACCEPT_CONN_REQ, MSG_TYPE_DETAIL_CONN_REQ, MSG_TYPE_DETAIL_CREATE_AGENT, MSG_TYPE_DETAIL_CREATE_KEY, MSG_TYPE_MSG_DETAIL, MSG_TYPE_UPDATE_COM_METHOD}
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
+import com.evernym.verity.agentmsg.msgfamily.pairwise.{AnswerInviteMsgDetail_MFV_0_5, ConnReqRespMsg_MFV_0_6, InviteCreateMsgDetail_MFV_0_5, KeyCreatedRespMsg_MFV_0_5, KeyCreatedRespMsg_MFV_0_6}
+import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId}
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
+import com.evernym.verity.integration.base.sdk_provider.JsonMsgUtil.createJsonString
 import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.LedgerTxnExecutor
-import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
+import com.evernym.verity.observability.logs.LoggingUtil.{getLoggerByClass, getLoggerByName}
 import com.evernym.verity.observability.metrics.NoOpMetricsWriter
+import com.evernym.verity.protocol.engine.Constants.{MSG_TYPE_CONNECT, MSG_TYPE_CREATE_AGENT, MSG_TYPE_SIGN_UP, MTV_1_0}
 import com.evernym.verity.protocol.engine.util.DIDDoc
 import com.evernym.verity.protocol.protocols
+import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
+import com.evernym.verity.testkit.agentmsg.{CreateInviteResp_MFV_0_5, InviteAcceptedResp_MFV_0_5}
+import com.evernym.verity.testkit.util.{AcceptConnReq_MFV_0_6, AgentCreated_MFV_0_5, AgentCreated_MFV_0_6, ComMethodUpdated_MFV_0_5, ConnReqAccepted_MFV_0_6, ConnReq_MFV_0_6, Connect_MFV_0_5, Connected_MFV_0_5, CreateAgent_MFV_0_5, CreateAgent_MFV_0_6, CreateKey_MFV_0_5, CreateKey_MFV_0_6, CreateMsg_MFV_0_5, InviteMsgDetail_MFV_0_5, MsgCreated_MFV_0_5, MsgsSent_MFV_0_5, SignUp_MFV_0_5, SignedUp_MFV_0_5, TestComMethod, UpdateComMethod_MFV_0_5}
+import com.evernym.verity.util.MsgIdProvider.getNewMsgId
+import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
+import com.evernym.verity.testkit.util.HttpUtil._
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.matchers.should.Matchers
@@ -43,22 +53,19 @@ import org.scalatest.matchers.should.Matchers
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 import scala.collection.JavaConverters._
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.duration.{Duration, FiniteDuration, SECONDS}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.FiniteDuration
 import scala.reflect.ClassTag
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 
-trait SdkProvider {
-  this: BasicSpec =>
+trait SdkProvider { this: BasicSpec =>
 
-  def setupIssuerSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam] = None): IssuerSdk =
+  def setupIssuerSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): IssuerSdk =
     IssuerSdk(buildSdkParam(verityEnv), executionContext, oauthParam)
-
-  def setupIssuerRestSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam] = None): IssuerRestSDK =
+  def setupIssuerRestSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): IssuerRestSDK =
     IssuerRestSDK(buildSdkParam(verityEnv), executionContext, oauthParam)
-
-  def setupVerifierSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam] = None): VerifierSdk =
+  def setupVerifierSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): VerifierSdk =
     VerifierSdk(buildSdkParam(verityEnv), executionContext, oauthParam)
 
   def setupHolderSdk(
@@ -196,17 +203,19 @@ trait SdkProvider {
 
 /**
  * a base sdk class for issuer/holder sdk
- *
  * @param param sdk parameters
  */
 abstract class SdkBase(param: SdkParam,
-                       executionContext: ExecutionContext) extends Matchers {
+                       executionContext: ExecutionContext)
+  extends LegacySdkBase_0_5
+    with LegacySdkBase_0_6
+    with Matchers {
 
   implicit val ec: ExecutionContext = executionContext
   type ConnId = String
 
   def fetchAgencyKey(): AgencyPublicDid = {
-    val resp = checkOKResponse(sendGET("agency"))
+    val resp = checkOKResponse(sendGET(buildFullUrl("agency")))
     val apd = parseHttpResponseAs[AgencyPublicDid](resp)
     require(apd.DID.nonEmpty, "agency DID should not be empty")
     require(apd.verKey.nonEmpty, "agency verKey should not be empty")
@@ -235,105 +244,85 @@ abstract class SdkBase(param: SdkParam,
     parseAndUnpackResponse[T](checkOKResponse(sendPOST(routedPackedMsg)))
   }
 
-  protected def packForMyVerityAgent(msg: String): Array[Byte] = {
+  protected def packForMyVerityAgent(msg: String)
+                                    (implicit mpf: MsgPackFormat = MPF_INDY_PACK): Array[Byte] = {
     val packedMsgForVerityAgent = packFromLocalAgentKey(msg, Set(KeyParam.fromVerKey(verityAgentDidPair.verKey)))
     prepareFwdMsg(agencyDID, verityAgentDidPair.did, packedMsgForVerityAgent)
   }
 
-  protected def packFromLocalAgentKey(msg: String, recipVerKeyParams: Set[KeyParam]): Array[Byte] = {
+  protected def packFromLocalAgentKey(msg: String, recipVerKeyParams: Set[KeyParam])
+                                     (implicit mpf: MsgPackFormat = MPF_INDY_PACK): Array[Byte] = {
     packMsg(msg, recipVerKeyParams, Option(KeyParam.fromVerKey(myLocalAgentVerKey)))
+  }
+
+  def packForMyPairwiseRel(connId: String, msg: String)
+                          (implicit mpf: MsgPackFormat = MPF_INDY_PACK): Array[Byte] = {
+    val pairwiseRel = myPairwiseRelationships(connId)
+    val senderVerKeyParam = Option(KeyParam.fromVerKey(pairwiseRel.myPairwiseVerKey))
+    val recipVerKeyParams = Set(KeyParam.fromVerKey(pairwiseRel.myVerityAgentVerKey))
+    val verityAgentPackedMsg = packMsg(msg, recipVerKeyParams, senderVerKeyParam)
+    prepareFwdMsg(agencyDID, pairwiseRel.myPairwiseDID, verityAgentPackedMsg)
+  }
+
+  protected def packForAgencyAgent(msg: String)
+                                  (implicit mpf: MsgPackFormat = MPF_INDY_PACK): Array[Byte] = {
+    val recipVerKeyParams = Set(KeyParam.fromVerKey(agencyVerKey))
+    val packedMsgForAgencyAgent = packMsg(msg, recipVerKeyParams, Option(KeyParam.fromVerKey(myLocalAgentVerKey)))
+    prepareFwdMsg(agencyDID, agencyDID, packedMsgForAgencyAgent)
   }
 
   /**
    *
    * @param recipDID recipient of fwd msg
    * @param fwdToDID destination of the given 'msg'
-   * @param msg      the message to be sent
+   * @param msg the message to be sent
    * @return
    */
-  protected def prepareFwdMsg(recipDID: DidStr, fwdToDID: DidStr, msg: Array[Byte]): Array[Byte] = {
-    val fwdJson = AgentMsgPackagingUtil.buildFwdJsonMsg(MPF_INDY_PACK, fwdToDID, msg)
+  protected def prepareFwdMsg(recipDID: DidStr, fwdToDID: DidStr, msg: Array[Byte])
+                             (implicit mpf: MsgPackFormat = MPF_INDY_PACK): Array[Byte] = {
+    val fwdJson = AgentMsgPackagingUtil.buildFwdJsonMsg(mpf, fwdToDID, msg)
     val senderKey = if (recipDID == agencyDID) None else Option(KeyParam.fromVerKey(myLocalAgentVerKey))
     packMsg(fwdJson, Set(KeyParam.fromDID(recipDID)), senderKey)
   }
 
   protected def packMsg(msg: String,
                         recipVerKeyParams: Set[KeyParam],
-                        senderKeyParam: Option[KeyParam]): Array[Byte] = {
-    val msgBytes = msg.getBytes()
-    val pm = testWalletAPI.executeSync[PackedMsg](
-      PackMsg(msgBytes, recipVerKeyParams, senderKeyParam))
+                        senderKeyParam: Option[KeyParam])
+                       (implicit mpf: MsgPackFormat = MPF_INDY_PACK): Array[Byte] = {
+    val walletMsg = mpf match {
+      case MPF_MSG_PACK => LegacyPackMsg(MessagePackUtil.convertJsonStringToPackedMsg(msg), recipVerKeyParams, senderKeyParam)
+      case _            => PackMsg(msg.getBytes(), recipVerKeyParams, senderKeyParam)
+    }
+    val pm = testWalletAPI.executeSync[PackedMsg](walletMsg)
     pm.msg
   }
 
-  def unpackMsg[T: ClassTag](msg: Array[Byte]): ReceivedMsgParam[T] = {
-    val json = testWalletAPI.executeSync[UnpackedMsg](UnpackMsg(msg)).msgString
-    val jsonObject = new JSONObject(json)
-    ReceivedMsgParam(jsonObject.getString("message"))
+  def unpackMsg[T: ClassTag](msg: Array[Byte])
+                            (implicit mpf: MsgPackFormat = MPF_INDY_PACK): ReceivedMsgParam[T] = {
+    val walletMsg = mpf match {
+      case MPF_MSG_PACK => LegacyUnpackMsg(msg, Option(KeyParam.fromVerKey(myLocalAgentVerKey)), isAnonCryptedMsg = false)
+      case _            => UnpackMsg(msg)
+    }
+    val upm = testWalletAPI.executeSync[UnpackedMsg](walletMsg)
+    val jsonMsg = mpf match {
+      case MPF_MSG_PACK => MessagePackUtil.convertPackedMsgToJsonString(upm.msg)
+      case _            => new JSONObject(new String(upm.msg)).getString("message")
+    }
+    ReceivedMsgParam(jsonMsg)
   }
 
-  protected def checkOKResponse(resp: HttpResponse): HttpResponse = {
-    checkResponse(resp, OK)
-  }
-
-  protected def checkResponse(resp: HttpResponse, expected: StatusCode): HttpResponse = {
-    val json = parseHttpResponseAsString(resp)
-    require(resp.status.intValue() == expected.intValue,
-      s"http response '${resp.status}' was not equal to expected '${expected.value}': $json")
-    resp
-  }
-
-  protected def sendPOST(payload: Array[Byte]): HttpResponse =
+  protected def sendPOST(payload: Array[Byte])(implicit ec: ExecutionContext): HttpResponse =
     sendBinaryReqToUrl(payload, param.verityPackedMsgUrl)
 
-  protected def sendBinaryReqToUrl(payload: Array[Byte], url: String): HttpResponse = {
-    awaitFut(
-      Http().singleRequest(
-        HttpRequest(
-          method = HttpMethods.POST,
-          uri = url,
-          entity = HttpEntity(
-            ContentTypes.`application/octet-stream`,
-            payload
-          )
-        )
-      )
-    )
-  }
+  def buildFullUrl(suffix: String): String = param.verityBaseUrl + s"/$suffix"
 
-  def sendGET(pathSuffix: String): HttpResponse = {
-    val actualPath = param.verityBaseUrl + s"/$pathSuffix"
-    awaitFut(
-      Http().singleRequest(
-        HttpRequest(
-          method = HttpMethods.GET,
-          uri = actualPath,
-          entity = HttpEntity.Empty
-        )
-      )
-    )
-  }
-
-  protected def parseAndUnpackResponse[T: ClassTag](resp: HttpResponse): ReceivedMsgParam[T] = {
-    val packedMsg = parseHttpResponseAsString(resp)
-    unpackMsg[T](packedMsg.getBytes)
-  }
-
-  def parseHttpResponseAs[T: ClassTag](resp: HttpResponse): T = {
-    val respString = parseHttpResponseAsString(resp)
-    JacksonMsgCodec.fromJson[T](respString)
-  }
-
-  def parseHttpResponseAsString(resp: HttpResponse): String = {
-    awaitFut(resp.entity.dataBytes.runReduce(_ ++ _).map(_.utf8String))
-  }
-
-  protected def awaitFut[T](fut: Future[T]): T = {
-    Await.result(fut, Duration(25, SECONDS))
+  protected def parseAndUnpackResponse[T: ClassTag](resp: HttpResponse)
+                                                   (implicit mpf: MsgPackFormat = MPF_INDY_PACK): ReceivedMsgParam[T] = {
+    val packedMsg = awaitFut(Unmarshal(resp.entity).to[Array[Byte]])
+    unpackMsg[T](packedMsg)
   }
 
   def randomUUID(): String = UUID.randomUUID().toString
-
   def randomSeed(): String = randomUUID().replace("-", "")
 
   implicit val walletAPIParam: WalletAPIParam = WalletAPIParam(UUID.randomUUID().toString)
@@ -360,18 +349,16 @@ abstract class SdkBase(param: SdkParam,
   def agencyPublicDid: AgencyPublicDid = agencyPublicDidOpt.getOrElse(
     throw new RuntimeException("agency key is not yet fetched")
   )
-
   def verityAgentDidPair: DidPair = verityAgentDidPairOpt.getOrElse(
     throw new RuntimeException("verity agent not yet created")
   )
-
   def agencyDID: DidStr = agencyPublicDid.DID
-
   def agencyVerKey: VerKeyStr = agencyPublicDid.verKey
-
   def myLocalAgentVerKey: VerKeyStr = localAgentDidPair.verKey
 
   protected lazy val testAppConfig = new TestAppConfig()
+
+  val logger: Logger = getLoggerByClass(getClass)
 
   protected lazy val testWalletAPI: LegacyWalletAPI = {
     val walletProvider = LibIndyWalletProvider
@@ -382,7 +369,6 @@ abstract class SdkBase(param: SdkParam,
 
   /**
    * checks message orders (sender and received)
-   *
    * @param threadOpt
    * @param expectedSenderOrder
    * @param expectedReceivedOrder assuming two participants as of now
@@ -394,8 +380,199 @@ abstract class SdkBase(param: SdkParam,
       val theirDID = myPairwiseRelationships(connId).theirDIDDoc.get.getDID
       theirDID -> count
     }
-    threadOpt.flatMap(_.sender_order) shouldBe Some(expectedSenderOrder)
+      threadOpt.flatMap(_.sender_order) shouldBe Some(expectedSenderOrder)
     threadOpt.map(_.received_orders) shouldBe Some(receivedOrderByDid)
+  }
+}
+
+trait LegacySdkBase_0_5 { this: SdkBase =>
+
+  def provisionAgent_0_5()(implicit mpf: MsgPackFormat = MPF_MSG_PACK): AgentCreated_MFV_0_5 = {
+    val connected = sendConnect_0_5()
+    sendSignup_0_5(connected)
+    val ac = sendCreateAgent_0_5(connected)
+    verityAgentDidPairOpt = Option(DidPair(ac.withPairwiseDID, ac.withPairwiseDIDVerKey))
+    storeTheirKey(DidPair(ac.withPairwiseDID, ac.withPairwiseDIDVerKey))
+    ac
+  }
+
+  def updateComMethod_0_5(endpoint: String)
+                         (implicit mpf: MsgPackFormat = MPF_MSG_PACK): ComMethodUpdated_MFV_0_5 = {
+    val agentMsg = UpdateComMethod_MFV_0_5(
+      TypeDetail(MSG_TYPE_UPDATE_COM_METHOD, MTV_1_0),
+      TestComMethod(
+        "webhook",
+        COM_METHOD_TYPE_HTTP_ENDPOINT,
+        Option(endpoint),
+        None)
+    )
+    val agentJsonMsg = AgentMsgPackagingUtil.buildAgentMsgJson(List(agentMsg), wrapInBundledMsgs = true)
+    val routedPackedMsg = packForMyVerityAgent(agentJsonMsg)
+    parseAndUnpackResponse[ComMethodUpdated_MFV_0_5](checkOKResponse(sendPOST(routedPackedMsg))).msg
+  }
+
+  private def sendConnect_0_5()(implicit mpf: MsgPackFormat = MPF_MSG_PACK): Connected_MFV_0_5 = {
+    val agentMsg = Connect_MFV_0_5(TypeDetail(MSG_TYPE_CONNECT, MTV_1_0), localAgentDidPair.did, localAgentDidPair.verKey)
+    val agentJsonMsg = AgentMsgPackagingUtil.buildAgentMsgJson(List(agentMsg), wrapInBundledMsgs = true)
+    val routedPackedMsg = packForAgencyAgent(agentJsonMsg)
+    parseAndUnpackResponse[Connected_MFV_0_5](checkOKResponse(sendPOST(routedPackedMsg))).msg
+  }
+
+  private def sendSignup_0_5(connected: Connected_MFV_0_5)(implicit mpf: MsgPackFormat = MPF_MSG_PACK): SignedUp_MFV_0_5 = {
+    val agentMsg = SignUp_MFV_0_5(TypeDetail(MSG_TYPE_SIGN_UP, MTV_1_0))
+    val agentJsonMsg = AgentMsgPackagingUtil.buildAgentMsgJson(List(agentMsg), wrapInBundledMsgs = true)
+    val recipVerKeyParams = Set(KeyParam.fromVerKey(connected.withPairwiseDIDVerKey))
+    val packedMsgForAgencyPairwiseAgent = packMsg(agentJsonMsg, recipVerKeyParams, Option(KeyParam.fromVerKey(myLocalAgentVerKey)))
+    val routedPackedMsg = prepareFwdMsg(agencyDID, connected.withPairwiseDIDVerKey, packedMsgForAgencyPairwiseAgent)
+    parseAndUnpackResponse[SignedUp_MFV_0_5](checkOKResponse(sendPOST(routedPackedMsg))).msg
+  }
+
+  private def sendCreateAgent_0_5(connected: Connected_MFV_0_5)(implicit mpf: MsgPackFormat = MPF_MSG_PACK): AgentCreated_MFV_0_5 = {
+    val agentMsg = CreateAgent_MFV_0_5(TypeDetail(MSG_TYPE_CREATE_AGENT, MTV_1_0))
+    val agentJsonMsg = AgentMsgPackagingUtil.buildAgentMsgJson(List(agentMsg), wrapInBundledMsgs = true)
+    val recipVerKeyParams = Set(KeyParam.fromVerKey(connected.withPairwiseDIDVerKey))
+    val packedMsgForAgencyPairwiseAgent = packMsg(agentJsonMsg, recipVerKeyParams, Option(KeyParam.fromVerKey(myLocalAgentVerKey)))
+    val routedPackedMsg = prepareFwdMsg(agencyDID, connected.withPairwiseDIDVerKey, packedMsgForAgencyPairwiseAgent)
+    parseAndUnpackResponse[AgentCreated_MFV_0_5](checkOKResponse(sendPOST(routedPackedMsg))).msg
+  }
+
+  def createKey_0_5(connId: String)(implicit mpf: MsgPackFormat = MPF_MSG_PACK): KeyCreatedRespMsg_MFV_0_5 = {
+    val newPairwiseKey = createNewKey()
+    val createKey = CreateKey_MFV_0_5(TypeDetail(MSG_TYPE_CREATE_KEY, MTV_1_0), newPairwiseKey.did, newPairwiseKey.verKey)
+    val agentJsonMsg = AgentMsgPackagingUtil.buildAgentMsgJson(List(createKey), wrapInBundledMsgs = true)
+    val routedPackedMsg = packForMyVerityAgent(agentJsonMsg)
+    val kcr = parseAndUnpackResponse[KeyCreatedRespMsg_MFV_0_5](checkOKResponse(sendPOST(routedPackedMsg))).msg
+    myPairwiseRelationships += (connId -> PairwiseRel(Option(newPairwiseKey), Option(DidPair(kcr.withPairwiseDID, kcr.withPairwiseDIDVerKey))))
+    kcr
+  }
+
+  def sendConnReq_0_5(connId: String)(implicit mpf: MsgPackFormat = MPF_MSG_PACK): CreateInviteResp_MFV_0_5 = {
+    val myPairwiseRel = myPairwiseRelationships(connId)
+    val keyDlgProof = Util
+      .getAgentKeyDlgProof(
+        myPairwiseRel.myPairwiseVerKey,
+        myPairwiseRel.myVerityAgentDID,
+        myPairwiseRel.myVerityAgentVerKey
+      )(testWalletAPI, walletAPIParam)
+
+    val agentMsgs = List(
+      CreateMsg_MFV_0_5(TypeDetail(MSG_TYPE_CREATE_MSG, MTV_1_0), CREATE_MSG_TYPE_CONN_REQ, None),
+      InviteCreateMsgDetail_MFV_0_5(TypeDetail(MSG_TYPE_MSG_DETAIL, MTV_1_0), keyDlgProof, phoneNo = None,
+        includePublicDID = Option(false))
+    )
+    val agentJsonMsg = AgentMsgPackagingUtil.buildAgentMsgJson(agentMsgs, wrapInBundledMsgs = true)
+    val routedPackedMsg = packForMyPairwiseRel(connId, agentJsonMsg)
+    parseAndUnpackResponse[CreateInviteResp_MFV_0_5](checkOKResponse(sendPOST(routedPackedMsg))).msg
+  }
+
+  def sendConnReqAnswer_0_5(connId: String,
+                            inviteDetail: InviteDetail)
+                           (implicit mpf: MsgPackFormat = MPF_MSG_PACK): InviteAcceptedResp_MFV_0_5 = {
+    val myPairwiseRel = myPairwiseRelationships(connId)
+
+    myPairwiseRelationships += (connId ->
+      myPairwiseRel.copy(theirDIDDoc = Option(DIDDoc(
+        inviteDetail.senderDetail.DID,
+        inviteDetail.senderDetail.verKey,
+        inviteDetail.senderAgencyDetail.endpoint,
+        Vector(inviteDetail.senderDetail.agentKeyDlgProof.get.agentDelegatedKey,
+          inviteDetail.senderAgencyDetail.verKey)
+      )))
+      )
+    val keyDlgProof = Util
+      .getAgentKeyDlgProof(
+        myPairwiseRel.myPairwiseVerKey,
+        myPairwiseRel.myVerityAgentDID,
+        myPairwiseRel.myVerityAgentVerKey
+      )(testWalletAPI, walletAPIParam)
+
+    val agentMsgs = List(
+      CreateMsg_MFV_0_5(TypeDetail(MSG_TYPE_CREATE_MSG, MTV_1_0),
+        CREATE_MSG_TYPE_CONN_REQ_ANSWER, None, replyToMsgId = Option(inviteDetail.connReqId), sendMsg = true),
+      AnswerInviteMsgDetail_MFV_0_5(TypeDetail(MSG_TYPE_MSG_DETAIL, MTV_1_0),
+        inviteDetail.senderDetail, inviteDetail.senderAgencyDetail, MSG_STATUS_ACCEPTED.statusCode, Option(keyDlgProof))
+    )
+    val agentJsonMsg = AgentMsgPackagingUtil.buildAgentMsgJson(agentMsgs, wrapInBundledMsgs = true)
+    val routedPackedMsg = packForMyPairwiseRel(connId, agentJsonMsg)
+    parseAndUnpackResponse[InviteAcceptedResp_MFV_0_5](checkOKResponse(sendPOST(routedPackedMsg))).msg
+  }
+}
+
+trait LegacySdkBase_0_6 { this: SdkBase =>
+
+  def provisionAgent_0_6(): AgentCreated_MFV_0_6 = {
+    val ac = sendCreateAgent_0_6()
+    verityAgentDidPairOpt = Option(DidPair(ac.withPairwiseDID, ac.withPairwiseDIDVerKey))
+    storeTheirKey(DidPair(ac.withPairwiseDID, ac.withPairwiseDIDVerKey))
+    ac
+  }
+
+  private def sendCreateAgent_0_6(): AgentCreated_MFV_0_6 = {
+    val jsonMsg = createJsonString(CreateAgent_MFV_0_6(MSG_TYPE_DETAIL_CREATE_AGENT, localAgentDidPair.did, localAgentDidPair.verKey))
+    val packedMsgForAgencyAgent = packFromLocalAgentKey(jsonMsg, Set(KeyParam.fromVerKey(agencyVerKey)))
+    val routedPackedMsg = prepareFwdMsg(agencyDID, agencyDID, packedMsgForAgencyAgent)
+    parseAndUnpackResponse[AgentCreated_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg))).msg
+  }
+
+  def createKey_0_6(connId: String): KeyCreatedRespMsg_MFV_0_6 = {
+    val newPairwiseKey = createNewKey()
+    val jsonMsg = createJsonString(CreateKey_MFV_0_6(MSG_TYPE_DETAIL_CREATE_KEY, newPairwiseKey.did, newPairwiseKey.verKey))
+    val routedPackedMsg = packForMyVerityAgent(jsonMsg)
+    val kcr = parseAndUnpackResponse[KeyCreatedRespMsg_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg))).msg
+    myPairwiseRelationships += (connId -> PairwiseRel(Option(newPairwiseKey), Option(DidPair(kcr.withPairwiseDID, kcr.withPairwiseDIDVerKey))))
+    kcr
+  }
+
+  def sendConnReq_0_6(connId: String): ConnReqRespMsg_MFV_0_6 = {
+    val myPairwiseRel = myPairwiseRelationships(connId)
+
+    val keyDlgProof = Util
+      .getAgentKeyDlgProof(
+        myPairwiseRel.myPairwiseVerKey,
+        myPairwiseRel.myVerityAgentDID,
+        myPairwiseRel.myVerityAgentVerKey
+      )(testWalletAPI, walletAPIParam)
+
+    val jsonMsg = createJsonString(
+      ConnReq_MFV_0_6(
+        MSG_TYPE_DETAIL_CONN_REQ,
+        getNewMsgId,
+        `~thread` = MsgThread(thid=Option("1")),
+        keyDlgProof = Option(keyDlgProof)
+      )
+    )
+    val routedPackedMsg = packForMyPairwiseRel(connId, jsonMsg)
+    parseAndUnpackResponse[ConnReqRespMsg_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg))).msg
+  }
+
+  def sendConnReqAnswer_0_6(connId: String, inviteDetail: InviteDetail): ConnReqAccepted_MFV_0_6 = {
+    val myPairwiseRel = myPairwiseRelationships(connId)
+    myPairwiseRelationships += (connId ->
+      myPairwiseRel.copy(theirDIDDoc = Option(DIDDoc(
+        inviteDetail.senderDetail.DID,
+        inviteDetail.senderDetail.verKey,
+        inviteDetail.senderAgencyDetail.endpoint,
+        Vector(inviteDetail.senderDetail.agentKeyDlgProof.get.agentDelegatedKey,
+          inviteDetail.senderAgencyDetail.verKey)
+      )))
+      )
+    val keyDlgProof = Util
+      .getAgentKeyDlgProof(
+        myPairwiseRel.myPairwiseVerKey,
+        myPairwiseRel.myVerityAgentDID,
+        myPairwiseRel.myVerityAgentVerKey
+      )(testWalletAPI, walletAPIParam)
+
+    val jsonMsg = createJsonString(
+      AcceptConnReq_MFV_0_6(MSG_TYPE_DETAIL_ACCEPT_CONN_REQ,
+        getNewMsgId, sendMsg = true,
+        keyDlgProof,
+        inviteDetail.senderDetail,
+        inviteDetail.senderAgencyDetail,
+        inviteDetail.connReqId, MsgThread())
+    )
+    val routedPackedMsg = packForMyPairwiseRel(connId, jsonMsg)
+    parseAndUnpackResponse[ConnReqAccepted_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg))).msg
   }
 }
 
@@ -404,23 +581,16 @@ case class PairwiseRel(myLocalAgentDIDPair: Option[DidPair] = None,
                        theirDIDDoc: Option[DIDDoc] = None) {
 
   def myLocalAgentDIDPairReq: DidPair = myLocalAgentDIDPair.getOrElse(throw new RuntimeException("my pairwise key not exists"))
-
   def myPairwiseDID: DidStr = myLocalAgentDIDPairReq.did
-
   def myPairwiseVerKey: VerKeyStr = myLocalAgentDIDPairReq.verKey
 
   def myVerityAgentDIDPairReq: DidPair = verityAgentDIDPair.getOrElse(throw new RuntimeException("verity agent key not exists"))
-
   def myVerityAgentDID: DidStr = myVerityAgentDIDPairReq.did
-
   def myVerityAgentVerKey: VerKeyStr = myVerityAgentDIDPairReq.verKey
 
   def theirDIDDocReq: DIDDoc = theirDIDDoc.getOrElse(throw new RuntimeException("their DIDDoc not exists"))
-
   def theirAgentVerKey: VerKeyStr = theirDIDDocReq.verkey
-
   def theirRoutingKeys: Vector[VerKeyStr] = theirDIDDocReq.routingKeys
-
   def theirServiceEndpoint: ServiceEndpoint = theirDIDDocReq.endpoint
 
   def withProvisionalTheirDidDoc(invitation: Invitation): PairwiseRel = {
@@ -428,7 +598,7 @@ case class PairwiseRel(myLocalAgentDIDPair: Option[DidPair] = None,
       throw new RuntimeException("invalid url: " + invitation.inviteURL)
     )
     val didDoc = DIDDoc(
-      theirServiceDetail.verKey, //TODO: come back to this if assigning ver key as id starts causing issues
+      theirServiceDetail.verKey,    //TODO: come back to this if assigning ver key as id starts causing issues
       theirServiceDetail.verKey,
       theirServiceDetail.serviceEndpoint,
       theirServiceDetail.routingKeys
@@ -471,13 +641,18 @@ case class PairwiseRel(myLocalAgentDIDPair: Option[DidPair] = None,
 object ReceivedMsgParam {
 
   def apply[T: ClassTag](msg: String): ReceivedMsgParam[T] = {
-    val message = new JSONObject(msg)
-    val threadOpt = Try {
-      Option(DefaultMsgCodec.fromJson[MsgThread](message.getJSONObject("~thread").toString))
-    }.getOrElse(None)
-    val expMsg = DefaultMsgCodec.fromJson[T](message.toString)
-    checkInvalidFieldValues(msg, expMsg)
-    ReceivedMsgParam(expMsg, msg, None, threadOpt)
+    Try {
+      val message = new JSONObject(msg)
+      val threadOpt = Try {
+        Option(DefaultMsgCodec.fromJson[MsgThread](message.getJSONObject("~thread").toString))
+      }.getOrElse(None)
+      val expMsg = DefaultMsgCodec.fromJson[T](message.toString)
+      checkInvalidFieldValues(msg, expMsg)
+      ReceivedMsgParam(expMsg, msg, None, threadOpt)
+    } match {
+      case Success(resp) => resp
+      case Failure(ex)   => fromLegacy(msg).getOrElse(throw ex)
+    }
   }
 
   private def checkInvalidFieldValues(msgString: String, msg: Any): Unit = {
@@ -488,23 +663,57 @@ object ReceivedMsgParam {
     }
   }
 
+  private def fromLegacy[T: ClassTag](msg: String): Option[ReceivedMsgParam[T]] = {
+    Try {
+      val bm = AgentMsgParseUtil.convertTo[BundledMsg_MFV_0_5](msg)
+      if (bm.bundled.size == 1) {
+        Option(ReceivedMsgParam(MessagePackUtil.convertPackedMsgToJsonString(bm.bundled.head)))
+      } else {
+        val clazz = implicitly[ClassTag[T]].runtimeClass
+        if (classOf[CreateInviteResp_MFV_0_5].isAssignableFrom(clazz)) {
+          val expMsg = {
+            val mcJson = MessagePackUtil.convertPackedMsgToJsonString(bm.bundled.head)
+            val mdJson = MessagePackUtil.convertPackedMsgToJsonString(bm.bundled(1))
+            val msJson = if (bm.bundled.size == 3) Option(MessagePackUtil.convertPackedMsgToJsonString(bm.bundled(2))) else None
+
+            val mc = DefaultMsgCodec.fromJson[MsgCreated_MFV_0_5](mcJson)
+            val md = DefaultMsgCodec.fromJson[InviteMsgDetail_MFV_0_5](mdJson)
+            val ms = msJson.map(DefaultMsgCodec.fromJson[MsgsSent_MFV_0_5])
+            CreateInviteResp_MFV_0_5(mc, md, ms)
+          }
+          Option(ReceivedMsgParam[T](expMsg.asInstanceOf[T], msg, None, None))
+        } else if (classOf[InviteAcceptedResp_MFV_0_5].isAssignableFrom(clazz)) {
+          val expMsg = {
+            val mcJson = MessagePackUtil.convertPackedMsgToJsonString(bm.bundled.head)
+            val msJson = if (bm.bundled.size == 2) Option(MessagePackUtil.convertPackedMsgToJsonString(bm.bundled(1))) else None
+            val mc = DefaultMsgCodec.fromJson[MsgCreated_MFV_0_5](mcJson)
+            val ms = msJson.map(DefaultMsgCodec.fromJson[MsgsSent_MFV_0_5])
+            InviteAcceptedResp_MFV_0_5(mc, ms)
+          }
+          Option(ReceivedMsgParam[T](expMsg.asInstanceOf[T], msg, None, None))
+        } else {
+          throw new RuntimeException("can't deserialize response into given class: " + clazz)
+        }
+      }
+    }.getOrElse(None)
+  }
+
   val logger: Logger = getLoggerByName(getClass.getName)
 }
 
 /**
  *
- * @param msg       the received message
- * @param msgIdOpt  message id used by verity agent to uniquely identify a message
- *                  (this will be only available for messages retrieved from CAS/EAS)
+ * @param msg the received message
+ * @param msgIdOpt message id used by verity agent to uniquely identify a message
+ *                 (this will be only available for messages retrieved from CAS/EAS)
  * @param threadOpt received message's thread
  * @tparam T
  */
 case class ReceivedMsgParam[T: ClassTag](msg: T,
                                          jsonMsgStr: String,
                                          msgIdOpt: Option[MsgId] = None,
-                                         threadOpt: Option[MsgThread] = None) {
+                                         threadOpt: Option[MsgThread]=None) {
   def msgId: MsgId = msgIdOpt.getOrElse(throw new RuntimeException("msgId not available in received message"))
-
   def threadIdOpt: Option[ThreadId] = threadOpt.flatMap(_.thid)
 }
 
@@ -514,7 +723,6 @@ case class SdkParam(verityEnvUrlProvider: VerityEnvUrlProvider) {
   /**
    * will provide verity url of one of the available (started) nodes
    * in round robin fashion
-   *
    * @return
    */
   private def verityUrl: String = {
@@ -526,13 +734,10 @@ case class SdkParam(verityEnvUrlProvider: VerityEnvUrlProvider) {
     }
     verityUrls(lastVerityUrlUsedIndex)
   }
-
   var lastVerityUrlUsedIndex: Int = -1
 
   def verityBaseUrl: String = s"$verityUrl"
-
   def verityPackedMsgUrl: String = s"$verityUrl/agency/msg"
-
   def verityRestApiUrl: String = s"$verityUrl/api"
 }
 
@@ -555,7 +760,7 @@ object JsonMsgBuilder {
 case class JsonMsgBuilder(private val givenMsg: Any,
                           private val threadOpt: Option[MsgThread],
                           private val forRelId: Option[DidStr],
-                          private val applyToJsonMsg: String => String = { msg => msg }) {
+                          private val applyToJsonMsg: String => String = { msg => msg}) {
 
   lazy val thread = threadOpt.getOrElse(MsgThread(Option(UUID.randomUUID().toString)))
   lazy val threadId = thread.thid.getOrElse(throw new RuntimeException("thread id not available"))
@@ -564,8 +769,8 @@ case class JsonMsgBuilder(private val givenMsg: Any,
     val basicMsg = createJsonString(givenMsg, msgFamily)
     val threadedMsg = withThreadIdAdded(basicMsg, thread)
     val relationshipMsg = forRelId match {
-      case Some(did) => addForRel(did, threadedMsg)
-      case None => threadedMsg
+      case Some(did)  => addForRel(did, threadedMsg)
+      case None       => threadedMsg
     }
     applyToJsonMsg(relationshipMsg)
   }
@@ -608,6 +813,11 @@ case class JsonMsgBuilder(private val givenMsg: Any,
 }
 
 object JsonMsgUtil {
+
+  def createJsonString(msg: Any): String = {
+    createJSONObject(msg).toString
+  }
+
   def createJsonString(typeStr: String, msg: Any): String = {
     val coreJson = createJSONObject(msg)
     coreJson.put("@type", typeStr).toString
@@ -640,7 +850,7 @@ object MsgFamilyHelper {
     val protoDefOpt =
       protoDefs
         .find { pd =>
-          Try(pd.msgFamily.lookupAllMsgName(clazz).nonEmpty).getOrElse(false)
+          Try (pd.msgFamily.lookupAllMsgName(clazz).nonEmpty).getOrElse(false)
         }
     protoDefOpt.map(_.msgFamily)
   }
@@ -656,9 +866,7 @@ object MsgFamilyHelper {
 case class TheirServiceDetail(verKey: VerKeyStr, routingKeys: Vector[VerKeyStr], serviceEndpoint: ServiceEndpoint)
 
 trait OAuthParam
-
 case class V1OAuthParam(tokenExpiresDuration: FiniteDuration) extends OAuthParam
-
 case class V2OAuthParam(fixedToken: String) extends OAuthParam
 
 class UnexpectedMsgException(msg: String) extends RuntimeException(msg)

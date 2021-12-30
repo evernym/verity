@@ -3,11 +3,12 @@ package com.evernym.verity.actor.agent.user
 import akka.actor.ActorRef
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException, RemoteEndpointNotFoundErrorException}
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
-import com.evernym.verity.actor.agent.msghandler.{AgentMsgProcessor, MsgRespConfig, ProcessTypedMsg, SendToProtocolActor}
+import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
+import com.evernym.verity.actor.agent.msghandler.{AgentMsgProcessor, MsgRespConfig, ProcessTypedMsg, SendMsgToMyDomain, SendToProtocolActor}
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing._
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
@@ -19,6 +20,7 @@ import com.evernym.verity.actor.agent.state.base.AgentStatePairwiseImplBase
 import com.evernym.verity.actor.agent.user.UserAgentPairwise.{COLLECTION_METRIC_MND_MSGS_DELIVRY_STATUS_TAG, COLLECTION_METRIC_MND_MSGS_DETAILS_TAG, COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, COLLECTION_METRIC_MND_MSGS_TAG}
 import com.evernym.verity.actor.agent.user.msgstore.{FailedMsgTracker, RetryEligibilityCriteria}
 import com.evernym.verity.actor.agent.{SetupCreateKeyEndpoint, _}
+import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.MsgEvent
 import com.evernym.verity.did.didcomm.v1.{Thread, ThreadBase}
@@ -59,7 +61,8 @@ import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.util.Util.replaceVariables
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
-import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey, TheirKeyStored}
+import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.UpgradeInfoMsgHelper
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
 import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType}
@@ -72,6 +75,7 @@ import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSIn
 import com.evernym.verity.util2.{Exceptions, Status}
 import org.json.JSONObject
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Left, Success, Try}
 
@@ -141,6 +145,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     case mss: MsgSentSuccessfully                           => handleMsgSentSuccessfully(mss)
     case msf: MsgSendingFailed                              => handleMsgSendingFailed(msf)
     case GetOutboxParam(destId)                             => sendOutboxParam(destId)
+    case GetPairwiseUpgradeInfo                             => handleGetUpgradeInfo()
+    case GetPairwiseConnDetail                              => sendPairwiseConnDetail()
+    case utr: UpdateTheirRouting                            => updateTheirPairwiseDidDoc(utr)
+    case SendUpgradeInfoIfNeeded                            => sendUpgradeInfoIfRequired()
   }
 
   override final def receiveAgentEvent: Receive =
@@ -215,6 +223,111 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
   //TODO: not sure why we have this, we may wanna test and remove this if not needed
   val agentSpecificEventReceiver: Receive = {
     case _ =>
+  }
+
+  def handleGetUpgradeInfo(): Unit = {
+    val sndr = sender()
+    buildGetUpgradeInfo().map { resp =>
+      sndr ! resp
+    }
+  }
+
+  def buildGetUpgradeInfo(): Future[ActorMessage] = {
+    if (theirRoutingUpdateStatus.original.isEmpty) {
+      Future.successful(NoUpgradeNeeded)
+    } else {
+      val direction =
+        if (theirRoutingUpdateStatus.isOrigAndLatestSame) "v2tov1"
+        else "v1tov2"
+      val theirAgencyDID = theirRoutingParam.routingTarget
+      getAgencyIdentityFut(agencyDIDReq, GetAgencyIdentity(theirAgencyDID), metricsWriter).map { cr =>
+        PairwiseUpgradeInfo(
+          direction,
+          theirAgencyDID,
+          cr.getAgencyInfoReq(theirAgencyDID).verKeyReq,
+          cr.getAgencyInfoReq(theirAgencyDID).endpointReq)
+      }
+    }
+  }
+
+  def sendPairwiseConnDetail(): Unit = {
+    val sndr = sender()
+
+    val myPairwiseDidDoc = PairwiseDidDoc(
+      state.myDid_!,
+      state.myDidAuthKeyReq.verKey,
+      state.thisAgentKeyDIDReq,
+      state.thisAgentVerKeyReq
+    )
+
+    val theirPairwiseDidDoc = PairwiseDidDoc(
+      state.theirDid_!,
+      state.theirDidAuthKeyReq.verKeyOpt.getOrElse(""),
+      state.theirAgentAuthKeyReq.keyId,
+      state.theirAgentAuthKeyReq.verKey
+    )
+
+    sndr ! GetPairwiseConnDetailResp(
+      state.getConnectionStatus.answerStatusCode,
+      myPairwiseDidDoc,
+      theirPairwiseDidDoc
+    )
+  }
+
+  def updateTheirPairwiseDidDoc(utr: UpdateTheirRouting): Unit = {
+    val sndr = sender()
+    state
+      .relationship
+      .flatMap(_.theirDidDoc)
+      .flatMap(_.endpoints)
+      .map(_.endpoints)
+      .map(_.map(_.endpointADTX))
+      .getOrElse(Seq.empty)
+      .find(_.isInstanceOf[LegacyRoutingServiceEndpoint])
+        match {
+          case Some(lep: LegacyRoutingServiceEndpoint) =>
+            if (lep.agentKeyDID == utr.routingPairwiseDID &&
+              lep.agentVerKey == utr.routingPairwiseVerKey &&
+              lep.agencyDID == utr.agencyDID &&
+              lep.authKeyIds.contains(utr.routingPairwiseDID)) {
+              //no need to update anything
+              sndr ! Done
+            } else {
+              writeAndApply(TheirRoutingUpdated(utr.routingPairwiseDID, utr.routingPairwiseVerKey, utr.agencyDID, utr.agencyVerKey))
+              walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(utr.agencyDID, utr.agencyVerKey, ignoreIfAlreadyExists = true)).map { _ =>
+                sndr ! Done
+              }
+            }
+          case _ =>
+            logger.warn(s"[$persistenceId] [routing migration] no legacy routing service endpoint found")
+            throw new RemoteEndpointNotFoundErrorException(Option(s"[$persistenceId] [routing migration] no legacy routing service endpoint found"))
+        }
+    self ! SendUpgradeInfoIfNeeded
+  }
+
+  def sendUpgradeInfoIfRequired(): Unit = {
+    if (theirRoutingUpdateStatus.isOrigAndLatestSame) {
+      buildGetUpgradeInfo().map {
+        case NoUpgradeNeeded =>
+        //nothing to do
+        case pui: PairwiseUpgradeInfo =>
+          val pairwiseResults = Map(state.myDid_! -> pui)
+          val agentMsgContext = AgentMsgContext(MsgPackFormat.MPF_INDY_PACK, MFV_1_0, None)
+          val getPairwiseUpgradeInfoResp = UpgradeInfoMsgHelper.buildRespMsg(pairwiseResults)(agentMsgContext)
+          val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
+            getPairwiseUpgradeInfoResp, wrapInBundledMsgs = false)
+          AgentMsgPackagingUtil.buildAgentMsg(agentMsgContext.msgPackFormat,
+            param)(agentMsgTransformer, wap, metricsWriter).map { pm =>
+            self ! SendMsgToMyDomain(
+              OutgoingMsgParam(pm),
+              UUID.randomUUID().toString,
+              MSG_TYPE_UPGRADE_INFO,
+              state.thisAgentKeyDIDReq,
+              None
+            )
+          }
+      }
+    }
   }
 
   def sendOutboxParam(destId: DestId): Unit = {
@@ -1104,3 +1217,28 @@ trait UserAgentPairwiseStateUpdateImpl
     updateStateWithOwnerAgentKey()
   }
 }
+
+case object GetPairwiseConnDetail extends ActorMessage
+
+case class GetPairwiseConnDetailResp(connAnswerStatusCode: String,
+                                     myDidDoc: PairwiseDidDoc,
+                                     theirDidDoc: PairwiseDidDoc) extends ActorMessage
+
+case class PairwiseDidDoc(pairwiseDID: DidStr,
+                          pairwiseDIDVerKey: VerKeyStr,
+                          pairwiseAgentDID: DidStr,
+                          pairwiseAgentVerKey: VerKeyStr)
+
+case object GetPairwiseUpgradeInfo extends ActorMessage
+case class PairwiseUpgradeInfo(direction: String,
+                               theirAgencyDID: DidStr,
+                               theirAgencyVerKey: VerKeyStr,
+                               theirAgencyEndpoint: String) extends ActorMessage
+case object NoUpgradeNeeded extends ActorMessage
+
+case class UpdateTheirRouting(routingPairwiseDID: DidStr,
+                              routingPairwiseVerKey: VerKeyStr,
+                              agencyDID: DidStr,
+                              agencyVerKey: VerKeyStr) extends ActorMessage
+
+case object SendUpgradeInfoIfNeeded extends ActorMessage

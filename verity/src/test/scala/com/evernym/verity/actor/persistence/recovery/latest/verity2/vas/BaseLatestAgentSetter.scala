@@ -3,14 +3,15 @@ package com.evernym.verity.actor.persistence.recovery.latest.verity2.vas
 import java.util.UUID
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.SponsorRel
-import com.evernym.verity.actor.persistence.recovery.base.{AgentIdentifiers, BasePersistentStore}
+import com.evernym.verity.actor.persistence.recovery.base.BasePersistentStore
+import com.evernym.verity.actor.persistence.recovery.base.AgentIdentifiers._
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.constants.ActorNameConstants.{ACTOR_TYPE_AGENCY_AGENT_ACTOR, ACTOR_TYPE_USER_AGENT_ACTOR, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR}
 import com.google.protobuf.ByteString
 
 //base traits for different type of agent actor setup
 
-trait AgencyAgentEventSetter extends AgentIdentifiers with BasePersistentStore { this: ProvidesMockPlatform =>
+trait AgencyAgentEventSetter extends BasePersistentStore { this: ProvidesMockPlatform =>
 
   def aaRegion: agentRegion = agentRegion(myAgencyAgentEntityId, agencyAgentRegion)
 
@@ -34,7 +35,7 @@ trait AgencyAgentEventSetter extends AgentIdentifiers with BasePersistentStore {
   )
 }
 
-trait UserAgentCommon extends AgentIdentifiers { this: BasePersistentStore =>
+trait UserAgentCommon { this: BasePersistentStore =>
   lazy val publicKey = createDID(mySelfRelAgentEntityId)   //publicKey
 }
 

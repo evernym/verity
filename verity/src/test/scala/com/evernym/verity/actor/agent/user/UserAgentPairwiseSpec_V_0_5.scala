@@ -20,7 +20,7 @@ import com.evernym.verity.protocol.container.actor.{ActorProtocol, MsgEnvelope, 
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{GetInviteDetail_MFV_0_5, ConnectingProtoDef => ConnectingProtoDef_V_0_5}
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
-import com.evernym.verity.testkit.util.{AgentPackMsgUtil, CreateMsg_MFV_0_5, TestConfigDetail, TestUtil}
+import com.evernym.verity.testkit.util.{AgentPackMsgUtil, CreateMsg_MFV_0_5, TestConfigDetail}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.util.Util
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
@@ -64,6 +64,7 @@ trait UserAgentPairwiseSpec_V_0_5 extends UserAgentPairwiseSpecScaffolding {
   override def beforeAll(): Unit = {
     super.beforeAll()
     setupAgency()
+    updateAgencyDid()
     createUserAgent()
     updateComMethod(COM_METHOD_TYPE_PUSH, testPushComMethod)
     updateComMethod(COM_METHOD_TYPE_HTTP_ENDPOINT, "localhost:7000")

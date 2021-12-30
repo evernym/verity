@@ -1,6 +1,6 @@
 package com.evernym.verity.actor.wallet
 
-import akka.actor.{Actor, ActorRef, NoSerializationVerificationNeeded, Stash}
+import akka.actor.{ActorRef, NoSerializationVerificationNeeded, Stash}
 import akka.pattern.pipe
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.PayloadMetadata

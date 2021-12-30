@@ -34,6 +34,10 @@ trait VDRTools {
 
 }
 
+object VDRTools {
+  def apply(libDirLocation: String): VDRTools = new VDRToolsImpl(libDirLocation)
+}
+
 //TODO: most of the below parameters will be removed once corresponding library objects are available to use
 case class VDR_LedgerRegistered()
 

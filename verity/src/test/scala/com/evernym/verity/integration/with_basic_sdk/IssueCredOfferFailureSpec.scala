@@ -8,6 +8,7 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Offer
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.OfferCred
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
+import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util.TestExecutionContextProvider
 import org.json.JSONObject
@@ -99,7 +100,7 @@ class IssueCredOfferFailureSpec
   private def sendInvalidOfferMsg(offerMsg: Offer, jsonModifier: String => String): Unit = {
     val resp = issuerSDK.sendMsgForConn(issuerHolderConn, offerMsg,
       applyToJsonMsg = jsonModifier, expectedRespStatus = BadRequest)
-    val msg = issuerSDK.parseHttpResponseAsString(resp)
+    val msg = HttpUtil.parseHttpResponseAsString(resp)(futureExecutionContext)
     msg.contains("error decoding object type") shouldBe true
   }
 

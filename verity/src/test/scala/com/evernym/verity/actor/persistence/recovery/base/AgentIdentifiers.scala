@@ -6,7 +6,7 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.actor.testkit.CommonSpecUtil._
 import com.evernym.verity.did.DidPair
 
-trait AgentIdentifiers {
+object AgentIdentifiers {
 
   lazy val myAgencyAgentDIDKeySeed = randomSeed()
   lazy val mySelfRelDIDKeySeed = randomSeed()

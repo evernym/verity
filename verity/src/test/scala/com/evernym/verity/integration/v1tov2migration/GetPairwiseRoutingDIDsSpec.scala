@@ -1,48 +1,31 @@
 package com.evernym.verity.integration.v1tov2migration
 
-import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitSnapshotPlugin
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.actor.agent.user.GetPairwiseRoutingDIDsResp
 import com.evernym.verity.actor.{AgentDetailSet, AgentKeyCreated, OwnerDIDSet}
-import com.evernym.verity.actor.persistence.recovery.base.{BasePersistentStore, PersistenceIdParam}
-import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.actor.persistence.recovery.base.AgentIdentifiers._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.constants.ActorNameConstants.{ACTOR_TYPE_USER_AGENT_ACTOR, USER_AGENT_REGION_ACTOR_NAME}
+import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACTOR
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
-import com.evernym.verity.integration.base.verity_provider.node.local.VerityLocalNode
 import com.evernym.verity.integration.base.{EAS, VerityProviderBaseSpec}
+import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.ConfigFactory
 
-import java.util.UUID
 import scala.concurrent.ExecutionContext
 
 
 class GetPairwiseRoutingDIDsSpec
   extends VerityProviderBaseSpec
-    with SdkProvider
-    with BasePersistentStore {
-
-  val userAgentDID = CommonSpecUtil.generateNewDid().did
-  val userAgentPersistenceIdParam = PersistenceIdParam(USER_AGENT_REGION_ACTOR_NAME, UUID.randomUUID().toString)
+    with SdkProvider {
 
   override def beforeAll(): Unit = {
-    //set up data
     super.beforeAll()
-    val mySelfRelDIDPair = CommonSpecUtil.generateNewDid()
-    val mySelfRelAgentDIDPair = CommonSpecUtil.generateNewDid()
-    val basicUserAgentEvents = scala.collection.immutable.Seq(
-      OwnerDIDSet(mySelfRelDIDPair.did, mySelfRelDIDPair.verKey),
-      AgentKeyCreated(mySelfRelAgentDIDPair.did, mySelfRelAgentDIDPair.verKey)
-    )
-    val pairwiseDIDEvents = (1 to 10).map { i =>
-      AgentDetailSet(s"pairwiseDID$i", s"agentDID$i")
-    }
-    storeAgentRoute(userAgentDID, ACTOR_TYPE_USER_AGENT_ACTOR, userAgentPersistenceIdParam.entityId)
-    addEventsToPersistentStorage(userAgentPersistenceIdParam, basicUserAgentEvents ++ pairwiseDIDEvents)
+    setupUserAgent()
   }
+
 
   lazy val issuerEAS = VerityEnvBuilder.default().withConfig(TEST_KIT_CONFIG).build(EAS)
   lazy val issuerRestSDK = setupIssuerRestSdk(issuerEAS, futureExecutionContext)
@@ -118,19 +101,29 @@ class GetPairwiseRoutingDIDsSpec
   }
 
   private def getPairwiseDIDs(queryParam: String): GetPairwiseRoutingDIDsResp = {
-    val basePath = s"agency/internal/maintenance/v1tov2migration/agent/$userAgentDID/pairwiseRoutingDIDs"
-    val apiResp = issuerRestSDK.sendGET(s"$basePath$queryParam")
-    val respString = issuerRestSDK.parseHttpResponseAsString(apiResp)
+    val urlSuffix = s"agency/internal/maintenance/v1tov2migration/agent/${mySelfRelAgentDIDPair.did}/pairwiseRoutingDIDs"
+    val apiResp = HttpUtil.sendGET(issuerRestSDK.buildFullUrl(s"$urlSuffix$queryParam"))(futureExecutionContext)
+    val respString = HttpUtil.parseHttpResponseAsString(apiResp)(futureExecutionContext)
     DefaultMsgCodec.fromJson[GetPairwiseRoutingDIDsResp](respString)
+  }
+
+  def setupUserAgent(): Unit = {
+    val basicUserAgentEvents = scala.collection.immutable.Seq(
+      OwnerDIDSet(mySelfRelDIDPair.did, mySelfRelDIDPair.verKey),
+      AgentKeyCreated(mySelfRelAgentDIDPair.did, mySelfRelAgentDIDPair.verKey)
+    )
+    val pairwiseDIDEvents = (1 to 10).map { i =>
+      AgentDetailSet(s"pairwiseDID$i", s"agentDID$i")
+    }
+    issuerEAS.persStoreTestKit.storeAgentRoute(mySelfRelAgentDIDPair.did, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentPersistenceId.entityId)
+    issuerEAS.persStoreTestKit.addEventsToPersistentStorage(mySelfRelAgentPersistenceId, basicUserAgentEvents ++ pairwiseDIDEvents)
   }
 
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
   override def executionContextProvider: ExecutionContextProvider = ecp
 
-  override implicit val system: ActorSystem = issuerEAS.nodes.head.asInstanceOf[VerityLocalNode].platform.actorSystem
-
-  lazy val TEST_KIT_CONFIG =
+  private val TEST_KIT_CONFIG =
     ConfigFactory.empty
       .withFallback(EventSourcedBehaviorTestKit.config)
       .withFallback(PersistenceTestKitSnapshotPlugin.config)

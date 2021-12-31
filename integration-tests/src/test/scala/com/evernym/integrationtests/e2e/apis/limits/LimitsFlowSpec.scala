@@ -344,8 +344,8 @@ class LimitsFlowSpec
 
     // Note: Count of cred offer attributes has non-linear growth of payload on CAS, e.g.
     //       for 10 attrs of 22k-char values (payload ~220k) there are no problem on CAS side,
-    //       meanwhile 125 attrs of 1480k values (payload ~ 185k) cause DynamoDB issues.
-    //       This tests are intended to work against 185k credential offer limits as worst-case scenario
+    //       meanwhile 125 attrs of 1400k values (payload ~ 175k) cause DynamoDB issues.
+    //       This tests are intended to work against 175k credential offer limits as worst-case scenario
     "issue credential limits" - {
       val connectionId = UUID.randomUUID().toString
 

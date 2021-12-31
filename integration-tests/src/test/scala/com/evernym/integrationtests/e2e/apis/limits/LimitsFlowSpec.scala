@@ -346,6 +346,9 @@ class LimitsFlowSpec
     //       for 10 attrs of 22k-char values (payload ~220k) there are no problem on CAS side,
     //       meanwhile 125 attrs of 1400k values (payload ~ 175k) cause DynamoDB issues.
     //       This tests are intended to work against 175k credential offer limits as worst-case scenario
+    // VE-3244: Limits and these tests were temporarily modified for 180k credential offer limit, which
+    //          was done to unblock some specific use cases with small number of large attributes in credentials,
+    //          however this can lead to unexpected errors in corner cases (e.g. 125 attrs with ~1400-char attrs)
     "issue credential limits" - {
       val connectionId = UUID.randomUUID().toString
 

@@ -44,17 +44,17 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libVdrToolsVer = "0.8.1"
+val libVdrToolsVer = "0.8.2"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libindy.so"),
-  NonMatchingLib("libvcx", "0.12.0-bionic~502", "libvcx.so")  // For integration testing ONLY
+  NonMatchingLib("libvcx", "0.12.0-bionic~602", "libvcx.so")  // For integration testing ONLY
 )
 
 //deb package dependencies versions
 val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 
 //dependency versions
-val vdrtoolsWrapperVer  = "0.8.1"
+val vdrtoolsWrapperVer  = "0.8.2"
 val akkaVer         = "2.6.17"
 val akkaHttpVer     = "10.2.7"
 val akkaMgtVer      = "1.1.1"
@@ -68,9 +68,9 @@ val sdnotifyVer     = "1.3"
 
 //test dependency versions
 val scalatestVer    = "3.2.10"
-val mockitoVer      = "1.16.42"
+val mockitoVer      = "1.16.49"
 val veritySdkVer    = "0.5.0"
-val vcxWrapperVer   = "0.12.0.502"
+val vcxWrapperVer   = "0.12.0.602"
 
 
 val flexmarkVer     = "0.62.2"
@@ -311,7 +311,7 @@ lazy val commonLibraryDependencies = {
 
     //logging dependencies
     "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4",
-    "ch.qos.logback" % "logback-classic" % "1.2.7",
+    "ch.qos.logback" % "logback-classic" % "1.2.10",
     akkaGrp %% "akka-slf4j" % akkaVer,
 
     //kamon monitoring dependencies

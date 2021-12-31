@@ -9,11 +9,12 @@ import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
 import com.evernym.verity.integration.base.verity_provider.node.local.VerityLocalNode
 import com.evernym.verity.testkit.mock.blob_store.MockBlobStore
+import com.typesafe.config.ConfigMergeable
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
 
@@ -41,7 +42,8 @@ case class VerityEnv(seed: String,
       (targetNodes.map(_._1), otherNodes.filter(_._1.isAvailable).map(_._1))
     }
 
-    targetNodes.foreach(_.stop())
+    val future = Future.sequence(targetNodes.map(_.stop()))
+    Await.result(future, VerityEnv.STOP_MAX_TIMEOUT)
 
     val nodesToBeChecked = remainingNodes.map { curNode =>
       val excludeArteryPorts = (targetNodes :+ curNode).map(_.portProfile.artery)
@@ -74,19 +76,21 @@ case class VerityEnv(seed: String,
   }
 
   def startNodeAtIndex(index: Int): Unit = {
-    nodes(index).start()
+    Await.result(nodes(index).start(), VerityEnv.START_MAX_TIMEOUT)
   }
 
   def restartNodeAtIndex(index: Int): Unit = {
-    nodes(index).restart()
+    Await.result(nodes(index).restart(),  VerityEnv.MAX_RESTART_TIMEOUT)
   }
 
   def stopAllNodes(): Unit = {
-    nodes.foreach(_.stop())
+    val future = Future.sequence(nodes.map(_.stop()))
+    Await.result(future, VerityEnv.STOP_MAX_TIMEOUT)
   }
 
-  def restartAllNodes(): Unit = {
-    nodes.foreach(_.restart())
+  def restartAllNodes(maxTimeout: FiniteDuration = VerityEnv.MAX_RESTART_TIMEOUT): Unit = {
+    val future = Future.sequence(nodes.map(_.restart()))
+    Await.result(future, maxTimeout)
   }
 
   def checkBlobObjectCount(keyStartsWith: String, expectedCount: Int, bucketName: String = "local-blob-store"): Unit = {
@@ -114,6 +118,12 @@ case class VerityEnv(seed: String,
   lazy val endpointProvider: VerityEnvUrlProvider = VerityEnvUrlProvider(nodes)
 
   lazy val persStoreTestKit = new PersistentStoreTestKit(nodes.head.asInstanceOf[VerityLocalNode].platform.actorSystem, ec)
+}
+
+object VerityEnv {
+  val START_MAX_TIMEOUT: FiniteDuration = 25.seconds
+  val STOP_MAX_TIMEOUT: FiniteDuration = 45.seconds
+  val MAX_RESTART_TIMEOUT: FiniteDuration = START_MAX_TIMEOUT + STOP_MAX_TIMEOUT
 }
 
 case class VerityEnvUrlProvider(private val _nodes: Seq[VerityNode]) {

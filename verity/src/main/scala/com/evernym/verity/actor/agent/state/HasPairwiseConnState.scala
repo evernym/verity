@@ -97,7 +97,7 @@ trait PairwiseConnStateBase
         case (Some(tdd: TheirDidDocDetail), None) =>
           val lrd = LegacyRoutingDetail(tdd.agencyDID, tdd.agentKeyDID, tdd.agentVerKey, tdd.agentKeyDlgProofSignature)
           updateLegacyRelationshipState(tdd.pairwiseDID, tdd.pairwiseDIDVerKey, lrd)
-          updateTheirRouting(
+          trackTheirRoutingUpdateStatus(
             TheirRouting(
               tdd.agentKeyDID,
               tdd.agentVerKey,
@@ -134,17 +134,32 @@ trait PairwiseConnStateBase
           case ep: RoutingServiceEndpoint => ep
           case _ => throw new MatchError("unsupported endpoint matched")
         }.map(EndpointADT.apply)
-        val newAuthKeys =
-          Seq(AuthorizedKey(tru.routingPairwiseDID, tru.routingPairwiseVerKey, Set(EDGE_AGENT_KEY, AGENT_KEY_TAG)))
         val updatedEndpoints = Endpoints(updatedEndpointSeq)
-        val updateAuthKeys = AuthorizedKeys(tdd.getAuthorizedKeys.keys.filterNot(_.keyId == tru.routingPairwiseDID) ++ newAuthKeys)
-        tdd
-          .update(_.authorizedKeys := updateAuthKeys)   //keeping old and new auth keys to satisfy constraints in endpoints
-          .update(_.endpoints := updatedEndpoints)
-          .update(_.authorizedKeys := AuthorizedKeys(newAuthKeys))  //updated the new auth keys post endpoint update
+
+        if (tdd.getAuthorizedKeys.keys.exists(_.keyId == tru.routingPairwiseDID)) {
+          //migration use case
+          val updatedKeys = Seq(AuthorizedKey(tru.routingPairwiseDID, tru.routingPairwiseVerKey, Set(EDGE_AGENT_KEY, AGENT_KEY_TAG)))
+          tdd
+            .update(_.endpoints := updatedEndpoints)
+            .update(_.authorizedKeys := AuthorizedKeys(updatedKeys))
+        } else {
+          //migration undo use case
+          val (otherKeys, toBeUpdated) =
+          tdd
+            .getAuthorizedKeys
+            .keys
+            .filter(_.keyId != tru.routingPairwiseDID)
+            .partition(ak => ak.tags != Set(EDGE_AGENT_KEY, AGENT_KEY_TAG))
+          val updatedKeys = toBeUpdated.map(_.copy(tags = Set(EDGE_AGENT_KEY)))
+          val newKeys = Seq(AuthorizedKey(tru.routingPairwiseDID, tru.routingPairwiseVerKey, Set(AGENT_KEY_TAG)))
+          val finalUpdatedAuthKeys = otherKeys ++ updatedKeys ++ newKeys
+          tdd
+            .update(_.authorizedKeys := AuthorizedKeys(finalUpdatedAuthKeys))
+            .update(_.endpoints := updatedEndpoints)
+        }
       })
       updateRelationshipBase(relationshipState.update(_.thoseDidDocs.setIfDefined(updatedDidDoc.map(Seq(_)))))
-      updateTheirRouting(
+      trackTheirRoutingUpdateStatus(
         TheirRouting(
           tru.routingPairwiseDID,
           tru.routingPairwiseVerKey,
@@ -267,7 +282,7 @@ trait PairwiseConnStateBase
     }
   }
 
-  private def updateTheirRouting(newRoute: TheirRouting): Unit = {
+  private def trackTheirRoutingUpdateStatus(newRoute: TheirRouting): Unit = {
     theirRoutingUpdateStatus =
       (theirRoutingUpdateStatus.original, theirRoutingUpdateStatus.latest) match {
         case (None,       None) =>

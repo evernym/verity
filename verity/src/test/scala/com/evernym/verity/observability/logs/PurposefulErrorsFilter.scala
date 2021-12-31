@@ -16,8 +16,7 @@ class PurposefulErrorsFilter extends TurboFilter {
   private def isAPurposefulThrowable(t: Throwable): Boolean = {
     if(t == null) false
     else {
-      t.getMessage.contains(searchStr) ||
-        isAPurposefulThrowable(t.getCause)
+      (t.getMessage != null && t.getMessage.contains(searchStr)) || isAPurposefulThrowable(t.getCause)
     }
 
   }

@@ -54,6 +54,7 @@ trait UserAgentPairwiseSpec_V_0_7
   override def beforeAll(): Unit = {
     super.beforeAll()
     setupAgency()
+    updateAgencyDid()
     createUserAgent_0_7()
   }
 

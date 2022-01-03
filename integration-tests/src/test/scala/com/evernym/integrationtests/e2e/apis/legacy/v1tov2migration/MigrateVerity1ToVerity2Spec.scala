@@ -231,10 +231,12 @@
 //      }
 //    }
 //    //exchange some messages (question-answer)
-//    exchangeCommittedAnswerBeforeMigration("How are you?", "fine")
+//    testCommittedAnswerOnPreMigrationConns("How are you?", "fine")
+//    testIssueCredPreMigration()
+//    testPresentProofPreMigration()
 //  }
 //
-//  private def exchangeCommittedAnswerBeforeMigration(question: String,
+//  private def testCommittedAnswerOnPreMigrationConns(question: String,
 //                                                     answer: String): Unit = {
 //    setupData.entAgents.foreach { case (entName, entAgentState) =>
 //      entAgentState.preMigrationConns.foreach { case (userName, userAgentState) =>
@@ -298,7 +300,7 @@
 //        upgradeConnection(userName, userAgentState.connId, upgradeConnData)
 //      }
 //    }
-//    exchangeCommittedAnswerBeforeMigration("How are you after undo?", "Fine after undo too")
+//    testCommittedAnswerOnPreMigrationConns("How are you after undo?", "Fine after undo too")
 //  }
 //
 //  private def testEstablishNewConnsPostMigration(): Unit = {
@@ -371,6 +373,51 @@
 //    }
 //  }
 //
+//  private def testIssueCredPreMigration(): Unit = {
+//    setupData.entAgents.foreach { case (entName, entAgentState) =>
+//      entAgentState.getTargetConns(forPreMigrationConn = true).foreach { case (userName, userAgentState) =>
+//        val connId = userAgentState.connId
+//        val issuerSetup = entAgentState.issuerSetup
+//        val credValue = """
+//           {
+//            "first-name": "Hi",
+//            "last-name": "there",
+//            "age": "30"
+//           }
+//          """
+//        sendCredOffer(entName, connId, issuerSetup.sourceId, issuerSetup.credDefId, credValue, "credName")
+//        val expectedOfferMsg = expectMsg[Any](userName, connId, Option("CRED_OFFER"))
+//        sendCredReq(userName, connId, issuerSetup.sourceId, expectedOfferMsg.msgStr)
+//        val expectedReqMsg = expectMsg[Any](entName, connId, Option("credential-request"))
+//        checkReceivedCredReq(entName, connId, issuerSetup.sourceId, expectedReqMsg.msgStr)
+//        val expectedCred = expectMsg[Any](userName, connId, Option("CRED"))
+//        checkReceivedCred(userName, connId, issuerSetup.sourceId, expectedCred.msgStr)
+//      }
+//    }
+//  }
+//
+//  private def testPresentProofPreMigration(): Unit = {
+//    setupData.entAgents.foreach { case (entName, entAgentState) =>
+//      entAgentState.getTargetConns(forPreMigrationConn = true).foreach { case (userName, userAgentState) =>
+//        val connId = userAgentState.connId
+//        val issuerSetup = entAgentState.issuerSetup
+//        val reqAttrs =
+//          """[
+//            {"name":"first-name"},
+//            {"name":"last-name"}
+//            ]"""
+//        val reqPredicates =
+//          """[]"""
+//
+//        sendProofReq(entName, connId, issuerSetup.sourceId, reqAttrs, reqPredicates)
+//        val expectedProofReq = expectMsg[Any](userName, connId, Option("PROOF_REQUEST"))
+//        sendProof(userName, connId, issuerSetup.sourceId, expectedProofReq.msgStr)
+//        val expectedProof = expectMsg[Any](entName, connId, Option("presentation"))
+//        checkProofValid(entName, connId, issuerSetup.sourceId, expectedProof.msgStr)
+//      }
+//    }
+//  }
+//
 //  private def testIssueCredPostMigration(forPreMigrationConn: Boolean): Unit = {
 //    setupData.entAgents.foreach { case (entName, entAgentState) =>
 //      entAgentState.getTargetConns(forPreMigrationConn).foreach { case (userName, userAgentState) =>
@@ -388,7 +435,9 @@
 //
 //        val expectedOfferMsg = expectMsg[Any](userName, connId, Option("credential-offer"))
 //        sendCredReq(userName, connId, issuerSetup.sourceId, expectedOfferMsg.msgStr)
-//        checkReceivedCred(userName, connId, issuerSetup.sourceId)
+//
+//        val expectedCred = expectMsg[Any](userName, connId, Option("credential"))
+//        checkReceivedCred(userName, connId, issuerSetup.sourceId, expectedCred.msgStr)
 //      }
 //    }
 //  }

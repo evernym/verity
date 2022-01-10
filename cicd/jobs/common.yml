@@ -24,7 +24,7 @@
 
 .main-changes-or-manual-rule:
   rules:
-    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main" # Main branch build
+    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "eas" # Main branch build
       changes:
         - $DEFINED_CHANGES
       when: on_success

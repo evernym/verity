@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.persistence.recovery.base
 
+import akka.actor.ActorSystem
 import akka.persistence.testkit.{PersistenceTestKitSnapshotPlugin, SnapshotMeta}
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.evernym.verity.actor.agent.msgrouter.RoutingAgentUtil
@@ -10,7 +11,7 @@ import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.actor.testkit.actor.MockAppConfig
 import com.evernym.verity.actor.testkit.HasTestActorSystem
 import com.evernym.verity.actor.wallet.{Close, CreateDID, CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
-import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, LegacyRouteSet, MappingAdded, PersistentMsg, RouteSet}
+import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, LegacyRouteSet, MappingAdded, PersistentMsg, PersistentMultiEventMsg, RouteSet}
 import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.constants.ActorNameConstants._
@@ -19,10 +20,21 @@ import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED255
 import com.evernym.verity.transformations.transformers.v1._
 import com.evernym.verity.transformations.transformers.legacy._
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
+import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
+import com.evernym.verity.protocol.engine.MultiEvent
 import com.evernym.verity.testkit.HasTestWalletAPI
 import com.evernym.verity.transformations.transformers.{<=>, legacy, v1}
 import com.evernym.verity.vault.WalletAPIParam
+import com.evernym.verity.vault.WalletUtil.{buildWalletConfig, generateWalletParamSync}
 import com.typesafe.config.{Config, ConfigFactory}
+import org.hyperledger.indy.sdk.wallet.Wallet
+
+import scala.concurrent.ExecutionContext
+import scala.util.Try
+
+class PersistentStoreTestKit(val system: ActorSystem,
+                             val futureExecutionContext: ExecutionContext)
+  extends BasePersistentStore
 
 /**
  * common/base code to store events and adding data to wallet store
@@ -37,6 +49,7 @@ trait BasePersistentStore
   lazy val agentRouteStoreEncKey = appConfig.getStringReq(ConfigConstants.SECRET_ROUTING_AGENT)
 
   def createWallet(walletId: String): Unit = {
+    Try(deleteWallet(walletId))
     testWalletAPI.executeSync[WalletCreated.type](CreateWallet())(WalletAPIParam(walletId))
   }
 
@@ -58,6 +71,14 @@ trait BasePersistentStore
 
   def closeWallet(walletId: String): Done.type = {
     testWalletAPI.executeSync[Done.type](Close())(WalletAPIParam(walletId))
+  }
+
+  private def deleteWallet(walletId: String): Unit = {
+    val walletConfig = buildWalletConfig(testAppConfig)
+    val walletParam = generateWalletParamSync(walletId, testAppConfig, LibIndyWalletProvider)
+    val config = walletConfig.buildConfig(walletParam.walletName)
+    val cred = walletConfig.buildCredentials(walletParam.encryptionKey)
+    Wallet.deleteWallet(config, cred).get()
   }
 
   def storeAgentRoute(agentDID: DidStr, actorTypeId: Int, address: EntityId)
@@ -97,8 +118,9 @@ trait BasePersistentStore
   def getEvents(pp: PersistenceIdParam, encryptionKey: Option[String]=None): Seq[Any] = {
     val events = persTestKit.persistedInStorage(pp.toString)
     val transformer = getTransformerFor(pp, encryptionKey)
-    events.map { e =>
-      transformer.undo(e.asInstanceOf[PersistentMsg])
+    events.map {
+      case pm: PersistentMsg => transformer.undo(pm)
+      case pme: PersistentMultiEventMsg => MultiEvent(pme.events.map(transformer.undo))
     }
   }
 

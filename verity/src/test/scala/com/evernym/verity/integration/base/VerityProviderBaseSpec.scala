@@ -115,9 +115,8 @@ trait VerityProviderBaseSpec
 
     private def createEnv(verityNodes: Seq[VerityNode], appSeed: String): VerityEnv = {
       implicit val ec = futureExecutionContext
-      logger.info(s"[rg-00] start nodes ${verityNodes.map(_.portProfile.artery)}")
+      logger.info(s"Start verity nodes with ports ${verityNodes.map(_.portProfile.artery)}")
       try {
-        logger.info("[rg-00] start await nodes")
         startVerityNodes(verityNodes, VerityEnv.START_MAX_TIMEOUT)
         val verityEnv = VerityEnv(appSeed, verityNodes, futureExecutionContext)
         allVerityEnvs = allVerityEnvs :+ verityEnv
@@ -125,19 +124,16 @@ trait VerityProviderBaseSpec
       }
       catch {
         case e: Exception =>
-          logger.warn(s"Start nodes failed: ${e.getMessage} ${e.getStackTrace.mkString("", System.lineSeparator(), "")}")
-          logger.info(s"[rg-00] Stop nodes...")
+          logger.warn(s"Verity nodes start failed: ${e.getMessage} ${e.getStackTrace.mkString("", System.lineSeparator(), "")}")
           Await.result(Future.sequence(verityNodes.map(_.stop())), VerityEnv.STOP_MAX_TIMEOUT)
-          logger.info("[rg-00] Nodes stopped")
           throw e
       }
     }
 
     private def createEnvAsync(verityNodes: Seq[VerityNode], appSeed: String): Future[VerityEnv] = {
       implicit val ec = futureExecutionContext
-      logger.info(s"[rg-00] start nodes ${verityNodes.map(_.portProfile.artery)}")
+      logger.info(s"Start verity nodes with ports ${verityNodes.map(_.portProfile.artery)}")
       try {
-        logger.info("[rg-00] start await nodes")
         startVerityNodesAsync(verityNodes, VerityEnv.START_MAX_TIMEOUT) map { _ =>
           val verityEnv = VerityEnv(appSeed, verityNodes, futureExecutionContext)
           allVerityEnvs = allVerityEnvs :+ verityEnv
@@ -146,10 +142,8 @@ trait VerityProviderBaseSpec
       }
       catch {
         case e: Exception =>
-          logger.warn(s"Start nodes failed: ${e.getMessage} ${e.getStackTrace.mkString("", System.lineSeparator(), "")}")
-          logger.info(s"[rg-00] Stop nodes...")
+          logger.warn(s"Nodes start failed: ${e.getMessage} ${e.getStackTrace.mkString("", System.lineSeparator(), "")}")
           Await.result(Future.sequence(verityNodes.map(_.stop())), VerityEnv.STOP_MAX_TIMEOUT)
-          logger.info("[rg-00] Nodes stopped")
           throw e
       }
     }
@@ -158,7 +152,7 @@ trait VerityProviderBaseSpec
       val otherNodes = verityNodes.drop(1)
       Await.result(verityNodes.head.start(), maxStartTimeout)
       Await.result(Future.sequence(otherNodes.map(_.start())), maxStartTimeout)
-      logger.info(s"[rg-00] Nodes ${verityNodes.map(_.portProfile.artery)} started")
+      logger.info(s" Verity nodes with ports ${verityNodes.map(_.portProfile.artery)} started")
     }
 
     private def startVerityNodesAsync(verityNodes: Seq[VerityNode], maxStartTimeout: FiniteDuration)(implicit ec: ExecutionContext): Future[Seq[Unit]] = {

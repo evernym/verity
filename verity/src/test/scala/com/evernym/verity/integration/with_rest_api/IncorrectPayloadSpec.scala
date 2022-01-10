@@ -5,16 +5,17 @@ import com.evernym.verity.util2.Status.INVALID_VALUE
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.http.route_handlers.open.RestErrorResponse
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
-import com.evernym.verity.integration.base.sdk_provider.SdkProvider
+import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerRestSDK, SdkProvider}
 import com.evernym.verity.protocol.engine.ThreadId
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Offer
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
+import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory}
 import org.json.JSONObject
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext}
 
 
 class IncorrectPayloadSpec
@@ -24,11 +25,8 @@ class IncorrectPayloadSpec
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(VAS_OVERRIDE_CONFIG).build(VAS)
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
-
-  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, executionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+  var issuerRestSDK: IssuerRestSDK = _
+  var holderSDK: HolderSdk = _
 
   val issuerHolderConn = "connId1"
   var schemaId: SchemaId = _
@@ -38,6 +36,16 @@ class IncorrectPayloadSpec
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+
+    val issuerVerityEnvFut = VerityEnvBuilder.default().withConfig(VAS_OVERRIDE_CONFIG).buildAsync(VAS)
+    val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
+    val issuerRestSDKFut = setupIssuerRestSdkAsync(issuerVerityEnvFut, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, executionContext)
+
+    issuerRestSDK = Await.result(issuerRestSDKFut, SDK_BUILD_TIMEOUT)
+    holderSDK = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)
+
+
     provisionEdgeAgent(issuerRestSDK)
     provisionCloudAgent(holderSDK)
     setupIssuer(issuerRestSDK)
@@ -60,7 +68,7 @@ class IncorrectPayloadSpec
           jsonObject.put("auto_issue", "true").toString   //sending string "true" instead of boolean true
         }
         val httpResp = issuerRestSDK.sendMsgForConn(issuerHolderConn, credOffer, applyToJsonMsg = jsonModifier, expectedRespStatus = BadRequest)
-        val restErrorResp = issuerRestSDK.parseHttpResponseAs[RestErrorResponse](httpResp)
+        val restErrorResp = HttpUtil.parseHttpResponseAs[RestErrorResponse](httpResp)
         restErrorResp shouldBe RestErrorResponse(INVALID_VALUE.statusCode, "field 'auto_issue' has invalid value")
       }
     }
@@ -73,6 +81,7 @@ class IncorrectPayloadSpec
       """.stripMargin
     )
 
+  implicit val futExecutionContext: ExecutionContext = futureExecutionContext
   /**
    * custom thread pool executor
    */

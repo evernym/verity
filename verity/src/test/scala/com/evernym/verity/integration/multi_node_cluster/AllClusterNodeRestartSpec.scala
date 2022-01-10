@@ -27,7 +27,7 @@ class AllClusterNodeRestartSpec
 
       "when checked if all nodes are up" - {
         "should be successful" in {
-          eventually(timeout(Span(20, Seconds)), interval(Span(200, Millis))) {
+          eventually(timeout(Span(40, Seconds)), interval(Span(200, Millis))) {
             verityEnv.checkIfNodesAreUp() shouldBe true
             verityEnv.availableNodes.size shouldBe 3
           }
@@ -44,7 +44,7 @@ class AllClusterNodeRestartSpec
 
       "when try to restart all nodes" - {
         "should be successful" in {
-          verityEnv.availableNodes.foreach(node => node.restart())
+          verityEnv.availableNodes.map(n => n.restart()(executionContext))
           eventually(timeout(Span(30, Seconds)), interval(Span(100, Millis))) {
             verityEnv.availableNodes.size shouldBe 3
           }

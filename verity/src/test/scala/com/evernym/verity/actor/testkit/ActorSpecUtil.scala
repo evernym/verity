@@ -60,6 +60,7 @@ class TestAppConfig(newConfig: Option[Config] = None,
   }
 
   lazy val baseConfig: Config = getLoadedConfig
+  override var config: Config = _
 }
 object TestAppConfig {
   def apply(newConfig: Option[Config] = None, clearValidators: Boolean = false) =

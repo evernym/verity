@@ -12,19 +12,19 @@ stages:
   - check
   - test
   - package
-  - build-test-harness
-  - acceptance
+  #- build-test-harness
+  #- acceptance
   - publish
-  - deploy
+  #- deploy
 
 include:
   - '/cicd/jobs/common.yml'
   - '/cicd/jobs/check.yml'
   - '/cicd/jobs/test.yml'
   - '/cicd/jobs/package.yml'
-  - '/cicd/jobs/interop.yml'
+  #- '/cicd/jobs/interop.yml'
   - '/cicd/jobs/publish.yml'
-  - '/cicd/jobs/deploy.yml'
+  #- '/cicd/jobs/deploy.yml'
   - template: Security/SAST.gitlab-ci.yml 
   - template: Security/Secret-Detection.gitlab-ci.yml
  

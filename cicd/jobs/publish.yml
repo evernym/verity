@@ -24,65 +24,65 @@ publish-debian:
       -F file=@$debianPackage
       --cacert "$EVERNYM_CERTIFICATE"
 
-publish-docker:
-  stage: publish
-  image:
-    name: gcr.io/kaniko-project/executor:debug
-    entrypoint: [""]
-  extends:
-    - .publish-common
-    - .main-or-manual-rule
-  needs:
-    - package
-  script:
-    # Make Kaniko trust Evernym's internal CA
-    - cat "$EVERNYM_CERTIFICATE" >> /kaniko/ssl/certs/ca-certificates.crt
-    # Move to pre-packaged docker directory
-    - cd $CI_PROJECT_DIR/verity/target/docker
-    - ls -lR
-    # source args for container build
-    - source ./args.env
-    # establish kaniko's config file from gitlab-runner environment variables
-    - >
-      printf
-      '{"auths":{"%s":{"username":"%s","password":"%s"}},"credHelpers":{"%s":"ecr-login"}}'
-      $CI_REGISTRY
-      $CI_REGISTRY_USER
-      $CI_REGISTRY_PASSWORD
-      $AWS_ECR_REGISTRY
-      > /kaniko/.docker/config.json
-    - >
-      DOCKER_AWS_DESTINATIONS="
-      --destination $AWS_ECR_REGISTRY/verity:$VERITY_VERSION
-      --destination $AWS_ECR_REGISTRY/verity:latest
-      "
-    - >
-      /kaniko/executor
-      --build-arg LIBINDY_VERSION=$LIBINDY_VERSION
-      --build-arg EVERNYM_CERTIFICATE=$EVERNYM_ROOT_CA
-      --context . $DRY_RUN $DOCKER_AWS_DESTINATIONS
-      --destination $CI_REGISTRY_IMAGE:$VERITY_VERSION
-      --destination $CI_REGISTRY_IMAGE:latest
-  tags:
-    - large
-    - docker-machine
-
-publish-helm:
-  stage: publish
-  extends:
-    - .publish-common
-    - .main-or-manual-rule
-  variables:
-    DEFINED_CHANGES: "verity/src/helm/**/* "
-  needs:
-    - package-helm
-  tags:
-    - docker-machine
-    - micro
-  script:
-    - >
-      curl
-      --request POST
-      --user gitlab-ci-token:$CI_JOB_TOKEN
-      --form "chart=@$(find ${CI_PROJECT_DIR}/verity/target/helm -type f -name '*.tgz')"
-      "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/api/stable/charts"
+#publish-docker:
+#  stage: publish
+#  image:
+#    name: gcr.io/kaniko-project/executor:debug
+#    entrypoint: [""]
+#  extends:
+#    - .publish-common
+#    - .main-or-manual-rule
+#  needs:
+#    - package
+#  script:
+#    # Make Kaniko trust Evernym's internal CA
+#    - cat "$EVERNYM_CERTIFICATE" >> /kaniko/ssl/certs/ca-certificates.crt
+#    # Move to pre-packaged docker directory
+#    - cd $CI_PROJECT_DIR/verity/target/docker
+#    - ls -lR
+#    # source args for container build
+#    - source ./args.env
+#    # establish kaniko's config file from gitlab-runner environment variables
+#    - >
+#      printf
+#      '{"auths":{"%s":{"username":"%s","password":"%s"}},"credHelpers":{"%s":"ecr-login"}}'
+#      $CI_REGISTRY
+#      $CI_REGISTRY_USER
+#      $CI_REGISTRY_PASSWORD
+#      $AWS_ECR_REGISTRY
+#      > /kaniko/.docker/config.json
+#    - >
+#      DOCKER_AWS_DESTINATIONS="
+#      --destination $AWS_ECR_REGISTRY/verity:$VERITY_VERSION
+#      --destination $AWS_ECR_REGISTRY/verity:latest
+#      "
+#    - >
+#      /kaniko/executor
+#      --build-arg LIBINDY_VERSION=$LIBINDY_VERSION
+#      --build-arg EVERNYM_CERTIFICATE=$EVERNYM_ROOT_CA
+#      --context . $DRY_RUN $DOCKER_AWS_DESTINATIONS
+#      --destination $CI_REGISTRY_IMAGE:$VERITY_VERSION
+#      --destination $CI_REGISTRY_IMAGE:latest
+#  tags:
+#    - large
+#    - docker-machine
+#
+#publish-helm:
+#  stage: publish
+#  extends:
+#    - .publish-common
+#    - .main-or-manual-rule
+#  variables:
+#    DEFINED_CHANGES: "verity/src/helm/**/* "
+#  needs:
+#    - package-helm
+#  tags:
+#    - docker-machine
+#    - micro
+#  script:
+#    - >
+#      curl
+#      --request POST
+#      --user gitlab-ci-token:$CI_JOB_TOKEN
+#      --form "chart=@$(find ${CI_PROJECT_DIR}/verity/target/helm -type f -name '*.tgz')"
+#      "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/api/stable/charts"

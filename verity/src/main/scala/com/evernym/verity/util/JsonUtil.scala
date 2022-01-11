@@ -2,14 +2,14 @@ package com.evernym.verity.util
 
 import com.evernym.verity.protocol.engine.util.DbcUtil
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.{DefaultScalaModule, ScalaObjectMapper}
+import com.fasterxml.jackson.module.scala.{ClassTagExtensions, DefaultScalaModule, ScalaObjectMapper}
 import org.json.{JSONException, JSONObject}
 
 //TODO move to MsgCodec?
 object JsonUtil {
 
   private val jsonMapper = {
-    val objectMapper = new ObjectMapper() with ScalaObjectMapper
+    val objectMapper = new ObjectMapper() with ClassTagExtensions
     objectMapper.registerModule(DefaultScalaModule)
     objectMapper
   }

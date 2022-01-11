@@ -43,7 +43,6 @@ case class VerityLocalNode(tmpDirPath: Path,
     logger.info(s"Start verity instance ${portProfile.artery}")
     if (!isAvailable) {
       Future {
-        logger.info(s"Class loader for instance ${portProfile.artery} booting is ${Thread.currentThread().getContextClassLoader}")
         startVerityInstance()
       } map {
         srv =>
@@ -61,23 +60,6 @@ case class VerityLocalNode(tmpDirPath: Path,
       stopGracefully()
     }
   }
-
-  //is this really ungraceful shutdown?
-  //  private def stopUngracefully(): Unit = {
-  //    def stopHttpServer(): Unit = {
-  //      val httpStopFut = httpServer.stop()
-  //      Await.result(httpStopFut, 30.seconds)
-  //    }
-  //
-  //    def stopActorSystem(): Unit = {
-  //      val platformStopFut = platform.actorSystem.terminate()
-  //      Await.result(platformStopFut, 30.seconds)
-  //    }
-  //
-  //    isAvailable = false
-  //    stopHttpServer()
-  //    stopActorSystem()
-  //  }
 
   private def stopGracefully(): Unit = {
     isAvailable = false

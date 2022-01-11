@@ -32,14 +32,16 @@ object UrlParam {
     try {
       val url = new URL(urlStr)
       val port = portToBeUsed(url.getProtocol, url.getPort)
+      val protocol = if (Option(url.getProtocol).nonEmpty) url.getProtocol else protocolToBeUsed(port)
       val path = buildOption(url.getPath).map(_.replaceFirst("/", ""))
       val query = buildOption(url.getQuery)
-      UrlParam(url.getProtocol, url.getHost, port, path, query)
+      UrlParam(protocol, url.getHost, port, path, query)
     } catch {
       //only retry with 'http' if no protocol is given but it does include some port
       case e: MalformedURLException
         if isNoProtocolWithPossiblePortGiven(urlStr, e) || isUnknownProtocol(urlStr, e) =>
-          apply(HTTP_PROTOCOL + "://" + urlStr)
+          val port = urlStr.split(":").last.split("/").head.toInt
+          apply(protocolToBeUsed(port) + "://" + urlStr)
       case x @ (_: MalformedURLException | _: RuntimeException) =>
         throw new InvalidComMethodException(Option(s"invalid http endpoint: '$urlStr' reason: ${x.getMessage}"))
     }

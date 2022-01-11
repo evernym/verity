@@ -142,7 +142,7 @@ trait VerityProviderBaseSpec
       }
       catch {
         case e: Exception =>
-          logger.warn(s"Nodes start failed: ${e.getMessage} ${e.getStackTrace.mkString("", System.lineSeparator(), "")}")
+          logger.warn(s"Verity nodes ${verityNodes.map(_.portProfile.artery)} start failed. ", e)
           Await.result(Future.sequence(verityNodes.map(_.stop())), VerityEnv.STOP_MAX_TIMEOUT)
           throw e
       }

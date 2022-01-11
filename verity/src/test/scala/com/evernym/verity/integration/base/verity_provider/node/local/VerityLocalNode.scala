@@ -64,6 +64,7 @@ case class VerityLocalNode(tmpDirPath: Path,
   private def stopGracefully(): Unit = {
     isAvailable = false
     if (httpServer == null){
+      logger.warn(s"Verity node ${portProfile.artery} 'stopGracefully' called, but it seems like node was not be started")
       return
     }
     val cluster = Cluster(platform.actorSystem)

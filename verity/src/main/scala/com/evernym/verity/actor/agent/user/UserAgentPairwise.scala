@@ -72,7 +72,7 @@ import com.evernym.verity.msgoutbox.outbox.Outbox.DESTINATION_ID_DEFAULT
 import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.registry.PinstIdPair
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
-import com.evernym.verity.util2.{Exceptions, Status}
+import com.evernym.verity.util2.{Exceptions, Status, UrlParam}
 import org.json.JSONObject
 
 import java.util.UUID
@@ -245,7 +245,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
           direction,
           theirAgencyDID,
           cr.getAgencyInfoReq(theirAgencyDID).verKeyReq,
-          cr.getAgencyInfoReq(theirAgencyDID).endpointReq)
+          UrlParam(cr.getAgencyInfoReq(theirAgencyDID).endpointReq).toString
+        )
       }
     }
   }

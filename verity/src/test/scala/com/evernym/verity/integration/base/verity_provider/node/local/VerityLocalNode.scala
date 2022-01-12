@@ -40,7 +40,7 @@ case class VerityLocalNode(tmpDirPath: Path,
   private val logger: Logger = LoggingUtil.getLoggerByName("VerityLocalNode")
 
   def start()(implicit ec: ExecutionContext): Future[Unit] = {
-    logger.info(s"Start verity instance ${portProfile.artery}")
+    logger.info(s"Start verity instance with artery port ${portProfile.artery} and http port ${portProfile.http}")
     if (!isAvailable) {
       Future {
         startVerityInstance()

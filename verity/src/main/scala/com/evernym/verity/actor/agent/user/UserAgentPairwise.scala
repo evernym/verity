@@ -8,7 +8,7 @@ import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.actor.agent.agency.GetAgencyIdentity
-import com.evernym.verity.actor.agent.msghandler.{AgentMsgProcessor, MsgRespConfig, ProcessTypedMsg, SendToProtocolActor}
+import com.evernym.verity.actor.agent.msghandler.{AgentMsgProcessor, MsgRespConfig, ProcessTypedMsg, SendMsgToMyDomain, SendToProtocolActor}
 import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsgParam}
 import com.evernym.verity.actor.agent.msghandler.outgoing._
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
@@ -62,6 +62,7 @@ import com.evernym.verity.util.Util.replaceVariables
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey, TheirKeyStored}
+import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.UpgradeInfoMsgHelper
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
 import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType}
@@ -71,9 +72,10 @@ import com.evernym.verity.msgoutbox.outbox.Outbox.DESTINATION_ID_DEFAULT
 import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.registry.PinstIdPair
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
-import com.evernym.verity.util2.{Exceptions, Status}
+import com.evernym.verity.util2.{Exceptions, Status, UrlParam}
 import org.json.JSONObject
 
+import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Left, Success, Try}
 
@@ -146,6 +148,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     case GetPairwiseUpgradeInfo                             => handleGetUpgradeInfo()
     case GetPairwiseConnDetail                              => sendPairwiseConnDetail()
     case utr: UpdateTheirRouting                            => updateTheirPairwiseDidDoc(utr)
+    case SendUpgradeInfoIfNeeded                            => sendUpgradeInfoIfRequired()
   }
 
   override final def receiveAgentEvent: Receive =
@@ -224,20 +227,26 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
 
   def handleGetUpgradeInfo(): Unit = {
     val sndr = sender()
+    buildGetUpgradeInfo().map { resp =>
+      sndr ! resp
+    }
+  }
+
+  def buildGetUpgradeInfo(): Future[ActorMessage] = {
     if (theirRoutingUpdateStatus.original.isEmpty) {
-      sndr ! NoUpgradeNeeded
+      Future.successful(NoUpgradeNeeded)
     } else {
       val direction =
-        if (theirRoutingUpdateStatus.original == theirRoutingUpdateStatus.latest) "v2tov1"
+        if (theirRoutingUpdateStatus.isOrigAndLatestSame) "v2tov1"
         else "v1tov2"
       val theirAgencyDID = theirRoutingParam.routingTarget
       getAgencyIdentityFut(agencyDIDReq, GetAgencyIdentity(theirAgencyDID), metricsWriter).map { cr =>
-        sndr !
-          PairwiseUpgradeInfo(
-            direction,
-            theirAgencyDID,
-            cr.getAgencyInfoReq(theirAgencyDID).verKeyReq,
-            cr.getAgencyInfoReq(theirAgencyDID).endpointReq)
+        PairwiseUpgradeInfo(
+          direction,
+          theirAgencyDID,
+          cr.getAgencyInfoReq(theirAgencyDID).verKeyReq,
+          UrlParam(cr.getAgencyInfoReq(theirAgencyDID).endpointReq).toString
+        )
       }
     }
   }
@@ -294,6 +303,32 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
             logger.warn(s"[$persistenceId] [routing migration] no legacy routing service endpoint found")
             throw new RemoteEndpointNotFoundErrorException(Option(s"[$persistenceId] [routing migration] no legacy routing service endpoint found"))
         }
+    self ! SendUpgradeInfoIfNeeded
+  }
+
+  def sendUpgradeInfoIfRequired(): Unit = {
+    if (theirRoutingUpdateStatus.isOrigAndLatestSame) {
+      buildGetUpgradeInfo().map {
+        case NoUpgradeNeeded =>
+        //nothing to do
+        case pui: PairwiseUpgradeInfo =>
+          val pairwiseResults = Map(state.myDid_! -> pui)
+          val agentMsgContext = AgentMsgContext(MsgPackFormat.MPF_INDY_PACK, MFV_1_0, None)
+          val getPairwiseUpgradeInfoResp = UpgradeInfoMsgHelper.buildRespMsg(pairwiseResults)(agentMsgContext)
+          val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
+            getPairwiseUpgradeInfoResp, wrapInBundledMsgs = false)
+          AgentMsgPackagingUtil.buildAgentMsg(agentMsgContext.msgPackFormat,
+            param)(agentMsgTransformer, wap, metricsWriter).map { pm =>
+            self ! SendMsgToMyDomain(
+              OutgoingMsgParam(pm),
+              UUID.randomUUID().toString,
+              MSG_TYPE_UPGRADE_INFO,
+              state.thisAgentKeyDIDReq,
+              None
+            )
+          }
+      }
+    }
   }
 
   def sendOutboxParam(destId: DestId): Unit = {
@@ -1206,3 +1241,5 @@ case class UpdateTheirRouting(routingPairwiseDID: DidStr,
                               routingPairwiseVerKey: VerKeyStr,
                               agencyDID: DidStr,
                               agencyVerKey: VerKeyStr) extends ActorMessage
+
+case object SendUpgradeInfoIfNeeded extends ActorMessage

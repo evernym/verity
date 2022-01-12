@@ -96,6 +96,7 @@ trait UserAgentPairwiseSpec_V_0_6
   override def beforeAll(): Unit = {
     super.beforeAll()
     setupAgency()
+    updateAgencyDid()
     createUserAgent()
     updateComMethod(COM_METHOD_TYPE_PUSH, testPushComMethod)
     updateComMethod(COM_METHOD_TYPE_HTTP_ENDPOINT, "localhost:7000")

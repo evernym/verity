@@ -4,10 +4,11 @@ import com.evernym.verity.util2.Status.MSG_STATUS_CREATED
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.constants.Constants.DEFAULT_INVITE_RECEIVER_USER_NAME
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.connecting.common.{InviteDetail, SenderAgencyDetail}
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util2.UrlParam
+
 
 trait HasCloudAgent { this: MockAgent =>
 
@@ -56,21 +57,6 @@ trait HasCloudAgent { this: MockAgent =>
   def setAgencyIdentity(ad: AgencyPublicDid): Unit = {
     storeTheirKey(ad.DID, ad.verKey, ignoreIfAlreadyExists = true)
     agencyPublicDid = Option(ad)
-  }
-
-  def setAgencyIdentityWithRandomData(): Unit = {
-    if (agencyPublicDid.isDefined)
-      throw new RuntimeException("agency detail is already set")
-    val dd = generateNewDid()
-    setAgencyIdentity(AgencyPublicDid(dd.did, dd.verKey))
-  }
-
-  def updateCloudAgentPairwiseKeys(connId: String, did: DidStr, verKey: VerKeyStr): Unit = {
-    if (! pairwiseConnDetails.contains(connId)) {
-      throw new RuntimeException(s"name '$connId' is not yet created")
-    }
-    val pcd = pairwiseConnDetail(connId)
-    pcd.setTheirPairwiseDidPair(did, verKey)
   }
 
   def setAgencyPairwiseAgentDetail(id: String, verKey: VerKeyStr): Unit = {

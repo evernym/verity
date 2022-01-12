@@ -5,7 +5,6 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import com.evernym.verity.actor.ConnectionStatusUpdated
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.agent.user.UpdateTheirRouting
-import com.evernym.verity.actor.persistence.recovery.base.AgentIdentifiers._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.GetUpgradeInfo
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
@@ -80,10 +79,11 @@ class GetUpgradeInfoSpec
     "when tried to update their did doc" - {
       "should be successful" in {
         val myPairwiseDid = holderSDKCAS.myPairwiseRelationships(connId).myPairwiseDID
+        val theirPairwiseDidDoc = holderSDKCAS.myPairwiseRelationships(connId).theirDIDDocReq
 
         val utr = UpdateTheirRouting(
-          theirPairwiseRelDIDPair.did,
-          theirPairwiseRelDIDPair.verKey,
+          theirPairwiseDidDoc.id,
+          theirPairwiseDidDoc.verkey,
           issuerSDKVAS.agencyDID,
           issuerSDKVAS.agencyVerKey)
         val jsonReq = DefaultMsgCodec.toJson(utr)
@@ -99,6 +99,7 @@ class GetUpgradeInfoSpec
         val resp = holderSDKCAS.getUpgradeInfo(GetUpgradeInfo(List(myPairwiseDid)))
         resp.data.size shouldBe 1
         resp.data(myPairwiseDid).direction shouldBe "v1tov2"
+        resp.data(myPairwiseDid).theirAgencyEndpoint.startsWith("http") shouldBe true
       }
     }
 
@@ -125,6 +126,7 @@ class GetUpgradeInfoSpec
         val resp = holderSDKCAS.getUpgradeInfo(GetUpgradeInfo(List(myPairwiseDid)))
         resp.data.size shouldBe 1
         resp.data(myPairwiseDid).direction shouldBe "v2tov1"
+        resp.data(myPairwiseDid).theirAgencyEndpoint.startsWith("http") shouldBe true
       }
     }
   }

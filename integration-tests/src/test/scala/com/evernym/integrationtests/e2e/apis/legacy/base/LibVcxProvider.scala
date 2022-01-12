@@ -6,7 +6,8 @@ import akka.http.scaladsl.model.{HttpEntity, HttpMethods, HttpRequest, HttpRespo
 import com.evernym.sdk.vcx.connection.ConnectionApi
 import com.evernym.sdk.vcx.credential.CredentialApi
 import com.evernym.sdk.vcx.credentialDef.CredentialDefApi
-import com.evernym.sdk.vcx.proof.DisclosedProofApi
+import com.evernym.sdk.vcx.issuer.IssuerApi
+import com.evernym.sdk.vcx.proof.{DisclosedProofApi, ProofApi}
 import com.evernym.sdk.vcx.schema.SchemaApi
 import com.evernym.sdk.vcx.utils.UtilsApi
 import com.evernym.sdk.vcx.vcx.VcxApi
@@ -29,7 +30,6 @@ import org.scalatest.time.{Millis, Seconds, Span}
 import java.util.UUID
 import com.evernym.verity.util2.ExecutionContextProvider
 
-import java.time.Instant
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.{Duration, SECONDS}
@@ -64,9 +64,7 @@ trait LibVcxProvider
                       agencyDidPair: DidPair,
                       protocolVersion: String): Unit = {
     val idOwner = provisionIssuerBase(identityOwnerName, verityEndpoint, agencyDidPair, protocolVersion)
-    withTAAAccepted(identityOwnerName) { _ =>
-      ledgerUtil.bootstrapNewDID(idOwner.sdkToRemoteDID, idOwner.sdkToRemoteVerKey)
-    }
+    ledgerUtil.bootstrapNewDID(idOwner.sdkToRemoteDID, idOwner.sdkToRemoteVerKey)
   }
 
   def provisionHolder(identityOwnerName: IdentityOwnerName,
@@ -81,7 +79,7 @@ trait LibVcxProvider
                   sourceId: String,
                   createSchemaParam: CreateSchemaParam,
                   credDefParam: CreateCredDefParam): IssuerSetup = {
-    val schemaId: String = withTAAAccepted(identityOwnerName) { _ =>
+    val schemaId: String = withVcxIdentityOwner(identityOwnerName) { _ =>
       val schemaHandle =
         SchemaApi.schemaCreate(
           sourceId,
@@ -94,7 +92,7 @@ trait LibVcxProvider
       SchemaApi.schemaGetSchemaId(schemaHandle).get()
     }
 
-    val credDefId = withTAAAccepted(identityOwnerName) { _ =>
+    val credDefId = withVcxIdentityOwner(identityOwnerName) { idOwner =>
       val credDefHandle =
         CredentialDefApi.credentialDefCreate(
           sourceId,
@@ -106,7 +104,9 @@ trait LibVcxProvider
           0
         ).get()
 
-      CredentialDefApi.credentialDefGetCredentialDefId(credDefHandle).get()
+      val credDefId = CredentialDefApi.credentialDefGetCredentialDefId(credDefHandle).get()
+      idOwner.updateCredDefHandle(credDefId, credDefHandle)
+      credDefId
     }
     IssuerSetup(sourceId, schemaId, credDefId)
   }
@@ -169,23 +169,6 @@ trait LibVcxProvider
     s"$major.$minor.$path"
   }
 
-  def withTAAAccepted[R](forOwnerName: IdentityOwnerName)(f: IdentityOwner => R): R = {
-    withVcxIdentityOwner(forOwnerName) { owner =>
-      if (isTaaEnabled) {
-        val agreement = new JSONObject(UtilsApi.getLedgerAuthorAgreement.get())
-        val acceptMechanism = "at_submission"
-        UtilsApi.setActiveTxnAuthorAgreementMeta(
-          agreement.getString("text"),
-          agreement.getString("version"),
-          null,
-          acceptMechanism,
-          Instant.now.getEpochSecond
-        )
-      }
-      f(owner)
-    }
-  }
-
   def sendMessage[T: ClassTag](fromOwnerName: IdentityOwnerName,
                                toConn: String,
                                msg: T,
@@ -222,6 +205,23 @@ trait LibVcxProvider
     }
   }
 
+  def sendCredOffer(fromOwnerName: IdentityOwnerName,
+                    connId: String,
+                    sourceId: String,
+                    credDefId: String,
+                    credData: String,
+                    credName: String,
+                    price: String="0"): Unit = {
+    withConnection(fromOwnerName, connId) { (idOwner, connHandle) =>
+      idOwner.getCredDefHandler(credDefId).foreach { credDefHandle =>
+        val credHandle = IssuerApi.issuerCreateCredential(sourceId, credDefHandle, idOwner.institutionDID,
+          credData, credName, price).get()
+        IssuerApi.issuerSendCredentialOffer(credHandle, connHandle).get()
+        idOwner.updateIssuerCredHandle(connId, sourceId, credHandle)
+      }
+    }
+  }
+
   def sendCredReq(fromOwnerName: IdentityOwnerName,
                   connId: String,
                   sourceId: String,
@@ -229,22 +229,48 @@ trait LibVcxProvider
     withConnection(fromOwnerName, connId) { (idOwner, connHandle) =>
       val credHandle = CredentialApi.credentialCreateWithOffer(sourceId, offer).get()
       CredentialApi.credentialSendRequest(credHandle, connHandle, 0).get()
-      idOwner.updateCredHandle(connId, sourceId, credHandle)
+      idOwner.updateHolderCredHandle(connId, sourceId, credHandle)
+    }
+  }
+
+  def checkReceivedCredReq(fromOwnerName: IdentityOwnerName,
+                           connId: String,
+                           sourceId: String,
+                           reqMsg: String): Unit = {
+    withConnection(fromOwnerName, connId) { (idOwner, connHandle) =>
+      idOwner.getIssuerCredHandler(connId, sourceId).foreach { credHandle =>
+        IssuerApi.issuerCredentialUpdateStateWithMessage(credHandle, reqMsg).get()
+        IssuerApi.issuerSendCredential(credHandle, connHandle).get()
+        val credState = IssuerApi.issuerCredentialGetState(credHandle).get()
+        credState shouldBe 4
+      }
     }
   }
 
   def checkReceivedCred(fromOwnerName: IdentityOwnerName,
                         connId: String,
-                        sourceId: String): Unit = {
+                        sourceId: String,
+                        cred: String): Unit = {
     withVcxIdentityOwner(fromOwnerName) { idOwner =>
-      idOwner.getCredHandler(connId, sourceId).foreach { credHandle =>
-        eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
-          CredentialApi.credentialUpdateState(credHandle).get()
-          val credState = CredentialApi.credentialGetState(credHandle).get()
-          credState shouldBe 4
-        }
+      idOwner.getHolderCredHandler(connId, sourceId).foreach { credHandle =>
+        CredentialApi.credentialUpdateStateWithMessage(credHandle, cred).get()
+        val credState = CredentialApi.credentialGetState(credHandle).get()
+        credState shouldBe 4
         CredentialApi.getCredential(credHandle).get()
       }
+    }
+  }
+
+  def sendProofReq(fromOwnerName: IdentityOwnerName,
+                   connId: String,
+                   sourceId: String,
+                   requestedAttrs: String,
+                   reqPredicates: String): Unit = {
+    withConnection(fromOwnerName, connId) { (idOwner, connHandle) =>
+      val proofHandle = ProofApi.proofCreate(sourceId, requestedAttrs,
+        reqPredicates, """{}""", "name").get()
+      ProofApi.proofSendRequest(proofHandle, connHandle).get()
+      idOwner.updateVerifierProofHandle(connId, sourceId, proofHandle)
     }
   }
 
@@ -266,7 +292,20 @@ trait LibVcxProvider
       credentials.put("attrs", attrsObject)
       DisclosedProofApi.proofGenerate(proofHandle, credentials.toString, "{}").get()
       DisclosedProofApi.proofSend(proofHandle, connHandle).get()
-      idOwner.updateProofHandle(connId, sourceId, proofHandle)
+      idOwner.updateHolderProofHandle(connId, sourceId, proofHandle)
+    }
+  }
+
+  def checkProofValid(fromOwnerName: IdentityOwnerName,
+                      connId: String,
+                      sourceId: String,
+                      proof: String): Unit = {
+    withVcxIdentityOwner(fromOwnerName) { idOwner =>
+      idOwner.getVerifierProofHandler(connId, sourceId).foreach { proofHandle =>
+      ProofApi.proofUpdateStateWithMessage(proofHandle, proof).get()
+      val credState = ProofApi.proofGetState(proofHandle).get()
+      credState shouldBe 4
+      }
     }
   }
 
@@ -274,7 +313,7 @@ trait LibVcxProvider
                          connId: String,
                          sourceId: String): Unit = {
     withVcxIdentityOwner(fromOwnerName) { idOwner =>
-      idOwner.getProofHandler(connId, sourceId).foreach { proofHandle =>
+      idOwner.getHolderProofHandler(connId, sourceId).foreach { proofHandle =>
         eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
           DisclosedProofApi.proofUpdateState(proofHandle).get()
           val credState = DisclosedProofApi.proofGetState(proofHandle).get()
@@ -284,14 +323,28 @@ trait LibVcxProvider
     }
   }
 
+  def upgradeConnection(fromOwnerName: IdentityOwnerName,
+                        connId: String,
+                        data: String): Unit = {
+    withConnection(fromOwnerName, connId) { (_, connHandle) =>
+      ConnectionApi.connectionUpgrade(connHandle, data).get()
+    }
+  }
+
+  def getPairwiseDID(fromOwnerName: IdentityOwnerName,
+                     connId: String): String = {
+    withConnection(fromOwnerName, connId) { (_, connHandle) =>
+      ConnectionApi.connectionGetPwDid(connHandle).get()
+    }
+  }
 
   def expectMsg[T: ClassTag](idOwnerName: IdentityOwnerName,
                              fromConn: String,
                              legacyMsgTypeName: Option[String] = None): ExpectedMsg[T] = {
     withConnection(idOwnerName, fromConn) { (_, connHandle) =>
       val expectedPairwiseDID = ConnectionApi.connectionGetPwDid(connHandle).get()
-
-      eventually(timeout(Span(15, Seconds)), interval(Span(100, Millis))) {
+      val expectedMsgTypeStr = Try(buildMsgTypeStr)
+      eventually(timeout(Span(15, Seconds)), interval(Span(1000, Millis))) {
         val getMsgResult = UtilsApi.vcxGetMessages("MS-103", null, s"$expectedPairwiseDID").get()
         val jsonArray = new JSONArray(getMsgResult).asScala
         val pairwiseMsgsOpt = jsonArray.find { obj =>
@@ -314,8 +367,10 @@ trait LibVcxProvider
           legacyMsgTypeName.contains(rm.msgTypeName) ||
             Try {
               val receivedMsg = new JSONObject(rm.msg)
-              val expectedMsgTypeStr = buildMsgTypeStr
-              receivedMsg.getString("@type") == expectedMsgTypeStr
+              val receivedMsgType = receivedMsg.getString("@type")
+              legacyMsgTypeName.contains(receivedMsgType) ||
+                expectedMsgTypeStr.map(_ == receivedMsgType)
+                  .getOrElse(false)
             }.getOrElse(false)
         }
         expectedMsg.isDefined shouldBe true
@@ -416,6 +471,24 @@ trait LibVcxProvider
     val walletName = UUID.randomUUID().toString
     val walletKey = "test-password"
 
+    val indyPoolNetwork = new JSONObject()
+    val namespaceList = new JSONArray()
+    namespaceList.put("sov")
+    indyPoolNetwork.put("genesis_path", genesisTxnFilePath)
+    indyPoolNetwork.put("namespace_list", namespaceList)
+
+    if (isTaaEnabled) {
+      val indyTAAConfigJson = new JSONObject()
+      indyTAAConfigJson.put("text", "TAA for sandbox ledger")
+      indyTAAConfigJson.put("version", "1.0.0")
+      indyTAAConfigJson.put("acc_mech_type", "at_submission")
+      indyTAAConfigJson.put("time", java.time.Instant.now().getEpochSecond)
+
+      indyPoolNetwork.put("taa_config", indyTAAConfigJson)
+    }
+
+    val poolNetworks = new JSONArray()
+    poolNetworks.put(indyPoolNetwork)
     val provisionConfig: JSONObject = new JSONObject(specificConfig.toString)
       .put("agency_url", verityEndpoint)
       .put("agency_did", agencyDidPair.did)
@@ -425,8 +498,8 @@ trait LibVcxProvider
       .put("pool_name", UUID.randomUUID().toString)
       .put("name", s"verity-integration-test")
       .put("logo", s"https://robohash.org/${UUID.randomUUID()}.png")
-      .put("path", genesisTxnFilePath)
       .put("protocol_type", protocolVersion)
+      .put("pool_networks", poolNetworks)
 
     val config = new JSONObject(UtilsApi.vcxAgentProvisionAsync(provisionConfig.toString()).get())
     val idOwner = IdentityOwner(config)
@@ -453,48 +526,86 @@ case class IdentityOwner(config: JSONObject) {
 
   type ConnId = String
   type SerializedConnHandle = String
+  type SerializedCredDefHandle = String
   type SerializedCredHandle = String
   type SerializedProofHandle = String
 
   private var serializedConnHandles: Map[ConnId, SerializedConnHandle] = Map.empty
-  private var serializedCredHandles: Map[ConnId, SerializedCredHandle] = Map.empty
-  private var serializedProofHandles: Map[ConnId, SerializedProofHandle] = Map.empty
+  private var serializedCredDefHandles: Map[ConnId, SerializedCredDefHandle] = Map.empty
+
+  private var serializedHolderCredHandles: Map[ConnId, SerializedCredHandle] = Map.empty
+  private var serializedIssuerCredHandles: Map[ConnId, SerializedCredHandle] = Map.empty
+
+  private var serializedVerifierProofHandles: Map[ConnId, SerializedProofHandle] = Map.empty
+  private var serializedHolderProofHandles: Map[ConnId, SerializedProofHandle] = Map.empty
 
   def updateConnectionHandle(connId1: String, handle: Integer): Unit = {
     val ser = ConnectionApi.connectionSerialize(handle).get
     serializedConnHandles += connId1 -> ser
   }
 
-  def updateCredHandle(connId1: String, sourceId: String, handle: Integer): Unit = {
-    val ser = CredentialApi.credentialSerialize(handle).get
-    val key = connId1 + sourceId
-    serializedCredHandles += key -> ser
+  def updateCredDefHandle(credDefId: String, handle: Integer): Unit = {
+    val ser = CredentialDefApi.credentialDefSerialize(handle).get
+    serializedCredDefHandles += credDefId -> ser
   }
 
-  def updateProofHandle(connId1: String, sourceId: String, handle: Integer): Unit = {
+  def updateHolderCredHandle(connId1: String, sourceId: String, handle: Integer): Unit = {
+    val ser = CredentialApi.credentialSerialize(handle).get
+    val key = connId1 + sourceId
+    serializedHolderCredHandles += key -> ser
+  }
+
+  def updateIssuerCredHandle(connId1: String, sourceId: String, handle: Integer): Unit = {
+    val ser = IssuerApi.issuerCredentialSerialize(handle).get
+    val key = connId1 + sourceId
+    serializedIssuerCredHandles += key -> ser
+  }
+
+  def updateVerifierProofHandle(connId1: String, sourceId: String, handle: Integer): Unit = {
+    val ser = ProofApi.proofSerialize(handle).get
+    val key = connId1 + sourceId
+    serializedVerifierProofHandles += key -> ser
+  }
+
+  def updateHolderProofHandle(connId1: String, sourceId: String, handle: Integer): Unit = {
     val ser = DisclosedProofApi.proofSerialize(handle).get
     val key = connId1 + sourceId
-    serializedProofHandles += key -> ser
+    serializedHolderProofHandles += key -> ser
   }
 
   def getConnectionHandler(connId1: String): Option[Integer] = {
     serializedConnHandles.get(connId1).map(ConnectionApi.connectionDeserialize(_).get)
   }
 
-  def getCredHandler(connId1: String, sourceId: String): Option[Integer] = {
-    val key = connId1 + sourceId
-    serializedCredHandles.get(key).map(CredentialApi.credentialDeserialize(_).get)
+  def getCredDefHandler(credDefId: String): Option[Integer] = {
+    serializedCredDefHandles.get(credDefId).map(CredentialDefApi.credentialDefDeserialize(_).get)
   }
 
-  def getProofHandler(connId1: String, sourceId: String): Option[Integer] = {
+  def getHolderCredHandler(connId1: String, sourceId: String): Option[Integer] = {
     val key = connId1 + sourceId
-    serializedProofHandles.get(key).map(DisclosedProofApi.proofDeserialize(_).get)
+    serializedHolderCredHandles.get(key).map(CredentialApi.credentialDeserialize(_).get)
+  }
+
+  def getIssuerCredHandler(connId1: String, sourceId: String): Option[Integer] = {
+    val key = connId1 + sourceId
+    serializedIssuerCredHandles.get(key).map(IssuerApi.issuerCredentialDeserialize(_).get)
+  }
+
+  def getVerifierProofHandler(connId1: String, sourceId: String): Option[Integer] = {
+    val key = connId1 + sourceId
+    serializedVerifierProofHandles.get(key).map(ProofApi.proofDeserialize(_).get)
+  }
+
+  def getHolderProofHandler(connId1: String, sourceId: String): Option[Integer] = {
+    val key = connId1 + sourceId
+    serializedHolderProofHandles.get(key).map(DisclosedProofApi.proofDeserialize(_).get)
   }
 
   val walletKey: String = config.getString("wallet_key")
   val walletName: String = config.getString("wallet_name")
   val sdkToRemoteDID: DidStr = config.getString("sdk_to_remote_did")
   val sdkToRemoteVerKey: VerKeyStr = config.getString("sdk_to_remote_verkey")
+  val institutionDID: DidStr = config.getString("institution_did")
 }
 
 case class CreateSchemaParam(name: String, version: String, attribute: String)

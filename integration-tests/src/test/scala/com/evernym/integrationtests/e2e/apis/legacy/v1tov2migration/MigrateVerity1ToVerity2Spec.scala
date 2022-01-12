@@ -45,9 +45,9 @@
 //  //override lazy val isTaaEnabled: Boolean = false
 //
 //  val setupData: SetupData = SetupData(
-//    totalEntAgents = 2,
-//    preMigrationConnsPerEntAgent = 2,
-//    postMigrationConnsPerEntAgent = 2
+//    totalEntAgents = 1,
+//    preMigrationConnsPerEntAgent = 1,
+//    postMigrationConnsPerEntAgent = 1
 //  )
 //
 //  lazy val issuerVAS: VerityEnv =
@@ -101,24 +101,23 @@
 //          )
 //        }
 //        val migrationParam = MigrationParam(
-//          validate = "True",
-//          mode = "start",
+//          mode = "migrate",
 //          casEndpoint = holderCAS.endpointProvider.availableNodeUrls.head,
 //          easEndpoint = issuerEAS.endpointProvider.availableNodeUrls.head,
 //          vasEndpoint = issuerVAS.endpointProvider.availableNodeUrls.head,
 //          candidates.toList
 //        )
 //        val migrationParamJson = DefaultMsgCodec.toJson(migrationParam)
-//        println("migrationParamJson: " + migrationParamJson)
+//        logger.info("migrationParamJson: " + migrationParamJson)
 //      }
 //    }
 //
 //    "when started migration" - {
 //      "should be successful" in {
 //        do {
-//          Thread.sleep(5000)    //wait for 5 seconds
+//          logger.info("checking if migration is finished")
+//          Thread.sleep(5000)               //wait for 5 seconds
 //        } while (! isMigrationFinished)    //check for migration completion
-//        issuerVAS.restartAllNodes()
 //      }
 //    }
 //  }
@@ -141,14 +140,38 @@
 //  "PostMigration" - {
 //    "when messages exchanged" - {
 //      "should be successful" in {
-//        testMsgsOverPreMigrationConns()
-//        testMsgsOverNewConnPostMigration()
+//        testCommittedAnswerPostMigration(state="PostMigrationBeforeConnUpgrade", forPreMigrationConn = true)
+//        testMsgsOverOldConnPostMigration(state="PostMigrationAfterConnUpgrade", null)
+//        testMsgsOverNewConnPostMigration(state="PostMigration")
+//      }
+//    }
+//  }
+//
+//  "PostUndoMigration" - {
+//    "when messages exchanged" - {
+//      "should be successful" in {
+//        issuerVAS.stopAllNodes()
+//        issuerEAS.restartAllNodes()
+//        do {
+//          logger.info("wait for all EAS nodes to be restarted")
+//          Thread.sleep(2000)
+//        } while (issuerEAS.availableNodes.isEmpty)
+//        do {
+//          logger.info("checking if migration is undone")
+//          Thread.sleep(5000)             //wait for 5 seconds
+//        } while (! isMigrationUndone)    //check for migration undo completion
+//
+//        testMsgsOverOldConnsPostMigrationUndone(state="PostUndoMigrationAfterConnUpgrade")
 //      }
 //    }
 //  }
 //
 //  private def isMigrationFinished: Boolean = {
-//    Files.exists(Paths.get("/tmp/migrated"))
+//    Files.exists(Paths.get("/tmp/migration-finished"))
+//  }
+//
+//  private def isMigrationUndone: Boolean = {
+//    Files.exists(Paths.get("/tmp/migration-undone"))
 //  }
 //
 //  private def setupEntV1Agents(): Unit = {
@@ -191,8 +214,8 @@
 //    setupData.entAgents.foreach { case (entName, entAgentState) =>
 //      (1 to setupData.preMigrationConnsPerEntAgent).foreach { i =>
 //        logger.warn(s"setting up pre migration state: $entName:$i")
-//        val userId = s"$entName-user-$i"
-//        val connId = s"$entName-conn-$i"
+//        val userId = s"$entName-user-$i-old"
+//        val connId = s"$entName-conn-$i-old"
 //        val invitation = createConnection(entName, connId)
 //
 //        provisionHolder(
@@ -208,15 +231,19 @@
 //      }
 //    }
 //    //exchange some messages (question-answer)
-//    exchangeCommittedAnswerBeforeMigration("How are you?", "fine")
+//    testCommittedAnswerOnPreMigrationConns("How are you?", "fine")
+//    testIssueCredPreMigration()
+//    testPresentProofPreMigration()
 //  }
 //
-//  private def exchangeCommittedAnswerBeforeMigration(question: String,
+//  private def testCommittedAnswerOnPreMigrationConns(question: String,
 //                                                     answer: String): Unit = {
 //    setupData.entAgents.foreach { case (entName, entAgentState) =>
 //      entAgentState.preMigrationConns.foreach { case (userName, userAgentState) =>
 //        logger.warn(s"testing committed-answer pre migration: $userName")
-//        sendMessage(entName, userAgentState.connId,
+//        sendMessage(
+//          entName,
+//          userAgentState.connId,
 //          Question(
 //            question_text = question,
 //            question_detail = None,
@@ -245,28 +272,42 @@
 //    }
 //  }
 //
-//  private def testMsgsOverPreMigrationConns(): Unit = {
-//    testCommittedAnswerPostMigration(forPreMigrationConn = true)
-//    //NOTE (for existing connection only):
-//    // 'issue-cred', 'present-proof' (and may be other) protocols
-//    // doesn't work post verity side of the migration and user will have to
-//    // upgrade the app (with libvcx connection migration changes)
-//    // which will migrate the connection in libvcx to be able to use/respond to
-//    // 'issue-cred', 'present-proof' protocols.
+//  private def testMsgsOverOldConnPostMigration(state: String, upgradeConnData: String): Unit = {
+//    setupData.entAgents.foreach { case (entName, entAgentState) =>
+//      entAgentState.getTargetConns(forPreMigrationConn=true).foreach { case (userName, userAgentState) =>
+//        upgradeConnection(userName, userAgentState.connId, upgradeConnData)
+//      }
+//    }
+//    testCommittedAnswerPostMigration(state, forPreMigrationConn = true)
+//    testIssueCredPostMigration(forPreMigrationConn = true)
+//    testPresentProofPostMigration(forPreMigrationConn = true)
 //  }
 //
-//  private def testMsgsOverNewConnPostMigration(): Unit = {
+//  private def testMsgsOverNewConnPostMigration(state: String): Unit = {
 //    testEstablishNewConnsPostMigration()
-//    testCommittedAnswerPostMigration(forPreMigrationConn = false)
+//    testCommittedAnswerPostMigration(state, forPreMigrationConn = false)
 //    testIssueCredPostMigration(forPreMigrationConn = false)
 //    testPresentProofPostMigration(forPreMigrationConn = false)
+//  }
+//
+//  private def testMsgsOverOldConnsPostMigrationUndone(state: String): Unit = {
+//    setupData.entAgents.foreach { case (entName, entAgentState) =>
+//      entAgentState.getTargetConns(forPreMigrationConn=true).foreach { case (userName, userAgentState) =>
+//        val pairwiseDID = getPairwiseDID(userName, userAgentState.connId)
+//        val msg = expectMsg[Any](userName, userAgentState.connId, Option("did:sov:123456789abcdefghi1234;spec/v1tov2migration/1.0/UPGRADE_INFO"))
+//        val respJsonObject = new JSONObject(msg.msgStr)
+//        val upgradeConnData = respJsonObject.getJSONObject("data").getJSONObject(pairwiseDID).toString()
+//        upgradeConnection(userName, userAgentState.connId, upgradeConnData)
+//      }
+//    }
+//    testCommittedAnswerOnPreMigrationConns("How are you after undo?", "Fine after undo too")
 //  }
 //
 //  private def testEstablishNewConnsPostMigration(): Unit = {
 //    setupData.entAgents.foreach { case (entName, entAgentState) =>
 //      (1 to setupData.postMigrationConnsPerEntAgent).foreach { i =>
-//        val userId = s"$entName-user-$i"
-//        val connId = s"$entName-conn-$i"
+//        val userId = s"$entName-user-$i-new"
+//        val connId = s"$entName-conn-$i-new"
 //
 //        val issuerRestSDK = entAgentState.issuerRestSDK
 //        val receivedMsg = issuerRestSDK.sendCreateRelationship(connId)
@@ -283,6 +324,12 @@
 //        val invite = new JSONObject(decoded)
 //        val updatedInvite = invite.put("@id", MsgUtil.newMsgId)
 //
+//        provisionHolder(
+//          userId,
+//          holderCAS.endpointProvider.availableNodeUrls.head,
+//          casAgencyDidPair.get,
+//          "3.0" //member pass uses 3.0
+//        )
 //        entAgentState.addPostMigrationConnState(userId, connId, updatedInvite.toString)
 //
 //        acceptInvitation(userId, connId, updatedInvite.toString)
@@ -292,14 +339,14 @@
 //    }
 //  }
 //
-//  private def testCommittedAnswerPostMigration(forPreMigrationConn: Boolean): Unit = {
+//  private def testCommittedAnswerPostMigration(state: String, forPreMigrationConn: Boolean): Unit = {
 //    setupData.entAgents.foreach { case (entName, entAgentState) =>
 //      entAgentState.getTargetConns(forPreMigrationConn).foreach { case (userName, userAgentState) =>
 //        val issuerRestSDK = entAgentState.issuerRestSDK
 //        val connId = userAgentState.connId
 //
-//        val question = s"PostMigration-$connId: How are you?"
-//        val answer = s"PostMigration-$connId: I am fine"
+//        val question = s"$state-$connId: How are you?"
+//        val answer = s"$state-$connId: I am fine"
 //
 //        val msg =
 //          AskQuestion(
@@ -326,6 +373,51 @@
 //    }
 //  }
 //
+//  private def testIssueCredPreMigration(): Unit = {
+//    setupData.entAgents.foreach { case (entName, entAgentState) =>
+//      entAgentState.getTargetConns(forPreMigrationConn = true).foreach { case (userName, userAgentState) =>
+//        val connId = userAgentState.connId
+//        val issuerSetup = entAgentState.issuerSetup
+//        val credValue = """
+//           {
+//            "first-name": "Hi",
+//            "last-name": "there",
+//            "age": "30"
+//           }
+//          """
+//        sendCredOffer(entName, connId, issuerSetup.sourceId, issuerSetup.credDefId, credValue, "credName")
+//        val expectedOfferMsg = expectMsg[Any](userName, connId, Option("CRED_OFFER"))
+//        sendCredReq(userName, connId, issuerSetup.sourceId, expectedOfferMsg.msgStr)
+//        val expectedReqMsg = expectMsg[Any](entName, connId, Option("credential-request"))
+//        checkReceivedCredReq(entName, connId, issuerSetup.sourceId, expectedReqMsg.msgStr)
+//        val expectedCred = expectMsg[Any](userName, connId, Option("CRED"))
+//        checkReceivedCred(userName, connId, issuerSetup.sourceId, expectedCred.msgStr)
+//      }
+//    }
+//  }
+//
+//  private def testPresentProofPreMigration(): Unit = {
+//    setupData.entAgents.foreach { case (entName, entAgentState) =>
+//      entAgentState.getTargetConns(forPreMigrationConn = true).foreach { case (userName, userAgentState) =>
+//        val connId = userAgentState.connId
+//        val issuerSetup = entAgentState.issuerSetup
+//        val reqAttrs =
+//          """[
+//            {"name":"first-name"},
+//            {"name":"last-name"}
+//            ]"""
+//        val reqPredicates =
+//          """[]"""
+//
+//        sendProofReq(entName, connId, issuerSetup.sourceId, reqAttrs, reqPredicates)
+//        val expectedProofReq = expectMsg[Any](userName, connId, Option("PROOF_REQUEST"))
+//        sendProof(userName, connId, issuerSetup.sourceId, expectedProofReq.msgStr)
+//        val expectedProof = expectMsg[Any](entName, connId, Option("presentation"))
+//        checkProofValid(entName, connId, issuerSetup.sourceId, expectedProof.msgStr)
+//      }
+//    }
+//  }
+//
 //  private def testIssueCredPostMigration(forPreMigrationConn: Boolean): Unit = {
 //    setupData.entAgents.foreach { case (entName, entAgentState) =>
 //      entAgentState.getTargetConns(forPreMigrationConn).foreach { case (userName, userAgentState) =>
@@ -343,7 +435,9 @@
 //
 //        val expectedOfferMsg = expectMsg[Any](userName, connId, Option("credential-offer"))
 //        sendCredReq(userName, connId, issuerSetup.sourceId, expectedOfferMsg.msgStr)
-//        checkReceivedCred(userName, connId, issuerSetup.sourceId)
+//
+//        val expectedCred = expectMsg[Any](userName, connId, Option("credential"))
+//        checkReceivedCred(userName, connId, issuerSetup.sourceId, expectedCred.msgStr)
 //      }
 //    }
 //  }
@@ -434,7 +528,7 @@
 //    path.toString
 //  }
 //
-//  val logger: Logger = getLoggerByClass(getClass)
+//  lazy val logger: Logger = getLoggerByClass(getClass)
 //}
 //
 //case class SetupData(totalEntAgents: Int,
@@ -461,7 +555,7 @@
 //  }
 //
 //  def addPostMigrationConnState(userName: UserName, connId: String, invitation: String): Unit = {
-//    preMigrationConns = preMigrationConns ++ Map(userName-> ConnState(connId, invitation))
+//    postMigrationConns = postMigrationConns ++ Map(userName-> ConnState(connId, invitation))
 //  }
 //
 //  def setRestSdk(sdk: IssuerRestSDK): Unit = {
@@ -478,8 +572,7 @@
 //  def abbreviatedInvitation: InviteDetailAbbreviated = DefaultMsgCodec.fromJson[InviteDetailAbbreviated](invitation)
 //}
 //
-//case class MigrationParam(validate: String,
-//                          mode: String,
+//case class MigrationParam(mode: String,
 //                          casEndpoint: String,
 //                          easEndpoint: String,
 //                          vasEndpoint: String,
@@ -487,4 +580,4 @@
 //case class Candidate(verity1Params: Verity1Params, verity2Params: Verity2Params)
 //case class Verity1Params(easAgentDID: String, sqliteWallet: SqliteWallet)
 //case class SqliteWallet(name: String, key: String)
-//case class Verity2Params(vasDomainDID: String, vasDomainDIDVerKey: String)
+//case class Verity2Params(vasDomainDID: String, vasAgentVerKey: String)

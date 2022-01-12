@@ -3,7 +3,7 @@ package com.evernym.verity.integration.outbox.with_rest_api.oauth.v2
 import akka.http.scaladsl.model.StatusCodes.Accepted
 import com.evernym.verity.agentmsg.msgfamily.configs.ComMethodAuthentication
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
-import com.evernym.verity.integration.base.sdk_provider.{SdkProvider, V2OAuthParam}
+import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerRestSDK, SdkProvider, V2OAuthParam}
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestion
@@ -21,7 +21,7 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory}
 
 import java.util.UUID
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext}
 
 
 class RestIssuerSdkSpec
@@ -31,14 +31,22 @@ class RestIssuerSdkSpec
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).build(VAS)
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
-
-  lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, executionContext, Option(V2OAuthParam("fixed-token")))
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+  var issuerRestSDK: IssuerRestSDK = _
+  var holderSDK: HolderSdk = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+
+    val issuerVerityEnv = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).buildAsync(VAS)
+    val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
+
+    val issuerRestSDKFut = setupIssuerRestSdkAsync(issuerVerityEnv, executionContext, Option(V2OAuthParam("fixed-token")))
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+
+
+    issuerRestSDK = Await.result(issuerRestSDKFut, SDK_BUILD_TIMEOUT)
+    holderSDK = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)
+
     issuerRestSDK.msgListener.accessTokenRefreshCount shouldBe 0
     issuerRestSDK.resetPlainMsgsCounter.plainMsgsBeforeLastReset shouldBe 0
     issuerRestSDK.fetchAgencyKey()

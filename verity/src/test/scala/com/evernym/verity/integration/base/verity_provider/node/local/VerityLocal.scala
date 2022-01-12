@@ -17,9 +17,10 @@ import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedE
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
+import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
+
 import com.evernym.verity.vdr.{TestLedgerRegistry, TestVdrToolsBuilder}
 import com.evernym.verity.vdr.service.VDRToolsFactory
-import com.typesafe.config.{Config, ConfigFactory}
 
 import java.nio.file.Path
 import scala.concurrent.duration._
@@ -44,10 +45,8 @@ object LocalVerity {
 
   def apply(verityNodeParam: VerityNodeParam,
             ecp: ExecutionContextProvider,
-            bootstrapApp: Boolean = true,
-            trackMessageProgress: Boolean = true): HttpServer = {
-
-    val config = buildStandardVerityConfig(verityNodeParam)
+            baseConfig: Option[ConfigMergeable] = None): HttpServer = {
+    val config = buildStandardVerityConfig(verityNodeParam, baseConfig.getOrElse(ConfigFactory.load()))
     val appConfig = new AppConfigWrapper(config)
     val platform = initializeApp(appConfig, verityNodeParam.serviceParam, ecp)
     val httpServer = new HttpServer(
@@ -75,9 +74,9 @@ object LocalVerity {
     }
   }
 
-  def buildStandardVerityConfig(verityNodeParam: VerityNodeParam): Config = {
+  def buildStandardVerityConfig(verityNodeParam: VerityNodeParam, baseConfig: ConfigMergeable): Config = {
     buildCustomVerityConfigOnly(verityNodeParam)
-      .withFallback(ConfigFactory.load())
+      .withFallback(baseConfig)
   }
 
   private def waitTillUp(appStateManager: ActorRef): Unit = {
@@ -138,7 +137,7 @@ object LocalVerity {
   }
 }
 
-class AppConfigWrapper(config: Config) extends AppConfig {
+class AppConfigWrapper(var config: Config) extends AppConfig {
   DEPRECATED_setConfigWithoutValidation(config)
 }
 

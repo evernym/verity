@@ -17,9 +17,11 @@ import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedE
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
+import com.evernym.verity.vdr.{TestLedgerRegistry, TestVdrToolsBuilder}
+import com.evernym.verity.vdr.service.VDRToolsFactory
 import com.typesafe.config.{Config, ConfigFactory}
-import java.nio.file.Path
 
+import java.nio.file.Path
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.language.postfixOps
@@ -99,6 +101,9 @@ object LocalVerity {
       override lazy val storageAPI: StorageAPI = {
         serviceParam.flatMap(_.storageAPI).getOrElse(StorageAPI.loadFromConfig(appConfig, executionContextProvider.futureExecutionContext))
       }
+
+      val testVdrLedgerRegistry = TestLedgerRegistry()
+      override lazy val vdrBuilderFactory: VDRToolsFactory = () => new TestVdrToolsBuilder(testVdrLedgerRegistry)
     }
 
     val platform: Platform = PlatformBuilder.build(

@@ -21,7 +21,7 @@ class VdrToolsConfigSpec
               |
               |  vdrs: [
               |    {
-              |      type: "indy-ledger"
+              |      type: "indy"
               |      namespaces: ["indy:sovrin", "sov"]
               |      genesis-txn-file-location: "/path"
               |    }

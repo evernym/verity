@@ -1,24 +1,32 @@
 package com.evernym.verity.vdr
 
-import akka.testkit.TestKitBase
 import akka.actor.typed.scaladsl.adapter._
+import akka.testkit.TestKitBase
 import com.evernym.verity.actor.testkit.HasBasicActorSystem
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vdr.service.{IndyLedger, Ledger, VDRToolsConfig}
+import org.json.JSONObject
+import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
-import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext}
 
 
 class VDRActorAdapterSpec
   extends TestKitBase
     with HasBasicActorSystem
     with BasicSpec
-    with Eventually {
+    with Eventually
+    with BeforeAndAfterEach {
 
+  var testLedgerRegistry: TestLedgerRegistry = TestLedgerRegistry()
+
+  override protected def afterEach(): Unit = {
+    testLedgerRegistry.cleanup()
+  }
 
   "VDRActorAdapter" - {
 
@@ -49,7 +57,7 @@ class VDRActorAdapterSpec
         result shouldBe PingResult(
           Map(
             "indy:sovrin" -> LedgerStatus(reachable = true),
-            "sov"         -> LedgerStatus(reachable = true)
+            "sov" -> LedgerStatus(reachable = true)
           )
         )
       }
@@ -73,7 +81,7 @@ class VDRActorAdapterSpec
         val ex = intercept[RuntimeException] {
           Await.result(
             vdrAdapter.prepareSchemaTxn(
-              "schemaJson",
+              "{}",
               "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
               "did1",
               None
@@ -91,7 +99,7 @@ class VDRActorAdapterSpec
         val ex = intercept[RuntimeException] {
           Await.result(
             vdrAdapter.prepareSchemaTxn(
-              "schemaJson",
+              "{}",
               "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
               "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
               None
@@ -108,7 +116,7 @@ class VDRActorAdapterSpec
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         Await.result(
           vdrAdapter.prepareSchemaTxn(
-            "schemaJson",
+            "{}",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
@@ -123,7 +131,7 @@ class VDRActorAdapterSpec
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val result = for {
           preparedTxn <- vdrAdapter.prepareSchemaTxn(
-            """{"field1":"value"1}""",
+            """{"field1":"value1"}""",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
@@ -167,7 +175,7 @@ class VDRActorAdapterSpec
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val result = for {
           preparedTxn <- vdrAdapter.prepareSchemaTxn(
-            """{"field1":"value"1}""",
+            """{"field1":"value1"}""",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
@@ -176,7 +184,9 @@ class VDRActorAdapterSpec
           schema <- vdrAdapter.resolveSchema("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1")
         } yield {
           schema.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
-          schema.json shouldBe """{"field1":"value"1}"""
+          val json = new JSONObject(schema.json)
+          json.getString("field1") shouldBe "value1"
+          json.getString("id") shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
         }
         Await.result(result, apiTimeout)
       }
@@ -291,8 +301,10 @@ class VDRActorAdapterSpec
           credDef <- vdrAdapter.resolveCredDef("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1")
         } yield {
           credDef.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
-          credDef.json shouldBe """{"schemaId":"schema-id"}"""
           credDef.schemaId shouldBe "schema-id"
+          val json = new JSONObject(credDef.json)
+          json.getString("schemaId") shouldBe "schema-id"
+          json.getString("id") shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
         }
         Await.result(result, apiTimeout)
       }
@@ -341,7 +353,7 @@ class VDRActorAdapterSpec
 
         for {
           //add did doc to  the VDR (as of now, we don't have prepareDIDTxn support, so directly adding it)
-          _ <- testVDRTools.addDidDoc(TestVDRDidDoc("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM", "verKey", None));
+          _ <- testLedgerRegistry.addDidDoc(TestVDRDidDoc("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM", "verKey", None));
           dd <- vdrAdapter.resolveDID("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM")
         } yield {
           dd.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM"
@@ -354,9 +366,8 @@ class VDRActorAdapterSpec
 
   def createVDRActorAdapter(ledgers: List[Ledger]): VDRActorAdapter = {
 
-    testVDRTools = new TestVdrTools
-    val testVdrToolsBuilder = new TestVdrToolsBuilder()
-    val testVDRToolsFactory = { ()  => testVdrToolsBuilder }
+    val testVdrToolsBuilder = new TestVdrToolsBuilder(testLedgerRegistry)
+    val testVDRToolsFactory = { () => testVdrToolsBuilder }
     val vdrToolsConfig = VDRToolsConfig(ledgers)
     new VDRActorAdapter(testVDRToolsFactory, vdrToolsConfig, None)(ec, system.toTyped)
   }
@@ -369,9 +380,4 @@ class VDRActorAdapterSpec
   implicit lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   implicit val ec: ExecutionContext = ecp.futureExecutionContext
 
-  def addDidDoc(dd: TestVDRDidDoc): Unit = {
-    testVDRTools.addDidDoc(dd)
-  }
-
-  var testVDRTools = new TestVdrTools
 }

@@ -14,7 +14,7 @@ object VDRAdapterUtil {
     PreparedTxn(
       vdrTxn.getNamespace,
       buildSigSpec(vdrTxn.getSignatureSpec),
-      vdrTxn.getBytesToSign,
+      vdrTxn.getTxnBytes,
       vdrTxn.getBytesToSign,
       buildEndorsementSpec(vdrTxn.getEndorsementSpec)
     )

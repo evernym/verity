@@ -68,7 +68,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                   ctx.apply(CredDefWritten(credDefCreated.credDefId))
                   ctx.signal(StatusReport(credDefCreated.credDefId))
                 case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
-                  ctx.logger.warn(e.toString)
+                  ctx.logger.info(e.toString)
                   val endorserDID = m.endorserDID.getOrElse(
                     init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
                   )

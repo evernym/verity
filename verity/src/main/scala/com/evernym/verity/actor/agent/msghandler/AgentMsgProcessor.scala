@@ -679,6 +679,8 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     val m = msgExtractor.extract(imp.msgToBeProcessed, imp.msgPackFormatReq, imp.msgType)
     val tmsg = TypedMsg(m.msg, imp.msgType)
     val thId = msgThread.flatMap(_.thid).getOrElse(m.meta.threadId)
+    logger.info(s"Extracted message ${imp.msgType}, thread id: $thId")
+
     (tmsg, thId, m.meta.forRelationship, msgRespDetail)
   } catch {
     case e: MsgCodecException =>

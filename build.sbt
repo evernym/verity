@@ -62,8 +62,7 @@ val alpAkkaVer      = "3.0.3"
 val kamonVer        = "2.4.2"
 val kanelaAgentVer  = "1.0.14"
 val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
-val jacksonVer      = "2.13.1"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
-                                  // around base64 decoding etc, should look into it.
+val jacksonVer      = "2.13.1"
 val sdnotifyVer     = "1.3"
 
 //test dependency versions

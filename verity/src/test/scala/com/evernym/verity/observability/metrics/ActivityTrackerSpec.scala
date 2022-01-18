@@ -32,9 +32,9 @@ class ActivityTrackerSpec
         val sponsorRel1: SponsorRel = SponsorRel(SPONSOR_ID, SPONSEE_ID)
         val sponsorRel2: SponsorRel = SponsorRel(SPONSOR_ID2, SPONSEE_ID)
         val ea = newEdgeAgent()
-        val activityTracker: DidStr = createCloudAgent(sponsorRel1, sponsorKeys().verKey, getNonce, ea)
-        val user2: DidStr = createCloudAgent(sponsorRel1, sponsorKeys().verKey, getNonce)
-        val user3: DidStr = createCloudAgent(sponsorRel1, sponsorKeys().verKey, getNonce)
+        val activityTracker: DidStr = createCloudAgent(sponsorRel1, testSponsor.verKey, getNonce, ea)
+        val user2: DidStr = createCloudAgent(sponsorRel1, testSponsor.verKey, getNonce)
+        val user3: DidStr = createCloudAgent(sponsorRel1, testSponsor.verKey, getNonce)
 
         val window15Day = ActivityWindowRule(VariableDuration("15 d"), ActiveUsers)
         val windows = Set(window15Day)
@@ -43,7 +43,7 @@ class ActivityTrackerSpec
         AgentActivityTracker.track(DEFAULT_ACTIVITY_TYPE, user3, None)
 
         //Different Sponsor
-        val differentSponsor = createCloudAgent(sponsorRel2, sponsorKeys().verKey, getNonce)
+        val differentSponsor = createCloudAgent(sponsorRel2, testSponsor.verKey, getNonce)
         Thread.sleep(500)
         // Tags for relationships
         val metricKeys = windows.map(_.trackActivityType.metricName)
@@ -55,7 +55,7 @@ class ActivityTrackerSpec
       //Test writes metric with multiple windows
       "should record activity with multiple windows" ignore {
         val sponsorRel3: SponsorRel = SponsorRel(SPONSOR_ID3, SPONSEE_ID)
-        val activityTracker: DidStr = createCloudAgent(sponsorRel3, sponsorKeys().verKey, getNonce)
+        val activityTracker: DidStr = createCloudAgent(sponsorRel3, testSponsor.verKey, getNonce)
         val baseTimeStamp = TimeUtil.nowDateString
         val windowMonth = ActivityWindowRule(CalendarMonth, ActiveUsers)
         val window30Day = ActivityWindowRule(VariableDuration("30 d"), ActiveUsers)
@@ -124,7 +124,7 @@ class ActivityTrackerSpec
       //Test updates window
       "should be able to update window" in {
         val sponsorRel4: SponsorRel = SponsorRel(SPONSOR_ID4, SPONSEE_ID)
-        val activityTracker: DidStr = createCloudAgent(sponsorRel4, sponsorKeys().verKey, getNonce)
+        val activityTracker: DidStr = createCloudAgent(sponsorRel4, testSponsor.verKey, getNonce)
         val window = ActivityWindowRule(VariableDuration("9 min"), ActiveUsers)
         Thread.sleep(500)
         var metrics = getMetricWithTags(Set(window.trackActivityType.metricName), testMetricsBackend)
@@ -158,7 +158,7 @@ class ActivityTrackerSpec
     "with a window of Active Agent Relationship" - {
       "should filter windows when relationship is missing" in {
         val sponsorRel5: SponsorRel = SponsorRel(SPONSOR_ID5, SPONSEE_ID)
-        val activityTracker: DidStr = createCloudAgent(sponsorRel5, sponsorKeys().verKey, getNonce)
+        val activityTracker: DidStr = createCloudAgent(sponsorRel5, testSponsor.verKey, getNonce)
         val windowMonthRel = ActivityWindowRule(CalendarMonth, ActiveRelationships)
         val window7DayRel = ActivityWindowRule(VariableDuration("7 d"), ActiveRelationships)
         val window2DayUser = ActivityWindowRule(VariableDuration("2 d"), ActiveUsers)
@@ -180,7 +180,7 @@ class ActivityTrackerSpec
 
       "should record new activity with multiple relationships" in {
         val sponsorRel6: SponsorRel = SponsorRel(SPONSOR_ID6, SPONSEE_ID)
-        val activityTracker: DidStr = createCloudAgent(sponsorRel6, sponsorKeys().verKey, getNonce)
+        val activityTracker: DidStr = createCloudAgent(sponsorRel6, testSponsor.verKey, getNonce)
         val baseTimeStamp = TimeUtil.nowDateString
         val windowMonthRel = ActivityWindowRule(CalendarMonth, ActiveRelationships)
         val windows = Set(windowMonthRel)
@@ -204,8 +204,8 @@ class ActivityTrackerSpec
       "should record activity with multiple windows" ignore {
         val sponsorRel7: SponsorRel = SponsorRel(SPONSOR_ID7, SPONSEE_ID)
         val sponsorRel8: SponsorRel = SponsorRel(SPONSOR_ID8, SPONSEE_ID)
-        val activityTracker: DidStr = createCloudAgent(sponsorRel7, sponsorKeys().verKey, getNonce)
-        val activityTracker2 = createCloudAgent(sponsorRel8, sponsorKeys().verKey, getNonce)
+        val activityTracker: DidStr = createCloudAgent(sponsorRel7, testSponsor.verKey, getNonce)
+        val activityTracker2 = createCloudAgent(sponsorRel8, testSponsor.verKey, getNonce)
 
         val baseTimeStamp = TimeUtil.nowDateString
         val windowMonthRel = ActivityWindowRule(CalendarMonth, ActiveRelationships)

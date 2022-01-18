@@ -59,7 +59,7 @@ object AgentProvisioningMsgFamily extends MsgFamily {
   }
 /**
   *
-  * @param sponseeId   An identifier a Sponsor uses to identify/refrence the sponsee i.g. id used in the sponsor’s back end database.
+  * @param sponseeId   An identifier a Sponsor uses to identify/reference the sponsee i.g. id used in the sponsor’s back end database.
   *
   * @param sponsorId   Identifier established when Sponsor registers with Evernym TE - persistent id for sponsor
   *

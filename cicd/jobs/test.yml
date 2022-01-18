@@ -74,7 +74,7 @@ static-analysis: # This test don't work and is currently not providing value
 
     # For the integration tests to set up a usable bucket
     BLOB_BUCKET: "blob-bucket"
-    BLOB_S3_ENDPOINT: "http://{bucket}.s3server:8000"
+    BLOB_S3_ENDPOINT: "http://$BLOB_BUCKET.s3server:8000"
 
     # These are used by the s3 service in .integration jobs
     REMOTE_MANAGEMENT_DISABLE: 1

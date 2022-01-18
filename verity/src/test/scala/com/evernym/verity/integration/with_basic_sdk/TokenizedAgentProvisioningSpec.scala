@@ -19,11 +19,11 @@ class TokenizedAgentProvisioningSpec
     with SdkProvider {
 
   var issuerVerityEnv: VerityEnv = _
-  val TOTAL_AGENTS_TO_PROVISION = 10    //change accordingly
+  val TOTAL_AGENTS_TO_PROVISION = 3
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
-    val issuerVerityEnvFut = VerityEnvBuilder.default().withConfig(VAS_CONFIG).buildAsync(VAS)
+    val issuerVerityEnvFut = VerityEnvBuilder.default(3).withConfig(VAS_CONFIG).buildAsync(VAS)
     issuerVerityEnv = Await.result(issuerVerityEnvFut, ENV_BUILD_TIMEOUT)
   }
 

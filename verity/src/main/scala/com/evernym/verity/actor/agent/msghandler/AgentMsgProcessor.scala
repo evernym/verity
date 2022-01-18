@@ -47,7 +47,7 @@ import com.evernym.verity.push_notification.PushNotifData
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
-import com.evernym.verity.util2.{ActorErrorResp, Status}
+import com.evernym.verity.util2.{ActorErrorResp, Exceptions, Status}
 import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
@@ -130,6 +130,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
 
     //pinst -> actor driver (processSignalMsg method) -> this actor [for further processing]
     case psm: ProcessSignalMsg     =>
+      logInternalSigMsgDetail(psm.smp.signalMsg, psm.protoRef, psm.threadId)
       recordProcessSignalMsgProgress(psm)
       sendToAgentActor(psm)
   }
@@ -182,6 +183,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
   }
 
   def handleOutgoingMsg[A](om: OutgoingMsg[A], isSignalMsg: Boolean=false): Unit = {
+    logOutgoingMsgDetail(om.msg, om.protoDef, om.context.threadContextDetail.threadId)
     logger.debug(s"preparing outgoing agent message: $om")
     logger.debug(s"outgoing msg: native msg: " + om.msg)
 
@@ -618,10 +620,10 @@ class AgentMsgProcessor(val appConfig: AppConfig,
 
           case _ => throw new UnsupportedMessageType(imp.msgType.toString, List.empty)
         }
-
       val senderPartiId = param.senderParticipantId(imp.senderVerKey)
       validateMsg(imp, msgToBeSent)
       if (forRelationship.isDefined && forRelationship != param.relationshipId) {
+        logIncomingMsgDetail(msgToBeSent, threadId)
         forRelationship.foreach { relId =>
           val msgForRel = MsgForRelationship(domainId, msgToBeSent.msg, threadId, senderPartiId,
             imp.msgPackFormat, imp.msgFormat, respDetail, Option(rmc))
@@ -637,6 +639,56 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         )
       }
     } catch protoExceptionHandler
+  }
+
+  private def logIncomingMsgDetail(typedMsg: TypedMsgLike,
+                                   threadId: String): Unit = {
+    try {
+      logger.info(buildMsgDetail("->", typedMsg, threadId, None))
+    } catch {
+      case e: RuntimeException =>
+        logger.warn("error while logging incoming message detail: " + Exceptions.getStackTraceAsSingleLineString(e))
+    }
+  }
+
+  private def logOutgoingMsgDetail(msg: Any,
+                                   protoDef: ProtoDef,
+                                   threadId: String): Unit = {
+    try {
+      val msgType = protoDef.msgFamily.msgType(msg.getClass)
+      logger.info(buildMsgDetail("<-", TypedMsg(msg, msgType), threadId, Option(protoDef)))
+    } catch {
+      case e: RuntimeException =>
+        logger.warn("error while logging outgoing message detail: " + Exceptions.getStackTraceAsSingleLineString(e))
+    }
+  }
+
+  private def logInternalSigMsgDetail(msg: Any,
+                                      protoRef: ProtoRef,
+                                      threadId: String): Unit = {
+    try {
+      val protoDef = protocolRegistry.find(protoRef).map(_.protoDef).get
+      val msgType = protoDef.msgFamily.msgType(msg.getClass)
+      logger.info(buildMsgDetail("-", TypedMsg(msg, msgType), threadId, Option(protoDef)))
+    } catch {
+      case e: RuntimeException =>
+        logger.warn("error while logging internal signal message detail: " + Exceptions.getStackTraceAsSingleLineString(e))
+    }
+  }
+
+  private def buildMsgDetail(direction: String,
+                             typedMsg: TypedMsgLike,
+                             threadId: String,
+                             protoDefOpt: Option[ProtoDef]): String = {
+    val protoDef = protoDefOpt orElse protocols.protocolRegistry.protoDefForMsg(typedMsg)
+    val msgCategory = protoDef.flatMap { pd =>
+        pd.msgFamily.msgCategory(typedMsg.msgType.msgName)
+    }.getOrElse("msg")
+
+    val relId =
+      if (param.relationshipId.contains(domainId)) ""
+      else param.relationshipId.map(r => s":$r").getOrElse("")
+    s"Agent Message [$domainId$relId][$threadId] $direction $msgCategory:${typedMsg.msgType.toString}"
   }
 
   private def validateMsg(imp: IncomingMsgParam, msg: TypedMsg): Unit = {
@@ -697,6 +749,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
                                        usesLegacyGenMsgWrapper: Boolean=false,
                                        usesLegacyBundledMsgWrapper: Boolean=false)
                                       (implicit rmc: ReqMsgContext = ReqMsgContext()): Unit = {
+    logIncomingMsgDetail(tmsg, threadId)
     // flow diagram: ctl + proto, step 14
     val msgEnvelope = buildMsgEnvelope(tmsg, threadId, senderParticipantId)
     val pair = pinstIdForMsg_!(msgEnvelope.typedMsg, relationshipId, threadId)

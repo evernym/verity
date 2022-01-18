@@ -10,7 +10,7 @@ import com.evernym.verity.util.TestExecutionContextProvider
 import scala.concurrent.{Await, ExecutionContext}
 
 
-class AgentProvisioningSpec
+class BasicAgentProvisioningSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 

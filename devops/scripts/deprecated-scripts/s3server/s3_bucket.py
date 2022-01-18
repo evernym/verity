@@ -9,7 +9,7 @@ import boto3
 ACCESS_KEY = os.environ.get('ACCESS_KEY', 'accessKey1')
 BUCKET = os.environ.get('BUCKET', 'blob-bucket')
 CURRENT_BUCKETS = []
-ENDPOINT_URL = os.environ.get('ENDPOINT_URL', f'http://{BUCKET}.s3-devlab:8000')
+ENDPOINT_URL = os.environ.get('ENDPOINT_URL', 'http://s3-devlab:8000')
 SECRET_ACCESS_KEY = os.environ.get('SECRET_ACCESS_KEY', 'verySecretKey1')
 
 

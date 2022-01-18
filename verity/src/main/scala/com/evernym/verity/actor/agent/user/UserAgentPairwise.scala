@@ -73,7 +73,6 @@ import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.engine.registry.PinstIdPair
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.SendSMSInvite
 import com.evernym.verity.util2.{Exceptions, Status, UrlParam}
-import org.json.JSONObject
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
@@ -721,7 +720,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
         MSG_TYPE_DETAIL_SEND_REMOTE_MSG,
         uid,
         msg.getType,
-        new JSONObject(new String(payloadMsg)),
+        payloadMsg,
         sendMsg=msg.sendMsg,
         ThreadBase.convertOpt(msg.thread),
         title,

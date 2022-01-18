@@ -17,7 +17,7 @@ import org.json.JSONObject
 case class SendRemoteMsgReq_MFV_0_6(`@type`: String,
                                     `@id`: MsgId,
                                     mtype: String,
-                                    `@msg`: JSONObject,
+                                    `@msg`: Array[Byte],
                                     sendMsg: Boolean,
                                     `~thread`: Option[Thread] = None,
                                     title: Option[String] = None,

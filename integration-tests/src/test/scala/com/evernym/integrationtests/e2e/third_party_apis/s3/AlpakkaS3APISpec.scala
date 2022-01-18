@@ -60,9 +60,9 @@ class AlpakkaS3APISpec
       |  }
       |
       |
-      |  access-style = virtual
-      |  endpoint-url = "http://{bucket}.localhost:8001"
-      |  endpoint-url = ${?BLOB_S3_ENDPOINT_BUCKET}
+      |
+      |  endpoint-url = "http://{bucket}.s3server:8000"
+      |
       |
       |}
       |""".stripMargin

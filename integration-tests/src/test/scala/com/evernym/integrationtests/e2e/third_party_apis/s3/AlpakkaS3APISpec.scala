@@ -59,13 +59,10 @@ class AlpakkaS3APISpec
       |    }
       |  }
       |
-      |  # path-style-access has a deprecation warning but the pipleine needs it to pass
-      |  //TODO: Move to access-style instead of path-style-access
-      |  //  access-style = virtual
-      |  path-style-access = true
-      |  endpoint-url = "http://localhost:8001"
-      |//  endpoint-url = "http://{bucket}.localhost:8001" // Used for 'access-style'
-      |  endpoint-url = ${?BLOB_S3_ENDPOINT}
+      |
+      |  access-style = virtual
+      |  endpoint-url = "http://{bucket}.localhost:8001" // Used for 'access-style'
+      |
       |
       |}
       |""".stripMargin

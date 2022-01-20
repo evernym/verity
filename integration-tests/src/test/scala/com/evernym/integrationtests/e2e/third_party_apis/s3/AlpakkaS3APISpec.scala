@@ -58,10 +58,11 @@ class AlpakkaS3APISpec
       |      default-region = "us-west-2"
       |    }
       |  }
+      |  //TODO: Move to access-style instead of path-style-access
+      |  path-style-access = force
+      |  endpoint-url = "http://localhost:8001"
+      |  endpoint-url = ${?BLOB_S3_ENDPOINT}
       |
-      |
-      |
-      |  endpoint-url = "http://{bucket}.s3server:8000"
       |
       |
       |}

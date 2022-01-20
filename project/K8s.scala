@@ -136,6 +136,7 @@ object K8sConfigTemplateGen {
                                   |include "config-map/customers.conf"
                                   |include "config-map/sms-preferred-order.conf"
                                   |include "config-map/msg-types-for-alert-push-notif.conf"
+                                  |include "config-map/internal-api-allowed-ips.conf"
                                   |include "config-map/custom.conf"""".stripMargin
   }
 

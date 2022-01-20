@@ -32,7 +32,7 @@ class ConnectionMigrationSpec
   lazy val issuerEAS = VerityEnvBuilder.default().withConfig(TEST_KIT_CONFIG).build(EAS)
   lazy val issuerVAS = VerityEnvBuilder.default().withConfig(REST_API_CONFIG.withFallback(TEST_KIT_CONFIG)).build(VAS)
 
-  lazy val verity1HolderSDK = setupIssuerRestSdk(holderCAS, futureExecutionContext)
+  lazy val verity1HolderSDK = setupHolderSdk(holderCAS, futureExecutionContext)
   lazy val verity1IssuerRestSDK = setupIssuerRestSdk(issuerEAS, futureExecutionContext)
   lazy val verity2IssuerRestSDK = setupIssuerRestSdk(issuerVAS, futureExecutionContext)
 
@@ -95,6 +95,7 @@ class ConnectionMigrationSpec
         val urlSuffix = s"agency/internal/maintenance/v1tov2migration/VAS/connection/${myPairwiseRelDIDPair.did}/diddoc"
         HttpUtil.sendJsonReqToUrl(jsonReq, verity2IssuerRestSDK.buildFullUrl(s"$urlSuffix"))(futureExecutionContext)
         checkPersistedEvents(smc)
+
         HttpUtil.sendJsonReqToUrl(jsonReq, verity2IssuerRestSDK.buildFullUrl(s"$urlSuffix"))(futureExecutionContext)
         checkPersistedEvents(smc)
       }

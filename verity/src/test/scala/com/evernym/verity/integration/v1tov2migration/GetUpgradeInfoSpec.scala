@@ -27,7 +27,7 @@ class GetUpgradeInfoSpec
 
   lazy val issuerSDKVAS = setupIssuerSdk(issuerVAS, executionContext)
   lazy val issuerSDKEAS = setupIssuerSdk(issuerEAS, executionContext)
-  lazy val holderSDKCAS = setupHolderSdk(holderCAS, defaultSvcParam.ledgerTxnExecutor, executionContext)
+  lazy val holderSDKCAS = setupHolderSdk(holderCAS, executionContext, defaultSvcParam.ledgerTxnExecutor)
 
   val connId = "connId1"
   var invitation: InviteDetail = null

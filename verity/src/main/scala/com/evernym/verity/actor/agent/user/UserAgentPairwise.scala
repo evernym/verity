@@ -144,10 +144,12 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     case mss: MsgSentSuccessfully                           => handleMsgSentSuccessfully(mss)
     case msf: MsgSendingFailed                              => handleMsgSendingFailed(msf)
     case GetOutboxParam(destId)                             => sendOutboxParam(destId)
+
     case GetPairwiseUpgradeInfo                             => handleGetUpgradeInfo()
     case GetPairwiseConnDetail                              => sendPairwiseConnDetail()
     case utr: UpdateTheirRouting                            => updateTheirPairwiseDidDoc(utr)
-    case SendUpgradeInfoIfNeeded                            => sendUpgradeInfoIfRequired()
+    //sent after routing update
+    case SendUpgradeInfo                                    => sendUpgradeInfo()
   }
 
   override final def receiveAgentEvent: Receive =
@@ -203,7 +205,15 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
       //TODO This can be more easily done by teaching the LegacyRoutingServiceEndpoint and RoutingServiceEndpoint how to do the conversion.
       val updatedDidDoc = state.relationship.flatMap(_.theirDidDoc.map { tdd =>
         val updatedEndpointSeq: Seq[EndpointADT] = tdd.endpoints_!.endpoints.map(_.endpointADTX).map {
-          case lep: LegacyRoutingServiceEndpoint => lep.copy(agencyDID = tais.DID)
+          case lep: LegacyRoutingServiceEndpoint =>
+            initTheirRoutingUpdateStatus(
+              TheirRouting(
+                lep.agentKeyDID,
+                lep.agentVerKey,
+                tais.DID
+              )
+            )
+            lep.copy(agencyDID = tais.DID)
           case ep: RoutingServiceEndpoint        => ep
           case _                                 => throw new MatchError("unsupported endpoint matched")
         }.map(EndpointADT.apply)
@@ -217,6 +227,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
         }
         .getOrElse(state)
       state = state.withConnectionStatus(ConnectionStatus(reqReceived=true, MSG_STATUS_ACCEPTED.statusCode))
+
   }
 
   //TODO: not sure why we have this, we may wanna test and remove this if not needed
@@ -232,11 +243,11 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
   }
 
   def buildGetUpgradeInfo(): Future[ActorMessage] = {
-    if (theirRoutingUpdateStatus.original.isEmpty) {
+    if (theirRoutingStatus.original.isEmpty) {
       Future.successful(NoUpgradeNeeded)
     } else {
       val direction =
-        if (theirRoutingUpdateStatus.isOrigAndLatestSame) "v2tov1"
+        if (theirRoutingStatus.isOrigAndLatestSame) "v2tov1"
         else "v1tov2"
       val theirAgencyDID = theirRoutingParam.routingTarget
       getAgencyIdentityFut(agencyDIDReq, GetAgencyIdentity(theirAgencyDID), metricsWriter).map { cr =>
@@ -297,36 +308,34 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
               walletAPI.executeAsync[TheirKeyStored](StoreTheirKey(utr.agencyDID, utr.agencyVerKey, ignoreIfAlreadyExists = true)).map { _ =>
                 sndr ! Done
               }
+              self ! SendUpgradeInfo
             }
           case _ =>
             logger.warn(s"[$persistenceId] [routing migration] no legacy routing service endpoint found")
             throw new RemoteEndpointNotFoundErrorException(Option(s"[$persistenceId] [routing migration] no legacy routing service endpoint found"))
         }
-    self ! SendUpgradeInfoIfNeeded
   }
 
-  def sendUpgradeInfoIfRequired(): Unit = {
-    if (theirRoutingUpdateStatus.isOrigAndLatestSame) {
-      buildGetUpgradeInfo().map {
-        case NoUpgradeNeeded =>
-        //nothing to do
-        case pui: PairwiseUpgradeInfo =>
-          val pairwiseResults = Map(state.myDid_! -> pui)
-          val agentMsgContext = AgentMsgContext(MsgPackFormat.MPF_INDY_PACK, MFV_1_0, None)
-          val getPairwiseUpgradeInfoResp = UpgradeInfoMsgHelper.buildRespMsg(pairwiseResults)(agentMsgContext)
-          val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
-            getPairwiseUpgradeInfoResp, wrapInBundledMsgs = false)
-          AgentMsgPackagingUtil.buildAgentMsg(agentMsgContext.msgPackFormat,
-            param)(agentMsgTransformer, wap, metricsWriter).map { pm =>
-            self ! SendMsgToMyDomain(
-              OutgoingMsgParam(pm),
-              UUID.randomUUID().toString,
-              MSG_TYPE_UPGRADE_INFO,
-              state.thisAgentKeyDIDReq,
-              None
-            )
-          }
-      }
+  def sendUpgradeInfo(): Unit = {
+    buildGetUpgradeInfo().map {
+      case NoUpgradeNeeded =>
+      //nothing to do
+      case pui: PairwiseUpgradeInfo =>
+        val pairwiseResults = Map(state.myDid_! -> pui)
+        val agentMsgContext = AgentMsgContext(MsgPackFormat.MPF_INDY_PACK, MFV_1_0, None)
+        val getPairwiseUpgradeInfoResp = UpgradeInfoMsgHelper.buildRespMsg(pairwiseResults)(agentMsgContext)
+        val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
+          getPairwiseUpgradeInfoResp, wrapInBundledMsgs = false)
+        AgentMsgPackagingUtil.buildAgentMsg(agentMsgContext.msgPackFormat,
+          param)(agentMsgTransformer, wap, metricsWriter).map { pm =>
+          self ! SendMsgToMyDomain(
+            OutgoingMsgParam(pm),
+            UUID.randomUUID().toString,
+            MSG_TYPE_UPGRADE_INFO,
+            state.thisAgentKeyDIDReq,
+            None
+          )
+        }
     }
   }
 
@@ -1241,4 +1250,4 @@ case class UpdateTheirRouting(routingPairwiseDID: DidStr,
                               agencyDID: DidStr,
                               agencyVerKey: VerKeyStr) extends ActorMessage
 
-case object SendUpgradeInfoIfNeeded extends ActorMessage
+case object SendUpgradeInfo extends ActorMessage

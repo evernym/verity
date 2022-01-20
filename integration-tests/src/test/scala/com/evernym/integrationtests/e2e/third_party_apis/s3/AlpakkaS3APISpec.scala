@@ -59,6 +59,9 @@ class AlpakkaS3APISpec
       |    }
       |  }
       |  //TODO: Move to access-style instead of path-style-access
+      |  // The 'force' is used because at the moment this test in Gitlab CI fails. Docker can't resolve links
+      |  // with subdomains like http://bucket.server:port without additional configuration and unknown how setup it.
+      |  // So 'force' allows disable almost all warnings about usage of 'path style-access'.
       |  path-style-access = force
       |  endpoint-url = "http://localhost:8001"
       |  endpoint-url = ${?BLOB_S3_ENDPOINT}

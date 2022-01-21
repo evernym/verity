@@ -120,6 +120,15 @@ data:
       }
     }
     {{- end }}
+  internal-api-allowed-ips.conf: |
+    {{- if .Values.internalAPI }}
+    {
+    "verity": {
+      "internal-api":
+{{ toPrettyJson .Values.internalAPI | indent 8 }}
+      }
+    }
+    {{- end }}
   msg-types-for-alert-push-notif.conf: |
     {{- if .Values.msgTypesAlertPushNotif }}
     {

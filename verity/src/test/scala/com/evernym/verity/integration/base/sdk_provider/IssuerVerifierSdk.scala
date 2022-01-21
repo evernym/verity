@@ -21,11 +21,12 @@ import com.evernym.verity.integration.base.PortProvider
 import com.evernym.verity.integration.base.sdk_provider.msg_listener.{JsonMsgListener, MsgListenerBase, PackedMsgListener, ReceivedMsgCounter}
 import com.evernym.verity.protocol.engine.Constants.MFV_0_6
 import com.evernym.verity.protocol.engine.ThreadId
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateEdgeAgent}
+import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateEdgeAgent, ProvisionToken}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete, ConnRequestReceived, ConnResponseSent}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{ConnectionInvitation, Create, OutOfBandInvitation}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{Created, Invitation}
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResult
+import com.evernym.verity.testkit.TestSponsor
 import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.testkit.util.HttpUtil._
 import com.evernym.verity.util.Base58Util
@@ -88,6 +89,27 @@ abstract class VeritySdkBase(param: SdkParam,
                      threadOpt: Option[MsgThread] = None,
                      applyToJsonMsg: String => String = { msg => msg},
                      expectedRespStatus: StatusCode = OK): HttpResponse
+
+  def buildProvToken(sponseeId: String,
+                     sponsorId: String,
+                     nonce: String,
+                     timestamp: String,
+                     testSponsor: TestSponsor
+                    ): ProvisionToken = {
+    val sponsorSig = testSponsor.sign(nonce, sponseeId, sponsorId, timestamp, testSponsor.verKey)
+    ProvisionToken(
+      sponseeId,
+      sponsorId,
+      nonce,
+      timestamp,
+      sponsorSig,
+      testSponsor.verKey
+    )
+  }
+
+  def provisionVerityEdgeAgent(provToken: ProvisionToken): AgentCreated = {
+    provisionVerityAgentBase(CreateEdgeAgent(localAgentDidPair.verKey, Option(provToken)))
+  }
 
   def provisionVerityEdgeAgent(): AgentCreated = {
     provisionVerityAgentBase(CreateEdgeAgent(localAgentDidPair.verKey, None))

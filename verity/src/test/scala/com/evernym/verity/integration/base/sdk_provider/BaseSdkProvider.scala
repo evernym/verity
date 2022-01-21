@@ -241,6 +241,13 @@ abstract class SdkBase(param: SdkParam,
     storeTheirKey(DidPair(dp.did, dp.verKey))
   }
 
+  def updatePairwiseAgentDidPair(connId: String, myPairwiseKey: DidPair, agentDidPair: DidPair): PairwiseRel = {
+    storeTheirKey(agentDidPair)
+    val pairwiseRel = PairwiseRel(Option(myPairwiseKey), Option(agentDidPair))
+    myPairwiseRelationships += (connId -> pairwiseRel)
+    pairwiseRel
+  }
+
   def sendToRoute[T: ClassTag](msg: Any, fwdToDID: DidStr): ReceivedMsgParam[T] = {
     val jsonMsgBuilder = JsonMsgBuilder(msg)
     val packedMsg = packFromLocalAgentKey(jsonMsgBuilder.jsonMsg, Set(KeyParam.fromVerKey(agencyVerKey)))

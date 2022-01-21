@@ -62,7 +62,7 @@ import com.evernym.verity.util.Util.replaceVariables
 import com.evernym.verity.util._
 import com.evernym.verity.vault._
 import com.evernym.verity.actor.wallet.{PackedMsg, StoreTheirKey, TheirKeyStored}
-import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.UpgradeInfoMsgHelper
+import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.UpgradePairwiseInfoMsgHelper
 import com.evernym.verity.config.ConfigUtil
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
 import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType}
@@ -321,9 +321,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
       case NoUpgradeNeeded =>
       //nothing to do
       case pui: PairwiseUpgradeInfo =>
-        val pairwiseResults = Map(state.myDid_! -> pui)
         val agentMsgContext = AgentMsgContext(MsgPackFormat.MPF_INDY_PACK, MFV_1_0, None)
-        val getPairwiseUpgradeInfoResp = UpgradeInfoMsgHelper.buildRespMsg(pairwiseResults)(agentMsgContext)
+        val getPairwiseUpgradeInfoResp = UpgradePairwiseInfoMsgHelper.buildRespMsg(pui)(agentMsgContext)
         val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner,
           getPairwiseUpgradeInfoResp, wrapInBundledMsgs = false)
         AgentMsgPackagingUtil.buildAgentMsg(agentMsgContext.msgPackFormat,

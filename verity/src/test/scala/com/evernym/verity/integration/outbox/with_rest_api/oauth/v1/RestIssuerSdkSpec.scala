@@ -163,7 +163,6 @@ class RestIssuerSdkSpec
       "should get 'question' (questionanswer 1.0) message" in {
         val receivedMsgParam = holderSDK.downloadMsg[Question](firstConn)
         lastReceivedThread = receivedMsgParam.threadOpt
-        holderSDK.sendUpdateMsgStatusAsReviewedForConn(firstConn, receivedMsgParam.msgId)
         val question = receivedMsgParam.msg
         question.question_text shouldBe "How are you?"
       }

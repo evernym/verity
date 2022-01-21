@@ -80,7 +80,6 @@ class QuestionAnswerSpec
         lastReceivedMsgThread = receivedMsg.threadOpt
         val question = receivedMsg.msg
         question.question_text shouldBe "How are you?"
-        holderSDK.sendUpdateMsgStatusAsReviewedForConn(firstConn, receivedMsg.msgId)
       }
     }
 

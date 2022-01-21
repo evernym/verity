@@ -89,7 +89,6 @@ class BasicMessageSpec
         lastReceivedMsgThread = receivedMsg.threadOpt
         val message = receivedMsg.msg
         message.content shouldBe "How are you?"
-        holderSDK.sendUpdateMsgStatusAsReviewedForConn(firstConn, receivedMsg.msgId)
       }
     }
 

@@ -329,7 +329,7 @@ case class HolderSdk(param: SdkParam,
     )
   }
 
-  def sendUpdateMsgStatusAsReviewedForConn(connId: String, msgId: MsgId): Unit = {
+  private def sendUpdateMsgStatusAsReviewedForConn(connId: String, msgId: MsgId): Unit = {
     updateMsgStatusOnConn(connId, msgId, "MS-106")
   }
 

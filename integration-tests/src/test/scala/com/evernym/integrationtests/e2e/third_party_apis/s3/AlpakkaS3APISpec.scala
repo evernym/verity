@@ -58,15 +58,12 @@ class AlpakkaS3APISpec
       |      default-region = "us-west-2"
       |    }
       |  }
-      |
-      |  # path-style-access has a deprecation warning but the pipleine needs it to pass
       |  //TODO: Move to access-style instead of path-style-access
-      |  //  access-style = virtual
-      |  path-style-access = true
+      |  // The 'access-style=path' is used because at the moment this test in Gitlab CI fails with virtual host path-style.
+      |  // Docker can't resolve links with subdomains like http://bucket.containerName:port without additional configuration which is not a priority now.
+      |  access-style = path
       |  endpoint-url = "http://localhost:8001"
-      |//  endpoint-url = "http://{bucket}.localhost:8001" // Used for 'access-style'
       |  endpoint-url = ${?BLOB_S3_ENDPOINT}
-      |
       |}
       |""".stripMargin
 

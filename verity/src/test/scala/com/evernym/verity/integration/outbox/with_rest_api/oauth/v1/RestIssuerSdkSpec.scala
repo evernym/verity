@@ -161,7 +161,7 @@ class RestIssuerSdkSpec
   "HolderSDK" - {
     "when tried to get newly un viewed messages" - {
       "should get 'question' (questionanswer 1.0) message" in {
-        val receivedMsgParam = holderSDK.expectMsgFromConn[Question](firstConn)
+        val receivedMsgParam = holderSDK.downloadMsg[Question](firstConn)
         lastReceivedThread = receivedMsgParam.threadOpt
         holderSDK.sendUpdateMsgStatusAsReviewedForConn(firstConn, receivedMsgParam.msgId)
         val question = receivedMsgParam.msg

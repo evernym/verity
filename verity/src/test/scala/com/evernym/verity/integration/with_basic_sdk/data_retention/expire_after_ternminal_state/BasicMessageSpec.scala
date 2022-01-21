@@ -83,7 +83,7 @@ class BasicMessageSpec
   "HolderSDK" - {
     "when tried to get newly un viewed messages" - {
       "should get 'message' (basicmessage 1.0) message" in {
-        val receivedMsg = holderSDK.expectMsgFromConn[Message](firstConn)
+        val receivedMsg = holderSDK.downloadMsg[Message](firstConn)
         lastReceivedMsgThread = receivedMsg.threadOpt
         val message = receivedMsg.msg
         message.content shouldBe "How are you?"

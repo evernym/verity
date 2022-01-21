@@ -108,7 +108,7 @@ class PresentProofSpec
   "HolderSDK" - {
     "when try to get un viewed messages" - {
       "should get 'offer-credential' (issue-credential 1.0) message" in {
-        val receivedMsg = holderSDK.expectMsgFromConn[OfferCred](issuerHolderConn)
+        val receivedMsg = holderSDK.downloadMsg[OfferCred](issuerHolderConn)
         offerCred = receivedMsg.msg
         lastReceivedThread = receivedMsg.threadOpt
         holderSDK.checkMsgOrders(lastReceivedThread, 0, Map.empty)
@@ -145,7 +145,7 @@ class PresentProofSpec
   "HolderSDK" - {
     "when try to get un viewed messages" - {
       "should get 'issue-credential' (issue-credential 1.0) message" in {
-        val receivedMsg = holderSDK.expectMsgFromConn[IssueCred](issuerHolderConn)
+        val receivedMsg = holderSDK.downloadMsg[IssueCred](issuerHolderConn)
         holderSDK.storeCred(receivedMsg.msg, lastReceivedThread)
       }
     }
@@ -175,7 +175,7 @@ class PresentProofSpec
   "HolderSDK" - {
     "when tried to get un viewed messages" - {
       "should get 'request-presentation' (present-proof 1.0) message" in {
-        val receivedMsg = holderSDK.expectMsgFromConn[RequestPresentation](verifierHolderConn)
+        val receivedMsg = holderSDK.downloadMsg[RequestPresentation](verifierHolderConn)
         lastReceivedThread = receivedMsg.threadOpt
         proofReq = receivedMsg.msg
       }

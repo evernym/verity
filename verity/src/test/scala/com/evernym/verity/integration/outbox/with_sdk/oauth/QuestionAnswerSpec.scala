@@ -78,7 +78,7 @@ class QuestionAnswerSpec
   "HolderSDK" - {
     "when tried to get newly un viewed messages" - {
       "should get 'question' (questionanswer 1.0) message" in {
-        val receivedMsg = holderSDK.expectMsgFromConn[Question](firstConn)
+        val receivedMsg = holderSDK.downloadMsg[Question](firstConn)
         lastReceivedMsgThread = receivedMsg.threadOpt
         val question = receivedMsg.msg
         question.question_text shouldBe "How are you?"
@@ -125,7 +125,7 @@ class QuestionAnswerSpec
   "HolderSDK" - {
     "when tried to get newly un viewed messages after restart" - {
       "should get 'question' (questionanswer 1.0) message" in {
-        val receivedMsg = holderSDK.expectMsgFromConn[Question](firstConn)
+        val receivedMsg = holderSDK.downloadMsg[Question](firstConn)
         lastReceivedMsgThread = receivedMsg.threadOpt
         val question = receivedMsg.msg
         question.question_text shouldBe "How are you after restart?"

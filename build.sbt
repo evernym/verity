@@ -69,7 +69,7 @@ val sdnotifyVer     = "1.3"
 val scalatestVer    = "3.2.10"
 val mockitoVer      = "1.16.49"
 val veritySdkVer    = "0.5.0"
-val vcxWrapperVer   = "0.13.0.675"
+val vcxWrapperVer   = "0.13.0.696"
 
 
 val flexmarkVer     = "0.62.2"

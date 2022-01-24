@@ -288,7 +288,7 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
 
     //akka persistence dependencies
-    akkaGrp %% "akka-persistence-dynamodb" % "1.1.3",
+    akkaGrp %% "akka-persistence-dynamodb" % "1.1.1",
 
     //lightbend akka dependencies
     "com.lightbend.akka" %% "akka-stream-alpakka-s3" % alpAkkaVer,

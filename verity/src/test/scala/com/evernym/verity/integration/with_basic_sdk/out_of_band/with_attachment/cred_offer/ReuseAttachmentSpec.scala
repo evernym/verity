@@ -155,7 +155,7 @@ class ReuseAttachmentSpec
   "HolderSDK" - {
     "when try to get un viewed messages" - {
       "should get 'issue-credential' (issue-credential 1.0) message" in {
-        val receivedMsg = holderSDK.expectMsgFromConn[IssueCred](oobIssuerHolderConn)
+        val receivedMsg = holderSDK.downloadMsg[IssueCred](oobIssuerHolderConn)
         holderSDK.storeCred(receivedMsg.msg, lastReceivedThread)
       }
     }
@@ -171,7 +171,7 @@ class ReuseAttachmentSpec
         lastReceivedThread = Option(MsgThread(Option(attachmentJsonObj.getJSONObject("~thread").getString("thid"))))
         holderSDK.sendCredRequest(oobIssuerHolderConn, credDefId, offerCred, lastReceivedThread)
 
-        val receivedMsg = holderSDK.expectMsgFromConn[IssueCredProblemReport](oobIssuerHolderConn)
+        val receivedMsg = holderSDK.downloadMsg[IssueCredProblemReport](oobIssuerHolderConn)
         receivedMsg.msg.description shouldBe ProblemDescription(
           Some("Invalid 'RequestCred' message in current state"), "invalid-message-state")
       }
@@ -257,7 +257,7 @@ class ReuseAttachmentSpec
         reqPresentation = JacksonMsgCodec.fromJson[RequestPresentation](attachmentJsonObj.toString())
         lastReceivedThread = Option(MsgThread(Option(attachmentJsonObj.getJSONObject("~thread").getString("thid"))))
         holderSDK.acceptProofReq(oobVerifierHolderConn, reqPresentation, Map.empty, lastReceivedThread)
-        val receivedMsg = holderSDK.expectMsgFromConn[PresentProofProblemReport](oobVerifierHolderConn)
+        val receivedMsg = holderSDK.downloadMsg[PresentProofProblemReport](oobVerifierHolderConn)
         receivedMsg.msg.description shouldBe ProblemDescription(
           Some("Invalid 'Presentation' message in current state"), "invalid-message-state")
       }

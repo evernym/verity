@@ -55,7 +55,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
             ctx.apply(SchemaWritten(schemaCreated.schemaId))
             ctx.signal(StatusReport(schemaCreated.schemaId))
           case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
-            ctx.logger.warn(e.toString)
+            ctx.logger.info(e.toString)
             val endorserDID = m.endorserDID.getOrElse(
               init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
             )

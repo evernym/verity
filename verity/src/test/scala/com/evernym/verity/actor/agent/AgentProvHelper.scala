@@ -9,14 +9,13 @@ import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.{AgencyPublicDid, agentRegion}
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
-import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackedMsg, SignMsg, SignedMsg}
+import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, RequesterKeys}
-import com.evernym.verity.testkit.{BasicSpec, TestWallet}
+import com.evernym.verity.testkit.{BasicSpec, TestSponsor}
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 import com.evernym.verity.testkit.mock.agent.MockEnvUtil.buildMockEdgeAgent
-import com.evernym.verity.util.{Base64Util, TimeUtil}
-import com.evernym.verity.vault.KeyParam
+import com.evernym.verity.util.TimeUtil
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 
@@ -51,16 +50,10 @@ trait AgentProvHelper
     mockAgencyAdmin.agencyPublicDid.foreach(ma.handleFetchAgencyKey)
   }
 
-  val sponsorWallet = new TestWallet(futureExecutionContext, createWallet = true)
-
-  def sponsorKeys(seed: String="000000000000000000000000Trustee1"): NewKeyCreated =
-    sponsorWallet.executeSync[NewKeyCreated](CreateNewKey(seed=Some(seed)))
+  val testSponsor = new TestSponsor("000000000000000000000000Trustee1", futureExecutionContext)
 
   def sponsorSig(nonce: String, id: String, sponsorId: String, vk: VerKeyStr, timestamp: String): Base64Encoded = {
-    val signedMsg = sponsorWallet.executeSync[SignedMsg](
-      SignMsg(KeyParam.fromVerKey(vk), (nonce + timestamp + id + sponsorId).getBytes())
-    )
-    Base64Util.getBase64Encoded(signedMsg.msg)
+    testSponsor.sign(nonce, id, sponsorId, timestamp, vk)
   }
 
   def newEdgeAgent(admin: MockEdgeAgent = mockAgencyAdmin): MockEdgeAgent = {

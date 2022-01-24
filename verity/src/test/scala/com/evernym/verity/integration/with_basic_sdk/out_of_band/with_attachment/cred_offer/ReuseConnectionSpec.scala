@@ -94,7 +94,7 @@ class ReuseConnectionSpec
         val handshakeReuse = HandshakeReuse(MsgThread(pthid = Option(oobInvite.`@id`)))
         val msgThread = Option(MsgThread(thid = Option(UUID.randomUUID().toString), pthid = Option(oobInvite.`@id`)))
         holderSDK.sendProtoMsgToTheirAgent(issuerHolderConn, handshakeReuse, msgThread)
-        holderSDK.expectMsgFromConn[HandshakeReuseAccepted](issuerHolderConn)
+        holderSDK.downloadMsg[HandshakeReuseAccepted](issuerHolderConn)
         val receivedMsg = issuerSDK.expectMsgOnWebhook[ConnectionReused]()
         issuerSDK.expectMsgOnWebhook[MoveProtocol]()
         receivedMsg.threadOpt.map(_.pthid).isDefined shouldBe true
@@ -134,7 +134,7 @@ class ReuseConnectionSpec
   "HolderSDK" - {
     "when try to get un viewed messages" - {
       "should get 'issue-credential' (issue-credential 1.0) message" in {
-        val receivedMsg = holderSDK.expectMsgFromConn[IssueCred](issuerHolderConn)
+        val receivedMsg = holderSDK.downloadMsg[IssueCred](issuerHolderConn)
         holderSDK.storeCred(receivedMsg.msg, lastReceivedThread)
       }
     }

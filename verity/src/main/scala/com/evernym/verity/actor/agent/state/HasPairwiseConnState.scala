@@ -97,7 +97,7 @@ trait PairwiseConnStateBase
         case (Some(tdd: TheirDidDocDetail), None) =>
           val lrd = LegacyRoutingDetail(tdd.agencyDID, tdd.agentKeyDID, tdd.agentVerKey, tdd.agentKeyDlgProofSignature)
           updateLegacyRelationshipState(tdd.pairwiseDID, tdd.pairwiseDIDVerKey, lrd)
-          trackTheirRoutingUpdateStatus(
+          initTheirRoutingUpdateStatus(
             TheirRouting(
               tdd.agentKeyDID,
               tdd.agentVerKey,
@@ -118,6 +118,13 @@ trait PairwiseConnStateBase
         cc.theirAgentDID,
         cc.theirAgentDIDVerKey,
         cc.theirAgentKeyDlgProofSignature)
+      initTheirRoutingUpdateStatus(
+        TheirRouting(
+          cc.theirAgentDID,
+          cc.theirAgentDIDVerKey,
+          cc.theirAgencyDID
+        )
+      )
       updateLegacyRelationshipState(cc.theirEdgeDID, "", lrd)
 
       //below event is related to v1 to v2 migration only
@@ -159,7 +166,7 @@ trait PairwiseConnStateBase
         }
       })
       updateRelationshipBase(relationshipState.update(_.thoseDidDocs.setIfDefined(updatedDidDoc.map(Seq(_)))))
-      trackTheirRoutingUpdateStatus(
+      updateTheirRoutingStatus(
         TheirRouting(
           tru.routingPairwiseDID,
           tru.routingPairwiseVerKey,
@@ -282,24 +289,28 @@ trait PairwiseConnStateBase
     }
   }
 
-  private def trackTheirRoutingUpdateStatus(newRoute: TheirRouting): Unit = {
-    theirRoutingUpdateStatus =
-      (theirRoutingUpdateStatus.original, theirRoutingUpdateStatus.latest) match {
-        case (None,       None) =>
-          //first time regular update
-          TheirRoutingUpdateStatus(None, Option(newRoute))
+  def initTheirRoutingUpdateStatus(routing: TheirRouting): Unit = {
+    theirRoutingStatus = TheirRoutingStatus(None, Option(routing))
+  }
+
+  private def updateTheirRoutingStatus(newRoute: TheirRouting): Unit = {
+    theirRoutingStatus =
+      (theirRoutingStatus.original, theirRoutingStatus.latest) match {
+
+        //migrate the routing (to point to VAS)
         case (None,       Some(latest)) if latest != newRoute =>
-          //migrate the routing (to point to VAS)
-          TheirRoutingUpdateStatus(Some(latest), Option(newRoute))
+          TheirRoutingStatus(Some(latest), Option(newRoute))
+
+        //undo routing changes (to point back to EAS)
         case (Some(_), Some(latest)) if latest != newRoute =>
-          //undo routing changes (to point back to EAS)
-          theirRoutingUpdateStatus.copy(latest = Option(newRoute))
+          theirRoutingStatus.copy(latest = Option(newRoute))
+
         case _  =>
-          theirRoutingUpdateStatus
+          theirRoutingStatus
     }
   }
 
-  var theirRoutingUpdateStatus: TheirRoutingUpdateStatus = TheirRoutingUpdateStatus(None, None)
+  var theirRoutingStatus: TheirRoutingStatus = TheirRoutingStatus(None, None)
 }
 
 
@@ -309,8 +320,8 @@ trait PairwiseConnStateBase
  */
 trait PairwiseConnState extends PairwiseConnStateBase
 
-case class TheirRoutingUpdateStatus(original: Option[TheirRouting],
-                                    latest: Option[TheirRouting]) {
+case class TheirRoutingStatus(original: Option[TheirRouting],
+                              latest: Option[TheirRouting]) {
   def isOrigAndLatestSame: Boolean = original == latest
 }
 

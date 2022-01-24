@@ -25,7 +25,7 @@ class AgencyAgentCreateNewAgentFailure extends AgentProvBaseSpec_V_0_7 {
 
         val sentCreateAgent = sendCreateCloudAgent(
           SponsorRel("inactive", "whatever"),
-          sponsorKeys().verKey,
+          testSponsor.verKey,
           getNonce,
           mockEdgeAgent,
           TimeUtil.nowDateString
@@ -38,7 +38,7 @@ class AgencyAgentCreateNewAgentFailure extends AgentProvBaseSpec_V_0_7 {
       "should send problem report" taggedAs UNSAFE_IgnoreLog in {
         val sentCreateAgent = sendCreateCloudAgent(
           SponsorRel.empty,
-          sponsorKeys().verKey,
+          testSponsor.verKey,
           getNonce,
           mockEdgeAgent,
           TimeUtil.nowDateString
@@ -51,7 +51,7 @@ class AgencyAgentCreateNewAgentFailure extends AgentProvBaseSpec_V_0_7 {
       "should send problem report" taggedAs UNSAFE_IgnoreLog in {
         val sentCreateAgent = sendCreateCloudAgent(
           SponsorRel("not found", "whatever"),
-          sponsorKeys().verKey,
+          testSponsor.verKey,
           getNonce,
           mockEdgeAgent,
           TimeUtil.nowDateString
@@ -64,7 +64,7 @@ class AgencyAgentCreateNewAgentFailure extends AgentProvBaseSpec_V_0_7 {
       "should send problem report" taggedAs UNSAFE_IgnoreLog in {
         val sentCreateAgent = sendCreateCloudAgent(
           SponsorRel("inactive", "whatever"),
-          sponsorKeys().verKey,
+          testSponsor.verKey,
           getNonce,
           mockEdgeAgent,
           TimeUtil.longToDateString(Duration("12 minute").toMillis + TimeUtil.now)
@@ -89,7 +89,7 @@ class AgencyAgentCreateNewCloudAgent extends AgentProvBaseSpec_V_0_7 {
       "should respond with AGENT_CREATED msg" in {
 
         val agentDid = createCloudAgent(SponsorRel("sponsor1", "id"),
-          sponsorKeys().verKey,
+          testSponsor.verKey,
           getNonce,
           mockEdgeAgent)
         agentDid shouldBe mockEdgeAgent.myDIDDetail.did
@@ -100,7 +100,7 @@ class AgencyAgentCreateNewCloudAgent extends AgentProvBaseSpec_V_0_7 {
       "should respond with error agent already created" taggedAs UNSAFE_IgnoreLog in {
         val sentCreateAgent = sendCreateCloudAgent(
           SponsorRel("sponsor1", "id"),
-          sponsorKeys().verKey,
+          testSponsor.verKey,
           getNonce,
           mockEdgeAgent,
           TimeUtil.nowDateString
@@ -135,7 +135,7 @@ class AgencyAgentCreateNewEdgeAgent extends AgentProvBaseSpec_V_0_7 {
 
         val agentDid = createEdgeAgent(
           SponsorRel("sponsor1", "id"),
-          sponsorKeys().verKey,
+          testSponsor.verKey,
           nonce,
           mockEdgeAgent,
           TimeUtil.nowDateString
@@ -148,7 +148,7 @@ class AgencyAgentCreateNewEdgeAgent extends AgentProvBaseSpec_V_0_7 {
       "should respond successfully" taggedAs UNSAFE_IgnoreLog in {
         val sentCreateAgent = sendCreateEdgeAgent(
           SponsorRel("sponsor1", "id"),
-          sponsorKeys().verKey,
+          testSponsor.verKey,
           nonce,
           mockEdgeAgent,
           TimeUtil.nowDateString
@@ -179,7 +179,7 @@ class AgencyAgentCreateNewAgentTokenDoubleUseFailure extends AgentProvBaseSpec_V
       "should respond with AGENT_CREATED msg" in {
         val selfDID = createCloudAgent(
           SponsorRel("sponsor1", "id"),
-          sponsorKeys().verKey,
+          testSponsor.verKey,
           nonce,
           mockEdgeAgent1,
           commonTime
@@ -195,7 +195,7 @@ class AgencyAgentCreateNewAgentTokenDoubleUseFailure extends AgentProvBaseSpec_V
 
         val sentCreateAgent = sendCreateEdgeAgent(
           SponsorRel("sponsor1", "id"),
-          sponsorKeys().verKey,
+          testSponsor.verKey,
           nonce,
           mockEdgeAgent,
           commonTime

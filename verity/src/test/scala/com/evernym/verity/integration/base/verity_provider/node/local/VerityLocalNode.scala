@@ -40,16 +40,15 @@ case class VerityLocalNode(tmpDirPath: Path,
   private val logger: Logger = LoggingUtil.getLoggerByName("VerityLocalNode")
 
   def start()(implicit ec: ExecutionContext): Future[Unit] = {
-    logger.info(s"[rg-00] start verity instance ${portProfile.artery}")
+    logger.info(s"Start verity instance with artery port ${portProfile.artery} and http port ${portProfile.http}")
     if (!isAvailable) {
       Future {
-        logger.info(s"[rg-01] Future class loader is ${Thread.currentThread().getContextClassLoader}")
         startVerityInstance()
       } map {
         srv =>
           _httpServer = srv
           isAvailable = true
-          logger.info(s"[rg-00] verity instance ${portProfile.artery} started")
+          logger.info(s"Verity instance ${portProfile.artery} started")
       }
     } else {
       Future.successful(())
@@ -62,28 +61,10 @@ case class VerityLocalNode(tmpDirPath: Path,
     }
   }
 
-  //is this really ungraceful shutdown?
-  //  private def stopUngracefully(): Unit = {
-  //    def stopHttpServer(): Unit = {
-  //      val httpStopFut = httpServer.stop()
-  //      Await.result(httpStopFut, 30.seconds)
-  //    }
-  //
-  //    def stopActorSystem(): Unit = {
-  //      val platformStopFut = platform.actorSystem.terminate()
-  //      Await.result(platformStopFut, 30.seconds)
-  //    }
-  //
-  //    isAvailable = false
-  //    stopHttpServer()
-  //    stopActorSystem()
-  //  }
-
   private def stopGracefully(): Unit = {
     isAvailable = false
-    //TODO: need to resolve this
     if (httpServer == null){
-      logger.warn(s"[rg-00] stopGracefully called, but it seems like node was not be started, node ${portProfile.artery}")
+      logger.warn(s"Verity node ${portProfile.artery} 'stopGracefully' called, but it seems like node was not be started")
       return
     }
     val cluster = Cluster(platform.actorSystem)

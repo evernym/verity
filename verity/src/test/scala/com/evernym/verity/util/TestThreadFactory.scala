@@ -11,7 +11,7 @@ class TestThreadFactory(namePrefix: String, group: ThreadGroup, classLoader: Cla
 
   override def newThread(target: Runnable): Thread = {
     val thread = new Thread(group, new RunnableWithClassLoader(target, classLoader), namePrefix + "-" + count.incrementAndGet)
-    logger.info(s"[rg-01] created thread $thread, with contextClassLoader: $classLoader")
+    logger.info(s"Thread $thread created, with contextClassLoader: $classLoader")
     thread
   }
 }

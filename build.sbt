@@ -59,6 +59,7 @@ val akkaVer         = "2.6.17"
 val akkaHttpVer     = "10.2.7"
 val akkaMgtVer      = "1.1.3"
 val alpAkkaVer      = "3.0.3"
+val akkaPersistence = "1.1.1"
 val kamonVer        = "2.4.2"
 val kanelaAgentVer  = "1.0.14"
 val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
@@ -288,7 +289,7 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
 
     //akka persistence dependencies
-    akkaGrp %% "akka-persistence-dynamodb" % "1.1.3",
+    akkaGrp %% "akka-persistence-dynamodb" % akkaPersistence,
 
     //lightbend akka dependencies
     "com.lightbend.akka" %% "akka-stream-alpakka-s3" % alpAkkaVer,

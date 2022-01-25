@@ -22,6 +22,8 @@ import com.evernym.verity.sdk.utils.{AsJsonObject, Context}
 
 import java.lang
 import java.nio.file.Path
+import java.util.UUID
+import scala.annotation.tailrec
 import scala.language.postfixOps
 import scala.sys.process.Process
 
@@ -79,15 +81,28 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                          version: String,
                          func: String,
                          constructParams: Seq[Any] = Seq.empty,
-                         funcParams: Seq[Any] = Seq.empty): String = {
+                         funcParams: Seq[Any] = Seq.empty)
+                        (injectThreadId: Option[String] = None): String = {
 
     val versionConversion = ProcessSdkProvider.versionToModule(version)
     val params = mkParams(constructParams)
     val fParams = Seq("context", mkParams(funcParams)).mkString(",")
+
+    val cmd: String = injectThreadId match {
+      case Some(injectThreadId) =>
+        s"""
+        pp = $obj($params)
+        pp.thread_id = ${stringParam(injectThreadId)}
+        await pp.$func($fParams)
+        """
+      case None => s"await $obj($params).$func($fParams)"
+    }
+
+
     executeOneLine(
       ctx,
       s"from verity_sdk.protocols.$versionConversion.$obj import $obj",
-      s"await $obj($params).$func($fParams)"
+      cmd
     )
   }
 
@@ -129,37 +144,37 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
   override def updateEndpoint_0_6: UpdateEndpointV0_6 =
     new UndefinedUpdateEndpoint_0_6() {
       override def update(ctx: Context): Unit =
-        executeCmd(ctx, "UpdateEndpoint", this.version, "update")
+        executeCmd(ctx, "UpdateEndpoint", this.version, "update")()
     }
 
   override def updateConfigs_0_6(name: String, logoUrl: String): UpdateConfigsV0_6 =
     new UndefinedUpdateConfigs_0_6 {
       override def update(ctx: Context): Unit =
-        executeCmd(ctx, "UpdateConfigs", this.version, "update", Seq(name, logoUrl))
+        executeCmd(ctx, "UpdateConfigs", this.version, "update", Seq(name, logoUrl))()
     }
 
   override def updateConfigs_0_6(): UpdateConfigsV0_6 =
     new UndefinedUpdateConfigs_0_6 {
       override def status(ctx: Context): Unit =
-        executeCmd(ctx, "UpdateConfigs", this.version, "status")
+        executeCmd(ctx, "UpdateConfigs", this.version, "status")()
     }
 
   override def issuerSetup_0_6: IssuerSetupV0_6 = {
     new UndefinedIssuerSetup_0_6 {
       override def create(ctx: Context): Unit =
-        executeCmd(ctx, "IssuerSetup", this.version, "create")
+        executeCmd(ctx, "IssuerSetup", this.version, "create")()
 
       override def currentPublicIdentifier(ctx: Context): Unit =
-        executeCmd(ctx, "IssuerSetup", this.version, "current_public_identifier")
+        executeCmd(ctx, "IssuerSetup", this.version, "current_public_identifier")()
     }
   }
 
   override def writeSchema_0_6(name: String, ver: String, attrs: String*): WriteSchemaV0_6 = {
     new UndefinedWriteSchema_0_6 {
       override def write(ctx: Context): Unit =
-        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq))
+        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq))(Some(myThreadId))
       override def write(ctx: Context, endorserDid: String): Unit =
-        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq), Seq(endorserDid))
+        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq), Seq(endorserDid))(Some(myThreadId))
     }
   }
 
@@ -169,9 +184,9 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                                 revocationDetails: Option[RevocationRegistryConfig]): WriteCredentialDefinitionV0_6 = {
     new UndefinedWriteCredentialDefinition_0_6 {
       override def write(ctx: Context): Unit =
-        executeCmd(ctx, "WriteCredentialDefinition", this.version, "write", Seq(name, schemaId, tag, revocationDetails.orNull))
+        executeCmd(ctx, "WriteCredentialDefinition", this.version, "write", Seq(name, schemaId, tag, revocationDetails.orNull))(Some(myThreadId))
       override def write(ctx: Context, endorserDid: String): Unit =
-        executeCmd(ctx, "WriteCredentialDefinition", this.version, "write", Seq(name, schemaId, tag, revocationDetails.orNull), Seq(endorserDid))
+        executeCmd(ctx, "WriteCredentialDefinition", this.version, "write", Seq(name, schemaId, tag, revocationDetails.orNull), Seq(endorserDid))(Some(myThreadId))
     }
   }
 
@@ -183,8 +198,8 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "BasicMessage",
           this.version,
           "message",
-          Seq(forRelationship, None, content, sentTime, localization)
-        )
+          Seq(forRelationship, myThreadId, content, sentTime, localization)
+        )()
       }
     }
   }
@@ -201,8 +216,8 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "CommittedAnswer",
           this.version,
           "ask",
-          Seq(forRelationship, None, questionText, questionDescription, validResponses, requireSig)
-        )
+          Seq(forRelationship, myThreadId, questionText, questionDescription, validResponses, requireSig)
+        )()
       }
     }
 
@@ -213,14 +228,16 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
   override def committedAnswer_1_0(forRelationship: DidStr,
                                    threadId: String): CommittedAnswerV1_0 =
     new UndefinedCommittedAnswer_1_0 {
+      override val myThreadId: String = threadId
+
       override def status(ctx: Context): Unit = {
         executeCmd(
           ctx,
           "CommittedAnswer",
           this.version,
           "status",
-          Seq(forRelationship, threadId)
-        )
+          Seq(forRelationship, myThreadId)
+        )()
       }
     }
 
@@ -232,19 +249,21 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def outOfBand_1_0(forRelationship: String, inviteURL: String): OutOfBandV1_0 = new UndefinedOutOfBand_1_0 {
     override def handshakeReuse(ctx: Context): Unit =
-      executeCmd(ctx, "OutOfBand", version, "handshake_reuse", Seq(None, None, forRelationship, inviteURL))
+      executeCmd(ctx, "OutOfBand", version, "handshake_reuse", Seq(None, myThreadId, forRelationship, inviteURL))()
   }
 
   override def relationship_1_0(label: String): RelationshipV1_0 = new UndefinedRelationship_1_0 {
     override def create(ctx: Context): Unit =
-      executeCmd(ctx, "Relationship", version, "create", Seq(None, None, label))
+      executeCmd(ctx, "Relationship", version, "create", Seq(None, myThreadId, label))()
   }
 
   override def relationship_1_0(forRelationship: String, threadId: String): RelationshipV1_0 = new UndefinedRelationship_1_0 {
+    override val myThreadId: String = threadId
+
     override def connectionInvitation(ctx: Context, shortInvite: lang.Boolean): Unit =
-      executeCmd(ctx, "Relationship", version, "connection_invitation", Seq(forRelationship, threadId), Seq(shortInvite))
+      executeCmd(ctx, "Relationship", version, "connection_invitation", Seq(forRelationship, myThreadId), Seq(shortInvite))()
     override def outOfBandInvitation(ctx: Context, shortInvite: lang.Boolean, goal: GoalCode): Unit =
-      executeCmd(ctx, "Relationship", version, "out_of_band_invitation", Seq(forRelationship, threadId), Seq(shortInvite, goal))
+      executeCmd(ctx, "Relationship", version, "out_of_band_invitation", Seq(forRelationship, myThreadId), Seq(shortInvite, goal))()
   }
 
   override def issueCredential_1_0(forRelationship: String,
@@ -260,19 +279,21 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "IssueCredential",
           this.version,
           "offer_credential",
-          Seq(forRelationship, None, credDefId, credValues, comment, price, autoIssue, byInvitation)
-        )
+          Seq(forRelationship, myThreadId, credDefId, credValues, comment, price, autoIssue, byInvitation)
+        )()
       }
     }
   }
 
   override def issueCredential_1_0(forRelationship: String, threadId: String): IssueCredentialV1_0 = {
     new UndefinedIssueCredential_1_0 {
+      override val myThreadId: String = threadId
+
       override def issueCredential(ctx: Context): Unit =
-        executeCmd(ctx, "IssueCredential", this.version, "issue_credential", Seq(forRelationship, threadId))
+        executeCmd(ctx, "IssueCredential", this.version, "issue_credential", Seq(forRelationship, myThreadId))()
 
       override def status(ctx: Context): Unit =
-        executeCmd(ctx, "IssueCredential", this.version, "status", Seq(forRelationship, threadId))
+        executeCmd(ctx, "IssueCredential", this.version, "status", Seq(forRelationship, myThreadId))()
     }
   }
 
@@ -290,17 +311,19 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
         "PresentProof",
         this.version,
         "request",
-        Seq(forRelationship, None, name, proofAttrs.toSeq, proofPredicate.toSeq, byInvitation)
-      )
+        Seq(forRelationship, myThreadId, name, proofAttrs.toSeq, proofPredicate.toSeq, byInvitation)
+      )()
   }
 
   override def presentProof_1_0(forRelationship: DidStr, threadId: String): PresentProofV1_0 =
     new UndefinedPresentProof_1_0 {
+      override val myThreadId: String = threadId
+
       override def status(ctx: Context): Unit =
-        executeCmd(ctx, "PresentProof", this.version, "status", Seq(forRelationship, threadId))
+        executeCmd(ctx, "PresentProof", this.version, "status", Seq(forRelationship, myThreadId))()
 
       override def acceptProposal(ctx: Context): Unit =
-        executeCmd(ctx, "PresentProof", this.version, "accept_proposal", Seq(forRelationship, threadId))
+        executeCmd(ctx, "PresentProof", this.version, "accept_proposal", Seq(forRelationship, myThreadId))()
     }
 
   override def presentProof_1_0(forRelationship: String, proofAttrs: Array[ProposedAttribute], proofPredicates: Array[ProposedPredicate]): PresentProofV1_0 = ???

@@ -20,7 +20,6 @@ import com.evernym.verity.sdk.protocols.writecreddef.v0_6.{RevocationRegistryCon
 import com.evernym.verity.sdk.protocols.writeschema.v0_6.WriteSchemaV0_6
 import com.evernym.verity.sdk.utils.{AsJsonObject, Context}
 
-import java.io.{BufferedWriter, File, FileWriter}
 import java.lang
 import java.nio.file.{Path, Paths}
 
@@ -89,8 +88,9 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                          version: String,
                          func: String,
                          constructParams: Seq[Any] = Seq.empty,
-                         funcParams: Seq[Any] = Seq.empty): String = {
-    executeCmdWithUsing(ctx, obj, obj, version, func, constructParams, funcParams)
+                         funcParams: Seq[Any] = Seq.empty)
+                        (injectThreadId: Option[String] = None): String = {
+    executeCmdWithUsing(ctx, obj, obj, version, func, constructParams, funcParams)(injectThreadId)
   }
 
   private def executeCmdWithUsing(ctx: Context,
@@ -99,7 +99,8 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                                   version: String,
                                   func: String,
                                   constructParams: Seq[Any] = Seq.empty,
-                                  funcParams: Seq[Any] = Seq.empty): String = {
+                                  funcParams: Seq[Any] = Seq.empty)
+                                 (injectThreadId: Option[String] = None): String = {
 
     val versionConversion = versionToModule(version)
 
@@ -113,15 +114,26 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
       fParams = Seq("context", mkParams(funcParams)).mkString(",")
     }
 
+    val cmd: String = injectThreadId match {
+      case Some(injectThreadId) =>
+        s"""
+        var pp = $obj.$versionConversion($params);
+        typeof(AbstractProtocol).GetField("threadId", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(pp, ${stringParam(injectThreadId)});
+        pp.$func($fParams);
+        """
+      case None => s"$obj.$versionConversion($params).$func($fParams)"
+    }
+
     executeOneLine(
       ctx,
       s"using VeritySDK.Protocols.$using;",
-      s"$obj.$versionConversion($params).$func($fParams)"
+      cmd
     )
   }
 
   private def executeCmdForWriteCredentialDefinition(ctx: Context,
                                                      version: String,
+                                                     threadId: String,
                                                      name: String,
                                                      schemaId: String,
                                                      tag: Option[String],
@@ -142,7 +154,11 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     executeOneLine(
       ctx,
       s"using VeritySDK.Protocols.WriteCredDef;",
-      s"WriteCredentialDefinition.$versionConversion(${stringParam(name)}, ${stringParam(schemaId)}, ${stringParam(tag.orNull)}, $rev_s).write(${fParams})"
+      s"""
+        var pp = WriteCredentialDefinition.$versionConversion(${stringParam(name)}, ${stringParam(schemaId)}, ${stringParam(tag.orNull)}, $rev_s);
+        typeof(AbstractProtocol).GetField("threadId", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(pp, ${stringParam(threadId)});
+        pp.write(${fParams})
+       """
     )
   }
 
@@ -191,44 +207,44 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def updateEndpoint_0_6: UpdateEndpointV0_6 = new UndefinedUpdateEndpoint_0_6() {
     override def update(ctx: Context): Unit =
-      executeCmd(ctx, "UpdateEndpoint", this.version, "update")
+      executeCmd(ctx, "UpdateEndpoint", this.version, "update")()
   }
 
   override def updateConfigs_0_6(name: String, logoUrl: String): UpdateConfigsV0_6 = new UndefinedUpdateConfigs_0_6 {
     override def update(ctx: Context): Unit =
-      executeCmd(ctx, "UpdateConfigs", this.version, "update", Seq(name, logoUrl))
+      executeCmd(ctx, "UpdateConfigs", this.version, "update", Seq(name, logoUrl))()
   }
 
   override def updateConfigs_0_6(): UpdateConfigsV0_6 = new UndefinedUpdateConfigs_0_6 {
     override def status(ctx: Context): Unit =
-      executeCmd(ctx, "UpdateConfigs", this.version, "status")
+      executeCmd(ctx, "UpdateConfigs", this.version, "status")()
   }
 
   override def issuerSetup_0_6: IssuerSetupV0_6 = {
     new UndefinedIssuerSetup_0_6 {
       override def create(ctx: Context): Unit =
-        executeCmd(ctx, "IssuerSetup", this.version, "create")
+        executeCmd(ctx, "IssuerSetup", this.version, "create")()
 
       override def currentPublicIdentifier(ctx: Context): Unit =
-        executeCmd(ctx, "IssuerSetup", this.version, "currentPublicIdentifier")
+        executeCmd(ctx, "IssuerSetup", this.version, "currentPublicIdentifier")()
     }
   }
 
   override def writeSchema_0_6(name: String, ver: String, attrs: String*): WriteSchemaV0_6 = {
     new UndefinedWriteSchema_0_6 {
       override def write(ctx: Context): Unit =
-        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq))
+        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq))(Some(myThreadId))
       override def write(ctx: Context, endorserDid: String): Unit =
-        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq), Seq(endorserDid))
+        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq), Seq(endorserDid))(Some(myThreadId))
     }
   }
 
   override def writeCredDef_0_6(name: String, schemaId: String, tag: Option[String], revocationDetails: Option[RevocationRegistryConfig]): WriteCredentialDefinitionV0_6 = {
     new UndefinedWriteCredentialDefinition_0_6 {
       override def write(ctx: Context): Unit =
-        executeCmdForWriteCredentialDefinition(ctx, this.version, name, schemaId, tag, revocationDetails)
+        executeCmdForWriteCredentialDefinition(ctx, this.version, myThreadId, name, schemaId, tag, revocationDetails)
       override def write(ctx: Context, endorserDid: String): Unit =
-        executeCmdForWriteCredentialDefinition(ctx, this.version, name, schemaId, tag, revocationDetails, Seq(endorserDid))
+        executeCmdForWriteCredentialDefinition(ctx, this.version, myThreadId, name, schemaId, tag, revocationDetails, Seq(endorserDid))
     }
   }
 
@@ -239,7 +255,11 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
       executeOneLine(
         ctx,
         s"using VeritySDK.Protocols.QuestionAnswer;",
-        s"CommittedAnswer.${versionToModule(this.version)}(${stringParam(forRelationship)}, ${stringParam(questionText)}, ${stringParam(questionDescription)}, $vR, ${booleanParam(requireSig)}).ask(context)"
+        s"""
+          var pp = CommittedAnswer.${versionToModule(this.version)}(${stringParam(forRelationship)}, ${stringParam(questionText)}, ${stringParam(questionDescription)}, $vR, ${booleanParam(requireSig)});
+          typeof(AbstractProtocol).GetField("threadId", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(pp, ${stringParam(myThreadId)});
+          pp.ask(context)
+        """
       )
     }
   }
@@ -254,7 +274,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           this.version,
           "answer",
           Seq(forRelationship, threadId, answerStr)
-        )
+        )()
 
       override def status(ctx: Context): Unit =
         executeCmdWithUsing(
@@ -264,7 +284,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           this.version,
           "status",
           Seq(forRelationship, threadId, answerStr)
-        )
+        )()
 
     }
   }
@@ -278,7 +298,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
         this.version,
         "status",
         Seq(forRelationship, threadId)
-      )
+      )()
     }
   }
 
@@ -290,34 +310,35 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def outOfBand_1_0(forRelationship: String, inviteURL: String): OutOfBandV1_0 = new UndefinedOutOfBand_1_0 {
     override def handshakeReuse(ctx: Context): Unit =
-      executeCmd(ctx, "OutOfBand", version, "handshakeReuse", Seq(forRelationship, inviteURL))
+      executeCmd(ctx, "OutOfBand", version, "handshakeReuse", Seq(forRelationship, inviteURL))(Some(myThreadId))
   }
 
   override def relationship_1_0(label: String): RelationshipV1_0 = new UndefinedRelationship_1_0 {
     override def create(ctx: Context): Unit =
-      executeCmd(ctx, "Relationship", version, "create", Seq(label))
+      executeCmd(ctx, "Relationship", version, "create", Seq(label))(Some(myThreadId))
   }
 
   override def relationship_1_0(forRelationship: String,
                                 threadId: String): RelationshipV1_0 = new UndefinedRelationship_1_0 {
+    override val myThreadId: String = threadId
     override def connectionInvitation(ctx: Context, shortInvite: lang.Boolean): Unit =
       executeCmd(
         ctx,
         "Relationship",
         version,
         "connectionInvitation",
-        Seq(forRelationship, threadId),
+        Seq(forRelationship, myThreadId),
         Seq(shortInvite)
-      )
+      )()
     override def outOfBandInvitation(ctx: Context, shortInvite: lang.Boolean, goal: GoalCode): Unit =
       executeCmd(
         ctx,
         "Relationship",
         version,
         "outOfBandInvitation",
-        Seq(forRelationship, threadId),
+        Seq(forRelationship, myThreadId),
         Seq(shortInvite, goal)
-      )
+      )()
   }
 
   override def issueCredential_1_0(forRelationship: String,
@@ -334,18 +355,20 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           this.version,
           "offerCredential",
           Seq(forRelationship, credDefId, credValues, comment, price, autoIssue, byInvitation)
-        )
+        )(Some(myThreadId))
       }
     }
   }
 
   override def issueCredential_1_0(forRelationship: String, threadId: String): IssueCredentialV1_0 = {
     new UndefinedIssueCredential_1_0 {
+      override val myThreadId: String = threadId
+
       override def issueCredential(ctx: Context): Unit =
-        executeCmd(ctx, "IssueCredential", this.version, "issueCredential", Seq(forRelationship, threadId))
+        executeCmd(ctx, "IssueCredential", this.version, "issueCredential", Seq(forRelationship, myThreadId))()
 
       override def status(ctx: Context): Unit =
-        executeCmd(ctx, "IssueCredential", this.version, "status", Seq(forRelationship, threadId))
+        executeCmd(ctx, "IssueCredential", this.version, "status", Seq(forRelationship, myThreadId))()
     }
   }
 
@@ -436,7 +459,9 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
       val cmd = s"""
             $cmd_proofAttrs
             $cmd_proofPredicate
-            PresentProof.${versionToModule(this.version)}(${stringParam(forRelationship)}, ${stringParam(name)}, $cmd_proofAttrsArr, $cmd_proofPredicateArr, ${booleanParam(byInvitation)}).request(context);
+            var pp = PresentProof.${versionToModule(this.version)}(${stringParam(forRelationship)}, ${stringParam(name)}, $cmd_proofAttrsArr, $cmd_proofPredicateArr, ${booleanParam(byInvitation)})
+            typeof(AbstractProtocol).GetField("threadId", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(pp, ${stringParam(myThreadId)});
+            pp.request(context);
       """
 
       executeOneLine(ctx,s"using VeritySDK.Protocols.PresentProof;", cmd)
@@ -450,12 +475,14 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def presentProof_1_0(forRelationship: DidStr,
                                 threadId: String): PresentProofV1_0 = new UndefinedPresentProof_1_0 {
+    override val myThreadId: String = threadId
+
     override def status(ctx: Context): Unit = {
-      executeCmd(ctx, "PresentProof", this.version, "status", Seq(forRelationship, threadId))
+      executeCmd(ctx, "PresentProof", this.version, "status", Seq(forRelationship, myThreadId))()
     }
 
     override def acceptProposal(ctx: Context): Unit = {
-      executeCmd(ctx, "PresentProof", this.version, "acceptProposal", Seq(forRelationship, threadId))
+      executeCmd(ctx, "PresentProof", this.version, "acceptProposal", Seq(forRelationship, myThreadId))()
     }
   }
 
@@ -468,7 +495,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           this.version,
           "message",
           Seq(forRelationship, content, sentTime, localization)
-        )
+        )(Some(myThreadId))
     }
   }
 }
@@ -497,6 +524,7 @@ object DotNetSdkProvider {
     using VeritySDK.Exceptions;
     using VeritySDK.Handler;
     using VeritySDK.Utils;
+    using VeritySDK.Protocols;
     $imports
 
     var context_str = @\"${context.replace("\"", "\"\"")}\";

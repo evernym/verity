@@ -30,10 +30,10 @@ class AriesProtocolMetricSpec
         val a1 = newEdgeAgent()
         val a2 = newEdgeAgent()
 
-        createCloudAgent(SponsorRel(SPONSOR_ID, "id"), sponsorKeys().verKey, getNonce, a1)
+        createCloudAgent(SponsorRel(SPONSOR_ID, "id"), testSponsor.verKey, getNonce, a1)
         assert(numberOfTags(getMetrics(AS_NEW_PROTOCOL_COUNT), tag) == count + 1)
 
-        createCloudAgent(SponsorRel(SPONSOR_ID2, "id2"), sponsorKeys().verKey, getNonce, a2)
+        createCloudAgent(SponsorRel(SPONSOR_ID2, "id2"), testSponsor.verKey, getNonce, a2)
         assert(numberOfTags(getMetrics(AS_NEW_PROTOCOL_COUNT), tag) == count + 2)
       }
     }

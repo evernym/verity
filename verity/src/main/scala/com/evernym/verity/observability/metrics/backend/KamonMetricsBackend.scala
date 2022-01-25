@@ -3,6 +3,7 @@ package com.evernym.verity.observability.metrics.backend
 import akka.actor.ActorSystem
 import com.evernym.verity.observability.metrics.TagMap
 import com.evernym.verity.observability.metrics.{ClientSpan, DefaultSpan, InternalSpan, MetricsBackend, MetricsUnit, SpanType}
+import com.typesafe.config.Config
 import kamon.Kamon
 import kamon.tag.TagSet
 
@@ -64,4 +65,5 @@ object KamonMetricsBackend {
     }
     Kamon.runWithSpan(spanBuilder.start())(fn)
   }
+
 }

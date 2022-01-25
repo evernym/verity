@@ -10,7 +10,7 @@ import com.evernym.verity.protocol.engine.Constants.{MFV_0_7, MSG_FAMILY_AGENT_P
 import com.evernym.verity.protocol.engine.util.DbcUtil.requireNotNull
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.TimeUtil._
-import com.typesafe.config.{Config, ConfigFactory, ConfigObject}
+import com.typesafe.config.ConfigObject
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
@@ -59,7 +59,7 @@ object AgentProvisioningMsgFamily extends MsgFamily {
   }
 /**
   *
-  * @param sponseeId   An identifier a Sponsor uses to identify/refrence the sponsee i.g. id used in the sponsor’s back end database.
+  * @param sponseeId   An identifier a Sponsor uses to identify/reference the sponsee i.g. id used in the sponsor’s back end database.
   *
   * @param sponsorId   Identifier established when Sponsor registers with Evernym TE - persistent id for sponsor
   *
@@ -94,7 +94,13 @@ object AgentProvisioningMsgFamily extends MsgFamily {
   }
 
   case class Keys(verKey: VerKeyStr)
-  case class SponsorDetails(name: String, id: String, keys: List[Keys], endpoint: String, active: Boolean=false, pushService: Option[SponsorPushService] = None, pushMsgOverrides: Config = ConfigFactory.empty())
+  case class SponsorDetails(name: String,
+                            id: String,
+                            keys: List[Keys],
+                            endpoint: String,
+                            active: Boolean=false,
+                            pushService: Option[SponsorPushService] = None,
+                            pushMsgOverrides: String = "{}")
   case class SponsorPushService(service: String, host: String, path: String, key: String)
   object SponsorDetails {
     def apply(details: ConfigObject): SponsorDetails = {
@@ -109,9 +115,9 @@ object AgentProvisioningMsgFamily extends MsgFamily {
         )
       }.toOption
 
-      val pushMsgOverrides: Config = Try{
-        config.getObject("push-msg-overrides").toConfig
-      }.getOrElse(ConfigFactory.empty())
+      val pushMsgOverrides = Try{
+        config.getObject("push-msg-overrides").toString
+      }.getOrElse("{}")
 
       SponsorDetails(
         config.getString("name"),

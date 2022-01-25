@@ -5,7 +5,8 @@ import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
-import com.evernym.verity.integration.base.sdk_provider.SdkProvider
+import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider}
+import com.evernym.verity.integration.base.verity_provider.VerityEnv
 import com.evernym.verity.integration.with_basic_sdk.data_retention.DataRetentionBaseSpec
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Ctl.SendMessage
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Msg.Message
@@ -13,7 +14,7 @@ import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitatio
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.typesafe.config.ConfigFactory
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext}
 
 
 class BasicMessageSpec
@@ -24,23 +25,36 @@ class BasicMessageSpec
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val issuerVerityEnv =
-    VerityEnvBuilder
-      .default()
-      .withServiceParam(buildSvcParam)
-      .withConfig(DATA_RETENTION_CONFIG)
-      .build(VAS)
+  var issuerVerityEnv: VerityEnv = _
+  var holderVerityEnv: VerityEnv = _
 
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
-
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, ledgerTxnExecutor, executionContext)
+  var issuerSDK: IssuerSdk = _
+  var holderSDK: HolderSdk = _
 
   val firstConn = "connId1"
   var firstInvitation: Invitation = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+
+    val issuerVerityEnvFut =
+      VerityEnvBuilder
+        .default()
+        .withServiceParam(buildSvcParam)
+        .withConfig(DATA_RETENTION_CONFIG)
+        .buildAsync(VAS)
+
+    val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
+
+
+    issuerVerityEnv = Await.result(issuerVerityEnvFut, ENV_BUILD_TIMEOUT)
+    holderVerityEnv = Await.result(holderVerityEnvFut, ENV_BUILD_TIMEOUT)
+
+    val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, ledgerTxnExecutor, executionContext)
+
+    issuerSDK = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
+    holderSDK = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)
 
     issuerSDK.fetchAgencyKey()
     issuerSDK.provisionVerityEdgeAgent()
@@ -71,11 +85,10 @@ class BasicMessageSpec
   "HolderSDK" - {
     "when tried to get newly un viewed messages" - {
       "should get 'message' (basicmessage 1.0) message" in {
-        val receivedMsg = holderSDK.expectMsgFromConn[Message](firstConn)
+        val receivedMsg = holderSDK.downloadMsg[Message](firstConn)
         lastReceivedMsgThread = receivedMsg.threadOpt
         val message = receivedMsg.msg
         message.content shouldBe "How are you?"
-        holderSDK.sendUpdateMsgStatusAsReviewedForConn(firstConn, receivedMsg.msgId)
       }
     }
 

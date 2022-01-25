@@ -3,7 +3,7 @@ package com.evernym.verity.integration.with_basic_sdk.out_of_band.without_attach
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
-import com.evernym.verity.integration.base.sdk_provider.SdkProvider
+import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider}
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
@@ -14,7 +14,7 @@ import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 =>
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext}
 
 
 //Holder and Issuer already have a connection/relationship.
@@ -28,11 +28,8 @@ class ReuseConnectionSpec
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
-  lazy val holderVerityEnv = VerityEnvBuilder.default().build(CAS)
-
-  lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
-  lazy val holderSDK = setupHolderSdk(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+  var issuerSDK: IssuerSdk = _
+  var holderSDK: HolderSdk = _
 
   val issuerHolderConn = "connId1"
   val oobIssuerHolderConn = "connId2"
@@ -46,6 +43,15 @@ class ReuseConnectionSpec
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+
+    val issuerVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
+    val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
+    val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, executionContext)
+
+    issuerSDK = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
+    holderSDK = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)
+
     provisionEdgeAgent(issuerSDK)
     provisionCloudAgent(holderSDK)
 
@@ -81,7 +87,7 @@ class ReuseConnectionSpec
         val handshakeReuse = HandshakeReuse(MsgThread(pthid = Option(oobInvite.`@id`)))
         val msgThread = Option(MsgThread(pthid = Option(oobInvite.`@id`)))
         holderSDK.sendProtoMsgToTheirAgent(issuerHolderConn, handshakeReuse, msgThread)
-        holderSDK.expectMsgFromConn[HandshakeReuseAccepted](issuerHolderConn)
+        holderSDK.downloadMsg[HandshakeReuseAccepted](issuerHolderConn)
         val receivedMsg = issuerSDK.expectMsgOnWebhook[ConnectionReused]()
         receivedMsg.threadOpt.map(_.pthid).isDefined shouldBe true
         java.lang.Thread.sleep(2000)  //time to let "move protocol" finish on verity side
@@ -105,7 +111,7 @@ class ReuseConnectionSpec
   "HolderSDK" - {
     "when try to get un viewed messages" - {
       "should get 'offer-credential' (issue-credential 1.0) message" in {
-        val receivedMsg = holderSDK.expectMsgFromConn[OfferCred](issuerHolderConn)
+        val receivedMsg = holderSDK.downloadMsg[OfferCred](issuerHolderConn)
         offerCred = receivedMsg.msg
         lastReceivedThread = receivedMsg.threadOpt
       }
@@ -137,7 +143,7 @@ class ReuseConnectionSpec
   "HolderSDK" - {
     "when try to get un viewed messages" - {
       "should get 'issue-credential' (issue-credential 1.0) message" in {
-        val receivedMsg = holderSDK.expectMsgFromConn[IssueCred](issuerHolderConn)
+        val receivedMsg = holderSDK.downloadMsg[IssueCred](issuerHolderConn)
         holderSDK.storeCred(receivedMsg.msg, lastReceivedThread)
       }
     }

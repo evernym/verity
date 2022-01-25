@@ -1,9 +1,20 @@
 package com.evernym.verity.observability.metrics
 
+import akka.actor.ActorSystem
+
 import java.time.Instant
 import scala.collection.mutable
 
 class TestMetricsBackend extends MetricsBackend {
+
+  /*
+   This constructor is needed because
+   com.evernym.verity.observability.metrics.MetricsWriterExtensionImpl.metricsWriter uses reflection
+   to create instance of MetricsBackend
+   */
+  def this(system: ActorSystem) {
+    this
+  }
 
   val gaugesMap = new mutable.HashMap[TestMetricHead, Double]()
   val histogramsMap = new mutable.HashMap[TestMetricHead, HistogramEntry]

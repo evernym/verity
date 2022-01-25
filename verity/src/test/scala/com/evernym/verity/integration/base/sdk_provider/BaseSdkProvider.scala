@@ -53,7 +53,7 @@ import org.scalatest.matchers.should.Matchers
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
@@ -61,41 +61,95 @@ import scala.util.{Failure, Success, Try}
 
 trait SdkProvider { this: BasicSpec =>
 
-  def setupIssuerSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): IssuerSdk =
+  def setupIssuerSdk(verityEnv: VerityEnv,
+                     executionContext: ExecutionContext,
+                     oauthParam: Option[OAuthParam]=None): IssuerSdk =
     IssuerSdk(buildSdkParam(verityEnv), executionContext, oauthParam)
-  def setupIssuerRestSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): IssuerRestSDK =
+
+  def setupIssuerRestSdk(verityEnv: VerityEnv,
+                         executionContext: ExecutionContext,
+                         oauthParam: Option[OAuthParam]=None): IssuerRestSDK =
     IssuerRestSDK(buildSdkParam(verityEnv), executionContext, oauthParam)
-  def setupVerifierSdk(verityEnv: VerityEnv, executionContext: ExecutionContext, oauthParam: Option[OAuthParam]=None): VerifierSdk =
+
+  def setupVerifierSdk(verityEnv: VerityEnv,
+                       executionContext: ExecutionContext,
+                       oauthParam: Option[OAuthParam]=None): VerifierSdk =
     VerifierSdk(buildSdkParam(verityEnv), executionContext, oauthParam)
 
-  def setupHolderSdk(
-                      verityEnv: VerityEnv,
-                      ledgerTxnExecutor: LedgerTxnExecutor,
-                      executionContext: ExecutionContext
-                    ): HolderSdk =
+  def setupHolderSdk(verityEnv: VerityEnv,
+                     ledgerTxnExecutor: LedgerTxnExecutor,
+                     executionContext: ExecutionContext): HolderSdk =
     HolderSdk(buildSdkParam(verityEnv), Option(ledgerTxnExecutor), executionContext, None)
 
-  def setupHolderSdk(
-                      verityEnv: VerityEnv,
-                      ledgerTxnExecutor: Option[LedgerTxnExecutor],
-                      executionContext: ExecutionContext
-                    ): HolderSdk =
+  def setupHolderSdk(verityEnv: VerityEnv,
+                     executionContext: ExecutionContext,
+                     ledgerTxnExecutor: Option[LedgerTxnExecutor]): HolderSdk =
     HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, executionContext, None)
 
-  def setupHolderSdk(
-                      verityEnv: VerityEnv,
-                      oauthParam: OAuthParam,
-                      executionContext: ExecutionContext,
-                    ): HolderSdk =
+  def setupHolderSdk(verityEnv: VerityEnv,
+                     oauthParam: OAuthParam,
+                     executionContext: ExecutionContext): HolderSdk =
     HolderSdk(buildSdkParam(verityEnv), None, executionContext, Option(oauthParam))
 
-  def setupHolderSdk(
-                      verityEnv: VerityEnv,
-                      ledgerTxnExecutor: Option[LedgerTxnExecutor],
-                      oauthParam: Option[OAuthParam],
-                      executionContext: ExecutionContext,
-                    ): HolderSdk =
+  def setupHolderSdk(verityEnv: VerityEnv,
+                     executionContext: ExecutionContext,
+                     ledgerTxnExecutor: Option[LedgerTxnExecutor] = None,
+                     oauthParam: Option[OAuthParam] = None): HolderSdk =
     HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, executionContext, oauthParam)
+
+  def setupIssuerSdkAsync(verityEnv: Future[VerityEnv],
+                          executionContext: ExecutionContext,
+                          oauthParam: Option[OAuthParam] = None): Future[IssuerSdk] =
+    verityEnv.map(env => {
+      setupIssuerSdk(env, executionContext, oauthParam)
+    })(executionContext)
+
+  def setupIssuerRestSdkAsync(verityEnv: Future[VerityEnv],
+                              executionContext: ExecutionContext,
+                              oauthParam: Option[OAuthParam] = None): Future[IssuerRestSDK] =
+    verityEnv.map(env => {
+      setupIssuerRestSdk(env, executionContext, oauthParam)
+    })(executionContext)
+
+  def setupVerifierSdkAsync(verityEnv: Future[VerityEnv],
+                            executionContext: ExecutionContext,
+                            oauthParam: Option[OAuthParam] = None): Future[VerifierSdk] =
+    verityEnv.map(env => {
+      setupVerifierSdk(env, executionContext, oauthParam)
+    })(executionContext)
+
+
+  def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
+                          ledgerTxnExecutor: LedgerTxnExecutor,
+                          executionContext: ExecutionContext): Future[HolderSdk] = {
+    verityEnv.map {
+      env => setupHolderSdk(env, ledgerTxnExecutor, executionContext)
+    }(executionContext)
+  }
+
+
+  def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
+                          ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                          executionContext: ExecutionContext): Future[HolderSdk] =
+    verityEnv.map(env => {
+      setupHolderSdk(env, executionContext, ledgerTxnExecutor)
+    })(executionContext)
+
+
+  def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
+                          oauthParam: OAuthParam,
+                          executionContext: ExecutionContext): Future[HolderSdk] =
+    verityEnv.map(env => {
+      setupHolderSdk(env, oauthParam, executionContext)
+    })(executionContext)
+
+  def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
+                          ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                          oauthParam: Option[OAuthParam],
+                          executionContext: ExecutionContext): Future[HolderSdk] =
+    verityEnv.map(env => {
+      setupHolderSdk(env, executionContext, ledgerTxnExecutor, oauthParam)
+    })(executionContext)
 
   private def buildSdkParam(verityEnv: VerityEnv): SdkParam = {
     SdkParam(VerityEnvUrlProvider(verityEnv.nodes))
@@ -178,9 +232,20 @@ abstract class SdkBase(param: SdkParam,
     val agentCreated = receivedMsgParam.msg
     require(agentCreated.selfDID.trim.nonEmpty, "agent provisioning selfDID can't be empty")
     require(agentCreated.agentVerKey.trim.nonEmpty, "agent provisioning verKey can't be empty")
-    verityAgentDidPairOpt = Option(DidPair(agentCreated.selfDID, agentCreated.agentVerKey))
-    storeTheirKey(DidPair(agentCreated.selfDID, agentCreated.agentVerKey))
+    updateVerityAgentDidPair(DidPair(agentCreated.selfDID, agentCreated.agentVerKey))
     agentCreated
+  }
+
+  def updateVerityAgentDidPair(dp: DidPair): Unit = {
+    verityAgentDidPairOpt = Option(dp)
+    storeTheirKey(DidPair(dp.did, dp.verKey))
+  }
+
+  def updatePairwiseAgentDidPair(connId: String, myPairwiseKey: DidPair, agentDidPair: DidPair): PairwiseRel = {
+    storeTheirKey(agentDidPair)
+    val pairwiseRel = PairwiseRel(Option(myPairwiseKey), Option(agentDidPair))
+    myPairwiseRelationships += (connId -> pairwiseRel)
+    pairwiseRel
   }
 
   def sendToRoute[T: ClassTag](msg: Any, fwdToDID: DidStr): ReceivedMsgParam[T] = {
@@ -337,8 +402,7 @@ trait LegacySdkBase_0_5 { this: SdkBase =>
     val connected = sendConnect_0_5()
     sendSignup_0_5(connected)
     val ac = sendCreateAgent_0_5(connected)
-    verityAgentDidPairOpt = Option(DidPair(ac.withPairwiseDID, ac.withPairwiseDIDVerKey))
-    storeTheirKey(DidPair(ac.withPairwiseDID, ac.withPairwiseDIDVerKey))
+    updateVerityAgentDidPair(DidPair(ac.withPairwiseDID, ac.withPairwiseDIDVerKey))
     ac
   }
 
@@ -448,8 +512,7 @@ trait LegacySdkBase_0_6 { this: SdkBase =>
 
   def provisionAgent_0_6(): AgentCreated_MFV_0_6 = {
     val ac = sendCreateAgent_0_6()
-    verityAgentDidPairOpt = Option(DidPair(ac.withPairwiseDID, ac.withPairwiseDIDVerKey))
-    storeTheirKey(DidPair(ac.withPairwiseDID, ac.withPairwiseDIDVerKey))
+    updateVerityAgentDidPair(DidPair(ac.withPairwiseDID, ac.withPairwiseDIDVerKey))
     ac
   }
 

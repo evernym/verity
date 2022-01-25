@@ -47,7 +47,7 @@ val evernymDevRepo = DebianRepo(
 val libVdrToolsVer = "0.8.2"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libindy.so"),
-  NonMatchingLib("libvcx", "0.12.0-bionic~602", "libvcx.so")  // For integration testing ONLY
+  NonMatchingLib("libvcx", "0.13.0-bionic~675", "libvcx.so")  // For integration testing ONLY
 )
 
 //deb package dependencies versions
@@ -57,20 +57,20 @@ val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 val vdrtoolsWrapperVer  = "0.8.2"
 val akkaVer         = "2.6.17"
 val akkaHttpVer     = "10.2.7"
-val akkaMgtVer      = "1.1.1"
+val akkaMgtVer      = "1.1.3"
 val alpAkkaVer      = "3.0.3"
+val akkaPersistence = "1.1.1"
 val kamonVer        = "2.4.2"
 val kanelaAgentVer  = "1.0.14"
 val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
-val jacksonVer      = "2.11.4"    //TODO: incrementing to latest version (2.12.0) was causing certain unexpected issues
-                                  // around base64 decoding etc, should look into it.
+val jacksonVer      = "2.13.1"
 val sdnotifyVer     = "1.3"
 
 //test dependency versions
 val scalatestVer    = "3.2.10"
-val mockitoVer      = "1.16.49"
+val mockitoVer      = "1.16.55"
 val veritySdkVer    = "0.5.0"
-val vcxWrapperVer   = "0.12.0.602"
+val vcxWrapperVer   = "0.13.0.675"
 
 
 val flexmarkVer     = "0.62.2"
@@ -289,7 +289,7 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
 
     //akka persistence dependencies
-    akkaGrp %% "akka-persistence-dynamodb" % "1.1.1",
+    akkaGrp %% "akka-persistence-dynamodb" % akkaPersistence,
 
     //lightbend akka dependencies
     "com.lightbend.akka" %% "akka-stream-alpakka-s3" % alpAkkaVer,

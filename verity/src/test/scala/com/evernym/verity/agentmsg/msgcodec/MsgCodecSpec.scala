@@ -131,7 +131,7 @@ class MsgCodecSpec
         val packedMsgOutput = """{"k1":"v1"}""".getBytes
         val packedMsgString = new String(packedMsgOutput)
         val fwdMsgWithJSONObject = FwdReqMsg_MFV_1_0("fwd-type", "route", new JSONObject(packedMsgString), Some("some-type"))
-        val expectedJson = """{"fwdMsgType":"some-type","@type":"fwd-type","@fwd":"route","@msg":{"k1":"v1"}}"""
+        val expectedJson = """{"@type":"fwd-type","@fwd":"route","@msg":{"k1":"v1"},"fwdMsgType":"some-type"}"""
         val jacksonSerializedJson = JacksonMsgCodec.toJson(fwdMsgWithJSONObject)
         assertSerialized(expectedJson, jacksonSerializedJson)
       }

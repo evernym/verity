@@ -2,12 +2,15 @@ package com.evernym.verity.integration.multi_node_cluster
 
 import com.evernym.verity.integration.base.{VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
+import com.evernym.verity.observability.logs.LoggingUtil
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util.TestExecutionContextProvider
+import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 
 class AllClusterNodeRestartSpec
@@ -27,7 +30,7 @@ class AllClusterNodeRestartSpec
 
       "when checked if all nodes are up" - {
         "should be successful" in {
-          eventually(timeout(Span(20, Seconds)), interval(Span(200, Millis))) {
+          eventually(timeout(Span(40, Seconds)), interval(Span(200, Millis))) {
             verityEnv.checkIfNodesAreUp() shouldBe true
             verityEnv.availableNodes.size shouldBe 3
           }
@@ -44,10 +47,10 @@ class AllClusterNodeRestartSpec
 
       "when try to restart all nodes" - {
         "should be successful" in {
-          verityEnv.availableNodes.foreach(node => node.restart())
-          eventually(timeout(Span(30, Seconds)), interval(Span(100, Millis))) {
-            verityEnv.availableNodes.size shouldBe 3
-          }
+          val restartFutures = verityEnv.availableNodes.map(n => n.restart()(executionContext))
+          val future = Future.sequence(restartFutures)(Seq.canBuildFrom, executionContext)
+          assert(future.isReadyWithin(30.seconds), "Cluster restart failed")
+          verityEnv.availableNodes.size shouldBe 3
         }
       }
 

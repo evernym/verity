@@ -27,7 +27,7 @@ class GetUpgradeInfoSpec
 
   lazy val issuerSDKVAS = setupIssuerSdk(issuerVAS, executionContext)
   lazy val issuerSDKEAS = setupIssuerSdk(issuerEAS, executionContext)
-  lazy val holderSDKCAS = setupHolderSdk(holderCAS, defaultSvcParam.ledgerTxnExecutor, executionContext)
+  lazy val holderSDKCAS = setupHolderSdk(holderCAS, executionContext, defaultSvcParam.ledgerTxnExecutor)
 
   val connId = "connId1"
   var invitation: InviteDetail = null
@@ -99,6 +99,7 @@ class GetUpgradeInfoSpec
         val resp = holderSDKCAS.getUpgradeInfo(GetUpgradeInfo(List(myPairwiseDid)))
         resp.data.size shouldBe 1
         resp.data(myPairwiseDid).direction shouldBe "v1tov2"
+        resp.data(myPairwiseDid).theirAgencyEndpoint.startsWith("http") shouldBe true
       }
     }
 
@@ -125,6 +126,7 @@ class GetUpgradeInfoSpec
         val resp = holderSDKCAS.getUpgradeInfo(GetUpgradeInfo(List(myPairwiseDid)))
         resp.data.size shouldBe 1
         resp.data(myPairwiseDid).direction shouldBe "v2tov1"
+        resp.data(myPairwiseDid).theirAgencyEndpoint.startsWith("http") shouldBe true
       }
     }
   }

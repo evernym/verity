@@ -38,6 +38,7 @@ import com.evernym.verity.vault.KeyParam
 import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.util2.Exceptions.HandledErrorException
+import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -166,7 +167,7 @@ trait MsgNotifierForStoredMsgs
     // check if override exist
     val msgTypeBasedTemplateOverride: Option[String] = sponsorId.flatMap { sponsorId =>
       ConfigUtil.findSponsorConfigWithId(sponsorId, appConfig).flatMap { sd =>
-        Try(sd.pushMsgOverrides.getString(msgTypeBasedTemplateConfigName)).toOption
+        Try(ConfigFactory.parseString(sd.pushMsgOverrides).getString(msgTypeBasedTemplateConfigName)).toOption
       }
     }
 

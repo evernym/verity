@@ -198,8 +198,8 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "BasicMessage",
           this.version,
           "message",
-          Seq(forRelationship, myThreadId, content, sentTime, localization)
-        )()
+          Seq(forRelationship, None, content, sentTime, localization)
+        )(Some(myThreadId))
       }
     }
   }
@@ -216,8 +216,8 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "CommittedAnswer",
           this.version,
           "ask",
-          Seq(forRelationship, myThreadId, questionText, questionDescription, validResponses, requireSig)
-        )()
+          Seq(forRelationship, None, questionText, questionDescription, validResponses, requireSig)
+        )(Some(myThreadId))
       }
     }
 
@@ -249,12 +249,12 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def outOfBand_1_0(forRelationship: String, inviteURL: String): OutOfBandV1_0 = new UndefinedOutOfBand_1_0 {
     override def handshakeReuse(ctx: Context): Unit =
-      executeCmd(ctx, "OutOfBand", version, "handshake_reuse", Seq(None, myThreadId, forRelationship, inviteURL))()
+      executeCmd(ctx, "OutOfBand", version, "handshake_reuse", Seq(None, None, forRelationship, inviteURL))(Some(myThreadId))
   }
 
   override def relationship_1_0(label: String): RelationshipV1_0 = new UndefinedRelationship_1_0 {
     override def create(ctx: Context): Unit =
-      executeCmd(ctx, "Relationship", version, "create", Seq(None, myThreadId, label))()
+      executeCmd(ctx, "Relationship", version, "create", Seq(None, None, label))(Some(myThreadId))
   }
 
   override def relationship_1_0(forRelationship: String, threadId: String): RelationshipV1_0 = new UndefinedRelationship_1_0 {
@@ -279,8 +279,8 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "IssueCredential",
           this.version,
           "offer_credential",
-          Seq(forRelationship, myThreadId, credDefId, credValues, comment, price, autoIssue, byInvitation)
-        )()
+          Seq(forRelationship, None, credDefId, credValues, comment, price, autoIssue, byInvitation)
+        )(Some(myThreadId))
       }
     }
   }
@@ -311,8 +311,8 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
         "PresentProof",
         this.version,
         "request",
-        Seq(forRelationship, myThreadId, name, proofAttrs.toSeq, proofPredicate.toSeq, byInvitation)
-      )()
+        Seq(forRelationship, None, name, proofAttrs.toSeq, proofPredicate.toSeq, byInvitation)
+      )(Some(myThreadId))
   }
 
   override def presentProof_1_0(forRelationship: DidStr, threadId: String): PresentProofV1_0 =

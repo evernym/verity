@@ -242,6 +242,7 @@ case class Ubuntu(codeName: String, toolsCheck: Boolean) extends OS {
   val version: String = codeName match {
     case "bionic" => "18.04"
     case "xenial" => "16.04"
+    case "focal" => "20.04"
   }
 
   override def checkRepo(repo: DebianRepo, indent: Int = 2): Boolean = {

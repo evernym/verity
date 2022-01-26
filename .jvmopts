@@ -2,4 +2,5 @@
 -Xmx2048M
 -Xss2M
 -XX:MaxMetaspaceSize=768M
+-Djava.io.tmpdir=$PWD/target
 

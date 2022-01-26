@@ -1144,7 +1144,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$issuerName] start relationship protocol to issue to" in {
         val relProvisioning = issuerSdk.relationship_1_0("inviter")
         relProvisioning.create(issuerSdk.context)
-        expectSignal(issuerMsgReceiver, IssueCredMsgFamily, "created") { msg =>
+        expectSignal(issuerMsgReceiver, RelationshipMsgFamily, "created") { msg =>
           relDid = msg.getString("did")
         }
       }

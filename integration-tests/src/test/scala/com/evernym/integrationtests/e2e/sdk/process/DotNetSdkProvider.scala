@@ -459,7 +459,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
       val cmd = s"""
             $cmd_proofAttrs
             $cmd_proofPredicate
-            var pp = PresentProof.${versionToModule(this.version)}(${stringParam(forRelationship)}, ${stringParam(name)}, $cmd_proofAttrsArr, $cmd_proofPredicateArr, ${booleanParam(byInvitation)})
+            var pp = PresentProof.${versionToModule(this.version)}(${stringParam(forRelationship)}, ${stringParam(name)}, $cmd_proofAttrsArr, $cmd_proofPredicateArr, ${booleanParam(byInvitation)});
             typeof(AbstractProtocol).GetField("threadId", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(pp, ${stringParam(myThreadId)});
             pp.request(context);
       """

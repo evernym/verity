@@ -521,6 +521,7 @@ object DotNetSdkProvider {
     using System.Text;
     using System.Text.Json;
     using System.Json;
+    using System.Reflection;
     using VeritySDK.Exceptions;
     using VeritySDK.Handler;
     using VeritySDK.Utils;

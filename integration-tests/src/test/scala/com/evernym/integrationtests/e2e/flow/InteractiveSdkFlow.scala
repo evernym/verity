@@ -324,7 +324,6 @@ trait InteractiveSdkFlow extends MetricsFlow {
         schema.write(issuerSdk.context, endorserDid)
 
         expectSignal(msgReceiverSdk, WriteSchemaMsgFamily, "status-report") { msg =>
-          println(msg)
           threadId(msg) shouldBe schema.getThreadId
         }
       }

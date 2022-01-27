@@ -88,9 +88,9 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                          version: String,
                          func: String,
                          constructParams: Seq[Any] = Seq.empty,
-                         funcParams: Seq[Any] = Seq.empty)
-                        (injectThreadId: Option[String] = None): String = {
-    executeCmdWithUsing(ctx, obj, obj, version, func, constructParams, funcParams)(injectThreadId)
+                         funcParams: Seq[Any] = Seq.empty,
+                         injectThreadId: Option[String] = None): String = {
+    executeCmdWithUsing(ctx, obj, obj, version, func, constructParams, funcParams, injectThreadId)
   }
 
   private def executeCmdWithUsing(ctx: Context,
@@ -99,8 +99,8 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                                   version: String,
                                   func: String,
                                   constructParams: Seq[Any] = Seq.empty,
-                                  funcParams: Seq[Any] = Seq.empty)
-                                 (injectThreadId: Option[String] = None): String = {
+                                  funcParams: Seq[Any] = Seq.empty,
+                                  injectThreadId: Option[String] = None): String = {
 
     val versionConversion = versionToModule(version)
 
@@ -207,35 +207,35 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def updateEndpoint_0_6: UpdateEndpointV0_6 = new UndefinedUpdateEndpoint_0_6() {
     override def update(ctx: Context): Unit =
-      executeCmd(ctx, "UpdateEndpoint", this.version, "update")()
+      executeCmd(ctx, "UpdateEndpoint", this.version, "update")
   }
 
   override def updateConfigs_0_6(name: String, logoUrl: String): UpdateConfigsV0_6 = new UndefinedUpdateConfigs_0_6 {
     override def update(ctx: Context): Unit =
-      executeCmd(ctx, "UpdateConfigs", this.version, "update", Seq(name, logoUrl))()
+      executeCmd(ctx, "UpdateConfigs", this.version, "update", Seq(name, logoUrl))
   }
 
   override def updateConfigs_0_6(): UpdateConfigsV0_6 = new UndefinedUpdateConfigs_0_6 {
     override def status(ctx: Context): Unit =
-      executeCmd(ctx, "UpdateConfigs", this.version, "status")()
+      executeCmd(ctx, "UpdateConfigs", this.version, "status")
   }
 
   override def issuerSetup_0_6: IssuerSetupV0_6 = {
     new UndefinedIssuerSetup_0_6 {
       override def create(ctx: Context): Unit =
-        executeCmd(ctx, "IssuerSetup", this.version, "create")()
+        executeCmd(ctx, "IssuerSetup", this.version, "create")
 
       override def currentPublicIdentifier(ctx: Context): Unit =
-        executeCmd(ctx, "IssuerSetup", this.version, "currentPublicIdentifier")()
+        executeCmd(ctx, "IssuerSetup", this.version, "currentPublicIdentifier")
     }
   }
 
   override def writeSchema_0_6(name: String, ver: String, attrs: String*): WriteSchemaV0_6 = {
     new UndefinedWriteSchema_0_6 {
       override def write(ctx: Context): Unit =
-        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq))(Some(myThreadId))
+        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq), Seq.empty, Some(myThreadId))
       override def write(ctx: Context, endorserDid: String): Unit =
-        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq), Seq(endorserDid))(Some(myThreadId))
+        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq), Seq(endorserDid), Some(myThreadId))
     }
   }
 
@@ -274,7 +274,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           this.version,
           "answer",
           Seq(forRelationship, threadId, answerStr)
-        )()
+        )
 
       override def status(ctx: Context): Unit =
         executeCmdWithUsing(
@@ -284,8 +284,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           this.version,
           "status",
           Seq(forRelationship, threadId, answerStr)
-        )()
-
+        )
     }
   }
 
@@ -298,7 +297,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
         this.version,
         "status",
         Seq(forRelationship, threadId)
-      )()
+      )
     }
   }
 
@@ -310,12 +309,12 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def outOfBand_1_0(forRelationship: String, inviteURL: String): OutOfBandV1_0 = new UndefinedOutOfBand_1_0 {
     override def handshakeReuse(ctx: Context): Unit =
-      executeCmd(ctx, "OutOfBand", version, "handshakeReuse", Seq(forRelationship, inviteURL))(Some(myThreadId))
+      executeCmd(ctx, "OutOfBand", version, "handshakeReuse", Seq(forRelationship, inviteURL), Seq.empty, Some(myThreadId))
   }
 
   override def relationship_1_0(label: String): RelationshipV1_0 = new UndefinedRelationship_1_0 {
     override def create(ctx: Context): Unit =
-      executeCmd(ctx, "Relationship", version, "create", Seq(label))(Some(myThreadId))
+      executeCmd(ctx, "Relationship", version, "create", Seq(label), Seq.empty, Some(myThreadId))
   }
 
   override def relationship_1_0(forRelationship: String,
@@ -329,7 +328,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
         "connectionInvitation",
         Seq(forRelationship, myThreadId),
         Seq(shortInvite)
-      )()
+      )
     override def outOfBandInvitation(ctx: Context, shortInvite: lang.Boolean, goal: GoalCode): Unit =
       executeCmd(
         ctx,
@@ -338,7 +337,7 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
         "outOfBandInvitation",
         Seq(forRelationship, myThreadId),
         Seq(shortInvite, goal)
-      )()
+      )
   }
 
   override def issueCredential_1_0(forRelationship: String,
@@ -354,8 +353,10 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "IssueCredential",
           this.version,
           "offerCredential",
-          Seq(forRelationship, credDefId, credValues, comment, price, autoIssue, byInvitation)
-        )(Some(myThreadId))
+          Seq(forRelationship, credDefId, credValues, comment, price, autoIssue, byInvitation),
+          Seq.empty,
+          Some(myThreadId)
+        )
       }
     }
   }
@@ -365,10 +366,10 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
       override val myThreadId: String = threadId
 
       override def issueCredential(ctx: Context): Unit =
-        executeCmd(ctx, "IssueCredential", this.version, "issueCredential", Seq(forRelationship, myThreadId))()
+        executeCmd(ctx, "IssueCredential", this.version, "issueCredential", Seq(forRelationship, myThreadId))
 
       override def status(ctx: Context): Unit =
-        executeCmd(ctx, "IssueCredential", this.version, "status", Seq(forRelationship, myThreadId))()
+        executeCmd(ctx, "IssueCredential", this.version, "status", Seq(forRelationship, myThreadId))
     }
   }
 
@@ -478,11 +479,11 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     override val myThreadId: String = threadId
 
     override def status(ctx: Context): Unit = {
-      executeCmd(ctx, "PresentProof", this.version, "status", Seq(forRelationship, myThreadId))()
+      executeCmd(ctx, "PresentProof", this.version, "status", Seq(forRelationship, myThreadId))
     }
 
     override def acceptProposal(ctx: Context): Unit = {
-      executeCmd(ctx, "PresentProof", this.version, "acceptProposal", Seq(forRelationship, myThreadId))()
+      executeCmd(ctx, "PresentProof", this.version, "acceptProposal", Seq(forRelationship, myThreadId))
     }
   }
 
@@ -494,8 +495,10 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "BasicMessage",
           this.version,
           "message",
-          Seq(forRelationship, content, sentTime, localization)
-        )(Some(myThreadId))
+          Seq(forRelationship, content, sentTime, localization),
+          Seq.empty,
+          Some(myThreadId)
+        )
     }
   }
 }

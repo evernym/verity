@@ -17,9 +17,10 @@ import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 import com.evernym.vdrtools.ledger.Ledger._
 import com.evernym.vdrtools.pool.Pool
+import com.evernym.verity.observability.logs.LoggingUtil
+
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
-
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.util.{Failure, Success}
@@ -99,6 +100,7 @@ class LedgerUtil (val appConfig: AppConfig,
     } else {
       submitterRole match {
         case "STEWARD" =>
+          LoggingUtil.getLoggerByName("VCXDebug").info("")
           val req = buildNymRequest(submitterDID, did, verKey, null, role).get
           executeLedgerRequest(req)
         case "ENDORSER" =>

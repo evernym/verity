@@ -20,6 +20,7 @@ import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.integration.base.sdk_provider.MsgFamilyHelper.buildMsgTypeStr
 import com.evernym.verity.integration.base.sdk_provider.{JsonMsgUtil, MsgFamilyHelper}
+import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.testkit.util.LedgerUtil
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.util.HttpUtil.{checkOKResponse, parseHttpResponseAs}
@@ -79,16 +80,20 @@ trait LibVcxProvider
                   sourceId: String,
                   createSchemaParam: CreateSchemaParam,
                   credDefParam: CreateCredDefParam): IssuerSetup = {
+    LoggingUtil.getLoggerByName("VCXDebug").info("Start setup issuer")
     val schemaId: String = withVcxIdentityOwner(identityOwnerName) { _ =>
+      LoggingUtil.getLoggerByName("VCXDebug").info("Before schema create")
+      LoggingUtil.getLoggerByName("VCXDebug").info(s"Call schema create with param: $createSchemaParam")
       val schemaHandle =
-        SchemaApi.schemaCreate(
+      SchemaApi.schemaCreate(
           sourceId,
           createSchemaParam.name,
           createSchemaParam.version,
           createSchemaParam.attribute,
-          0
-        ).get()
+      0
+      ).get()
 
+      LoggingUtil.getLoggerByName("VCXDebug").info("After schema create")
       SchemaApi.schemaGetSchemaId(schemaHandle).get()
     }
 
@@ -166,7 +171,10 @@ trait LibVcxProvider
     val major = random.nextInt(100)
     val minor = 100 + random.nextInt(100)
     val path  = 200 + random.nextInt(100)
-    s"$major.$minor.$path"
+    val version = s"$major.$minor.$path"
+    println(s"getRandomSchemaVersion - $version")
+    version
+
   }
 
   def sendMessage[T: ClassTag](fromOwnerName: IdentityOwnerName,

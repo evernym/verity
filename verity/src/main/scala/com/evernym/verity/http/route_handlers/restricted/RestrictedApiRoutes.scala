@@ -17,7 +17,7 @@ trait RestrictedApiRoutes
     with ResourceUsageEndpointHandler
     with AgencySetupEndpointHandler
     with MaintenanceEndpointHandler
-    with ItemManagerEndpointHandler
+    with ItemStoreEndpointHandler
     with MsgProgressTrackerEndpointHandler
     with OutboxEndpointHandler
     with HealthCheckEndpointHandlerV2 {

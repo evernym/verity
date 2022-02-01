@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.item_store.Events;
+
+message ItemAdded {
+    option (scalapb.message).extends = "com.evernym.verity.item_store.ItemStore.Event";
+    string id = 1;
+    string detail = 2;
+}
+
+message ItemRemoved {
+    option (scalapb.message).extends = "com.evernym.verity.item_store.ItemStore.Event";
+    string id = 1;
+}

@@ -69,9 +69,6 @@ trait ProvidesMockPlatform
   lazy val activityTrackerRegionActor: ActorRef = platform.activityTrackerRegion
   lazy val walletRegionActor: ActorRef = platform.walletActorRegion
 
-  lazy val itemManagerRegionActor: ActorRef = platform.itemManagerRegion
-  lazy val itemContainerRegionActor: ActorRef = platform.itemContainerRegion
-
   lazy val mockAgencyAdmin: MockEdgeAgent =
     new MockEdgeAgent(
       UrlParam(localAgencyEndpoint),

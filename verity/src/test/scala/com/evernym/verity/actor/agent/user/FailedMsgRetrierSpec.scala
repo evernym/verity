@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.user
 
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.testkit.EventFilter
-import com.evernym.verity.util2.{ExecutionContextProvider, Status}
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, HasAppConfig, ItemUpdated, ShardUtil}
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK

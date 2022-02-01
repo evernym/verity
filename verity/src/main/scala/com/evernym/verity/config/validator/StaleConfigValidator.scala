@@ -18,32 +18,36 @@ trait StaleConfigValidatorBase extends ConfigValidator {
   private def staleConfigs: Set[StaleConfig] = removedConfig ++ renamedConfig
 
   private def removedConfig: Set[StaleConfig] = Set (
-    RemovedConfig("agency.config"),
-    RemovedConfig("agency.routing"),
-    RemovedConfig("agency.services.sms-service.external-services.twilio.endpoint"),
-    RemovedConfig("agency.lib-indy.library-file-location"),
-    RemovedConfig("agency.lib-indy.ledger.wallet-type"),
+    "agency.config",
+    "agency.routing",
+    "agency.services.sms-service.external-services.twilio.endpoint",
+    "agency.lib-indy.library-file-location",
+    "agency.lib-indy.ledger.wallet-type",
 
-    RemovedConfig("verity.wallet-api"),
-    RemovedConfig("kamon.instrumentation.akka.filters.group"),
+    "verity.wallet-api",
+    "kamon.instrumentation.akka.filters.group",
 
-    RemovedConfig("verity.timeout.sms-service-ask-timeout-in-seconds"),
-    RemovedConfig("verity.timeout.service-shutdown-timeout-in-seconds"),
-    RemovedConfig("verity.user-agent-pairwise-watcher"),
+    "verity.timeout.sms-service-ask-timeout-in-seconds",
+    "verity.timeout.service-shutdown-timeout-in-seconds",
+    "verity.user-agent-pairwise-watcher",
 
-    RemovedConfig("verity.services.sms-service.send-via-local-agency"),
-    RemovedConfig("verity.services.sms-service.endpoint"),
-    RemovedConfig("verity.services.sms-service.allowed-client-ip-addresses"),
-    RemovedConfig("verity.app-state-manager.state.draining")
-  )
+    "verity.services.sms-service.send-via-local-agency",
+    "verity.services.sms-service.endpoint",
+    "verity.services.sms-service.allowed-client-ip-addresses",
+    "verity.app-state-manager.state.draining",
+
+    "verity.item-manager",
+    "verity.item-container",
+
+  ).map(RemovedConfig)
 
   private def renamedConfig: Set[StaleConfig] = Set (
-    RenamedConfig("verity.cache.key-value-mapper-cache-expiration-time-in-seconds", "verity.cache.key-value-mapper.expiration-time-in-seconds"),
-    RenamedConfig("verity.cache.agent-config-cache-expiration-time-in-seconds", "verity.cache.agent-config.expiration-time-in-seconds"),
-    RenamedConfig("verity.cache.agency-detail-cache-expiration-time-in-seconds", "verity.cache.agency-detail.expiration-time-in-seconds"),
-    RenamedConfig("verity.cache.get-ver-key-cache-expiration-time-in-seconds", "verity.cache.ledger-get-ver-key.expiration-time-in-seconds, verity.cache.wallet-get-ver-key.expiration-time-in-seconds"),
-    RenamedConfig("verity.timeout.actor-ref-resolve-timeout-in-seconds", "verity.timeout.general-actor-ref-resolve-timeout-in-seconds"),
-  )
+    "verity.cache.key-value-mapper-cache-expiration-time-in-seconds" -> "verity.cache.key-value-mapper.expiration-time-in-seconds",
+    "verity.cache.agent-config-cache-expiration-time-in-seconds" -> "verity.cache.agent-config.expiration-time-in-seconds",
+    "verity.cache.agency-detail-cache-expiration-time-in-seconds" -> "verity.cache.agency-detail.expiration-time-in-seconds",
+    "verity.cache.get-ver-key-cache-expiration-time-in-seconds" -> "verity.cache.ledger-get-ver-key.expiration-time-in-seconds, verity.cache.wallet-get-ver-key.expiration-time-in-seconds",
+    "verity.timeout.actor-ref-resolve-timeout-in-seconds" -> "verity.timeout.general-actor-ref-resolve-timeout-in-seconds",
+  ).map{ case (on, nw) => RenamedConfig(on, nw)}
 
   override val validationType: String = "stale configuration checking"
 

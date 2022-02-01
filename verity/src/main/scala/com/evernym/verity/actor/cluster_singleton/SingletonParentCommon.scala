@@ -90,6 +90,7 @@ class SingletonParent(val name: String, executionContext: ExecutionContext)(impl
     TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
 
   override final def preStart(): Unit = {
+    createChildActors()
     try {
       cluster.subscribe(self, initialStateMode = InitialStateAsEvents, classOf[MemberEvent])
     } catch {
@@ -97,7 +98,6 @@ class SingletonParent(val name: String, executionContext: ExecutionContext)(impl
         val errorMsg = s"unable to start cluster singleton child actors: ${Exceptions.getErrorMsg(e)}"
         publishAppStateEvent(ErrorEvent(SeriousSystemError, CONTEXT_ACTOR_INIT, e, Option(errorMsg)))
     }
-    createChildActors()
   }
 
   private def getRequiredActor(props: Props, name: String): ActorRef = context.child(name).getOrElse(context.actorOf(props, name))

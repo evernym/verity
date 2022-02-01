@@ -1,12 +1,12 @@
 package com.evernym.verity.actor.cluster_singleton.watcher
 
-import akka.actor.{ActorRef, Props}
+import akka.actor.typed.ActorSystem
+import akka.actor.typed.scaladsl.AskPattern._
+import akka.actor.typed.scaladsl.AskPattern.Askable
+import akka.actor.{ActorRef, Props, typed}
 import akka.cluster.sharding.ClusterSharding
-import akka.pattern.ask
+import akka.actor.typed.scaladsl.adapter._
 import com.evernym.verity.actor.cluster_singleton.ForWatcherManagerChild
-import com.evernym.verity.actor.itemmanager.ItemCommonConstants._
-import com.evernym.verity.actor.itemmanager.ItemCommonType.ItemId
-import com.evernym.verity.actor.itemmanager._
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, HasAppConfig}
 import com.evernym.verity.config.AppConfig
@@ -15,7 +15,7 @@ import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.actor.agent.EntityTypeMapper
 import com.evernym.verity.actor.base.CoreActorExtended
-import com.evernym.verity.actor.itemmanager.ItemConfigManager.versionedItemManagerEntityId
+import com.evernym.verity.item_store.{ItemId, ItemStore}
 import com.evernym.verity.util2.ActorErrorResp
 import com.typesafe.scalalogging.Logger
 
@@ -34,7 +34,6 @@ class WatcherManager(val appConfig: AppConfig, ec: ExecutionContext)
 
   //NOTE: don't make below statement lazy, it needs to start as soon as possible
   val actorWatcher: ActorRef = context.actorOf(ActorWatcher.props(appConfig, ec), "ActorWatcher")
-
   override def receiveCmd: Receive = {
     case fwmc: ForWatcherManagerChild => actorWatcher forward fwmc.cmd
   }
@@ -50,7 +49,6 @@ class ActorWatcher(val appConfig: AppConfig, ec: ExecutionContext)
     with HasActorResponseTimeout
     with HasAppConfig {
 
-  import ActorWatcher._
   implicit val executionContext = ec
 
   val logger: Logger = getLoggerByClass(classOf[ActorWatcher])
@@ -58,11 +56,10 @@ class ActorWatcher(val appConfig: AppConfig, ec: ExecutionContext)
   override def receiveCmd: Receive = {
     case ai: AddItem                    => addItem(ai)
     case ri: RemoveItem                 => removeItem(ri)
+    case GetItems                       => getItems()
     case fai: FetchedActiveItems        => updateFetchedItems(fai)
     case CheckForPeriodicTaskExecution  => handlePeriodicTaskExecution()
-    case ItemManagerConfigAlreadySet    => //this will be received from item manager if it is already configured
-    case _: ItemManagerStateDetail      => //this will be received from item manager if it got configured for first time
-    case _: ItemCmdResponse             => //nothing to do
+    case _: ItemStore.Reply             => //nothing to do
     case ar: ActorErrorResp             => logger.error("received unexpected message: " + ar)
   }
 
@@ -74,35 +71,18 @@ class ActorWatcher(val appConfig: AppConfig, ec: ExecutionContext)
     processOneBatchOfFetchedActiveItems()
   }
 
-  /**
-   * configuration which decides if items should be migrated to next linked container or not.
-   * @return
-   */
-  lazy val migrateItemsToNextLinkedContainer: Boolean = true
-
-  lazy val itemManagerEntityId =
-    versionedItemManagerEntityId(itemManagerEntityIdPrefix, appConfig)
-
-  def buildItemManagerConfig: SetItemManagerConfig = SetItemManagerConfig(
-    itemManagerEntityId,
-    migrateItemsToNextLinkedContainer)
-
-  lazy val itemManagerRegion: ActorRef = ClusterSharding(context.system).shardRegion(ITEM_MANAGER_REGION_ACTOR_NAME)
-
-  def setItemManagerConfig(): Unit = {
-    itemManagerRegion ! ForIdentifier(itemManagerEntityId, ExternalCmdWrapper(buildItemManagerConfig, None))
-  }
-
   private def addItem(ai: AddItem): Unit = {
     val itemId = buildUniqueItemId(ai.itemId, ai.itemEntityType)
-    val uip = UpdateItem(itemId, Option(ITEM_STATUS_ACTIVE), ai.detail, None)
-    itemManagerRegion ! ForIdentifier(itemManagerEntityId, ExternalCmdWrapper(uip, None))
+    itemStore ! ItemStore.Commands.AddItem(itemId, "", context.self)
   }
 
   private def removeItem(ri: RemoveItem): Unit = {
     val itemId = buildUniqueItemId(ri.itemId, ri.itemEntityType)
-    val uip = UpdateItem(itemId, Option(ITEM_STATUS_REMOVED), None, None)
-    itemManagerRegion ! ForIdentifier(itemManagerEntityId, ExternalCmdWrapper(uip, None))
+    itemStore ! ItemStore.Commands.RemoveItem(itemId, context.self)
+  }
+
+  private def getItems(): Unit = {
+    itemStore ! ItemStore.Commands.Get(sender())
   }
 
   private def sendMsgToWatchedItem(itemId: String): Unit = {
@@ -140,9 +120,9 @@ class ActorWatcher(val appConfig: AppConfig, ec: ExecutionContext)
   private lazy val actorTypeToRegions = EntityTypeMapper.buildRegionMappings(appConfig, context.system)
 
   private def activeRegisteredItemMetricsName: String =
-    s"as.akka.actor.$itemManagerEntityId.retry.active.count"
+    s"as.akka.actor.$itemStoreEntityId.retry.active.count"
   private def pendingActiveRegisteredItemMetricsName: String =
-    s"as.akka.actor.$itemManagerEntityId.retry.pending.count"
+    s"as.akka.actor.$itemStoreEntityId.retry.pending.count"
 
   scheduleJob(
     "CheckForPeriodicTaskExecution",
@@ -150,13 +130,10 @@ class ActorWatcher(val appConfig: AppConfig, ec: ExecutionContext)
     CheckForPeriodicTaskExecution
   )
 
-  setItemManagerConfig()
-
   private def fetchAllActiveItems(): Unit = {
-    val fut = itemManagerRegion ? ForIdentifier(itemManagerEntityId, ExternalCmdWrapper(GetItems(Set(ITEM_STATUS_ACTIVE)), None))
-    fut map {
-      case ai: AllItems => self ! FetchedActiveItems(ai.items)
-      case NoItemsFound => self ! FetchedActiveItems(Map.empty)
+    val fut = itemStore.ask(ref => ItemStore.Commands.Get(ref))
+    fut map { ai: ItemStore.Replies.Items =>
+      self ! FetchedActiveItems(ai.active.map(_.id))
     }
   }
 
@@ -168,27 +145,32 @@ class ActorWatcher(val appConfig: AppConfig, ec: ExecutionContext)
 
   private def processOneBatchOfFetchedActiveItems(): Unit = {
     if (activeItems.nonEmpty) {
-      getBatchedRecords.foreach { case (itemId, _) =>
+      getBatchedRecords.foreach { itemId =>
         sendMsgToWatchedItem(itemId)
-        activeItems = activeItems - itemId
+        activeItems = activeItems.filter(_ != itemId)
       }
       metricsWriter.gaugeUpdate(pendingActiveRegisteredItemMetricsName, activeItems.size)
     }
   }
 
-  private def getBatchedRecords: Map[ItemId, ItemDetail] = {
+  private def getBatchedRecords: List[ItemId] = {
     if (batchSize >= 0) {
       activeItems.take(batchSize)
     } else activeItems
   }
 
-  var activeItems: Map[ItemId, ItemDetail] = Map.empty
+  var activeItems: List[ItemId] = List.empty
+
+  val itemStoreEntityId = "item-store"
+  val itemStore: typed.ActorRef[ItemStore.Cmd] = context.system.spawnAnonymous(ItemStore(itemStoreEntityId, appConfig.config))
+  implicit val typedSystem: ActorSystem[_] = context.system.toTyped
 }
 
 case object CheckForPeriodicTaskExecution extends ActorMessage
-case class AddItem(itemId: ItemId, itemEntityType: String, detail: Option[String]=None) extends ActorMessage
+case object GetItems extends ActorMessage
+case class AddItem(itemId: ItemId, itemEntityType: String) extends ActorMessage
 case class RemoveItem(itemId: ItemId, itemEntityType: String) extends ActorMessage
-case class FetchedActiveItems(items: Map[ItemId, ItemDetail]) extends ActorMessage
+case class FetchedActiveItems(items: List[ItemId]) extends ActorMessage
 
 
 object ActorWatcher {

@@ -1,21 +1,16 @@
 package com.evernym.verity.util.healthcheck
 
 import akka.actor.ActorSystem
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorRef, Behavior}
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
 import akka.util.Timeout
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.actor.appStateManager.AppStateConstants.CONTEXT_AGENT_SERVICE_INIT
-import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, SeriousSystemError}
-import com.evernym.verity.libindy.wallet.LibIndyWalletProvider
 import com.evernym.verity.util.healthcheck.AkkaPersistenceStorageChecker.Commands.GetState
 import com.evernym.verity.util.healthcheck.AkkaPersistenceStorageChecker.Replies.CurrentState
 import com.evernym.verity.util.healthcheck.AkkaPersistenceStorageChecker.States.Ready
-import com.evernym.verity.util2.Exceptions
-import com.evernym.verity.util2.Exceptions.NoResponseFromLedgerPoolServiceException
 import com.evernym.verity.vault.WalletDoesNotExist
 import com.evernym.verity.vault.WalletUtil.generateWalletParamAsync
 
@@ -32,8 +27,8 @@ class HealthCheckerImpl(val agentActorContext: AgentActorContext,
                         implicit val futureExecutionContext: ExecutionContext)
   extends HealthChecker {
   import akka.actor.typed.ActorSystem
-  import akka.actor.typed.scaladsl.adapter._
   import akka.actor.typed.scaladsl.AskPattern._
+  import akka.actor.typed.scaladsl.adapter._
 
   implicit val typedSystem: ActorSystem[_] = actorSystem.toTyped
 
@@ -81,9 +76,6 @@ class HealthCheckerImpl(val agentActorContext: AgentActorContext,
         ApiStatus(status = true, "OK")
       }.recover {
         case e: Exception =>
-          val errorMsg = s"ledger connection check failed (error stack trace: ${Exceptions.getStackTraceAsSingleLineString(e)})"
-          AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT,
-            new NoResponseFromLedgerPoolServiceException(Option(errorMsg))))
           ApiStatus(status = false, e.getMessage)
       }
   }
@@ -93,6 +85,7 @@ class HealthCheckerImpl(val agentActorContext: AgentActorContext,
   override def checkLiveness: Future[Unit] = {
     Future {}
   }
+
 }
 
 

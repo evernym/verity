@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.item_store.States;
+
+message Ready {
+    option (scalapb.message).extends = "com.evernym.verity.item_store.ItemStore.State";
+    map<string, string> items = 1;
+}

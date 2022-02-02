@@ -1,20 +1,19 @@
-package com.evernym.verity.itemmanager
+package com.evernym.verity.item_store
 
 import akka.actor.typed.scaladsl.adapter._
-import com.evernym.verity.actor.itemmanager.ItemManagerEntityHelper
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.ExecutionContextProvider
 
 import scala.concurrent.ExecutionContext
 
-class ItemManagerEntityHelperSpec
+class ItemStoreEntityHelperSpec
   extends ActorSpec
     with BasicSpec {
 
-  val imh = new ItemManagerEntityHelper("123", "Outbox", system.toTyped)
+  val imh = new ItemStoreEntityHelper("123", "Outbox", system.toTyped)
 
-  "ItemManagerEntityHelper" - {
+  "ItemStoreEntityHelper" - {
 
     "when tried to register an entity first time" - {
       "should be successful" in {

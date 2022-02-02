@@ -317,55 +317,6 @@ message CallerResourceUnwarned {
     uint64 unwarnPeriod = 4;
 }
 
-message ItemUpdated {
-    string id = 1;
-    int32 status = 2;
-    string detail = 3;
-    bool isFromMigration = 4;
-    uint64 creationTimeInMillis = 5;
-}
-
-message MigrationStarted {
-    string toContainerEntityId = 1;
-    uint64 time = 2;
-}
-
-message ItemMigrated {
-    string itemId = 1;
-    string toContainerEntityId = 2;
-}
-
-message MigrationFinished {
-    string toContainerEntityId = 1;
-    uint64 time = 2;
-}
-
-message MigrationCompletedByContainer {
-    string entityId = 1;
-    uint64 time = 2;
-    bool isStorageCleaned = 3;
-}
-
-message MigratedContainerStorageCleaned {
-    string entityId = 1;
-}
-
-message ItemContainerConfigSet {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
-    string managerEntityId = 1;
-    bool migrateItemsToNextLinkedContainer = 2;
-}
-
-message ItemContainerPrevIdUpdated {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
-    string id = 1;
-}
-
-message ItemContainerNextIdUpdated {
-    option (scalapb.message).extends = "com.evernym.verity.actor.ActorMessage";
-    string id = 1;
-}
-
 message ConnectionCompleted {
     string theirAgencyDID = 1;
     string theirEdgeDID = 2;

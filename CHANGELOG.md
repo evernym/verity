@@ -1,16 +1,27 @@
 Note: When interacting with Verity, it will also be helpful to review [the Verity SDK Release Notes](https://gitlab.com/evernym/verity/verity-sdk/-/blob/main/CHANGELOG.md).
 
 
-# Release notes - Verity 2.17.1 release TBD
-Includes VDR Tools 0.8.4 and Verity SDK 0.6.0
+# Release notes - Verity 2.17.2 release TBD
+Includes VDR Tools 0.8.4 works with Verity SDK 0.6.0
+
+## Task
+* [VE-2753] Each Verity tenant can customize text used in push notifications.
+* [Documented communication method types](https://gitlab.com/evernym/verity/verity/-/blob/5591cc8759fb0ba84614143705007e9e9bcfde2c/docs/documentation/communication-mechanisms/README.md)
+* Dependency updates: kamon, mockito, scalatest
+
+
+# Release notes - Verity 2.17.1 release 1 Feb 2022
+Includes VDR Tools 0.8.2 works with Verity SDK 0.6.0
 
 ## Bug
 * [VE-3292] fix UPGRADE\_INFO not being sent after routing update on CAS
 * [VE-3275] Verity token generation script \(provision\_verity\_helper.py\) frequently fails
 
 ## Task
-* [VE-2753] Each Verity tenant can customize text used in push notifications.
 * [VE-3279] Stop using `path-style-access` property in S3 Alpakka
+* Dependency updates: akka-discovery, akka-management
+* Fixed Verity builds to work with noexec tmp dirs
+* Improved logging
 
 
 # Release notes - Verity 2.17.0 released 25 Jan 2022
@@ -30,7 +41,7 @@ Includes VDR Tools 0.8.2
 ## Task
 * Improve logging in production and pipelines
 * Use VDR Tools with support for multiple Indy ledgers
-* [VE-3247] Update jackson libraries to latest version
+* Updated various dependencies: jackson, logback, sbt, kanela
 * [VE-2780] Use correct process \(Passivate - response\) for passivating actors in shard regions
 
 

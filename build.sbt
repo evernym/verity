@@ -60,17 +60,17 @@ val akkaHttpVer     = "10.2.7"
 val akkaMgtVer      = "1.1.3"
 val alpAkkaVer      = "3.0.3"
 val akkaPersistence = "1.1.1"
-val kamonVer        = "2.4.2"
+val kamonVer        = "2.4.5"
 val kanelaAgentVer  = "1.0.14"
 val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
 val jacksonVer      = "2.13.1"
 val sdnotifyVer     = "1.3"
 
 //test dependency versions
-val scalatestVer    = "3.2.10"
-val mockitoVer      = "1.16.55"
+val scalatestVer    = "3.2.11"
+val mockitoVer      = "1.17.0"
 val veritySdkVer    = "0.5.0"
-val vcxWrapperVer   = "0.13.0.696"
+val vcxWrapperVer   = "0.13.1.735"
 
 
 val flexmarkVer     = "0.62.2"

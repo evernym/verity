@@ -646,7 +646,6 @@ object PresentProof {
     val msgName: String = PresentProofMsgFamily.msgType(invalidMsg.getClass).msgName
     val stateName: String = curState.getClass.getSimpleName
     val errorMsg = s"Unexpected '$msgName' message in current state '$stateName"
-    ctx.send(Msg.buildProblemReport(errorMsg, unexpectedMessage))
     ctx.signal(
       Sig.buildProblemReport(errorMsg, unexpectedMessage)
     )

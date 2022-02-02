@@ -18,7 +18,7 @@ trait ItemStoreEndpointHandler { this: HttpRouteWithPlatform =>
     platform.singletonParentProxy ? ForEntityItemWatcher(GetItems)
   }
 
-  protected val itemManagerRoutes: Route =
+  protected val itemStoreRoutes: Route =
     handleExceptions(exceptionHandler) {
       logRequestResult("agency-service") {
         extractRequest { implicit req =>

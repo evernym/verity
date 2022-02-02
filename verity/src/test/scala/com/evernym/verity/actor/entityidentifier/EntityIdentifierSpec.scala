@@ -93,10 +93,6 @@ class EntityIdentifierSpec extends AnyFreeSpec with Matchers {
           EntityIdentity("3V9qmfUMnoMRsKanbXhJgumtcHkFUQBF9MuYpJnjFuSY", "ResourceUsageTracker", Some(63), false, false, false)
         parsePath(ActorPath.fromString("akka://verity/system/sharding/ActivityTracker/34/ThjpwgAgSDSUDwZhC7nNA7")) shouldBe
           EntityIdentity("ThjpwgAgSDSUDwZhC7nNA7", "ActivityTracker", Some(34), false, false, false)
-        parsePath(ActorPath.fromString("akka://verity/system/sharding/ItemManager/84/v4-uap-actor-watcher")) shouldBe
-          EntityIdentity("v4-uap-actor-watcher", "ItemManager", Some(84), false, false, false)
-        parsePath(ActorPath.fromString("akka://verity/system/sharding/ItemContainer/62/v4-20210212-4")) shouldBe
-          EntityIdentity("v4-20210212-4", "ItemContainer", Some(62), false, false, false)
         parsePath(ActorPath.fromString("akka://verity/system/sharding/UrlMapper/42/a2c88f71")) shouldBe
           EntityIdentity("a2c88f71", "UrlMapper", Some(42), false, false, false)
 

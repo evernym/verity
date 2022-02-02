@@ -13,7 +13,7 @@ class ItemStoreEntityHelperSpec
 
   val imh = new ItemStoreEntityHelper("123", "Outbox", system.toTyped)
 
-  "ItemManagerEntityHelper" - {
+  "ItemStoreEntityHelper" - {
 
     "when tried to register an entity first time" - {
       "should be successful" in {

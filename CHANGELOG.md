@@ -1,8 +1,9 @@
-Note: When interacting with Verity, it will also be helpful to review [the Verity SDK Release Notes](https://gitlab.com/evernym/verity/verity-sdk/-/blob/main/CHANGELOG.md).
+Note: When interacting with Verity, it will also be helpful to review [the Verity SDK Release Notes](https://gitlab.com/evernym/verity/verity-sdk/-/blob/main/CHANGELOG.md) and [the VDR Tools Release Notes](https://gitlab.com/evernym/verity/vdr-tools/-/blob/main/CHANGELOG.md)
 
 
 # Release notes - Verity 2.17.2 release TBD
-Includes VDR Tools 0.8.4 works with Verity SDK 0.6.0
+Works with Verity SDK 0.6.1
+Includes VDR Tools 0.8.4 works with Verity SDK 0.6.1
 
 ## Task
 * [VE-2753] Each Verity tenant can customize text used in push notifications.
@@ -11,7 +12,8 @@ Includes VDR Tools 0.8.4 works with Verity SDK 0.6.0
 
 
 # Release notes - Verity 2.17.1 release 1 Feb 2022
-Includes VDR Tools 0.8.2 works with Verity SDK 0.6.0
+Works with Verity SDK 0.6.1
+Includes VDR Tools 0.8.2
 
 ## Bug
 * [VE-3292] fix UPGRADE\_INFO not being sent after routing update on CAS

@@ -255,7 +255,7 @@ object Outbox {
         rfa.isItANotification, rfa.isAnyRetryAttemptsLeft, st)
       Effect
         .persist(MsgSendingFailed(rfa.msgId, rfa.comMethodId, isDeliveryFailed))
-        .thenRun((_: State) => setup.itemManagerEntityHelper.register())
+        .thenRun((_: State) => setup.itemStoreEntityHelper.register())
         .thenRun((_: State) => if (rfa.sendAck) setup.dispatcher.ack(rfa.msgId))
         .thenRun((_: State) => if (isDeliveryFailed && ! rfa.isItANotification) {
           setup.metricsWriter.gaugeIncrement(AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, tags = comMethodTypeTags(st.comMethods.get(rfa.comMethodId)))
@@ -581,7 +581,7 @@ object Outbox {
   private def processPendingDeliveries(st: State)(implicit setup: SetupOutbox): Unit = {
     val pendingMsgs = getPendingMsgs(st)
     if (pendingMsgs.isEmpty) {
-      setup.itemManagerEntityHelper.deregister()
+      setup.itemStoreEntityHelper.deregister()
     } else {
       st match {
         case i: States.Initialized =>
@@ -733,6 +733,6 @@ case class SetupOutbox(actorContext: ActorContext[Cmd],
                        dispatcher: Dispatcher,
                        relResolver: RelResolver,
                        messageMetaReplyAdapter: ActorRef[MessageMeta.ProcessedForOutboxReply],
-                       itemManagerEntityHelper: ItemStoreEntityHelper,
+                       itemStoreEntityHelper: ItemStoreEntityHelper,
                        timer: TimerScheduler[Cmd],
                        msgRepository: MessageRepository)

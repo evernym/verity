@@ -162,7 +162,7 @@ class ActorWatcher(val appConfig: AppConfig, ec: ExecutionContext)
   var activeItems: List[ItemId] = List.empty
 
   val itemStoreEntityId = "item-store"
-  val itemStore: typed.ActorRef[ItemStore.Cmd] = context.system.spawnAnonymous(ItemStore(itemStoreEntityId, appConfig.config))
+  val itemStore: typed.ActorRef[ItemStore.Cmd] = context.spawn(ItemStore(itemStoreEntityId, appConfig.config), "ItemStore")
   implicit val typedSystem: ActorSystem[_] = context.system.toTyped
 }
 
@@ -179,7 +179,6 @@ object ActorWatcher {
    * @return
    */
 
-  lazy val itemManagerEntityIdPrefix: String = "watcher"
   def props(config: AppConfig, ec: ExecutionContext): Props = Props(new ActorWatcher(config, ec))
 }
 

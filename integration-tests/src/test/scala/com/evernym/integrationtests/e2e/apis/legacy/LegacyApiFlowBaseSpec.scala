@@ -268,7 +268,7 @@ trait LegacyApiFlowBaseSpec
           val fwdMsg: FwdMsg = DefaultMsgCodec.fromJson[FwdMsg](latestFwdMsg)
           logger.debug("latestFwdMsg: " + latestFwdMsg)
           logger.debug(s"fwdMsg: $fwdMsg")
-          fwdMsg.sponseeDetails shouldBe "MCM::FwdIntegration"
+          fwdMsg.sponseeDetails shouldBe "FCM::FwdIntegration"
         }
       }
     }
@@ -966,7 +966,7 @@ trait LegacyApiFlowBaseSpec
         val msgSender = () =>
           ce.enterprise.sendsNewMsgForFwd(ce.scenario.connIds.head,  CLIENT_MSG_UID_CRED_OFFER_1, CREATE_MSG_TYPE_CRED_OFFER, "cred offer msg")
 
-        ce.user.updateAgentComMethod(TestComMethod("id", COM_METHOD_TYPE_FWD_PUSH, Some("MCM::FwdIntegration")))
+        ce.user.updateAgentComMethod(TestComMethod("id", COM_METHOD_TYPE_FWD_PUSH, Some("FCM::FwdIntegration")))
         ce.user.receiveFwdMsgForSponsor(msgSender)
       }
 

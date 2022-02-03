@@ -44,7 +44,7 @@ abstract class VeritySdkBase(param: SdkParam,
   extends SdkBase(param, ec) {
 
   def registerWebhook(id: Option[String] = None, authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated
-  def sendCreateRelationship(connId: String): ReceivedMsgParam[Created]
+  def sendCreateRelationship(connId: String, label: Option[String]=None): ReceivedMsgParam[Created]
   def sendCreateConnectionInvitation(connId: String, thread: Option[MsgThread]): Invitation
 
   def expectConnectionComplete(connId: ConnId): Complete = {
@@ -192,8 +192,8 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
     cmu
   }
 
-  def sendCreateRelationship(connId: String): ReceivedMsgParam[Created] = {
-    val jsonMsgBuilder = JsonMsgBuilder(Create(label = Option(connId), None))
+  def sendCreateRelationship(connId: String, label: Option[String]=None): ReceivedMsgParam[Created] = {
+    val jsonMsgBuilder = JsonMsgBuilder(Create(label = label orElse Option(connId), None))
     val routedPackedMsg = packForMyVerityAgent(jsonMsgBuilder.jsonMsg)
     checkOKResponse(sendPOST(routedPackedMsg))
     val receivedMsg = expectMsgOnWebhook[Created]()
@@ -324,8 +324,8 @@ case class IssuerRestSDK(param: SdkParam,
     cmu
   }
 
-  def sendCreateRelationship(connId: String): ReceivedMsgParam[Created] = {
-    val resp = sendMsg(Create(None, None))
+  def sendCreateRelationship(connId: String, label: Option[String]=None): ReceivedMsgParam[Created] = {
+    val resp = sendMsg(Create(label = label orElse Option(connId), None))
     resp.status shouldBe Accepted
     val rmp = expectMsgOnWebhook[Created]()
     myPairwiseRelationships += (connId -> PairwiseRel(None, Option(DidPair(rmp.msg.did, rmp.msg.verKey))))

@@ -3,15 +3,15 @@ package com.evernym.verity.texter
 import com.evernym.verity.config.AppConfig
 
 import java.net.HttpURLConnection._
-import javax.ws.rs.client.{Client, ClientBuilder, Entity}
-import javax.ws.rs.core.MediaType
+import jakarta.ws.rs.client.{Client, ClientBuilder, Entity}
+import jakarta.ws.rs.core.MediaType
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util2.Exceptions.{InternalServerErrorException, SmsSendingFailedException}
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.http.common.ConfigSvc
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider
+import com.fasterxml.jackson.jakarta.rs.json.JacksonJsonProvider
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature
 
 import scala.collection.JavaConverters._
@@ -37,7 +37,7 @@ class BandwidthDispatcher(val appConfig: AppConfig)
   lazy val client: Client = {
     ClientBuilder.newBuilder
       .register(classOf[ObjectMapper])
-      .register(classOf[JacksonJaxbJsonProvider])
+      .register(classOf[JacksonJsonProvider])
       .register(HttpAuthenticationFeature.basic(token, secret), 1)
       .build
   }

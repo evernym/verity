@@ -23,12 +23,12 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
 
   def handleControl: Control ?=> Any = {
     case c => mainHandleControl(ctx.getState, ctx.getRoster.selfRole, c)
-
   }
 
   def mainHandleControl: (CredDefState, Option[Role], Control) ?=> Any = {
     case (_, _, c: Init) => ctx.apply(ProtocolInitialized(c.parametersStored.toSeq))
     case (s: State.Initialized, _, m: Write) => writeCredDef(m, s)
+    case _ => ctx.signal(ProblemReport("Unexpected message in current state"))
   }
 
   override def applyEvent: ApplyEvent = {

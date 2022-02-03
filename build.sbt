@@ -60,17 +60,17 @@ val akkaHttpVer     = "10.2.7"
 val akkaMgtVer      = "1.1.3"
 val alpAkkaVer      = "3.0.3"
 val akkaPersistence = "1.1.1"
-val kamonVer        = "2.4.2"
+val kamonVer        = "2.4.5"
 val kanelaAgentVer  = "1.0.14"
 val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
 val jacksonVer      = "2.13.1"
 val sdnotifyVer     = "1.3"
 
 //test dependency versions
-val scalatestVer    = "3.2.10"
-val mockitoVer      = "1.16.55"
+val scalatestVer    = "3.2.11"
+val mockitoVer      = "1.17.0"
 val veritySdkVer    = "0.5.0"
-val vcxWrapperVer   = "0.13.0.675"
+val vcxWrapperVer   = "0.13.1.735"
 
 
 val flexmarkVer     = "0.62.2"
@@ -84,7 +84,7 @@ val CompileOnly = config(COMPILE_TIME_ONLY)
 
 val majorNum = "2"
 val minorNum = "17"
-val patchNum = "0"
+val patchNum = "2"
 
 // I'm not sure why setting this keys don't resolve in all
 // other scopes but it does not so we re-resolve it commonSettings
@@ -328,9 +328,10 @@ lazy val commonLibraryDependencies = {
     "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVer,          //Scala classes serialization/deserialization
 
     //sms service implementation dependencies
-    "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % jacksonVer,     //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
-    "org.glassfish.jersey.core" % "jersey-client" % "2.25"                          //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
-      excludeAll ExclusionRule(organization = "javax.inject"),                      //TODO: (should fix this) excluded to avoid issue found during 'sbt assembly' after upgrading to sbt 1.3.8
+    "com.fasterxml.jackson.jakarta.rs" % "jackson-jakarta-rs-json-provider" % jacksonVer,
+    //"com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % jacksonVer,     //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
+    "org.glassfish.jersey.core" % "jersey-client" % "3.0.3"
+      excludeAll ExclusionRule(organization = "jakarta.inject"),                      //TODO: (should fix this) excluded to avoid issue found during 'sbt assembly' after upgrading to sbt 1.3.8
     "com.twilio.sdk" % "twilio-java-sdk" % "6.3.0",                                 //used by "TwilioDispatcher" class
 
     //other dependencies

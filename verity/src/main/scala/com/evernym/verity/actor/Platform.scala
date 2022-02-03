@@ -11,7 +11,6 @@ import com.evernym.verity.actor.agent.agency.{AgencyAgent, AgencyAgentPairwise}
 import com.evernym.verity.actor.agent.msgrouter.Route
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
-import com.evernym.verity.actor.itemmanager.{ItemContainer, ItemManager}
 import com.evernym.verity.actor.metrics.{CollectionsMetricCollector, LibindyMetricsCollector}
 import com.evernym.verity.actor.msg_tracer.MsgTracingRegionActors
 import com.evernym.verity.actor.node_singleton.NodeSingleton
@@ -331,37 +330,6 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
           Route.defaultPassivationTimeout,
           PERSISTENT_ACTOR_BASE,
           ROUTE_REGION_ACTOR_NAME,
-          null
-        ).toSeconds,
-        TimeUnit.SECONDS
-      ))
-    )
-
-  val itemManagerRegion: ActorRef =
-    createPersistentRegion(
-      ITEM_MANAGER_REGION_ACTOR_NAME,
-      ItemManager.props(executionContextProvider.futureExecutionContext),
-      passivateIdleEntityAfter = Some(FiniteDuration(
-        ConfigUtil.getReceiveTimeout(
-          appConfig,
-          ItemManager.defaultPassivationTimeout,
-          PERSISTENT_ACTOR_BASE,
-          ITEM_MANAGER_REGION_ACTOR_NAME,
-          null
-        ).toSeconds,
-        TimeUnit.SECONDS
-      ))
-    )
-  val itemContainerRegion: ActorRef =
-    createPersistentRegion(
-      ITEM_CONTAINER_REGION_ACTOR_NAME,
-      ItemContainer.props(executionContextProvider.futureExecutionContext),
-      passivateIdleEntityAfter = Some(FiniteDuration(
-        ConfigUtil.getReceiveTimeout(
-          appConfig,
-          ItemContainer.defaultPassivationTimeout,
-          PERSISTENT_ACTOR_BASE,
-          ITEM_CONTAINER_REGION_ACTOR_NAME,
           null
         ).toSeconds,
         TimeUnit.SECONDS

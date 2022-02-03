@@ -1,9 +1,9 @@
-package com.evernym.verity.itemmanager
-
-import java.security.Permission
+package com.evernym.verity
 
 import akka.testkit.TestKitBase
 import org.scalatest.{BeforeAndAfterAll, Suite}
+
+import java.security.Permission
 
 sealed case class ExitException(status: Int) extends SecurityException("System.exit() is not allowed") {
 }

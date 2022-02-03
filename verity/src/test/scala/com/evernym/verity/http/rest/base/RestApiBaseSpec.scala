@@ -20,8 +20,12 @@ import com.evernym.verity.testkit.mock.agent.MockEdgeAgent._
 import com.evernym.verity.testkit.mock.agent.MockEnv
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault.KeyParam
+import com.google.protobuf.duration.Duration.defaultInstance.seconds
+import org.joda.time.DurationFieldType.millis
 import org.json.JSONObject
+import org.scalatest.time.{Millis, Seconds, Span}
 
+import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 import scala.util.Try
 
@@ -294,15 +298,17 @@ trait RestApiBaseSpec
 
   //this is mostly use where one agency sent a packed message to another agency
   def processLastReceivedPackedMsg[T: ClassTag](mockRestEnv: MockRestEnv, connId: String): T = {
-    val (_, lastPayload) = withExpectNewMsgAtRegisteredEndpoint({
-      testMsgSendingSvc.lastBinaryMsgSent.foreach { pm =>
-        buildAgentPostReq(pm) ~> epRoutes ~> check {
-          status shouldBe OK
+    eventually(timeout(Span(10, Seconds)), interval(Span(200, Millis))){
+      val (_, lastPayload) = withExpectNewMsgAtRegisteredEndpoint({
+        testMsgSendingSvc.lastBinaryMsgSent.foreach { pm =>
+          buildAgentPostReq(pm) ~> epRoutes ~> check {
+            status shouldBe OK
+          }
         }
-      }
-    })
+      })
     lastPayload.isDefined shouldBe true
     mockRestEnv.mockEnv.edgeAgent.unpackAgentMsgFromConn[T](lastPayload.get.msg, connId)
+    }
   }
 }
 

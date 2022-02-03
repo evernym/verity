@@ -8,13 +8,9 @@ import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffec
 import akka.util.Timeout
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.AgentActorContext
-import com.evernym.verity.actor.appStateManager.AppStateConstants.CONTEXT_AGENT_SERVICE_INIT
-import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, SeriousSystemError}
 import com.evernym.verity.util.healthcheck.AkkaPersistenceStorageChecker.Commands.GetState
 import com.evernym.verity.util.healthcheck.AkkaPersistenceStorageChecker.Replies.CurrentState
 import com.evernym.verity.util.healthcheck.AkkaPersistenceStorageChecker.States.Ready
-import com.evernym.verity.util2.Exceptions
-import com.evernym.verity.util2.Exceptions.NoResponseFromLedgerPoolServiceException
 import com.evernym.verity.vault.WalletDoesNotExist
 import com.evernym.verity.vault.WalletUtil.generateWalletParamAsync
 import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
@@ -81,9 +77,6 @@ class HealthCheckerImpl(val agentActorContext: AgentActorContext,
         ApiStatus(status = true, "OK")
       }.recover {
         case e: Exception =>
-          val errorMsg = s"ledger connection check failed (error stack trace: ${Exceptions.getStackTraceAsSingleLineString(e)})"
-          AppStateUpdateAPI(actorSystem).publishEvent(ErrorEvent(SeriousSystemError, CONTEXT_AGENT_SERVICE_INIT,
-            new NoResponseFromLedgerPoolServiceException(Option(errorMsg))))
           ApiStatus(status = false, e.getMessage)
       }
   }

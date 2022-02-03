@@ -1,7 +1,6 @@
 package com.evernym.integrationtests.e2e.sdk
 
 import java.lang
-
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
@@ -17,6 +16,8 @@ import com.evernym.verity.sdk.protocols.writecreddef.v0_6.WriteCredentialDefinit
 import com.evernym.verity.sdk.protocols.writeschema.v0_6.WriteSchemaV0_6
 import com.evernym.verity.sdk.utils.Context
 import org.json.JSONObject
+
+import java.util.UUID
 
 
 object UndefinedInterfaces {
@@ -62,11 +63,12 @@ object UndefinedInterfaces {
   }
 
   class UndefinedWriteSchema_0_6 extends WriteSchemaV0_6 {
+    val myThreadId: String = UUID.randomUUID.toString
+    override def getThreadId: String = myThreadId
+
     override def write(context: Context): Unit = throw new NotImplementedError
     override def writeMsg(context: Context): JSONObject = throw new NotImplementedError
     override def writeMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
-
-    override def getThreadId: String = throw new NotImplementedError
 
     override def write(context: Context, endorserDID: String): Unit = throw new NotImplementedError
     override def writeMsg(context: Context, endorserDID: String): JSONObject = throw new NotImplementedError
@@ -74,11 +76,12 @@ object UndefinedInterfaces {
   }
 
   class UndefinedWriteCredentialDefinition_0_6 extends WriteCredentialDefinitionV0_6 {
+    val myThreadId: String = UUID.randomUUID.toString
+    override def getThreadId: String = myThreadId
+
     override def write(context: Context): Unit = throw new NotImplementedError
     override def writeMsg(context: Context): JSONObject = throw new NotImplementedError
     override def writeMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
-
-    override def getThreadId: String = throw new NotImplementedError
 
     override def write(context: Context, endorserDID: String): Unit = throw new NotImplementedError
     override def writeMsg(context: Context, endorserDID: String): JSONObject = throw new NotImplementedError
@@ -87,6 +90,9 @@ object UndefinedInterfaces {
 
 
   class UndefinedConnections_1_0 extends ConnectionsV1_0 {
+    val myThreadId: String = UUID.randomUUID.toString
+    override def getThreadId: String = myThreadId
+
     override def status(context: Context): Unit = throw new NotImplementedError
     override def statusMsg(context: Context): JSONObject = throw new NotImplementedError
     override def statusMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
@@ -94,19 +100,21 @@ object UndefinedInterfaces {
     override def accept(context: Context): Unit = throw new NotImplementedError
     override def acceptMsg(context: Context): JSONObject = throw new NotImplementedError
     override def acceptMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
-
-    override def getThreadId: String = throw new NotImplementedError
   }
 
   class UndefinedOutOfBand_1_0 extends OutOfBandV1_0 {
+    val myThreadId: String = UUID.randomUUID.toString
+    override def getThreadId: String = myThreadId
+
     override def handshakeReuse(context: Context): Unit = throw new NotImplementedError
     override def handshakeReuseMsg(context: Context): JSONObject = throw new NotImplementedError
     override def handshakeReuseMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
-
-    override def getThreadId: String = throw new NotImplementedError
   }
 
   class UndefinedPresentProof_1_0 extends PresentProofV1_0 {
+    val myThreadId: String = UUID.randomUUID.toString
+    override def getThreadId: String = myThreadId
+
     override def request(context: Context): Unit = throw new NotImplementedError
     override def requestMsg(context: Context): JSONObject = throw new NotImplementedError
     override def requestMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
@@ -130,19 +138,21 @@ object UndefinedInterfaces {
     override def acceptProposal(context: Context): Unit = throw new NotImplementedError
     override def acceptProposalMsg(context: Context): JSONObject = throw new NotImplementedError
     override def acceptProposalMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
-
-    override def getThreadId: String = throw new NotImplementedError
   }
 
   class UndefinedBasicMessage_1_0 extends BasicMessageV1_0 {
+    val myThreadId: String = UUID.randomUUID.toString
+    override def getThreadId: String = myThreadId
+
     override def message(context: Context): Unit = throw new NotImplementedError
     override def messageMsg(context: Context): JSONObject = throw new NotImplementedError
     override def messageMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
-
-    override def getThreadId: String = throw new NotImplementedError
   }
 
   class UndefinedCommittedAnswer_1_0 extends CommittedAnswerV1_0 {
+    val myThreadId: String = UUID.randomUUID.toString
+    override def getThreadId: String = myThreadId
+
     override def ask(context: Context): Unit = throw new NotImplementedError
     override def askMsg(context: Context): JSONObject = throw new NotImplementedError
     override def askMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
@@ -154,11 +164,12 @@ object UndefinedInterfaces {
     override def status(context: Context): Unit = throw new NotImplementedError
     override def statusMsg(context: Context): JSONObject = throw new NotImplementedError
     override def statusMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
-
-    override def getThreadId: String = throw new NotImplementedError
   }
 
   class UndefinedIssueCredential_1_0 extends IssueCredentialV1_0 {
+    val myThreadId: String = UUID.randomUUID.toString
+    override def getThreadId: String = myThreadId
+
     override def proposeCredential(context: Context): Unit = throw new NotImplementedError
     override def proposeCredentialMsg(context: Context): JSONObject = throw new NotImplementedError
     override def proposeCredentialMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
@@ -182,12 +193,11 @@ object UndefinedInterfaces {
     override def status(context: Context): Unit = throw new NotImplementedError
     override def statusMsg(context: Context): JSONObject = throw new NotImplementedError
     override def statusMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
-
-    override def getThreadId: String = throw new NotImplementedError
   }
 
   class UndefinedRelationship_1_0 extends RelationshipV1_0 {
-    override def getThreadId: String = throw new NotImplementedError
+    val myThreadId: String = UUID.randomUUID.toString
+    override def getThreadId: String = myThreadId
 
     override def create(context: Context): Unit = throw new NotImplementedError
     override def createMsg(context: Context): JSONObject = throw new NotImplementedError

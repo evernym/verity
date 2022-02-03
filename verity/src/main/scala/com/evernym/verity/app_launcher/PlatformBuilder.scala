@@ -11,7 +11,8 @@ import scala.concurrent.ExecutionContext
 
 object PlatformBuilder {
   def build(executionContextProvider: ExecutionContextProvider,
-            appConfig: AppConfig, agentActorContext: Option[AgentActorContext]=None): Platform = {
+            appConfig: AppConfig,
+            agentActorContext: Option[AgentActorContext]=None): Platform = {
     new Platform(
       agentActorContext.getOrElse(new DefaultAgentActorContext(executionContextProvider, appConfig)),
       PlatformServices, executionContextProvider

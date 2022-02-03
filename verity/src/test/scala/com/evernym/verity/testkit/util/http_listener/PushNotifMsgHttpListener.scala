@@ -16,7 +16,7 @@ trait PushNotifMsgHttpListener
   import akka.http.scaladsl.model.StatusCodes._
   implicit lazy val executionContext: ExecutionContext = futureExecutionContext
 
-  lazy val listeningUrl: String = s"MCM:${listeningEndpoint.url}"
+  lazy val listeningUrl: String = s"FCM:${listeningEndpoint.url}"
 
   def handleJsonMsg(jsonMsg: String): Future[Either[RuntimeException, String]] = {
     addToMsgs(jsonMsg)

@@ -82,7 +82,6 @@ class MockFirebasePusher(appConfig: AppConfig,
     }
   }
 
-  def getLastSentPushNotif(regId: String): Option[PushNotifPayload] = MockFirebasePusher.pushedMsg.get(regId).map(_.lastPushNotifPayload)
 }
 
 case class PushNotifPayload(sendAsAlertPushNotif: Boolean, notifData: Map[String, Any], extraData: Map[String, Any], jsonPayload: String)

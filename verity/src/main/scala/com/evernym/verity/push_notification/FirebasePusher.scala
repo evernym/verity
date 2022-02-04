@@ -30,12 +30,26 @@ class FirebasePusher(appConfig: AppConfig,
 
   override lazy val comMethodPrefix= "FCM"
 
-  def convertToMsg[T: ClassTag](jsonString: String): T = {
-    try {
-      DefaultMsgCodec.fromJson(jsonString)
-    } catch {
-      case e: DecodingException =>
-        throw new BadRequestErrorException(UNHANDLED.statusCode, msgDetail=Option(e.getMessage))
+  def push(notifParam: PushNotifParam)
+          (implicit system: ActorSystem): Future[PushNotifResponse] = {
+
+    val pushContent = createPushContent(notifParam)
+    val httpClient = Http().outgoingConnectionHttps(serviceParam.host)
+    val auth = RawHeader("Authorization", s"key=${serviceParam.key}")
+    for {
+      response <-
+        Source.single(
+          HttpRequest(
+            method = HttpMethods.POST,
+            uri = Uri(serviceParam.path),
+            headers = List(auth)
+          ).withEntity(ContentTypes.`application/json`, pushContent)
+        )
+          .via(httpClient)
+          .mapAsync(1)(response => Unmarshal(response.entity).to[String])
+          .runWith(Sink.head)
+    } yield {
+      handleResponse(notifParam.comMethodValue, response, notifParam.regId)
     }
   }
 
@@ -78,28 +92,15 @@ class FirebasePusher(appConfig: AppConfig,
     }
   }
 
-  def push(notifParam: PushNotifParam)
-          (implicit system: ActorSystem): Future[PushNotifResponse] = {
-
-    val pushContent = createPushContent(notifParam)
-    val httpClient = Http().outgoingConnectionHttps(serviceParam.host)
-    val auth = RawHeader("Authorization", s"key=${serviceParam.key}")
-    for {
-      response <-
-        Source.single(
-          HttpRequest(
-            method = HttpMethods.POST,
-            uri = Uri(serviceParam.path),
-            headers = List(auth)
-          ).withEntity(ContentTypes.`application/json`, pushContent)
-        )
-          .via(httpClient)
-          .mapAsync(1)(response => Unmarshal(response.entity).to[String])
-          .runWith(Sink.head)
-    } yield {
-      handleResponse(notifParam.comMethodValue, response, notifParam.regId)
+  private def convertToMsg[T: ClassTag](jsonString: String): T = {
+    try {
+      DefaultMsgCodec.fromJson(jsonString)
+    } catch {
+      case e: DecodingException =>
+        throw new BadRequestErrorException(UNHANDLED.statusCode, msgDetail=Option(e.getMessage))
     }
   }
+
 }
 
 case class FirebasePushServiceParam(key: String, host: String, path: String)

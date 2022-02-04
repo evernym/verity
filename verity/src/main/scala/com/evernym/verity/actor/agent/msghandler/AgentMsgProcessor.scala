@@ -311,7 +311,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         // Other signals go regularly.
         case _ =>
           recordOutMsgDeliveryEvent(msgId)
-          sendToAgentActor(SendMsgToMyDomain(omp, msgId, msgType.msgName, ParticipantUtil.DID(omc.from), thread))
+          sendToAgentActor(SendMsgToMyDomain(omp, msgId, msgType.msgName, ParticipantUtil.DID(omc.from), None, thread))
       }
       NEXT_HOP_MY_EDGE_AGENT
     } else {
@@ -837,6 +837,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
               msgId,
               fwdMsg.fwdMsgType.getOrElse(MSG_TYPE_UNKNOWN),
               ParticipantUtil.DID(param.selfParticipantId),
+              fwdMsg.fwdMsgSender,
               None
             )
           )
@@ -1057,6 +1058,7 @@ case class SendMsgToMyDomain(om: OutgoingMsgParam,
                              msgId: MsgId,
                              msgName: MsgName,
                              senderDID: DidStr,
+                             senderName: Option[String],
                              threadOpt: Option[Thread]) extends ActorMessage
 
 case class SendMsgToTheirDomain(om: OutgoingMsgParam,

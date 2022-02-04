@@ -57,7 +57,7 @@ class MockFirebasePusher(appConfig: AppConfig,
     try {
       logger.debug(s"sendMessageToEndpoint -> url: $url, pushNotifPayload: $pushNotifPayload")
       val endpoint = UrlParam(url)
-      val httpClient = Http().outgoingConnection(host = endpoint.host, port=endpoint.port)
+      val httpClient = Http().outgoingConnection(host = endpoint.host, port = endpoint.port)
 
       if (sendToEndpointEnabled) {
         for {

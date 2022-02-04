@@ -28,11 +28,13 @@ trait UsesConfigs extends HasAppConfig with HasExecutionContextProvider {
 
   def getConfigs(names: Set[String]): Future[AgentConfigs] = {
     val gcs = names.map(n => GetConfigDetail(n, req=false))
-    getMissingConfigsFromUserAgent(gcs).mapTo[AgentConfigs]
+    getConfigsFromUserAgent(gcs).mapTo[AgentConfigs]
   }
 
-  def getAgentConfigDetails: Set[ConfigDetail] = (agentConfigs ++
-    getCachedConfigDetails).map(c => ConfigDetail(c._1, c._2.value)).toSet
+  def getAgentConfigDetails: Set[ConfigDetail] = {
+    (getCachedConfigDetails ++ agentConfigs)
+      .map(c => ConfigDetail(c._1, c._2.value)).toSet
+  }
 
   def getAgentConfigs(getConfDetail: Set[GetConfigDetail]): Future[AgentConfigs] = {
     val requestedConfigNames = getConfDetail.map(_.name)
@@ -41,7 +43,7 @@ trait UsesConfigs extends HasAppConfig with HasExecutionContextProvider {
     if (configsNotFound.isEmpty) {
       Future.successful(AgentConfigs(configsFound))
     } else {
-      getMissingConfigsFromUserAgent(getConfDetail.filter(gcd => configsNotFound.contains(gcd.name))) map {
+      getConfigsFromUserAgent(getConfDetail.filter(gcd => configsNotFound.contains(gcd.name))) map {
         case fc: AgentConfigs => AgentConfigs(configsFound ++ fc.configs)
         case x =>
           val sd = getUnhandledError(x)
@@ -55,7 +57,7 @@ trait UsesConfigs extends HasAppConfig with HasExecutionContextProvider {
       map(co => co._1 -> AgentConfig(co._2.toString, ZonedDateTime.now()))
   }
 
-  def getMissingConfigsFromUserAgent(configs: Set[GetConfigDetail]): Future[AgentConfigs] = {
+  def getConfigsFromUserAgent(configs: Set[GetConfigDetail]): Future[AgentConfigs] = {
 
     def buildKeyDetails(gcd: Set[GetConfigDetail], req: Boolean): Set[KeyDetail] = {
       if (gcd.nonEmpty) Set(KeyDetail(GetConfigCacheParam(ownerAgentKeyDIDReq, GetConfigs(gcd.map(_.name))), required = req))

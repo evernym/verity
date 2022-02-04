@@ -39,9 +39,9 @@ import scala.concurrent.duration.{Duration, SECONDS}
 import scala.reflect.ClassTag
 
 abstract class VeritySdkBase(param: SdkParam,
-                             ec: ExecutionContext,
+                             executionContext: ExecutionContext,
                              oauthParam: Option[OAuthParam]=None)
-  extends SdkBase(param, ec) {
+  extends SdkBase(param, executionContext) {
 
   def registerWebhook(id: Option[String] = None, authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated
   def sendCreateRelationship(connId: String, label: Option[String]=None): ReceivedMsgParam[Created]
@@ -149,8 +149,6 @@ abstract class VeritySdkBase(param: SdkParam,
   def resetAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetAuthedMsgsCounter
   def resetFailedAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetFailedAuthedMsgsCounter
 
-  implicit val executionContext: ExecutionContext
-
 }
 
 /**
@@ -193,7 +191,7 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
   }
 
   def sendCreateRelationship(connId: String, label: Option[String]=None): ReceivedMsgParam[Created] = {
-    val jsonMsgBuilder = JsonMsgBuilder(Create(label = label orElse Option(connId), None))
+    val jsonMsgBuilder = JsonMsgBuilder(Create(label = label, None))
     val routedPackedMsg = packForMyVerityAgent(jsonMsgBuilder.jsonMsg)
     checkOKResponse(sendPOST(routedPackedMsg))
     val receivedMsg = expectMsgOnWebhook[Created]()

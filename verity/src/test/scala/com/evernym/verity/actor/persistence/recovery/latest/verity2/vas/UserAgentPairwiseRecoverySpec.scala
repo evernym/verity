@@ -43,7 +43,7 @@ class UserAgentPairwiseRecoverySpec
         walletServiceCountBeforeRestart shouldBe prevWalletServiceCount
         val uapEventsBeforeRestart = getEvents(myPairwiseRelAgentPersistenceId)
 
-        uapEventsBeforeRestart shouldBe uapEventsBeforeStart
+        uapEventsBeforeRestart.containsSlice(uapEventsBeforeStart) shouldBe true
         restartActor(uapRegion)
 
         val walletServiceCountAfterRestart = getStableWalletAPISucceedCountMetric

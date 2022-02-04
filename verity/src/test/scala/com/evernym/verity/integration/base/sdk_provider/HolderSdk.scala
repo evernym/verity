@@ -289,7 +289,8 @@ case class HolderSdk(param: SdkParam,
       MPF_INDY_PACK,
       packedMsg,
       routingKeys,
-      fwdMsgType
+      fwdMsgType,
+      None
     )(
       new AgentMsgTransformer(
         testWalletAPI,

@@ -335,13 +335,13 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
   }
 
   protected def handleMsgSentSuccessfully(mss: MsgSentSuccessfully): Unit = {
-    buildPushNotifDataForSuccessfulMsgDelivery(NotifyMsgDetail(mss.uid, mss.typ)).foreach { pnd =>
+    buildPushNotifDataForSuccessfulMsgDelivery(NotifyMsgDetail(mss.uid, mss.typ, None)).foreach { pnd =>
       ctx.signal(NotifyUserViaPushNotif(pnd, updateDeliveryStatus = false))
     }
   }
 
   protected def handleMsgSendingFailed(msf: MsgSendingFailed): Unit = {
-    buildPushNotifDataForFailedMsgDelivery(NotifyMsgDetail(msf.uid, msf.typ)).foreach { pnd =>
+    buildPushNotifDataForFailedMsgDelivery(NotifyMsgDetail(msf.uid, msf.typ, None)).foreach { pnd =>
       ctx.signal(NotifyUserViaPushNotif(pnd, updateDeliveryStatus = false))
     }
   }
@@ -447,7 +447,8 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
           MPF_INDY_PACK,
           packedMsg,
           routingKeys,
-          msgType
+          msgType,
+          None
         )(agentMsgTransformer, wap, ctx.metricsWriter, futureExecutionContext)
       case x => throw new RuntimeException("unsupported routing detail" + x)
     }

@@ -143,6 +143,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     case ppgm: ProcessPersistedSendRemoteMsg                => processPersistedSendRemoteMsg(ppgm)
     case mss: MsgSentSuccessfully                           => handleMsgSentSuccessfully(mss)
     case msf: MsgSendingFailed                              => handleMsgSendingFailed(msf)
+    case StoreOwnerName(name)                               => storeOwnerName(name)
     case GetOutboxParam(destId)                             => sendOutboxParam(destId)
 
     case GetPairwiseUpgradeInfo                             => handleGetUpgradeInfo()
@@ -332,6 +333,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
             UUID.randomUUID().toString,
             MSG_TYPE_UPGRADE_INFO,
             state.thisAgentKeyDIDReq,
+            None,
             None
           )
         }
@@ -447,11 +449,11 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
   }
 
   def handleMsgSentSuccessfully(mss: MsgSentSuccessfully): Unit = {
-    notifyUserForSuccessfulMsgDelivery(NotifyMsgDetail(mss.uid, mss.typ))
+    notifyUserForSuccessfulMsgDelivery(NotifyMsgDetail(mss.uid, mss.typ, None))
   }
 
   def handleMsgSendingFailed(msf: MsgSendingFailed): Unit = {
-    notifyUserForFailedMsgDelivery(NotifyMsgDetail(msf.uid, msf.typ))
+    notifyUserForFailedMsgDelivery(NotifyMsgDetail(msf.uid, msf.typ, None))
   }
 
   def stateDetailsFor: Future[ProtoRef => PartialFunction[String, Parameter]] = {
@@ -754,7 +756,12 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     val msg = getMsgReq(uid)
     val payload = getMsgPayload(uid)
     logger.debug("msg building started", (LOG_KEY_UID, uid))
-    getAgentConfigs(Set(GetConfigDetail(NAME_KEY, req = false), GetConfigDetail(LOGO_URL_KEY, req = false))).flatMap { fc: AgentConfigs =>
+    getAgentConfigs(
+      Set(
+        GetConfigDetail(NAME_KEY, req = false),
+        GetConfigDetail(LOGO_URL_KEY, req = false)
+      )
+    ).flatMap { fc: AgentConfigs =>
       logger.debug("got required configs", (LOG_KEY_UID, uid))
       (theirRoutingDetail, payload) match {
         case (Some(Left(_: LegacyRoutingDetail)), _) =>
@@ -763,9 +770,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
             case MPF_INDY_PACK  => buildSendRemoteMsg_MFV_0_6(uid)
             case x              => throw new RuntimeException("unsupported msg pack format: " + x)
           }
-          buildAndSendMsgToTheirRoutingService(uid, msg.getType, agentMsgs, mpf)
+          buildAndSendMsgToTheirRoutingService(uid, msg.getType, fc.getConfValueOpt(NAME), agentMsgs, mpf)
         case (Some(Right(_: RoutingDetail)), Some(p)) =>
-          buildRoutedPackedMsgForTheirRoutingService(mpf, p.msg, msg.`type`, metricsWriter).map { pm =>
+          buildRoutedPackedMsgForTheirRoutingService(mpf, p.msg, msg.`type`,
+            fc.getConfValueOpt(NAME), metricsWriter).map { pm =>
             val smp = buildSendMsgParam(uid, msg.getType, pm.msg, isItARetryAttempt = false)
             sendFinalPackedMsgToTheirRoutingService(pm, smp)
           }
@@ -787,24 +795,50 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
   //target msg is already packed and it needs to be packed inside general msg wrapper
   def buildAndSendGeneralMsgToTheirRoutingService(smp: SendMsgParam,
                                                   thread: Option[Thread]=None): Future[Any] = {
-    val packedMsgFut = if (smp.theirRoutingParam.route.isLeft) {
-      val agentMsgs = buildLegacySendRemoteMsg_MFV_0_5(smp.uid, smp.msgType, smp.msg, None, Map.empty, thread)
-      buildReqMsgForTheirRoutingService(MPF_MSG_PACK, agentMsgs, wrapInBundledMsgs = true, smp.msgType, metricsWriter)
-    } else {
-      buildRoutedPackedMsgForTheirRoutingService(MPF_INDY_PACK, smp.msg, smp.msgType, metricsWriter)
-    }
-    packedMsgFut.map { pm =>
-      sendFinalPackedMsgToTheirRoutingService(pm, smp.copy(msg = pm.msg))
+    getAgentConfigs(
+      Set(
+        GetConfigDetail(NAME_KEY, req = false)
+      )
+    ).flatMap { fc: AgentConfigs =>
+      val packedMsgFut = if (smp.theirRoutingParam.route.isLeft) {
+        val agentMsgs = buildLegacySendRemoteMsg_MFV_0_5(smp.uid, smp.msgType, smp.msg, None, Map.empty, thread)
+        buildReqMsgForTheirRoutingService(
+          MPF_MSG_PACK,
+          agentMsgs,
+          wrapInBundledMsgs = true,
+          smp.msgType,
+          fc.getConfValueOpt(NAME),
+          metricsWriter
+        )
+      } else {
+        buildRoutedPackedMsgForTheirRoutingService(
+          MPF_INDY_PACK,
+          smp.msg,
+          smp.msgType,
+          fc.getConfValueOpt(NAME),
+          metricsWriter)
+      }
+      packedMsgFut.map { pm =>
+        sendFinalPackedMsgToTheirRoutingService(pm, smp.copy(msg = pm.msg))
+      }
     }
   }
 
   //final target msg is ready and needs to be packed as per their routing service
   def buildAndSendMsgToTheirRoutingService(uid: MsgId,
                                            msgType: String,
+                                           msgSender: Option[String],
                                            agentMsgs: List[Any],
                                            msgPackFormat: MsgPackFormat): Future[Any] = {
     metricsWriter.runWithSpan("buildAndSendMsgToTheirRoutingService", "UserAgentPairwise", InternalSpan) {
-      val packedMsgFut = buildReqMsgForTheirRoutingService(msgPackFormat, agentMsgs, wrapInBundledMsgs = true, msgType, metricsWriter)
+      val packedMsgFut = buildReqMsgForTheirRoutingService(
+        msgPackFormat,
+        agentMsgs,
+        wrapInBundledMsgs = true,
+        msgType,
+        msgSender,
+        metricsWriter
+      )
       logger.debug("agency msg prepared", (LOG_KEY_UID, uid))
       packedMsgFut.map { pm =>
         val smp = buildSendMsgParam(uid, msgType, pm.msg, isItARetryAttempt = false)
@@ -833,7 +867,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     if (! state.isConnectionStatusEqualTo(CONN_STATUS_DELETED.statusCode)) {
       val msg = getMsgReq(uid)
       val payloadWrapper = getMsgPayload(uid)
-      notifyUserForNewMsg(NotifyMsgDetail(uid, msg.getType, payloadWrapper))
+      notifyUserForNewMsg(NotifyMsgDetail(uid, msg.getType, None, payloadWrapper))
     } else {
       val errorMsg = s"connection is marked as DELETED, user won't be notified about this msg: $uid"
       logger.warn("user agent pairwise", "notify user",
@@ -879,7 +913,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
       scke.forDIDPair.DID, scke.newAgentKeyDIDPair.DID,
       scke.forDIDPair.verKey, scke.newAgentKeyDIDPair.verKey
     )
-    val eventsToPersist: List[Any] = (pidEvent ++ pubIdEvent ++ List(odsEvt, cdsEvt)).toList
+    val labelConfigEvt = scke.label.map(l => ConfigUpdated(NAME, l, getMillisForCurrentUTCZonedDateTime))
+    val eventsToPersist: List[Any] = (pidEvent ++ pubIdEvent ++ List(odsEvt, cdsEvt) ++ labelConfigEvt).toList
     writeAndApplyAll(eventsToPersist)
     val sndr = sender()
 
@@ -1121,7 +1156,22 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
         s"threadContexts: ${state.threadContext.map(_.contexts.size).getOrElse(0)}, " +
         s"protoInstances: ${state.protoInstances.map(_.instances.size).getOrElse(0)}"
     )
+    checkIfOwnerLabelSet()
     super.postAgentStateFix()
+  }
+
+  private def storeOwnerName(name: String): Unit = {
+    writeAndApply(ConfigUpdated(NAME, name, getMillisForCurrentUTCZonedDateTime))
+  }
+
+  private def checkIfOwnerLabelSet(): Unit = {
+    if (state.ownerAgentDidPair.isDefined && ! state.configs.contains(NAME)) {
+      getConfigsFromUserAgent(Set(GetConfigDetail(NAME, req = false))).map { resp =>
+        resp.configs.find(_.name == NAME).map { nameConfig =>
+          self ! StoreOwnerName(nameConfig.value)
+        }
+      }
+    }
   }
 }
 
@@ -1250,3 +1300,5 @@ case class UpdateTheirRouting(routingPairwiseDID: DidStr,
                               agencyVerKey: VerKeyStr) extends ActorMessage
 
 case object SendUpgradeInfo extends ActorMessage
+
+case class StoreOwnerName(name: String) extends ActorMessage

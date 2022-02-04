@@ -89,7 +89,7 @@ trait AgentMsgHandler
     logger.debug("default implementation of storeOutgoingMsg")
   }
 
-  def sendMsgToMyDomain(omp: OutgoingMsgParam, msgId: MsgId, msgName: MsgName): Unit = {
+  def sendMsgToMyDomain(omp: OutgoingMsgParam, msgId: MsgId, msgName: MsgName, msgSender: Option[String]): Unit = {
     logger.debug("default implementation of sendMsgToMyDomain")
   }
 

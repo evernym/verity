@@ -1,12 +1,12 @@
-package com.evernym.verity.integration.push_notification
+package com.evernym.verity.integration.push_notification.verity2
 
-import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, UpdateComMethodReqMsg, UpdateConfigReqMsg}
+import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.integration.base.sdk_provider.msg_listener.JsonMsgListener
-import com.evernym.verity.integration.base.{CAS, PortProvider, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider, V1OAuthParam}
 import com.evernym.verity.integration.base.verity_provider.VerityEnv
+import com.evernym.verity.integration.base.{CAS, PortProvider, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestion
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 import com.evernym.verity.util.TestExecutionContextProvider
@@ -14,11 +14,14 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.ConfigFactory
 import org.json.JSONObject
 
-import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext}
 
 
-class PushNotifForNewConnectionSpec
+//when the agent configuration is updated with `name` key
+//     and a label is also provided during invite creation
+// in this case the label provided in the invitation should be used as a 'senderName' in the push notification
+class PushNotifWithPairwiseSenderNameSpec
   extends VerityProviderBaseSpec
   with SdkProvider {
 

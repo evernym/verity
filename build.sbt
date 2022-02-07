@@ -237,22 +237,23 @@ lazy val protoBufSettings = Seq(
   PB.deleteTargetDirectory := false,
 
   //this 'PB.includePaths' is to make import works
-  Compile / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
+  //There are used .absolutePaths because after update sbt-protoc to 1.0.6 sbt produce warnings about relative paths
+  Compile / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths,
   Compile / PB.targets := Seq(
     scalapb.gen(flatPackage = true) -> (Compile / sourceManaged).value
   ),
-  Compile / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
+  Compile / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths,
   Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch, build).taskValue,
   // Since sbt-protoc 1.0.1 and later adds PB.protoSources to unmanagedResourceDirectories,
   // we need to exclude all extra dirs that contains .scala files. Same for Test config.
-  Compile / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main/scala")),
+  Compile / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main/scala")).absolutePaths,
 
-  Test / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
+  Test / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths,
   Test / PB.targets := Seq(
     scalapb.gen(flatPackage = true) -> (Test / sourceManaged).value
   ),
-  Test / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test")),
-  Test / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test/scala")),
+  Test / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test")).absolutePaths,
+  Test / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test/scala")).absolutePaths,
   //
 )
 

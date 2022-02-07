@@ -272,10 +272,10 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     )
 
     val theirPairwiseDidDoc = PairwiseDidDoc(
-      state.theirDid_!,
-      state.theirDidAuthKeyReq.verKeyOpt.getOrElse(""),
-      state.theirAgentAuthKeyReq.keyId,
-      state.theirAgentAuthKeyReq.verKey
+      state.theirDid.getOrElse(""),
+      state.theirDidAuthKey.flatMap(_.verKeyOpt).getOrElse(""),
+      state.theirAgentAuthKey.map(_.keyId).getOrElse(""),
+      state.theirAgentAuthKey.map(_.verKey).getOrElse("")
     )
 
     sndr ! GetPairwiseConnDetailResp(

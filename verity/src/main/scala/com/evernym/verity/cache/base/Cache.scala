@@ -67,6 +67,12 @@ trait CacheBase extends HasExecutionContextProvider {
     cacheProvider.cachedObjects
   }
 
+  def invalidateFromFetcherCache(fetcherParam: FetcherParam, key: Key): Unit = {
+    val cacheProvider = getCacheProvider(fetcherParam)
+    cacheProvider.invalidate(key)
+    logger.info(s"cached object '$key' invalidated: " + fetcherParam)
+  }
+
   private def addToFetcherCache(fetcherParam: FetcherParam, key: Key, value: AnyRef): Unit = {
     val cacheProvider = getCacheProvider(fetcherParam)
     cacheProvider.put(key, value)

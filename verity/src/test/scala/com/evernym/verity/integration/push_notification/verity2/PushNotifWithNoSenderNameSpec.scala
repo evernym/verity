@@ -17,10 +17,10 @@ import org.json.JSONObject
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 
-//when neither the agent configuration is updated with `name` key
+//when neither the agent configuration is updated with `senderName`
 //     nor     any label provided during invite creation
-// in this case the default sender name (RemoteConnection) will be used as a 'senderName' in the push notification
-// if then issuer updated the config with a name
+// in this case the default sender name (Remote connection) will be used as a 'senderName' in the push notification
+// if then issuer updated the config with a senderName
 // in that case the new sender name will be used as a 'senderName' in the push notification
 
 class PushNotifWithNoSenderNameSpec

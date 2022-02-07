@@ -2,7 +2,8 @@ package com.evernym.verity.integration.push_notification.verity1
 
 import com.evernym.verity.actor.ConnectionStatusUpdated
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
-import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, UpdateComMethodReqMsg}
+import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
+import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, UpdateComMethodReqMsg, UpdateConfigReqMsg}
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.integration.base.sdk_provider.msg_listener.JsonMsgListener
 import com.evernym.verity.integration.base.sdk_provider.{JsonMsgUtil, SdkProvider}
@@ -17,10 +18,11 @@ import org.json.JSONObject
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 
-// when senderName is not explicitly provided during send message
-// in this case the the default sender name (RemoteConnection) should be used as a 'senderName' in the push notification
+// when senderName is set in the agent config
+//  and not explicitly provided/overridden during send message
+// in this case the the default sender name (Remote connection) should be used as a 'senderName' in the push notification
 
-class PushNotifWithoutExplicitSenderNameSpec
+class PushNotifWithAgentSenderNameSpec
   extends VerityProviderBaseSpec
   with SdkProvider {
 
@@ -38,6 +40,8 @@ class PushNotifWithoutExplicitSenderNameSpec
     issuerSDKEAS.fetchAgencyKey()
     issuerSDKEAS.provisionAgent_0_5()
     issuerSDKEAS.updateComMethod_0_5(issuerSDKEAS.msgListener.webhookEndpoint)
+    issuerSDKEAS.sendUpdateConfig(
+      UpdateConfigReqMsg(Set(ConfigDetail("name", "config-issuer-name"), ConfigDetail("logoUrl", "issuer-logo-url"))))
     issuerSDKEAS.createKey_0_5(connId)
     invitation = issuerSDKEAS.sendConnReq_0_5(connId).md.inviteDetail
 
@@ -87,10 +91,11 @@ class PushNotifWithoutExplicitSenderNameSpec
           val legacyType = data.getString("type")
           val pushNotifMsgTitle = data.getString("pushNotifMsgTitle")
           val pushNotifMsgText = data.getString("pushNotifMsgText")
+          println("### pushNotifJson: " + pushNotifJson)
           msgType shouldBe "general"
           legacyType shouldBe "general"
           pushNotifMsgTitle shouldBe "Hi there"
-          pushNotifMsgText.startsWith("Remote connection sent you a General") shouldBe true
+          pushNotifMsgText.startsWith("config-issuer-name sent you a General") shouldBe true
         }
       }
     }

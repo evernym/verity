@@ -18,7 +18,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 
 
-//when the agent configuration is updated with `name` key
+//when the agent configuration is updated with `senderName`
 //     and a label is also provided during invite creation
 // in this case the label provided in the invitation should be used as a 'senderName' in the push notification
 class PushNotifWithPairwiseSenderNameSpec
@@ -53,7 +53,7 @@ class PushNotifWithPairwiseSenderNameSpec
     issuerSDK.provisionVerityEdgeAgent()
     issuerSDK.registerWebhookWithoutOAuth()
     issuerSDK.registerWebhook()
-    issuerSDK.sendUpdateConfig(UpdateConfigReqMsg(Set(ConfigDetail("name", "issuer-name"), ConfigDetail("logoUrl", "issuer-logo-url"))))
+    issuerSDK.sendUpdateConfig(UpdateConfigReqMsg(Set(ConfigDetail("name", "config-issuer-name"), ConfigDetail("logoUrl", "issuer-logo-url"))))
     val receivedMsg = issuerSDK.sendCreateRelationship(firstConn, Option("issuer-name-conn1"))
     firstInvitation = issuerSDK.sendCreateConnectionInvitation(firstConn, receivedMsg.threadOpt)
 

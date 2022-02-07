@@ -243,12 +243,16 @@ lazy val protoBufSettings = Seq(
   ),
   Compile / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
   Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch, build).taskValue,
+  // Since sbt-protoc 1.0.1 and later adds PB.protoSources to unmanagedResourceDirectories,
+  // we need to exclude all extra dirs that contains .scala files. Same for Test config.
+  Compile / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main/scala")),
 
   Test / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
   Test / PB.targets := Seq(
     scalapb.gen(flatPackage = true) -> (Test / sourceManaged).value
   ),
   Test / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test")),
+  Test / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test/scala")),
   //
 )
 

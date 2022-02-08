@@ -32,7 +32,6 @@ class CaffeineCacheProvider(cacheParam: CaffeineCacheParam)
   override def cachedObjects: Map[String, AnyRef] = cache.asMap().toMap
   override def put(key: String, value: AnyRef): Unit = cache.put(key, value)
   override def get(key: String): Option[AnyRef] = cache.getIfPresent(key)
-  override def invalidate(key: String): Unit = cache.invalidate(key)
 
   override def size: Int = cachedObjects.size
   override def hitCount: Long = cache.stats().hitCount()

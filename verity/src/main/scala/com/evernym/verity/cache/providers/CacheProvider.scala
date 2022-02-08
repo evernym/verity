@@ -8,7 +8,6 @@ trait CacheProvider {
   def hitCount: Long
   def missCount: Long
 
-  def invalidate(key: String): Unit
   def put(key: String, value: AnyRef): Unit
   def get(key: String): Option[AnyRef]
 

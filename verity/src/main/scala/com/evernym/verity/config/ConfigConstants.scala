@@ -28,13 +28,12 @@ object ConfigConstants {
 
   val PUSH_NOTIF = s"$SERVICES.push-notif-service"
   val PUSH_NOTIF_ENABLED = s"$PUSH_NOTIF.enabled"
+
   private val FCM = s"$PUSH_NOTIF.fcm"
+  val FCM_PROVIDER = s"$FCM.provider"
   val FCM_API_HOST = s"$FCM.host"
   val FCM_API_PATH = s"$FCM.path"
   val FCM_API_KEY = s"$FCM.key"
-
-  val MCM_ENABLED = s"$PUSH_NOTIF.mcm.enabled"
-  val MCM_SEND_MSG = s"$PUSH_NOTIF.mcm.send-messages-to-endpoint"
 
   val PUSH_NOTIF_GENERAL_MSG_TITLE_TEMPLATE = s"$PUSH_NOTIF.general-msg-title-template"
   val PUSH_NOTIF_GENERAL_NEW_MSG_BODY_TEMPLATE = s"$PUSH_NOTIF.general-new-msg-body-template"

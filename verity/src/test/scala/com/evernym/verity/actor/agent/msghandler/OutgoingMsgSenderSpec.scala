@@ -35,7 +35,9 @@ class OutgoingMsgSenderSpec
             "msgId1",
             "msgType",
             "senderDID",
-            None)
+            None,
+            None
+          )
           expectMsgType[ProcessSendMsgToMyDomain]
           checkOutgoingMsgSenderActor("msgId1", shallExists = false)
         }
@@ -51,7 +53,9 @@ class OutgoingMsgSenderSpec
             "msgId2",
             "msgType",
             "senderDID",
-            None)
+            None,
+            None
+          )
           expectMsgType[ProcessSendMsgToMyDomain]
           checkOutgoingMsgSenderActor("msgId2", shallExists = true)
           (1 to 3).foreach { _ =>

@@ -11,7 +11,6 @@ import com.evernym.verity.agentmsg.msgpacker.PackMsgParam
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, ThreadId}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
-import com.evernym.verity.push_notification.MockPusher
 import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
@@ -23,7 +22,9 @@ import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.push_notification.FirebasePushServiceParam
 import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent}
+import com.evernym.verity.testkit.mock.pushnotif.MockFirebasePusher
 import com.evernym.verity.util2.UrlParam
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
@@ -48,7 +49,7 @@ trait UserAgentPairwiseSpecScaffolding
 
   lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext)
 
-  lazy val mockPusher: MockPusher = new MockPusher(appConfig, futureExecutionContext)
+  lazy val mockPusher: MockFirebasePusher = new MockFirebasePusher(appConfig, futureExecutionContext, FirebasePushServiceParam("", "", ""))
 
   val testPushComMethod: String = s"${mockPusher.comMethodPrefix}:12345"
 
@@ -91,7 +92,7 @@ trait UserAgentPairwiseSpecScaffolding
   def checkPushNotif(expectSilentPushNotif: Boolean, expectAlertingPushNotif: Boolean, oldPushMsgCount: Int): Boolean = {
     if (expectSilentPushNotif) checkIfSilentPushNotifSent()
     else if (expectAlertingPushNotif) checkIfAlertingPushNotifSent()
-    else MockPusher.pushedMsg.size == oldPushMsgCount
+    else MockFirebasePusher.pushedMsg.size == oldPushMsgCount
   }
 
   def setPairwiseEntityId(agentPairwiseDID: DidStr): Unit = {
@@ -231,7 +232,7 @@ trait UserAgentPairwiseSpecScaffolding
                                                      expectAlertingPushNotif: Boolean = false): Unit = {
     s"when received CREATE_MSG ($msgType) msg [$hint]" - {
       "should respond with error" in {
-        val oldPushMsgCount = MockPusher.pushedMsg.size
+        val oldPushMsgCount = MockFirebasePusher.pushedMsg.size
         val coreMsg = buildCoreCreateGeneralMsg(includeSendMsg = true, msgType,
           PackedMsg("msg-data".getBytes), None, None)(mockRemoteEdgeCloudAgent.encryptParamForOthersPairwiseKey(connId))
         val msg = buildReceivedReqMsg_V_0_5(coreMsg)
@@ -249,7 +250,7 @@ trait UserAgentPairwiseSpecScaffolding
       "should respond with MSG_CREATED msg" taggedAs (UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
         eventually {
           val currentMsgsSent = totalBinaryMsgSent
-          val oldPushMsgCount = MockPusher.pushedMsg.size
+          val oldPushMsgCount = MockFirebasePusher.pushedMsg.size
           val coreMsg = buildCoreCreateGeneralMsg(includeSendMsg = true, msgType,
             PackedMsg("msg-data".getBytes), None, None)(mockRemoteEdgeCloudAgent.encryptParamForOthersPairwiseKey(connId))
           val msg = buildReceivedReqMsg_V_0_5(coreMsg)

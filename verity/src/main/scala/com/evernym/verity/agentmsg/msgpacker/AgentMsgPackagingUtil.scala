@@ -128,7 +128,8 @@ object AgentMsgPackagingUtil {
   private def buildFwdMsgForRoute(msgPackFormat: MsgPackFormat,
                                   packedMsg: PackedMsg,
                                   fwdRoutes: FwdRouteMsg,
-                                  fwdMsgTypeVersion: String = MTV_1_0)
+                                  fwdMsgTypeVersion: String = MTV_1_0,
+                                  fwdMsgSender: Option[String] = None)
                                  (implicit agentMsgTransformer: AgentMsgTransformer,
                                   wap: WalletAPIParam): Future[PackedMsg] = {
     val fwdMsg = buildFwdJsonMsg(
@@ -136,7 +137,8 @@ object AgentMsgPackagingUtil {
       fwdRoutes.to,
       packedMsg.msg,
       fwdMsgTypeVersion = fwdMsgTypeVersion,
-      fwdMsgType = packedMsg.metadata.map(_.msgTypeStr)
+      fwdMsgType = packedMsg.metadata.map(_.msgTypeStr),
+      fwdMsgSender = fwdMsgSender
     )
     fwdRoutes.encryptInfo.fold(
       si => agentMsgTransformer.packAsync(msgPackFormat, fwdMsg, EncryptParam(Set(si.keyParam), None)),
@@ -158,7 +160,8 @@ object AgentMsgPackagingUtil {
                       msgQualifier: MsgFamilyQualifier=EVERNYM_QUALIFIER,
                       msgName: MsgName=MSG_TYPE_FWD,
                       fwdMsgTypeVersion: String = MTV_1_0,
-                      fwdMsgType: Option[String] = None): String = {
+                      fwdMsgType: Option[String] = None,
+                      fwdMsgSender: Option[String] = None): String = {
     mpf match {
       case MPF_MSG_PACK =>
         val fwdMsg = DefaultMsgCodec.toJson(
@@ -171,7 +174,8 @@ object AgentMsgPackagingUtil {
           typeStrFromMsgType(msgQualifier, MSG_FAMILY_ROUTING, fwdMsgTypeVersion, msgName),
           toDID,
           fwdJsValue,
-          fwdMsgType
+          fwdMsgType,
+          fwdMsgSender
         )
         DefaultMsgCodec.toJson(fwd)
       case x            => throw new RuntimeException("unsupported msg pack format: " + x)
@@ -198,7 +202,8 @@ object AgentMsgPackagingUtil {
   def packMsgForRoutingKeys(msgPackFormat: MsgPackFormat,
                             msg: Array[Byte],
                             routingKeys: Seq[VerKeyStr],
-                            msgType: String)
+                            msgType: String,
+                            msgSender: Option[String])
                            (implicit agentMsgTransformer: AgentMsgTransformer,
                             wap: WalletAPIParam,
                             mw: MetricsWriter,
@@ -212,11 +217,11 @@ object AgentMsgPackagingUtil {
           val remaining = routingKeys.tail
           val encryptWith = remaining.head
           val fwdJsonMsg = buildFwdJsonMsg(MPF_INDY_PACK, to, msg,
-            COMMUNITY_QUALIFIER, MSG_TYPE_FORWARD, fwdMsgType = Option(msgType))
+            COMMUNITY_QUALIFIER, MSG_TYPE_FORWARD, fwdMsgType = Option(msgType), fwdMsgSender = msgSender)
           agentMsgTransformer.packAsync(msgPackFormat, fwdJsonMsg,
             EncryptParam(Set(KeyParam(Left(encryptWith))), None)).flatMap { newPackedMsg =>
             if (remaining.size >= 2) {
-              packMsgForRoutingKeys(msgPackFormat, newPackedMsg.msg, remaining, msgType)
+              packMsgForRoutingKeys(msgPackFormat, newPackedMsg.msg, remaining, msgType, msgSender)
             } else {
               Future.successful(newPackedMsg)
             }

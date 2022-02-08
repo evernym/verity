@@ -87,16 +87,25 @@ object LocalVerity {
     Await.result(fut, 3.seconds).asInstanceOf[AppState] == ListeningState
   }
 
-  class Starter(appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider) {
-    class MockDefaultAgentActorContext(override val appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider)
+  class Starter(appConfig: AppConfig, serviceParam: Option[ServiceParam],
+                executionContextProvider: ExecutionContextProvider) {
+
+    class MockDefaultAgentActorContext(override val appConfig: AppConfig,
+                                       serviceParam: Option[ServiceParam],
+                                       executionContextProvider: ExecutionContextProvider)
       extends DefaultAgentActorContext(executionContextProvider, appConfig) {
 
       implicit val executor: ExecutionContextExecutor = system.dispatcher
       override lazy val poolConnManager: LedgerPoolConnManager = {
-        new InMemLedgerPoolConnManager(executionContextProvider.futureExecutionContext, serviceParam.flatMap(_.ledgerTxnExecutor))(executor)
+        new InMemLedgerPoolConnManager(
+          executionContextProvider.futureExecutionContext,
+          serviceParam.flatMap(_.ledgerTxnExecutor)
+        )(executor)
       }
       override lazy val storageAPI: StorageAPI = {
-        serviceParam.flatMap(_.storageAPI).getOrElse(StorageAPI.loadFromConfig(appConfig, executionContextProvider.futureExecutionContext))
+        serviceParam
+          .flatMap(_.storageAPI)
+          .getOrElse(StorageAPI.loadFromConfig(appConfig, executionContextProvider.futureExecutionContext))
       }
     }
 
@@ -108,12 +117,16 @@ object LocalVerity {
   }
 
   object Starter {
-    def apply(appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider): Starter =
+    def apply(appConfig: AppConfig,
+              serviceParam: Option[ServiceParam],
+              executionContextProvider: ExecutionContextProvider): Starter =
       new Starter(appConfig, serviceParam, executionContextProvider)
   }
 
 
-  private def initializeApp(appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider): Platform = {
+  private def initializeApp(appConfig: AppConfig,
+                            serviceParam: Option[ServiceParam],
+                            executionContextProvider: ExecutionContextProvider): Platform = {
     val s = Starter(appConfig, serviceParam, executionContextProvider)
     assert(s.platform != null)
     s.platform

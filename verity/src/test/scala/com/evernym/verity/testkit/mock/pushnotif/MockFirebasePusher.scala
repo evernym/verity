@@ -1,32 +1,37 @@
-package com.evernym.verity.push_notification
+package com.evernym.verity.testkit.mock.pushnotif
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Sink, Source}
-import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
+import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants.PUSH_NOTIF
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
-import com.evernym.verity.config.ConfigConstants.MCM_SEND_MSG
+import com.evernym.verity.push_notification.{FirebasePushServiceParam, PushNotifParam, PushNotifResponse, PushServiceProvider, Pusher}
+import com.evernym.verity.util2.Status.MSG_DELIVERY_STATUS_SENT
 import com.evernym.verity.util2.UrlParam
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
-import com.evernym.verity.util2.Status.MSG_DELIVERY_STATUS_SENT
 
 /**
  * this is disabled by default and only enabled via configuration for integration tests
  */
-class MockPusher(val appConfig: AppConfig, executionContext: ExecutionContext) extends PushServiceProvider {
+class MockFirebasePusher(appConfig: AppConfig,
+                         executionContext: ExecutionContext,
+                         serviceParam: FirebasePushServiceParam) extends PushServiceProvider {
   private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
+
+  val FCM_SEND_MSG = s"$PUSH_NOTIF.fcm.send-messages-to-endpoint"
 
   val logger: Logger = getLoggerByClass(classOf[Pusher])
 
-  override lazy val comMethodPrefix = MockPusher.comMethodPrefix
+  override lazy val comMethodPrefix = MockFirebasePusher.comMethodPrefix
 
 
   lazy val sendToEndpointEnabled: Boolean =
-    appConfig.config.getBoolean(MCM_SEND_MSG)
+    appConfig.config.getBoolean(FCM_SEND_MSG)
 
   def push(notifParam: PushNotifParam)
           (implicit system: ActorSystem): Future[PushNotifResponse] = {
@@ -40,8 +45,8 @@ class MockPusher(val appConfig: AppConfig, executionContext: ExecutionContext) e
   }
 
   def addToPushedMsgs(regId: String, pushNotifPayload: PushNotifPayload): Unit = {
-    val updatedPushNotids = MockPusher.pushedMsg.get(regId).map(_.allNotifs).getOrElse(List.empty) ++ List(pushNotifPayload)
-    MockPusher.pushedMsg += (regId -> RegIdPushNotifs(pushNotifPayload, updatedPushNotids))
+    val updatedPushNotids = MockFirebasePusher.pushedMsg.get(regId).map(_.allNotifs).getOrElse(List.empty) ++ List(pushNotifPayload)
+    MockFirebasePusher.pushedMsg += (regId -> RegIdPushNotifs(pushNotifPayload, updatedPushNotids))
   }
 
   //TODO: The service decorator used with the provision tokenizer could inherit this functionality i.e
@@ -52,7 +57,7 @@ class MockPusher(val appConfig: AppConfig, executionContext: ExecutionContext) e
     try {
       logger.debug(s"sendMessageToEndpoint -> url: $url, pushNotifPayload: $pushNotifPayload")
       val endpoint = UrlParam(url)
-      val httpClient = Http().outgoingConnection(host = endpoint.host, port=endpoint.port)
+      val httpClient = Http().outgoingConnection(host = endpoint.host, port = endpoint.port)
 
       if (sendToEndpointEnabled) {
         for {
@@ -77,13 +82,12 @@ class MockPusher(val appConfig: AppConfig, executionContext: ExecutionContext) e
     }
   }
 
-  def getLastSentPushNotif(regId: String): Option[PushNotifPayload] = MockPusher.pushedMsg.get(regId).map(_.lastPushNotifPayload)
 }
 
 case class PushNotifPayload(sendAsAlertPushNotif: Boolean, notifData: Map[String, Any], extraData: Map[String, Any], jsonPayload: String)
 case class RegIdPushNotifs(lastPushNotifPayload: PushNotifPayload, allNotifs: List[PushNotifPayload])
 
-object MockPusher {
+object MockFirebasePusher {
   val pushedMsg = scala.collection.mutable.Map.empty[String, RegIdPushNotifs]
-  val comMethodPrefix = "MCM"
+  val comMethodPrefix = "FCM"
 }

@@ -2,7 +2,7 @@ package com.evernym.verity.util
 
 import com.evernym.verity.protocol.engine.util.DbcUtil
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.{ClassTagExtensions, DefaultScalaModule, ScalaObjectMapper}
+import com.fasterxml.jackson.module.scala.{ClassTagExtensions, DefaultScalaModule}
 import org.json.{JSONException, JSONObject}
 
 //TODO move to MsgCodec?
@@ -59,4 +59,15 @@ object JsonUtil {
     """[""" + items.map(i => s""""$i"""").mkString(",") + """]"""
   }
 
+}
+
+class JsonObjectWrapper(jsonObject: JSONObject) {
+
+  def getString(key: String): String = jsonObject.getString(key)
+  def getArrayBytes(key: String): Array[Byte] = jsonObject.get(key).toString.getBytes
+
+  def getStringOption(key: String): Option[String] = {
+    if (jsonObject.has(key)) Option(jsonObject.getString(key))
+    else None
+  }
 }

@@ -9,13 +9,14 @@ import com.evernym.verity.actor.base.Done
 import com.evernym.verity.testkit.mock.agent.MockEnvUtil._
 import com.evernym.verity.actor.testkit.{AgentSpecHelper, PersistentActorSpec}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreAkkaEvents
-import com.evernym.verity.push_notification.MockPusher
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.TestComMethod
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.did.DidPair
+import com.evernym.verity.push_notification.FirebasePushServiceParam
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
+import com.evernym.verity.testkit.mock.pushnotif.MockFirebasePusher
 import com.evernym.verity.util2.UrlParam
 import org.scalatest.concurrent.Eventually
 
@@ -34,7 +35,7 @@ trait UserAgentSpecScaffolding
     new MockEdgeAgent(UrlParam("localhost:9001"), platform.agentActorContext.appConfig, futureExecutionContext)
 
   override lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext)
-  lazy val mockPusher: MockPusher = new MockPusher(appConfig, futureExecutionContext)
+  lazy val mockPusher: MockFirebasePusher = new MockFirebasePusher(appConfig, futureExecutionContext, FirebasePushServiceParam("", "", ""))
 
   import mockEdgeAgent._
   import mockEdgeAgent.v_0_5_req._

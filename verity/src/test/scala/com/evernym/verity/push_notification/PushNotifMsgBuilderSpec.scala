@@ -37,7 +37,7 @@ class PushNotifMsgBuilderSpec extends BasicSpec with CancelGloballyAfterFailure 
 
   def checkPushMsgData(msgType: String, expBody: String, expLegacyType: String = "unknown", expAlertPushNotif: Boolean = true): Unit = {
     s"should create correct push msg for type: $msgType" in {
-      val spn = getCommonPushNotifData(NotifyMsgDetail("MsgId", msgType), newExtraData).get
+      val spn = getCommonPushNotifData(NotifyMsgDetail("MsgId", msgType, None), newExtraData).get
       spn.notifData(BODY) shouldBe expBody
       spn.extraData(PUSH_NOTIF_MSG_TYPE) shouldBe msgType
       spn.extraData(TYPE) shouldBe expLegacyType // this is legacy field

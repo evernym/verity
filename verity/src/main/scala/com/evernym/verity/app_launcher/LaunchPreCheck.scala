@@ -13,8 +13,7 @@ case class StartupProbeStatus(status: Boolean,
                               akkaStorageStatus: String,
                               walletStorageStatus: String,
                               blobStorageStatus: String,
-                              ledgerPoolStatus: String,
-                              vdrToolsStatus: String)
+                              ledgerPoolStatus: String)
 
 /**
  * checks to perform during agent service start to make sure that basic required
@@ -54,20 +53,17 @@ object LaunchPreCheck {
     val walletStorageFuture = checkApiStatus(system, "wallet storage", {healthChecker.checkWalletStorageStatus})
     val blobStorageFuture = checkApiStatus(system, "blob storage", {healthChecker.checkBlobStorageStatus})
     val ledgerFuture = checkApiStatus(system, "ledger", {healthChecker.checkLedgerPoolStatus})
-    val vdrFuture = checkApiStatus(system, "vdrtools", {healthChecker.checkVDRToolsStatus})
     for {
       akkaStorage   <- akkaStorageFuture
       walletStorage <- walletStorageFuture
       blobStorage   <- blobStorageFuture
       ledger        <- ledgerFuture
-      vdrTools      <- vdrFuture
     } yield StartupProbeStatus(
-      akkaStorage.status && walletStorage.status && blobStorage.status && ledger.status && vdrTools.status,
+      akkaStorage.status && walletStorage.status && blobStorage.status && ledger.status,
       akkaStorage.msg,
       walletStorage.msg,
       blobStorage.msg,
-      ledger.msg,
-      vdrTools.msg
+      ledger.msg
     )
   }
 

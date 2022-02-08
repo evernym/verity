@@ -165,7 +165,7 @@ object AgentMsgPackagingUtil {
     mpf match {
       case MPF_MSG_PACK =>
         val fwdMsg = DefaultMsgCodec.toJson(
-          FwdReqMsg_MFV_0_5(TypeDetail(MSG_TYPE_FWD, fwdMsgTypeVersion), toDID, msg, fwdMsgType, fwdMsgSender)
+          FwdReqMsg_MFV_0_5(TypeDetail(MSG_TYPE_FWD, fwdMsgTypeVersion), toDID, msg, fwdMsgType)
         )
         buildBundledMsg(List(fwdMsg))
       case MPF_INDY_PACK =>

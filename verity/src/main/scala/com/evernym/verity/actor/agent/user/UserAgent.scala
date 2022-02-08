@@ -441,13 +441,13 @@ class UserAgent(val agentActorContext: AgentActorContext,
     handleInitPairwiseConnResp(thisAgentKey.did, thisAgentKey.verKey, futResp, sndr)
   }
 
-  def createNewPairwiseEndpoint(label: Option[String]): Future[Option[ControlMsg]] = {
+  def createNewPairwiseEndpoint(ownerName: Option[String]): Future[Option[ControlMsg]] = {
     walletAPI.executeAsync[NewKeyCreated](CreateNewKey()).flatMap { requesterKey =>
       val respFut = createNewPairwiseEndpointBase(
         requesterKey,
         requesterKey.didPair.toAgentDidPair,
         Option(requesterKey.verKey),
-        label
+        ownerName
       )
       respFut.map { _ =>
         Option(
@@ -462,7 +462,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
   def createNewPairwiseEndpointBase(thisAgentKey: NewKeyCreated,
                                     requesterDIDPair: DidPair,
                                     requesterVerKeyOpt: Option[VerKeyStr]=None,
-                                    label: Option[String])
+                                    ownerName: Option[String])
   : Future[Any] = {
     val requesterVerKeyFut = requesterVerKeyOpt match {
       case Some(vk) => Future.successful(vk)
@@ -478,14 +478,14 @@ class UserAgent(val agentActorContext: AgentActorContext,
     }
 
     endpointDIDPairFut.flatMap { endpointDIDPair =>
-      val cke = buildSetupCreateKeyEndpoint(requesterDIDPair, endpointDIDPair, label)
+      val cke = buildSetupCreateKeyEndpoint(requesterDIDPair, endpointDIDPair, ownerName)
       userAgentPairwiseRegion ? ForIdentifier(getNewActorId, cke)
     }
   }
 
   def buildSetupCreateKeyEndpoint(forDIDPair: DidPair,
                                   newAgentPairwiseVerKeyDIDPair: DidPair,
-                                  label: Option[String]): SetupCreateKeyEndpoint = {
+                                  ownerName: Option[String]): SetupCreateKeyEndpoint = {
     SetupCreateKeyEndpoint(
       newAgentPairwiseVerKeyDIDPair,
       forDIDPair,
@@ -494,7 +494,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
       agentWalletId,
       None,
       state.publicIdentity.orElse(state.configs.get(PUBLIC_DID).map(c => DidPair(c.value))),
-      label
+      ownerName
     )
   }
 

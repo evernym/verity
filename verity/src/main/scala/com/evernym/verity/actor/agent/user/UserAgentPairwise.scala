@@ -913,8 +913,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
       scke.forDIDPair.DID, scke.newAgentKeyDIDPair.DID,
       scke.forDIDPair.verKey, scke.newAgentKeyDIDPair.verKey
     )
-    val labelConfigEvt = scke.label.map(l => ConfigUpdated(NAME, l, getMillisForCurrentUTCZonedDateTime))
-    val eventsToPersist: List[Any] = (pidEvent ++ pubIdEvent ++ List(odsEvt, cdsEvt) ++ labelConfigEvt).toList
+    val nameConfigEvt = scke.ownerName.map(n => ConfigUpdated(NAME, n, getMillisForCurrentUTCZonedDateTime))
+    val eventsToPersist: List[Any] = (pidEvent ++ pubIdEvent ++ List(odsEvt, cdsEvt) ++ nameConfigEvt).toList
     writeAndApplyAll(eventsToPersist)
     val sndr = sender()
 
@@ -1156,7 +1156,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
         s"threadContexts: ${state.threadContext.map(_.contexts.size).getOrElse(0)}, " +
         s"protoInstances: ${state.protoInstances.map(_.instances.size).getOrElse(0)}"
     )
-    checkIfOwnerLabelSet()
+    checkIfOwnerNameSet()
     super.postAgentStateFix()
   }
 
@@ -1164,7 +1164,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     writeAndApply(ConfigUpdated(NAME, name, getMillisForCurrentUTCZonedDateTime))
   }
 
-  private def checkIfOwnerLabelSet(): Unit = {
+  private def checkIfOwnerNameSet(): Unit = {
     if (state.ownerAgentDidPair.isDefined && ! state.configs.contains(NAME)) {
       getConfigsFromUserAgent(Set(GetConfigDetail(NAME, req = false))).map { resp =>
         resp.configs.find(_.name == NAME).map { nameConfig =>

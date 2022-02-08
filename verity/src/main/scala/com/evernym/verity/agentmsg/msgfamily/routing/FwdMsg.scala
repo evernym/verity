@@ -13,8 +13,7 @@ import org.json.JSONObject
 case class FwdReqMsg_MFV_0_5(`@type`: TypeDetail,
                              `@fwd`: String,
                              `@msg`: Array[Byte],
-                             fwdMsgType: Option[String],
-                             fwdMsgSender: Option[String]) extends MsgBase {
+                             fwdMsgType: Option[String]) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@fwd", `@fwd`)
@@ -63,7 +62,7 @@ object FwdMsgHelper {
   // TODO: stop using "Message Family" as terminology in our codebase.
   private def buildReqMsgFrom_MFV_0_5(implicit amw: AgentMsgWrapper): FwdReqMsg = {
     val msg = amw.headAgentMsg.convertTo[FwdReqMsg_MFV_0_5]
-    FwdReqMsg(amw.headAgentMsgDetail, msg.`@fwd`, msg.`@msg`, msg.fwdMsgType, msg.fwdMsgSender)
+    FwdReqMsg(amw.headAgentMsgDetail, msg.`@fwd`, msg.`@msg`, msg.fwdMsgType, None)
   }
 
   private def buildReqMsgFrom_MFV_1_0(implicit amw: AgentMsgWrapper): FwdReqMsg = {

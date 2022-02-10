@@ -91,7 +91,6 @@ class PushNotifWithAgentSenderNameSpec
           val legacyType = data.getString("type")
           val pushNotifMsgTitle = data.getString("pushNotifMsgTitle")
           val pushNotifMsgText = data.getString("pushNotifMsgText")
-          println("### pushNotifJson: " + pushNotifJson)
           msgType shouldBe "general"
           legacyType shouldBe "general"
           pushNotifMsgTitle shouldBe "Hi there"

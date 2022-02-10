@@ -53,6 +53,15 @@ trait AgentCommon
 
   def agentCommonCmdReceiver[A]: Receive = {
     case _: AgentActorDetailSet    => //nothing to do
+    case SetMissingRoute =>
+      val sndr = sender()
+      state
+        .myDid
+        .map(d => setRoute(d, state.thisAgentKeyDID))
+        .getOrElse(Future.failed(throw new RuntimeException("myDID not set")))
+        .map { _ =>
+          sndr ! MissingRouteSet
+        }
   }
 
   def receiveAgentInitCmd: Receive = {
@@ -469,3 +478,6 @@ trait PayloadMetadataBase {
 }
 
 object FixAgentState extends ActorMessage
+
+case object SetMissingRoute extends ActorMessage
+case object MissingRouteSet extends ActorMessage

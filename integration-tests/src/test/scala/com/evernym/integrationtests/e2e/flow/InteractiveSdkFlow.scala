@@ -282,6 +282,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
                    maxDuration: Option[Duration] = None)
                   (check: JSONObject => Unit = {_ => })
                   (implicit scenario: Scenario): Unit = {
+    logger.info(s"Expect message: $msgFamily $expectedSignalMsgName")
     fromReceiver.expectMsg(expectedSignalMsgName, maxDuration) { resp =>
       resp shouldBe an[JSONObject]
 
@@ -927,7 +928,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
                       relationshipId: String,
                       inviteUrl: AtomicReference[String])
                      (implicit scenario: Scenario) = {
-    val inviterName = inviteeSdk.sdkConfig.name
+    val inviterName = inviterSdk.sdkConfig.name
     val inviteeName = inviteeSdk.sdkConfig.name
 
     val inviterMsgReceiver = receivingSdk(Option(inviterMsgReceiverSdkProvider))

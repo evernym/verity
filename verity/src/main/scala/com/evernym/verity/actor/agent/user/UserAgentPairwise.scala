@@ -1091,16 +1091,16 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     if (state.theirDidDoc.isEmpty) {
       updateTheirDidDoc(stdd)
       for {
-        _   <- setRoute(stdd.myDID)
-        ctlMsg  <-
-          agencyDidPairFut().map { agencyDidPair =>
+          _       <- setRoute(stdd.myDID)
+          ctlMsg  <- agencyDidPairFut()
+            .map { agencyDidPair =>
             val myVerKey = state.myDidAuthKeyReq.verKey
             val routingKeys = Vector(agencyDidPair.verKey)
             Option(ControlMsg(TheirDidDocUpdated(state.myDid_!, myVerKey, routingKeys)))
           }
       } yield ctlMsg
     } else {
-      throw new BadRequestErrorException(Status.UNAUTHORIZED.statusCode, Option("unauthorized access"))
+      Future.failed(new BadRequestErrorException(Status.UNAUTHORIZED.statusCode, Option("unauthorized access")))
     }
   }
 

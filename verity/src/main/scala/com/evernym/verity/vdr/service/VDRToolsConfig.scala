@@ -20,9 +20,9 @@ case class IndyLedger(namespaces: List[Namespace],
 
 case class VDRToolsConfig(ledgers: List[Ledger]) {
   def validate(): Unit = {
-//    if (ledgers.isEmpty) {
-//      throw new RuntimeException("[VDR] no ledger configs found")
-//    }
+    if (ledgers.isEmpty) {
+      throw new RuntimeException("[VDR] no ledger configs found")
+    }
     val allNamespaces = ledgers.flatMap(_.namespaces)
     if (allNamespaces.size != allNamespaces.distinct.size) {
       throw new RuntimeException("[VDR] ledgers can not have shared namespaces")

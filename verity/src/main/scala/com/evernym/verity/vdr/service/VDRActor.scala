@@ -188,7 +188,7 @@ object VDRActor {
         case il: IndyLedger =>
           vdrToolsBuilder.registerIndyLedger(
             il.namespaces,
-            il.genesisTxnFilePath,
+            il.genesisTxnData,
             il.taaConfig
           )
       }

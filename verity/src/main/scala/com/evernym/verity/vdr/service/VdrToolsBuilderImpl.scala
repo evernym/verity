@@ -15,7 +15,7 @@ class VdrToolsBuilderImpl extends VdrToolsBuilder {
   override def registerIndyLedger(namespaceList: List[String],
                                   genesisTxnData: String,
                                   taaConfig: Option[TaaConfig]): Future[Unit] = {
-    val fut: CompletableFuture[Unit] = builder.registerIndyLedger(namespaceList.asJava, genesisTxnData, null).thenApply(_ => ())
+    val fut: CompletableFuture[Unit] = builder.registerIndyLedger(namespaceList.asJava, genesisTxnData, taaConfig.orNull).thenApply(_ => ())
     toFuture(fut)
   }
 

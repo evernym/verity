@@ -64,7 +64,7 @@ trait AgentActorContext
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val storageAPI: StorageAPI = StorageAPI.loadFromConfig(appConfig, futureExecutionContext)
   lazy val vdrBuilderFactory: VDRToolsFactory = () => new VdrToolsBuilderImpl
-  lazy val vdrAdapter: VDRAdapter = createMockVDRAdapter(vdrBuilderFactory)
+  lazy val vdrAdapter: VDRAdapter = createVDRAdapter(vdrBuilderFactory, appConfig)
 
   //NOTE: this 'oAuthAccessTokenRefreshers' is only need here until we switch to the outbox solution
   val oAuthAccessTokenRefreshers: AccessTokenRefreshers = new AccessTokenRefreshers {
@@ -97,12 +97,10 @@ trait AgentActorContext
     }
   }
 
-  private def createMockVDRAdapter(vdrToolsFactory: VDRToolsFactory)(implicit ec: ExecutionContext, as: ActorSystem): VDRActorAdapter = {
+  private def createVDRAdapter(vdrToolsFactory: VDRToolsFactory, appConfig: AppConfig)(implicit ec: ExecutionContext, as: ActorSystem): VDRActorAdapter = {
     new VDRActorAdapter(
       vdrToolsFactory,
-      new VDRToolsConfig(
-        List(IndyLedger(List("indy:sovrin", "sov"), "genesis1-path", None))
-      ),
+      VDRToolsConfig.load(appConfig.config),
       None
     )(ec, as.toTyped)
   }

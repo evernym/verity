@@ -1,6 +1,7 @@
 package com.evernym.verity.vdr
 
 import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 
 import scala.concurrent.Future
 
@@ -37,11 +38,14 @@ case class LedgerStatus(reachable: Boolean)
 
 case class PingResult(status: Map[Namespace, LedgerStatus])
 
-case class PreparedTxn(namespace: String,
+case class PreparedTxn(namespace: Namespace,
                        signatureSpec: SignatureSpec,
                        txnBytes: Array[Byte],
                        bytesToSign: Array[Byte],
-                       endorsementSpec: EndorsementSpec)
+                       endorsementSpec: EndorsementSpec) {
+
+  def signatureType: String = if (signatureSpec == "") SIGN_ED25519_SHA512_SINGLE else signatureSpec
+}
 
 case class SubmittedTxn(response: String)
 
@@ -50,16 +54,4 @@ case class Schema(fqId: FQSchemaId, json: String)
 case class CredDef(fqId: FQCredDefId, schemaId: FQSchemaId, json: String)
 
 case class DidDoc(fqId: FQDid, verKey: VerKeyStr, endpoint: Option[String])
-
-trait SignatureSpec
-
-case object NoSignature extends SignatureSpec
-
-case class Spec(data: String) extends SignatureSpec
-
-trait EndorsementSpec
-
-case object NoEndorsement extends EndorsementSpec
-
-case class Endorsement(data: String) extends EndorsementSpec
 

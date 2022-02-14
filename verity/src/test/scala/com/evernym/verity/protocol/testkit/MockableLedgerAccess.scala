@@ -7,7 +7,8 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException}
+import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException, LedgerUtil}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessAdapter
 import com.evernym.verity.testkit.TestWallet
 import com.evernym.verity.util.TestExecutionContextProvider
@@ -126,7 +127,13 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
                                 endorser: Option[String])
                                (handler: Try[PreparedTxn] => Unit): Unit = {
     handler {
-      if (ledgerAvailable) Try(PreparedTxn("namespace", NoSignature, schemaJson.getBytes, Array.empty, NoEndorsement))
+      if (ledgerAvailable) {
+        val jsonObject = new JSONObject(schemaJson)
+        endorser.foreach(eid => jsonObject.put("endorser", eid))
+        val json = jsonObject.toString()
+        submitterDids += json.hashCode -> submitterDID
+        Try(PreparedTxn(NAMESPACE_INDY_SOVRIN, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, NO_ENDORSEMENT))
+      }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
@@ -137,7 +144,13 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
                                  endorser: Option[String])
                                 (handler: Try[PreparedTxn] => Unit): Unit = {
     handler {
-      if (ledgerAvailable) Try(PreparedTxn("namespace", NoSignature, credDefJson.getBytes, Array.empty, NoEndorsement))
+      if (ledgerAvailable) {
+        val jsonObject = new JSONObject(credDefJson)
+        endorser.foreach(eid => jsonObject.put("endorser", eid))
+        val json = jsonObject.toString()
+        submitterDids += json.hashCode -> submitterDID
+        Try(PreparedTxn(NAMESPACE_INDY_SOVRIN, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, NO_ENDORSEMENT))
+      }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
@@ -147,7 +160,12 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
                          endorsement: Array[Byte])
                         (handler: Try[SubmittedTxn] => Unit): Unit = {
     handler {
-      if (ledgerAvailable) Try(SubmittedTxn(""))
+      if (ledgerAvailable) {
+        val submitterDID = extractSubmitterDID(preparedTxn)
+        if (submitterDID.equals(fqID(MOCK_NO_DID))) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
+        else if (submitterDID.equals(fqID(MOCK_NOT_ENDORSER))) Failure(LedgerRejectException(invalidEndorserError))
+        else Try(SubmittedTxn("{}"))
+      }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
@@ -165,6 +183,22 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
       Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
+
+  override def fqID(id: String): String = {
+    LedgerUtil.toFQId(id, NAMESPACE_INDY_SOVRIN)
+  }
+
+  private def extractSubmitterDID(preparedTxn: PreparedTxn): String = {
+    val json = new String(preparedTxn.txnBytes)
+    submitterDids(json.hashCode)
+  }
+
+  var submitterDids: Map[TxnHash, DidStr] = Map.empty
+
+  val NAMESPACE_INDY_SOVRIN = "indy:sovrin"
+  val NO_ENDORSEMENT = ""
+
+  type TxnHash = Int
 
   override val mockExecutionContext: ExecutionContext = executionContext
 }

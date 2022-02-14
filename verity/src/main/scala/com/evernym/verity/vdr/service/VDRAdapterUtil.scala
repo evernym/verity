@@ -13,10 +13,10 @@ object VDRAdapterUtil {
   def buildPreparedTxn(vdrTxn: VdrResults.PreparedTxnResult): PreparedTxn = {
     PreparedTxn(
       vdrTxn.getNamespace,
-      buildSigSpec(vdrTxn.getSignatureSpec),
+      vdrTxn.getSignatureSpec,
       vdrTxn.getTxnBytes,
       vdrTxn.getBytesToSign,
-      buildEndorsementSpec(vdrTxn.getEndorsementSpec)
+      vdrTxn.getEndorsementSpec
     )
   }
 
@@ -71,30 +71,8 @@ object VDRAdapterUtil {
     TxnDataHolder(
       txn.namespace,
       txn.txnBytes,
-      buildVDRSigSpec(txn.signatureSpec)
+      txn.signatureSpec
     )
-  }
-
-  private def buildSigSpec(vdrSigSpec: String): SignatureSpec = {
-    Spec(vdrSigSpec)
-  }
-
-  private def buildEndorsementSpec(vdrEndorsementSpec: String): EndorsementSpec = {
-    Endorsement(vdrEndorsementSpec)
-  }
-
-  private def buildVDRSigSpec(sigSpec: SignatureSpec): String = {
-    sigSpec match {
-      case NoSignature => ""
-      case Spec(data) => data
-    }
-  }
-
-  private def buildVDREndorsementSpec(endorsementSpec: EndorsementSpec): Array[Byte] = {
-    endorsementSpec match {
-      case Endorsement(data) => data.getBytes
-      case NoEndorsement => Array.empty
-    }
   }
 }
 

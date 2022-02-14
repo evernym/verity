@@ -9,7 +9,7 @@ import scala.concurrent.Future
 
 trait VdrTools {
 
-  def ping(namespaceList: List[Namespace]): Future[Map[String, PingResult]]
+  def ping(namespaceList: List[Namespace]): Future[Map[Namespace, PingResult]]
 
   def resolveDid(fqDid: FQDid): Future[VdrDid]
 

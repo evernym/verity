@@ -17,7 +17,8 @@ import scala.util.Try
 class LedgerAccessAdapter(vdrTools: VDRAdapter,
                           cache: Cache,
                           ledgerSvc: LedgerSvc,
-                          _walletAccess: WalletAccess)
+                          _walletAccess: WalletAccess,
+                          _vdrDefaultNamespace: Namespace)
                          (implicit val asyncOpRunner: AsyncOpRunner,
                           implicit val asyncAPIContext: AsyncAPIContext,
                           implicit val ec: ExecutionContext)
@@ -158,6 +159,10 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     }.recover {
       case e: Throwable => throw LedgerAccessException(e.getMessage)
     }
+  }
+
+  override def fqID(id: String): String = {
+    LedgerUtil.toFQId(id, _vdrDefaultNamespace)
   }
 
   override def walletAccess: WalletAccess = _walletAccess

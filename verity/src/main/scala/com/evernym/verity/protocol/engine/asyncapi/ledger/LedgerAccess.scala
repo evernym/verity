@@ -54,6 +54,8 @@ trait LedgerAccess {
 
   def resolveCredDef(fqCredDefId: FQCredDefId)
                     (handler: Try[CredDef] => Unit): Unit
+
+  def fqID(id: String): String
 }
 
 case class LedgerRejectException(msg: String) extends Exception(msg)

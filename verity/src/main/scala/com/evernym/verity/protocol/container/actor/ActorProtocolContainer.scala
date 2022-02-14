@@ -311,18 +311,21 @@ class ActorProtocolContainer[
   implicit def asyncOpRunner: AsyncOpRunner = this
 
 
+  lazy val vdrDefaultNamespace: String = appConfig.getStringReq(VDR_DEFAULT_NAMESPACE)
+
   override lazy val wallet =
     new WalletAccessAdapter(
-        agentActorContext.walletAPI,
-        getRoster.selfId_!
+      agentActorContext.walletAPI,
+      getRoster.selfId_!
     )
 
   override lazy val ledger =
     new LedgerAccessAdapter(
-      null, //TODO: replace this with actual VDR Adapter implementation
-        agentActorContext.generalCache,
-        agentActorContext.ledgerSvc,
-        wallet
+      agentActorContext.vdrAdapter,
+      agentActorContext.generalCache,
+      agentActorContext.ledgerSvc,
+      wallet,
+      vdrDefaultNamespace
     )
 
   override lazy val endorser =
@@ -341,8 +344,8 @@ class ActorProtocolContainer[
 
   override lazy val segmentStore =
     new SegmentStoreAccessAdapter(
-        agentActorContext.storageAPI,
-        getProtoRef
+      agentActorContext.storageAPI,
+      getProtoRef
     )
 
   lazy val singletonParentProxyActor: ActorRef = getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)

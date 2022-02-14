@@ -3,8 +3,10 @@ package com.evernym.verity.vdr
 import akka.actor.typed.scaladsl.adapter._
 import akka.testkit.TestKitBase
 import com.evernym.verity.actor.testkit.HasBasicActorSystem
+import com.evernym.verity.protocol.engine.asyncapi.ledger.NAMESPACE_INDY_SOVRIN
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.vdr.base.TestVDRDidDoc
 import com.evernym.verity.vdr.service.{IndyLedger, Ledger, VDRToolsConfig}
 import org.json.JSONObject
 import org.scalatest.BeforeAndAfterEach
@@ -22,7 +24,7 @@ class VDRActorAdapterSpec
     with Eventually
     with BeforeAndAfterEach {
 
-  var testLedgerRegistry: TestLedgerRegistry = TestLedgerRegistry()
+  var testLedgerRegistry: MockLedgerRegistry = MockLedgerRegistry()
 
   override protected def afterEach(): Unit = {
     testLedgerRegistry.cleanup()
@@ -128,6 +130,24 @@ class VDRActorAdapterSpec
 
     "when asked to submit schema txn with valid data" - {
       "should be successful" in {
+        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+        val result = for {
+          preparedTxn <- vdrAdapter.prepareSchemaTxn(
+            """{"field1":"value1"}""",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
+            None
+          )
+          _ <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
+        } yield {
+          //nothing to validate
+        }
+        Await.result(result, apiTimeout)
+      }
+    }
+
+    "when asked to submit schema txn without submitter DID on ledger" - {
+      "should respond with appropriate error" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val result = for {
           preparedTxn <- vdrAdapter.prepareSchemaTxn(
@@ -366,9 +386,9 @@ class VDRActorAdapterSpec
 
   def createVDRActorAdapter(ledgers: List[Ledger]): VDRActorAdapter = {
 
-    val testVdrToolsBuilder = new TestVdrToolsBuilder(testLedgerRegistry)
+    val testVdrToolsBuilder = new MockVdrToolsBuilder(testLedgerRegistry)
     val testVDRToolsFactory = { () => testVdrToolsBuilder }
-    val vdrToolsConfig = VDRToolsConfig(ledgers)
+    val vdrToolsConfig = VDRToolsConfig(NAMESPACE_INDY_SOVRIN, ledgers)
     new VDRActorAdapter(testVDRToolsFactory, vdrToolsConfig, None)(ec, system.toTyped)
   }
 

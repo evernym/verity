@@ -56,7 +56,8 @@ class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory,
                          endorsement: Array[Byte]): Future[SubmittedTxn] = {
     val holder = buildVDRPreparedTxn(preparedTxn)
     vdrActorRef
-      .ask(ref => VDRActor.Commands.SubmitTxn(holder.namespace,
+      .ask(ref => VDRActor.Commands.SubmitTxn(
+        holder.namespace,
         holder.txnBytes,
         holder.signatureSpec,
         signature,

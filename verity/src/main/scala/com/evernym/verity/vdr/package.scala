@@ -2,6 +2,8 @@ package com.evernym.verity
 
 package object vdr {
   type Namespace = String
+  type SignatureSpec = String
+  type EndorsementSpec = String
   type FQSchemaId = String
   type FQCredDefId = String
   type FQDid = String

@@ -18,8 +18,7 @@ import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
 import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
-
-import com.evernym.verity.vdr.{TestLedgerRegistry, TestVdrToolsBuilder}
+import com.evernym.verity.vdr.{MockLedgerRegistry, MockVdrToolsBuilder}
 import com.evernym.verity.vdr.service.VDRToolsFactory
 
 import java.nio.file.Path
@@ -109,8 +108,8 @@ object LocalVerity {
           .getOrElse(StorageAPI.loadFromConfig(appConfig, executionContextProvider.futureExecutionContext))
       }
 
-      val testVdrLedgerRegistry = TestLedgerRegistry()
-      override lazy val vdrBuilderFactory: VDRToolsFactory = () => new TestVdrToolsBuilder(testVdrLedgerRegistry)
+      val testVdrLedgerRegistry = MockLedgerRegistry()
+      override lazy val vdrBuilderFactory: VDRToolsFactory = () => new MockVdrToolsBuilder(testVdrLedgerRegistry)
     }
 
     val platform: Platform = PlatformBuilder.build(

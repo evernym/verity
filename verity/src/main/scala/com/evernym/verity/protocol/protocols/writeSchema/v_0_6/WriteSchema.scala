@@ -4,8 +4,8 @@ import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
-import com.evernym.verity.protocol.engine.asyncapi.wallet.SchemaCreatedResult
+import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerRejectException, LedgerUtil, TxnForEndorsement}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.{SchemaCreatedResult, SignedMsgResult}
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.events.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.protocol.engine.msg.Init
@@ -14,8 +14,9 @@ import com.evernym.verity.protocol.protocols.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Role.Writer
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.State.{Done, Error, Initialized, Processing}
 import com.evernym.verity.util.JsonUtil.seqToJson
+import com.evernym.verity.vdr.{PreparedTxn, SubmittedTxn}
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, WriteSchemaState, String])
   extends Protocol[WriteSchema, Role, Msg, Any, WriteSchemaState, String](WriteSchemaDefinition) {
@@ -29,7 +30,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
   def mainHandleControl: (WriteSchemaState, Option[Role], Control) ?=> Any = {
     case (_, _, c: Init) => ctx.apply(ProtocolInitialized(c.parametersStored.toSeq))
     case (s: State.Initialized, _, m: Write) =>
-      writeSchemaToLedger(m, s)
+      writeSchema(m, s)
     case _ => ctx.signal(ProblemReport("Unexpected message in current state"))
   }
 
@@ -46,13 +47,13 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
     case (_: Processing, _, e: WriteFailed) => Error(e.error)
   }
 
-  def writeSchemaToLedger(m: Write, init: State.Initialized): Unit = {
+  def writeSchema(m: Write, init: State.Initialized): Unit = {
     ctx.apply(RequestReceived(m.name, m.version, m.attrNames))
     val submitterDID = _submitterDID(init)
     ctx.wallet.createSchema(submitterDID, m.name, m.version, seqToJson(m.attrNames)) {
       case Success(schemaCreated: SchemaCreatedResult) =>
-        ctx.ledger.writeSchema(submitterDID, schemaCreated.schemaJson) {
-          case Success(_) =>
+        writeSchemaToLedger(submitterDID, schemaCreated.schemaId, schemaCreated.schemaJson) {
+          case Success(SubmittedTxn(_)) =>
             ctx.apply(SchemaWritten(schemaCreated.schemaId))
             ctx.signal(StatusReport(schemaCreated.schemaId))
           case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
@@ -61,10 +62,10 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
               init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
             )
             if (endorserDID.nonEmpty) {
-              ctx.ledger.prepareSchemaForEndorsement(submitterDID, schemaCreated.schemaJson, endorserDID) {
-                case Success(ledgerRequest) =>
-                  ctx.signal(NeedsEndorsement(schemaCreated.schemaId, ledgerRequest.req))
-                  ctx.apply(AskedForEndorsement(schemaCreated.schemaId, ledgerRequest.req))
+              prepareTxnForEndorsement(submitterDID, endorserDID, schemaCreated.schemaId, schemaCreated.schemaJson) {
+                case Success(data: TxnForEndorsement) =>
+                  ctx.signal(NeedsEndorsement(schemaCreated.schemaId, data))
+                  ctx.apply(AskedForEndorsement(schemaCreated.schemaId, data))
                 case Failure(e) =>
                   problemReport(e)
               }
@@ -78,6 +79,57 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
         problemReport(e)
     }
   }
+
+  private def writeSchemaToLedger(submitterDID: DidStr,
+                                  schemaId: String,
+                                  schemaJson: String)
+                                 (handleResult: Try[SubmittedTxn] => Unit): Unit = {
+    ctx.ledger
+      .prepareSchemaTxn(
+        schemaJson,
+        ctx.ledger.fqID(schemaId),
+        ctx.ledger.fqID(submitterDID),
+        None) {
+        case Success(pt: PreparedTxn) =>
+          ctx.wallet.sign(pt.bytesToSign, pt.signatureType) {
+            case Success(smr: SignedMsgResult) =>
+              ctx.ledger.submitTxn(pt, smr.signatureResult.signature, Array.empty)(handleResult)
+            case Failure(ex) =>
+              handleResult(Failure(ex))
+          }
+        case Failure(ex) =>
+          handleResult(Failure(ex))
+      }
+  }
+
+  private def prepareTxnForEndorsement(submitterDID: DidStr,
+                                       endorser: String,
+                                       schemaId: String,
+                                       schemaJson: String)
+                                      (handleResult: Try[TxnForEndorsement] => Unit): Unit = {
+    ctx.ledger
+      .prepareSchemaTxn(
+        schemaJson,
+        ctx.ledger.fqID(schemaId),
+        ctx.ledger.fqID(submitterDID),
+        Option(ctx.ledger.fqID(endorser))) {
+        case Success(pt: PreparedTxn) =>
+          ctx.wallet.sign(pt.bytesToSign, pt.signatureType) {
+            case Success(smr: SignedMsgResult) =>
+              if (LedgerUtil.isIndyNamespace(pt.namespace)) {
+                val txn = LedgerUtil.buildIndyRequest(pt.txnBytes, Map(submitterDID -> smr.signatureResult.toBase64))
+                handleResult(Success(txn))
+              } else {
+                handleResult(Failure(new RuntimeException("endorsement spec not supported:" + pt.endorsementSpec)))
+              }
+            case Failure(ex) =>
+              handleResult(Failure(ex))
+          }
+        case Failure(ex) =>
+          handleResult(Failure(ex))
+      }
+  }
+
 
   def problemReport(e: Throwable): Unit = {
     ctx.logger.error(e.toString)

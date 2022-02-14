@@ -6,6 +6,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.exception.DIDException
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
+import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerUtil
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}
@@ -95,7 +96,7 @@ class WriteSchemaSpec
 
               val needsEndorsement = f.writer expect signal[NeedsEndorsement]
               val json = new JSONObject(needsEndorsement.schemaJson)
-              json.getString("endorser") shouldBe defaultEndorser
+              json.getString("endorser") shouldBe toFqId(defaultEndorser)
               f.writer.state shouldBe a[State.WaitingOnEndorser]
             })
           })
@@ -113,7 +114,7 @@ class WriteSchemaSpec
 
               val needsEndorsement = f.writer expect signal[NeedsEndorsement]
               val json = new JSONObject(needsEndorsement.schemaJson)
-              json.getString("endorser") shouldBe userEndorser
+              json.getString("endorser") shouldBe toFqId(userEndorser)
               f.writer.state shouldBe a[State.WaitingOnEndorser]
             })
           })
@@ -133,7 +134,7 @@ class WriteSchemaSpec
 
               val needsEndorsement = f.writer expect signal[NeedsEndorsement]
               val json = new JSONObject(needsEndorsement.schemaJson)
-              json.getString("endorser") shouldBe defaultEndorser
+              json.getString("endorser") shouldBe toFqId(defaultEndorser)
               f.writer.state shouldBe a[State.WaitingOnEndorser]
             })
           })
@@ -151,7 +152,7 @@ class WriteSchemaSpec
 
               val needsEndorsement = f.writer expect signal[NeedsEndorsement]
               val json = new JSONObject(needsEndorsement.schemaJson)
-              json.getString("endorser") shouldBe userEndorser
+              json.getString("endorser") shouldBe toFqId(userEndorser)
               f.writer.state shouldBe a[State.WaitingOnEndorser]
             })
           })
@@ -208,6 +209,9 @@ class WriteSchemaSpec
       }
     }
   }
+
+  def toFqId(id: String): String =
+    LedgerUtil.toFQId(id, "indy:sovrin")
 
   def withDefaultWalletAccess(s: Scenario, f: => Unit): Unit = {
     s.writer walletAccess MockableWalletAccess()

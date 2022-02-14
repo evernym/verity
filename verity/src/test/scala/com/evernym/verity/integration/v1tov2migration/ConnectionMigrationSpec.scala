@@ -90,6 +90,7 @@ class ConnectionMigrationSpec
             TheirPairwiseDidDoc(
               verity1ConnDetail.theirDidDoc.pairwiseDID, verity1ConnDetail.theirDidDoc.pairwiseDIDVerKey,
               verity1ConnDetail.theirDidDoc.pairwiseAgentDID, verity1ConnDetail.theirDidDoc.pairwiseAgentVerKey,
+              holderCAS.endpointProvider.availableNodeUrls.head + "/agency/msg",
               casAgencyDetail.DID, casAgencyDetail.verKey
             )
           )

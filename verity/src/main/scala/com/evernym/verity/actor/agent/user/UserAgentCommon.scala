@@ -228,7 +228,7 @@ trait UserAgentCommon
   }
 
   def sendAgentMsgToRegisteredEndpoint(srm: SendMsgToRegisteredEndpoint): Future[Option[ControlMsg]] = {
-    sendMsgToRegisteredEndpoint(NotifyMsgDetail(srm.msgId, "unknown", Option(PayloadWrapper(srm.msg, srm.metadata))), None)
+    sendMsgToRegisteredEndpoint(NotifyMsgDetail(srm.msgId, "unknown", None, Option(PayloadWrapper(srm.msg, srm.metadata))), None)
       .map(_ => None)
   }
 
@@ -252,12 +252,13 @@ trait UserAgentCommon
     logger.debug("packed msg stored")
   }
 
-  override def sendMsgToMyDomain(omp: OutgoingMsgParam, msgId: MsgId, msgName: String): Unit = {
+  override def sendMsgToMyDomain(omp: OutgoingMsgParam, msgId: MsgId, msgName: String, msgSender: Option[String]): Unit = {
     logger.debug("about to send un stored msg to my domain (edge): " + omp.givenMsg)
     notifyUserForNewMsg(
       NotifyMsgDetail(
         msgId,
         msgName,
+        msgSender,
         Option(PayloadWrapper(omp.msgToBeProcessed, omp.metadata)))
     )
   }

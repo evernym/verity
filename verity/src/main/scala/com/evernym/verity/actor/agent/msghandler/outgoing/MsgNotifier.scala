@@ -261,7 +261,8 @@ trait MsgNotifierForStoredMsgs
         val mds = msgStore.getMsgDetails(notifMsgDtl.uid)
         val title = mds.get(TITLE).map(v => Map(TITLE -> v)).getOrElse(Map.empty)
         val detail = mds.get(DETAIL).map(v => Map(DETAIL -> v)).getOrElse(Map.empty)
-        val name = mds.get(NAME_KEY).map(v => Map(NAME_KEY -> v)).getOrElse(Map.empty)
+        val name = notifMsgDtl.msgSender.map(s => Map(NAME_KEY -> s))
+          .getOrElse(mds.get(NAME_KEY).map(v => Map(NAME_KEY -> v)).getOrElse(Map.empty))
         val logoUrl = mds.get(LOGO_URL_KEY).map(v => Map(LOGO_URL_KEY -> v)).getOrElse(Map.empty)
         val extraData = title ++ detail ++ name ++ logoUrl
 
@@ -488,7 +489,7 @@ trait MsgNotifierForUserAgentCommon
     logger.debug("about to send stored msg to self: " + msgId)
     val msg = msgStore.getMsgReq(msgId)
     val payloadWrapper = msgStore.getMsgPayload(msgId)
-    notifyUserForNewMsg(NotifyMsgDetail(msgId, msg.getType, payloadWrapper))
+    notifyUserForNewMsg(NotifyMsgDetail(msgId, msg.getType, None, payloadWrapper))
   }
 }
 
@@ -523,11 +524,11 @@ case class FwdMetaData(msgType: Option[String], msgSenderName: Option[String])
 case class FwdMsg(msgId: String, msgType: String, sponseeDetails: String, relationshipDid: DidStr, metaData: FwdMetaData)
 
 object NotifyMsgDetail {
-  def withTrackingId(msgType: String, payloadWrapper: Option[PayloadWrapper]): NotifyMsgDetail =
-    NotifyMsgDetail("TrackingId-" + MsgIdProvider.getNewMsgId, msgType, payloadWrapper)
+  def withTrackingId(msgType: String, msgSender: Option[String], payloadWrapper: Option[PayloadWrapper]): NotifyMsgDetail =
+    NotifyMsgDetail("TrackingId-" + MsgIdProvider.getNewMsgId, msgType, msgSender, payloadWrapper)
 }
 
-case class NotifyMsgDetail(uid: MsgId, msgType: String, payloadWrapper: Option[PayloadWrapper] = None) {
+case class NotifyMsgDetail(uid: MsgId, msgType: String, msgSender: Option[String], payloadWrapper: Option[PayloadWrapper] = None) {
   // this is used for legacy reasons, for compatibility with old versions of mobile application.
   // it will be removed after some time
   def deprecatedPushMsgType: String = if (msgType.contains('/')) MSG_TYPE_UNKNOWN else msgType

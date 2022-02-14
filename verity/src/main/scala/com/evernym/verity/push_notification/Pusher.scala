@@ -133,20 +133,13 @@ object PusherUtil  {
       val key = appConfig.getStringReq(FCM_API_KEY)
       val host = appConfig.getStringReq(FCM_API_HOST)
       val path = appConfig.getStringReq(FCM_API_PATH)
-      Option(new FirebasePusher(FirebasePushServiceParam(key, host, path), executionContext, appConfig))
+      loadFirebasePusher(appConfig, executionContext, FirebasePushServiceParam(key, host, path))
     } else None
-  }
-
-  private def buildMockPusher(config: AppConfig,
-                              executionContext: ExecutionContext): Option[PushServiceProvider] = {
-    //This MCM (Mock Cloud Messaging) is only enabled in integration test
-    val isMCMEnabled = config.getBooleanOption(MCM_ENABLED).getOrElse(false)
-    if (isMCMEnabled) Option(new MockPusher(config, executionContext)) else None
   }
 
   private def supportedPushNotifProviders(config: AppConfig,
                                           executionContext: ExecutionContext): PushNotifProviders = {
-    val providers = (buildFirebasePusher(config, executionContext) ++ buildMockPusher(config, executionContext)).toList
+    val providers = buildFirebasePusher(config, executionContext).toList
     val providerId = providers.map(_.comMethodPrefix).mkString("|")
     PushNotifProviders(s"($providerId):(.*)".r, providers)
   }
@@ -180,20 +173,23 @@ object PusherUtil  {
     }
   }
 
-  def sponsorPushProvider(config: AppConfig, sponsorId: String, executionContext: ExecutionContext): Option[PushServiceProvider]  = {
+  def sponsorPushProvider(config: AppConfig,
+                          sponsorId: String,
+                          executionContext: ExecutionContext): Option[PushServiceProvider]  = {
     ConfigUtil.findSponsorConfigWithId(sponsorId, config)
       .orElse(throw new InvalidComMethodException(Some("Unable to find sponsor details, unable to push to sponsor push service")))
       .flatMap(_.pushService)
-      .map { x =>
+      .flatMap { x =>
         x.service match {
-          case "fcm"  => new FirebasePusher(FirebasePushServiceParam(x.key, x.host, x.path), executionContext, config)
-          case "mock" => new MockPusher(config, executionContext)
+          case "fcm"  => loadFirebasePusher(config, executionContext, FirebasePushServiceParam(x.key, x.host, x.path))
           case t      => throw new InvalidComMethodException(Some(s"Unexpected push service type '$t', this type is not supported"))
         }
       }
   }
 
-  def checkIfValidPushComMethod(comMethodValue: ComMethodDetail, config: AppConfig, executionContext: ExecutionContext): Unit =
+  def checkIfValidPushComMethod(comMethodValue: ComMethodDetail,
+                                config: AppConfig,
+                                executionContext: ExecutionContext): Unit =
     extractServiceProviderAndRegId(comMethodValue, config, executionContext)
 
   def getPushMsgType(msgType: String): String = {
@@ -215,6 +211,18 @@ object PusherUtil  {
     val vowels = Set('a', 'e', 'i', 'o', 'u')
     val prefixed = if (vowels.contains(capitalizeMsg.head.toLower)) "an " else "a "
     prefixed + capitalizeMsg
+  }
+
+  def loadFirebasePusher(appConfig: AppConfig,
+                         executionContext: ExecutionContext,
+                         serviceParam: FirebasePushServiceParam): Option[PushServiceProvider] = {
+    appConfig.getStringOption(FCM_PROVIDER).map { clazz =>
+      Class
+        .forName(clazz)
+        .getConstructor(classOf[AppConfig], classOf[ExecutionContext], classOf[FirebasePushServiceParam])
+        .newInstance(appConfig, executionContext, serviceParam)
+        .asInstanceOf[PushServiceProvider]
+    }
   }
 }
 

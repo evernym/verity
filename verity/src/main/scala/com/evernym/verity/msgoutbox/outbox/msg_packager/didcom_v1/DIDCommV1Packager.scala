@@ -85,7 +85,8 @@ object DIDCommV1Packager {
             msgPackFormat,
             reply.payload,
             routingKeys,
-            msgType
+            msgType,
+            None
           )(agentMsgTransformer, WalletAPIParam(walletId), metricsWriter, executionContext)
           future.map { pm =>
             replyTo ! Replies.PackedMsg(pm.msg)

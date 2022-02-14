@@ -130,7 +130,7 @@ class MsgCodecSpec
       "should be able to produce same json with different serializers" in {
         val packedMsgOutput = """{"k1":"v1"}""".getBytes
         val packedMsgString = new String(packedMsgOutput)
-        val fwdMsgWithJSONObject = FwdReqMsg_MFV_1_0("fwd-type", "route", new JSONObject(packedMsgString), Some("some-type"))
+        val fwdMsgWithJSONObject = FwdReqMsg_MFV_1_0("fwd-type", "route", new JSONObject(packedMsgString), Some("some-type"), None)
         val expectedJson = """{"@type":"fwd-type","@fwd":"route","@msg":{"k1":"v1"},"fwdMsgType":"some-type"}"""
         val jacksonSerializedJson = JacksonMsgCodec.toJson(fwdMsgWithJSONObject)
         assertSerialized(expectedJson, jacksonSerializedJson)
@@ -165,7 +165,7 @@ class MsgCodecSpec
   "when deserializing json with field names with special characters" - {
     "should be able to deserialize successfully" in {
       val json = """{"@type":"fwd-type","@fwd":"route","@msg":{"k1":"v1"}}"""
-      val expectedNativeMsg = FwdReqMsg_MFV_1_0("fwd-type", "route", new JSONObject("""{"k1":"v1"}"""), Some("some-type"))
+      val expectedNativeMsg = FwdReqMsg_MFV_1_0("fwd-type", "route", new JSONObject("""{"k1":"v1"}"""), Some("some-type"), None)
       val jacksonDeserializedMsg = JacksonMsgCodec.fromJson[FwdReqMsg_MFV_1_0](json)
       jacksonDeserializedMsg.canEqual(expectedNativeMsg) shouldBe true
     }

@@ -25,7 +25,7 @@ trait AgentOutgoingMsgHandler
 
   def agentOutgoingCommonCmdReceiver: Receive = {
     case spn: SendPushNotif                 => handleSendPushNotif(spn)
-    case sm: SendUnStoredMsgToMyDomain      => sendMsgToMyDomain(sm.omp, sm.msgId, sm.msgName)
+    case sm: SendUnStoredMsgToMyDomain      => sendMsgToMyDomain(sm.omp, sm.msgId, sm.msgName, None)
 
     case sm: SendMsgToMyDomain      =>
       //TODO: this conditional logic (VAS vs non VAS) is temporary only
@@ -47,7 +47,7 @@ trait AgentOutgoingMsgHandler
       }
 
     //OutgoingMsgSender -> this actor (will be only used on VAS due to different data retention expectation)
-    case psm: ProcessSendMsgToMyDomain      => sendMsgToMyDomain(psm.om, psm.msgId, psm.msgName)
+    case psm: ProcessSendMsgToMyDomain      => sendMsgToMyDomain(psm.om, psm.msgId, psm.msgName, psm.senderName)
     case pst: ProcessSendMsgToTheirDomain   => sendMsgToTheirDomain(pst.om, pst.msgId, pst.msgName, pst.threadOpt)
   }
 

@@ -57,7 +57,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
   def handleCreateKey(st: State.Initialized, m: Ctl.Create): Unit = {
     ctx.apply(CreatingPairwiseKey(m.label.getOrElse(st.label), m.logoUrl.getOrElse(st.logoUrl)))
-    ctx.signal(Signal.CreatePairwiseKey())
+    ctx.signal(Signal.CreatePairwiseKey(m.label))
   }
 
   def checkPhoneNumberValidOrNotProvided(phoneNumber: Option[String]): Boolean = {

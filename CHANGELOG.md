@@ -2,13 +2,21 @@ Note: When interacting with Verity, it will also be helpful to review [the Verit
 
 
 # Release notes - Verity 2.17.2 release TBD
-Includes VDR Tools 0.8.4 works with Verity SDK 0.6.0
+Includes VDR Tools 0.8.2 works with Verity SDK 0.6.1
+
+## Bug
+* [VE-3343] Fix v1 to v2 migration logic
+* Various fixes for tests being flaky
+* [VE-3165] Fix for startup probe
 
 ## Task
-* [VE-2753] Each Verity tenant can customize text used in push notifications.
 * [Documented communication method types](https://gitlab.com/evernym/verity/verity/-/blob/5591cc8759fb0ba84614143705007e9e9bcfde2c/docs/documentation/communication-mechanisms/README.md)
-* Dependency updates: kamon, mockito, scalatest
-
+* Dependency updates: kamon, jersey-client, mockito, scalatest, vcx
+* [VE-2753] Each Verity tenant can customize text used in push notifications.
+* [VE-3335] Make sender name available to CAS in push notification
+* [VE-3168] Reuse of threadId should be reported correctly
+* [VE-3025] Refactor item manager to be simple typed persistent actor
+* [VE-3318] Disable actor state cleanup job (not needed anymore)
 
 # Release notes - Verity 2.17.1 release 1 Feb 2022
 Includes VDR Tools 0.8.2 works with Verity SDK 0.6.0
@@ -72,7 +80,7 @@ Includes VDR Tools 0.8.2
 * [VE-3105] AppStateManagerSpec intermittent test failure
 * [VE-3096] Unit test failed - WalletActor:  when sent CreateWallet command again
 * [VE-3095] Unit test failed -  ItemManager: move to new item container
-* [VE-3086] default-dummy-actor is staturating datadog custom metric limits
+* [VE-3086] default-dummy-actor is saturating datadog custom metric limits
 * [VE-3068] Intermittent integration test failure: port already in use
 * [VE-2294] fix serialization issue observed during wallet actor performance integration test
 
@@ -120,7 +128,7 @@ Includes VDR Tools 0.8.2
 * [VE-2908] Integration tests fail intermittently in verity-release pipeline
 * [VE-2911] webhook messages are not being retried if they fail in first attempt
 * [VE-2904] Fix unnecessary app state changes during unhandled event
-* [VE-2913] Fix flodded "refresh access token failed: purposefully failing" messages in the OAuthAccessTokenHolderSpec
+* [VE-2913] Fix flooded "refresh access token failed: purposefully failing" messages in the OAuthAccessTokenHolderSpec
 
 ## Tasks
 * [VE-2651] Add Jacoco code coverage tool to build pipeline
@@ -215,9 +223,9 @@ Includes VDR Tools 0.8.2
 * [VE-2646] Provide kamon with application version
 * [VE-2626] Enable split-brain resolver in Verity
 * [VE-2594] Truncate large replies in GET\_MSGs to fit in multi-node message limits
-* [VE-2550] Calls to create\_wallet and open\_wallet in async libindy often take more than 20 seconds to complete when under heavy load
+* [VE-2550] Calls to create\_wallet and open\_wallet in `async libindy` often take more than 20 seconds to complete when under heavy load
 * [VE-2409] Switch Verity to use Async Libindy
-* [VE-2303] Implement MySQL cache in async libindy
+* [VE-2303] Implement MySQL cache in async `libindy`
 
 
 # Release notes - Verity 2.12.2 (0.4.123069613.a21b28b) released 16 Jun 2021
@@ -294,19 +302,19 @@ Includes VDR Tools 0.8.2
 * [VE-2396] Invalid replayed event, multiple persistent actor instances with same persistence id?
 
 ## Tasks
-* [VE-2613] Add libmysqlstorage to install script
+* [VE-2613] Add `libmysqlstorage` to install script
 * [VE-2612] Intermittent failures during unit tests
 * [VE-2593] Add entries for VS Code/Scala Metals to .gitignore file
 * [VE-2557] Remove dependencies on bintray in Verity pipelines
 * [VE-2552] Move off of bintray repos
 * [VE-2535] Make it possible to target all messages specifically coming from "my domain" or from "their domain"
-* [VE-2527] Indentify Verity dependencies
+* [VE-2527] Identify Verity dependencies
 * [VE-2514] Upgrade verity-sdk docker image and packages to use Ubuntu 18.04
 * [VE-2490] Make it possible to run clustered Verity in docker
 * [VE-2488] Fix local run failures of Verity integration tests
 * [VE-2487] Fix problem with non-steady network traffic in issuance test
-* [VE-2486] Make libindy wallet connections limit configurable in ephemeral envs
-* [VE-2475] Exceptions from libindy should be properly logged
+* [VE-2486] Make `libindy` wallet connections limit configurable in ephemeral envs
+* [VE-2475] Exceptions from `libindy` should be properly logged
 * [VE-2469] Investigate reasons of increased DynamoDB usage in load tests
 * [VE-2462] "Actor not found" error during verification load test
 * [VE-2457] Verity integration tests error handling improvement
@@ -321,7 +329,7 @@ Includes VDR Tools 0.8.2
 * [VE-2477] fix agent provisioning new key creation in agency agent wallet issue
 
 ## Tasks
-* [VE-2471] Add agent provisioning 0.7 support for libvcx
+* [VE-2471] Add agent provisioning 0.7 support for `libvcx`
 
 
 # Release notes - Verity 2.10.0 (0.4.115809643.e5a8582) released 17 Mar 2021
@@ -330,8 +338,8 @@ Includes VDR Tools 0.8.2
 * [VE-2357] Webhook URL does not support query strings
 * [VE-2375] invalid com method was switching Verity app state to degraded state
 * [VE-2378] GNR-100 ("system is unusually busy, try again later") returned on incorrect payload
-* [VE-2382] Wrong version of libmysqlstorage breaks Verity upgrade
-* [VE-2389] Verity is not returning Agency Agent Verkey
+* [VE-2382] Wrong version of `libmysqlstorage` breaks Verity upgrade
+* [VE-2389] Verity is not returning Agency Agent VerKey
 * [VE-2391] Malicious payloads to connecting endpoint crashes Verity
 * [VE-2392] Malicious large payload to  "~for_relationship" crashes Verity
 * [VE-2393] SourceId: 1 crashes Verity
@@ -357,9 +365,9 @@ Includes VDR Tools 0.8.2
 * [VE-2422] Create sample app for out-of-band with request attach that uses Verity REST API
 * [VE-2438] Change our supervisor settings to retry after 1 second instead of 3 seconds
 * [VE-2439] Refactor ItemContainer cleanup code to be more soften instead of trying to delete all events in one go
-* [VE-2440] remove "cache initialization info log" and "ledger svc unutilized caches"
+* [VE-2440] remove "cache initialization info log" and "ledger svc un-utilized caches"
 * [VE-2452] DynamoDB errors during connections load test
-* [VE-2456] Allow Verity to switch between 'libindy' and 'libindy-async'
+* [VE-2456] Allow Verity to switch between `libindy` and `libindy-async`
 * [VE-2427] Remove legacy public identity behaviour config option
 * [VE-2435] Add more logging for http request observability
 
@@ -376,10 +384,10 @@ Includes VDR Tools 0.8.2
 * [VE-2246] Add asynchronous API to protocol engine
 * [VE-2320] Investigate and fix problem with too many open sockets
 * [VE-2336] Expose msgType for Aries protocols in a way that doesn't break push Notifications for Connect.Me
-* [VE-2340] Review kamon metrics/reporter for any possible improvments
+* [VE-2340] Review kamon metrics/reporter for any possible improvements
 * [VE-2355] Add support for Configurable Message Retention
 * [VE-2361] Switch default wallet impl to `standard`
-* [VE-2373] Add `INFO` log messages for Push Notfications
+* [VE-2373] Add `INFO` log messages for Push Notifications
 
 
 # Release notes - Verity 2.8.0 (0.4.110434998.b502641) released 13 Jan 2021
@@ -388,7 +396,7 @@ Includes VDR Tools 0.8.2
 * [VE-2281] Not possible to provision a token in .NET SDK
 
 ## Tasks
-* [VE-2017] Define Messages for BasicMesasge (Control, Signal, Protocol)
+* [VE-2017] Define Messages for BasicMessage (Control, Signal, Protocol)
 * [VE-2018] Implement Protocol Logic for BasicMessage
 * [VE-2019] Implement Integration tests for BasicMessage
 * [VE-2020] Wire new Protocol for BasicMessage
@@ -429,7 +437,7 @@ Includes VDR Tools 0.8.2
 # Release notes - Verity 2.5.0 (0.4.103141332.ef1e3e6) released 21 Oct 2020
 
 ## Bugs
-* [VE-1968] Python SDK example app sometimes throws libindy warning
+* [VE-1968] Python SDK example app sometimes throws `libindy` warning
 * [VE-1997] If label is not specified in Relationship create call, Python and Java SDKs do not default to the label specified in UpdateConfigs
 * [VE-2015] UPDATE_CONFIG protocol setting the logoUrl to null generates a NullPointerException and then crashes the UserAgent actor
 * [VE-2057] Not possible to specify the walletPath in public constructors for NodeJS SDK
@@ -466,12 +474,12 @@ Includes VDR Tools 0.8.2
 # Release notes - Verity 2.3.0 (0.4.99581977.9703ac5) released 8 Sep 2020
 
 ## Bugs
-* [VE-1957] No linkage between relationship-reused thid/pthid and OutofBand invitation message thid/@id
+* [VE-1957] No linkage between relationship-reused `thid/pthid` and OutOfBand invitation message `thid/@id`
 * [VE-1958] profileUrl is not set when out-of-band-invitation is used
 
 ## Stories
-* [VE-1491] As Evernym Customer using Aries 1.0 connections protocol, I need to have be able to send a connection using URL
-* [VE-1811] Verity Application needs to persists events in docker container
+* [VE-1491] As Evernym Customer using Aries 1.0 connections protocol, I need to have to be able to send a connection using URL
+* [VE-1811] Verity Application needs to persist events in docker container
 * [VE-1883] Implement support for goal-code and goal in Out-Of-Band protocol on Verity
 
 
@@ -491,7 +499,7 @@ Includes VDR Tools 0.8.2
 
 tories
 * [VE-1551] Cache used provisioning tokes on Verity so token cannot be used more than once within the token window
-* [VE-1790] Publish verity intergration test runner
+* [VE-1790] Publish verity integration test runner
 
 
 # Release notes - Verity 2.1 (0.4.95258837.49f840f) released 28 Jul 2020
@@ -509,7 +517,7 @@ tories
 
 ## Tasks
 * [VE-1540] As Evernym TE, I need to add puppet config for enforcing token provisioning on VAS
-* [VE-1554] Change REST API token provisioing script to use 0.7
+* [VE-1554] Change REST API token provisioning script to use 0.7
 
 ## Stories
 * [VE-1322] As Verity customer, I want to be able to issue credential in one step (instead of two)
@@ -520,7 +528,7 @@ tories
 * [VE-1557] As Evernym  Verity SDK customer, I want to install Verity SDK from language specific repos
 * [VE-1568] As Evernym  Verity SDK customer, I want a way to easily run example apps using Docker
 * [VE-1621] I want to configure a custom SMS text message per customer
-* [VE-1590] Add support for multiple sponser app to be able to use push notification service
+* [VE-1590] Add support for multiple sponsor app to be able to use push notification service
 * [VE-1672] Tokenizer use sponsor push service
 
 

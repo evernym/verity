@@ -23,12 +23,13 @@ object MockableLedgerAccess {
   val MOCK_NO_DID = "MOCK_NO_DID"
   val MOCK_NOT_ENDORSER = "MOCK_NOT_ENDORSER"
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+
   def apply(): MockableLedgerAccess = {
     new MockableLedgerAccess(ecp.futureExecutionContext)
   }
 
   def apply(ledgerAvailable: Boolean): MockableLedgerAccess =
-    new MockableLedgerAccess(ecp.futureExecutionContext, ledgerAvailable=ledgerAvailable)
+    new MockableLedgerAccess(ecp.futureExecutionContext, ledgerAvailable = ledgerAvailable)
 }
 
 class MockableLedgerAccess(executionContext: ExecutionContext,
@@ -38,13 +39,14 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
   extends LedgerAccess with MockAsyncOpRunner {
 
   import MockableLedgerAccess._
+
   implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
   val testWallet = new TestWallet(executionContext, false)
   implicit val wap: WalletAPIParam = testWallet.wap
-  override val walletAccess = new WalletAccessAdapter (
-      testWallet.testWalletAPI,
-      testWallet.walletId
+  override val walletAccess = new WalletAccessAdapter(
+    testWallet.testWalletAPI,
+    testWallet.walletId
   )
 
   lazy val invalidEndorserError: String = "Rule for this action is: 1 TRUSTEE signature is required OR 1 STEWARD " +
@@ -124,7 +126,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
                                 endorser: Option[String])
                                (handler: Try[PreparedTxn] => Unit): Unit = {
     handler {
-      if (ledgerAvailable) Try(PreparedTxn("context", NoSignature, schemaJson.getBytes, NoEndorsement))
+      if (ledgerAvailable) Try(PreparedTxn("namespace", NoSignature, schemaJson.getBytes, Array.empty, NoEndorsement))
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
@@ -135,7 +137,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
                                  endorser: Option[String])
                                 (handler: Try[PreparedTxn] => Unit): Unit = {
     handler {
-      if (ledgerAvailable) Try(PreparedTxn("context", NoSignature, credDefJson.getBytes, NoEndorsement))
+      if (ledgerAvailable) Try(PreparedTxn("namespace", NoSignature, credDefJson.getBytes, Array.empty, NoEndorsement))
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
@@ -145,7 +147,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
                          endorsement: Array[Byte])
                         (handler: Try[SubmittedTxn] => Unit): Unit = {
     handler {
-      if (ledgerAvailable) Try(SubmittedTxn())
+      if (ledgerAvailable) Try(SubmittedTxn(""))
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
@@ -179,7 +181,7 @@ object MockLedgerData {
           "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
           "schema-name",
           "0.1",
-          Seq("attr-1","attr2"),
+          Seq("attr-1", "attr2"),
           Some(55),
           "0.1"
         ))
@@ -189,17 +191,17 @@ object MockLedgerData {
 
   val credDefs01 = Map(
     "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1" ->
-    GetCredDefResp(
-      txnResp,
-      Some(CredDefV1(
-        "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
-        "CL",
-        "55",
-        "tag",
-        "1.0",
-        Map.empty
-      ))
-    )
+      GetCredDefResp(
+        txnResp,
+        Some(CredDefV1(
+          "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
+          "CL",
+          "55",
+          "tag",
+          "1.0",
+          Map.empty
+        ))
+      )
   )
 }
 

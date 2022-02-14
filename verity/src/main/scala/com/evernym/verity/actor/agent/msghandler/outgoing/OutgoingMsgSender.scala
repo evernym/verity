@@ -86,7 +86,7 @@ object OutgoingMsgSender {
 
 object ProcessSendMsgToMyDomain {
   def apply(smd: SendMsgToMyDomain): ProcessSendMsgToMyDomain =
-    ProcessSendMsgToMyDomain(smd.om, smd.msgId, smd.msgName, smd.senderDID, smd.threadOpt)
+    ProcessSendMsgToMyDomain(smd.om, smd.msgId, smd.msgName, smd.senderDID, smd.senderName, smd.threadOpt)
 }
 
 trait ProcessSendMsgBase extends ActorMessage {
@@ -98,6 +98,7 @@ case class ProcessSendMsgToMyDomain(om: OutgoingMsgParam,
                                     msgId: MsgId,
                                     msgName: MsgName,
                                     senderDID: DidStr,
+                                    senderName: Option[String],
                                     threadOpt: Option[Thread]) extends ProcessSendMsgBase
 
 object ProcessSendMsgToTheirDomain {

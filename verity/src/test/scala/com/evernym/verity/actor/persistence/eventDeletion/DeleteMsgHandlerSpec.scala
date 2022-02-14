@@ -5,7 +5,7 @@ import akka.persistence.{DeleteMessagesFailure, DeleteMessagesSuccess}
 import akka.testkit.EventFilter
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.base.Done
-import com.evernym.verity.actor.{ActorMessage, ItemUpdated, TestJournal}
+import com.evernym.verity.actor.{ActorMessage, ConfigUpdated, TestJournal}
 import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersistenceEncryption, GetPersistentActorDetail, PersistentActorDetail}
 import com.evernym.verity.actor.testkit.{ActorSpec, AkkaTestBasic}
 import com.evernym.verity.config.AppConfig
@@ -85,13 +85,11 @@ class MockPersistentActor(val appConfig: AppConfig, executionContext: ExecutionC
 
     case PersistEvents(totalEvents) =>
       totalEventsToBePersisted = totalEvents
-      (1 to totalEvents).foreach { i =>
+      (1 to totalEvents).foreach { _ =>
         writeAndApply(
-          ItemUpdated(
-            i.toString,
-            0, //status would be always from this new request message
-            "detail", //detail would be always from this new request message
-            isFromMigration = false,
+          ConfigUpdated(
+            "config-name",
+            "config-value",
             getMillisFromZonedDateTime(getCurrentUTCZonedDateTime))
         )
       }
@@ -103,7 +101,7 @@ class MockPersistentActor(val appConfig: AppConfig, executionContext: ExecutionC
   }
 
   override def receiveEvent: Receive = {
-    case _: ItemUpdated =>
+    case _: ConfigUpdated =>
       totalEventsPersisted += 1
       if (totalEventsToBePersisted == totalEventsPersisted) {
         sender ! Done

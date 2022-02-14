@@ -1,4 +1,4 @@
-package com.evernym.verity.actor.itemmanager
+package com.evernym.verity.item_store
 
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.eventstream.EventStream.Publish
@@ -6,10 +6,10 @@ import akka.cluster.sharding.ShardRegion.EntityId
 import com.evernym.verity.actor.cluster_singleton.watcher.{AddItem, ForEntityItemWatcher, RemoveItem}
 import com.evernym.verity.actor.node_singleton.SingletonProxyEvent
 
-//a helper class to add/remove an entity to/from item manager
-class ItemManagerEntityHelper(entityId: EntityId,
-                              entityType: String,
-                              system: ActorSystem[Nothing]) {
+//a helper class to add/remove an entity to/from item store
+class ItemStoreEntityHelper(entityId: EntityId,
+                            entityType: String,
+                            system: ActorSystem[Nothing]) {
 
   var isAlreadyRegistered = false
   var isAlreadyUnregistered = false

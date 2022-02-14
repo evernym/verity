@@ -246,6 +246,7 @@ trait PairwiseConnStateBase
                                         agentMsgs: List[Any],
                                         wrapInBundledMsgs: Boolean,
                                         msgType: String,
+                                        msgSender: Option[String],
                                         mw: MetricsWriter): Future[PackedMsg] = {
     theirRoutingDetail match {
       case Some(Left(_: LegacyRoutingDetail)) =>
@@ -259,13 +260,16 @@ trait PairwiseConnStateBase
           msgPackFormat,
           packMsgParam
         )(agentMsgTransformer, wap, mw).flatMap { pm =>
-          buildRoutedPackedMsgForTheirRoutingService(msgPackFormat, pm.msg, msgType, mw)
+          buildRoutedPackedMsgForTheirRoutingService(msgPackFormat, pm.msg, msgType, msgSender, mw)
         }
       case x => throw new RuntimeException("unsupported routing detail (for unpacked msg): " + x)
     }
   }
 
-  def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat, packedMsg: Array[Byte], msgType: String,
+  def buildRoutedPackedMsgForTheirRoutingService(msgPackFormat: MsgPackFormat,
+                                                 packedMsg: Array[Byte],
+                                                 msgType: String,
+                                                 msgSender: Option[String],
                                                  mw: MetricsWriter):
   Future[PackedMsg] = {
     theirRoutingDetail match {
@@ -283,7 +287,8 @@ trait PairwiseConnStateBase
           MPF_INDY_PACK,
           packedMsg,
           routingKeys,
-          msgType
+          msgType,
+          msgSender
         )(agentMsgTransformer, wap, mw, futureExecutionContext)
       case x => throw new RuntimeException("unsupported routing detail (for packed msg): " + x)
     }

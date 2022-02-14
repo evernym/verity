@@ -7,10 +7,10 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.common.ConfigSvc
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider
+import com.fasterxml.jackson.jakarta.rs.json.JacksonJsonProvider
 
-import javax.ws.rs.client.{Client, ClientBuilder, Entity}
-import javax.ws.rs.core.MediaType
+import jakarta.ws.rs.client.{Client, ClientBuilder, Entity}
+import jakarta.ws.rs.core.MediaType
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature
 
 import scala.collection.JavaConverters._
@@ -41,7 +41,7 @@ class OpenMarketDispatcherMEP (val appConfig: AppConfig)
     ClientBuilder
       .newBuilder
       .register(classOf[ObjectMapper])
-      .register(classOf[JacksonJaxbJsonProvider])
+      .register(classOf[JacksonJsonProvider])
       .register(HttpAuthenticationFeature.basic(userName, password), 1)
       .build
   }

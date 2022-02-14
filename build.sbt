@@ -44,7 +44,7 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libVdrToolsVer = "0.8.2"
+val libVdrToolsVer = "0.8.2.1407" // todo version containing improved error processing for submitted txns
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libindy.so"),
   NonMatchingLib("libvcx", "0.13.0-bionic~675", "libvcx.so")  // For integration testing ONLY
@@ -54,22 +54,23 @@ val sharedLibDeps = Seq(
 val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 
 //dependency versions
-val vdrtoolsWrapperVer  = "0.8.2"
+val vdrtoolsWrapperVer  = "0.8.2-1407"  // todo version to test new VDR Java wrapper API
 val akkaVer         = "2.6.17"
 val akkaHttpVer     = "10.2.7"
-val akkaMgtVer      = "1.1.1"
+val akkaMgtVer      = "1.1.3"
 val alpAkkaVer      = "3.0.3"
-val kamonVer        = "2.4.2"
+val akkaPersistence = "1.1.1"
+val kamonVer        = "2.4.6"
 val kanelaAgentVer  = "1.0.14"
 val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
 val jacksonVer      = "2.13.1"
 val sdnotifyVer     = "1.3"
 
 //test dependency versions
-val scalatestVer    = "3.2.10"
-val mockitoVer      = "1.16.49"
-val veritySdkVer    = "0.5.0"
-val vcxWrapperVer   = "0.13.0.675"
+val scalatestVer    = "3.2.11"
+val mockitoVer      = "1.17.0"
+val veritySdkVer    = "0.6.1"
+val vcxWrapperVer   = "0.13.1.735"
 
 
 val flexmarkVer     = "0.62.2"
@@ -83,7 +84,7 @@ val CompileOnly = config(COMPILE_TIME_ONLY)
 
 val majorNum = "2"
 val minorNum = "17"
-val patchNum = "0"
+val patchNum = "2"
 
 // I'm not sure why setting this keys don't resolve in all
 // other scopes but it does not so we re-resolve it commonSettings
@@ -156,6 +157,7 @@ lazy val settings = Seq(
 //  resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public", // this shouldn't be necessay since we're publishing vdr-tools to maven central
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
 //  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",
+  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/27807222/packages/maven", // todo used to fetch java wrapper from main builds
 
   Test / parallelExecution := false,
   Test / logBuffered := false,
@@ -236,18 +238,23 @@ lazy val protoBufSettings = Seq(
   PB.deleteTargetDirectory := false,
 
   //this 'PB.includePaths' is to make import works
-  Compile / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
+  //There are used .absolutePaths because after update sbt-protoc to 1.0.6 sbt produce warnings about relative paths
+  Compile / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths,
   Compile / PB.targets := Seq(
     scalapb.gen(flatPackage = true) -> (Compile / sourceManaged).value
   ),
-  Compile / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
+  Compile / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths,
   Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch, build).taskValue,
+  // Since sbt-protoc 1.0.1 and later adds PB.protoSources to unmanagedResourceDirectories,
+  // we need to exclude all extra dirs that contains .scala files. Same for Test config.
+  Compile / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main/scala")).absolutePaths,
 
-  Test / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")),
+  Test / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths,
   Test / PB.targets := Seq(
     scalapb.gen(flatPackage = true) -> (Test / sourceManaged).value
   ),
-  Test / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test")),
+  Test / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test")).absolutePaths,
+  Test / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test/scala")).absolutePaths,
   //
 )
 
@@ -288,7 +295,7 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
 
     //akka persistence dependencies
-    akkaGrp %% "akka-persistence-dynamodb" % "1.1.1",
+    akkaGrp %% "akka-persistence-dynamodb" % akkaPersistence,
 
     //lightbend akka dependencies
     "com.lightbend.akka" %% "akka-stream-alpakka-s3" % alpAkkaVer,
@@ -326,9 +333,10 @@ lazy val commonLibraryDependencies = {
     "com.fasterxml.jackson.module" %% "jackson-module-scala" % jacksonVer,          //Scala classes serialization/deserialization
 
     //sms service implementation dependencies
-    "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % jacksonVer,     //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
-    "org.glassfish.jersey.core" % "jersey-client" % "2.25"                          //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
-      excludeAll ExclusionRule(organization = "javax.inject"),                      //TODO: (should fix this) excluded to avoid issue found during 'sbt assembly' after upgrading to sbt 1.3.8
+    "com.fasterxml.jackson.jakarta.rs" % "jackson-jakarta-rs-json-provider" % jacksonVer,
+    //"com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % jacksonVer,     //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
+    "org.glassfish.jersey.core" % "jersey-client" % "3.0.3"
+      excludeAll ExclusionRule(organization = "jakarta.inject"),                      //TODO: (should fix this) excluded to avoid issue found during 'sbt assembly' after upgrading to sbt 1.3.8
     "com.twilio.sdk" % "twilio-java-sdk" % "6.3.0",                                 //used by "TwilioDispatcher" class
 
     //other dependencies

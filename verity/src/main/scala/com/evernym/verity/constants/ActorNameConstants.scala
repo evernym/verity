@@ -18,8 +18,6 @@ object ActorNameConstants {
   val USER_AGENT_PAIRWISE_REGION_ACTOR_NAME = "UserAgentPairwise"
   val WALLET_REGION_ACTOR_NAME = "WalletActor"
   val ACTIVITY_TRACKER_REGION_ACTOR_NAME = "ActivityTracker"
-  val ITEM_MANAGER_REGION_ACTOR_NAME = "ItemManager"
-  val ITEM_CONTAINER_REGION_ACTOR_NAME = "ItemContainer"
   val MSG_TRACER_REGION_ACTOR_NAME = "MsgTracer"
   val MSG_PROGRESS_TRACKER_REGION_ACTOR_NAME = "MsgProgressTracker"
   val ACTOR_STATE_CLEANUP_EXECUTOR = "ActorStateCleanupExecutor"

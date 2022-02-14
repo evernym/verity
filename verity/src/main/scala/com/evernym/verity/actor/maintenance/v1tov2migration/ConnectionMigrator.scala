@@ -1,13 +1,17 @@
 package com.evernym.verity.actor.maintenance.v1tov2migration
 
-import akka.actor.Props
+import akka.actor.{ActorRef, Props}
+import akka.cluster.sharding.ClusterSharding
+import akka.pattern.ask
+import akka.util.Timeout
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.actor.agent.user.{GetDomainDetail, GetDomainDetailResp}
-import com.evernym.verity.actor.{ActorMessage, AgentDetailSet, ConnectionStatusUpdated, OwnerSetForAgent, RouteSet, TheirDidDocDetail}
-import com.evernym.verity.actor.base.{CoreActorExtended, Done}
+import com.evernym.verity.actor.{ActorMessage, AgentDetailSet, ConnectionStatusUpdated, ForIdentifier, OwnerSetForAgent, RouteSet, TheirDidDocDetail}
+import com.evernym.verity.actor.base.{CoreActorExtended, Done, Stop}
 import com.evernym.verity.actor.wallet.{StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.ActorNameConstants
+import com.evernym.verity.constants.ActorNameConstants.ROUTE_REGION_ACTOR_NAME
 import com.evernym.verity.constants.InitParamConstants.{DATA_RETENTION_POLICY, LOGO_URL, NAME}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
@@ -15,11 +19,13 @@ import com.evernym.verity.protocol.engine.MultiEvent
 import com.evernym.verity.protocol.engine.events.{DataRetentionPolicySet, DomainIdSet, LegacyPackagingContextSet, PackagingContextSet, StorageIdSet}
 import com.evernym.verity.protocol.protocols.protocolRegistry
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.{CreatingPairwiseKey, InitParam, Initialized, PairwiseKeyCreated, RelationshipDef}
+import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vault.wallet_api.WalletAPI
 
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 
 
 class ConnectionMigrator(appConfig: AppConfig,
@@ -39,11 +45,21 @@ class ConnectionMigrator(appConfig: AppConfig,
       .execute(InternalMsgRouteParam(smc.agent.agentDID, GetDomainDetail))
       .mapTo[GetDomainDetailResp]
       .flatMap { dd =>
+        //below logic is to make sure it deterministically calculates the same
+        // pairwise actor entity id for given 'VAS agent' + 'Enterprise pairwise DID' combination
+        // to avoid creating lots of stale actors if migration script is
+        // executed multiple times (for testing purposes, dry run etc)
+        val pairwiseAgentActorEntityId =
+          UUID
+            .nameUUIDFromBytes((smc.agent.agentDID + smc.connection.myDidDoc.pairwiseDID).getBytes())
+            .toString
         Future.sequence(
           Seq(
+            setupAgentWalletState(dd.walletId, smc),
             setupRelationshipProtocolState(smc.connection.myDidDoc, dd),
-            setupUserAgentPairwiseState(smc),
-            setupAgentWalletState(dd.walletId, smc)
+            setupUserAgentPairwiseState(smc, pairwiseAgentActorEntityId).flatMap { _ =>
+              stopRouteActor(smc.connection.myDidDoc.pairwiseDID)
+            }
           )
         )
       }.map { _ =>
@@ -53,23 +69,24 @@ class ConnectionMigrator(appConfig: AppConfig,
   }
 
   private def setupAgentWalletState(walletId: String, smc: SetupMigratedConnection): Future[Any] = {
-    val fut1 = storeTheirKey(walletId, smc.connection.theirDidDoc.agencyDID, smc.connection.theirDidDoc.agencyDIDVerKey)
-    val fut2 = storeTheirKey(walletId, smc.connection.theirDidDoc.pairwiseDID, smc.connection.theirDidDoc.pairwiseDIDVerKey)
-    Future.sequence(Seq(fut1, fut2))
+    if (smc.connection.theirDidDoc.pairwiseDID != "") {
+      val fut1 = storeTheirKey(walletId, smc.connection.theirDidDoc.pairwiseDID, smc.connection.theirDidDoc.pairwiseDIDVerKey)
+      val fut2 = storeTheirKey(walletId, smc.connection.theirDidDoc.agencyDID, smc.connection.theirDidDoc.agencyDIDVerKey)
+      Future.sequence(Seq(fut1, fut2))
+    } else Future.successful(Done)
   }
 
-  private def setupUserAgentPairwiseState(smc: SetupMigratedConnection): Future[Any] = {
+  //this is to make sure when next time it is restarted, it reads the events persisted
+  // as part of 'setupUserAgentPairwiseState'
+  private def stopRouteActor(did: DidStr): Future[Any] = {
+    implicit val timeout: Timeout = Timeout(15.seconds)
+    routeRegion ? ForIdentifier(did, Stop(sendAck = true))
+  }
 
+  private def setupUserAgentPairwiseState(smc: SetupMigratedConnection,
+                                          pairwiseAgentActorEntityId: String): Future[Any] = {
     Future {
-      //below logic is to make sure it deterministically calculates the same
-      // pairwise actor entity id for given 'agent' + 'pairwise DID' combination
-      // to avoid creating lots of stale actors if migration script is
-      // executed multiple times.
-      val pairwiseAgentActorEntityId =
-        UUID
-          .nameUUIDFromBytes((smc.agent.agentDID + smc.connection.myDidDoc.pairwiseDID).getBytes())
-          .toString
-      logger.info(s"[$actorId] pairwiseAgentActorEntityId: " + pairwiseAgentActorEntityId)
+      logger.debug(s"[$actorId] pairwiseAgentActorEntityId: " + pairwiseAgentActorEntityId)
 
       //set route for new pairwise DID
       context.system.actorOf(
@@ -103,21 +120,29 @@ class ConnectionMigrator(appConfig: AppConfig,
               smc.connection.myDidDoc.pairwiseDIDVerKey,
               smc.connection.myDidDoc.pairwiseDIDVerKey
             ),
-            ConnectionStatusUpdated(
-              reqReceived = true,
-              answerStatusCode = smc.connection.answerStatusCode,
-              Option(
-                TheirDidDocDetail(
-                  smc.connection.theirDidDoc.pairwiseDID,
-                  smc.connection.theirDidDoc.agencyDID,
-                  smc.connection.theirDidDoc.pairwiseAgentDID,
-                  smc.connection.theirDidDoc.pairwiseAgentVerKey,
-                  "", //no need for agent key delegation proof
-                  smc.connection.theirDidDoc.pairwiseDIDVerKey
+            if (smc.connection.answerStatusCode == Status.MSG_STATUS_ACCEPTED.statusCode) {
+              ConnectionStatusUpdated(
+                reqReceived = true,
+                answerStatusCode = smc.connection.answerStatusCode,
+                Option(
+                  TheirDidDocDetail(
+                    smc.connection.theirDidDoc.pairwiseDID,
+                    smc.connection.theirDidDoc.agencyDID,
+                    smc.connection.theirDidDoc.pairwiseAgentDID,
+                    smc.connection.theirDidDoc.pairwiseAgentVerKey,
+                    "", //no need for agent key delegation proof
+                    smc.connection.theirDidDoc.pairwiseDIDVerKey
+                  )
                 )
-              ),
-              None
-            )
+              )
+            } else {
+              ConnectionStatusUpdated(
+                reqReceived = true,
+                answerStatusCode = smc.connection.answerStatusCode,
+                None,
+                None
+              )
+            }
           )
         )
       )
@@ -197,6 +222,8 @@ class ConnectionMigrator(appConfig: AppConfig,
     )
   }
 
+  val routeRegion: ActorRef = ClusterSharding(context.system).shardRegion(ROUTE_REGION_ACTOR_NAME)
+
   private val logger = getLoggerByClass(getClass)
 }
 
@@ -219,5 +246,6 @@ case class TheirPairwiseDidDoc(pairwiseDID: DidStr,
                                pairwiseDIDVerKey: VerKeyStr,
                                pairwiseAgentDID: DidStr,
                                pairwiseAgentVerKey: VerKeyStr,
+                               agencyEndpoint: String,
                                agencyDID: DidStr,
                                agencyDIDVerKey: VerKeyStr)

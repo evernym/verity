@@ -17,7 +17,7 @@ trait LegacyRegionActors extends LegacyRegionNames { this: Platform =>
   val legacyAgentRouteStoreRegion: ActorRef =
     createPersistentRegion(
       LEGACY_AGENT_ROUTE_STORE_REGION_ACTOR_NAME,
-      LegacyAgentRouteStore.props(this.executionContextProvider.futureExecutionContext),
+      LegacyAgentRouteStore.props(agentActorContext.agentMsgRouter, executionContextProvider.futureExecutionContext),
       passivateIdleEntityAfter = Some(FiniteDuration(
         ConfigUtil.getReceiveTimeout(
           appConfig,

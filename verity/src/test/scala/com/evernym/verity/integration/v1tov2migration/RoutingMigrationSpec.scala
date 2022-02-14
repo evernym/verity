@@ -8,13 +8,14 @@ import com.evernym.verity.actor.persistence.recovery.base.AgentIdentifiers._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.persistence.recovery.base.PersistenceIdParam
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.GetUpgradeInfo
+import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.{GetUpgradeInfo, PairwiseUpgradeInfoRespMsg_MFV_1_0}
 import com.evernym.verity.constants.ActorNameConstants.{ACTOR_TYPE_USER_AGENT_ACTOR, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, USER_AGENT_PAIRWISE_REGION_ACTOR_NAME}
+import com.evernym.verity.constants.Constants.NO
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.base.{CAS, EAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.ExecutionContext
@@ -53,12 +54,15 @@ class RoutingMigrationSpec
         val apiUrl = verity1HolderSDK.buildFullUrl(s"agency/internal/maintenance/v1tov2migration/CAS/connection/${myPairwiseRelDIDPair.did}/routing")
         HttpUtil.sendJsonReqToUrl(jsonReq, apiUrl, method = HttpMethods.PUT)(futureExecutionContext)
         totalPairwiseEvents().count(_.isInstanceOf[TheirRoutingUpdated]) shouldBe 1
-
-        val myPairwiseDid = myPairwiseRelDIDPair.did
-        val resp = verity1HolderSDK.getUpgradeInfo(GetUpgradeInfo(List(myPairwiseDid)))
-        resp.data.size shouldBe 1
-        resp.data(myPairwiseDid).direction shouldBe "v1tov2"
-        resp.data(myPairwiseDid).theirAgencyEndpoint.startsWith("http") shouldBe true
+        val resp = verity1HolderSDK.downloadMsg[PairwiseUpgradeInfoRespMsg_MFV_1_0](
+          "UPGRADE_INFO",
+          Option(NO),
+          Option(List(Status.MSG_STATUS_RECEIVED.statusCode)),
+          Option("connId1")
+        )
+        val upgradeInfo = resp.msg
+        upgradeInfo.direction shouldBe "v1tov2"
+        upgradeInfo.theirAgencyEndpoint.startsWith("http") shouldBe true
 
         HttpUtil.sendJsonReqToUrl(jsonReq, apiUrl, method = HttpMethods.PUT)(futureExecutionContext)
         totalPairwiseEvents().count(_.isInstanceOf[TheirRoutingUpdated]) shouldBe 1
@@ -78,11 +82,15 @@ class RoutingMigrationSpec
         HttpUtil.sendJsonReqToUrl(jsonReq, apiUrl, method = HttpMethods.PUT)(futureExecutionContext)
         totalPairwiseEvents().count(_.isInstanceOf[TheirRoutingUpdated]) shouldBe 2
 
-        val myPairwiseDid = myPairwiseRelDIDPair.did
-        val resp = verity1HolderSDK.getUpgradeInfo(GetUpgradeInfo(List(myPairwiseDid)))
-        resp.data.size shouldBe 1
-        resp.data(myPairwiseDid).direction shouldBe "v2tov1"
-        resp.data(myPairwiseDid).theirAgencyEndpoint.startsWith("http") shouldBe true
+        val resp = verity1HolderSDK.downloadMsg[PairwiseUpgradeInfoRespMsg_MFV_1_0](
+          "UPGRADE_INFO",
+          Option(NO),
+          Option(List(Status.MSG_STATUS_RECEIVED.statusCode)),
+          Option("connId1")
+        )
+        val upgradeInfo = resp.msg
+        upgradeInfo.direction shouldBe "v2tov1"
+        upgradeInfo.theirAgencyEndpoint.startsWith("http") shouldBe true
 
         HttpUtil.sendJsonReqToUrl(jsonReq, apiUrl, method = HttpMethods.PUT)(futureExecutionContext)
         totalPairwiseEvents().count(_.isInstanceOf[TheirRoutingUpdated]) shouldBe 2
@@ -109,7 +117,7 @@ class RoutingMigrationSpec
     holderCAS.persStoreTestKit.addEventsToPersistentStorage(mySelfRelAgentPersistenceId, basicUserAgentEvents)
     holderCAS.persStoreTestKit.createWallet(mySelfRelAgentEntityId)
     holderCAS.persStoreTestKit.createNewKey(mySelfRelAgentEntityId, Option(mySelfRelAgentDIDKeySeed))
-    holderCAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, mySelfRelDIDPair)
+    holderCAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, verity1HolderSDK.localAgentDidPair)
 
     verity1HolderSDK.fetchAgencyKey()
     verity1HolderSDK.updateVerityAgentDidPair(mySelfRelAgentDIDPair)
@@ -117,7 +125,7 @@ class RoutingMigrationSpec
 
   def setupVerity1UserPairwiseConn(): Unit = {
     val basicUserAgentPairwiseEvents = scala.collection.immutable.Seq(
-      OwnerSetForAgent(mySelfRelDIDPair.did, mySelfRelAgentDIDPair.did),
+      OwnerSetForAgent(verity1HolderSDK.localAgentDidPair.did, mySelfRelAgentDIDPair.did),
       AgentDetailSet(myPairwiseRelDIDPair.did, myPairwiseRelAgentDIDPair.did),
       AgentKeyDlgProofSet(myPairwiseRelAgentDIDPair.did, myPairwiseRelAgentDIDPair.verKey,"dummy-signature"),
       MsgCreated("001","connReq",myPairwiseRelDIDPair.did,"MS-101",1548446192302L,1548446192302L,"",None),
@@ -130,12 +138,16 @@ class RoutingMigrationSpec
     holderCAS.persStoreTestKit.storeAgentRoute(myPairwiseRelDIDPair.did, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
     holderCAS.persStoreTestKit.storeAgentRoute(myPairwiseRelAgentDIDPair.did, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, myPairwiseRelAgentEntityId)
     holderCAS.persStoreTestKit.addEventsToPersistentStorage(myPairwiseRelAgentPersistenceId, basicUserAgentPairwiseEvents)
+    holderCAS.persStoreTestKit.createNewKey(mySelfRelAgentEntityId, Option(myPairwiseRelDIDKeySeed))
     holderCAS.persStoreTestKit.createNewKey(mySelfRelAgentEntityId, Option(myPairwiseRelAgentKeySeed))
     holderCAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, myPairwiseRelDIDPair)
     holderCAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelDIDPair)
     holderCAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelAgentDIDPair)
     holderCAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, theirAgencyAgentDIDPair)
     holderCAS.persStoreTestKit.closeWallet(mySelfRelAgentEntityId)
+
+    verity1HolderSDK.createNewKey(Option(myPairwiseRelDIDKeySeed))
+    verity1HolderSDK.updatePairwiseAgentDidPair("connId1", myPairwiseRelDIDPair, myPairwiseRelAgentDIDPair)
   }
 
   def totalPairwiseEvents(): Seq[Any] = {

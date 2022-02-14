@@ -39,7 +39,11 @@ class HttpServer(val platform: Platform, routes: Route, executionContext: Execut
   var httpBinding: Option[ServerBinding] = None
 
   def start(): Unit = {
-    LaunchPreCheck.waitForRequiredDepsIsOk(platform.healthChecker, platform.executionContextProvider.futureExecutionContext)
+    LaunchPreCheck.waitForRequiredDepsIsOk(
+      platform.healthChecker,
+      platform.actorSystem,
+      platform.executionContextProvider.futureExecutionContext
+    )
     startService(init _)
   }
 
@@ -50,7 +54,7 @@ class HttpServer(val platform: Platform, routes: Route, executionContext: Execut
     }
   }
 
-  private def init(): (Future[Seq[HttpServerBindResult]]) = {
+  private def init(): Future[Seq[HttpServerBindResult]] = {
     startNewServer(routes, appConfig)
   }
 

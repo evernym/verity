@@ -19,7 +19,6 @@ import com.evernym.vdrtools.ledger.Ledger._
 import com.evernym.vdrtools.pool.Pool
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
-
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.util.{Failure, Success}

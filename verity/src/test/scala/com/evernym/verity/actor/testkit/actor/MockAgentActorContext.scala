@@ -20,6 +20,8 @@ import com.evernym.verity.texter.SMSSender
 
 import scala.concurrent.{ExecutionContext, Future}
 import com.evernym.verity.transports.MsgSendingSvc
+import com.evernym.verity.vdr.{TestLedgerRegistry, TestVdrToolsBuilder}
+import com.evernym.verity.vdr.service.VDRToolsFactory
 
 /**
  *
@@ -43,6 +45,10 @@ class MockAgentActorContext(val system: ActorSystem,
   )
 
   override lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, executionContext)
+
+  lazy val ledgerRegistry: TestLedgerRegistry = TestLedgerRegistry()
+
+  override lazy val vdrBuilderFactory: VDRToolsFactory = () => new TestVdrToolsBuilder(ledgerRegistry)
 
   override lazy val storageAPI: StorageAPI = new StorageAPI(appConfig, ecp.futureExecutionContext) {
     var storageMock: Map[String, Array[Byte]] = Map()

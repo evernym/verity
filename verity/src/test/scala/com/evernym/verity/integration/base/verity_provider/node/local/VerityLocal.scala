@@ -19,6 +19,9 @@ import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
 import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
 
+import com.evernym.verity.vdr.{TestLedgerRegistry, TestVdrToolsBuilder}
+import com.evernym.verity.vdr.service.VDRToolsFactory
+
 import java.nio.file.Path
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor}
@@ -76,7 +79,6 @@ object LocalVerity {
       .withFallback(baseConfig)
   }
 
-
   private def waitTillUp(appStateManager: ActorRef): Unit = {
     TestKit.awaitCond(isListening(appStateManager), waitAtMost, 200.millis)
   }
@@ -107,6 +109,9 @@ object LocalVerity {
           .flatMap(_.storageAPI)
           .getOrElse(StorageAPI.loadFromConfig(appConfig, executionContextProvider.futureExecutionContext))
       }
+
+      val testVdrLedgerRegistry = TestLedgerRegistry()
+      override lazy val vdrBuilderFactory: VDRToolsFactory = () => new TestVdrToolsBuilder(testVdrLedgerRegistry)
     }
 
     val platform: Platform = PlatformBuilder.build(

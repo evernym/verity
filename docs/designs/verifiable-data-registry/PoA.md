@@ -16,16 +16,19 @@ verity {
         }
     }
 
-    # vdrs (ledgers) specific configs (irrespective of which vdr-tools implementation gets used)
-    vdrs: [
-        # there can be more than one ledger of same 'type'
-        # it is just that the namespaces should be unique among all VDR entries in this section 
-        {
-            type = "indy-ledger"
-            namespaces = ["indy:sovrin", "sov"]
-            ...
-        }
-    ]
+    # vdr (ledgers) specific configs (irrespective of which vdr-tools implementation gets used)
+    vdr: {
+        default-namespace = "sov"
+        ledgers: [
+            # there can be more than one ledger of same 'type'
+            # it is just that the namespaces should be unique among all ledger entries in this section 
+            {
+                type = "indy"
+                namespaces = ["sov", "indy:sovrin"]
+                ...
+            }
+        ]
+    }
     ...
 }
 ```

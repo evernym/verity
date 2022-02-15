@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.engine.validate
 import com.evernym.verity.did.validateDID
 import com.evernym.verity.protocol.engine.{EmptyValueForOptionalFieldProtocolEngineException, InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, MsgBase}
 import com.evernym.verity.did.exception.DIDException
-import com.evernym.verity.did.{toDIDMethod, validateDID}
+import com.evernym.verity.did.toDIDMethod
 
 import scala.util.Try
 

@@ -3,7 +3,7 @@ package com.evernym.verity.vdr
 import akka.actor.typed.scaladsl.adapter._
 import akka.testkit.TestKitBase
 import com.evernym.verity.actor.testkit.HasBasicActorSystem
-import com.evernym.verity.protocol.engine.asyncapi.ledger.NAMESPACE_INDY_SOVRIN
+import com.evernym.verity.protocol.testkit.MockLedger.TEST_INDY_SOVRIN_NAMESPACE
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vdr.base.TestVDRDidDoc
@@ -186,7 +186,7 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "schema not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+        ex.getMessage shouldBe "schema not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1 (available schemas: )"
       }
     }
 
@@ -219,7 +219,7 @@ class VDRActorAdapterSpec
           Await.result(
             vdrAdapter.prepareCredDefTxn(
               """{"schemaId":"schema-id"}""",
-              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1 (validNamespaces: 'indy:sovrin, sov')",
               "did1",
               None
             ),
@@ -303,7 +303,7 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "cred def not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+        ex.getMessage shouldBe "cred def not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1 (available cred defs: )"
       }
     }
 
@@ -321,7 +321,7 @@ class VDRActorAdapterSpec
           credDef <- vdrAdapter.resolveCredDef("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1")
         } yield {
           credDef.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
-          credDef.schemaId shouldBe "schema-id"
+          credDef.fqSchemaId shouldBe "schema-id"
           val json = new JSONObject(credDef.json)
           json.getString("schemaId") shouldBe "schema-id"
           json.getString("id") shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
@@ -352,7 +352,7 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "did doc not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM"
+        ex.getMessage shouldBe "did doc not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM (available did docs: )"
       }
     }
 
@@ -388,14 +388,14 @@ class VDRActorAdapterSpec
 
     val testVdrToolsBuilder = new MockVdrToolsBuilder(testLedgerRegistry)
     val testVDRToolsFactory = { () => testVdrToolsBuilder }
-    val vdrToolsConfig = VDRToolsConfig(NAMESPACE_INDY_SOVRIN, ledgers)
+    val vdrToolsConfig = VDRToolsConfig(TEST_INDY_SOVRIN_NAMESPACE, ledgers)
     new VDRActorAdapter(testVDRToolsFactory, vdrToolsConfig, None)(ec, system.toTyped)
   }
 
   lazy val apiTimeout: FiniteDuration = 5.seconds
 
   lazy val defaultIndyLedger: IndyLedger = IndyLedger(List("indy:sovrin", "sov"), "genesis1-path", None)
-  lazy val anotherIndyLedger: IndyLedger = IndyLedger(List("indy:sovrin", "sov"), "genesis2-path", None)
+  lazy val anotherIndyLedger: IndyLedger = IndyLedger(List("indy:sovrin", "sov", "cheqd"), "genesis2-path", None)
 
   implicit lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   implicit val ec: ExecutionContext = ecp.futureExecutionContext

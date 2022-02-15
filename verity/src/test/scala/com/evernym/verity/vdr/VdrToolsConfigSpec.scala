@@ -1,5 +1,6 @@
 package com.evernym.verity.vdr
 
+import com.evernym.verity.config.ConfigConstants.VDR_DEFAULT_NAMESPACE
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.vdr.service.{IndyLedger, VDRToolsConfig}
 import com.typesafe.config.ConfigFactory
@@ -26,19 +27,22 @@ class VdrToolsConfigSpec
           ConfigFactory.parseString(
             s"""
               |verity {
-              |  vdrs: [
-              |    {
-              |      type: "indy"
-              |      namespaces: ["indy:sovrin", "sov"]
-              |      genesis-txn-file-location: "$genesisTxnFile"
-              |      transaction-author-agreement: {
-              |        version: "1"
-              |        text: "lorem ipsum dolor"
-              |        time-of-acceptance: "2022-01-01T06:00:00Z"
-              |        mechanism: "on_file"
+              |  vdr: {
+              |    default-namespace = "sov"
+              |    ledgers = [
+              |      {
+              |        type: "indy"
+              |        namespaces: ["sov", "indy:sovrin"]
+              |        genesis-txn-file-location: "$genesisTxnFile"
+              |        transaction-author-agreement: {
+              |          version: "1"
+              |          text: "lorem ipsum dolor"
+              |          time-of-acceptance: 1648037095
+              |          mechanism: "on_file"
+              |        }
               |      }
-              |    }
-              |  ]
+              |    ]
+              |  }
               |}
               |
               |""".stripMargin
@@ -48,7 +52,7 @@ class VdrToolsConfigSpec
         vdrToolsConfig.ledgers.length shouldBe 1
 
         val ledger = vdrToolsConfig.ledgers.head.asInstanceOf[IndyLedger]
-        ledger.namespaces shouldBe List("indy:sovrin", "sov")
+        ledger.namespaces shouldBe List("sov", "indy:sovrin")
         ledger.genesisTxnData shouldBe "genesis txn data"
         ledger.taaConfig should not be empty
 
@@ -56,7 +60,7 @@ class VdrToolsConfigSpec
         taa.getVersion shouldBe "1"
         taa.getText shouldBe "lorem ipsum dolor"
         taa.getAccMechType shouldBe "on_file"
-        taa.getTime shouldBe "2022-01-01T06:00:00Z"
+        taa.getTime shouldBe 1648037095
       }
     }
 
@@ -68,13 +72,17 @@ class VdrToolsConfigSpec
           ConfigFactory.parseString(
             s"""
                |verity {
-               |  vdrs: [
-               |    {
-               |      type: "indy"
-               |      namespaces: ["indy:sovrin", "sov"]
-               |      genesis-txn-file-location: "$genesisTxnFile"
-               |    }
-               |  ]
+               |  vdr: {
+               |    default-namespace = "sov"
+               |
+               |    ledgers: [
+               |      {
+               |        type: "indy"
+               |        namespaces: ["sov", "indy:sovrin"]
+               |        genesis-txn-file-location: "$genesisTxnFile"
+               |      }
+               |    ]
+               |  }
                |}
                |
                |""".stripMargin
@@ -84,7 +92,7 @@ class VdrToolsConfigSpec
         vdrToolsConfig.ledgers.length shouldBe 1
 
         val ledger = vdrToolsConfig.ledgers.head.asInstanceOf[IndyLedger]
-        ledger.namespaces shouldBe List("indy:sovrin", "sov")
+        ledger.namespaces shouldBe List("sov", "indy:sovrin")
         ledger.genesisTxnData shouldBe "genesis txn data"
         ledger.taaConfig shouldBe None
       }
@@ -99,18 +107,21 @@ class VdrToolsConfigSpec
           ConfigFactory.parseString(
             s"""
                |verity {
-               |  vdrs: [
-               |    {
-               |      type: "indy"
-               |      namespaces: ["indy:sovrin", "sov"]
-               |      genesis-txn-file-location: "$genesisTxnFileA"
-               |    },
-               |    {
-               |      type: "indy"
-               |      namespaces: ["indy:sovrin:builder"]
-               |      genesis-txn-file-location: "$genesisTxnFileB"
-               |    }
-               |  ]
+               |  vdr: {
+               |    default-namespace = "sov"
+               |    ledgers: [
+               |      {
+               |        type: "indy"
+               |        namespaces: ["sov", "indy:sovrin"]
+               |        genesis-txn-file-location: "$genesisTxnFileA"
+               |      },
+               |      {
+               |        type: "indy"
+               |        namespaces: ["indy:sovrin:builder"]
+               |        genesis-txn-file-location: "$genesisTxnFileB"
+               |      }
+               |    ]
+               |  }
                |}
                |
                |""".stripMargin
@@ -120,7 +131,7 @@ class VdrToolsConfigSpec
         vdrToolsConfig.ledgers.length shouldBe 2
 
         val ledgerA = vdrToolsConfig.ledgers.head.asInstanceOf[IndyLedger]
-        ledgerA.namespaces shouldBe List("indy:sovrin", "sov")
+        ledgerA.namespaces shouldBe List("sov", "indy:sovrin")
         ledgerA.genesisTxnData shouldBe "some genesis txn data"
         ledgerA.taaConfig shouldBe None
 
@@ -138,7 +149,10 @@ class VdrToolsConfigSpec
             ConfigFactory.parseString(
               """
                 |verity {
-                |  vdrs: []
+                |  vdr: {
+                |    default-namespace = "sov"
+                |    ledgers: []
+                |  }
                 |}
                 |
                 |""".stripMargin
@@ -159,13 +173,16 @@ class VdrToolsConfigSpec
             ConfigFactory.parseString(
               s"""
                  |verity {
-                 |  vdrs: [
-                 |    {
-                 |      type: "indy"
-                 |      namespaces: ["indy:sovrin", "sov"]
-                 |      genesis-txn-file-location: "${genesisTxn.getAbsolutePath}"
-                 |    }
-                 |  ]
+                 |  vdr: {
+                 |    default-namespace = "sov"
+                 |    ledgers: [
+                 |      {
+                 |        type: "indy"
+                 |        namespaces: ["sov", "indy:sovrin"]
+                 |        genesis-txn-file-location: "${genesisTxn.getAbsolutePath}"
+                 |      }
+                 |    ]
+                 |  }
                  |}
                  |
                  |""".stripMargin
@@ -186,18 +203,21 @@ class VdrToolsConfigSpec
             ConfigFactory.parseString(
               s"""
                  |verity {
-                 |  vdrs: [
-                 |    {
-                 |      type: "indy"
-                 |      namespaces: ["indy:sovrin", "sov"]
-                 |      genesis-txn-file-location: "$genesisTxnFileA"
-                 |    },
-                 |    {
-                 |      type: "indy"
-                 |      namespaces: ["sov"]
-                 |      genesis-txn-file-location: "$genesisTxnFileB"
-                 |    }
-                 |  ]
+                 |  vdr: {
+                 |    default-namespace = "indy:sovrin"
+                 |    ledgers: [
+                 |      {
+                 |        type: "indy"
+                 |        namespaces: ["sov", "indy:sovrin"]
+                 |        genesis-txn-file-location: "$genesisTxnFileA"
+                 |      },
+                 |      {
+                 |        type: "indy"
+                 |        namespaces: ["sov"]
+                 |        genesis-txn-file-location: "$genesisTxnFileB"
+                 |      }
+                 |    ]
+                 |  }
                  |}
                  |
                  |""".stripMargin
@@ -205,6 +225,61 @@ class VdrToolsConfigSpec
           )
         }
         ex.getMessage shouldBe "[VDR] ledgers can not have shared namespaces"
+      }
+    }
+
+    "when initialized without default namespaces" - {
+      "should throw exception" in {
+
+        val ex = intercept[RuntimeException] {
+          VDRToolsConfig.load(
+            ConfigFactory.parseString(
+              s"""
+                 |verity {
+                 |  vdr: {
+                 |    ledgers: [
+                 |      {
+                 |        type: "indy"
+                 |        namespaces: ["sov", "indy:sovrin"]
+                 |        genesis-txn-file-location: "/tmp/genesist.txt"
+                 |      }
+                 |    ]
+                 |  }
+                 |}
+                 |
+                 |""".stripMargin
+            )
+          )
+        }
+        ex.getMessage shouldBe "[VDR] required configuration not found: 'verity.vdr.default-namespace'"
+      }
+    }
+
+    "when initialized with default namespaces outside of registered ledger's namespaces" - {
+      "should throw exception" in {
+        val genesisTxnFile = createGenesisFile("some genesis txn data")
+        val ex = intercept[RuntimeException] {
+          VDRToolsConfig.load(
+            ConfigFactory.parseString(
+              s"""
+                 |verity {
+                 |  vdr: {
+                 |    default-namespace = "test"
+                 |    ledgers: [
+                 |      {
+                 |        type: "indy"
+                 |        namespaces: ["sov", "indy:sovrin"]
+                 |        genesis-txn-file-location: "$genesisTxnFile"
+                 |      }
+                 |    ]
+                 |  }
+                 |}
+                 |
+                 |""".stripMargin
+            )
+          )
+        }
+        ex.getMessage shouldBe s"[VDR] '$VDR_DEFAULT_NAMESPACE' (test) is not found in registered ledger's namespaces (sov, indy:sovrin)"
       }
     }
   }

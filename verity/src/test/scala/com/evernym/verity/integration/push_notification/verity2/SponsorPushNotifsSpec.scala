@@ -60,7 +60,7 @@ class SponsorPushNotifsSpec
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext)
     val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnv, executionContext)
-    val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
 
     issuerSDK   = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
     verifierSDK = Await.result(verifierSDKFut, SDK_BUILD_TIMEOUT)

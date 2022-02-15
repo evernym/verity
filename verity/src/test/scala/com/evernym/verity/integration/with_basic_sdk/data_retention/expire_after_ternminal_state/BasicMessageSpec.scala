@@ -46,7 +46,7 @@ class BasicMessageSpec
     val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
-    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, ledgerTxnExecutor, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, ledgerTxnExecutor, vdrTools, executionContext)
 
     issuerVerityEnv = Await.result(issuerVerityEnvFut, ENV_BUILD_TIMEOUT)
     holderVerityEnv = Await.result(holderVerityEnvFut, ENV_BUILD_TIMEOUT)

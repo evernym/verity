@@ -1,7 +1,7 @@
 package com.evernym.verity.integration.with_basic_sdk
 
 
-import akka.http.scaladsl.model.StatusCodes.{SeeOther, Unauthorized}
+import akka.http.scaladsl.model.StatusCodes.Unauthorized
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
@@ -32,8 +32,8 @@ class ConnectionAcceptanceSpec
     val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext)
-    val holderSDK1Fut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
-    val holderSDK2Fut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+    val holderSDK1Fut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
+    val holderSDK2Fut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
 
     issuerSDK = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
     holderSDK1 = Await.result(holderSDK1Fut, SDK_BUILD_TIMEOUT)

@@ -33,7 +33,7 @@ object ConfigUtil {
     * For example: "akka.sharding-region-name.user-agent" would
     * return "user-agent"
     *
-    * @param keyPath
+    * @param keyPath key path
     * @return last segment of a HOCON path
     */
   def lastKeySegment(keyPath: String): String = {
@@ -85,7 +85,6 @@ object ConfigUtil {
 
   def findTAAConfig_!(config: AppConfig, version: String): TransactionAuthorAgreement = {
     val agreementVersionPath = s"$LIB_INDY_LEDGER_TAA_AGREEMENTS.${com.typesafe.config.ConfigUtil.quoteString(version)}"
-
     TransactionAuthorAgreement(
       version,
       config.getStringReq(s"$agreementVersionPath.digest").toLowerCase(),

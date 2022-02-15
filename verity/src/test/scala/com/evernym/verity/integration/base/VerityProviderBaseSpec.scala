@@ -8,9 +8,11 @@ import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedE
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider}
+import com.evernym.verity.vdr.base.{MOCK_VDR_DID_SOV_NAMESPACE, MOCK_VDR_SOV_NAMESPACE}
+import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockVdrTools}
 import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
 import com.typesafe.scalalogging.Logger
-import org.scalatest.{BeforeAndAfterAll, Suite, fullstacks}
+import org.scalatest.{BeforeAndAfterAll, Suite}
 
 import java.nio.file.{Files, Path}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
@@ -161,14 +163,18 @@ trait VerityProviderBaseSpec
       Future.sequence(otherNodes.map(_.start()))
     }
 
-
   }
 
   //default service param to be used for all verity instances
   // implementing class can override it or send specific one for specific verity instance as well
   // but for external storage type of services (like ledger) we should make sure
   // it is the same instance across the all verity environments
-  lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new MockLedgerTxnExecutor(futureExecutionContext))
+  lazy val defaultSvcParam: ServiceParam =
+  ServiceParam
+    .empty
+    .withLedgerTxnExecutor(new MockLedgerTxnExecutor(futureExecutionContext))
+    .withVdrTools(new MockVdrTools(MockLedgerRegistry(
+      List(MockIndyLedger(List(MOCK_VDR_SOV_NAMESPACE, MOCK_VDR_DID_SOV_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext))
 
   private def randomTmpDirPath(): Path = {
     val tmpDir = TempDir.findSuiteTempDir(this.suiteName)

@@ -1,7 +1,7 @@
 package com.evernym.verity.vdrtools.ledger
 
 import akka.actor.ActorSystem
-import com.evernym.verity.util2.Exceptions.{InvalidValueException, MissingReqFieldException, NoResponseFromLedgerPoolServiceException}
+import com.evernym.verity.util2.Exceptions.{InvalidValueException, NoResponseFromLedgerPoolServiceException}
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status.{TIMEOUT, UNHANDLED, _}
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, MildSystemError, RecoverIfNeeded, SeriousSystemError}
@@ -27,6 +27,7 @@ import com.evernym.vdrtools.IndyException
 import com.evernym.vdrtools.ledger.Ledger
 import com.evernym.vdrtools.ledger.Ledger._
 import com.evernym.vdrtools.pool.{LedgerNotFoundException, Pool}
+import com.evernym.verity.vdrtools.ledger.LedgerTxnUtil.appendTAAToRequest
 
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
 import scala.concurrent.{ExecutionContext, Future, Promise, TimeoutException}
@@ -140,29 +141,8 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
     case e => Future.failed(e)
   }
 
-  def appendTAAToRequest(ledgerRequest: LedgerRequest, taa: Option[TransactionAuthorAgreement]): Future[LedgerRequest] = {
-  // IMPORTANT - Either use (text and version) OR (digest). Sending text or version with digest will result
-  //             in an IndyException - Error: Invalid structure Caused by: Invalid combination of params:
-  //             `text` and `version` should be passed or skipped together.
-    taa match {
-      case Some(taa) =>
-        toFuture(appendTxnAuthorAgreementAcceptanceToRequest(
-          ledgerRequest.req,
-          null,
-          null,
-          taa.digest,
-          taa.mechanism,
-          TAAUtil.taaAcceptanceEpochDateTime(taa.timeOfAcceptance)
-        )) map { req =>
-          ledgerRequest.prepared(newRequest = req)
-        }
-      case None => Future.successful(ledgerRequest)
-    }
-  }
-
-
   def prepareRequest(submitterDetail: Submitter,
-                     request:         LedgerRequest): Future[LedgerRequest] = {
+                     request: LedgerRequest): Future[LedgerRequest] = {
     Future.successful(request)
       .flatMap { r => appendTAAToRequest(r, r.taa) }
       .flatMap{ r =>
@@ -255,7 +235,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
   }
 
   def completeRequest(submitterDetail: Submitter,
-                      request:         LedgerRequest): Future[LedgerResult] = {
+                      request: LedgerRequest): Future[LedgerResult] = {
       if(pool.isEmpty) {
         Future.failed(StatusDetailException(LEDGER_NOT_CONNECTED))
       } else {
@@ -363,7 +343,8 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
             promise.completeWith(
               submitWriteRequest(Submitter(submitterDID, None), reqWithOptTAA.prepared(signedRequest.req))
             )
-          case Failure(ex) => promise.failure(ex)
+          case Failure(ex) =>
+            promise.failure(ex)
         }
         promise.future
       }
@@ -489,23 +470,27 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
     }
   }
 
-  def extractReqValue(resp: LedgerResult, fieldToExtract: String): Any = {
-    resp.get(fieldToExtract) match {
-      case Some(r) if r == null =>
-        throw new InvalidValueException(Option("ledger response parsing error " +
-          s"(invalid value found for field '$fieldToExtract': $r)"))
-      case Some(r) => r
-      case _ =>
-        throw new MissingReqFieldException(Option(s"ledger response parsing error ('$fieldToExtract' key is missing)"))
-    }
-  }
+}
 
-  def extractOptValue(resp: LedgerResult, fieldToExtract: String, nullAllowed: Boolean = false): Option[Any] = {
-    try {
-      Option(extractReqValue(resp, fieldToExtract))
-    } catch {
-      case _:InvalidValueException if nullAllowed => None
-      case _:MissingReqFieldException => None
+object LedgerTxnUtil {
+  def appendTAAToRequest(ledgerRequest: LedgerRequest, taa: Option[TransactionAuthorAgreement])
+                        (implicit ec: ExecutionContext): Future[LedgerRequest] = {
+    // IMPORTANT - Either use (text and version) OR (digest). Sending text or version with digest will result
+    //             in an IndyException - Error: Invalid structure Caused by: Invalid combination of params:
+    //             `text` and `version` should be passed or skipped together.
+    taa match {
+      case Some(taa) =>
+        toFuture(appendTxnAuthorAgreementAcceptanceToRequest(
+          ledgerRequest.req,
+          null,
+          null,
+          taa.digest,
+          taa.mechanism,
+          TAAUtil.taaAcceptanceEpochDateTime(taa.timeOfAcceptance)
+        )) map { req =>
+          ledgerRequest.prepared(newRequest = req)
+        }
+      case None => Future.successful(ledgerRequest)
     }
   }
 

@@ -6,8 +6,8 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.exception.DIDException
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerUtil
 import com.evernym.verity.protocol.testkit.DSL.signal
+import com.evernym.verity.protocol.testkit.MockLedger.toFqId
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}
 import com.evernym.verity.util.TestExecutionContextProvider
@@ -210,8 +210,7 @@ class WriteSchemaSpec
     }
   }
 
-  def toFqId(id: String): String =
-    LedgerUtil.toFQId(id, "indy:sovrin")
+
 
   def withDefaultWalletAccess(s: Scenario, f: => Unit): Unit = {
     s.writer walletAccess MockableWalletAccess()

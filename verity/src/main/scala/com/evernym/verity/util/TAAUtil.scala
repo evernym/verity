@@ -2,13 +2,14 @@ package com.evernym.verity.util
 
 import com.evernym.verity.util2.Exceptions.InvalidValueException
 import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
+import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 
 import scala.util.Try
 
 object TAAUtil {
   val taaAcceptanceDatePattern = "yyyy-MM-dd"
-  val taaAcceptanceFormat = DateTimeFormat.forPattern(taaAcceptanceDatePattern)
+  val taaAcceptanceFormat: DateTimeFormatter = DateTimeFormat.forPattern(taaAcceptanceDatePattern)
+
   def taaAcceptanceDateParse(str: String): Option[DateTime] = {
     Try(DateTime.parse(str, taaAcceptanceFormat)).toOption
   }

@@ -1,7 +1,7 @@
 package com.evernym.verity.vdr
 
 import com.evernym.verity.did.VerKeyStr
-import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519
 
 import scala.concurrent.Future
 
@@ -10,12 +10,14 @@ trait VDRAdapter {
 
   def ping(namespaces: List[Namespace]): Future[PingResult]
 
+  def prepareDidTxn(didJson: String,
+                    submitterDID: VdrDid,
+                    endorser: Option[String]): Future[PreparedTxn]
+
   def prepareSchemaTxn(schemaJson: String,
                        fqSchemaId: FQSchemaId,
                        submitterDID: VdrDid,
                        endorser: Option[String]): Future[PreparedTxn]
-
-
 
   def prepareCredDefTxn(credDefJson: String,
                         fqCredDefId: FQCredDefId,
@@ -26,11 +28,11 @@ trait VDRAdapter {
                 signature: Array[Byte],
                 endorsement: Array[Byte]): Future[SubmittedTxn]
 
-  def resolveSchema(schemaId: FQSchemaId): Future[Schema]
+  def resolveSchema(schemaId: FQSchemaId, cacheOption: Option[CacheOption]=None): Future[Schema]
 
-  def resolveCredDef(credDefId: FQCredDefId): Future[CredDef]
+  def resolveCredDef(credDefId: FQCredDefId, cacheOption: Option[CacheOption]=None): Future[CredDef]
 
-  def resolveDID(fqDid: FQDid): Future[DidDoc]
+  def resolveDID(fqDid: FQDid, cacheOption: Option[CacheOption]=None): Future[DidDoc]
 }
 
 
@@ -44,14 +46,21 @@ case class PreparedTxn(namespace: Namespace,
                        bytesToSign: Array[Byte],
                        endorsementSpec: EndorsementSpec) {
 
-  def signatureType: String = if (signatureSpec == "") SIGN_ED25519_SHA512_SINGLE else signatureSpec
+  def signatureType: String = if (signatureSpec == "") SIGN_ED25519 else signatureSpec
 }
 
 case class SubmittedTxn(response: String)
 
 case class Schema(fqId: FQSchemaId, json: String)
 
-case class CredDef(fqId: FQCredDefId, schemaId: FQSchemaId, json: String)
+case class CredDef(fqId: FQCredDefId, fqSchemaId: FQSchemaId, json: String)
 
 case class DidDoc(fqId: FQDid, verKey: VerKeyStr, endpoint: Option[String])
 
+case class CacheOption(noCache: Boolean, noUpdate: Boolean, noStore: Boolean, minFresh: Int)
+
+object CacheOption {
+
+  //TODO: finalize the default values
+  def default: CacheOption = CacheOption(noCache = true, noUpdate = true, noStore = true, minFresh = -1)
+}

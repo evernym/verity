@@ -31,6 +31,12 @@ class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory,
       .map(resp => buildPingResult(resp))
   }
 
+  override def prepareDidTxn(didJson: String, submitterDID: VdrDid, endorser: Option[String]): Future[PreparedTxn] =
+    vdrActorRef
+      .ask(ref => VDRActor.Commands.PrepareDidTxn(didJson, submitterDID, endorser, ref))
+      .flatMap(reply => Future.fromTry(reply.preparedTxn))
+      .map(resp => buildPreparedTxn(resp))
+
   override def prepareSchemaTxn(schemaJson: String,
                                 fqSchemaId: FQSchemaId,
                                 submitterDID: VdrDid,
@@ -61,29 +67,29 @@ class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory,
         holder.txnBytes,
         holder.signatureSpec,
         signature,
-        new String(endorsement),
+        if (endorsement.isEmpty) null else new String(endorsement),
         ref))
       .flatMap(reply => Future.fromTry(reply.txnResult))
       .map(resp => SubmittedTxn(resp))
   }
 
-  override def resolveSchema(schemaId: FQSchemaId): Future[Schema] = {
+  override def resolveSchema(fqSchemaId: FQSchemaId, cacheOption: Option[CacheOption]=None): Future[Schema] = {
     vdrActorRef
-      .ask(ref => VDRActor.Commands.ResolveSchema(schemaId, ref))
+      .ask(ref => VDRActor.Commands.ResolveSchema(fqSchemaId, cacheOption, ref))
       .flatMap(reply => Future.fromTry(reply.resp))
-      .map(resp => buildSchema(resp))
+      .map(resp => buildSchema(fqSchemaId, resp))
   }
 
-  override def resolveCredDef(credDefId: FQCredDefId): Future[CredDef] = {
+  override def resolveCredDef(fqCredDefId: FQCredDefId, cacheOption: Option[CacheOption]=None): Future[CredDef] = {
     vdrActorRef
-      .ask(ref => VDRActor.Commands.ResolveCredDef(credDefId, ref))
+      .ask(ref => VDRActor.Commands.ResolveCredDef(fqCredDefId, cacheOption, ref))
       .flatMap(reply => Future.fromTry(reply.resp))
-      .map(resp => buildCredDef(resp))
+      .map(resp => buildCredDef(fqCredDefId, resp))
   }
 
-  override def resolveDID(fqDid: FQDid): Future[DidDoc] = {
+  override def resolveDID(fqDid: FQDid, cacheOption: Option[CacheOption]=None): Future[DidDoc] = {
     vdrActorRef
-      .ask(ref => VDRActor.Commands.ResolveDID(fqDid, ref))
+      .ask(ref => VDRActor.Commands.ResolveDID(fqDid, cacheOption, ref))
       .flatMap(reply => Future.fromTry(reply.resp))
       .map(resp => buildDidDoc(resp))
   }

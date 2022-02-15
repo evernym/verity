@@ -50,7 +50,7 @@ class PresentProofSpec
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext)
     val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnv, executionContext)
-    val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
 
     issuerSDK   = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
     verifierSDK = Await.result(verifierSDKFut, SDK_BUILD_TIMEOUT)
@@ -63,7 +63,6 @@ class PresentProofSpec
     setupIssuer(issuerSDK)
     schemaId = writeSchema(issuerSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
     credDefId = writeCredDef(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))
-
     establishConnection(issuerHolderConn, issuerSDK, holderSDK)
     establishConnection(verifierHolderConn, verifierSDK, holderSDK)
   }

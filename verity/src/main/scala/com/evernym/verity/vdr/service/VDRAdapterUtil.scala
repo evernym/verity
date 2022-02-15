@@ -1,5 +1,6 @@
 package com.evernym.verity.vdr.service
 
+import com.evernym.vdrtools.vdr.VdrParams.CacheOptions
 import com.evernym.vdrtools.vdr.VdrResults
 import com.evernym.verity.vdr._
 import org.json.JSONObject
@@ -20,18 +21,21 @@ object VDRAdapterUtil {
     )
   }
 
-  def buildSchema(vdrSchema: VdrSchema): Schema = {
-    val json = new JSONObject(vdrSchema)
+  def buildSchema(fqSchemaId: FQSchemaId, vdrSchema: VdrSchema): Schema = {
+    //TODO: why the "id" field inside the `vdrSchema' json string is not fully qualified?
     Schema(
-      json.getString("id"),
+      fqSchemaId,
       vdrSchema
     )
   }
 
-  def buildCredDef(vdrCredDef: VdrCredDef): CredDef = {
+  def buildCredDef(fqCredDefId: FQCredDefId, vdrCredDef: VdrCredDef): CredDef = {
+    //TODO: check if "id" field inside the `vdrCredDef' json string is fully qualified?
+    //TODO: check if "schemaId" field inside the `vdrCredDef' json string is fully qualified?
+
     val json = new JSONObject(vdrCredDef)
     CredDef(
-      json.getString("id"),
+      fqCredDefId,
       json.getString("schemaId"),
       vdrCredDef
     )
@@ -50,7 +54,7 @@ object VDRAdapterUtil {
   def buildPingResult(vdrPingResult: Map[Namespace, VdrResults.PingResult]): PingResult = {
     PingResult(vdrPingResult.view.mapValues(e => LedgerStatus(e.isSuccessful)).toMap)
   }
-
+  
   def buildVDRSchemaParams(schemaJson: String,
                            fqSchemaId: FQSchemaId): TxnSpecificParams = {
     val json = new JSONObject(schemaJson)
@@ -72,6 +76,15 @@ object VDRAdapterUtil {
       txn.namespace,
       txn.txnBytes,
       txn.signatureSpec
+    )
+  }
+
+  def buildVDRCache(cache: CacheOption): CacheOptions = {
+    new CacheOptions(
+      cache.noCache,
+      cache.noStore,
+      cache.noUpdate,
+      cache.minFresh
     )
   }
 }

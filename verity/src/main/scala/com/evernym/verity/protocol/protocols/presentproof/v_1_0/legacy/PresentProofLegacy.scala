@@ -228,11 +228,10 @@ trait PresentProofLegacy
     }
 
     def doSchemaRetrievalLegacy(ids: Set[String])(handler: Try[String] => Unit): Unit = {
-      ctx.ledger.getSchemas(ids) {
+      ctx.ledger.resolveSchemas(ids) {
         case Success(schemas) if schemas.size == ids.size =>
-          val retrievedSchemasJson = schemas.map { case (id, getSchemaResp) =>
-            val schemaJson = DefaultMsgCodec.toJson(getSchemaResp.schema)
-            s""""$id": $schemaJson"""
+          val retrievedSchemasJson = schemas.map { schema =>
+            s""""${schema.fqId}": ${schema.json}"""
           }.mkString("{", ",", "}")
           handler(Success(retrievedSchemasJson))
         case Success(_) => handler(Failure(new Exception("Unable to retrieve schema from ledger")))
@@ -243,11 +242,10 @@ trait PresentProofLegacy
 
     def doCredDefRetrievalLegacy(schemas: String, credDefIds: Set[String])
                           (handler: Try[(String, String)] => Unit): Unit = {
-      ctx.ledger.getCredDefs(credDefIds) {
+      ctx.ledger.resolveCredDefs(credDefIds) {
         case Success(credDefs) if credDefs.size == ids.size =>
-          val retrievedCredDefJson = credDefs.map { case (id, getCredDefResp) =>
-            val credDefJson = DefaultMsgCodec.toJson(getCredDefResp.credDef)
-            s""""$id": $credDefJson"""
+           val retrievedCredDefJson = credDefs.map { credDef =>
+            s""""${credDef.fqId}": ${credDef.json}"""
           }.mkString("{", ",", "}")
           handler(Success((schemas, retrievedCredDefJson)))
         case Success(_) => throw new Exception("Unable to retrieve cred def from ledger")

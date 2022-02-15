@@ -26,7 +26,7 @@ class BasicAgentProvisioningSpec
     val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext)
-    val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
 
     issuerSDK = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
     holderSDK = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)

@@ -23,7 +23,7 @@ class JnaPathSpec extends AnyFreeSpec with Matchers with OptionValues with TempD
 
   "isRecognizedCmd" - {
     "should recognize sbt command as true" in {
-      val testPropKey = setNextPropKeyTo("org.jetbrains.plugins.scala.testingSupport.scalaTest.ScalaTestRunner -s com.evernym.verity.libindy.JnaPathSpec -showProgressMessages true")
+      val testPropKey = setNextPropKeyTo("org.jetbrains.plugins.scala.testingSupport.scalaTest.ScalaTestRunner -s com.evernym.verity.vdrtools.JnaPathSpec -showProgressMessages true")
       isRecognizedCmd(propKey = testPropKey) shouldBe true
     }
     "should recognize testing environment" in {

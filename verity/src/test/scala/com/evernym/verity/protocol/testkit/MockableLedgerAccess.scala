@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.testkit
 import akka.actor.ActorRef
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
+import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
@@ -10,15 +11,17 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException, LedgerUtil}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessAdapter
+import com.evernym.verity.protocol.testkit.MockLedger.{TEST_INDY_SOVRIN_NAMESPACE, nonFqID}
 import com.evernym.verity.testkit.TestWallet
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vdr._
+import com.evernym.verity.vdr.base.{MOCK_VDR_DID_SOV_NAMESPACE, MOCK_VDR_SOV_NAMESPACE}
 import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Try}
 
 object MockableLedgerAccess {
   val MOCK_NO_DID = "MOCK_NO_DID"
@@ -34,8 +37,8 @@ object MockableLedgerAccess {
 }
 
 class MockableLedgerAccess(executionContext: ExecutionContext,
-                           val schemas: Map[String, GetSchemaResp] = MockLedgerData.schemas01,
-                           val credDefs: Map[String, GetCredDefResp] = MockLedgerData.credDefs01,
+                           val schemas: Map[String, Schema] = MockLedgerData.schemas01,
+                           val credDefs: Map[String, CredDef] = MockLedgerData.credDefs01,
                            val ledgerAvailable: Boolean = true)
   extends LedgerAccess with MockAsyncOpRunner {
 
@@ -57,70 +60,6 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     "1 ENDORSER signature is required, Error: Not enough ENDORSER signatures\\nConstraint: 1 signature of any role " +
     "is required with additional metadata fees schema, Error: Fees are required for this txn type"
 
-  override def getCredDef(credDefId: String)(handler: Try[GetCredDefResp] => Unit): Unit = {
-    handler {
-      if (ledgerAvailable) Try(credDefs.getOrElse(credDefId, throw new Exception("Unknown cred def")))
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
-    }
-  }
-
-  override def writeCredDef(submitterDID: DidStr, credDefJson: String)(handler: Try[TxnResp] => Unit): Unit = {
-    handler {
-      if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
-      else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
-      else if (ledgerAvailable) Success(TxnResp(submitterDID, None, None, "", None, 0, None))
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
-    }
-  }
-
-  override def getSchema(schemaId: String)(handler: Try[GetSchemaResp] => Unit): Unit = {
-    handler {
-      if (ledgerAvailable) Try(schemas.getOrElse(schemaId, throw new Exception("Unknown schema")))
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
-    }
-  }
-
-  override def writeSchema(submitterDID: DidStr, schemaJson: String)(handler: Try[TxnResp] => Unit): Unit = {
-    handler {
-      if (ledgerAvailable & submitterDID.equals(MOCK_NO_DID)) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
-      else if (ledgerAvailable & submitterDID.equals(MOCK_NOT_ENDORSER)) Failure(LedgerRejectException(invalidEndorserError))
-      else if (ledgerAvailable) Success(TxnResp(submitterDID, None, None, "", None, 0, None))
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
-    }
-  }
-
-  override def prepareSchemaForEndorsement(submitterDID: DidStr, schemaJson: String, endorserDID: DidStr)
-                                          (handler: Try[LedgerRequest] => Unit): Unit = {
-    handler {
-      val json = new JSONObject(schemaJson)
-      json.put("endorser", endorserDID)
-      Try(LedgerRequest(json.toString))
-    }
-  }
-
-  override def prepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr)
-                                           (handler: Try[LedgerRequest] => Unit): Unit = {
-    handler {
-      val json = new JSONObject(credDefJson)
-      json.put("endorser", endorserDID)
-      Try(LedgerRequest(json.toString))
-    }
-  }
-
-  override def getSchemas(schemaIds: Set[String])(handler: Try[Map[String, GetSchemaResp]] => Unit): Unit = {
-    handler {
-      if (ledgerAvailable) Try(schemas.view.filterKeys(s => schemaIds.contains(s)).toMap)
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
-    }
-  }
-
-  override def getCredDefs(credDefIds: Set[String])(handler: Try[Map[String, GetCredDefResp]] => Unit): Unit = {
-    handler {
-      if (ledgerAvailable) Try(credDefs.view.filterKeys(c => credDefIds.contains(c)).toMap)
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
-    }
-  }
-
   override def prepareSchemaTxn(schemaJson: String,
                                 fqSchemaId: FQSchemaId,
                                 submitterDID: DidStr,
@@ -132,7 +71,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
         endorser.foreach(eid => jsonObject.put("endorser", eid))
         val json = jsonObject.toString()
         submitterDids += json.hashCode -> submitterDID
-        Try(PreparedTxn(NAMESPACE_INDY_SOVRIN, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, NO_ENDORSEMENT))
+        Try(PreparedTxn(TEST_INDY_SOVRIN_NAMESPACE, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, NO_ENDORSEMENT))
       }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
@@ -149,7 +88,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
         endorser.foreach(eid => jsonObject.put("endorser", eid))
         val json = jsonObject.toString()
         submitterDids += json.hashCode -> submitterDID
-        Try(PreparedTxn(NAMESPACE_INDY_SOVRIN, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, NO_ENDORSEMENT))
+        Try(PreparedTxn(TEST_INDY_SOVRIN_NAMESPACE, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, NO_ENDORSEMENT))
       }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
@@ -170,23 +109,54 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
-  override def resolveSchema(fqSchemaId: FQSchemaId)(handler: Try[Schema] => Unit): Unit = {
+  override def resolveSchema(fqSchemaId: FQSchemaId, cacheOption: Option[CacheOption])(handler: Try[Schema] => Unit): Unit = {
     handler {
-      // todo Use schema store to retrieve schema
-      Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+      if (ledgerAvailable) {
+        Try{
+          val schemaResp = schemas.getOrElse(nonFqID(fqSchemaId), throw new Exception("Unknown schema"))
+          Schema(fqSchemaId, schemaResp.json)
+        }
+      }
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 
-  override def resolveCredDef(fqCredDefId: FQCredDefId)(handler: Try[CredDef] => Unit): Unit = {
+  override def resolveSchemas(fqSchemaIds: Set[FQSchemaId], cacheOption: Option[CacheOption])(handler: Try[Seq[Schema]] => Unit): Unit = {
     handler {
-      // todo Use cred def store retrieve cred def
-      Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+      if (ledgerAvailable) {
+        Try{
+          schemas.filter{ case (id, schema) => fqSchemaIds.map(nonFqID).contains(id)}.values.toSeq
+        }
+      }
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 
-  override def fqID(id: String): String = {
-    LedgerUtil.toFQId(id, NAMESPACE_INDY_SOVRIN)
+  override def resolveCredDef(fqCredDefId: FQCredDefId, cacheOption: Option[CacheOption])(handler: Try[CredDef] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) {
+        Try{
+          val credDefResp = credDefs.getOrElse(nonFqID(fqCredDefId), throw new Exception("Unknown cred def"))
+          CredDef(fqCredDefId, credDefResp.fqSchemaId, credDefResp.json)
+        }
+      }
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
   }
+
+  override def resolveCredDefs(fqCredDefIds: Set[FQCredDefId], cacheOption: Option[CacheOption])(handler: Try[Seq[CredDef]] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) {
+        Try{
+          val unqualifiedCredDefIds = fqCredDefIds.map(nonFqID)
+          val storedCredDefIds = credDefs.keys
+          credDefs.filter{ case (id, credDef) => fqCredDefIds.map(nonFqID).contains(id)}.values.toSeq
+        }
+      }
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
 
   private def extractSubmitterDID(preparedTxn: PreparedTxn): String = {
     val json = new String(preparedTxn.txnBytes)
@@ -201,6 +171,12 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
   type TxnHash = Int
 
   override val mockExecutionContext: ExecutionContext = executionContext
+
+  override def fqID(id: String): String = MockLedger.fqID(id)
+
+  override def fqSchemaId(id: String): String = MockLedger.fqSchemaID(id)
+
+  override def fqCredDefId(id: String): FQCredDefId = MockLedger.fqCredDefId(id)
 }
 
 
@@ -209,33 +185,74 @@ object MockLedgerData {
 
   val schemas01 = Map(
     "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0" ->
-      GetSchemaResp(
-        txnResp,
-        Some(SchemaV1(
-          "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
-          "schema-name",
-          "0.1",
-          Seq("attr-1", "attr2"),
-          Some(55),
-          "0.1"
-        ))
+      Schema(
+        "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
+        DefaultMsgCodec.toJson(
+          SchemaV1(
+            "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
+            "schema-name",
+            "0.1",
+            Seq("attr-1", "attr2"),
+            Some(55),
+            "0.1"
+          )
+        )
       )
-
   )
 
   val credDefs01 = Map(
     "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1" ->
-      GetCredDefResp(
-        txnResp,
-        Some(CredDefV1(
-          "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
-          "CL",
-          "55",
-          "tag",
-          "1.0",
-          Map.empty
-        ))
+      CredDef(
+        "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
+        "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
+        DefaultMsgCodec.toJson(
+          CredDefV1(
+            "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
+            "CL",
+            "55",
+            "tag",
+            "1.0",
+            Map.empty
+          )
+        )
       )
   )
+
+
 }
 
+object MockLedger {
+
+  val TEST_INDY_SOVRIN_NAMESPACE = MOCK_VDR_SOV_NAMESPACE
+
+  val NO_ENDORSEMENT = ""
+
+  def fqID(id: String): String = {
+    LedgerUtil.toFQId(id, TEST_INDY_SOVRIN_NAMESPACE)
+  }
+
+  def fqSchemaID(id: String): String = {
+    LedgerUtil.toFQSchemaId(id, TEST_INDY_SOVRIN_NAMESPACE)
+  }
+
+  def fqCredDefId(id: String): String = {
+    LedgerUtil.toFQCredDefId(id, TEST_INDY_SOVRIN_NAMESPACE)
+  }
+
+  //TODO: come back to this
+  def nonFqID(id: String): String = {
+    id match {
+      case fqIdRegEx(id)        => id
+      case fqSchemaIdRegEx(id)  => nonFqID(id)
+      case fqCredDefIdRegEx(id) => nonFqID(id).replace(s"$SCHEME_NAME_INDY_SCHEMA:$MOCK_VDR_DID_SOV_NAMESPACE:", "")
+      case other                => id
+    }
+  }
+
+  val fqIdRegEx = s"$SCHEME_NAME_DID:$TEST_INDY_SOVRIN_NAMESPACE:(.*)".r
+  val fqSchemaIdRegEx = s"$SCHEME_NAME_INDY_SCHEMA:$MOCK_VDR_DID_SOV_NAMESPACE:(.*)".r
+  val fqCredDefIdRegEx = s"$SCHEME_NAME_INDY_CRED_DEF:$MOCK_VDR_DID_SOV_NAMESPACE:(.*)".r
+
+  def toFqId(id: String): String =
+    LedgerUtil.toFQId(id, TEST_INDY_SOVRIN_NAMESPACE)
+}

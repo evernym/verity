@@ -24,6 +24,11 @@ object VDRActor {
     case class Ping(namespaces: List[Namespace],
                     replyTo: ActorRef[Replies.PingResp]) extends Cmd
 
+    case class PrepareDidTxn(txnSpecificParams: TxnSpecificParams,
+                             submitterDid: DidStr,
+                             endorser: Option[String],
+                             replyTo: ActorRef[Replies.PrepareTxnResp]) extends Cmd
+
     case class PrepareSchemaTxn(txnSpecificParams: TxnSpecificParams,
                                 submitterDid: DidStr,
                                 endorser: Option[String],
@@ -42,12 +47,15 @@ object VDRActor {
                          replyTo: ActorRef[Replies.SubmitTxnResp]) extends Cmd
 
     case class ResolveSchema(schemaId: FQSchemaId,
+                             cacheOption: Option[CacheOption]=None,
                              replyTo: ActorRef[Replies.ResolveSchemaResp]) extends Cmd
 
     case class ResolveCredDef(credDefId: FQCredDefId,
+                              cacheOption: Option[CacheOption]=None,
                               replyTo: ActorRef[Replies.ResolveCredDefResp]) extends Cmd
 
     case class ResolveDID(fqDid: FQDid,
+                          cacheOption: Option[CacheOption]=None,
                           replyTo: ActorRef[Replies.ResolveDIDResp]) extends Cmd
 
   }
@@ -107,6 +115,8 @@ object VDRActor {
   def ready(vdrTools: VdrTools)(implicit executionContext: ExecutionContext): Behavior[Cmd] =
     Behaviors.receiveMessagePartial {
       case p: Ping => handlePing(vdrTools, p)
+
+      case pdt: PrepareDidTxn => handlePrepareDidTxn(vdrTools, pdt)
       case pst: PrepareSchemaTxn => handlePrepareSchemaTxn(vdrTools, pst)
       case pcdt: PrepareCredDefTxn => handlePrepareCredDefTxn(vdrTools, pcdt)
       case st: SubmitTxn => handleSubmitTxn(vdrTools, st)
@@ -122,6 +132,15 @@ object VDRActor {
     vdrTools
       .ping(p.namespaces)
       .onComplete(resp => p.replyTo ! PingResp(resp))
+    Behaviors.same
+  }
+
+  private def handlePrepareDidTxn(vdrTools: VdrTools,
+                                  pst: PrepareDidTxn)
+                                 (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
+    vdrTools
+      .prepareDid(pst.txnSpecificParams, pst.submitterDid, pst.endorser)
+      .onComplete(resp => pst.replyTo ! PrepareTxnResp(resp))
     Behaviors.same
   }
 
@@ -156,7 +175,7 @@ object VDRActor {
                                   rs: ResolveSchema)
                                  (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
     vdrTools
-      .resolveSchema(rs.schemaId)
+      .resolveSchema(rs.schemaId, VDRAdapterUtil.buildVDRCache(rs.cacheOption.getOrElse(CacheOption.default)))
       .onComplete(resp => rs.replyTo ! ResolveSchemaResp(resp))
     Behaviors.same
   }
@@ -165,7 +184,7 @@ object VDRActor {
                                    rcd: ResolveCredDef)
                                   (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
     vdrTools
-      .resolveCredDef(rcd.credDefId)
+      .resolveCredDef(rcd.credDefId, VDRAdapterUtil.buildVDRCache(rcd.cacheOption.getOrElse(CacheOption.default)))
       .onComplete(resp => rcd.replyTo ! ResolveCredDefResp(resp))
     Behaviors.same
   }
@@ -174,7 +193,7 @@ object VDRActor {
                                rd: ResolveDID)
                               (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
     vdrTools
-      .resolveDid(rd.fqDid)
+      .resolveDid(rd.fqDid, VDRAdapterUtil.buildVDRCache(rd.cacheOption.getOrElse(CacheOption.default)))
       .onComplete(resp => rd.replyTo ! ResolveDIDResp(resp))
     Behaviors.same
   }

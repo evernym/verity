@@ -19,7 +19,7 @@ trait WalletAccess
 
   def verKeyOpt(forDID: DidStr)(handler: Try[VerKeyOptResult] => Unit): Unit
 
-  def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE)
+  def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE, signerDid: Option[DidStr]=None)
           (handler: Try[SignedMsgResult] => Unit): Unit
 
   /**
@@ -59,6 +59,8 @@ object WalletAccess {
   type SignType = String
   val KEY_ED25519: KeyType = "ed25519"
   val SIGN_ED25519_SHA512_SINGLE: SignType = "spec/signature/1.0/ed25519Sha512_single"
+  val SIGN_ED25519: SignType = "ed25519"
+  val supportedSigningSpecs = List(SIGN_ED25519_SHA512_SINGLE, SIGN_ED25519)
   // TODO: Decide if following belong here or at a broader level
   type PackedMsg = Array[Byte]
 }

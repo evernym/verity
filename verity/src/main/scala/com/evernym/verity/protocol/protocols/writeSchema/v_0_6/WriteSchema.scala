@@ -14,7 +14,7 @@ import com.evernym.verity.protocol.protocols.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Role.Writer
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.State.{Done, Error, Initialized, Processing}
 import com.evernym.verity.util.JsonUtil.seqToJson
-import com.evernym.verity.vdr.{PreparedTxn, SubmittedTxn}
+import com.evernym.verity.vdr.{FQDid, FQSchemaId, PreparedTxn, SubmittedTxn}
 
 import scala.util.{Failure, Success, Try}
 
@@ -50,22 +50,22 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
   def writeSchema(m: Write, init: State.Initialized): Unit = {
     ctx.apply(RequestReceived(m.name, m.version, m.attrNames))
     val submitterDID = _submitterDID(init)
+    //TODO: Does submitterDID in below call needs to be fully qualified?
     ctx.wallet.createSchema(submitterDID, m.name, m.version, seqToJson(m.attrNames)) {
       case Success(schemaCreated: SchemaCreatedResult) =>
-        writeSchemaToLedger(submitterDID, schemaCreated.schemaId, schemaCreated.schemaJson) {
+        val fqSchemaId = ctx.ledger.fqSchemaId(schemaCreated.schemaId)
+        writeSchemaToLedger(submitterDID, fqSchemaId, schemaCreated.schemaJson) {
           case Success(SubmittedTxn(_)) =>
-            ctx.apply(SchemaWritten(schemaCreated.schemaId))
-            ctx.signal(StatusReport(schemaCreated.schemaId))
-          case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
+            ctx.apply(SchemaWritten(fqSchemaId))
+            ctx.signal(StatusReport(fqSchemaId))
+          case Failure(e: LedgerRejectException)  =>
             ctx.logger.info(e.toString)
-            val endorserDID = m.endorserDID.getOrElse(
-              init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
-            )
-            if (endorserDID.nonEmpty) {
-              prepareTxnForEndorsement(submitterDID, endorserDID, schemaCreated.schemaId, schemaCreated.schemaJson) {
+            val fqEndorserDID = ctx.ledger.fqID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
+            if (fqEndorserDID.nonEmpty) {
+              prepareTxnForEndorsement(submitterDID, fqSchemaId, schemaCreated.schemaJson, fqEndorserDID) {
                 case Success(data: TxnForEndorsement) =>
-                  ctx.signal(NeedsEndorsement(schemaCreated.schemaId, data))
-                  ctx.apply(AskedForEndorsement(schemaCreated.schemaId, data))
+                  ctx.signal(NeedsEndorsement(fqSchemaId, data))
+                  ctx.apply(AskedForEndorsement(fqSchemaId, data))
                 case Failure(e) =>
                   problemReport(e)
               }
@@ -80,18 +80,18 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
     }
   }
 
-  private def writeSchemaToLedger(submitterDID: DidStr,
-                                  schemaId: String,
+  private def writeSchemaToLedger(submitterDID: FQDid,
+                                  fqSchemaId: FQSchemaId,
                                   schemaJson: String)
                                  (handleResult: Try[SubmittedTxn] => Unit): Unit = {
     ctx.ledger
       .prepareSchemaTxn(
         schemaJson,
-        ctx.ledger.fqID(schemaId),
+        fqSchemaId,
         ctx.ledger.fqID(submitterDID),
         None) {
         case Success(pt: PreparedTxn) =>
-          ctx.wallet.sign(pt.bytesToSign, pt.signatureType) {
+          ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(submitterDID)) {
             case Success(smr: SignedMsgResult) =>
               ctx.ledger.submitTxn(pt, smr.signatureResult.signature, Array.empty)(handleResult)
             case Failure(ex) =>
@@ -102,22 +102,22 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
       }
   }
 
-  private def prepareTxnForEndorsement(submitterDID: DidStr,
-                                       endorser: String,
-                                       schemaId: String,
-                                       schemaJson: String)
+  private def prepareTxnForEndorsement(submitterDID: FQDid,
+                                       fqSchemaId: FQSchemaId,
+                                       schemaJson: String,
+                                       fqEndorserDid: FQDid)
                                       (handleResult: Try[TxnForEndorsement] => Unit): Unit = {
     ctx.ledger
       .prepareSchemaTxn(
         schemaJson,
-        ctx.ledger.fqID(schemaId),
+        fqSchemaId,
         ctx.ledger.fqID(submitterDID),
-        Option(ctx.ledger.fqID(endorser))) {
+        Option(fqEndorserDid)) {
         case Success(pt: PreparedTxn) =>
-          ctx.wallet.sign(pt.bytesToSign, pt.signatureType) {
+          ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(submitterDID)) {
             case Success(smr: SignedMsgResult) =>
               if (LedgerUtil.isIndyNamespace(pt.namespace)) {
-                val txn = LedgerUtil.buildIndyRequest(pt.txnBytes, Map(submitterDID -> smr.signatureResult.toBase64))
+                val txn = LedgerUtil.buildIndyRequest(pt.txnBytes, Map(ctx.ledger.fqID(submitterDID) -> smr.signatureResult.toBase64))
                 handleResult(Success(txn))
               } else {
                 handleResult(Failure(new RuntimeException("endorsement spec not supported:" + pt.endorsementSpec)))
@@ -129,7 +129,6 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
           handleResult(Failure(ex))
       }
   }
-
 
   def problemReport(e: Throwable): Unit = {
     ctx.logger.error(e.toString)

@@ -40,7 +40,7 @@ class PushNotifWithPairwiseSenderNameSpec
     val holderVerityEnvFut = VerityEnvBuilder.default().withConfig(CAS_CONFIG).buildAsync(CAS)
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext, Option(V1OAuthParam(5.seconds)))
-    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
 
     issuerVerityEnv = Await.result(issuerVerityEnvFut, ENV_BUILD_TIMEOUT)
     holderVerityEnv = Await.result(holderVerityEnvFut, ENV_BUILD_TIMEOUT)

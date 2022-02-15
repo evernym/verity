@@ -109,6 +109,16 @@ object VerityLocalConfig {
     )
   }
 
+  private def configureVDRs(): Config = {
+    ConfigFactory.parseString(
+      s"""
+         |verity.vdr {
+         |  default-namespace = "sov"
+         |  ledgers: []
+         |}""".stripMargin
+    )
+  }
+
   private def configureLibIndy(taaEnabled: Boolean): Config = {
     ConfigFactory.parseString(
       s"""
@@ -186,6 +196,7 @@ object VerityLocalConfig {
       useDefaultWallet(tempDir),
       useCustomPort(port, otherNodeArteryPorts),
       configureLibIndy(taaEnabled),
+      configureVDRs(),
       identityUrlShortener(),
       prometheusServer(port.prometheusPort),
 

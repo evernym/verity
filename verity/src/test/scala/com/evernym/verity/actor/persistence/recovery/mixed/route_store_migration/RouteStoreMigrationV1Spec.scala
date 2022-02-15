@@ -15,14 +15,16 @@ import com.evernym.verity.constants.Constants.YES
 import com.evernym.verity.did.DidStr
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Millis, Seconds, Span}
+import org.scalatest.time.{Seconds, Span}
 
 import scala.concurrent.ExecutionContext
 import scala.util.Random
 
-//testing for those systems who has legacy routing actors,
-// the new routing actors and legacy route actor migration works fine
-// parallely with someone trying to get legacy routes from new actors
+//testing for those verity systems who has
+//   * legacy routing actors and
+//   * the new routing actors
+// and the legacy route actor migration works fine
+//  parallely with someone trying to get legacy routes from new actors
 class RouteStoreMigrationV1Spec
   extends BaseRecoveryActorSpec
     with Eventually {
@@ -177,6 +179,7 @@ class RouteStoreMigrationV1Spec
               }
             }
          }
+         verity.timeout.general-actor-ask-timeout-in-seconds = 1
         """.stripMargin
     )
   }

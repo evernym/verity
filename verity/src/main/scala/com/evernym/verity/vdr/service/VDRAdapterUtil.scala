@@ -1,81 +1,103 @@
 package com.evernym.verity.vdr.service
 
+import com.evernym.vdrtools.vdr.VdrResults
 import com.evernym.verity.vdr._
+import org.json.JSONObject
 
 //currently only contains data transformation related functions
+// todo : add fq names conversion
 object VDRAdapterUtil {
 
   //implementation specific objects to interface objects converters
 
-  def buildPreparedTxn(vdrTxn: VDR_PreparedTxn): PreparedTxn = {
+  def buildPreparedTxn(vdrTxn: VdrResults.PreparedTxnResult): PreparedTxn = {
     PreparedTxn(
-      vdrTxn.context,
-      buildSigSpec(vdrTxn.signatureSpec),
-      vdrTxn.bytesToSign,
-      buildEndorsementSpec(vdrTxn.endorsementSpec)
+      vdrTxn.getNamespace,
+      buildSigSpec(vdrTxn.getSignatureSpec),
+      vdrTxn.getTxnBytes,
+      vdrTxn.getBytesToSign,
+      buildEndorsementSpec(vdrTxn.getEndorsementSpec)
     )
   }
 
-  def buildSchema(vdrSchema: VDR_Schema): Schema = {
+  def buildSchema(vdrSchema: VdrSchema): Schema = {
+    val json = new JSONObject(vdrSchema)
     Schema(
-      vdrSchema.schemaId,
-      new String(vdrSchema.payload)
+      json.getString("id"),
+      vdrSchema
     )
   }
 
-  def buildCredDef(vdrCredDef: VDR_CredDef) : CredDef = {
+  def buildCredDef(vdrCredDef: VdrCredDef): CredDef = {
+    val json = new JSONObject(vdrCredDef)
     CredDef(
-      vdrCredDef.credDefID,
-      vdrCredDef.schemaId,
-      new String(vdrCredDef.payload)
+      json.getString("id"),
+      json.getString("schemaId"),
+      vdrCredDef
     )
   }
 
-  def buildDidDoc(vdrDidDoc: VDR_DidDoc): DidDoc = {
+  def buildDidDoc(vdrDidDoc: VdrDid): DidDoc = {
+    // todo cheqd did will probably have another format
+    val json = new JSONObject(vdrDidDoc)
     DidDoc(
-      vdrDidDoc.id,
-      vdrDidDoc.verKeyStr,
-      vdrDidDoc.endpoint
+      json.getString("id"),
+      json.getString("verkey"),
+      None
     )
   }
 
-  def buildPingResult(vdrPingResult: VDR_PingResult): PingResult = {
-    PingResult(vdrPingResult.status.mapValues(e => LedgerStatus(e.reachable)))
+  def buildPingResult(vdrPingResult: Map[Namespace, VdrResults.PingResult]): PingResult = {
+    PingResult(vdrPingResult.mapValues(e => LedgerStatus(e.isSuccessful)))
+  }
+
+  def buildVDRSchemaParams(schemaJson: String,
+                           fqSchemaId: FQSchemaId): TxnSpecificParams = {
+    val json = new JSONObject(schemaJson)
+    json.put("id", fqSchemaId)
+    json.toString
+  }
+
+  def buildVDRCredDefParams(credDefJson: String,
+                            fqCredDefId: FQCredDefId): TxnSpecificParams = {
+    val json = new JSONObject(credDefJson)
+    json.put("id", fqCredDefId)
+    json.toString
   }
 
   //interface objects to implementation specific objects converters
 
-  def buildVDRPreparedTxn(txn: PreparedTxn): VDR_PreparedTxn = {
-    VDR_PreparedTxn(
-      txn.context,
-      buildVDRSigSpec(txn.signatureSpec),
-      txn.bytesToSign,
-      buildVDREndorsementSpec(txn.endorsementSpec)
+  def buildVDRPreparedTxn(txn: PreparedTxn): TxnDataHolder = {
+    TxnDataHolder(
+      txn.namespace,
+      txn.txnBytes,
+      buildVDRSigSpec(txn.signatureSpec)
     )
   }
 
-  private def buildSigSpec(vdrSigSpec: VDR_SignatureSpec): SignatureSpec = {
-    vdrSigSpec match {
-      case VDR_NoSignature => NoSignature
-    }
+  private def buildSigSpec(vdrSigSpec: String): SignatureSpec = {
+    Spec(vdrSigSpec)
   }
 
-  private def buildEndorsementSpec(vdrEndorsementSpec: VDR_EndorsementSpec): EndorsementSpec = {
-    vdrEndorsementSpec match {
-      case VDR_NoEndorsement => NoEndorsement
-    }
+  private def buildEndorsementSpec(vdrEndorsementSpec: String): EndorsementSpec = {
+    Endorsement(vdrEndorsementSpec)
   }
 
-  private def buildVDRSigSpec(sigSpec: SignatureSpec): VDR_SignatureSpec = {
+  private def buildVDRSigSpec(sigSpec: SignatureSpec): String = {
     sigSpec match {
-      case NoSignature => VDR_NoSignature
+      case NoSignature => ""
+      case Spec(data) => data
     }
   }
 
-  private def buildVDREndorsementSpec(endorsementSpec: EndorsementSpec): VDR_EndorsementSpec = {
+  private def buildVDREndorsementSpec(endorsementSpec: EndorsementSpec): Array[Byte] = {
     endorsementSpec match {
-      case NoEndorsement    => VDR_NoEndorsement
-      case IndyEndorsement  => VDR_IndyEndorsement
+      case Endorsement(data) => data.getBytes
+      case NoEndorsement => Array.empty
     }
   }
 }
+
+case class TxnDataHolder(namespace: Namespace,
+                         txnBytes: Array[Byte],
+                         signatureSpec: String)

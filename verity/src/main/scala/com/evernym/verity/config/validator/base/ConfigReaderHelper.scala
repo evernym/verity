@@ -132,6 +132,10 @@ trait ConfigReaderHelper
     readOptionalConfig(config.getConfig, key)
   }
 
+  def getObjectListReq(key: String): Seq[ConfigObject] = {
+    readReqConfig(config.getObjectList, key).asScala
+  }
+
   def getObjectListOption(key: String): Option[Seq[ConfigObject]] = {
     readOptionalConfig(config.getObjectList, key)
       .map(_.asScala)

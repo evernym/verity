@@ -11,13 +11,15 @@ trait VDRAdapter {
 
   def prepareSchemaTxn(schemaJson: String,
                        fqSchemaId: FQSchemaId,
-                       submitterDID: DidStr,
+                       submitterDID: VdrDid,
                        endorser: Option[String]): Future[PreparedTxn]
 
+
+
   def prepareCredDefTxn(credDefJson: String,
-                       fqCredDefId: FQCredDefId,
-                       submitterDID: DidStr,
-                       endorser: Option[String]): Future[PreparedTxn]
+                        fqCredDefId: FQCredDefId,
+                        submitterDID: VdrDid,
+                        endorser: Option[String]): Future[PreparedTxn]
 
   def submitTxn(preparedTxn: PreparedTxn,
                 signature: Array[Byte],
@@ -32,24 +34,32 @@ trait VDRAdapter {
 
 
 case class LedgerStatus(reachable: Boolean)
+
 case class PingResult(status: Map[Namespace, LedgerStatus])
 
-case class PreparedTxn(context: String,
+case class PreparedTxn(namespace: String,
                        signatureSpec: SignatureSpec,
+                       txnBytes: Array[Byte],
                        bytesToSign: Array[Byte],
                        endorsementSpec: EndorsementSpec)
 
-case class SubmittedTxn()
+case class SubmittedTxn(response: String)
 
 case class Schema(fqId: FQSchemaId, json: String)
+
 case class CredDef(fqId: FQCredDefId, schemaId: FQSchemaId, json: String)
+
 case class DidDoc(fqId: FQDid, verKey: VerKeyStr, endpoint: Option[String])
 
-//below will change to some constants/enums when we have actual VDRTools library available for integration
 trait SignatureSpec
+
 case object NoSignature extends SignatureSpec
 
+case class Spec(data: String) extends SignatureSpec
+
 trait EndorsementSpec
+
 case object NoEndorsement extends EndorsementSpec
-case object IndyEndorsement extends EndorsementSpec
+
+case class Endorsement(data: String) extends EndorsementSpec
 

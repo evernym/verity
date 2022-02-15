@@ -17,6 +17,7 @@ import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 import com.evernym.vdrtools.ledger.Ledger._
 import com.evernym.vdrtools.pool.Pool
+
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 import scala.concurrent.{Await, ExecutionContext}
@@ -208,7 +209,6 @@ class LedgerUtil (val appConfig: AppConfig,
     checkTxn(response)
 
     val data = findData(response)
-
     assert(data.contains(did))
     assert(data.contains(verkey))
 

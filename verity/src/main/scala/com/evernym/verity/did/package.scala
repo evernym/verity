@@ -2,6 +2,9 @@ package com.evernym.verity
 
 import com.evernym.verity.did.exception.{UnableToIdentifyDIDMethodException, UnrecognizedDIDMethodException}
 import com.evernym.verity.did.methods._
+import com.evernym.verity.did.methods.indy_sovrin.DIDIndySovrin
+import com.evernym.verity.did.methods.key.DIDKey
+import com.evernym.verity.did.methods.sov.DIDSov
 import com.evernym.verity.util.Base58Util
 
 import scala.util.Success
@@ -17,19 +20,19 @@ package object did {
   def toDIDMethod(did: DidStr): DIDMethod = {
     val splitted = did.split(":")
     splitted.length match {
-      case x if x >= 3 => {
+      case x if x >= 3 =>
         splitted(1) match {
-          case "sov" => new DIDSov(did)
-          case "key" => new DIDKey(did)
+          case "indy" => new DIDIndySovrin(did)     //TODO: is this look correct?
+          case "sov"  => new DIDSov(did)
+          case "key"  => new DIDKey(did)
           case _ => throw new UnrecognizedDIDMethodException(did, splitted(2))
         }
-      }
-      case 1 => {
+      case 1 =>
         new UnqualifiedDID(did)
-      }
-      case _ => {
+
+      case _ =>
         throw new UnableToIdentifyDIDMethodException(did)
-      }
+
     }
   }
 
@@ -37,7 +40,7 @@ package object did {
   def validateDID(did: Any): Unit = {
     did match {
       case u: UnqualifiedDID =>
-        val decodedDID = Base58Util.decode(u.identifier)
+        val decodedDID = Base58Util.decode(u.methodIdentifier.toString)
         decodedDID match {
           case Success(d) if d.length == VALID_DID_BYTE_LENGTH => //valid did
           case _ => throw new RuntimeException("invalid did: " + u)

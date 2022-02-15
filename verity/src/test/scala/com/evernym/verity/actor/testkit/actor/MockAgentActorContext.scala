@@ -12,6 +12,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc}
 import com.evernym.verity.protocol
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
+import com.evernym.verity.protocol.engine.MockVDRAdapter
 import com.evernym.verity.protocol.engine.registry.{PinstIdResolution, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.tictactoe.TicTacToeProtoDef
 import com.evernym.verity.storage_services.StorageAPI
@@ -20,7 +21,8 @@ import com.evernym.verity.texter.SMSSender
 
 import scala.concurrent.{ExecutionContext, Future}
 import com.evernym.verity.transports.MsgSendingSvc
-import com.evernym.verity.vdr.{MockLedgerRegistry, MockVdrToolsBuilder}
+import com.evernym.verity.vdr.base.MOCK_VDR_SOV_NAMESPACE
+import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockVdrToolsBuilder, VDRAdapter}
 import com.evernym.verity.vdr.service.VDRToolsFactory
 
 /**
@@ -46,9 +48,11 @@ class MockAgentActorContext(val system: ActorSystem,
 
   override lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, executionContext)
 
-  lazy val ledgerRegistry: MockLedgerRegistry = MockLedgerRegistry()
+  lazy val ledgerRegistry: MockLedgerRegistry = MockLedgerRegistry(List(MockIndyLedger(List(MOCK_VDR_SOV_NAMESPACE), "genesis.txn file path", None)))  //TODO: finalize this
 
   override lazy val vdrBuilderFactory: VDRToolsFactory = () => new MockVdrToolsBuilder(ledgerRegistry)
+
+  override lazy val vdrAdapter: VDRAdapter = createVDRAdapter(vdrBuilderFactory)
 
   override lazy val storageAPI: StorageAPI = new StorageAPI(appConfig, ecp.futureExecutionContext) {
     var storageMock: Map[String, Array[Byte]] = Map()
@@ -67,6 +71,10 @@ class MockAgentActorContext(val system: ActorSystem,
     }
 
     override def ping: Future[Unit] = Future.successful((): Unit)
+  }
+
+  def createVDRAdapter(vdrToolsFactory: VDRToolsFactory)(implicit ec: ExecutionContext): VDRAdapter = {
+    new MockVDRAdapter(vdrToolsFactory)(ec)
   }
 
   override lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] =

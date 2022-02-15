@@ -6,6 +6,8 @@ import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.integration.base.{PortProvider, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.verity_provider.node.local.ServiceParam
 import com.evernym.verity.storage_services.StorageAPI
+import com.evernym.verity.vdr.base.MOCK_VDR_SOV_NAMESPACE
+import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockVdrTools}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import java.net.InetAddress
@@ -19,10 +21,13 @@ trait DataRetentionBaseSpec { this: VerityProviderBaseSpec =>
 
   val ledgerTxnExecutor = new MockLedgerTxnExecutor(futureExecutionContext)
 
+  val vdrTools = new MockVdrTools(MockLedgerRegistry(List(MockIndyLedger(List(MOCK_VDR_SOV_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext)
+
   def buildSvcParam: ServiceParam =
     ServiceParam
       .empty
       .withLedgerTxnExecutor(ledgerTxnExecutor)
+      .withVdrTools(vdrTools)
       .withStorageApi(StorageAPI.loadFromConfig(appConfig, futureExecutionContext))
 
   val arteryPort: Int = PortProvider.getFreePort

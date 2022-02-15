@@ -24,9 +24,9 @@ case class MockLedgerRegistry(var ledgers: List[InMemLedger] = List.empty) {
 
   def forLedger[T](fqDidStr: DidStr)(f: InMemLedger => T): Future[T] = {
     try {
-      val testIdentifier = TestFQIdentifier(fqDidStr, ledgers.flatMap(_.namespaces))
-      val ledger = ledgers.find(_.namespaces.contains(testIdentifier.namespace)).getOrElse(
-        throw new RuntimeException("ledger not found for the namespace: " + testIdentifier.namespace)
+      val testIdentifier = FQIdentifier(fqDidStr, ledgers.flatMap(_.namespaces))
+      val ledger = ledgers.find(_.namespaces.contains(testIdentifier.vdrNamespace)).getOrElse(
+        throw new RuntimeException("ledger not found for the namespace: " + testIdentifier.vdrNamespace)
       )
       Future.successful(f(ledger))
     } catch {

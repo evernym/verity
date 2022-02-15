@@ -10,7 +10,7 @@ import com.evernym.verity.vdr.service._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-//in-memory version of VDRTools to be used in tests (unit/integration)
+//in-memory version of VDRTools to be used in tests unit/integration tests
 class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionContext)
   extends VdrTools {
 
@@ -19,7 +19,17 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
 
   override def ping(namespaces: List[Namespace]): Future[Map[String, VdrResults.PingResult]] = {
     val allNamespaces = if (namespaces.isEmpty) ledgerRegistry.ledgers.flatMap(_.namespaces) else namespaces
-    Future.successful(allNamespaces.map(n => n -> new VdrResults.PingResult("0", "SUCCESS")).toMap)
+    Future.successful(allNamespaces.map(n => n -> new VdrResults.PingResult("SUCCESS", "successful")).toMap)
+  }
+
+  override def prepareDid(txnSpecificParams: TxnSpecificParams,
+                          submitterDid: DidStr,
+                          endorser: Option[String]): Future[PreparedTxnResult] = {
+    ledgerRegistry.forLedger(submitterDid) { ledger: InMemLedger =>
+      val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams)
+      val id = json.get("id").asText
+      ledger.prepareSchemaTxn(txnSpecificParams, id, submitterDid, endorser)
+    }
   }
 
   override def prepareSchema(txnSpecificParams: TxnSpecificParams,
@@ -37,14 +47,10 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
                               endorser: Option[String]): Future[PreparedTxnResult] = {
     ledgerRegistry.forLedger(submitterDid) { ledger: InMemLedger =>
       val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams);
-      val id = json.get("id").asText
+      val id = json.get("id").asText()
       ledger.prepareCredDefTxn(txnSpecificParams, id, submitterDid, endorser)
     }
   }
-
-  override def prepareDid(txnSpecificParams: TxnSpecificParams,
-                          submitterDid: DidStr,
-                          endorser: Option[String]): Future[PreparedTxnResult] = ???
 
   override def submitTxn(namespace: Namespace,
                          txnBytes: Array[Byte],
@@ -102,24 +108,29 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
   }
 }
 
-//TODO: refactor this to some common utility etc
-object TestFQIdentifier {
-  def apply(fqId: String, validNamespaces: List[Namespace]): TestFQIdentifier = {
-    if (fqId.startsWith("did:")) {
-      val didFqId = fqId.replace("did:", "")
-      validNamespaces.find(n => didFqId.startsWith(s"$n:")) match {
-        case Some(namespace) =>
-          val identifier = didFqId.replace(s"$namespace:", "")
-          TestFQIdentifier("did", namespace, identifier)
-        case None => throw new InvalidIdentifierException("invalid identifier: " + fqId)
-      }
-    } else {
-      throw new InvalidIdentifierException("invalid identifier: " + fqId)
+//TODO: this is mainly to confirm the mock vdr implementation throws appropriate errors
+// if given identifiers are not correct FQIds
+object FQIdentifier {
+
+  val validSchemes = Set(SCHEME_NAME_INDY_SCHEMA, SCHEME_NAME_INDY_CRED_DEF)
+
+  def apply(fqId: String, validNamespaces: List[Namespace]):  FQIdentifier = {
+    val fqIdentifier = {
+      if (fqId.startsWith("did:sov")) FQIdentifier("sov", fqId.replace("did:sov:", ""))
+      else if (fqId.startsWith("did:indy:sovrin")) FQIdentifier("indy:sovrin", fqId.replace("did:indy:sovrin:", ""))
+      else if (fqId.startsWith("schema:sov")) FQIdentifier("sov", fqId.replace("schema:sov:", ""))
+      else if (fqId.startsWith("creddef:sov")) FQIdentifier("sov", fqId.replace("creddef:sov:", ""))
+      else throw new RuntimeException("invalid identifier: " + fqId)
     }
+    if (! validNamespaces.contains(fqIdentifier.vdrNamespace )) {
+      throw new RuntimeException("namespace not supported: " + fqIdentifier.vdrNamespace)
+    }
+    fqIdentifier
   }
+
 }
 
-case class TestFQIdentifier(scheme: String, namespace: String, identifier: String)
+case class FQIdentifier(vdrNamespace: String, methodIdentifier: String)
 
 
 class InvalidIdentifierException(msg: String) extends RuntimeException(msg)

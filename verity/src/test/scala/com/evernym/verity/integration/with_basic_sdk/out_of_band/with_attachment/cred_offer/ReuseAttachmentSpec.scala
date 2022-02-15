@@ -69,7 +69,7 @@ class ReuseAttachmentSpec
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
     val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnvFut, executionContext)
-    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
 
     issuerVerityEnv = Await.result(issuerVerityEnvFut, ENV_BUILD_TIMEOUT)
     verifierVerityEnv = Await.result(verifierVerityEnvFut, ENV_BUILD_TIMEOUT)

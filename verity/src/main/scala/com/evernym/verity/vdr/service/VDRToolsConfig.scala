@@ -1,6 +1,7 @@
 package com.evernym.verity.vdr.service
 
 import com.evernym.vdrtools.vdr.VdrParams.TaaConfig
+import com.evernym.verity.config.ConfigConstants.VDR_DEFAULT_NAMESPACE
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.util2.Status.VALIDATION_FAILED
@@ -8,6 +9,7 @@ import com.evernym.verity.vdr.Namespace
 import com.typesafe.config.Config
 
 import scala.io.Source.fromFile
+
 
 sealed trait Ledger {
   def namespaces: List[Namespace]
@@ -17,7 +19,7 @@ case class IndyLedger(namespaces: List[Namespace],
                       genesisTxnData: String,
                       taaConfig: Option[TaaConfig]) extends Ledger
 
-case class VDRToolsConfig(ledgers: List[Ledger]) {
+case class VDRToolsConfig(defaultNamespace: String, ledgers: List[Ledger]) {
   def validate(): Unit = {
     if (ledgers.isEmpty) {
       throw new RuntimeException("[VDR] no ledger configs found")
@@ -25,6 +27,9 @@ case class VDRToolsConfig(ledgers: List[Ledger]) {
     val allNamespaces = ledgers.flatMap(_.namespaces)
     if (allNamespaces.size != allNamespaces.distinct.size) {
       throw new RuntimeException("[VDR] ledgers can not have shared namespaces")
+    }
+    if (! allNamespaces.contains(defaultNamespace)) {
+      throw new RuntimeException(s"[VDR] '$VDR_DEFAULT_NAMESPACE' ($defaultNamespace) is not found in registered ledger's namespaces (${allNamespaces.mkString(", ")})")
     }
   }
 
@@ -40,7 +45,7 @@ object VDRToolsConfig {
     val digest = config.getStringOption("digest")
 
     val mechanism = config.getStringReq("mechanism")
-    val time = config.getStringReq("time-of-acceptance")
+    val time = config.getLongReq("time-of-acceptance")
 
     // TODO: Move validation to TaaConfig?
     if (text.isDefined && version.isDefined) {
@@ -84,7 +89,10 @@ object VDRToolsConfig {
   }
 
   def load(config: Config): VDRToolsConfig = {
-    val vdrConfigs = ConfigReadHelper(config).getObjectListReq("verity.vdrs").map(_.toConfig)
-    VDRToolsConfig(vdrConfigs.map(loadLedger).toList)
+    val defaultNamespace = ConfigReadHelper(config).getStringOption(VDR_DEFAULT_NAMESPACE).getOrElse(
+      throw new RuntimeException(s"[VDR] required configuration not found: '$VDR_DEFAULT_NAMESPACE'")
+    )
+    val ledgersConfig = ConfigReadHelper(config).getObjectListReq("verity.vdr.ledgers").map(_.toConfig)
+    VDRToolsConfig(defaultNamespace, ledgersConfig.map(loadLedger).toList)
   }
 }

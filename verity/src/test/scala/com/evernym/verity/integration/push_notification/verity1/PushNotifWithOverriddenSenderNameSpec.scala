@@ -29,7 +29,7 @@ class PushNotifWithOverriddenSenderNameSpec
   lazy val holderCAS = VerityEnvBuilder.default().build(CAS)
 
   lazy val issuerSDKEAS = setupIssuerSdk(issuerEAS, executionContext)
-  lazy val holderSDKCAS = setupHolderSdk(holderCAS, executionContext, defaultSvcParam.ledgerTxnExecutor)
+  lazy val holderSDKCAS = setupHolderSdk(holderCAS, executionContext, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools)
   val connId = "connId1"
   var invitation: InviteDetail = null
 

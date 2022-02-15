@@ -4,8 +4,9 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
-import com.evernym.verity.did.exception.{DIDException, SubNameSpacesUnsupportedException}
+import com.evernym.verity.did.exception.DIDException
 import com.evernym.verity.protocol.testkit.DSL.signal
+import com.evernym.verity.protocol.testkit.MockLedger.toFqId
 import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.TestExecutionContextProvider
@@ -14,8 +15,9 @@ import org.json.JSONObject
 import scala.concurrent.ExecutionContext
 import scala.language.{implicitConversions, reflectiveCalls}
 
-class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition)
-  with BasicFixtureSpec {
+class WriteCredentialDefinitionSpec
+  extends TestsProtocolsImpl(CredDefDefinition)
+    with BasicFixtureSpec {
 
   private implicit def EnhancedScenario(s: Scenario) = new {
     val writer: TestEnvir = s("writer")
@@ -85,7 +87,7 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
 
               val needsEndorsement = f.writer expect signal[NeedsEndorsement]
               val json = new JSONObject(needsEndorsement.credDefJson)
-              json.getString("endorser") shouldBe defaultEndorser
+              json.getString("endorser") shouldBe toFqId(defaultEndorser)
               f.writer.state shouldBe a[State.WaitingOnEndorser]
             })
           })
@@ -103,7 +105,7 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
 
               val needsEndorsement = f.writer expect signal[NeedsEndorsement]
               val json = new JSONObject(needsEndorsement.credDefJson)
-              json.getString("endorser") shouldBe userEndorser
+              json.getString("endorser") shouldBe toFqId(userEndorser)
               f.writer.state shouldBe a[State.WaitingOnEndorser]
             })
           })
@@ -123,7 +125,7 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
 
               val needsEndorsement = f.writer expect signal[NeedsEndorsement]
               val json = new JSONObject(needsEndorsement.credDefJson)
-              json.getString("endorser") shouldBe defaultEndorser
+              json.getString("endorser") shouldBe toFqId(defaultEndorser)
               f.writer.state shouldBe a[State.WaitingOnEndorser]
             })
           })
@@ -141,7 +143,7 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
 
               val needsEndorsement = f.writer expect signal[NeedsEndorsement]
               val json = new JSONObject(needsEndorsement.credDefJson)
-              json.getString("endorser") shouldBe userEndorser
+              json.getString("endorser") shouldBe toFqId(userEndorser)
               f.writer.state shouldBe a[State.WaitingOnEndorser]
             })
           })
@@ -160,7 +162,7 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
 
             val needsEndorsement = f.writer expect signal[NeedsEndorsement]
             val json = new JSONObject(needsEndorsement.credDefJson)
-            json.getString("endorser") shouldBe defaultEndorser
+            json.getString("endorser") shouldBe toFqId(defaultEndorser)
             f.writer.state shouldBe a[State.WaitingOnEndorser]
           })
         })

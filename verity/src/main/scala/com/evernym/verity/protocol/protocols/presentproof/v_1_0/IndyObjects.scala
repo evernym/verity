@@ -128,7 +128,7 @@ object ProofRequestUtil {
             attrs,
             preds,
             request.revocation_interval,
-            Some("1.0")
+            Some("2.0")
           )
         )
       case Failure(exception) => Failure(exception)
@@ -155,7 +155,7 @@ object ProofRequestUtil {
             attrs,
             preds,
             revocationInterval,
-            Some("1.0")
+            Some("2.0")
           )
         )
       case Failure(exception) => Failure(exception)

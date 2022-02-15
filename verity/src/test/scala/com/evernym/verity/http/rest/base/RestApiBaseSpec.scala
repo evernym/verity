@@ -20,12 +20,9 @@ import com.evernym.verity.testkit.mock.agent.MockEdgeAgent._
 import com.evernym.verity.testkit.mock.agent.MockEnv
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault.KeyParam
-import com.google.protobuf.duration.Duration.defaultInstance.seconds
-import org.joda.time.DurationFieldType.millis
 import org.json.JSONObject
 import org.scalatest.time.{Millis, Seconds, Span}
 
-import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 import scala.util.Try
 

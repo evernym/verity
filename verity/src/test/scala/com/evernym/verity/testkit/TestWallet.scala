@@ -50,6 +50,10 @@ trait HasDefaultTestWallet extends HasTestWalletAPI {
   implicit val wap: WalletAPIParam = WalletAPIParam(walletId)
 
   if (createWallet) {
+    _createWallet()
+  }
+
+  def _createWallet(): Unit = {
     testWalletAPI.executeSync[WalletCreated.type](CreateWallet())
   }
 }

@@ -1,35 +1,15 @@
 package com.evernym.verity.protocol.engine.asyncapi.ledger
 
-import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerRequest, TxnResp}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.vdr.{CredDef, FQCredDefId, FQSchemaId, PreparedTxn, Schema, SubmittedTxn}
+import com.evernym.verity.vdr.{CacheOption, CredDef, FQCredDefId, FQDid, FQSchemaId, PreparedTxn, Schema, SubmittedTxn}
 
 import scala.util.Try
+
 
 trait LedgerAccess {
 
   def walletAccess: WalletAccess
-
-  def getSchema(schemaId: String)(handler: Try[GetSchemaResp] => Unit): Unit
-
-  def getCredDef(credDefId: String)(handler: Try[GetCredDefResp] => Unit): Unit
-
-  def getSchemas(schemaIds: Set[String])
-               (handler: Try[Map[String, GetSchemaResp]] => Unit): Unit
-
-  def getCredDefs(credDefIds: Set[String])
-                (handler: Try[Map[String, GetCredDefResp]] => Unit): Unit
-
-  def writeSchema(submitterDID: DidStr, schemaJson: String)(handler: Try[TxnResp] => Unit): Unit
-
-  def prepareSchemaForEndorsement(submitterDID: DidStr, schemaJson: String, endorserDID: DidStr)
-                                 (handler: Try[LedgerRequest] => Unit): Unit
-
-  def writeCredDef(submitterDID: DidStr, credDefJson: String)(handler: Try[TxnResp] => Unit): Unit
-
-  def prepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr)
-                                  (handler: Try[LedgerRequest] => Unit): Unit
 
   //new vdr apis
   def prepareSchemaTxn(schemaJson: String,
@@ -49,13 +29,27 @@ trait LedgerAccess {
                 endorsement: Array[Byte])
                (handler: Try[SubmittedTxn] => Unit): Unit
 
-  def resolveSchema(fqSchemaId: FQSchemaId)
+  def resolveSchema(fqSchemaId: FQSchemaId,
+                    cacheOption: Option[CacheOption]=None)
                    (handler: Try[Schema] => Unit): Unit
 
-  def resolveCredDef(fqCredDefId: FQCredDefId)
+  def resolveSchemas(fqSchemaIds: Set[FQSchemaId],
+                     cacheOption: Option[CacheOption]=None)
+                    (handler: Try[Seq[Schema]] => Unit): Unit
+
+  def resolveCredDef(fqCredDefId: FQCredDefId,
+                     cacheOption: Option[CacheOption]=None)
                     (handler: Try[CredDef] => Unit): Unit
 
-  def fqID(id: String): String
+  def resolveCredDefs(fqCredDefIds: Set[FQCredDefId],
+                      cacheOption: Option[CacheOption]=None)
+                     (handler: Try[Seq[CredDef]] => Unit): Unit
+
+  def fqID(id: String): FQDid
+
+  def fqSchemaId(id: String): FQSchemaId
+
+  def fqCredDefId(id: String): FQCredDefId
 }
 
 case class LedgerRejectException(msg: String) extends Exception(msg)

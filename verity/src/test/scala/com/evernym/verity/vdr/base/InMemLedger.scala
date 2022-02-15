@@ -3,6 +3,8 @@ package com.evernym.verity.vdr.base
 import com.evernym.vdrtools.vdr.VdrResults.PreparedTxnResult
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
+import com.evernym.verity.protocol.testkit.MockLedger.NO_ENDORSEMENT
 import com.evernym.verity.vdr._
 
 
@@ -10,24 +12,33 @@ import com.evernym.verity.vdr._
 trait InMemLedger {
   def namespaces: List[Namespace]
 
-  def prepareSchemaTxn(schemaJson: String,
+  def prepareDidTxn(txnSpecificParams: TxnSpecificParams,
+                    submitterDid: VdrDid,
+                    endorser: Option[String]): PreparedTxnResult = {
+    val id = FQIdentifier(submitterDid, namespaces)
+    val schema = TestVDRDid(submitterDid, txnSpecificParams)
+    val jsonPayload = JacksonMsgCodec.toJson(schema)
+    new PreparedTxnResult(id.vdrNamespace, jsonPayload.getBytes, SIGN_ED25519_SHA512_SINGLE, jsonPayload.getBytes, NO_ENDORSEMENT)
+  }
+
+  def prepareSchemaTxn(txnSpecificParams: TxnSpecificParams,
                        fqSchemaId: FQSchemaId,
                        submitterDid: VdrDid,
                        endorser: Option[String]): PreparedTxnResult = {
-    val id = TestFQIdentifier(fqSchemaId, namespaces)
-    val schema = TestVDRSchema(submitterDid, fqSchemaId, schemaJson)
+    val id = FQIdentifier(fqSchemaId, namespaces)
+    val schema = TestVDRSchema(submitterDid, fqSchemaId, txnSpecificParams)
     val jsonPayload = JacksonMsgCodec.toJson(schema)
-    new PreparedTxnResult(id.namespace, jsonPayload.getBytes, "", jsonPayload.getBytes, "")
+    new PreparedTxnResult(id.vdrNamespace, jsonPayload.getBytes, SIGN_ED25519_SHA512_SINGLE, jsonPayload.getBytes, NO_ENDORSEMENT)
   }
 
-  def prepareCredDefTxn(credDefJson: String,
+  def prepareCredDefTxn(txnSpecificParams: TxnSpecificParams,
                         fQCredDefId: FQCredDefId,
                         submitterDid: VdrDid,
                         endorser: Option[String]): PreparedTxnResult = {
-    val id = TestFQIdentifier(fQCredDefId, namespaces)
-    val credDef = TestVDRCredDef(submitterDid, fQCredDefId, extractSchemaId(credDefJson), credDefJson)
+    val id = FQIdentifier(fQCredDefId, namespaces)
+    val credDef = TestVDRCredDef(submitterDid, fQCredDefId, extractSchemaId(txnSpecificParams), txnSpecificParams)
     val jsonPayload = JacksonMsgCodec.toJson(credDef)
-    new PreparedTxnResult(id.namespace, jsonPayload.getBytes, "", jsonPayload.getBytes, "")
+    new PreparedTxnResult(id.vdrNamespace, jsonPayload.getBytes, SIGN_ED25519_SHA512_SINGLE, jsonPayload.getBytes, NO_ENDORSEMENT)
   }
 
   def submitTxn(txnBytes: Array[Byte]): TxnResult = {
@@ -47,18 +58,21 @@ trait InMemLedger {
     "{}"
   }
 
-  def resolveSchema(schemaId: FQSchemaId): VdrSchema = {
-    val data = schemas.getOrElse(schemaId, throw new RuntimeException("schema not found for given id: " + schemaId))
+  def resolveSchema(fqSchemaId: FQSchemaId): VdrSchema = {
+    val data = schemas.getOrElse(fqSchemaId, throw new RuntimeException("schema not found for given id: " +
+      fqSchemaId + s" (available schemas: ${schemas.keys.mkString(", ")})"))
     new String(data)
   }
 
-  def resolveCredDef(credDefId: FQCredDefId): VdrCredDef = {
-    val data = credDefs.getOrElse(credDefId, throw new RuntimeException("cred def not found for given id: " + credDefId))
+  def resolveCredDef(fqCredDefId: FQCredDefId): VdrCredDef = {
+    val data = credDefs.getOrElse(fqCredDefId, throw new RuntimeException("cred def not found for given id: " +
+      fqCredDefId + s" (available cred defs: ${credDefs.keys.mkString(", ")})"))
     new String(data)
   }
 
   def resolveDid(fqDid: FQDid): VdrDid = {
-    val data = didDocs.getOrElse(fqDid, throw new RuntimeException("did doc not found for given id: " + fqDid))
+    val data = didDocs.getOrElse(fqDid, throw new RuntimeException("did doc not found for given id: " +
+      fqDid + s" (available did docs: ${didDocs.keys.mkString(", ")})"))
     new String(data)
   }
 
@@ -97,6 +111,11 @@ trait InMemLedger {
 
 trait TestPayloadBase {
   def payloadType: String
+}
+
+case class TestVDRDid(submitterDid: FQDid, json: String)
+  extends TestPayloadBase {
+  override val payloadType: String = "did"
 }
 
 case class TestVDRSchema(submitterDid: FQDid, schemaId: FQSchemaId, json: String)

@@ -44,9 +44,9 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libVdrToolsVer = "0.8.2.1407" // todo version containing improved error processing for submitted txns
+val libVdrToolsVer = "0.8.4" // todo version containing improved error processing for submitted txns
 val sharedLibDeps = Seq(
-  NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libindy.so"),
+  NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libvdrtools.so"),
   NonMatchingLib("libvcx", "0.13.0-bionic~675", "libvcx.so")  // For integration testing ONLY
 )
 
@@ -54,7 +54,7 @@ val sharedLibDeps = Seq(
 val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 
 //dependency versions
-val vdrtoolsWrapperVer  = "0.8.2-1407"  // todo version to test new VDR Java wrapper API
+val vdrtoolsWrapperVer  = "0.8.4"
 val akkaVer         = "2.6.17"
 val akkaHttpVer     = "10.2.7"
 val akkaMgtVer      = "1.1.3"
@@ -157,7 +157,7 @@ lazy val settings = Seq(
 //  resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public", // this shouldn't be necessay since we're publishing vdr-tools to maven central
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
 //  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",
-  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/27807222/packages/maven", // todo used to fetch java wrapper from main builds
+  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/27807222/packages/maven", // used to fetch java wrapper from main builds
 
   Test / parallelExecution := false,
   Test / logBuffered := false,

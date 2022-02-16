@@ -1,22 +1,26 @@
 Note: When interacting with Verity, it will also be helpful to review [the Verity SDK Release Notes](https://gitlab.com/evernym/verity/verity-sdk/-/blob/main/CHANGELOG.md).
 
 
-# Release notes - Verity 2.17.2 release TBD
+# Release notes - Verity 2.17.2 release 16 Feb 2022
 Includes VDR Tools 0.8.2 works with Verity SDK 0.6.1
 
 ## Bug
 * [VE-3343] Fix v1 to v2 migration logic
 * Various fixes for tests being flaky
-* [VE-3165] Fix for startup probe
+* [VE-3165] Fix for startup probe to improve rolling upgrades
 
 ## Task
 * [Documented communication method types](https://gitlab.com/evernym/verity/verity/-/blob/5591cc8759fb0ba84614143705007e9e9bcfde2c/docs/documentation/communication-mechanisms/README.md)
 * Dependency updates: kamon, jersey-client, mockito, scalatest, vcx
-* [VE-2753] Each Verity tenant can customize text used in push notifications.
+* [VE-2753] [Each Verity tenant can customize text used in push notifications](https://gitlab.com/evernym/verity/verity/-/blob/612935eb443d1595d2d01dc056ddcb86192ed74c/verity/src/main/resources/reference.conf#L1104).
 * [VE-3335] Make sender name available to CAS in push notification
 * [VE-3168] Reuse of threadId should be reported correctly
 * [VE-3025] Refactor item manager to be simple typed persistent actor
 * [VE-3318] Disable actor state cleanup job (not needed anymore)
+* [VE-3298] Fix the sbt env checker to validate Ubuntu 20.04 development environments
+* Dependency updates: jersey-client, kamon, mockito, scalatest
+* Fixed flaky unit tests
+
 
 # Release notes - Verity 2.17.1 release 1 Feb 2022
 Includes VDR Tools 0.8.2 works with Verity SDK 0.6.0

@@ -56,11 +56,11 @@ val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 //dependency versions
 val vdrtoolsWrapperVer  = "0.8.2-1407"  // todo version to test new VDR Java wrapper API
 val akkaVer         = "2.6.17"
-val akkaHttpVer     = "10.2.7"
+val akkaHttpVer     = "10.2.8"
 val akkaMgtVer      = "1.1.3"
 val alpAkkaVer      = "3.0.3"
 val akkaPersistence = "1.1.1"
-val kamonVer        = "2.4.6"
+val kamonVer        = "2.4.7"
 val kanelaAgentVer  = "1.0.14"
 val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
 val jacksonVer      = "2.13.1"
@@ -335,7 +335,7 @@ lazy val commonLibraryDependencies = {
     //sms service implementation dependencies
     "com.fasterxml.jackson.jakarta.rs" % "jackson-jakarta-rs-json-provider" % jacksonVer,
     //"com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % jacksonVer,     //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
-    "org.glassfish.jersey.core" % "jersey-client" % "3.0.3"
+    "org.glassfish.jersey.core" % "jersey-client" % "3.0.4"
       excludeAll ExclusionRule(organization = "jakarta.inject"),                      //TODO: (should fix this) excluded to avoid issue found during 'sbt assembly' after upgrading to sbt 1.3.8
     "com.twilio.sdk" % "twilio-java-sdk" % "6.3.0",                                 //used by "TwilioDispatcher" class
 

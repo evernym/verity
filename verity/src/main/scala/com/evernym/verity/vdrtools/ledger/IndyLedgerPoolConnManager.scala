@@ -158,7 +158,8 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
         val expectedDigest = HashUtil.hash(SHA256)(ledgerTaa.version + ledgerTaa.text).hex
 
         val autoAccept = appConfig.getBooleanOption(LIB_INDY_LEDGER_TAA_AUTO_ACCEPT).getOrElse(false)
-        val configuredTaa:Option[TransactionAuthorAgreement] = if(!autoAccept) {
+        logger.info(s"Auto accept enabled is $autoAccept")
+        val configuredTaa: Option[TransactionAuthorAgreement] = if(!autoAccept) {
           findTAAConfig(appConfig, ledgerTaa.version)
         }
         else {

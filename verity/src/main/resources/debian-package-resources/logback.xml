@@ -39,7 +39,7 @@
         </encoder>
     </appender>
 
-    <logger name="AppStateManager" level="INFO" additivity="false">
+    <logger name="AppStateManager" level="DEBUG" additivity="false">
         <appender-ref ref="ROLLING-APP-STATE"/>
         <appender-ref ref="ROLLING-GENERAL"/>
     </logger>

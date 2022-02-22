@@ -3,4 +3,4 @@
 -Xss2M
 -XX:MaxMetaspaceSize=768M
 -Djava.io.tmpdir=$PWD/target
-
+-Dtest.taa.accept.date=$(date +%F)

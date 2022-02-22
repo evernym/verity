@@ -70,7 +70,6 @@ object ConfigUtil {
   def findTAAConfig(config: AppConfig, version: String): Option[TransactionAuthorAgreement] = {
     // Return None if the configuration file says TAA is disabled.
     if(!isTAAConfigEnabled(config)) {
-      logger.info("TAA is NOT enabled")
       return None
     }
 
@@ -80,28 +79,19 @@ object ConfigUtil {
       )
     }
     catch {
-      case e: ConfigLoadingFailedException =>
-        logger.warn("Error occurred due to load TAA from config", e)
-        None
+      case _: ConfigLoadingFailedException => None
     }
   }
 
   def findTAAConfig_!(config: AppConfig, version: String): TransactionAuthorAgreement = {
-    val agreementVersionPath = s"$LIB_INDY_LEDGER_TAA_AGREEMENTS.${com.typesafe.config.ConfigUtil.quoteString(version)}"
+    val agreementVersionPath = s"${LIB_INDY_LEDGER_TAA_AGREEMENTS}.${com.typesafe.config.ConfigUtil.quoteString(version)}"
 
-    val indyConf = config.getConfigOption(LIB_INDY_LEDGER)
-    logger.info(s"Indy config: $indyConf")
-
-    logger.info(s"Looking at TAA from path $agreementVersionPath")
-
-    val taa = TransactionAuthorAgreement(
+    TransactionAuthorAgreement(
       version,
       config.getStringReq(s"$agreementVersionPath.digest").toLowerCase(),
       config.getStringReq(s"$agreementVersionPath.mechanism"),
       config.getStringReq(s"$agreementVersionPath.time-of-acceptance")
     )
-    logger.info(s"TAA loaded - $taa")
-    taa
   }
 
   def nowTimeOfAcceptance(): String = {

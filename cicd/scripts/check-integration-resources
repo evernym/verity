@@ -91,5 +91,4 @@ curl --fail -s "http://$YOURLS_HOST:$YOURLS_PORT/yourls-api.php\
 &url=http%3A%2F%2Fexample.com/$RANDOM"  \
 | grep '"status":"success"'
 
-
 echo ""

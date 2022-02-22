@@ -9,7 +9,6 @@ import com.evernym.verity.integration.base.sdk_provider.msg_listener.JsonMsgList
 import com.evernym.verity.integration.base.sdk_provider.{JsonMsgUtil, SdkProvider}
 import com.evernym.verity.integration.base.{CAS, EAS, PortProvider, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
-import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestion
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.ConfigFactory
@@ -70,7 +69,7 @@ class PushNotifWithAgentSenderNameSpec
     "when tried to send 'ask-question' (questionanswer 1.0) message" - {
       "should be successful" in {
         val msg = AskQuestion("How are you?", Option("detail"),
-          Vector("I am fine", "I am not fine"), signature_required = false, None)
+          Vector("I am fine", "I am not fine"), signature_required = false)
         val jsonObject = new JSONObject(JsonMsgUtil.createJsonString("", msg))
         val packedMsg = issuerSDKEAS.packForTheirPairwiseRel(connId, jsonObject.toString)
         issuerSDKEAS.sendCreateMsgReq_0_5(connId, packedMsg)
@@ -94,7 +93,7 @@ class PushNotifWithAgentSenderNameSpec
           msgType shouldBe "general"
           legacyType shouldBe "general"
           pushNotifMsgTitle shouldBe "Hi there"
-          pushNotifMsgText.startsWith("config-issuer-name sent you a General") shouldBe true
+          pushNotifMsgText.startsWith("config-issuer-name sent you a general") shouldBe true
         }
       }
     }

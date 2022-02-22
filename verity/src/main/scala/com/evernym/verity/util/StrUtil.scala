@@ -14,12 +14,20 @@ object StrUtil {
   }
 
   def camelToKebab(v: String): String = {
+    camelToWords(v, "-")
+  }
+
+  def camelToSeparateWords(v: String): String = {
+    camelToWords(v, " ")
+  }
+
+  private def camelToWords(v: String, separator: String): String = {
     val t = Option(v)
       .getOrElse("")
       .filterNot(Character.isWhitespace)
-      .map({c => if(c.isUpper) "-"+c.toLower else ""+c})
+      .map({c => if (c.isUpper) separator + c.toLower else "" + c})
       .mkString
-    if(t.startsWith("-")) t.substring(1) else t
+    if(t.startsWith(separator)) t.substring(1) else t
   }
 
   protected def cleanClassName(name: String): String = {

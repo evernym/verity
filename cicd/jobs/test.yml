@@ -131,6 +131,7 @@ legacy:
   extends:
     - .integration-common
   script:
+    - export TAA_ACCEPT_DATE=$(date +%F)
     - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.ApiFlowSpec"
   variables:
     TEST_SCENARIOS: "scenario1, scenario2"
@@ -139,6 +140,7 @@ legacy-with-restart:
   extends:
     - .integration-common
   script:
+    - export TAA_ACCEPT_DATE=$(date +%F)
     - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.ApiFlowSpec"
   variables:
     TEST_SCENARIOS: "scenario1"
@@ -149,6 +151,7 @@ integration:
     - .integration-common
   script:
     - echo "Running 3rd party tests..."
+    - export TAA_ACCEPT_DATE=$(date +%F)
     - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.third_party_apis.s3.*"
     - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.third_party_apis.wallet_api.*"
     - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.vcx.*"
@@ -159,4 +162,5 @@ limits:
   extends:
     - .integration-common
   script:
+    - export TAA_ACCEPT_DATE=$(date +%F)
     - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.limits.* -- -n com.evernym.integrationtests.e2e.tag.annotation.Limits"

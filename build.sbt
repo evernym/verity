@@ -44,7 +44,7 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libVdrToolsVer = "0.8.2.1407" // todo version containing improved error processing for submitted txns
+val libVdrToolsVer = "0.8.2"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libindy.so"),
   NonMatchingLib("libvcx", "0.13.0-bionic~675", "libvcx.so")  // For integration testing ONLY

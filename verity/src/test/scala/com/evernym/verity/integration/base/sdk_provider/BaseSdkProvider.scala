@@ -168,8 +168,18 @@ trait SdkProvider { this: BasicSpec =>
     holderSDK.provisionVerityCloudAgent()
   }
 
-  def establishConnection(connId: String, inviterSDK: VeritySdkBase, inviteeSDK: HolderSdk): Unit = {
-    val receivedMsg = inviterSDK.sendCreateRelationship(connId)
+  def establishConnection(connId: String,
+                          label: String,
+                          inviterSDK: VeritySdkBase,
+                          inviteeSDK: HolderSdk): Unit = {
+    establishConnection(connId, inviterSDK, inviteeSDK, Option(label))
+  }
+
+  def establishConnection(connId: String,
+                          inviterSDK: VeritySdkBase,
+                          inviteeSDK: HolderSdk,
+                          label: Option[String]=None): Unit = {
+    val receivedMsg = inviterSDK.sendCreateRelationship(connId, label)
     val lastReceivedThread = receivedMsg.threadOpt
     val invitation = inviterSDK.sendCreateConnectionInvitation(connId, lastReceivedThread)
 

@@ -112,7 +112,6 @@ static-analysis: # This test don't work and is currently not providing value
     when: always
   before_script:
 #    - devops/scripts/s3server/s3_init.sh
-    - export TAA_ACCEPT_DATE = $(date %+F)
     - cicd/scripts/check-integration-resources
   services:
     - name: registry.gitlab.com/evernym/containers/indy-pool:${indyNodeVersion}_${sovtokenVersion}

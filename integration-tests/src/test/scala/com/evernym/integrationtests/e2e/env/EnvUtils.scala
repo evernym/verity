@@ -41,7 +41,7 @@ object EnvUtils {
     override def beforeAll(): Unit = {
       super.beforeAll()
       if (System.getenv("TAA_ACCEPT_DATE") != java.time.LocalDate.now.toString){
-        throw new RuntimeException("Looks like TAA_ACCEPT_DATE env var is not defined. Check integration-test/README.md")
+        throw new RuntimeException("Looks like TAA_ACCEPT_DATE env var is not defined. Check README.md")
       }
       else {
         logger.info("TAA accept date is ok")

@@ -21,10 +21,6 @@ These services are managed via `devlabs`. See [verity devlab README](../devlab/R
 
 ## Running
 
-If you want to run integration test you should set environment variable `TAA_ACCEPT_DATE` 
-with current date in format `yyyy-mm-dd`. 
-
-You can add `TAA_ACCEPT_DATE=$(date +%F)` to /etc/environment and then logout to apply changes.
 
 
 In a proper environment, the following commands will run the integration tests: 

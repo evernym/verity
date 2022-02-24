@@ -8,7 +8,6 @@ import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.actor.appStateManager.{ErrorEvent, MildSystemError, RecoverIfNeeded}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.base.CoreActorExtended
 import com.evernym.verity.config.ConfigConstants._
@@ -18,7 +17,6 @@ import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.engine.DomainId
-import com.evernym.verity.util.StrUtil.camelToCapitalize
 import com.evernym.verity.util.Util.getOptionalField
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
@@ -191,27 +189,6 @@ object PusherUtil  {
                                 config: AppConfig,
                                 executionContext: ExecutionContext): Unit =
     extractServiceProviderAndRegId(comMethodValue, config, executionContext)
-
-  def getPushMsgType(msgType: String): String = {
-    val msgTypeToBeUsed = msgType match {
-      case CREATE_MSG_TYPE_PROOF_REQ => "proofRequest"
-      case CREATE_MSG_TYPE_TOKEN_XFER_REQ => "tokenTransferRequest"
-      case MSG_TYPE_UNKNOWN => "message"
-      case "issue-credential/1.0/offer-credential" => "credentialOffer"
-      case "issue-credential/1.0/issue-credential" => "credential"
-      case "present-proof/1.0/request-presentation" => "proofRequest"
-      case "committedanswer/1.0/question" => "question"
-      case "questionanswer/1.0/question" => "question"
-      case x if x.contains("/") => "message"
-      case x => x
-    }
-    val capitalizeMsg =
-      if (msgTypeToBeUsed == msgTypeToBeUsed.toUpperCase) msgTypeToBeUsed
-      else camelToCapitalize(msgTypeToBeUsed)
-    val vowels = Set('a', 'e', 'i', 'o', 'u')
-    val prefixed = if (vowels.contains(capitalizeMsg.head.toLower)) "an " else "a "
-    prefixed + capitalizeMsg
-  }
 
   def loadFirebasePusher(appConfig: AppConfig,
                          executionContext: ExecutionContext,

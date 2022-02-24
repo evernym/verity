@@ -44,7 +44,7 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libVdrToolsVer = "0.8.2.1407" // todo version containing improved error processing for submitted txns
+val libVdrToolsVer = "0.8.2"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libindy.so"),
   NonMatchingLib("libvcx", "0.13.0-bionic~675", "libvcx.so")  // For integration testing ONLY
@@ -62,7 +62,7 @@ val alpAkkaVer      = "3.0.3"
 val akkaPersistence = "1.1.1"
 val kamonVer        = "2.4.6"
 val kanelaAgentVer  = "1.0.14"
-val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
+val cinnamonVer     = "2.16.1-20210817-a2c7968"
 val jacksonVer      = "2.13.1"
 val sdnotifyVer     = "1.3"
 
@@ -335,7 +335,7 @@ lazy val commonLibraryDependencies = {
     //sms service implementation dependencies
     "com.fasterxml.jackson.jakarta.rs" % "jackson-jakarta-rs-json-provider" % jacksonVer,
     //"com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % jacksonVer,     //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
-    "org.glassfish.jersey.core" % "jersey-client" % "3.0.3"
+    "org.glassfish.jersey.core" % "jersey-client" % "3.0.4"
       excludeAll ExclusionRule(organization = "jakarta.inject"),                      //TODO: (should fix this) excluded to avoid issue found during 'sbt assembly' after upgrading to sbt 1.3.8
     "com.twilio.sdk" % "twilio-java-sdk" % "6.3.0",                                 //used by "TwilioDispatcher" class
 

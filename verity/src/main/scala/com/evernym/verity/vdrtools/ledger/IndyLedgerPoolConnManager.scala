@@ -157,19 +157,7 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
       }.map { ledgerTaa: LedgerTAA =>
         val expectedDigest = HashUtil.hash(SHA256)(ledgerTaa.version + ledgerTaa.text).hex
 
-        val autoAccept = appConfig.getBooleanOption(LIB_INDY_LEDGER_TAA_AUTO_ACCEPT).getOrElse(false)
-        val configuredTaa: Option[TransactionAuthorAgreement] = if(!autoAccept) {
-          findTAAConfig(appConfig, ledgerTaa.version)
-        }
-        else {
-          // This for demo, testing or otherwise when connecting to a ledger that don't have a legally binding TAA
-          Some(TransactionAuthorAgreement(
-            ledgerTaa.version,
-            expectedDigest,
-            "on_file",
-            nowTimeOfAcceptance()
-          ))
-        }
+        val configuredTaa: Option[TransactionAuthorAgreement] = findTAAConfig(appConfig, ledgerTaa.version)
 
         configuredTaa match {
           case Some(taa) =>

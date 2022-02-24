@@ -1,11 +1,11 @@
 package com.evernym.integrationtests.e2e.env
 
 import java.nio.file.{Path, Paths}
-
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.fixture.TempDir
 import com.evernym.integrationtests.e2e.env.AppType.AppType
 import com.evernym.integrationtests.e2e.env.PrintLineUtil._
+import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 import org.scalatest.{BeforeAndAfterAll, TestSuite}
 
 import scala.language.postfixOps
@@ -40,6 +40,12 @@ object EnvUtils {
 
     override def beforeAll(): Unit = {
       super.beforeAll()
+      if (System.getenv("TAA_ACCEPT_DATE") != java.time.LocalDate.now.toString){
+        throw new RuntimeException("Looks like TAA_ACCEPT_DATE env var is not defined. Check integration-test/README.md")
+      }
+      else {
+        logger.info("TAA accept date is ok")
+      }
       if (env.getEnvStatus == ENV_STATUS_UNINITIALIZED) {
         env.setupEnv(testEnv)
         env.startEnv(testEnv)

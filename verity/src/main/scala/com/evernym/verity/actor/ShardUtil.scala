@@ -1,7 +1,6 @@
 package com.evernym.verity.actor
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.cluster.sharding.ClusterShardingSettings.PassivationStrategySettings
 import akka.cluster.sharding.ShardRegion.{ExtractEntityId, ExtractShardId}
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 import com.evernym.verity.actor.persistence.SupervisorUtil.{logger, supervisorProps}
@@ -64,11 +63,7 @@ trait ShardUtil {
     val defaultClusterSetting = ClusterShardingSettings(system)
 
     val finalClusterSettings = passivateIdleEntityAfter match {
-      case Some(pt) => defaultClusterSetting.withPassivationStrategy(
-        PassivationStrategySettings
-          .defaults
-          .withIdleEntityPassivation(pt)
-      )
+      case Some(pt) => defaultClusterSetting.withPassivateIdleAfter(pt)
       case None     => defaultClusterSetting
     }
     ClusterSharding(system).start(

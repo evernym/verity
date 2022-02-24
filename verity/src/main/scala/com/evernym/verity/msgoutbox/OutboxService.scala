@@ -1,9 +1,9 @@
 package com.evernym.verity.msgoutbox
 
 import java.util.concurrent.TimeUnit
+
 import akka.actor.typed.{ActorSystem, Behavior}
 import akka.cluster.sharding.typed.ClusterShardingSettings
-import akka.cluster.sharding.typed.ClusterShardingSettings.PassivationStrategySettings
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity}
 import akka.util.Timeout
 import com.evernym.verity.actor.agent.AgentActorContext
@@ -62,21 +62,14 @@ class OutboxServiceImpl(val relResolver: RelResolver,
     )
   }.withSettings(
     ClusterShardingSettings(system)
-      .withPassivationStrategy(
-        PassivationStrategySettings
-          .defaults
-          .withIdleEntityPassivation(
-            FiniteDuration(
-              ConfigUtil.getReceiveTimeout(
-                appConfig,
-                defaultOutboxPassivationTimeoutInSeconds,
-                PERSISTENT_ACTOR_BASE,
-                Outbox.TypeKey.name,
-                null,
-              ).toSeconds,
-              TimeUnit.SECONDS
-            )
-          )
+      .withPassivateIdleEntityAfter(
+        FiniteDuration(ConfigUtil.getReceiveTimeout(
+          appConfig,
+          defaultOutboxPassivationTimeoutInSeconds,
+          PERSISTENT_ACTOR_BASE,
+          Outbox.TypeKey.name,
+          null,
+        ).toSeconds, TimeUnit.SECONDS)
       )))
 
   implicit val tmt: Timeout = timeout.getOrElse(Timeout(5, TimeUnit.SECONDS))

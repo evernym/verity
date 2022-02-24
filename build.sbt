@@ -55,14 +55,14 @@ val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 
 //dependency versions
 val vdrtoolsWrapperVer  = "0.8.2-1407"  // todo version to test new VDR Java wrapper API
-val akkaVer         = "2.6.18"
-val akkaHttpVer     = "10.2.8"
+val akkaVer         = "2.6.17"
+val akkaHttpVer     = "10.2.7"
 val akkaMgtVer      = "1.1.3"
 val alpAkkaVer      = "3.0.3"
 val akkaPersistence = "1.1.1"
-val kamonVer        = "2.4.7"
+val kamonVer        = "2.4.6"
 val kanelaAgentVer  = "1.0.14"
-val cinnamonVer     = "2.16.2"
+val cinnamonVer     = "2.16.1-20210817-a2c7968"
 val jacksonVer      = "2.13.1"
 val sdnotifyVer     = "1.3"
 

@@ -1,5 +1,13 @@
 Note: When interacting with Verity, it will also be helpful to review [the Verity SDK Release Notes](https://gitlab.com/evernym/verity/verity-sdk/-/blob/main/CHANGELOG.md).
 
+# Release notes - Verity 2.17.3 release TBD
+Includes VDR Tools 0.8.2 works with Verity SDK 0.6.1
+
+## Task
+* [VE-3357] Migrate legacy routing actors to new route actors
+* [VE-3034] Replace VDRTools and VDRToolsImpl with actual VDRTools wrapper api and its object types
+* [VE-2753] Allow msg type based push notification templates
+* [VE-3395] Update dependencies and refactor pre-launch checks to catch more failures
 
 # Release notes - Verity 2.17.2 release 16 Feb 2022
 Includes VDR Tools 0.8.2 works with Verity SDK 0.6.1

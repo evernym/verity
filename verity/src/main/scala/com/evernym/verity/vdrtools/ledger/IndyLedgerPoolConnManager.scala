@@ -5,7 +5,6 @@ import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.ConfigConstants.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT
 import com.evernym.verity.config.ConfigUtil.{findTAAConfig, nowTimeOfAcceptance}
 import com.evernym.verity.config.{AppConfig, ConfigConstants, ConfigUtil}
 import com.evernym.verity.constants.Constants.{LEDGER_TXN_PROTOCOL_V1, LEDGER_TXN_PROTOCOL_V2}

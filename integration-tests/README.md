@@ -18,10 +18,24 @@ Current services that are required:
 
 These services are managed via `devlabs`. See [verity devlab README](../devlab/README.md) for how to manage (bring up, reset, down, etc) these services.
 
+## TAA ACCEPT
+If you want to run tests you should set environment variable `TAA_ACCEPT_DATE`
+with current date in format `yyyy-mm-dd`.
+
+You can add `TAA_ACCEPT_DATE=$(date +%F)` to /etc/environment and then logout to apply changes.
+
+Note that this variable is not updated automatically when a new day comes. Variables those defined in `/etc/environment` will be updated the next time you log in.
+
+If `TAA_ACCEPT_DATE` is missing the following error usually occurs:
+
+```
+ com.evernym.verity.ledger.OpenConnException: TAA is not configured
+ at com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager.$anonfun$enableTAA$3(IndyLedgerPoolConnManager.scala)
+ at scala.util.Success.$anonfun$map$1(Try.scala)
+ ...
+```
 
 ## Running
-
-
 
 In a proper environment, the following commands will run the integration tests: 
 

@@ -87,12 +87,6 @@ sbt protocGenerate test:protocGenerate
 sbt compile test:compile
 ```
 
-### TAA ACCEPT
-If you want to run tests you should set environment variable `TAA_ACCEPT_DATE`
-with current date in format `yyyy-mm-dd`.
-
-You can add `TAA_ACCEPT_DATE=$(date +%F)` to /etc/environment and then logout to apply changes.
-
 ### Unit Tests
 
 ```sbt test```

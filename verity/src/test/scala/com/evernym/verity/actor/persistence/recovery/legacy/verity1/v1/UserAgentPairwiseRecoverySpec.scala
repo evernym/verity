@@ -40,15 +40,18 @@ class UserAgentPairwiseRecoverySpec
 
         val walletServiceCountBeforeRestart = getStableWalletAPISucceedCountMetric
         val uapEventsBeforeRestart = getEvents(myPairwiseRelAgentPersistenceId)
-
-        uapEventsBeforeRestart shouldBe uapEventsBeforeStart ++ getAuthKeyAddedEvents(
-          List(
-            myPairwiseRelDIDPair,
-            myPairwiseRelAgentDIDPair,
-            mySelfRelAgentDIDPair,
-            theirPairwiseRelDIDPair
+        val expectedEvents = uapEventsBeforeStart ++
+          getAuthKeyAddedEvents(
+            List(
+              myPairwiseRelDIDPair,
+              myPairwiseRelAgentDIDPair,
+              mySelfRelAgentDIDPair,
+              theirPairwiseRelDIDPair
+            )
           )
-        )
+
+        uapEventsBeforeRestart.containsSlice(expectedEvents) shouldBe true
+
         restartActor(uapRegion)
 
         val walletServiceCountAfterRestart = getStableWalletAPISucceedCountMetric

@@ -289,7 +289,8 @@ case class HolderSdk(param: SdkParam,
       MPF_INDY_PACK,
       packedMsg,
       routingKeys,
-      fwdMsgType
+      fwdMsgType,
+      None
     )(
       new AgentMsgTransformer(
         testWalletAPI,
@@ -329,14 +330,19 @@ case class HolderSdk(param: SdkParam,
     )
   }
 
-  private def sendUpdateMsgStatusAsReviewedForConn(connId: String, msgId: MsgId): Unit = {
-    updateMsgStatusOnConn(connId, msgId, "MS-106")
+  private def sendUpdateMsgStatusAsReviewedForConn(msgId: MsgId, connId: Option[String]): Unit = {
+    updateMsgStatusOnConn(msgId, "MS-106", connId)
   }
 
-  def updateMsgStatusOnConn(connId: String, msgId: MsgId, statusCode: String): Unit = {
+  def updateMsgStatusOnConn(msgId: MsgId, statusCode: String, connId: Option[String]): Unit = {
     val updateMsgStatus = UpdateMsgStatusReqMsg_MFV_0_6(statusCode, List(msgId))
     val updateMsgStatusJson = JsonMsgUtil.createJsonString(MSG_TYPE_DETAIL_UPDATE_MSG_STATUS, updateMsgStatus)
-    val routedPackedMsg = packForMyPairwiseRel(connId, updateMsgStatusJson)
+    val routedPackedMsg = {
+      connId match {
+        case Some(cId) => packForMyPairwiseRel(cId, updateMsgStatusJson)
+        case None      => packForMyVerityAgent(updateMsgStatusJson)
+      }
+    }
     parseAndUnpackResponse[MsgStatusUpdatedRespMsg_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg)))
   }
 
@@ -372,8 +378,8 @@ case class HolderSdk(param: SdkParam,
       val msg = result.find(m => m.`type` == msgTypeStr && statusCodes.forall(scs => scs.contains(m.statusCode)))
       msg match {
         case Some(m) if excludePayload.contains(NO) && m.payload.isDefined =>
-          val unpackedMsg = unpackMsg(m.payload.get).copy(msgIdOpt = Option(m.uid))
-          connId.foreach(sendUpdateMsgStatusAsReviewedForConn(_, m.uid))
+          val unpackedMsg: ReceivedMsgParam[T] = unpackMsg(m.payload.get).copy(msgIdOpt = Option(m.uid))
+          sendUpdateMsgStatusAsReviewedForConn(m.uid, connId)
           return unpackedMsg
         case Some(m) if excludePayload.contains(NO) =>
           throw new RuntimeException("expected message found without payload: " + m)

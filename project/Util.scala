@@ -82,6 +82,10 @@ object Util {
     if (children.exists(f => f.isFile && filter(f))) directory :: childDirs  else childDirs
   }
 
+  implicit class ToAbsolutePaths(paths: Seq[File]){
+    def absolutePaths: Seq[File] = paths.map(_.getAbsoluteFile)
+  }
+
   def searchForAdditionalJars(dependencies: Classpath, jarNames: Seq[String]): Seq[(File, String)] = {
     val depLibs = dependencies.map(_.data).filter(f => ClasspathUtil.isArchive(f.toPath))
     jarNames

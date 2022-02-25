@@ -28,12 +28,10 @@ object WalletUtil {
     } else new DefaultWalletConfig
   }
 
-  //TODO: there are some code duplicate in below methods, see if we can fix it
   def generateWalletParamAsync(walletId: String,
                                appConfig: AppConfig,
                                walletProvider: WalletProvider)
                               (implicit ec: ExecutionContext): Future[WalletParam] = {
-    //TODO: should try to avoid this wallet config creating again and again
     val walletConfig = buildWalletConfig(appConfig)
     generateWalletParamAsync(walletId, appConfig, walletProvider, walletConfig)
   }
@@ -43,10 +41,12 @@ object WalletUtil {
                                        walletProvider: WalletProvider,
                                        walletConfig: WalletConfig)
                                       (implicit ec: ExecutionContext): Future[WalletParam] = {
-    val walletName = getWalletName(walletId, appConfig)
-    walletProvider.generateKeyAsync(Option(getWalletKeySeed(walletId, appConfig))).map { key =>
-      WalletParam(walletId, walletName, key, walletConfig)
-    }
+    val walletName = buildWalletName(walletId, appConfig)
+    walletProvider
+      .generateKeyAsync(Option(buildWalletKeySeed(walletId, appConfig)))
+      .map { key =>
+        WalletParam(walletId, walletName, key, walletConfig)
+      }
   }
 
   def generateWalletParamSync(walletId: String,
@@ -60,17 +60,17 @@ object WalletUtil {
                               appConfig: AppConfig,
                               walletProvider: WalletProvider,
                               walletConfig: WalletConfig): WalletParam = {
-    val walletName = getWalletName(walletId, appConfig)
-    val key = walletProvider.generateKeySync(Option(getWalletKeySeed(walletId, appConfig)))
+    val walletName = buildWalletName(walletId, appConfig)
+    val key = walletProvider.generateKeySync(Option(buildWalletKeySeed(walletId, appConfig)))
     WalletParam(walletId, walletName, key, walletConfig)
   }
 
-  private def getWalletName(entityId: String, appConfig: AppConfig): String = {
+  private def buildWalletName(entityId: String, appConfig: AppConfig): String = {
     //NOTE: This logic should not be changed unless we know its impact
     Util.saltedHashedName(entityId, appConfig)
   }
 
-  private def getWalletKeySeed(id: String, appConfig: AppConfig): String = {
+  private def buildWalletKeySeed(id: String, appConfig: AppConfig): String = {
     //NOTE: This logic should not be changed unless we know its impact
     val salt = appConfig.getStringReq(SALT_WALLET_ENCRYPTION)
     buildWalletKeySeed(id, salt)

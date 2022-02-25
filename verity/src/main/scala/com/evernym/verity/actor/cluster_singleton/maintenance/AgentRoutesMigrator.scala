@@ -7,7 +7,7 @@ import com.evernym.verity.actor.agent.maintenance.RegisteredRouteSummary
 import com.evernym.verity.actor.agent.msgrouter.RoutingAgentBucketMapperV1
 import com.evernym.verity.actor.agent.msgrouter.legacy.{GetRegisteredRouteSummary, MigratePending}
 import com.evernym.verity.actor.base.Done
-import com.evernym.verity.actor.persistence.{BasePersistentActor, BasePersistentTimeoutActor, DefaultPersistenceEncryption}
+import com.evernym.verity.actor.persistence.{BasePersistentTimeoutActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, MigrationCandidatesRecorded, MigrationStatusRecorded}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._

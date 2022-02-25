@@ -20,6 +20,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.ConfigUtil
+import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.did.DidStr
@@ -152,39 +153,47 @@ trait MsgNotifierForStoredMsgs
     }
   }
 
+  private def buildProtoMsgTypeConfigPath(family: String, version: String, msgName: String): String = {
+    s"${family}_${version}_$msgName"
+  }
+
   private def getPushNotifTextTemplate(msgType: String, sponsorId: Option[String]): String = {
 
     val formattedMsgType = {
       msgType match {
-        case VALID_MESSAGE_TYPE_REG_EX_DID(_, _, _, _, _)  => "general"
-        case VALID_MESSAGE_TYPE_REG_EX_HTTP(_, _, _, _, _) => "general"
-        case mt if mt.toUpperCase == mt                => "general"
-        case _ => camelToKebab(msgType)
+        case VALID_MESSAGE_TYPE_REG_EX_DID(_, _, family, version, msgName)  =>
+          buildProtoMsgTypeConfigPath(family, version, msgName)
+        case VALID_MESSAGE_TYPE_REG_EX_HTTP(_, _, family, version, msgName) =>
+          buildProtoMsgTypeConfigPath(family, version, msgName)
+        case mt if mt.toUpperCase == mt                    =>
+          "general"
+        case _                                             =>
+          camelToKebab(msgType)
       }
     }
     val msgTypeBasedTemplateConfigName = s"$formattedMsgType-new-msg-body-template"
+    val generalNewMsgTemplateConfigName = s"general-new-msg-body-template"
 
-    // check if override exist
-    val msgTypeBasedTemplateOverride: Option[String] = sponsorId.flatMap { sponsorId =>
+    // check if sponsor overrides exists
+    val sponsorNewMsgTemplate: Option[String] = sponsorId.flatMap { sponsorId =>
       ConfigUtil.findSponsorConfigWithId(sponsorId, appConfig).flatMap { sd =>
-        Try(ConfigFactory.parseString(sd.pushMsgOverrides).getString(msgTypeBasedTemplateConfigName)).toOption
+        Try {
+          val overriddenConfig = ConfigReadHelper(ConfigFactory.parseString(sd.pushMsgOverrides))
+          overriddenConfig.getStringOption(msgTypeBasedTemplateConfigName)
+            .orElse(overriddenConfig.getStringOption(generalNewMsgTemplateConfigName))
+        }.toOption.flatten
       }
     }
 
-    // if no override use default
-    val msgTypeBasedTemplate = msgTypeBasedTemplateOverride.orElse(
+    // if no override use default msg typed or general type based template
+    val msgTypeBasedTemplate = sponsorNewMsgTemplate.orElse(
       appConfig.getStringOption(s"$PUSH_NOTIF.$msgTypeBasedTemplateConfigName")
+        orElse appConfig.getStringOption(s"$PUSH_NOTIF.$generalNewMsgTemplateConfigName")
     )
 
     msgTypeBasedTemplate match {
       case Some(t: String) => t
-      case _ =>
-        msgType match {
-          case CREATE_MSG_TYPE_TOKEN_XFER_OFFER => "#{senderName} wants to send you Sovrin tokens"
-          case CREATE_MSG_TYPE_TOKEN_XFER_REQ => "#{senderName} is requesting Sovrin tokens"
-          case CREATE_MSG_TYPE_TOKEN_XFERRED => "#{senderName} sent you Sovrin tokens"
-          case _ => generalNewMsgBodyTemplateOpt.getOrElse("#{senderName} sent you #{msgType}")
-        }
+      case _               => generalNewMsgBodyTemplateOpt.getOrElse("#{senderName} sent you #{msgType}")
     }
 
   }
@@ -261,7 +270,8 @@ trait MsgNotifierForStoredMsgs
         val mds = msgStore.getMsgDetails(notifMsgDtl.uid)
         val title = mds.get(TITLE).map(v => Map(TITLE -> v)).getOrElse(Map.empty)
         val detail = mds.get(DETAIL).map(v => Map(DETAIL -> v)).getOrElse(Map.empty)
-        val name = mds.get(NAME_KEY).map(v => Map(NAME_KEY -> v)).getOrElse(Map.empty)
+        val name = notifMsgDtl.msgSender.map(s => Map(NAME_KEY -> s))
+          .getOrElse(mds.get(NAME_KEY).map(v => Map(NAME_KEY -> v)).getOrElse(Map.empty))
         val logoUrl = mds.get(LOGO_URL_KEY).map(v => Map(LOGO_URL_KEY -> v)).getOrElse(Map.empty)
         val extraData = title ++ detail ++ name ++ logoUrl
 
@@ -271,7 +281,7 @@ trait MsgNotifierForStoredMsgs
         val newExtraData = extraData ++ Map(PUSH_NOTIF_BODY_TEMPLATE -> msgBodyTemplateToUse)
 
         logger.debug(s"[${notifMsgDtl.uid}:${notifMsgDtl.msgType}] new messages notification: " + notifMsgDtl)
-        getCommonPushNotifData(notifMsgDtl, newExtraData) match {
+        buildPushNotifData(notifMsgDtl, newExtraData) match {
           case Some(pnd) => sendPushNotif(pnd, allComMethods)
           case None => Future.successful("push notification not enabled")
         }
@@ -466,6 +476,9 @@ trait MsgNotifierForStoredMsgs
   private def updatePushNotificationDeliveryStatus(umds: UpdateMsgDeliveryStatus): Unit =
     self ! umds
 
+  lazy val errorsForWhichComMethodShouldBeDeleted =
+    Set(PUSH_COM_METHOD_NOT_REGISTERED_ERROR, PUSH_COM_METHOD_INVALID_REGISTRATION_ERROR,
+      PUSH_COM_METHOD_MISMATCH_SENDER_ID_ERROR)
 }
 
 /**
@@ -488,7 +501,7 @@ trait MsgNotifierForUserAgentCommon
     logger.debug("about to send stored msg to self: " + msgId)
     val msg = msgStore.getMsgReq(msgId)
     val payloadWrapper = msgStore.getMsgPayload(msgId)
-    notifyUserForNewMsg(NotifyMsgDetail(msgId, msg.getType, payloadWrapper))
+    notifyUserForNewMsg(NotifyMsgDetail(msgId, msg.getType, None, payloadWrapper))
   }
 }
 
@@ -523,11 +536,11 @@ case class FwdMetaData(msgType: Option[String], msgSenderName: Option[String])
 case class FwdMsg(msgId: String, msgType: String, sponseeDetails: String, relationshipDid: DidStr, metaData: FwdMetaData)
 
 object NotifyMsgDetail {
-  def withTrackingId(msgType: String, payloadWrapper: Option[PayloadWrapper]): NotifyMsgDetail =
-    NotifyMsgDetail("TrackingId-" + MsgIdProvider.getNewMsgId, msgType, payloadWrapper)
+  def withTrackingId(msgType: String, msgSender: Option[String], payloadWrapper: Option[PayloadWrapper]): NotifyMsgDetail =
+    NotifyMsgDetail("TrackingId-" + MsgIdProvider.getNewMsgId, msgType, msgSender, payloadWrapper)
 }
 
-case class NotifyMsgDetail(uid: MsgId, msgType: String, payloadWrapper: Option[PayloadWrapper] = None) {
+case class NotifyMsgDetail(uid: MsgId, msgType: String, msgSender: Option[String], payloadWrapper: Option[PayloadWrapper] = None) {
   // this is used for legacy reasons, for compatibility with old versions of mobile application.
   // it will be removed after some time
   def deprecatedPushMsgType: String = if (msgType.contains('/')) MSG_TYPE_UNKNOWN else msgType

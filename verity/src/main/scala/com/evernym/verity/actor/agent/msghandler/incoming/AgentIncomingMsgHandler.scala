@@ -60,21 +60,27 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
     // flow diagram: SIG, step 5
     val sndr = sender()
     if (handleSignalMsgs.isDefinedAt(psm.smp)) {
-      handleSignalMsgs(psm.smp).foreach { dmOpt =>
-        dmOpt.foreach { dm =>
-          dm.forRel match {
-            case Some(rel) =>
-              val tc = psm.threadContextDetail
-              val msgForRel = MsgForRelationship(domainId, dm.msg, psm.threadId, selfParticipantId,
-                Option(tc.msgPackFormat), Option(tc.msgTypeFormat), None)
-              agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(rel, msgForRel))
-            case None =>
-              agentActorContext.protocolRegistry.find(psm.protoRef).foreach { pd =>
-                sendToAgentMsgProcessor(ProcessUntypedMsgV2(dm.msg, pd.protoDef, psm.threadId), sndr)
-              }
+      handleSignalMsgs(psm.smp)
+        .recover({
+          case e: Exception =>
+            logger.error(s"An error occurred while handling signal msg(${psm.smp.signalMsg.getClass.getName})")
+            throw e
+        })
+        .foreach { dmOpt =>
+          dmOpt.foreach { dm =>
+            dm.forRel match {
+              case Some(rel) =>
+                val tc = psm.threadContextDetail
+                val msgForRel = MsgForRelationship(domainId, dm.msg, psm.threadId, selfParticipantId,
+                  Option(tc.msgPackFormat), Option(tc.msgTypeFormat), None)
+                agentActorContext.agentMsgRouter.execute(InternalMsgRouteParam(rel, msgForRel))
+              case None =>
+                agentActorContext.protocolRegistry.find(psm.protoRef).foreach { pd =>
+                  sendToAgentMsgProcessor(ProcessUntypedMsgV2(dm.msg, pd.protoDef, psm.threadId), sndr)
+                }
+            }
           }
         }
-      }
     } else {
       throw new RuntimeException(s"[$persistenceId] msg sent by driver not handled by agent: " + psm.smp.signalMsg)
     }

@@ -26,9 +26,9 @@ class FirebasePusherSpec extends TestKit(AkkaTestBasic.system()) with BasicSpec 
   val serverPath: String = TestExecutionContextProvider.appConfig.getStringReq(FCM_API_PATH)
   val pusher =
     new FirebasePusher(
-      FirebasePushServiceParam(serverKey, serverHost, serverPath),
+      TestExecutionContextProvider.appConfig,
       TestExecutionContextProvider.ecp.futureExecutionContext,
-      TestExecutionContextProvider.appConfig
+      FirebasePushServiceParam(serverKey, serverHost, serverPath)
     )
 
   "FCM pusher" - {

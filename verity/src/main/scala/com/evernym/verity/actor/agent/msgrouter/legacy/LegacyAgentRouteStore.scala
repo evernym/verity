@@ -4,13 +4,15 @@ import akka.actor.{ActorRef, Props}
 import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
 import akka.event.LoggingReceive
+import akka.pattern.ask
+import com.evernym.verity.actor.agent.SetMissingRoute
 import com.evernym.verity.util2.RouteId
 import com.evernym.verity.actor.agent.maintenance.{AlreadyCompleted, AlreadyRegistered, RegisteredRouteSummary}
-import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, Migrated, RouteAlreadySet, RoutingAgentUtil, StoreFromLegacy, StoreRoute}
+import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, AgentMsgRouter, InternalMsgRouteParam, RouteAlreadySet, RoutingAgentUtil, StoreRoute}
 import com.evernym.verity.actor.cluster_singleton.ForAgentRoutesMigrator
 import com.evernym.verity.actor.cluster_singleton.maintenance.RecordMigrationStatus
 import com.evernym.verity.actor.persistence.BasePersistentActor
-import com.evernym.verity.actor.{ActorMessage, ForIdentifier, LegacyRouteSet, Registered, RouteSet, RoutesMigrated, SendCmd}
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier, LegacyRouteSet, Registered, RouteSet, RoutesMigrated}
 import com.evernym.verity.config.{AppConfig, ConfigConstants}
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.did.DidStr
@@ -29,28 +31,35 @@ import scala.util.Random
  *
  * @param appConfig application config
  */
-class LegacyAgentRouteStore(executionContext: ExecutionContext)(implicit val appConfig: AppConfig)
+class LegacyAgentRouteStore(agentMsgRouter: AgentMsgRouter,
+                            executionContext: ExecutionContext)(implicit val appConfig: AppConfig)
   extends BasePersistentActor {
 
   override def futureExecutionContext: ExecutionContext = executionContext
 
-  override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
+  override val receiveCmd: Receive = receiveBaseCmd orElse receiveOtherCmd
+
+  lazy val receiveBaseCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case sr: LegacySetRoute if routes.contains(sr.forDID) => sender ! RouteAlreadySet(sr.forDID)
 
     case sr: LegacySetRoute =>
       writeApplyAndSendItBack(
         LegacyRouteSet(sr.forDID, sr.actorAddressDetail.actorTypeId, sr.actorAddressDetail.address))
     case gr: LegacyGetRoute             => handleGetRoute(gr)
+  }
 
+  lazy val receiveOtherCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case GetRegisteredRouteSummary      =>
       sender ! RegisteredRouteSummary(entityId, orderedRoutes.routes.size)
 
     case grd: GetRouteBatch             => handleGetRouteBatch(grd)
 
     case mp: MigratePending             => migratePending(mp)
-    case sc: SendCmd                    => sc.to ! sc.cmd
-    case mg: Migrated                   => handleMigrated(mg.route)
-    case ras: RouteAlreadySet           => handleMigrated(ras.forDID)
+
+    case FixRoute(routeId, aad)         => fixRouting(routeId, aad)(executionContext)
+
+    case FinishRouteMigration(routeId)  => finishRouteMigration(routeId)
+
     case GetRouteStoreMigrationStatus   =>
       sender ! RouteStoreMigrationStatus(timers.isTimerActive("migrate"), routes.size, migrationStatus)
 
@@ -97,9 +106,8 @@ class LegacyAgentRouteStore(executionContext: ExecutionContext)(implicit val app
       if (candidate.nonEmpty) {
         candidate.zipWithIndex.foreach { case (route, index) =>
           val routeId = route._1
-          val aad = route._2
           migrationStatus += routeId -> RouteMigrationStatus(inProgress = true, migrated = false, recorded = false)
-          executeRouteMigration(routeId, aad, mp.batchItemIntervalInMillis*index)
+          executeRouteMigration(routeId, route._2, mp.batchItemIntervalInMillis*index)(executionContext)
         }
       }
     }
@@ -107,16 +115,34 @@ class LegacyAgentRouteStore(executionContext: ExecutionContext)(implicit val app
     finishBatchProcessingIfCompleted()
   }
 
-  def executeRouteMigration(routeId: RouteId, aad: ActorAddressDetail, afterDelayInMillis: Int): Unit = {
+  def executeRouteMigration(routeId: RouteId,
+                            aad: ActorAddressDetail,
+                            afterDelayInMillis: Int)
+                           (implicit executionContext: ExecutionContext): Unit = {
     if (afterDelayInMillis > 0) {
       val timeout = (afterDelayInMillis + Random.nextInt(100)).millis
-      timers.startSingleTimer(routeId, SendCmd(routeRegion, ForIdentifier(routeId, StoreFromLegacy(aad))), timeout)
+      timers.startSingleTimer(routeId, FixRoute(routeId, aad), timeout)
     } else {
-      routeRegion ! ForIdentifier(routeId, StoreFromLegacy(aad))
+      fixRouting(routeId, aad)
     }
   }
 
-  def handleMigrated(route: RouteId): Unit = {
+  def fixRouting(routeId: RouteId, aad: ActorAddressDetail)
+                (implicit executionContext: ExecutionContext): Unit = {
+    agentMsgRouter
+      .execute(InternalMsgRouteParam(routeId, SetMissingRoute))
+      .map { _ =>
+        self ! FinishRouteMigration(routeId)
+      }.recover {
+        case _: Throwable =>
+          val fut = routeRegion ? ForIdentifier(routeId, StoreRoute(aad))
+          fut.map { _ =>
+            self ! FinishRouteMigration(routeId)
+          }
+    }
+  }
+
+  def finishRouteMigration(route: RouteId): Unit = {
     migrationStatus += route -> RouteMigrationStatus(inProgress = true, migrated = true, recorded = false)
     finishBatchProcessingIfCompleted()
   }
@@ -174,8 +200,8 @@ class OrderedRoutes {
 }
 
 object LegacyAgentRouteStore {
-  def props(executionContext: ExecutionContext)(implicit appConfig: AppConfig): Props =
-    Props(new LegacyAgentRouteStore(executionContext))
+  def props(agentMsgRouter: AgentMsgRouter, executionContext: ExecutionContext)(implicit appConfig: AppConfig): Props =
+    Props(new LegacyAgentRouteStore(agentMsgRouter, executionContext))
   val defaultPassivationTimeout = 600
 }
 
@@ -192,7 +218,9 @@ case class GetRouteBatchResult(routeStoreEntityId: EntityId, dids: Set[DidStr]) 
 
 case class Status(totalCandidates: Int, processedRoutes: Int) extends ActorMessage
 
-case class RouteMigrationStatus(inProgress: Boolean, migrated: Boolean, recorded: Boolean) extends ActorMessage {
+case class RouteMigrationStatus(inProgress: Boolean,
+                                migrated: Boolean,
+                                recorded: Boolean) extends ActorMessage {
   def notYetRecorded: Boolean = ! recorded
 }
 
@@ -202,3 +230,6 @@ case class RouteStoreMigrationStatus(isJobScheduled: Boolean,
                                      currentStatus: Map[RouteId, RouteMigrationStatus]) extends ActorMessage
 
 case class MigratePending(batchSize: Int, batchItemIntervalInMillis: Int) extends ActorMessage
+
+case class FixRoute(routeId: RouteId, aad: ActorAddressDetail) extends ActorMessage
+case class FinishRouteMigration(routeId: RouteId) extends ActorMessage

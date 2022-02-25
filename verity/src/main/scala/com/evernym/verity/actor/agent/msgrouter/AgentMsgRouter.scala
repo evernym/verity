@@ -18,15 +18,11 @@ import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.EntityTypeMapper
 import com.evernym.verity.actor.agent.msghandler.incoming.{ProcessPackedMsg, ProcessRestMsg}
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.cache.ROUTING_DETAIL_CACHE_FETCHER
-import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail}
-import com.evernym.verity.cache.fetchers.{CacheValueFetcher, RoutingDetailCacheFetcher}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.observability.metrics.MetricsWriterExtension
 import com.evernym.verity.util.LogUtil.logDuration
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util.{Base58Util, ReqMsgContext, RestMsgContext}
@@ -77,10 +73,7 @@ class AgentMsgRouter(executionContext: ExecutionContext)(implicit val appConfig:
 
   val logger: Logger = getLoggerByClass(classOf[AgentMsgRouter])
 
-  lazy val fetchers: Map[FetcherParam, CacheValueFetcher] = Map (
-    ROUTING_DETAIL_CACHE_FETCHER -> new RoutingDetailCacheFetcher(system, appConfig, futureExecutionContext)
-  )
-  lazy val routingCache: Cache = new Cache("RC", fetchers, MetricsWriterExtension(system).get(), futureExecutionContext)
+  lazy val routingRegion: ActorRef = ClusterSharding(system).shardRegion(ROUTE_REGION_ACTOR_NAME)
 
   lazy val agencyAgentRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_REGION_ACTOR_NAME)
   lazy val agencyAgentPairwiseRegion: ActorRef = ClusterSharding(system).shardRegion(AGENCY_AGENT_PAIRWISE_REGION_ACTOR_NAME)
@@ -101,7 +94,7 @@ class AgentMsgRouter(executionContext: ExecutionContext)(implicit val appConfig:
     val startTime = LocalDateTime.now
     logger.debug("get route info started", (LOG_KEY_SRC_DID, routeDID))
     val futResp =
-      getRouteInfoViaCache(routeDID)
+      getRouteInfoFromActor(routeDID)
         .map { r =>
           val curTime = LocalDateTime.now
           val millis = ChronoUnit.MILLIS.between(startTime, curTime)
@@ -111,11 +104,8 @@ class AgentMsgRouter(executionContext: ExecutionContext)(implicit val appConfig:
     Future(AskResp(futResp, Option(s"getting route info: $routeDID")))
   }
 
-  private def getRouteInfoViaCache(routeId: RouteId): Future[Option[ActorAddressDetail]] = {
-    val gcop = GetCachedObjectParam(KeyDetail(routeId, required = false), ROUTING_DETAIL_CACHE_FETCHER)
-    routingCache.getByParamAsync(gcop).map { cqr =>
-      cqr.getActorAddressDetailOpt(routeId)
-    }
+  private def getRouteInfoFromActor(routeId: RouteId): Future[Option[ActorAddressDetail]] = {
+    routingRegion.ask(ForIdentifier(routeId, GetStoredRoute)).mapTo[Option[ActorAddressDetail]]
   }
 
   def getRouteRegionActor(route: RouteId): Future[RouteInfo] = {

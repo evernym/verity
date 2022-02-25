@@ -25,9 +25,9 @@ import com.evernym.verity.util2.ServiceEndpoint
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgfamily.{BundledMsg_MFV_0_5, ConfigDetail, TypeDetail}
-import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CONN_REQ, CREATE_MSG_TYPE_CONN_REQ_ANSWER, MSG_TYPE_CREATE_KEY, MSG_TYPE_CREATE_MSG, MSG_TYPE_DETAIL_ACCEPT_CONN_REQ, MSG_TYPE_DETAIL_CONN_REQ, MSG_TYPE_DETAIL_CREATE_AGENT, MSG_TYPE_DETAIL_CREATE_KEY, MSG_TYPE_MSG_DETAIL, MSG_TYPE_UPDATE_COM_METHOD}
-import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
-import com.evernym.verity.agentmsg.msgfamily.pairwise.{AnswerInviteMsgDetail_MFV_0_5, ConnReqRespMsg_MFV_0_6, InviteCreateMsgDetail_MFV_0_5, KeyCreatedRespMsg_MFV_0_5, KeyCreatedRespMsg_MFV_0_6}
+import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CONN_REQ, CREATE_MSG_TYPE_CONN_REQ_ANSWER, CREATE_MSG_TYPE_GENERAL, MSG_TYPE_CREATE_KEY, MSG_TYPE_CREATE_MSG, MSG_TYPE_DETAIL_ACCEPT_CONN_REQ, MSG_TYPE_DETAIL_CONN_REQ, MSG_TYPE_DETAIL_CREATE_AGENT, MSG_TYPE_DETAIL_CREATE_KEY, MSG_TYPE_MSG_DETAIL, MSG_TYPE_UPDATE_COM_METHOD, MSG_TYPE_UPDATE_CONFIGS}
+import com.evernym.verity.agentmsg.msgfamily.configs.{ConfigsUpdatedRespMsg_MFV_0_5, UpdateConfigReqMsg}
+import com.evernym.verity.agentmsg.msgfamily.pairwise.{AnswerInviteMsgDetail_MFV_0_5, ConnReqRespMsg_MFV_0_6, GeneralCreateMsgDetail_MFV_0_5, InviteCreateMsgDetail_MFV_0_5, KeyCreatedRespMsg_MFV_0_5, KeyCreatedRespMsg_MFV_0_6}
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId}
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
@@ -42,7 +42,7 @@ import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import com.evernym.verity.testkit.agentmsg.{CreateInviteResp_MFV_0_5, InviteAcceptedResp_MFV_0_5}
-import com.evernym.verity.testkit.util.{AcceptConnReq_MFV_0_6, AgentCreated_MFV_0_5, AgentCreated_MFV_0_6, ComMethodUpdated_MFV_0_5, ConnReqAccepted_MFV_0_6, ConnReq_MFV_0_6, Connect_MFV_0_5, Connected_MFV_0_5, CreateAgent_MFV_0_5, CreateAgent_MFV_0_6, CreateKey_MFV_0_5, CreateKey_MFV_0_6, CreateMsg_MFV_0_5, InviteMsgDetail_MFV_0_5, MsgCreated_MFV_0_5, MsgsSent_MFV_0_5, SignUp_MFV_0_5, SignedUp_MFV_0_5, TestComMethod, UpdateComMethod_MFV_0_5}
+import com.evernym.verity.testkit.util.{AcceptConnReq_MFV_0_6, AgentCreated_MFV_0_5, AgentCreated_MFV_0_6, ComMethodUpdated_MFV_0_5, ConnReqAccepted_MFV_0_6, ConnReq_MFV_0_6, Connect_MFV_0_5, Connected_MFV_0_5, CreateAgent_MFV_0_5, CreateAgent_MFV_0_6, CreateKey_MFV_0_5, CreateKey_MFV_0_6, CreateMsg_MFV_0_5, InviteMsgDetail_MFV_0_5, MsgCreated_MFV_0_5, MsgsSent_MFV_0_5, SignUp_MFV_0_5, SignedUp_MFV_0_5, TestComMethod, TestConfigDetail, UpdateComMethod_MFV_0_5, UpdateConfigs_MFV_0_5}
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
 import com.evernym.verity.testkit.util.HttpUtil._
@@ -168,8 +168,18 @@ trait SdkProvider { this: BasicSpec =>
     holderSDK.provisionVerityCloudAgent()
   }
 
-  def establishConnection(connId: String, inviterSDK: VeritySdkBase, inviteeSDK: HolderSdk): Unit = {
-    val receivedMsg = inviterSDK.sendCreateRelationship(connId)
+  def establishConnection(connId: String,
+                          label: String,
+                          inviterSDK: VeritySdkBase,
+                          inviteeSDK: HolderSdk): Unit = {
+    establishConnection(connId, inviterSDK, inviteeSDK, Option(label))
+  }
+
+  def establishConnection(connId: String,
+                          inviterSDK: VeritySdkBase,
+                          inviteeSDK: HolderSdk,
+                          label: Option[String]=None): Unit = {
+    val receivedMsg = inviterSDK.sendCreateRelationship(connId, label)
     val lastReceivedThread = receivedMsg.threadOpt
     val invitation = inviterSDK.sendCreateConnectionInvitation(connId, lastReceivedThread)
 
@@ -396,7 +406,40 @@ abstract class SdkBase(param: SdkParam,
   }
 }
 
-trait LegacySdkBase_0_5 { this: SdkBase =>
+trait LegacySdkBase { this: SdkBase =>
+
+  def updateTheirDidDoc(connId: String, theirDidDoc: DIDDoc): Unit = {
+    val myPairwiseRel = myPairwiseRelationships(connId)
+    myPairwiseRelationships += (connId ->
+      myPairwiseRel.copy(theirDIDDoc = Option(theirDidDoc)))
+  }
+
+  def processConnectionCompleted(connId: String, inviteeDidPair: DidPair): Unit = {
+    updateTheirDidDoc(
+      connId,
+      DIDDoc(
+        inviteeDidPair.did,
+        inviteeDidPair.verKey,
+        "",
+        Vector.empty
+      )
+    )
+  }
+
+  def packForTheirPairwiseRel(connId: String,
+                              msg: String)
+                             (implicit mpf: MsgPackFormat = MPF_INDY_PACK): Array[Byte] = {
+    val pairwiseRel = myPairwiseRelationships(connId)
+    packMsg(
+      msg,
+      Set(KeyParam.fromVerKey(pairwiseRel.theirAgentVerKey)),
+      Option(KeyParam.fromVerKey(pairwiseRel.myPairwiseVerKey))
+    )
+  }
+}
+
+trait LegacySdkBase_0_5
+  extends LegacySdkBase { this: SdkBase =>
 
   def provisionAgent_0_5()(implicit mpf: MsgPackFormat = MPF_MSG_PACK): AgentCreated_MFV_0_5 = {
     val connected = sendConnect_0_5()
@@ -419,6 +462,18 @@ trait LegacySdkBase_0_5 { this: SdkBase =>
     val agentJsonMsg = AgentMsgPackagingUtil.buildAgentMsgJson(List(agentMsg), wrapInBundledMsgs = true)
     val routedPackedMsg = packForMyVerityAgent(agentJsonMsg)
     parseAndUnpackResponse[ComMethodUpdated_MFV_0_5](checkOKResponse(sendPOST(routedPackedMsg))).msg
+  }
+
+  def updateConfigs(configs: Set[TestConfigDetail],
+                    connId: Option[String]=None)
+                   (implicit mpf: MsgPackFormat = MPF_MSG_PACK): ConfigsUpdatedRespMsg_MFV_0_5 = {
+    val agentMsg = UpdateConfigs_MFV_0_5(TypeDetail(MSG_TYPE_UPDATE_CONFIGS, MTV_1_0), configs)
+    val agentJsonMsg = AgentMsgPackagingUtil.buildAgentMsgJson(List(agentMsg), wrapInBundledMsgs = true)
+    val routedPackedMsg = connId match {
+      case Some(cId) => packForMyPairwiseRel(cId, agentJsonMsg)
+      case None      => packForMyVerityAgent(agentJsonMsg)
+    }
+    parseAndUnpackResponse[ConfigsUpdatedRespMsg_MFV_0_5](checkOKResponse(sendPOST(routedPackedMsg))).msg
   }
 
   private def sendConnect_0_5()(implicit mpf: MsgPackFormat = MPF_MSG_PACK): Connected_MFV_0_5 = {
@@ -477,18 +532,19 @@ trait LegacySdkBase_0_5 { this: SdkBase =>
 
   def sendConnReqAnswer_0_5(connId: String,
                             inviteDetail: InviteDetail)
-                           (implicit mpf: MsgPackFormat = MPF_MSG_PACK): InviteAcceptedResp_MFV_0_5 = {
+                           (implicit mpf: MsgPackFormat = MPF_MSG_PACK): DidPair = {
     val myPairwiseRel = myPairwiseRelationships(connId)
 
-    myPairwiseRelationships += (connId ->
-      myPairwiseRel.copy(theirDIDDoc = Option(DIDDoc(
+    updateTheirDidDoc(
+      connId,
+      DIDDoc(
         inviteDetail.senderDetail.DID,
         inviteDetail.senderDetail.verKey,
         inviteDetail.senderAgencyDetail.endpoint,
         Vector(inviteDetail.senderDetail.agentKeyDlgProof.get.agentDelegatedKey,
           inviteDetail.senderAgencyDetail.verKey)
-      )))
       )
+    )
     val keyDlgProof = Util
       .getAgentKeyDlgProof(
         myPairwiseRel.myPairwiseVerKey,
@@ -505,10 +561,30 @@ trait LegacySdkBase_0_5 { this: SdkBase =>
     val agentJsonMsg = AgentMsgPackagingUtil.buildAgentMsgJson(agentMsgs, wrapInBundledMsgs = true)
     val routedPackedMsg = packForMyPairwiseRel(connId, agentJsonMsg)
     parseAndUnpackResponse[InviteAcceptedResp_MFV_0_5](checkOKResponse(sendPOST(routedPackedMsg))).msg
+
+    DidPair(myPairwiseRel.myPairwiseDID, myPairwiseRel.myPairwiseVerKey)
+  }
+
+  def sendCreateMsgReq_0_5(connId: String,
+                           msg: Array[Byte],
+                           senderName: Option[String]=None)
+                          (implicit mpf: MsgPackFormat = MPF_MSG_PACK): BundledMsg_MFV_0_5 = {
+    val agentMsgs = List(
+      CreateMsg_MFV_0_5(TypeDetail(MSG_TYPE_CREATE_MSG, MTV_1_0), CREATE_MSG_TYPE_GENERAL, None, sendMsg=true),
+      GeneralCreateMsgDetail_MFV_0_5(
+        TypeDetail(MSG_TYPE_MSG_DETAIL, MTV_1_0),
+        msg,
+        senderName = senderName
+      )
+    )
+    val agentJsonMsg = AgentMsgPackagingUtil.buildAgentMsgJson(agentMsgs, wrapInBundledMsgs = true)
+    val routedPackedMsg = packForMyPairwiseRel(connId, agentJsonMsg)
+    parseAndUnpackResponse[BundledMsg_MFV_0_5](checkOKResponse(sendPOST(routedPackedMsg))).msg
   }
 }
 
-trait LegacySdkBase_0_6 { this: SdkBase =>
+trait LegacySdkBase_0_6
+  extends LegacySdkBase { this: SdkBase =>
 
   def provisionAgent_0_6(): AgentCreated_MFV_0_6 = {
     val ac = sendCreateAgent_0_6()
@@ -556,15 +632,18 @@ trait LegacySdkBase_0_6 { this: SdkBase =>
 
   def sendConnReqAnswer_0_6(connId: String, inviteDetail: InviteDetail): ConnReqAccepted_MFV_0_6 = {
     val myPairwiseRel = myPairwiseRelationships(connId)
-    myPairwiseRelationships += (connId ->
-      myPairwiseRel.copy(theirDIDDoc = Option(DIDDoc(
+
+    updateTheirDidDoc(
+      connId,
+      DIDDoc(
         inviteDetail.senderDetail.DID,
         inviteDetail.senderDetail.verKey,
         inviteDetail.senderAgencyDetail.endpoint,
         Vector(inviteDetail.senderDetail.agentKeyDlgProof.get.agentDelegatedKey,
           inviteDetail.senderAgencyDetail.verKey)
-      )))
       )
+    )
+
     val keyDlgProof = Util
       .getAgentKeyDlgProof(
         myPairwiseRel.myPairwiseVerKey,

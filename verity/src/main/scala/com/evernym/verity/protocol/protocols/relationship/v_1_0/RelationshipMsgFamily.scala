@@ -49,7 +49,7 @@ sealed trait SignalMsg
 case class Identity(DID: DidStr, verKey: VerKeyStr)
 
 object Signal {
-  case class CreatePairwiseKey() extends SignalMsg
+  case class CreatePairwiseKey(label: Option[String]) extends SignalMsg
   case class Created(did: DidStr, verKey: VerKeyStr) extends SignalMsg
   case class Invitation(inviteURL: String, shortInviteURL: Option[String], invitationId: String) extends SignalMsg
   case class SendSMSInvite(invitationId: String, inviteURL: String, senderName: String, phoneNo: String) extends SignalMsg

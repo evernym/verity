@@ -60,7 +60,7 @@ trait UpdateComMethodSpec { this : EdgeEndpointBaseSpec =>
           Option("test"))).msg) ~> epRoutes ~> check {
           status shouldBe BadRequest
           responseTo[StatusDetailResp] shouldBe StatusDetailResp(INVALID_VALUE.withMessage(
-            "push address 'test' must match this regular expression: (FCM|MCM):(.*)"))
+            "push address 'test' must match this regular expression: (FCM):(.*)"))
         }
       }
     }

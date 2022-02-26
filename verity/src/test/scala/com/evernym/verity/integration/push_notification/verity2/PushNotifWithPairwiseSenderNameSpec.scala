@@ -95,7 +95,7 @@ class PushNotifWithPairwiseSenderNameSpec
           val pushNotifMsgText = data.getString("pushNotifMsgText")
           msgType shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/questionanswer/1.0/question"
           pushNotifMsgTitle shouldBe "Hi there"
-          pushNotifMsgText shouldBe "issuer-name-conn1 sent you a Question"
+          pushNotifMsgText shouldBe "issuer-name-conn1 sent you a question"
         }
       }
     }

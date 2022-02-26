@@ -17,7 +17,9 @@ abstract class StorageAPI(val config: AppConfig, executionContext: ExecutionCont
 }
 
 object StorageAPI {
-  def loadFromConfig(appConfig: AppConfig, executionContext: ExecutionContext, overrideConfig: Config = ConfigFactory.empty())(implicit as: ActorSystem): StorageAPI = {
+  def loadFromConfig(appConfig: AppConfig,
+                     executionContext: ExecutionContext,
+                     overrideConfig: Config = ConfigFactory.empty())(implicit as: ActorSystem): StorageAPI = {
     Class
       .forName(appConfig.config.getConfig("verity.blob-store").getString("storage-service"))
       .getConstructor(classOf[AppConfig], classOf[ExecutionContext], classOf[Config], classOf[ActorSystem])

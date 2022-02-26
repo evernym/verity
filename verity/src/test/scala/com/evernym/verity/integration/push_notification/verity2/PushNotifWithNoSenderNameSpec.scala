@@ -92,7 +92,7 @@ class PushNotifWithNoSenderNameSpec
           val pushNotifMsgText = data.getString("pushNotifMsgText")
           msgType shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/questionanswer/1.0/question"
           pushNotifMsgTitle shouldBe "Hi there"
-          pushNotifMsgText shouldBe "Remote connection sent you a Question"
+          pushNotifMsgText shouldBe "Remote connection sent you a question"
         }
       }
     }
@@ -123,7 +123,7 @@ class PushNotifWithNoSenderNameSpec
           val pushNotifMsgText = data.getString("pushNotifMsgText")
           msgType shouldBe "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/questionanswer/1.0/question"
           pushNotifMsgTitle shouldBe "Hi there"
-          pushNotifMsgText shouldBe "issuer-name sent you a Question"
+          pushNotifMsgText shouldBe "issuer-name sent you a question"
         }
       }
     }

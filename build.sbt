@@ -340,7 +340,7 @@ lazy val commonLibraryDependencies = {
     "com.twilio.sdk" % "twilio-java-sdk" % "6.3.0",                                 //used by "TwilioDispatcher" class
 
     //other dependencies
-    "com.github.blemale" %% "scaffeine" % "4.1.0",
+    "com.github.blemale" %% "scaffeine" % "5.1.2",
     "commons-net" % "commons-net" % "3.8.0",      //used for CIDR based ip address validation/checking/comparision
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",

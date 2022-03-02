@@ -15,11 +15,11 @@ Ubuntu (either native or in a docker container)
 
 ### JDK
 
-`verity` targets `JDK` `1.8` (normally openjdk)
+`verity` targets `JDK` `1.11` (normally openjdk)
 
 **Install (Ubuntu):**
 ```shell
-sudo apt install openjdk-8-jdk
+sudo apt install openjdk-11-jdk
 ```
 
 ### Scala and SBT 

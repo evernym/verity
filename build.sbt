@@ -25,7 +25,7 @@ import scala.language.postfixOps
 
 enablePlugins(JavaAppPackaging)
 
-ThisBuild / jdkExpectedVersion := "1.8"
+ThisBuild / jdkExpectedVersion := "11.0.13"
 
 val evernymUbuntuRepo = DebianRepo(
   "https://repo.corp.evernym.com/deb",
@@ -44,7 +44,7 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libVdrToolsVer = "0.8.4" // todo version containing improved error processing for submitted txns
+val libVdrToolsVer = "0.8.4"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libvdrtools.so"),
   NonMatchingLib("libvcx", "0.13.0-bionic~675", "libvcx.so")  // For integration testing ONLY
@@ -62,7 +62,7 @@ val alpAkkaVer      = "3.0.3"
 val akkaPersistence = "1.1.1"
 val kamonVer        = "2.4.6"
 val kanelaAgentVer  = "1.0.14"
-val cinnamonVer     = "2.16.1-20210817-a2c7968" //"2.16.1"
+val cinnamonVer     = "2.16.1-20210817-a2c7968"
 val jacksonVer      = "2.13.1"
 val sdnotifyVer     = "1.3"
 
@@ -76,7 +76,7 @@ val vcxWrapperVer   = "0.13.1.735"
 val flexmarkVer     = "0.62.2"
 
 // compiler plugin versions
-val silencerVersion = "1.7.5"
+val silencerVersion = "1.7.6"
 
 // a 'compileonly' configuration (see https://stackoverflow.com/questions/21515325/add-a-compile-time-only-dependency-in-sbt#answer-21516954)
 val COMPILE_TIME_ONLY = "compileonly"
@@ -84,7 +84,7 @@ val CompileOnly = config(COMPILE_TIME_ONLY)
 
 val majorNum = "2"
 val minorNum = "17"
-val patchNum = "2"
+val patchNum = "3"
 
 // I'm not sure why setting this keys don't resolve in all
 // other scopes but it does not so we re-resolve it commonSettings
@@ -133,7 +133,7 @@ lazy val integrationTests = (project in file("integration-tests"))
 
 lazy val settings = Seq(
   organization := "com.evernym",
-  scalaVersion := "2.12.14",
+  scalaVersion := "2.12.15",
 
   agentJars := Seq("kanela-agent"),
 
@@ -335,12 +335,12 @@ lazy val commonLibraryDependencies = {
     //sms service implementation dependencies
     "com.fasterxml.jackson.jakarta.rs" % "jackson-jakarta-rs-json-provider" % jacksonVer,
     //"com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % jacksonVer,     //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
-    "org.glassfish.jersey.core" % "jersey-client" % "3.0.3"
+    "org.glassfish.jersey.core" % "jersey-client" % "3.0.4"
       excludeAll ExclusionRule(organization = "jakarta.inject"),                      //TODO: (should fix this) excluded to avoid issue found during 'sbt assembly' after upgrading to sbt 1.3.8
     "com.twilio.sdk" % "twilio-java-sdk" % "6.3.0",                                 //used by "TwilioDispatcher" class
 
     //other dependencies
-    "com.github.blemale" %% "scaffeine" % "4.1.0",
+    "com.github.blemale" %% "scaffeine" % "5.1.2",
     "commons-net" % "commons-net" % "3.8.0",      //used for CIDR based ip address validation/checking/comparision
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",

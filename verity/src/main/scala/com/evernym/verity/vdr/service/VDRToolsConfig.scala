@@ -7,7 +7,6 @@ import com.evernym.verity.util2.Status.VALIDATION_FAILED
 import com.evernym.verity.vdr.Namespace
 import com.typesafe.config.Config
 
-import scala.collection.JavaConverters._
 import scala.io.Source.fromFile
 
 sealed trait Ledger {

@@ -16,6 +16,16 @@ class StrUtilSpec extends BasicSpec {
     camelToKebab("testNewAgain") shouldBe "test-new-again"
   }
 
+  "camelToSeparate" in {
+    camelToSeparateWords(null) shouldBe ""
+    camelToSeparateWords("") shouldBe ""
+    camelToSeparateWords("StatusReport") shouldBe "status report"
+    camelToSeparateWords("HITEST") shouldBe "h i t e s t"
+    camelToSeparateWords("Take From Highest Shelf") shouldBe "take from highest shelf"
+    camelToSeparateWords("testNew") shouldBe "test new"
+    camelToSeparateWords("testNewAgain") shouldBe "test new again"
+  }
+
   "classToKebab" in {
     classToKebab[Matchers] shouldBe "matchers"
     classToKebab[StrUtilSpec] shouldBe "str-util-spec"

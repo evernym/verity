@@ -1,7 +1,5 @@
 package com.evernym.verity.protocol.engine.util
 
-import scala.collection.IterableLike
-
 object DbcUtil {
 
   def errMsg(arg: String): String = s"missing argName: $arg"
@@ -10,7 +8,7 @@ object DbcUtil {
     if (arg == null) throw new IllegalArgumentException(errMsg(argName))
     else arg
 
-  def requireNotEmpty[T, R](arg: IterableLike[T, R], argName: String = "AGR"): IterableLike[T, R] =
+  def requireNotEmpty[T](arg: Iterable[T], argName: String = "AGR"): Iterable[T] =
     if (arg.nonEmpty) arg
     else throw new IllegalArgumentException(errMsg(argName))
 }

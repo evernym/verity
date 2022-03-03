@@ -133,12 +133,12 @@ trait ConfigReaderHelper
   }
 
   def getObjectListReq(key: String): Seq[ConfigObject] = {
-    readReqConfig(config.getObjectList, key).asScala
+    readReqConfig(config.getObjectList, key).asScala.toSeq
   }
 
   def getObjectListOption(key: String): Option[Seq[ConfigObject]] = {
     readOptionalConfig(config.getObjectList, key)
-      .map(_.asScala)
+      .map(_.asScala).map(_.toSeq)
   }
 
   def getDurationReq(key: String): FiniteDuration = {

@@ -136,9 +136,9 @@ class MockAgentActor(val appConfig: AppConfig, executionContext: ExecutionContex
       if (um.isFailed) {
         writeAndApply(MsgStatusUpdated(um.uid, Status.MSG_DELIVERY_STATUS_FAILED.statusCode))
       }
-      sender ! Done
+      sender() ! Done
 
-    case GetPending => sender ! PendingMsgs(pendingMsgs)
+    case GetPending => sender() ! PendingMsgs(pendingMsgs)
   }
 
   override def receiveCmd: Receive = agentCmd orElse retryCmdReceiver

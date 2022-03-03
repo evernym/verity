@@ -41,7 +41,7 @@ trait AgencyAgentCommon
   private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   val commonCmdReceiver: Receive = LoggingReceive.withLabel("commonCmdReceiver") {
-    case GetSponsorRel                  => sender ! sponsorRel.getOrElse(SponsorRel.empty)
+    case GetSponsorRel                  => sender() ! sponsorRel.getOrElse(SponsorRel.empty)
     case saw: SetAgentActorDetail       => setAgentActorDetail(saw)
   }
 
@@ -57,7 +57,7 @@ trait AgencyAgentCommon
     logger.debug("'SetAgentActorDetail' received", (LOG_KEY_PERSISTENCE_ID, persistenceId))
     setAgencyAndOwnerDetail(saw.didPair)
     updateAgentWalletId(saw.actorEntityId)
-    sender ! AgentActorDetailSet(saw.didPair, saw.actorEntityId)
+    sender() ! AgentActorDetailSet(saw.didPair, saw.actorEntityId)
   }
 
   override def agencyDidPairFutByCache(agencyDID: DidStr): Future[DidPair] = {

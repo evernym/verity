@@ -74,7 +74,7 @@ trait MsgProgressTrackerEndpointHandler { this: HttpRouteWithPlatform =>
                       }
                     } ~
                     get {
-                      parameters('onlyTopN.?, 'withDetail.?, 'inHtml.?) {
+                      parameters(Symbol("onlyTopN").?, Symbol("withDetail").?, Symbol("inHtml").?) {
                         (onlyTopN, withDetail, inHtml) =>
                           complete {
                             val topReqSize = onlyTopN.map(_.toInt)

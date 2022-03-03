@@ -38,7 +38,7 @@ class DefaultURLShortener(val config: AppConfig, executionContext: ExecutionCont
       shortenerSvc() match {
         case Some(shortener) =>
           try {
-            val snd = sender // save sender variable to be used in futures code bellow.
+            val snd = sender() // save sender variable to be used in futures code bellow.
             shortener.shortenURL(urlInfo) map { value =>
               snd ! UrlShortened(value)
             } recover {
@@ -48,11 +48,11 @@ class DefaultURLShortener(val config: AppConfig, executionContext: ExecutionCont
           } catch {
             case e: Throwable =>
               logger.warn(s"UrlShortener (${shortener.providerId}) failed with exception: ${e.getMessage}", e)
-              sender ! UrlShorteningFailed("Exception", e.getMessage)
+              sender() ! UrlShorteningFailed("Exception", e.getMessage)
           }
         case None =>
           logger.warn(s"Tried to user url shortening, but no url shortener configured")
-          sender ! UrlShorteningFailed("no shortener", "URL shortener not configured")
+          sender() ! UrlShorteningFailed("no shortener", "URL shortener not configured")
       }
       context.stop(self) // this actor is used only for one message at the time, so stop it after this.
   }

@@ -1,6 +1,8 @@
 package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.protocol.engine._
+
+import scala.collection.BuildFrom
 import scala.collection.generic.CanBuildFrom
 import scala.language.postfixOps
 
@@ -27,7 +29,7 @@ class InterceptSeq[T](val wrapped: Seq[T], transform: Any => Any) extends Seq[T]
   override def apply(idx: Int): T = wrapped.apply(idx)
   override def iterator: Iterator[T] = wrapped.iterator
 
-  override def :+[B >: T, That](elem: B)(implicit bf: CanBuildFrom[Seq[T], B, That]): That = {
+  override def :+[B >: T, That](elem: B)(implicit bf: BuildFrom[Seq[T], B, That]): That = {
     val i = elem match {
       case Envelope1(msg, to, fr, mid, tid) => Envelope1(transform(msg), to, fr, mid, tid)
       case Envelope2(msg, frm)              => Envelope2(transform(msg), frm)

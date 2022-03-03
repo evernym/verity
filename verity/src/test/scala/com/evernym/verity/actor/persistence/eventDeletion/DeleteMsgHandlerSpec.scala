@@ -96,7 +96,7 @@ class MockPersistentActor(val appConfig: AppConfig, executionContext: ExecutionC
 
     case StartMsgDeletion =>
       deleteMessagesExtended(lastSequenceNr)
-      sender ! Done
+      sender() ! Done
 
   }
 
@@ -104,7 +104,7 @@ class MockPersistentActor(val appConfig: AppConfig, executionContext: ExecutionC
     case _: ConfigUpdated =>
       totalEventsPersisted += 1
       if (totalEventsToBePersisted == totalEventsPersisted) {
-        sender ! Done
+        sender() ! Done
       }
   }
 

@@ -79,7 +79,7 @@ object LaunchPreCheck {
                              checkName: String,
                              checkDependency: => Future[ApiStatus],
                              checkRetryInterval: FiniteDuration = 300.millis,
-                             promise: Promise[ApiStatus] = Promise[ApiStatus])
+                             promise: Promise[ApiStatus] = Promise[ApiStatus]())
                             (implicit executionContext: ExecutionContext, system: ActorSystem): Future[ApiStatus] = {
 
     def retryCheck(waitInterval: FiniteDuration = 0.seconds): Future[ApiStatus] = {

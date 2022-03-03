@@ -12,15 +12,15 @@ import java.time.Instant
 class KamonMetricsBackend(system: ActorSystem) extends MetricsBackend {
 
   override def gaugeIncrement(name: String, value: Long, tags: TagMap): Unit = {
-    Kamon.gauge(name).withTags(TagSet.from(tags)).increment(value)
+    Kamon.gauge(name).withTags(TagSet.from(tags)).increment(value.toDouble)
   }
 
   override def gaugeDecrement(name: String, value: Long, tags: TagMap): Unit = {
-    Kamon.gauge(name).withTags(TagSet.from(tags)).decrement(value)
+    Kamon.gauge(name).withTags(TagSet.from(tags)).decrement(value.toDouble)
   }
 
   override def gaugeUpdate(name: String, value: Long, tags: TagMap): Unit = {
-    Kamon.gauge(name).withTags(TagSet.from(tags)).update(value)
+    Kamon.gauge(name).withTags(TagSet.from(tags)).update(value.toDouble)
   }
 
   override def histogramUpdate(name: String, unit: MetricsUnit, value: Long, tags: TagMap): Unit = {

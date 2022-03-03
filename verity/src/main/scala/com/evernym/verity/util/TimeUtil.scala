@@ -7,7 +7,7 @@ import com.evernym.verity.constants.Constants.UTC
 import com.evernym.verity.util2.Exceptions.InvalidValueException
 import org.joda.time.{DateTime, DateTimeZone}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration.Duration
 
 object TimeUtil {

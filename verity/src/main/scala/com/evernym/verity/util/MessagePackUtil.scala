@@ -4,7 +4,7 @@ import com.evernym.verity.util2.Exceptions._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 
 import java.math.BigInteger
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 
 /**

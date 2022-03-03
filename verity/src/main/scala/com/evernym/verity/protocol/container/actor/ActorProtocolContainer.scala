@@ -215,9 +215,9 @@ class ActorProtocolContainer[
   def handleSetThreadContext(tcd: ThreadContextDetail): Unit = {
     if (! state.equals(definition.initialState)) {
       storePackagingDetail(tcd)
-      sender ! ThreadContextStoredInProtoActor(pinstId, getProtoRef)
+      sender() ! ThreadContextStoredInProtoActor(pinstId, getProtoRef)
     } else {
-      sender ! ThreadContextNotStoredInProtoActor(pinstId, getProtoRef)
+      sender() ! ThreadContextNotStoredInProtoActor(pinstId, getProtoRef)
     }
   }
 

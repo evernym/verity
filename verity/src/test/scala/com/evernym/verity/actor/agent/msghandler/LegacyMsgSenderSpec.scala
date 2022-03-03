@@ -47,7 +47,7 @@ class LegacyMsgSenderSpec
       "should be successful" in {
         val testProbe = TestProbe()
         val legacyMsgSender = createLegacyMsgSender()
-        legacyMsgSender ! SendBinaryMsg(
+        legacyMsgsender() ! SendBinaryMsg(
           "msg".getBytes(),
           "http://www.webhook.com",
           withAuthHeader = false,
@@ -64,7 +64,7 @@ class LegacyMsgSenderSpec
       "should be successful" in {
         val testProbe = TestProbe()
         val legacyMsgSender = createLegacyMsgSender()
-        legacyMsgSender ! SendBinaryMsg(
+        legacyMsgsender() ! SendBinaryMsg(
           "msg".getBytes(),
           "http://www.webhook.com?sendFail",
           withAuthHeader = false,
@@ -81,7 +81,7 @@ class LegacyMsgSenderSpec
       "should be successful" in {
         val testProbe = TestProbe()
         val legacyMsgSender = createLegacyMsgSender()
-        legacyMsgSender ! SendBinaryMsg(
+        legacyMsgsender() ! SendBinaryMsg(
           "msg".getBytes(),
           "http://www.webhook.com?checkAuth",
           withAuthHeader = true,
@@ -98,7 +98,7 @@ class LegacyMsgSenderSpec
       "should be successful" in {
         val testProbe = TestProbe()
         val legacyMsgSender = createLegacyMsgSender()
-        legacyMsgSender ! SendBinaryMsg(
+        legacyMsgsender() ! SendBinaryMsg(
           "msg".getBytes(),
           "http://www.webhook.com?checkAuth&sendFail",
           withAuthHeader = true,
@@ -175,7 +175,7 @@ class LegacyMsgSenderSpec
       "should be successful" in {
         val testProbe = TestProbe()
         val legacyMsgSender = createLegacyMsgSender()
-        legacyMsgSender ! SendJsonMsg(
+        legacyMsgsender() ! SendJsonMsg(
           "msg",
           "http://www.webhook.com",
           withAuthHeader = false,
@@ -192,7 +192,7 @@ class LegacyMsgSenderSpec
       "should be successful" in {
         val testProbe = TestProbe()
         val legacyMsgSender = createLegacyMsgSender()
-        legacyMsgSender ! SendJsonMsg(
+        legacyMsgsender() ! SendJsonMsg(
           "msg",
           "http://www.webhook.com?sendFail",
           withAuthHeader = false,
@@ -209,7 +209,7 @@ class LegacyMsgSenderSpec
       "should be successful" in {
         val testProbe = TestProbe()
         val legacyMsgSender = createLegacyMsgSender()
-        legacyMsgSender ! SendJsonMsg(
+        legacyMsgsender() ! SendJsonMsg(
           "msg",
           "http://www.webhook.com?checkAuth",
           withAuthHeader = true,
@@ -226,7 +226,7 @@ class LegacyMsgSenderSpec
       "should be successful" in {
         val testProbe = TestProbe()
         val legacyMsgSender = createLegacyMsgSender()
-        legacyMsgSender ! SendJsonMsg(
+        legacyMsgsender() ! SendJsonMsg(
           "msg",
           "http://www.webhook.com?checkAuth&sendFail",
           withAuthHeader = true,

@@ -37,8 +37,8 @@ case class StateDataLegacy(requests: List[ProofRequest] = List(),
     copy(presentation = Some(DefaultMsgCodec.fromJson[ProofPresentation](presentation)))
   }
 
-  def addAttributesPresented(given: String): StateDataLegacy = {
-    copy(presentedAttributes = Some(DefaultMsgCodec.fromJson[AttributesPresented](given)))
+  def addAttributesPresented(givenAttrs: String): StateDataLegacy = {
+    copy(presentedAttributes = Some(DefaultMsgCodec.fromJson[AttributesPresented](givenAttrs)))
   }
 
   def addVerificationResults(results: String): StateDataLegacy = {

@@ -31,9 +31,9 @@ trait Journal {
   protected def logger: Logger
   protected def journalContext: JournalContext
 
-  protected def withLog[A](descr: String)(block: => A): A = _withLog(descr)((block _)())
-  protected def withLog[A](descr: String, details: Any)(block: => A): A = _withLog(descr, Option(details))((block _)())
-  protected def withLog[A](descr: String, details: Any, tag: Tag)(block: => A): A = _withLog(descr, Option(details), Option(tag))((block _)())
+  protected def withLog[A](descr: String)(block: => A): A = _withLog(descr)((() => block)())
+  protected def withLog[A](descr: String, details: Any)(block: => A): A = _withLog(descr, Option(details))((() => block)())
+  protected def withLog[A](descr: String, details: Any, tag: Tag)(block: => A): A = _withLog(descr, Option(details), Option(tag))((() => block)())
 
   protected def record(descr: String): Unit = _record(msg(descr, None, None))
   protected def record(descr: String, details: Any): Unit = _record(msg(descr, Option(details), None))

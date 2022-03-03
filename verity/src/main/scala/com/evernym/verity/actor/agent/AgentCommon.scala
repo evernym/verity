@@ -72,7 +72,7 @@ trait AgentCommon
       if (events.nonEmpty) {
         writeAllWithoutApply(events.toList)
       }
-      sender ! Done
+      sender() ! Done
     case FixAgentState => fixAgentState()
   }
 

@@ -58,7 +58,7 @@ trait KeyValueMapperBase extends SingletonPersistentAgentActorBase {
     case am: AddMapping =>
       writeApplyAndSendItBack(MappingAdded(am.key, am.value))
 
-    case gv: GetValue => sender ! mapping.get(gv.key)
+    case gv: GetValue => sender() ! mapping.get(gv.key)
   }
 }
 

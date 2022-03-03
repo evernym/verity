@@ -83,7 +83,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
       handleSetupNewAgentWalletOnStateReady(snaw)
 
     case _: CreateWallet if walletExtOpt.isDefined =>
-      sender ! WalletAlreadyCreated
+      sender() ! WalletAlreadyCreated
 
     case cmd: WalletCommand if walletExtOpt.isDefined => //only entertain commands extending 'WalletCommand'
       val sndr = sender()

@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.jakarta.rs.json.JacksonJsonProvider
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.Future
 
 

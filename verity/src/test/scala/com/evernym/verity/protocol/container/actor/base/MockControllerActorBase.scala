@@ -161,7 +161,7 @@ abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorConte
       gpp.threadId,
       None
     )
-    sender ! pinstId
+    sender() ! pinstId
   }
 
   def buildAndSendToProtocol(sm: SendMsg, sendResp: Boolean = false): Unit = {
@@ -169,7 +169,7 @@ abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorConte
     val msgEnvelope = buildMsgEnvelope(sm.msg, sm.threadId)
     tellProtocol(pinstIdPair, sm.threadContextDetail, msgEnvelope, self)
     if (sendResp) {
-      sender ! pinstIdPair
+      sender() ! pinstIdPair
     }
   }
 

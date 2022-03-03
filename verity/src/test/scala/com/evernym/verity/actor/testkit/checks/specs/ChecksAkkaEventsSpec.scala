@@ -95,7 +95,7 @@ class SpanishParent extends Actor {
 
 class SpanishActor() extends Actor {
   def receive: Receive = {
-    case "hola" => sender ! "hola, buenos días"
+    case "hola" => sender() ! "hola, buenos días"
     case "morir" => throw new RuntimeException("I'm dying [THIS IS A FAKE ERROR FOR TESTING].")
   }
 }

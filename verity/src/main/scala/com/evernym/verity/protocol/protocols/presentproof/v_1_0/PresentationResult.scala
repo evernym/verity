@@ -13,8 +13,8 @@ object PresentationResults {
         revealedAttrs ++ revealedGroupAttrs
       },
       presentation.requested_proof.self_attested_attrs,
-      presentation.requested_proof.unrevealed_attrs.mapValues(x => SubProofReferent(x.sub_proof_index)),
-      presentation.requested_proof.predicates.mapValues(x => SubProofReferent(x.sub_proof_index)),
+      presentation.requested_proof.unrevealed_attrs.view.mapValues(x => SubProofReferent(x.sub_proof_index)).toMap,
+      presentation.requested_proof.predicates.view.mapValues(x => SubProofReferent(x.sub_proof_index)).toMap,
       presentation.identifiers
     )
   }

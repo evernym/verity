@@ -79,7 +79,7 @@ trait HealthCheckEndpointHandler { this: HttpRouteWithPlatform =>
                 checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
                   path("application-state") {
                     (get & pathEnd) {
-                      parameters('detail.?) { detailOpt =>
+                      parameters(Symbol("detail").?) { detailOpt =>
                         complete {
                           val fut = if (detailOpt.map(_.toUpperCase).contains(YES)) {
                             askAppStateManager(GetDetailedAppState)

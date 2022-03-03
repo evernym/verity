@@ -16,7 +16,7 @@ trait EndpointsLike {
 
   validate()
 
-  def validate() {
+  def validate(): Unit = {
 
     if (endpoints.map(_.value).toSet.size != endpoints.size) {
       throw new RuntimeException("endpoint with same 'value' not allowed")

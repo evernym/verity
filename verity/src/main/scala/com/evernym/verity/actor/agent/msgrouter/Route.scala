@@ -23,7 +23,7 @@ class Route(executionContext: ExecutionContext)(implicit val appConfig: AppConfi
 
   override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case _: StoreRoute
-      if route.isDefined => sender ! RouteAlreadySet(entityId)
+      if route.isDefined => sender() ! RouteAlreadySet(entityId)
 
     case sr: StoreRoute =>
       writeApplyAndSendItBack(RouteSet(sr.actorAddressDetail.actorTypeId, sr.actorAddressDetail.address))
@@ -44,7 +44,7 @@ class Route(executionContext: ExecutionContext)(implicit val appConfig: AppConfi
   def handleGetRoute(): Unit = {
     logger.debug("current route value: " + route)
     if (route.isDefined) {
-      sender ! route
+      sender() ! route
     } else {
       //this logic needs to be there until all the legacy agent routes are migrated
       val bucketId = RoutingAgentUtil.getBucketEntityId(entityId)

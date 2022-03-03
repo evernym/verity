@@ -88,7 +88,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
 
   def sendAgencyAgentDetail(): Unit = {
     agencyAgentDetail() match {
-      case Some(aad)  => sender ! aad
+      case Some(aad)  => sender() ! aad
       case None       => throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode)
     }
   }
@@ -293,7 +293,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
     agencyAgentDetail() match {
       case Some(aad)  =>
         val ledgerDetail = if (withDetail) Option(agencyLedgerDetail()) else None
-        sender ! AgencyPublicDid(aad.did, aad.verKey, ledgerDetail)
+        sender() ! AgencyPublicDid(aad.did, aad.verKey, ledgerDetail)
       case None       => throw new BadRequestErrorException(AGENT_NOT_YET_CREATED.statusCode)
     }
   }

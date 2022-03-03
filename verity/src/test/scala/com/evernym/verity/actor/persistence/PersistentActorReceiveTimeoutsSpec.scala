@@ -278,7 +278,7 @@ class MockBaseActor(val appConfig: AppConfig, executionContext: ExecutionContext
   override def receiveCmd: Receive = {
     case ReceiveTimeoutQuestion() =>
       logger.info(s"$self: my timeout is: $entityReceiveTimeout")
-      sender ! ReceiveTimeoutAnswer(entityReceiveTimeout)
+      sender() ! ReceiveTimeoutAnswer(entityReceiveTimeout)
     case x => logger.info(s"receiveCmd: $x")
   }
 
@@ -301,7 +301,7 @@ class MockSingletonChildActor(val appConfig: AppConfig, executionContext: Execut
   override def receiveCmd: Receive = {
     case ReceiveTimeoutQuestion() =>
       logger.info(s"$self: my timeout is: $entityReceiveTimeout")
-      sender ! ReceiveTimeoutAnswer(entityReceiveTimeout)
+      sender() ! ReceiveTimeoutAnswer(entityReceiveTimeout)
     case x => logger.info(s"receiveCmd: $x")
   }
 

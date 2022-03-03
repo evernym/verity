@@ -102,7 +102,7 @@ import com.evernym.verity.actor.agent.user.GetSponsorRel
 class DummyAgentActor extends CoreActorExtended {
 
   override def receiveCmd: Receive = {
-    case GetSponsorRel             => sender ! SponsorRel("sponsor-id", "sponsee-id")
+    case GetSponsorRel             => sender() ! SponsorRel("sponsor-id", "sponsee-id")
 
   }
 }

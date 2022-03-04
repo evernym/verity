@@ -211,7 +211,7 @@ class MultiSdkFlowSpec
 
   def unauthorizedInteraction(apps: ScenarioAppEnvironment, unAuthedSdks: List[VeritySdkProvider]): Unit = {
     unAuthedSdks.foreach { sdk =>
-      s"unauthorized sdk interaction (${sdk.sdkConfig.name}(${Random.nextInt}))" - {
+      s"unauthorized sdk interaction (${sdk.sdkConfig.name}(${Random.nextInt()}))" - {
         "should fail with appropriate error" in {
           val ex = intercept[IOException] {
             val connectionId = UUID.randomUUID().toString

@@ -26,7 +26,7 @@ class SmsSenderSpec
     "when tried to send sms" - {
       "based on the preferred-order configuration" - {
         "should be able to send it successfully" in {
-          smssender() ! SmsInfo("4045943696", "test msg")
+          smsSender ! SmsInfo("4045943696", "test msg")
           expectMsgPF(duration) {
             case srs: SmsReqSent   => logger.info("sms request sent: " + srs)
           }

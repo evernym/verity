@@ -51,7 +51,7 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
         s"verity-sdk==$sdkVersion"
       ),
       interpreterWorkingDir.toFile,
-      envVars.toArray: _*
+      envVars.toIndexedSeq: _*
     ).!
 
     InterpreterEnv(s"${interpreterWorkingDir}/bin/python3", interpreterWorkingDir, envVars=envVars)

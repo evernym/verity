@@ -23,7 +23,6 @@ export ENDPOINT="s3server"
 export POOL_HOST="indy-pool"
 export TAA_ENABLE="true"
 export LIB_INDY_LEDGER_TAA_ENABLED="true"
-export LIB_INDY_LEDGER_TAA_AUTO_ACCEPT="true"
 
 # dynamoDb
 export DYNAMODB_HOST="dynamodb"

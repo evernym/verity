@@ -19,7 +19,7 @@ import org.apache.http.util.EntityUtils
 
 import java.io.File
 import java.nio.file.{Files, Path}
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration.Duration
 
 object Constants {

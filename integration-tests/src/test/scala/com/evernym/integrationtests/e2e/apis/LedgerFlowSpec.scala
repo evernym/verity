@@ -25,7 +25,7 @@ import java.util.UUID
 
 import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 @Integration
 class LedgerFlowSpec extends BasicSpec

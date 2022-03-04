@@ -15,7 +15,7 @@ import com.typesafe.config.ConfigException.{BadPath, Missing}
 import com.typesafe.config.ConfigValueType._
 import com.typesafe.config.{Config, ConfigRenderOptions}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.Future
 
 

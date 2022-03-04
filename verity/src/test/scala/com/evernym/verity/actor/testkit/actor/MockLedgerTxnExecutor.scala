@@ -8,7 +8,7 @@ import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
 import org.json.JSONObject
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.util.Random
 
 //TODO: This is not perfect/exact mock ledger object

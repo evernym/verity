@@ -29,9 +29,10 @@ import scala.reflect.ClassTag
 import scala.concurrent.duration._
 
 trait EdgeEndpointBaseSpec
-  extends ScalatestRouteTest
+  extends
+    BasicSpecWithIndyCleanup
+    with ScalatestRouteTest
     with EndpointHandlerBase
-    with BasicSpecWithIndyCleanup
     with Eventually
     with CommonSpecUtil
     with ApiClientSpecCommon

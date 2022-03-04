@@ -8,7 +8,7 @@ class AppConfigSpec extends BasicSpec with ConfigUtilBaseSpec with CommonSpecUti
   lazy val testAppConfig: AppConfig = new TestAppConfig()
   override def appConfig: AppConfig = testAppConfig
 
-  val configFile = "verity/target/scala-2.12/test-classes/application.conf"
+  val configFile = "verity/target/scala-2.13/test-classes/application.conf"
 
   "Config Wrapper" - {
     "when asked to refresh config" - {

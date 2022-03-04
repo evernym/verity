@@ -6,7 +6,7 @@ package:
     name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
     paths:
       - verity/target/docker
-      - verity/target/scala-2.12/verity-assembly-*.jar
+      - verity/target/scala-2.13/verity-assembly-*.jar
       - verity/target/*.deb
     when: always
   cache:

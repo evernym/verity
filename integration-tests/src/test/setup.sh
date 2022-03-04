@@ -59,7 +59,7 @@ prepare_jars(){
   appendToProgressLog "is source code changed: ${source_code_changed}"
   #  Find application jars
   #  Build application jars if they don't exist
-  if find ${PROJECT_DIR}/verity/target/scala-2.12 -name '*.jar' 2>/dev/null  | grep -q '.'; then
+  if find ${PROJECT_DIR}/verity/target/scala-2.13 -name '*.jar' 2>/dev/null  | grep -q '.'; then
     if [[ "$source_code_changed" == "true" ]]; then
       delete_existing_app_jars
       sbt -mem 2048 assembly >> ${PROGRESS_LOG_FILE_PATH}
@@ -82,7 +82,7 @@ prepare_jars(){
 delete_existing_app_jars() {
   for app in ${APPLICATIONS[*]}
   do
-    rm -f ${PROJECT_DIR}/${app}/target/scala-2.12/*.jar
+    rm -f ${PROJECT_DIR}/${app}/target/scala-2.13/*.jar
   done
 }
 

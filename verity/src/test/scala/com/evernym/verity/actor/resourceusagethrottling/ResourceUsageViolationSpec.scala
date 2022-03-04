@@ -40,7 +40,7 @@ class ResourceUsageViolationSpec
 
   val createMsgConnReq: String = MSG_FAMILY_CONNECTING + "/" + MSG_TYPE_CREATE_MSG + "_" + CREATE_MSG_TYPE_CONN_REQ
 
-  def resourceUsageTrackerSpec() {
+  def resourceUsageTrackerSpec(): Unit = {
     val resourceUsageRules = ResourceUsageRuleHelperExtension(system).get().resourceUsageRules
 
     // Begin resources and helper functions used in the testResourceGetsBlockedWarnedIfExceedsSetLimit test

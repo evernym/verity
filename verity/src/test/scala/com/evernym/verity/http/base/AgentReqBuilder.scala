@@ -13,7 +13,7 @@ trait AgentReqBuilder {
       method = hm,
       uri = path,
       entity = he,
-      headers = headers.to[immutable.Seq]
+      headers = headers
     )
     req.addHeader(`X-Real-Ip`(RemoteAddress(InetAddress.getLocalHost)))
   }

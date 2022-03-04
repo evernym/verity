@@ -143,9 +143,7 @@ lazy val settings = Seq(
     "-deprecation",
     "-encoding",
     "utf8",
-    //TODO: need to check why this option is unknown for scalac
-//    "-Xmax-classfile-name",
-//    "128",
+    //Option -Xmax-classfile-name was removed from scalac: https://github.com/scala/scala/pull/7497
     "-Xfatal-warnings",
     "-P:silencer:pathFilters=.*/tictactoe/Role.scala;.*/deaddrop/Role.scala"
   ),

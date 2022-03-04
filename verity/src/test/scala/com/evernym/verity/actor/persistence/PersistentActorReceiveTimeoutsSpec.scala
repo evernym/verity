@@ -241,7 +241,7 @@ class PersistentActorReceiveTimeoutsSpec extends BasicSpec {
         case x => throw new Exception(s"Wrong result: $x")
       }
     } catch {
-      case _: TimeoutException if ! expectedTimeout.isFinite() =>
+      case _: TimeoutException if ! expectedTimeout.isFinite =>
         logger.info("Actor not terminated, and that is expected.")
       case e: TimeoutException =>
         logger.error("Actor not terminated, and that was NOT expected.")
@@ -346,7 +346,7 @@ class WatcherActor(appConfig: AppConfig, expectedTimeout: Duration, executionCon
       isChildActorStartedSuccessfully = true
       logger.info(s"${sender()} is alive and its timeout is: $timeout")
 
-      if (timeout.isFinite() && timeout != expectedTimeout)
+      if (timeout.isFinite && timeout != expectedTimeout)
         senderActorRef ! WrongTimeoutReported(timeout)
   }
 

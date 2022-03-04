@@ -24,7 +24,7 @@ class ChecksAkkaEventsSpec extends ActorSpec with BasicSpec with Eventually {
     val aec = new AkkaEventChecker
     val cr = new CheckerRegistry(aec)
 
-    val spanishActor = system.actorOf(Props[SpanishActor], "spanish")
+    val spanishActor = system.actorOf(Props[SpanishActor](), "spanish")
 
     "can detect Warning events" in {
 
@@ -50,7 +50,7 @@ class ChecksAkkaEventsSpec extends ActorSpec with BasicSpec with Eventually {
 
     "can detect Error events" taggedAs (UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
 
-      val madre = system.actorOf(Props[SpanishParent], "madre")
+      val madre = system.actorOf(Props[SpanishParent](), "madre")
       //val e = intercept[FailedCheckException] {
         cr.run {
 
@@ -87,7 +87,7 @@ class SpanishParent extends Actor {
     }
   }
 
-  private val child = context.actorOf(Props[SpanishActor], "spanishchild")
+  private val child = context.actorOf(Props[SpanishActor](), "spanishchild")
   def receive: Receive = {
     case msg => child forward msg //forward all messages to the child
   }

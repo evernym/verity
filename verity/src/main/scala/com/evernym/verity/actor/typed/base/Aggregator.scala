@@ -26,6 +26,7 @@ object Aggregator {
       val replyAdapter = context.messageAdapter[Reply](WrappedReply(_))
       sendRequests(replyAdapter)
 
+      @annotation.nowarn
       def collecting(replies: immutable.IndexedSeq[Reply]): Behavior[Cmd] = {
         Behaviors.receiveMessage {
           case WrappedReply(reply: Reply) =>

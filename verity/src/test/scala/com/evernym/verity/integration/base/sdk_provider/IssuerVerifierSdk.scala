@@ -417,7 +417,7 @@ case class IssuerRestSDK(param: SdkParam,
             ContentTypes.`application/json`,
             payload
           ),
-          headers = Seq(RawHeader("X-API-key", apiKey)).to[immutable.Seq]
+          headers = Seq(RawHeader("X-API-key", apiKey))
         )
       )
     )
@@ -430,7 +430,7 @@ case class IssuerRestSDK(param: SdkParam,
           method = HttpMethods.GET,
           uri = url,
           entity = HttpEntity.Empty,
-          headers = Seq(RawHeader("X-API-key", apiKey)).to[immutable.Seq]
+          headers = Seq(RawHeader("X-API-key", apiKey))
         )
       )
     )

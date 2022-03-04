@@ -86,8 +86,8 @@ class UserAgentPairwiseRecoverySpec
     uas.msgAndDelivery shouldBe Some(
       MsgAndDelivery(
         msgs = Map(
-          "001" -> Msg("connReq", myPairwiseRelDIDPair.did, "MS-104", 1548446192302l, 1548446192302l,Some("002"), None, false),
-          "002" -> Msg("connReqAnswer", theirPairwiseRelDIDPair.did, "MS-104", 1548446192302l, 1548446192302l, None, None, false)
+          "001" -> Msg("connReq", myPairwiseRelDIDPair.did, "MS-104", 1548446192302L, 1548446192302L,Some("002"), None, false),
+          "002" -> Msg("connReqAnswer", theirPairwiseRelDIDPair.did, "MS-104", 1548446192302L, 1548446192302L, None, None, false)
         ),
         Map.empty, Map.empty, Map.empty
       )

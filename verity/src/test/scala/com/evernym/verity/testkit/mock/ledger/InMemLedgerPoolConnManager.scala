@@ -10,7 +10,7 @@ class InMemLedgerPoolConnManager(val executionContext: ExecutionContext, txnExec
                                 (implicit executor: ExecutionContextExecutor)
   extends LedgerPoolConnManager {
 
-  def this(executionContext: ExecutionContext)(implicit executor: ExecutionContextExecutor) {
+  def this(executionContext: ExecutionContext)(implicit executor: ExecutionContextExecutor) =  {
     this(executionContext, Some(new MockLedgerTxnExecutor(executionContext)))
   }
 

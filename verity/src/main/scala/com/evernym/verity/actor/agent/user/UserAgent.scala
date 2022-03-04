@@ -984,6 +984,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
     metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, this.actorId)
   }
 
+  @annotation.nowarn
   private def updateOAuthAccessTokenHolder(): Unit = {
     httpComMethodsWithAuth.foreach { hc =>
       hc.authentication match {

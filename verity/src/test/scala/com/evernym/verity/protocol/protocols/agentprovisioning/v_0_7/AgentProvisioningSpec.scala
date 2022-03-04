@@ -260,7 +260,7 @@ object TestingVars {
   val SDK_OWNER = "Faber"
   val NONCE = "abc123efg"
   val TIME_WINDOW: Long = 20
-  val SLIDING_TIME_WINDOW: Duration = Duration(TIME_WINDOW + "hour")
+  val SLIDING_TIME_WINDOW: Duration = Duration(s"${TIME_WINDOW}hour")
   val SIG: Base64Encoded = getBase64Encoded((NONCE + EXPIRATION_TIME + ID).getBytes)
   val ENDPOINT: String = "www.espn.com"
 

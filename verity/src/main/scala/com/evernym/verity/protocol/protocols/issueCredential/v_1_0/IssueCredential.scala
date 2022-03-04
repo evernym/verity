@@ -358,6 +358,7 @@ trait IssueCredentialHelpers
     }
   }
 
+  @annotation.nowarn
   def handleRequest(credOfferRef: SegmentId, m: Ctl.Request, myPwDid: DidStr): Unit = {
     ctx.withSegment[CredOffered](credOfferRef) {
       case Success(o) if o.isDefined => handleRequest(m, myPwDid, buildOfferCred(o))
@@ -420,6 +421,7 @@ trait IssueCredentialHelpers
     }
   }
 
+  @annotation.nowarn
   def handleIssue(m: Ctl.Issue, s: S.RequestReceived): Unit = {
     ctx.withSegment[CredOffered](s.credOfferRef) {
       case Success(o) if o.isDefined =>

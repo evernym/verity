@@ -10,6 +10,7 @@ import com.evernym.verity.testkit.BasicSpec
 
 import scala.util.Failure
 
+@annotation.nowarn
 class GetDIDForRouteSpec extends AgentMsgRouteSpecValues with BasicSpec {
 
   "AgentMsgRouter" - {

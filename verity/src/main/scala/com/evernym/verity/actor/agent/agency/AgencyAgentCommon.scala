@@ -138,6 +138,7 @@ trait AgencyAgentCommon
 
   def handleSpecificSignalMsgs: PartialFunction[SignalMsgParam, Future[Option[ControlMsg]]] = PartialFunction.empty
 
+  @annotation.nowarn
   def identifySponsor(idSponsor: IdentifySponsor): Future[Option[ControlMsg]] = {
     val sponsorRequired = ConfigUtil.sponsorRequired(appConfig)
     val tokenWindow = Duration(appConfig.getLoadedConfig.getString(s"$PROVISIONING.token-window"))

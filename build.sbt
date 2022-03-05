@@ -25,7 +25,7 @@ import scala.language.postfixOps
 
 enablePlugins(JavaAppPackaging)
 
-ThisBuild / jdkExpectedVersion := "1.8"
+ThisBuild / jdkExpectedVersion := "11.0.13"
 
 val evernymUbuntuRepo = DebianRepo(
   "https://repo.corp.evernym.com/deb",
@@ -76,7 +76,7 @@ val vcxWrapperVer   = "0.13.1.735"
 val flexmarkVer     = "0.62.2"
 
 // compiler plugin versions
-val silencerVersion = "1.7.5"
+val silencerVersion = "1.7.6"
 
 // a 'compileonly' configuration (see https://stackoverflow.com/questions/21515325/add-a-compile-time-only-dependency-in-sbt#answer-21516954)
 val COMPILE_TIME_ONLY = "compileonly"
@@ -133,7 +133,7 @@ lazy val integrationTests = (project in file("integration-tests"))
 
 lazy val settings = Seq(
   organization := "com.evernym",
-  scalaVersion := "2.12.14",
+  scalaVersion := "2.12.15",
 
   agentJars := Seq("kanela-agent"),
 
@@ -340,7 +340,7 @@ lazy val commonLibraryDependencies = {
     "com.twilio.sdk" % "twilio-java-sdk" % "6.3.0",                                 //used by "TwilioDispatcher" class
 
     //other dependencies
-    "com.github.blemale" %% "scaffeine" % "4.1.0",
+    "com.github.blemale" %% "scaffeine" % "5.1.2",
     "commons-net" % "commons-net" % "3.8.0",      //used for CIDR based ip address validation/checking/comparision
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",

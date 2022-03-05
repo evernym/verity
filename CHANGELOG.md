@@ -1,6 +1,6 @@
 Note: When interacting with Verity, it will also be helpful to review [the Verity SDK Release Notes](https://gitlab.com/evernym/verity/verity-sdk/-/blob/main/CHANGELOG.md).
 
-# Release notes - Verity 2.17.3 release TBD
+# Release notes - Verity 2.17.3 release 1 March 2022
 Includes VDR Tools 0.8.2 works with Verity SDK 0.6.1
 
 ## Task

@@ -65,7 +65,6 @@ object LocalVerity {
       verityNodeParam.portProfile,
       verityNodeParam.otherNodeArteryPorts,
       verityNodeParam.taaEnabled,
-      verityNodeParam.taaAutoAccept,
       verityNodeParam.serviceParam.flatMap(_.sharedEventStore))
 
     verityNodeParam.overriddenConfig match {
@@ -184,7 +183,6 @@ case class ServiceParam(ledgerSvcParam: Option[LedgerSvcParam]=None,
 }
 
 case class LedgerSvcParam(taaEnabled: Boolean = true,
-                          taaAutoAccept: Boolean = true,
                           ledgerTxnExecutor: Option[LedgerTxnExecutor]=None)
 
 case class VerityNodeParam(tmpDirPath: Path,
@@ -195,5 +193,4 @@ case class VerityNodeParam(tmpDirPath: Path,
                            overriddenConfig: Option[Config] = None) {
 
   def taaEnabled: Boolean = serviceParam.flatMap(_.ledgerSvcParam).forall(_.taaEnabled)
-  def taaAutoAccept: Boolean = serviceParam.flatMap(_.ledgerSvcParam).forall(_.taaAutoAccept)
 }

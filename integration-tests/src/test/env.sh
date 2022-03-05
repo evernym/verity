@@ -2,6 +2,8 @@
 
 APPLICATIONS=(consumer enterprise verity)
 
+export TAA_ACCEPT_DATE=$(date +%F)
+
 appendToProgressLog() {
   echo "$1" >> ${PROGRESS_LOG_FILE_PATH}
 }

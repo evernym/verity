@@ -5,7 +5,6 @@ import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, RecoverIfNeeded, SeriousSystemError}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.ConfigConstants.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT
 import com.evernym.verity.config.ConfigUtil.{findTAAConfig, nowTimeOfAcceptance}
 import com.evernym.verity.config.{AppConfig, ConfigConstants, ConfigUtil}
 import com.evernym.verity.constants.Constants.{LEDGER_TXN_PROTOCOL_V1, LEDGER_TXN_PROTOCOL_V2}
@@ -157,19 +156,7 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
       }.map { ledgerTaa: LedgerTAA =>
         val expectedDigest = HashUtil.hash(SHA256)(ledgerTaa.version + ledgerTaa.text).hex
 
-        val autoAccept = appConfig.getBooleanOption(LIB_INDY_LEDGER_TAA_AUTO_ACCEPT).getOrElse(false)
-        val configuredTaa:Option[TransactionAuthorAgreement] = if(!autoAccept) {
-          findTAAConfig(appConfig, ledgerTaa.version)
-        }
-        else {
-          // This for demo, testing or otherwise when connecting to a ledger that don't have a legally binding TAA
-          Some(TransactionAuthorAgreement(
-            ledgerTaa.version,
-            expectedDigest,
-            "on_file",
-            nowTimeOfAcceptance()
-          ))
-        }
+        val configuredTaa: Option[TransactionAuthorAgreement] = findTAAConfig(appConfig, ledgerTaa.version)
 
         configuredTaa match {
           case Some(taa) =>

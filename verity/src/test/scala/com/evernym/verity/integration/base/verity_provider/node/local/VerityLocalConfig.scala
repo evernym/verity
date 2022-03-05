@@ -109,7 +109,7 @@ object VerityLocalConfig {
     )
   }
 
-  private def configureLibIndy(taaEnabled: Boolean, taaAutoAccept: Boolean): Config = {
+  private def configureLibIndy(taaEnabled: Boolean): Config = {
     ConfigFactory.parseString(
       s"""
          |verity.lib-vdrtools {
@@ -124,7 +124,6 @@ object VerityLocalConfig {
          |          }
          |        }
          |        enabled = $taaEnabled
-         |        auto-accept = $taaAutoAccept
          |      }
          |    }
          |  }
@@ -180,14 +179,13 @@ object VerityLocalConfig {
                  port: PortProfile,
                  otherNodeArteryPorts: Seq[Int] = Seq.empty,
                  taaEnabled: Boolean = true,
-                 taaAutoAccept: Boolean = true,
                  sharedEventStore: Option[SharedEventStore]=None): Config = {
     val parts = Seq(
       testMetricsBackend(),
       useLevelDBPersistence(tempDir, sharedEventStore),
       useDefaultWallet(tempDir),
       useCustomPort(port, otherNodeArteryPorts),
-      configureLibIndy(taaEnabled, taaAutoAccept),
+      configureLibIndy(taaEnabled),
       identityUrlShortener(),
       prometheusServer(port.prometheusPort),
 
@@ -212,14 +210,12 @@ object VerityLocalConfig {
                port: PortProfile,
                otherNodeArteryPorts: Seq[Int] = Seq.empty,
                taaEnabled: Boolean = true,
-               taaAutoAccept: Boolean = true,
                sharedEventStore: Option[SharedEventStore]=None): Config = {
     val customConfig = customOnly(
       tempDir,
       port,
       otherNodeArteryPorts,
       taaEnabled,
-      taaAutoAccept,
       sharedEventStore
     )
     customConfig.withFallback(ConfigFactory.load())

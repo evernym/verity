@@ -10,7 +10,7 @@ import com.evernym.verity.protocol.engine.Constants.{MFV_0_7, MSG_FAMILY_AGENT_P
 import com.evernym.verity.protocol.engine.util.DbcUtil.requireNotNull
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.TimeUtil._
-import com.typesafe.config.ConfigObject
+import com.typesafe.config.{ConfigObject, ConfigRenderOptions}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
@@ -116,7 +116,7 @@ object AgentProvisioningMsgFamily extends MsgFamily {
       }.toOption
 
       val pushMsgOverrides = Try{
-        config.getObject("push-msg-overrides").toString
+        config.getConfig("push-msg-overrides").root().render(ConfigRenderOptions.concise())
       }.getOrElse("{}")
 
       SponsorDetails(

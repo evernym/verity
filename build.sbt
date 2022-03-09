@@ -406,6 +406,7 @@ lazy val mergeStrategy: PartialFunction[String, MergeStrategy] = {
   case PathList("reference.conf")                                   => referenceConfMerge()
   case PathList("cinnamon-reference.conf")                          => MergeStrategy.concat
   case PathList("cinnamon", "instrument", "Instrumentations.class") => MergeStrategy.last
+  case PathList(ps @ _*) if ps.last equals "version.conf"           => MergeStrategy.concat
   case s if s.contains("kanela-agent")                              => MergeStrategy.discard
   case s                                                            => MergeStrategy.defaultMergeStrategy(s)
 }

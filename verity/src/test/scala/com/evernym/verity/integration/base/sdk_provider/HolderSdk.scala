@@ -22,7 +22,7 @@ import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, 
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_6, MFV_1_0}
 import com.evernym.verity.protocol.engine.ThreadId
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateCloudAgent, RequesterKeys}
+import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateCloudAgent, ProvisionToken, RequesterKeys}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg.{ConnRequest, ConnResponse, Connection}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, RequestCred}
@@ -73,9 +73,14 @@ case class HolderSdk(param: SdkParam,
     parseAndUnpackResponse[UpgradeInfoRespMsg_MFV_1_0](checkOKResponse(sendPOST(routedPackedMsg))).msg
   }
 
-  def provisionVerityCloudAgent(): AgentCreated = {
+  def provisionVerityCloudAgent(provToken: ProvisionToken): AgentCreated = {
+    fetchAgencyKey()
+    provisionVerityCloudAgent(Option(provToken))
+  }
+
+  def provisionVerityCloudAgent(provToken: Option[ProvisionToken] = None): AgentCreated = {
     val reqKeys = RequesterKeys(localAgentDidPair.did, localAgentDidPair.verKey)
-    provisionVerityAgentBase(CreateCloudAgent(reqKeys, None))
+    provisionVerityAgentBase(CreateCloudAgent(reqKeys, provToken))
   }
 
   def sendCreateNewKey(connId: String): PairwiseRel = {

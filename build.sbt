@@ -56,7 +56,7 @@ val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 //dependency versions
 val vdrtoolsWrapperVer  = "0.8.2-1407"  // todo version to test new VDR Java wrapper API
 val akkaVer         = "2.6.17"
-val akkaHttpVer     = "10.2.7"
+val akkaHttpVer     = "10.2.8"
 val akkaMgtVer      = "1.1.3"
 val alpAkkaVer      = "3.0.3"
 val akkaPersistence = "1.1.1"

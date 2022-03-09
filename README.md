@@ -6,8 +6,8 @@
 `verity`uses native libraries that must be built for the target OS. These libraries are currently only built for a couple
 of LTS releases of Ubuntu.
 
-* 16.04
 * 18.04
+* 20.04
 
 Because of this, development of `verity` requires (or at least this guide requires) use of one of the above versions of
 Ubuntu (either native or in a docker container)

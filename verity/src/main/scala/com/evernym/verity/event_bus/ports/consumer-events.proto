@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package com.evernym.verity.event_bus.ports;
+
+message Event {
+  Metadata metadata = 1;
+  string context = 2;
+  string payload = 3;
+};
+
+message Metadata {
+  string topic = 1;
+  string eventId = 2;
+  string timestamp = 3;
+}

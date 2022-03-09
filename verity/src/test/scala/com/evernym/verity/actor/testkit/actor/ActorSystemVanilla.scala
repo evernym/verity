@@ -69,7 +69,7 @@ object ActorSystemVanilla {
   def apply(name: String, config: Config): ActorSystem = {
     ActorSystem(
       name,
-      ConfigFactory.empty(), // Creates an ActorSystem unencumbered with Verity Config
+      config,
       new FilterLocalReferenceConfClassLoader(Thread.currentThread().getContextClassLoader) // remove verity reference.conf
     )
   }

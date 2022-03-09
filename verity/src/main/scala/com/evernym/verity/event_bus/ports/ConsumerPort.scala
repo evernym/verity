@@ -1,6 +1,5 @@
 package com.evernym.verity.event_bus.ports
 
-import java.time.LocalDateTime
 import scala.concurrent.Future
 
 
@@ -21,19 +20,3 @@ trait ConsumerPort {
     ???
   }
 }
-
-/**
- *
- * @param metadata event metadata (topic-name, event-id, timestamp etc?)
- * @param context a json string supplied by ProducerPort while publishing event
- * @param payload event payload
- */
-case class Event(metadata: Metadata, context: String, payload: String)
-
-/**
- *
- * @param topic topic name to which the event was published
- * @param eventId event identifier (to be used for logging purposes?)
- * @param timestamp event timestamp (to be used for logging purposes?)
- */
-case class Metadata(topic: String, eventId: String, timestamp: LocalDateTime)

@@ -32,7 +32,7 @@ class LeveldbAPISpec extends BasicAsyncSpec with BeforeAndAfterAll{
     .withValue("verity.blob-store.local-store-path", ConfigValueFactory.fromAnyRef(s"/tmp/verity/leveldb-spec-${UUID.randomUUID().toString}"))
 
   val appConfig: AppConfig = new TestAppConfig(Some(blobConfig()))
-  lazy implicit val system: ActorSystem = ActorSystemVanilla("leveldb-test-system", appConfig.config)
+  lazy implicit val system: ActorSystem = ActorSystemVanilla("leveldb-test-system")
   val BUCKET: String = "leveldb-bucket"
   lazy val futureExecutionContext: ExecutionContext = new ExecutionContextProvider(appConfig).futureExecutionContext
 

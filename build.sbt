@@ -296,6 +296,7 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-persistence-typed" % akkaVer,
     akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
 
+    akkaGrp %% "akka-stream" % akkaVer,
     akkaGrp %% "akka-stream-kafka" % alpAkkaKafkaVer,
 
     //akka persistence dependencies

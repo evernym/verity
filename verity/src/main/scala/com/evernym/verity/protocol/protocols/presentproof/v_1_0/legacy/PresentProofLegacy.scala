@@ -45,7 +45,7 @@ trait PresentProofLegacy
     case (s: StatesLegacy.Complete        , _, ResultsOfVerification(r)) => StatesLegacy.Complete(s.data.addVerificationResults(r))
 
     //Common
-    case (s: HasData                      , _, Rejection(role, reason) ) => StatesLegacy.Rejected(s.data, Role.numToRole(role), OptionUtil.blankOption(reason))
+    case (s: legacy.HasData                      , _, Rejection(role, reason) ) => StatesLegacy.Rejected(s.data, Role.numToRole(role), OptionUtil.blankOption(reason))
   }
 
   def legacyProtoMsg: (State, Option[Role], ProtoMsg) ?=> Any = {

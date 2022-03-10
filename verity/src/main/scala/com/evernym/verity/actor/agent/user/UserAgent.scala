@@ -143,7 +143,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
     case ads: AgentDetailSet                     => handleAgentDetailSet(ads)
     case GetSponsorRel                           => sendSponsorDetails()
     case GetTokenForUrl(forUrl, cmd)             => sendToOAuthAccessTokenHolder(forUrl, cmd)
-    case GetOutboxParam(destId)                  => sendOutboxParam(destId, sender)
+    case GetOutboxParam(destId)                  => sendOutboxParam(destId, sender())
     case hck: HandleCreateKeyWithThisAgentKey    =>
       handleCreateKeyWithThisAgentKey(hck.thisAgentKey, hck.createKeyReqMsg)(hck.reqMsgContext)
 
@@ -204,13 +204,13 @@ class UserAgent(val agentActorContext: AgentActorContext,
     val batchSize = if (gp.batchSize > 0) gp.batchSize else ordered.size
     val remaining = ordered.splitAt(gp.totalItemsReceived)._2
     val batch = remaining.take(batchSize)
-    sender ! GetPairwiseRoutingDIDsResp(batch, remaining.size - batch.size)
+    sender() ! GetPairwiseRoutingDIDsResp(batch, remaining.size - batch.size)
   }
 
   def sendOutboxParam(destId: DestId, sndr: ActorRef): Unit = {
     //NOTE: below logic will have to be changed once we start supporting multiple destinations
     if (destId == DESTINATION_ID_DEFAULT) {
-      outboxActorRefs += destId -> sender
+      outboxActorRefs += destId -> sender()
       val comMethods =
         state.myDidDoc.flatMap(_.endpoints.map(_.endpoints)).getOrElse(Seq.empty)
           .map { ep =>
@@ -350,7 +350,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
 
   def handleAgentDetailSet(ads: AgentDetailSet): Unit = {
     if (state.relationshipAgentsContains(ads.forDID)) {
-      sender ! Done
+      sender() ! Done
     } else {
       writeApplyAndSendItBack(ads)
     }
@@ -371,7 +371,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
   def sendComMethodsByType(filterComMethodTypes: Seq[Int]): Unit = {
     logger.debug("about to send com methods...")
     val filteredComMethods = getComMethods(filterComMethodTypes)
-    sender ! filteredComMethods
+    sender() ! filteredComMethods
     logger.debug("com methods sent: " + filteredComMethods)
   }
 
@@ -500,14 +500,14 @@ class UserAgent(val agentActorContext: AgentActorContext,
 
   def handleFwdMsg(fwdMsg: FwdReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val efm = PackedMsgRouteParam(fwdMsg.`@fwd`, PackedMsg(fwdMsg.`@msg`), reqMsgContext)
-    agentActorContext.agentMsgRouter.forward(efm, sender)
+    agentActorContext.agentMsgRouter.forward(efm, sender())
   }
 
   def buildAndSendComMethodUpdatedRespMsg(comMethod: ComMethod)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val comMethodUpdatedRespMsg = UpdateComMethodMsgHelper.buildRespMsg(comMethod.id)(reqMsgContext.agentMsgContext)
     reqMsgContext.msgPackFormatReq match {
       case MPF_PLAIN =>
-        sender ! comMethodUpdatedRespMsg.head
+        sender() ! comMethodUpdatedRespMsg.head
 
         // to test if http endpoint is working send response also on it.
         if (comMethod.`type` == COM_METHOD_TYPE_HTTP_ENDPOINT) {
@@ -984,6 +984,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
     metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, this.actorId)
   }
 
+  @annotation.nowarn
   private def updateOAuthAccessTokenHolder(): Unit = {
     httpComMethodsWithAuth.foreach { hc =>
       hc.authentication match {

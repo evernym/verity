@@ -41,7 +41,7 @@ class UrlStore(val appConfig: AppConfig, executionContext: ExecutionContext) ext
       // Persist the event; then send it back to the sender.
       writeApplyAndSendItBack(UrlAdded(c.url))
 
-    case GetActualUrl => sender ! url
+    case GetActualUrl => sender() ! url
   }
 
   /**

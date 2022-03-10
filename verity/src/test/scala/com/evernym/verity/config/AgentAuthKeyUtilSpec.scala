@@ -53,10 +53,10 @@ class AgentAuthKeyUtilSpec extends BasicSpec with ConfigUtilBaseSpec {
         "should respond with updated set of keys" in {
           withChangedConfigFileContent(
             Set(
-              "verity/target/scala-2.12/test-classes/application.conf",
+              "verity/target/scala-2.13/test-classes/application.conf",
               //TODO: this test was failing on a dev machine (build pipeline is working fine though)
               // it can be fixed by uncommenting below line (but then, it fails on build pipeline)
-              // "verity/target/scala-2.12/multi-jvm-classes/application.conf",
+              // "verity/target/scala-2.13/multi-jvm-classes/application.conf",
             ),
             """domain-id-1: ["key1", "key2"]""",
             """domain-id-1: ["key1", "key2", "key3"]""", {

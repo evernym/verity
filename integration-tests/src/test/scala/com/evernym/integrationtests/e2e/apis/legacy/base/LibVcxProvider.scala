@@ -30,7 +30,7 @@ import org.scalatest.time.{Millis, Seconds, Span}
 import java.util.UUID
 import com.evernym.verity.util2.ExecutionContextProvider
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.reflect.ClassTag

@@ -2,7 +2,7 @@ package com.evernym.integrationtests.e2e.msg
 
 import org.json.{JSONArray, JSONObject}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 object VcxGetMsg {

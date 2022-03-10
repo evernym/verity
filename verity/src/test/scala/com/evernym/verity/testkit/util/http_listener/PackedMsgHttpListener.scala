@@ -38,7 +38,7 @@ trait PackedMsgHttpListener
       pathPrefix(s"${listeningEndpoint.path}") {
         extractRequest { implicit req: HttpRequest =>
           post {
-            parameters('qp1 ? "N") { qp1 =>
+            parameters(Symbol("qp1") ? "N") { qp1 =>
               if (qp1 == "qpv1") {
                 agentMsgHandler
               } else {

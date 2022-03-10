@@ -7,7 +7,7 @@ import com.evernym.verity.config.validator.base.{ConfigValidator, ConfigValidato
 import com.evernym.verity.util.SubnetUtilsExt
 import com.typesafe.config.{Config, ConfigValueType}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 //checks for invalid values (like file path without a file etc) or missing values
 

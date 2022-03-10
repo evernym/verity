@@ -7,7 +7,7 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.vdr._
 
 import java.util.concurrent.CompletableFuture
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
 import scala.concurrent.Future
 

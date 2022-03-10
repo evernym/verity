@@ -66,28 +66,28 @@ trait UserAgentEventSetter extends UserAgentCommon with BasePersistentStore { th
 
     PublicIdentityStored(publicKey.did, publicKey.verKey),
     MsgCreated(pubIdCreatedMsgId, "public-identifier-created", mySelfRelAgentDIDPair.did, "MS-103",
-      1615697663705l,1615697663705l,"",Some(MsgThreadDetail(UUID.randomUUID().toString,"",0,Vector())),true),
+      1615697663705L,1615697663705L,"",Some(MsgThreadDetail(UUID.randomUUID().toString,"",0,Vector())),true),
     MsgPayloadStored(pubIdCreatedMsgId,ByteString.copyFromUtf8("public-identifier-created"),
       Some(PayloadContext("did:sov:123456789abcdefghi1234;spec/issuer-setup/0.6/public-identifier-created","plain"))),
     MsgCreated(pubIdLookupMsgId, "public-identifier", mySelfRelAgentDIDPair.did, "MS-103",
-      1615697663705l,1615697663705l,"",Some(MsgThreadDetail(UUID.randomUUID().toString,"",0,Vector())),true),
+      1615697663705L,1615697663705L,"",Some(MsgThreadDetail(UUID.randomUUID().toString,"",0,Vector())),true),
     MsgPayloadStored(pubIdLookupMsgId,ByteString.copyFromUtf8("public-identifier"),
       Some(PayloadContext("did:sov:123456789abcdefghi1234;spec/issuer-setup/0.6/public-identifier","plain"))),
 
-    ConfigUpdated("name","name1",1615697665879l),
-    ConfigUpdated("logoUrl","/logo_url.ico",1615697665880l),
+    ConfigUpdated("name","name1",1615697665879L),
+    ConfigUpdated("logoUrl","/logo_url.ico",1615697665880L),
     MsgCreated(updateConfigStatusReportMsgId, "status-report", mySelfRelAgentDIDPair.did, "MS-103",
-      1615697663705l,1615697663705l,"",Some(MsgThreadDetail(UUID.randomUUID().toString,"",0,Vector())),true),
+      1615697663705L,1615697663705L,"",Some(MsgThreadDetail(UUID.randomUUID().toString,"",0,Vector())),true),
     MsgPayloadStored(updateConfigStatusReportMsgId,ByteString.copyFromUtf8("update-configs/0.6/status-report"),
       Some(PayloadContext("did:sov:123456789abcdefghi1234;spec/update-configs/0.6/status-report","plain"))),
 
     MsgCreated(writeSchemaStatusReportMsgId, "status-report", mySelfRelAgentDIDPair.did, "MS-103",
-      1615697663705l,1615697663705l,"",Some(MsgThreadDetail(UUID.randomUUID().toString,"",0,Vector())),true),
+      1615697663705L,1615697663705L,"",Some(MsgThreadDetail(UUID.randomUUID().toString,"",0,Vector())),true),
     MsgPayloadStored(writeSchemaStatusReportMsgId,ByteString.copyFromUtf8("write-schema/0.6/status-report"),
       Some(PayloadContext("did:sov:123456789abcdefghi1234;spec/write-schema/0.6/status-report","plain"))),
 
     MsgCreated(writeCredDefStatusReportMsgId, "status-report", mySelfRelAgentDIDPair.did, "MS-103",
-      1615697663705l,1615697663705l,"",Some(MsgThreadDetail(UUID.randomUUID().toString,"",0,Vector())),true),
+      1615697663705L,1615697663705L,"",Some(MsgThreadDetail(UUID.randomUUID().toString,"",0,Vector())),true),
     MsgPayloadStored(writeCredDefStatusReportMsgId,ByteString.copyFromUtf8("write-cred-def/0.6/status-report"),
       Some(PayloadContext("did:sov:123456789abcdefghi1234;spec/write-cred-def/0.6/status-report","plain"))),
 
@@ -133,12 +133,12 @@ trait UserAgentPairwiseEventSetter extends UserAgentCommon with BasePersistentSt
     OwnerSetForAgent(mySelfRelDIDPair.did, mySelfRelAgentDIDPair.did, mySelfRelAgentDIDPair.verKey),
     AgentDetailSet(myPairwiseRelDIDPair.did, myPairwiseRelAgentDIDPair.did, myPairwiseRelDIDPair.verKey, myPairwiseRelAgentDIDPair.verKey),
 
-    MsgCreated(invitationMsgId,"invitation",myPairwiseRelDIDPair.did,"MS-103",1615697693226l,1615697693226l,"",
+    MsgCreated(invitationMsgId,"invitation",myPairwiseRelDIDPair.did,"MS-103",1615697693226L,1615697693226L,"",
       Some(MsgThreadDetail(UUID.randomUUID().toString,"",0,Vector())),true),
     MsgPayloadStored(invitationMsgId,ByteString.copyFromUtf8("invitation"),
       Some(PayloadContext("did:sov:123456789abcdefghi1234;spec/relationship/1.0/invitation","plain"))),
 
-    MsgCreated(reqReceivedMsgId,"request-received",myPairwiseRelDIDPair.did,"MS-103",1615697693226l,1615697693226l,"",
+    MsgCreated(reqReceivedMsgId,"request-received",myPairwiseRelDIDPair.did,"MS-103",1615697693226L,1615697693226L,"",
       Some(MsgThreadDetail(UUID.randomUUID().toString,"",0,Vector())),true),
     MsgPayloadStored(reqReceivedMsgId,ByteString.copyFromUtf8("request-received"),
       Some(PayloadContext("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/request-received","plain"))),
@@ -155,17 +155,17 @@ trait UserAgentPairwiseEventSetter extends UserAgentCommon with BasePersistentSt
       ))
     ),
 
-    MsgCreated(respSentMsgId,"response-sent",myPairwiseRelDIDPair.did,"MS-103",1615697693226l,1615697693226l,"",
+    MsgCreated(respSentMsgId,"response-sent",myPairwiseRelDIDPair.did,"MS-103",1615697693226L,1615697693226L,"",
       Some(MsgThreadDetail(UUID.randomUUID().toString,"",0,Vector())),true),
     MsgPayloadStored(respSentMsgId,ByteString.copyFromUtf8("response-sent"),
       Some(PayloadContext("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/response-sent","plain"))),
 
-    MsgCreated(respMsgId,"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/response",myPairwiseRelDIDPair.did,"MS-103",1615697693226l,1615697693226l,"",
+    MsgCreated(respMsgId,"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/response",myPairwiseRelDIDPair.did,"MS-103",1615697693226L,1615697693226L,"",
       Some(MsgThreadDetail(UUID.randomUUID().toString,"",0,Vector())),true),
     MsgPayloadStored(respMsgId,ByteString.copyFromUtf8("response"),
       Some(PayloadContext("did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/response","plain"))),
 
-    MsgDeliveryStatusUpdated(respMsgId,"http://localhost:9001/agency/msg","MDS-102","",1615697701620l,0)
+    MsgDeliveryStatusUpdated(respMsgId,"http://localhost:9001/agency/msg","MDS-102","",1615697701620L,0)
   )
 }
 

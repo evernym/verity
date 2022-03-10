@@ -205,12 +205,12 @@ trait BasePersistentActor
    */
   def writeApplyAndSendItBack(evt: Any): Unit = {
     writeAndApply(evt)
-    sender ! evt
+    sender() ! evt
   }
 
   def asyncWriteApplyAndSendItBack(evt: Any): Unit = {
     asyncWriteAndApply(evt)
-    sender ! evt
+    sender() ! evt
   }
 
   var persistStart: Long = _
@@ -282,7 +282,7 @@ trait BasePersistentActor
   }
 
   def receiveWhenActorInitFailedBaseCmd: Receive = LoggingReceive.withLabel("receiveWhenActorInitFailedBaseCmd") {
-    case _ => sender ! ActorInitPostRecoveryFailed
+    case _ => sender() ! ActorInitPostRecoveryFailed
   }
 
   def handleEvent: Receive = {
@@ -481,7 +481,7 @@ trait BasePersistentActor
 
   private def handleBasePersistenceCmd: Receive = {
     case GetPersistentActorDetail     =>
-      sender ! PersistentActorDetail(actorDetail, persistenceId, totalPersistedEvents, totalRecoveredEvents)
+      sender() ! PersistentActorDetail(actorDetail, persistenceId, totalPersistedEvents, totalRecoveredEvents)
   }
 
   def basePersistentCmdHandler(actualReceiver: Receive): Receive =

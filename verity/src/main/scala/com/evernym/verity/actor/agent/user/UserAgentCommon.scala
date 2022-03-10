@@ -95,14 +95,14 @@ trait UserAgentCommon
    */
   val commonCmdReceiver: Receive = LoggingReceive.withLabel("commonCmdReceiver") {
     case umds: UpdateMsgDeliveryStatus  => updateMsgDeliveryStatus(umds)
-    case gc: GetConfigs                 => sender ! AgentConfigs(getFilteredConfigs(gc.names))
+    case gc: GetConfigs                 => sender() ! AgentConfigs(getFilteredConfigs(gc.names))
     case sad: SetAgencyIdentity         => setAgencyIdentity(sad)
     case _: AgencyIdentitySet           => //nothing to od
 
     //internal messages exchanged between actors
     case gmr: GetMsgsReqMsg               => handleGetMsgsInternal(gmr)
     case ums: UpdateMsgStatusReqMsg       => handleUpdateMsgStatusInternal(ums)
-    case GetRelParam                      => sender ! RelParamResp(domainId, state.relationship)
+    case GetRelParam                      => sender() ! RelParamResp(domainId, state.relationship)
   }
 
   override val receiveAgentSpecificInitCmd: Receive = LoggingReceive.withLabel("receiveActorInitSpecificCmd") {
@@ -146,14 +146,14 @@ trait UserAgentCommon
     logger.debug("'SetAgentActorDetail' received",
       (LOG_KEY_SRC_DID, saw.didPair.DID), (LOG_KEY_PERSISTENCE_ID, persistenceId))
     updateAgentWalletId(saw.actorEntityId)
-    sender ! AgentActorDetailSet(saw.didPair, saw.actorEntityId)
+    sender() ! AgentActorDetailSet(saw.didPair, saw.actorEntityId)
   }
 
   def setAgencyIdentity(saw: SetAgencyIdentity): Unit = {
     logger.debug("'SetAgencyIdentity' received",
       (LOG_KEY_SRC_DID, saw.didPair.DID), (LOG_KEY_PERSISTENCE_ID, persistenceId))
     setAgencyDIDPair(saw.didPair)
-    sender ! AgencyIdentitySet(saw.didPair)
+    sender() ! AgencyIdentitySet(saw.didPair)
   }
 
   def postUpdateConfig(updateConf: UpdateConfigReqMsg, senderVerKey: Option[VerKeyStr]): Unit = {}
@@ -181,7 +181,7 @@ trait UserAgentCommon
       val configUpdatedRespMsg = UpdateConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configUpdatedRespMsg, reqMsgContext.wrapInBundledMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
-      sendRespMsg("ConfigUpdated", rp, sender)
+      sendRespMsg("ConfigUpdated", rp, sender())
     }
   }
 
@@ -209,7 +209,7 @@ trait UserAgentCommon
       val configRemovedRespMsg = RemoveConfigMsgHelper.buildRespMsg(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, configRemovedRespMsg, reqMsgContext.wrapInBundledMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
-      sendRespMsg("ConfigRemoved", rp, sender)
+      sendRespMsg("ConfigRemoved", rp, sender())
     }
   }
 
@@ -223,7 +223,7 @@ trait UserAgentCommon
       val getConfRespMsg = GetConfigsMsgHelper.buildRespMsg(confs)(reqMsgContext.agentMsgContext)
       val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, getConfRespMsg, reqMsgContext.wrapInBundledMsg)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
-      sendRespMsg("Configs", rp, sender)
+      sendRespMsg("Configs", rp, sender())
     }
   }
 

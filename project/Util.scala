@@ -12,7 +12,7 @@ import java.io.File
 import java.nio.file.Files
 import java.util.Optional
 import scala.annotation.tailrec
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration.{Duration, MILLISECONDS, SECONDS, _}
 import scala.language.postfixOps
 

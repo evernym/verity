@@ -15,7 +15,7 @@ import com.typesafe.config.ConfigException.{BadPath, Missing}
 import com.typesafe.config.ConfigValueType._
 import com.typesafe.config.{Config, ConfigRenderOptions}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.Future
 
 
@@ -79,7 +79,7 @@ trait HealthCheckEndpointHandler { this: HttpRouteWithPlatform =>
                 checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
                   path("application-state") {
                     (get & pathEnd) {
-                      parameters('detail.?) { detailOpt =>
+                      parameters(Symbol("detail").?) { detailOpt =>
                         complete {
                           val fut = if (detailOpt.map(_.toUpperCase).contains(YES)) {
                             askAppStateManager(GetDetailedAppState)

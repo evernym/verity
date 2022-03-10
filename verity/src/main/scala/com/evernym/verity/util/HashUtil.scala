@@ -90,9 +90,9 @@ object HashUtil {
     * @param strs a variable number of strings
     * @return Byte Array of the calculated hash
     */
-  def safeMultiHash(algo: HashAlgorithm, strs: String*): Array[Byte] = safeIterMultiHash(algo, strs.toSeq)
+  def safeMultiHash(algo: HashAlgorithm, strs: String*): Array[Byte] = safeIterMultiHash(algo, strs.toList)
 
-  def safeIterMultiHash(algo: HashAlgorithm, strs: GenTraversable[String]): Array[Byte] = {
+  def safeIterMultiHash(algo: HashAlgorithm, strs: Iterable[String]): Array[Byte] = {
     val md: MessageDigest = DigestUtils.getDigest(algo.libName)
 
     strs

@@ -28,7 +28,7 @@ package object util {
 
   class Times(i: Int) {
     def times[T](block: => T): IndexedSeq[T] = {
-      val fn = block _
+      val fn = () => block
       (1 to i) map (_ => fn())
     }
   }

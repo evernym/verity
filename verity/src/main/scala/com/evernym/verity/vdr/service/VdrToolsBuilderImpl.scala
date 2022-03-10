@@ -4,7 +4,7 @@ import com.evernym.vdrtools.vdr.VdrBuilder
 import com.evernym.vdrtools.vdr.VdrParams.TaaConfig
 
 import java.util.concurrent.CompletableFuture
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
 import scala.concurrent.Future
 

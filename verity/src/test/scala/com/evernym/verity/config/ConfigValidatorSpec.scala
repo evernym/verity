@@ -15,7 +15,7 @@ class ConfigValidatorSpec extends BasicSpec with CommonSpecUtil {
   override def appConfig: AppConfig = testAppConfig
 
   class TestReqConfigValidator (val config: Config) extends RequiredConfigValidatorBase {
-    override val configsToBeValidated: Set[ConfDetail] = new RequiredConfigValidator(config).configsToBeValidated ++ Set (
+    override val configsToBeValidated: Set[ConfDetail] = new RequiredConfigValidator(config).configsToBeValidated() ++ Set (
       ConfDetail(HTTP_SSL_PORT)
     )
   }

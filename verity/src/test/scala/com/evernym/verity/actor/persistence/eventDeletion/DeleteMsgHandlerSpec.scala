@@ -96,7 +96,7 @@ class MockPersistentActor(val appConfig: AppConfig, executionContext: ExecutionC
 
     case StartMsgDeletion =>
       deleteMessagesExtended(lastSequenceNr)
-      sender ! Done
+      sender() ! Done
 
   }
 
@@ -104,7 +104,7 @@ class MockPersistentActor(val appConfig: AppConfig, executionContext: ExecutionC
     case _: ConfigUpdated =>
       totalEventsPersisted += 1
       if (totalEventsToBePersisted == totalEventsPersisted) {
-        sender ! Done
+        sender() ! Done
       }
   }
 
@@ -142,8 +142,8 @@ class FailsOnDeleteEventsTestJournal extends TestJournal {
 
   //this is to simulate DeleteMessageFailure scenario
   var failStatus: Map[SeqNo, Boolean] = Map(
-    150l -> false,
-    1550l -> false
+    150L -> false,
+    1550L -> false
   )
   override def asyncDeleteMessagesTo(persistenceId: String, toSequenceNr: Long): Future[Unit] = {
     failStatus.get(toSequenceNr) match {

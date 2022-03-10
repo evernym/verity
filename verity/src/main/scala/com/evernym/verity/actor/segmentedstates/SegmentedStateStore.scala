@@ -54,13 +54,13 @@ class SegmentedStateStore(val appConfig: AppConfig, executionContext: ExecutionC
     case SaveSegmentedState(segmentKey, value: BackupStored) =>
       storeSegment(segmentKey, value)
     case SaveSegmentedState(segmentKey, _) if state.contains(segmentKey) =>
-      sender ! ValidationError("segmented state already stored with segmentKey: " + segmentKey)
+      sender() ! ValidationError("segmented state already stored with segmentKey: " + segmentKey)
     case SaveSegmentedState(segmentKey, value: GeneratedMessage) =>
       storeSegment(segmentKey, value)
     case DeleteSegmentedState(segmentKey) =>
       removeSegment(segmentKey)
     case GetSegmentedState(segmentKey) =>
-      sender ! state.get(segmentKey)
+      sender() ! state.get(segmentKey)
   }
 
   def storeSegment(key: SegmentKey, value: GeneratedMessage): Unit = {
@@ -68,12 +68,12 @@ class SegmentedStateStore(val appConfig: AppConfig, executionContext: ExecutionC
     val data = ByteString.copyFrom(value.toByteArray)
     val sss = SegmentedStateStored(key, eventCode, data)
     writeAndApply(sss)
-    sender ! Some(value)
+    sender() ! Some(value)
   }
 
   def removeSegment(key: SegmentKey): Unit = {
     writeAndApply(SegmentedStateRemoved(key))
-    sender ! Done
+    sender() ! Done
   }
 
   def receiveEvent: Receive = {

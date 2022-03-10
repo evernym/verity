@@ -93,12 +93,12 @@ trait UserAgentPairwiseEventSetter extends BasePersistentStore { this: ProvidesM
     //TODO: 'senderDID' in these events looks wrong (it should be from theirPairwiseRelDIDPair.did)
     // FYI: this issue is in the main code, not in these events setup done in the test
     MsgCreated(responseMsgId,"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/connections/1.0/response",myPairwiseRelDIDPair.did,
-      "MS-103",1615697700836l,1615697700836l,"",None,true),
+      "MS-103",1615697700836L,1615697700836L,"",None,true),
     MsgPayloadStored(responseMsgId,ByteString.copyFromUtf8("response"),None),
-    MsgStatusUpdated(responseMsgId,"MS-106",1615697702731l),
+    MsgStatusUpdated(responseMsgId,"MS-106",1615697702731L),
 
     MsgCreated(oobAcceptedMsgId,"did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/out-of-band/1.0/handshake-reuse-accepted",
-      myPairwiseRelDIDPair.did,"MS-103",1615697720549l,1615697720549l,"",None,true),
+      myPairwiseRelDIDPair.did,"MS-103",1615697720549L,1615697720549L,"",None,true),
     MsgPayloadStored(oobAcceptedMsgId,ByteString.copyFromUtf8("handshake-reuse-accepted"),None),
   )
 

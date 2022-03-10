@@ -36,7 +36,7 @@ final class ConsumerSettingsProvider(config: Config, system: ActorSystem) {
 
   val bootstrapServers: String = config.getString("verity.kafka.consumer.service-name")
   val groupId: String = config.getString("verity.kafka.consumer.group-id")
-  val topics: Seq[String] = config.getStringList("verity.kafka.consumer.topics").asScala
+  val topics: Seq[String] = config.getStringList("verity.kafka.consumer.topics").asScala.toSeq
 
   def kafkaConsumerSettings(): ConsumerSettings[String, String] = {
     //TODO: finalize the serializers (string, bytearray etc)

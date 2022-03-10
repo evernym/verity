@@ -53,7 +53,7 @@ trait VeritySdkProvider {
   def data_!(key: String): String = data(key)
     .getOrElse(throw new Exception("expected data held by sdk was not found!"))
 
-  def updateData(key: String, value: String)
+  def updateData(key: String, value: String): Unit
 
   def relationship(id: String): Option[RelData]
 

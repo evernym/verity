@@ -41,7 +41,7 @@ trait UserAgentSpecScaffolding
   import mockEdgeAgent.v_0_5_req._
   import mockEdgeAgent.v_0_5_resp._
 
-  def alltests(ua: agentRegion, userDIDPair: DidPair)
+  def alltests(ua: agentRegion, userDIDPair: DidPair): Unit
 
   def setupUserAgentSpecs(ua: agentRegion, userDIDPair: DidPair): Unit = {
     "when sent GetConfigs msg" - {

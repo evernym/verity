@@ -10,8 +10,8 @@ trait AsyncOpRunner {
 
   def logger: Logger
 
-  def postAllAsyncOpsCompleted()
-  def abortTransaction()
+  def postAllAsyncOpsCompleted(): Unit
+  def abortTransaction(): Unit
 
   //TODO: it seems we should implement some kind of timeout in this class
   // which does/expects most of the orchestration of running the async operation

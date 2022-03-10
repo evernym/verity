@@ -70,7 +70,7 @@ class Pusher(domainId: DomainId,
             val errMsg = s"[domainId: $domainId, sponsorId: ${spn.sponsorId}] could not send push notification"
             logger.error(errMsg, ("com_method", cm), (LOG_KEY_STATUS_CODE, e.respCode),
               (LOG_KEY_RESPONSE_CODE, e.respCode), (LOG_KEY_ERR_MSG, e.getErrorMsg))
-            sender ! PushNotifResponse(cm.value, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(e.toString), Option(errMsg))
+            sender() ! PushNotifResponse(cm.value, MSG_DELIVERY_STATUS_FAILED.statusCode, Option(e.toString), Option(errMsg))
         }
       }
 

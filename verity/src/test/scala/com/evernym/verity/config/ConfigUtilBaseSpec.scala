@@ -29,7 +29,7 @@ trait ConfigUtilBaseSpec {
     val tempFile = new File(s"${sourceFile.getParent}/${sourceFile.getName}_temp")
 
     val source = Source.fromFile(sourceFilePath)
-    val allLines = source.getLines.toList
+    val allLines = source.getLines().toList
 
     if (allLines.count(_.contains(oldLine)) > 1) {
       throw new RuntimeException(s"given key '$oldLine' found more than once")

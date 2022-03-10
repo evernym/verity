@@ -1,44 +1,42 @@
-package com.evernym.verity.protocol.testkit
+//package com.evernym.verity.protocol.testkit
 
-import com.evernym.verity.protocol.engine._
-import scala.collection.generic.CanBuildFrom
-import scala.language.postfixOps
+//import scala.language.postfixOps
 
-class TrappingSeq[T](val wrapped: Seq[T]) extends Seq[T] {
-  var trapped: Vector[T] = Vector.empty
-
-  override def length: Int = wrapped.length
-  override def apply(idx: Int): T = wrapped.apply(idx)
-  override def iterator: Iterator[T] = wrapped.iterator
-
-  override def :+[B >: T, That](elem: B)(implicit bf: CanBuildFrom[Seq[T], B, That]): That = {
-    val rtn = wrapped :+ elem
-    trapped = trapped :+ wrapped.head
-    rtn
-  }
-}
-
-object TrappingSeq {
-  def apply[T](wrapped: Seq[T]): TrappingSeq[T] = new TrappingSeq(wrapped)
-}
-
-class InterceptSeq[T](val wrapped: Seq[T], transform: Any => Any) extends Seq[T] {
-  override def length: Int = wrapped.length
-  override def apply(idx: Int): T = wrapped.apply(idx)
-  override def iterator: Iterator[T] = wrapped.iterator
-
-  override def :+[B >: T, That](elem: B)(implicit bf: CanBuildFrom[Seq[T], B, That]): That = {
-    val i = elem match {
-      case Envelope1(msg, to, fr, mid, tid) => Envelope1(transform(msg), to, fr, mid, tid)
-      case Envelope2(msg, frm)              => Envelope2(transform(msg), frm)
-      case e => transform(e)
-    }
-    wrapped :+ i.asInstanceOf[T]
-  }
-}
-object InterceptSeq {
-  def apply[T](wrapped: Seq[T], transform: Any => Any): InterceptSeq[T] = new InterceptSeq(wrapped, transform)
-}
+//class TrappingSeq[T](val wrapped: Seq[T]) extends Seq[T] {
+//  var trapped: Vector[T] = Vector.empty
+//
+//  override def length: Int = wrapped.length
+//  override def apply(idx: Int): T = wrapped.apply(idx)
+//  override def iterator: Iterator[T] = wrapped.iterator
+//
+//  override def :+[B >: T, That](elem: B)(implicit bf: BuildFrom[Seq[T], B, That]): That = {
+//    val rtn = wrapped :+ elem
+//    trapped = trapped :+ wrapped.head
+//    rtn
+//  }
+//}
+//
+//object TrappingSeq {
+//  def apply[T](wrapped: Seq[T]): TrappingSeq[T] = new TrappingSeq(wrapped)
+//}
+//
+//class InterceptSeq[T](val wrapped: Seq[T], transform: Any => Any) extends Seq[T] {
+//  override def length: Int = wrapped.length
+//  override def apply(idx: Int): T = wrapped.apply(idx)
+//  override def iterator: Iterator[T] = wrapped.iterator
+//
+//  override def :+[B >: T, That](elem: B)(implicit bf: BuildFrom[Seq[T], B, That]): That = {
+//    val i = elem match {
+//      case Envelope1(msg, to, fr, mid, tid) => Envelope1(transform(msg), to, fr, mid, tid)
+//      case Envelope2(msg, frm)              => Envelope2(transform(msg), frm)
+//      case e => transform(e)
+//    }
+//    wrapped :+ i.asInstanceOf[T]
+//  }
+//}
+//object InterceptSeq {
+//  def apply[T](wrapped: Seq[T], transform: Any => Any): InterceptSeq[T] = new InterceptSeq(wrapped, transform)
+//}
 
 //class TestContainer[P,R,M,E,S,I](system: SimpleProtocolSystem,
 //                                  participantId: ParticipantId,

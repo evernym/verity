@@ -119,7 +119,7 @@ trait MsgFamily {
   def lookupAllMsgName(cls: Class[_]): MsgName = (allInputMsgs ++ allOutputMsgs) (cls)
 
   def lookupClassOrElse(msgName: MsgName, orElse: => Class[_]): Class[_] =
-    allInputMsgsReversed.getOrElse(msgName, (orElse _)() )
+    allInputMsgsReversed.getOrElse(msgName, (() => orElse)() )
 
   lazy val msgNames: Set[MsgName] = protocolMsgs.keySet ++ controlMsgs.keySet
 

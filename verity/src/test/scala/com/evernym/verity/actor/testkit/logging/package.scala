@@ -27,10 +27,10 @@ package object logging {
 
     override def receiveCmd: Receive = {
       case LogMsg(msg, level) => level match {
-        case DebugLevel       => log.debug(msg); logger.debug(s"$SCALA_LOGGER_MSG_PREFIX$msg"); sender ! Done
-        case InfoLevel        => log.info(msg); logger.info(s"$SCALA_LOGGER_MSG_PREFIX$msg"); sender ! Done
-        case WarningLevel     => log.warning(msg); logger.warn(s"$SCALA_LOGGER_MSG_PREFIX$msg"); sender ! Done
-        case ErrorLevel       => log.error(msg); logger.error(s"$SCALA_LOGGER_MSG_PREFIX$msg"); sender ! Done
+        case DebugLevel       => log.debug(msg); logger.debug(s"$SCALA_LOGGER_MSG_PREFIX$msg"); sender() ! Done
+        case InfoLevel        => log.info(msg); logger.info(s"$SCALA_LOGGER_MSG_PREFIX$msg"); sender() ! Done
+        case WarningLevel     => log.warning(msg); logger.warn(s"$SCALA_LOGGER_MSG_PREFIX$msg"); sender() ! Done
+        case ErrorLevel       => log.error(msg); logger.error(s"$SCALA_LOGGER_MSG_PREFIX$msg"); sender() ! Done
         case other            => throw new RuntimeException("unsupported log level: " + other)
       }
     }

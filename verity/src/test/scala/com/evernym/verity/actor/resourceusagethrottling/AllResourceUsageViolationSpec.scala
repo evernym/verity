@@ -13,7 +13,7 @@ import com.evernym.verity.http.route_handlers.restricted.{ResourceUsageCounterDe
 import com.typesafe.config.{Config, ConfigValueFactory}
 import org.scalatest.time.{Seconds, Span}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class AllResourceUsageViolationSpec extends BaseResourceUsageTrackerSpec {
 

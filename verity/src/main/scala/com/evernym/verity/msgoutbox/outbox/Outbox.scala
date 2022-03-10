@@ -300,6 +300,7 @@ object Outbox {
         .noReply
   }
 
+  @annotation.nowarn
   private def updateConfigCommandHandler(st: States.Initialized)(implicit setup: SetupOutbox): UpdateOutboxCmd => ReplyEffect[Event, State] = {
     case Commands.UpdateOutboxParam(StatusReply.Success(WalletUpdateParam(walletId, senderVerKey, comMethods))) =>
       if (st.senderVerKey != senderVerKey || st.comMethods != comMethods) {

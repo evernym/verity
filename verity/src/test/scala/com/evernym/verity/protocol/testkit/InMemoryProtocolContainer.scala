@@ -44,6 +44,7 @@ case class ProtocolContainerElements[P,R,M,E,S,I](system: SimpleProtocolSystem,
   *
   * @tparam E Event type
   */
+@annotation.nowarn
 class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[P,R,M,E,S,I], ec: ExecutionContext, ac: AppConfig)(implicit tag: ClassTag[M])
   extends {
     val pinstId = pce.pinstId

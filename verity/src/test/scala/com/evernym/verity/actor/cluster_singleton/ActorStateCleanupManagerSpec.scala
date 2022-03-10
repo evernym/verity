@@ -95,7 +95,7 @@ class ActorStateCleanupManagerSpec
     val routeDID = generateDID(i.toString)
     val routeStoreActorEntityId = RoutingAgentUtil.getBucketEntityId(routeDID)
     (routeStoreActorEntityId, routeDID)
-  }.groupBy(_._1).mapValues(_.map(_._2).toSet)
+  }.groupBy(_._1).view.mapValues(_.map(_._2).toSet).toMap
 
   def generateDID(seed: String): DidStr =
     CommonSpecUtil.generateNewDid(Option(UUID.nameUUIDFromBytes(seed.getBytes()).toString)).did

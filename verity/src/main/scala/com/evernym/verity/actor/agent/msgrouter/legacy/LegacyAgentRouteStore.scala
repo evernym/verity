@@ -40,7 +40,7 @@ class LegacyAgentRouteStore(agentMsgRouter: AgentMsgRouter,
   override val receiveCmd: Receive = receiveBaseCmd orElse receiveOtherCmd
 
   lazy val receiveBaseCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
-    case sr: LegacySetRoute if routes.contains(sr.forDID) => sender ! RouteAlreadySet(sr.forDID)
+    case sr: LegacySetRoute if routes.contains(sr.forDID) => sender() ! RouteAlreadySet(sr.forDID)
 
     case sr: LegacySetRoute =>
       writeApplyAndSendItBack(
@@ -50,7 +50,7 @@ class LegacyAgentRouteStore(agentMsgRouter: AgentMsgRouter,
 
   lazy val receiveOtherCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case GetRegisteredRouteSummary      =>
-      sender ! RegisteredRouteSummary(entityId, orderedRoutes.routes.size)
+      sender() ! RegisteredRouteSummary(entityId, orderedRoutes.routes.size)
 
     case grd: GetRouteBatch             => handleGetRouteBatch(grd)
 
@@ -61,7 +61,7 @@ class LegacyAgentRouteStore(agentMsgRouter: AgentMsgRouter,
     case FinishRouteMigration(routeId)  => finishRouteMigration(routeId)
 
     case GetRouteStoreMigrationStatus   =>
-      sender ! RouteStoreMigrationStatus(timers.isTimerActive("migrate"), routes.size, migrationStatus)
+      sender() ! RouteStoreMigrationStatus(timers.isTimerActive("migrate"), routes.size, migrationStatus)
 
     case _ @ (_: Registered | AlreadyRegistered | AlreadyCompleted | _: RouteSet) => //nothing to do
   }
@@ -85,7 +85,7 @@ class LegacyAgentRouteStore(agentMsgRouter: AgentMsgRouter,
     val candidates = orderedRoutes.getRouteBatch(grd)
     val resp = GetRouteBatchResult(entityId, candidates.toSet)
     logger.debug(s"ASC [$persistenceId] sending response: " + resp)
-    sender ! resp
+    sender() ! resp
   }
 
   def handleGetRoute(gr: LegacyGetRoute): Unit = {

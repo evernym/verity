@@ -47,7 +47,7 @@ val evernymDevRepo = DebianRepo(
 val libVdrToolsVer = "0.8.4"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libvdrtools.so"),
-  NonMatchingLib("libvcx", "0.13.0-bionic~675", "libvcx.so")  // For integration testing ONLY
+  NonMatchingLib("libvcx", "0.14.0-bionic", "libvcx.so")  // For integration testing ONLY
 )
 
 //deb package dependencies versions
@@ -60,7 +60,7 @@ val akkaHttpVer         = "10.2.8"
 val akkaMgtVer          = "1.1.3"
 val alpAkkaS3Ver        = "3.0.3"
 val alpAkkaKafkaVer     = "2.1.1"
-val akkaPersistence     = "1.1.1"
+val akkaPersistence     = "1.2.0-RC2"
 val kamonVer            = "2.4.6"
 val kanelaAgentVer      = "1.0.14"
 val cinnamonVer         = "2.16.1-20210817-a2c7968"
@@ -71,13 +71,13 @@ val sdnotifyVer         = "1.3"
 val scalatestVer        = "3.2.11"
 val mockitoVer          = "1.17.5"
 val veritySdkVer        = "0.6.1"
-val vcxWrapperVer       = "0.13.1.735"
+val vcxWrapperVer       = "0.14.0"
 
 
 val flexmarkVer         = "0.62.2"
 
 // compiler plugin versions
-val silencerVersion     = "1.7.6"
+val silencerVersion     = "1.7.8"
 
 // a 'compileonly' configuration (see https://stackoverflow.com/questions/21515325/add-a-compile-time-only-dependency-in-sbt#answer-21516954)
 val COMPILE_TIME_ONLY = "compileonly"
@@ -134,7 +134,7 @@ lazy val integrationTests = (project in file("integration-tests"))
 
 lazy val settings = Seq(
   organization := "com.evernym",
-  scalaVersion := "2.12.15",
+  scalaVersion := "2.13.8",
 
   agentJars := Seq("kanela-agent"),
 
@@ -144,8 +144,7 @@ lazy val settings = Seq(
     "-deprecation",
     "-encoding",
     "utf8",
-    "-Xmax-classfile-name",
-    "128",
+    //Option -Xmax-classfile-name was removed from scalac: https://github.com/scala/scala/pull/7497
     "-Xfatal-warnings",
     "-P:silencer:pathFilters=.*/tictactoe/Role.scala;.*/deaddrop/Role.scala"
   ),
@@ -348,7 +347,7 @@ lazy val commonLibraryDependencies = {
     "commons-net" % "commons-net" % "3.8.0",      //used for CIDR based ip address validation/checking/comparision
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",
-    "org.msgpack" %% "msgpack-scala" % "0.8.13",  //used by legacy pack/unpack operations
+    "org.msgpack" % "msgpack-scala_2.13.0-M2" % "0.8.13",  //used by legacy pack/unpack operations
     "org.fusesource.jansi" % "jansi" % "2.4.0",    //used by protocol engine for customized logging
     "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.5",  //used for libvdrtools sync api calls

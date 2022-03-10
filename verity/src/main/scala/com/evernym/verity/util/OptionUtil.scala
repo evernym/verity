@@ -1,10 +1,8 @@
 package com.evernym.verity.util
 
 import java.util.{Map => JavaMap}
-
-import scala.collection.GenTraversableOnce
-import scala.reflect.ClassTag
 import scala.language.implicitConversions
+import scala.reflect.ClassTag
 import scala.util.{Failure, Try}
 
 object OptionUtil {
@@ -17,8 +15,8 @@ object OptionUtil {
     Option(arg).filterNot(_ => isEmpty)
   }
 
-  def emptyOption[T <: GenTraversableOnce[_]](arg:T): Option[T] = {
-    Option(arg).filterNot(_.isEmpty)
+  def emptyOption[T <: IterableOnce[_]](arg:T): Option[T] = {
+    Option(arg).filterNot(_.iterator.isEmpty)
   }
 
   def emptyOption(arg:String): Option[String] = {

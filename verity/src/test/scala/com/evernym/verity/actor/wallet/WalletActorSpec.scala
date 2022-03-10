@@ -470,7 +470,7 @@ class WalletActorSpec
   def prepareBasicCredReqSetup(): CredReqData = {
     logger.info("new key created")
     val schema = Anoncreds.issuerCreateSchema(issuerDidPair.did, "test-schema", "1.0",
-      seqToJson(Array("name", "age"))).get()
+      seqToJson(Array("name", "age").toIndexedSeq)).get()
     logger.info("schema created")
 
     issuerWalletActor ! CreateCredDef(issuerDID = issuerDidPair.did,

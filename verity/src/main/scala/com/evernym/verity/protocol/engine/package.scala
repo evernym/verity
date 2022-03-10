@@ -64,10 +64,10 @@ package object engine {
   val INITIALIZED = "INITIALIZED"
 
   //TODO can be removed when deprecated usage is removed
-  val PROTOCOL_ENCAPSULATION_FIX_DATE = "2019-07-01"
+  final val PROTOCOL_ENCAPSULATION_FIX_DATE = "2019-07-01"
 
   //TODO can be removed when deprecated usage is removed
-  val SERVICES_DEPRECATION_DATE = "2019-07-04"
+  final val SERVICES_DEPRECATION_DATE = "2019-07-04"
 
 
   case class TypedMsg(msg: Any, msgType: MsgType) extends TypedMsgLike

@@ -19,11 +19,11 @@ trait CoreActorExtended extends CoreActor with HasActorTimers {
 
   private def handleExtendedCmd: Receive = {
     case p: Ping        =>
-      if (p.sendAck) sender ! Done
+      if (p.sendAck) sender() ! Done
 
     case s: Stop        =>
       stopActor()
-      if (s.sendAck) sender ! Done
+      if (s.sendAck) sender() ! Done
 
     case ReceiveTimeout => handleReceiveTimeout()
   }

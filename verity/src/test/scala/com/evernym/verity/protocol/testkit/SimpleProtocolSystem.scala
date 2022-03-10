@@ -225,7 +225,7 @@ class Domain(override val domainId: DomainId,
 
   var usedInitParams: Option[Map[String, String]] = None
 
-  override def provideInitParams(): Map[String, String] = defaultInitParams ++ usedInitParams.getOrElse(Map.empty)
+  override def provideInitParams: Map[String, String] = defaultInitParams ++ usedInitParams.getOrElse(Map.empty)
 
   def initParams(w: Map[String, String]) : Unit = {
     usedInitParams = Some(w)

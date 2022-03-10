@@ -22,10 +22,10 @@ object Base58Util {
     if (bi > 0) {
       while (bi >= Base) {
         val mod = bi.mod(Base)
-        s.insert(0, Alphabet.charAt(mod.intValue()))
+        s.insert(0, Alphabet.charAt(mod.intValue))
         bi = (bi - mod) / Base
       }
-      s.insert(0, Alphabet.charAt(bi.intValue()))
+      s.insert(0, Alphabet.charAt(bi.intValue))
     }
     // Convert leading zeros too.
     input.takeWhile(_ == 0).foldLeft(s) { case (ss, _) =>
@@ -34,7 +34,7 @@ object Base58Util {
   }
 
   def decode(input: String): Try[Array[Byte]] = Try {
-    require(input.length > 0, "Empty input for Base58.decode")
+    require(input.nonEmpty, "Empty input for Base58.decode")
 
     val decoded = decodeToBigInteger(input)
 

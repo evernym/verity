@@ -170,10 +170,10 @@ class ResourceWarningStatusMngr(val aac: AgentActorContext, executionContext: Ex
     val groupedList = filteredByResources.grouped(100)
     if (groupedList.nonEmpty) {
       groupedList.zipWithIndex.foreach { case (chunk, ind) =>
-        sender ! UsageWarningStatusChunk(chunk, ind + 1, groupedList.size)
+        sender() ! UsageWarningStatusChunk(chunk, ind + 1, groupedList.size)
       }
     } else {
-      sender ! UsageWarningStatusChunk(Map.empty, 1, 1)
+      sender() ! UsageWarningStatusChunk(Map.empty, 1, 1)
     }
   }
 

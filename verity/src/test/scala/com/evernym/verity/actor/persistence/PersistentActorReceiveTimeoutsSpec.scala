@@ -241,7 +241,7 @@ class PersistentActorReceiveTimeoutsSpec extends BasicSpec {
         case x => throw new Exception(s"Wrong result: $x")
       }
     } catch {
-      case _: TimeoutException if ! expectedTimeout.isFinite() =>
+      case _: TimeoutException if ! expectedTimeout.isFinite =>
         logger.info("Actor not terminated, and that is expected.")
       case e: TimeoutException =>
         logger.error("Actor not terminated, and that was NOT expected.")
@@ -278,7 +278,7 @@ class MockBaseActor(val appConfig: AppConfig, executionContext: ExecutionContext
   override def receiveCmd: Receive = {
     case ReceiveTimeoutQuestion() =>
       logger.info(s"$self: my timeout is: $entityReceiveTimeout")
-      sender ! ReceiveTimeoutAnswer(entityReceiveTimeout)
+      sender() ! ReceiveTimeoutAnswer(entityReceiveTimeout)
     case x => logger.info(s"receiveCmd: $x")
   }
 
@@ -301,7 +301,7 @@ class MockSingletonChildActor(val appConfig: AppConfig, executionContext: Execut
   override def receiveCmd: Receive = {
     case ReceiveTimeoutQuestion() =>
       logger.info(s"$self: my timeout is: $entityReceiveTimeout")
-      sender ! ReceiveTimeoutAnswer(entityReceiveTimeout)
+      sender() ! ReceiveTimeoutAnswer(entityReceiveTimeout)
     case x => logger.info(s"receiveCmd: $x")
   }
 
@@ -346,7 +346,7 @@ class WatcherActor(appConfig: AppConfig, expectedTimeout: Duration, executionCon
       isChildActorStartedSuccessfully = true
       logger.info(s"${sender()} is alive and its timeout is: $timeout")
 
-      if (timeout.isFinite() && timeout != expectedTimeout)
+      if (timeout.isFinite && timeout != expectedTimeout)
         senderActorRef ! WrongTimeoutReported(timeout)
   }
 

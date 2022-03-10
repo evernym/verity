@@ -48,7 +48,7 @@ object VDRAdapterUtil {
   }
 
   def buildPingResult(vdrPingResult: Map[Namespace, VdrResults.PingResult]): PingResult = {
-    PingResult(vdrPingResult.mapValues(e => LedgerStatus(e.isSuccessful)))
+    PingResult(vdrPingResult.view.mapValues(e => LedgerStatus(e.isSuccessful)).toMap)
   }
 
   def buildVDRSchemaParams(schemaJson: String,

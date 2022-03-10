@@ -34,15 +34,15 @@ class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam, 
 
   override def receiveCmd: Receive = {
     case SendSummary =>
-      sender ! SummaryData(data.exists(_.isSnapshot), data.count(!_.isSnapshot))
+      sender() ! SummaryData(data.exists(_.isSnapshot), data.count(!_.isSnapshot))
     case SendAggregated =>
-      sender ! AggregatedData(data.groupBy(_.message.getClass.getSimpleName).mapValues(_.size))
+      sender() ! AggregatedData(data.groupBy(_.message.getClass.getSimpleName).view.mapValues(_.size).toMap)
     case sa: SendAll =>
       val resp = {
         if (sa.withData) AllData(data)
         else AllData(data.map(d => d.copy(message = d.message.getClass.getSimpleName)))
       }
-      sender ! resp
+      sender() ! resp
   }
 
   override def receiveEvent: Receive = {

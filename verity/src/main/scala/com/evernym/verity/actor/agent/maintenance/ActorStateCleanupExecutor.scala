@@ -75,9 +75,9 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
   def handleGetStatus(ges: GetExecutorStatus): Unit = {
     val cs = ExecutorStatus(routeStoreStatus, batchStatus)
     if (ges.includeDetails) {
-      sender ! cs.copy(actorStateCleanupStatus = Option(agentActorCleanupState))
+      sender() ! cs.copy(actorStateCleanupStatus = Option(agentActorCleanupState))
     } else {
-      sender ! cs
+      sender() ! cs
     }
   }
 
@@ -128,13 +128,13 @@ class ActorStateCleanupExecutor(val appConfig: AppConfig, val aac: AgentActorCon
     logger.debug(s"ASC [$persistenceId] [ASCM->ASCE] received ProcessRouteStore: " + prs)
     if (routeStoreStatus.isDefined) {
       logger.debug(s"ASC [$persistenceId] status: " + routeStoreStatusReq)
-      sender ! routeStoreStatusExtended
+      sender() ! routeStoreStatusExtended
     } else {
       val event = StatusUpdated(prs.agentRouteStoreEntityId, prs.totalRoutes)
       logger.debug(s"ASC [$persistenceId] recording event: " + event)
       writeApplyAndSendItBack(event)
     }
-    actorStateCleanupManager = Option(sender)
+    actorStateCleanupManager = Option(sender())
     sendProcessPending()
   }
 

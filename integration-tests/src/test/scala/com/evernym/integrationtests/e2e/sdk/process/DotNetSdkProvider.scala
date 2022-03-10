@@ -382,8 +382,8 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                                 byInvitation: Boolean = false): PresentProofV1_0 = new UndefinedPresentProof_1_0 {
     override def request(ctx: Context): Unit = {
 
-      val jsonProofAttrs = toJsonArray(proofAttrs)
-      val jsonProofPredicate = toJsonArray(proofPredicate)
+      val jsonProofAttrs = toJsonArray(proofAttrs.toIndexedSeq)
+      val jsonProofPredicate = toJsonArray(proofPredicate.toIndexedSeq)
 
       var cmd_proofAttrs = ""
       var cmd_proofAttrsArr = "null"

@@ -47,7 +47,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   def handleGetMsgsInternal(gmr: GetMsgsReqMsg): Unit = {
     metricsWriter.runWithSpan("handleGetMsgsInternal", "UserAgentCommon", InternalSpan) {
-      sender ! GetMsgRespInternal(msgStore.getMsgs(gmr))
+      sender() ! GetMsgRespInternal(msgStore.getMsgs(gmr))
     }
   }
 
@@ -94,7 +94,7 @@ trait MsgStoreAPI { this: UserAgentCommon =>
 
   def handleUpdateMsgStatusInternal(ums: UpdateMsgStatusReqMsg): Unit = {
     val updatedMsgIds = handleUpdateMsgStatusBase(ums)
-    sender ! UpdateMsgStatusRespInternal(updatedMsgIds)
+    sender() ! UpdateMsgStatusRespInternal(updatedMsgIds)
   }
 
   private def handleUpdateMsgStatusBase(ums: UpdateMsgStatusReqMsg): List[MsgId] = {

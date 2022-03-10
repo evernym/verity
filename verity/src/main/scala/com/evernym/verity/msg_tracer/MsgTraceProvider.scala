@@ -64,7 +64,7 @@ trait HasAsyncReqContext {
    * @param respMsgId response msg id
    */
   protected def updateAsyncReqContext(respMsgId: RespMsgId, msgName: Option[String]=None): Unit = {
-    val newMsgName = asyncReqContext.map(_.msgName) + msgName.map(mn => s":$mn").getOrElse("")
+    val newMsgName = asyncReqContext.map(_.msgName).toString + msgName.map(mn => s":$mn").getOrElse("")
     val updated = asyncReqContext.map(_.copy(respMsgId = Option(respMsgId), msgName = newMsgName))
     asyncReqContext = updated
   }

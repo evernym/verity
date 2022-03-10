@@ -10,7 +10,7 @@ import sbtassembly.AssemblyPlugin.autoImport.assembly
 
 import java.io.File
 import java.nio.file.Path
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object K8sTasks {
   def init(libvdrtoolsVer: String) = {

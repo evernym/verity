@@ -8,7 +8,7 @@ import java.io.InputStream
 import java.net.URL
 import java.util
 import java.util.Collections
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 private class ClassLoaderWrapper(wrapped: ClassLoader) extends ClassLoader {
   //  override def getName: String = wrapped.getName

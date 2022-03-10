@@ -25,8 +25,8 @@ class MsgTracer(val appConfig: AppConfig)
       val resp = msgTracingMetricsRecorder.execute(mtm)
       if (msgTracingMetricsRecorder.isSendBackResp) {
         resp match {
-          case () => sender ! Done      //if no explicit response is sent from msg handler, send a Done as a default
-          case r  => sender ! r
+          case () => sender() ! Done      //if no explicit response is sent from msg handler, send a Done as a default
+          case r  => sender() ! r
         }
       }
       mtm match {

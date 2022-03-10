@@ -32,12 +32,12 @@ package object util2 {
   type RespMsgId = MsgId
 
   trait ShardActorObject {
-    def !(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender)
+    def !(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Unit
     def ?(msg: Any)(implicit id: String, sender: ActorRef = Actor.noSender): Future[Any]
   }
 
   trait ActorObject {
-    def !(msg: Any)(implicit sender: ActorRef = Actor.noSender)
+    def !(msg: Any)(implicit sender: ActorRef = Actor.noSender): Unit
     def ?(msg: Any)(implicit sender: ActorRef = Actor.noSender): Future[Any]
   }
 

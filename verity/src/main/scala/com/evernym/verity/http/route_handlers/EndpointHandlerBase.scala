@@ -65,7 +65,7 @@ trait EndpointHandlerBase
           extractRequest { implicit req: HttpRequest =>
             extractClientIP { implicit remoteAddress =>
               (get & pathEnd) {
-                parameters('detail.?) { detailOpt =>
+                parameters(Symbol("detail").?) { detailOpt =>
                   if (detailOpt.map(_.toUpperCase).contains(YES)) {
                     handleGetAgencyIdentity(withDetail = true)
                   } else {

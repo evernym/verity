@@ -30,7 +30,7 @@ import com.evernym.verity.sdk.protocols.writeschema.v0_6.WriteSchemaV0_6
 import com.evernym.verity.sdk.utils.Context
 
 import java.nio.file.Path
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class JavaSdkProvider(val sdkConfig: SdkConfig, val testDir: Option[Path] = None)
   extends BaseSdkProvider

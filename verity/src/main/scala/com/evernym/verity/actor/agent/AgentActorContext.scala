@@ -30,7 +30,7 @@ import com.evernym.verity.util.Util
 import com.evernym.verity.vault.service.ActorWalletService
 import com.evernym.verity.vault.wallet_api.{StandardWalletAPI, WalletAPI}
 import com.evernym.verity.vdr.{VDRActorAdapter, VDRAdapter}
-import com.evernym.verity.vdr.service.{IndyLedger, VDRToolsConfig, VDRToolsFactory, VdrTools, VdrToolsBuilder, VdrToolsBuilderImpl}
+import com.evernym.verity.vdr.service.{VDRToolsConfig, VDRToolsFactory, VdrToolsBuilderImpl}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Left

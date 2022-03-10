@@ -8,7 +8,7 @@ import scala.concurrent.ExecutionContext.global
 class InfoBipServiceProviderSpec
   extends ServiceProviderBaseSpec {
 
-  val system: ActorSystem = ActorSystemVanilla("test", appConfig.config)
+  val system: ActorSystem = ActorSystemVanilla("test")
   lazy val service = new InfoBipDirectSmsDispatcher(appConfig, global)(system)
 
   "InfoBip service provider" - {

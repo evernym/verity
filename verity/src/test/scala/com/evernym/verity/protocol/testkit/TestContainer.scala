@@ -1,6 +1,6 @@
-package com.evernym.verity.protocol.testkit
+//package com.evernym.verity.protocol.testkit
 
-import scala.language.postfixOps
+//import scala.language.postfixOps
 
 //class TrappingSeq[T](val wrapped: Seq[T]) extends Seq[T] {
 //  var trapped: Vector[T] = Vector.empty

@@ -42,15 +42,15 @@ echoBoldAndAppendToLog(){
 
 prepare_jars(){
   appendToLogWithDashLinePrefix "preparing verity jars..."
-  appendToLogWithDashLinePrefix "libindy version installed info ..."
+  appendToLogWithDashLinePrefix "libvdrtools version installed info ..."
   # Best effort retrieval of libindy version. Do not fail if apt-cache is not
   # present (i.e. macos). This is important if -e is added to the shebang.
-  apt-cache policy libindy >> ${PROGRESS_LOG_FILE_PATH} || true
-  appendToLogWithDashLinePrefix "libindy version info finished"
+  apt-cache policy libvdrtools >> ${PROGRESS_LOG_FILE_PATH} || true
+  appendToLogWithDashLinePrefix "libvdrtools version info finished"
 
-  appendToLogWithDashLinePrefix "libindy file info..."
-  ls -lrt /usr/lib/libindy.so >> ${PROGRESS_LOG_FILE_PATH}
-  appendToLogWithDashLinePrefix "libindy file info finished"
+  appendToLogWithDashLinePrefix "libvdrtools file info..."
+  ls -lrt /usr/lib/libvdrtools.so >> ${PROGRESS_LOG_FILE_PATH}
+  appendToLogWithDashLinePrefix "libvdrtools file info finished"
 
   pushd ${PROJECT_DIR} > /dev/null
 

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package com.evernym.verity.event_bus.ports;
+package com.evernym.verity.event_bus.ports.consumer;
 
 message Event {
   Metadata metadata = 1;

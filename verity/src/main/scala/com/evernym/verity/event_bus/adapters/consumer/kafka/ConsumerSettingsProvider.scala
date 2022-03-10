@@ -1,4 +1,4 @@
-package com.evernym.verity.event_bus.adapters.kafka
+package com.evernym.verity.event_bus.adapters.consumer.kafka
 
 import akka.actor.ActorSystem
 import akka.kafka.{CommitterSettings, ConsumerSettings}

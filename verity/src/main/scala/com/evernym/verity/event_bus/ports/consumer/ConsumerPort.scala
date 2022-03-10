@@ -1,4 +1,4 @@
-package com.evernym.verity.event_bus.ports
+package com.evernym.verity.event_bus.ports.consumer
 
 import scala.concurrent.Future
 

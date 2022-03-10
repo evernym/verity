@@ -2,6 +2,7 @@ package com.evernym.verity.event_bus.adapters.kafka
 
 import akka.kafka.{CommitDelivery, CommitWhen}
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
+import com.evernym.verity.event_bus.adapters.consumer.kafka.ConsumerSettingsProvider
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.ConfigException.Missing
 import com.typesafe.config.ConfigFactory

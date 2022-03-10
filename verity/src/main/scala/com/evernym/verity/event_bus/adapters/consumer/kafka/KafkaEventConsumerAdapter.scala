@@ -1,4 +1,4 @@
-package com.evernym.verity.event_bus.adapters.kafka
+package com.evernym.verity.event_bus.adapters.consumer.kafka
 
 import akka.actor.typed.{ActorSystem => TypedActorSystem}
 import akka.kafka.ConsumerMessage.CommittableOffset
@@ -6,7 +6,8 @@ import akka.kafka.Subscriptions
 import akka.kafka.scaladsl.Consumer.DrainingControl
 import akka.kafka.scaladsl.{Committer, Consumer}
 import akka.stream.scaladsl.Sink
-import com.evernym.verity.event_bus.ports.{ConsumerPort, Event}
+import com.evernym.verity.event_bus.ports.consumer.Event
+import com.evernym.verity.event_bus.ports.consumer.ConsumerPort
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.typesafe.scalalogging.Logger
 

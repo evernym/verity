@@ -1,7 +1,8 @@
 package com.evernym.verity.actor.testkit.actor
 
 import akka.actor.ActorSystem
-import com.typesafe.config.{Config, ConfigFactory}
+import com.evernym.verity.integration.base.PortProvider
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 
 import java.io.InputStream
 import java.net.URL
@@ -59,19 +60,48 @@ object ActorSystemVanilla {
 
 
   def apply(name: String): ActorSystem = {
-    ActorSystem(
+    create(
       name,
       ConfigFactory.empty(), // Creates an ActorSystem unencumbered with Verity Config
-      new FilterLocalReferenceConfClassLoader(Thread.currentThread().getContextClassLoader) // remove verity reference.conf
+      seedNodesWithRandomPorts = true
     )
   }
 
   def apply(name: String, config: Config): ActorSystem = {
+    create(
+      name,
+      config,
+      seedNodesWithRandomPorts = true
+    )
+  }
+
+
+  private def create(name: String, config: Config, seedNodesWithRandomPorts: Boolean): ActorSystem = {
+    val configToBeUsed = if (seedNodesWithRandomPorts) seedNodesWithRandomPort(config) else config
     ActorSystem(
       name,
-      ConfigFactory.empty(), // Creates an ActorSystem unencumbered with Verity Config
+      configToBeUsed,
       new FilterLocalReferenceConfClassLoader(Thread.currentThread().getContextClassLoader) // remove verity reference.conf
     )
   }
 
+  //this is to avoid port binding error (Address already in use)
+  private def seedNodesWithRandomPort(config: Config): Config = {
+    val existingSeedNodes =
+      if (config.hasPath("akka.cluster.seed-nodes")) config.getStringList("akka.cluster.seed-nodes").asScala
+      else List("akka://$systemName@127.0.0.1:25520")
+
+    val updatedSeedNodes = existingSeedNodes
+      .map{ url =>
+        val lastIndex = url.lastIndexOf(":")
+        val (prePort, port) = url.splitAt(lastIndex)
+        prePort + ":" + PortProvider.getFreePort
+      }
+
+    config
+      .withValue(
+        "akka.cluster.seed-nodes",
+        ConfigValueFactory.fromIterable(updatedSeedNodes.asJava)
+      )
+  }
 }

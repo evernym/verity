@@ -23,6 +23,7 @@ import scala.concurrent.duration.{Duration, SECONDS}
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
+
 class HttpServer(val platform: Platform, routes: Route, executionContext: ExecutionContext)
   extends HttpServerUtil
   with HasExecutionContextProvider {
@@ -39,11 +40,6 @@ class HttpServer(val platform: Platform, routes: Route, executionContext: Execut
   var httpBinding: Option[ServerBinding] = None
 
   def start(): Unit = {
-    LaunchPreCheck.waitForRequiredDepsIsOk(
-      platform.healthChecker,
-      platform.actorSystem,
-      platform.executionContextProvider.futureExecutionContext
-    )
     startService(init _)
   }
 

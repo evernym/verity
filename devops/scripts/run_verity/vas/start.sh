@@ -17,6 +17,7 @@ export VERITY_KAMON_STATE_PAGE_PORT=$((VAS_KAMON_STATE_PAGE_PORT_BASE+CUR_NODE_N
 export VERITY_KAMON_ENVIRONMENT_SERVICE="VAS-$CUR_NODE_NUMBER"
 export VERITY_DYNAMODB_JOURNAL_TABLE="verity_akka_application"
 export VERITY_DYNAMODB_SNAPSHOT_TABLE="verity_akka_snapshot_application"
+export TAA_ACCEPT_DATE=$(date +%F)
 
 for i in $(eval echo "{1..$TOTAL_SEED_NODES}")
 do

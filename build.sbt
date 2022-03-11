@@ -55,15 +55,15 @@ val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 
 //dependency versions
 val vdrtoolsWrapperVer  = "0.8.4"
-val akkaVer             = "2.6.17"
-val akkaHttpVer         = "10.2.8"
+val akkaVer             = "2.6.18"
+val akkaHttpVer         = "10.2.9"
 val akkaMgtVer          = "1.1.3"
 val alpAkkaS3Ver        = "3.0.3"
 val alpAkkaKafkaVer     = "2.1.1"
 val akkaPersistence     = "1.2.0-RC2"
-val kamonVer            = "2.4.6"
+val kamonVer            = "2.4.8"
 val kanelaAgentVer      = "1.0.14"
-val cinnamonVer         = "2.16.1-20210817-a2c7968"
+val cinnamonVer         = "2.16.2"
 val jacksonVer          = "2.13.1"
 val sdnotifyVer         = "1.3"
 
@@ -381,7 +381,7 @@ lazy val commonLibraryDependencies = {
       exclude ("com.evernym.vdrtools", "vdr-tools"),
 
     "net.glxn" % "qrgen" % "1.4", // QR code generator
-    "com.google.guava" % "guava" % "31.0.1-jre",
+    "com.google.guava" % "guava" % "31.1-jre",
 
     "com.evernym" % "vcx" % vcxWrapperVer,
 

@@ -74,7 +74,7 @@ val veritySdkVer        = "0.6.1"
 val vcxWrapperVer       = "0.14.0"
 
 
-val flexmarkVer         = "0.62.2"
+val flexmarkVer         = "0.64.0"
 
 // compiler plugin versions
 val silencerVersion     = "1.7.8"

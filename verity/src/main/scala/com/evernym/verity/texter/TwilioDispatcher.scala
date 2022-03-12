@@ -9,8 +9,9 @@ import com.evernym.verity.http.common.ConfigSvc
 import com.twilio.sdk.{TwilioRestClient, TwilioRestException}
 import com.twilio.sdk.resource.factory.SmsFactory
 
-import scala.collection.JavaConverters._
-import scala.concurrent.{Future, SyncVar}
+import java.util.concurrent.atomic.AtomicReference
+import scala.jdk.CollectionConverters._
+import scala.concurrent.{Future}
 
 
 class TwilioDispatcher(val appConfig: AppConfig)
@@ -22,11 +23,7 @@ class TwilioDispatcher(val appConfig: AppConfig)
   lazy val token: String = appConfig.getStringReq(TWILIO_TOKEN)
   lazy val accountSid: String = appConfig.getStringReq(TWILIO_ACCOUNT_SID)
 
-  lazy val client = {
-    val trc = new SyncVar[TwilioRestClient]
-    trc.put(new TwilioRestClient(accountSid, token))
-    trc
-  }
+  lazy val client = new AtomicReference[TwilioRestClient](new TwilioRestClient(accountSid, token))
 
   lazy val messageFactory: SmsFactory = client.get.getAccount().getSmsFactory
 

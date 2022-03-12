@@ -48,8 +48,8 @@ trait UserAgentEventSetter extends BasePersistentStore { this: ActorSpec =>
     AgentKeyCreated(mySelfRelAgentDIDPair.did),
     ComMethodUpdated("push-token", 1, "firebase-push-token"),
     ComMethodUpdated("webhook", 2, "http://abc.xyz.com"),
-    ConfigUpdated("name","name1", 1615697665879l),
-    ConfigUpdated("logoUrl","/logo_url.ico",1615697665880l),
+    ConfigUpdated("name","name1", 1615697665879L),
+    ConfigUpdated("logoUrl","/logo_url.ico",1615697665880L),
 
     //pairwise connection event for each new connection
     AgentDetailSet(myPairwiseRelDIDPair.did, myPairwiseRelAgentDIDPair.did, myPairwiseRelDIDPair.verKey, myPairwiseRelAgentDIDPair.verKey)

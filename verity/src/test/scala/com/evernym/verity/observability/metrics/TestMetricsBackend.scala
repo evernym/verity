@@ -12,7 +12,7 @@ class TestMetricsBackend extends MetricsBackend {
    com.evernym.verity.observability.metrics.MetricsWriterExtensionImpl.metricsWriter uses reflection
    to create instance of MetricsBackend
    */
-  def this(system: ActorSystem) {
+  def this(system: ActorSystem) = {
     this
   }
 
@@ -33,7 +33,7 @@ class TestMetricsBackend extends MetricsBackend {
 
   override def gaugeUpdate(name: String, value: Long, tags: TagMap): Unit = this.synchronized {
     val key = TestMetricHead(name, tags)
-    gaugesMap.put(key, value)
+    gaugesMap.put(key, value.toDouble)
   }
 
   override def histogramUpdate(name: String, unit: MetricsUnit, value: Long, tags: TagMap): Unit = this.synchronized {

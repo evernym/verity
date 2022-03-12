@@ -173,7 +173,7 @@ class ActorProtocolContainer[
   }
 
   override def postSuccessfulActorRecovery(): Unit = {
-    if (!state.equals(definition.initialState)){
+    if (state != definition.initialState){
       toBaseBehavior()
     }
   }
@@ -213,11 +213,11 @@ class ActorProtocolContainer[
    * @param tcd thread context detail
    */
   def handleSetThreadContext(tcd: ThreadContextDetail): Unit = {
-    if (! state.equals(definition.initialState)) {
+    if (state != definition.initialState) {
       storePackagingDetail(tcd)
-      sender ! ThreadContextStoredInProtoActor(pinstId, getProtoRef)
+      sender() ! ThreadContextStoredInProtoActor(pinstId, getProtoRef)
     } else {
-      sender ! ThreadContextNotStoredInProtoActor(pinstId, getProtoRef)
+      sender() ! ThreadContextNotStoredInProtoActor(pinstId, getProtoRef)
     }
   }
 

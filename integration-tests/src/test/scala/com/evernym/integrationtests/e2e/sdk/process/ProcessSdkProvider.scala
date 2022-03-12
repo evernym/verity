@@ -84,7 +84,7 @@ trait ProcessSdkProvider
           val p = Process(
             cmd,
             env.cwd.toFile,
-            env.envVars.toArray: _*
+            env.envVars.toIndexedSeq: _*
           )
           scriptStream match {
             case Some(s) => p.#<(s)
@@ -161,7 +161,7 @@ trait ProcessSdkProvider
   }
 
   def booleanParam: Boolean => String
-  def stringParam: String => String = {s => "\"" + s.replaceAllLiterally("\"", "\\\"") + "\""}
+  def stringParam: String => String = {s => "\"" + s.replace("\"", "\\\"") + "\""}
   def mapParam: Map[_, _] => String
   def noneParam: String
   def jsonParam: AsJsonObject => String

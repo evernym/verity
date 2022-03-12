@@ -35,14 +35,14 @@ class NodeSingleton(val appConfig: AppConfig, executionContext: ExecutionContext
 
     case NodeAddedToClusterSingleton =>
       logger.info(s"sending blocked/warned started...")
-      sendGetBlockingList(sender)
-      sendGetWarningList(sender)
+      sendGetBlockingList(sender())
+      sendGetWarningList(sender())
       logger.info(s"sending blocked/warned done !!")
 
     case RefreshNodeConfig =>
       logger.info(s"configuration refresh started...")
       appConfig.reload()
-      sender ! NodeConfigRefreshed
+      sender() ! NodeConfigRefreshed
       logger.info(s"configuration refresh done !!")
       MetricsWriterExtension(context.system).updateFilters(appConfig.config)
 
@@ -51,7 +51,7 @@ class NodeSingleton(val appConfig: AppConfig, executionContext: ExecutionContext
       try {
         val newConfig = ConfigFactory.parseString(onc.configStr)
         appConfig.setConfig(newConfig.withFallback(appConfig.config))
-        sender ! NodeConfigRefreshed
+        sender() ! NodeConfigRefreshed
         logger.info(s"configuration override done !!")
       } catch {
         case e: Throwable =>
@@ -60,27 +60,27 @@ class NodeSingleton(val appConfig: AppConfig, executionContext: ExecutionContext
 
     case uws: UpdateWarningStatus =>
       ResourceWarningStatusMngrCache(context.system).processEvent(uws)
-      sender ! Done
+      sender() ! Done
 
     case cuws: UsageWarningStatusChunk =>
       ResourceWarningStatusMngrCache(context.system).initWarningList(cuws)
-      sender ! Done
+      sender() ! Done
 
     case ubs: UpdateBlockingStatus =>
       ResourceBlockingStatusMngrCache(context.system).processEvent(ubs)
-      sender ! Done
+      sender() ! Done
 
     case cubs: UsageBlockingStatusChunk =>
       ResourceBlockingStatusMngrCache(context.system).initBlockingList(cubs)
-      sender ! Done
+      sender() ! Done
 
     case spt: StartProgressTracking =>
       MsgProgressTrackerCache(context.system).startProgressTracking(spt.trackingId)
-      sender ! Done
+      sender() ! Done
 
     case spt: StopProgressTracking =>
       MsgProgressTrackerCache(context.system).stopProgressTracking(spt.trackingId)
-      sender ! Done
+      sender() ! Done
 
     case p: PersistentActorQueryParam =>
       val ar = getRequiredActor(ReadOnlyPersistentActor.prop(appConfig, p.actorParam, executionContext), p.actorParam.id)

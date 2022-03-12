@@ -53,13 +53,13 @@ class WalletSetupManager(walletAPI: WalletAPI, ec: ExecutionContext)
         val ar = context.actorOf(Props(new MockAgentActor(walletAPI, ec)), id.toString)
         ar ! StartWalletSetup()
       }
-      sender ! Done
+      sender() ! Done
 
     case WalletSetupCompleted => successResponse += 1
     case WalletSetupFailed    => failedResponse += 1
 
     case GetStatus =>
-      sender ! Status(successResponse, failedResponse)
+      sender() ! Status(successResponse, failedResponse)
   }
 }
 

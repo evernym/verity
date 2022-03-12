@@ -26,7 +26,7 @@ class CoinFlipSpec extends TestsProtocolsImpl(CoinFlipDefinition) with BasicFixt
       val ct = new CoinTools {}
       val iters = 1000
       val x = Seq.fill(iters)(ct.chooseCoinValue())
-      val y = x.groupBy(identity).mapValues(_.length)
+      val y = x.groupBy(identity).view.mapValues(_.length)
 
       y.size shouldBe 2
       y.keys.toList.sortBy(identity) shouldBe List("H","T")

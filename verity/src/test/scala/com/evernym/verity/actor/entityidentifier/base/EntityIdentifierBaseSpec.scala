@@ -28,7 +28,7 @@ class MockNonPersistentActor
   extends CoreActorExtended {
 
   override def receiveCmd: Receive = {
-    case x => sender ! x
+    case x => sender() ! x
   }
 }
 

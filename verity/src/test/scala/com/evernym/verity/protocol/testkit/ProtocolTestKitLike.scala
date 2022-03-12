@@ -97,7 +97,7 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] extends HasExecutionContextProvider {
     def apply[T](block: => T): T = {
 
 //      println(s"-----------Starting interaction with: ${envirs.map(_._1.domain.domainId).mkString(", ")}-----------")
-      val f: () => T = block _
+      val f: () => T = () => block
       val result: T = envirs.size match {
 
         case 1 =>

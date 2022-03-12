@@ -26,7 +26,7 @@ class MsgCodecSpec
 
     "when serializing native object with NON binary data to json" - {
       "should be able to produce same json with different serializers" in {
-        val person = Employee(1, "Alice", "address-1", Option(123456l), Option(111))
+        val person = Employee(1, "Alice", "address-1", Option(123456L), Option(111))
         val expectedJson = """{"id":1,"name":"Alice","address":"address-1","ssn":123456,"phoneNumber":111}"""
         val jacksonSerializedJson = JacksonMsgCodec.toJson(person)
         assertSerialized(expectedJson, jacksonSerializedJson)
@@ -36,7 +36,7 @@ class MsgCodecSpec
     "when deserializing json with NON binary data to native object" - {
       "should be able to produce same native object with different deserializers" in {
         val json = """{"id":"1","name":"Alice", "address":"address-1","ssn":123456,"phoneNumber":111}"""
-        val person = Employee(1, "Alice", "address-1", Option(123456l), Option(111))
+        val person = Employee(1, "Alice", "address-1", Option(123456L), Option(111))
         val jacksonDeserializedMsg1 = JacksonMsgCodec.fromJson[Employee](json)
         jacksonDeserializedMsg1 shouldBe person
 

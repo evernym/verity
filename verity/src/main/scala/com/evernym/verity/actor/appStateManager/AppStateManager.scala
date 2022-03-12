@@ -37,9 +37,9 @@ class AppStateManager(val appConfig: AppConfig,
 
   //these are commands sent directly to this actor (not published events)
   private def handleStateRequests: Receive = {
-    case GetEvents                  => sender ! getAllEvents
-    case GetCurrentState            => sender ! getState
-    case GetDetailedAppState        => sender ! getDetailedAppState
+    case GetEvents                  => sender() ! getAllEvents
+    case GetCurrentState            => sender() ! getState
+    case GetDetailedAppState        => sender() ! getDetailedAppState
   }
 
   override def beforeStart(): Unit = {

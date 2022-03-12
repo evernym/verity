@@ -2,6 +2,8 @@ package com.evernym.verity.app_launcher
 
 import akka.actor.ActorSystem
 import akka.pattern.after
+import com.evernym.verity.config.ConfigConstants
+import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.healthcheck.{ApiStatus, HealthChecker}
 
@@ -54,10 +56,12 @@ object LaunchPreCheck {
   private def startupProbe(checkId: String,
                            healthChecker: HealthChecker)
                           (implicit executionContext: ExecutionContext, system: ActorSystem): Future[StartupProbeStatus] = {
+    val config = ConfigReadHelper(system.settings.config)
+    val ledgerTimeoutSeconds = config.getIntOption(ConfigConstants.LIB_INDY_LEDGER_POOL_CONFIG_CONN_MANAGER_OPEN_TIMEOUT).getOrElse(60)
+    val ledgerFuture = checkApiStatus(checkId, "ledger", {healthChecker.checkLedgerPoolStatus}, timeoutInterval = ledgerTimeoutSeconds.seconds)
     val akkaStorageFuture = checkApiStatus(checkId, "akka-persistence", {healthChecker.checkAkkaStorageStatus})
     val walletStorageFuture = checkApiStatus(checkId, "wallet-storage", {healthChecker.checkWalletStorageStatus})
     val blobStorageFuture = checkApiStatus(checkId, "blob-storage", {healthChecker.checkBlobStorageStatus})
-    val ledgerFuture = checkApiStatus(checkId, "ledger", {healthChecker.checkLedgerPoolStatus})
     //val vdrFuture = checkApiStatus(system, checkId, "vdrtools", {healthChecker.checkVDRToolsStatus})
     for {
       akkaStorage   <- akkaStorageFuture
@@ -78,8 +82,9 @@ object LaunchPreCheck {
   private def checkApiStatus(checkId: String,
                              checkName: String,
                              checkDependency: => Future[ApiStatus],
+                             timeoutInterval: FiniteDuration = 10.seconds,
                              checkRetryInterval: FiniteDuration = 300.millis,
-                             promise: Promise[ApiStatus] = Promise[ApiStatus])
+                             promise: Promise[ApiStatus] = Promise[ApiStatus]())
                             (implicit executionContext: ExecutionContext, system: ActorSystem): Future[ApiStatus] = {
 
     def retryCheck(waitInterval: FiniteDuration = 0.seconds): Future[ApiStatus] = {
@@ -89,34 +94,34 @@ object LaunchPreCheck {
           if (retryInterval.toSeconds > 5) 5.seconds    //retry at least after every 5 seconds
           else retryInterval
         }
-        checkApiStatus(checkId, checkName, checkDependency, nextCheckRetryInterval, promise)
+        checkApiStatus(checkId, checkName, checkDependency, timeoutInterval, nextCheckRetryInterval, promise)
       }
     }
 
     //execute the dependency check and process result accordingly
     try {
-      val delayedFuture = after(10.seconds, system.scheduler)(Future.failed(new TimeoutException(s"timed out")))
+      val delayedFuture = after(timeoutInterval, system.scheduler)(Future.failed(new TimeoutException(s"timed out")))
       Future.firstCompletedOf(Seq(checkDependency, delayedFuture)).onComplete {
         case Success(result: ApiStatus) =>
           if (result.status) {
-            logger.info(s"[$checkId][$checkName] dependency check status successful: " + result.msg)
+            logger.info(s"[$checkId] [$checkName] dependency check status successful: " + result.msg)
             promise.success(result)
           } else {
-            logger.warn(s"[$checkId][$checkName] dependency check status attempt unsuccessful: " + result.msg)
+            logger.warn(s"[$checkId] [$checkName] dependency check status attempt unsuccessful: " + result.msg)
             retryCheck(checkRetryInterval)
           }
         case Failure(_: TimeoutException) =>
-          logger.warn(s"[$checkId][$checkName] dependency check status attempt timed out")
+          logger.warn(s"[$checkId] [$checkName] dependency check status attempt timed out")
           //we are not passing 'checkInterval' in below `retryCheck` function call
           // because it is already timed out, it means it has already waited enough so we can try the next attempt immediately
           retryCheck()
         case Failure(e) =>
-          logger.warn(s"[$checkId][$checkName] dependency check status attempt unsuccessful: " + e.getMessage)
+          logger.warn(s"[$checkId] [$checkName] dependency check status attempt unsuccessful: " + e.getMessage)
           retryCheck(checkRetryInterval)
       }
     } catch {
       case e: RuntimeException =>
-        logger.warn(s"[$checkId][$checkName] dependency check status attempt failed: " + e.getMessage)
+        logger.warn(s"[$checkId] [$checkName] dependency check status attempt failed: " + e.getMessage)
         retryCheck(checkRetryInterval)
     }
 

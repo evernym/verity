@@ -47,7 +47,7 @@ class LogChecker extends Checker {
   def check(setupObj: TestAppender): Unit = {
     patternsToCheck foreach checkNoEventsForPattern
 
-    def checkNoEventsForPattern(epat: EventPattern) {
+    def checkNoEventsForPattern(epat: EventPattern): Unit = {
       val events = setupObj.findEvents(epat)
       if (events.nonEmpty) throw new FailedCheckException("Suspicious log events found", events)
     }

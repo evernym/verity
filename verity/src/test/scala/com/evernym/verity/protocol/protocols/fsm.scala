@@ -54,7 +54,7 @@ class FSMDocSpec extends ActorSpec with BasicSpec {
 
     when(Idle) {
       case Event(SetTarget(ref), Uninitialized) =>
-        stay using Todo(ref, Vector.empty)
+        stay() using Todo(ref, Vector.empty)
     }
 
     onTransition {
@@ -77,7 +77,7 @@ class FSMDocSpec extends ActorSpec with BasicSpec {
 
       case Event(e, s) =>
         log.warning("received unhandled request {} in state {}/{}", e, stateName, s)
-        stay
+        stay()
     }
 
     initialize()
@@ -109,7 +109,7 @@ class FSMDocSpec extends ActorSpec with BasicSpec {
 
       onTransition(handler _)
 
-      def handler(from: StateType, to: StateType) {
+      def handler(from: StateType, to: StateType): Unit = {
         // handle it here ...
       }
 
@@ -120,7 +120,7 @@ class FSMDocSpec extends ActorSpec with BasicSpec {
       }
 
       when(SomeState)(transform {
-        case Event(bytes: ByteString, read) => stay using (read + bytes.length)
+        case Event(bytes: ByteString, read) => stay() using (read + bytes.length)
       } using {
         case s @ FSM.State(state, read, timeout, stopReason, replies) if read > 1000 =>
           goto(Processing)
@@ -132,7 +132,7 @@ class FSMDocSpec extends ActorSpec with BasicSpec {
       }
 
       when(SomeState)(transform {
-        case Event(bytes: ByteString, read) => stay using (read + bytes.length)
+        case Event(bytes: ByteString, read) => stay() using (read + bytes.length)
       } using processingTrigger)
 
       onTermination {
@@ -144,7 +144,7 @@ class FSMDocSpec extends ActorSpec with BasicSpec {
       whenUnhandled {
         case Event(x: X, data) =>
           log.info("Received unhandled event: " + x)
-          stay
+          stay()
         case Event(msg, _) =>
           log.warning("Received unknown event: " + msg)
           goto(Error)
@@ -191,7 +191,7 @@ class FSMDocSpec extends ActorSpec with BasicSpec {
     "not batch if uninitialized" taggedAs (UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog) in {
       val buncher = system.actorOf(Props(classOf[Buncher], this))
       buncher ! Queue(42)
-      expectNoMessage
+      expectNoMessage()
     }
   }
 

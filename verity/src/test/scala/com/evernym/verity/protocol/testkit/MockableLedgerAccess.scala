@@ -108,14 +108,14 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
 
   override def getSchemas(schemaIds: Set[String])(handler: Try[Map[String, GetSchemaResp]] => Unit): Unit = {
     handler {
-      if (ledgerAvailable) Try(schemas.filterKeys(s => schemaIds.contains(s)))
+      if (ledgerAvailable) Try(schemas.view.filterKeys(s => schemaIds.contains(s)).toMap)
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 
   override def getCredDefs(credDefIds: Set[String])(handler: Try[Map[String, GetCredDefResp]] => Unit): Unit = {
     handler {
-      if (ledgerAvailable) Try(credDefs.filterKeys(c => credDefIds.contains(c)))
+      if (ledgerAvailable) Try(credDefs.view.filterKeys(c => credDefIds.contains(c)).toMap)
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }

@@ -149,7 +149,7 @@ class EntityTypesValidator(val instructionName: String, val required: Boolean = 
     }
   }
 
-  def validateElement(keyPath: String, valueElement: String) {
+  def validateElement(keyPath: String, valueElement: String): Unit = {
     valueElement match {
       case "global" | "ip" | "user" | "user-owner" | "user-counterparty" =>
       case _ => throw new InvalidValueException(Option(

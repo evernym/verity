@@ -12,13 +12,13 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgParseUtil}
 import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.AgentCreated
+import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, ProvisionToken}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg.ConnResponse
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
-import com.evernym.verity.testkit.{BasicSpec, LegacyWalletAPI}
+import com.evernym.verity.testkit.{BasicSpec, LegacyWalletAPI, TestSponsor}
 import com.evernym.verity.util.{Base64Util, MessagePackUtil, Util}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.util2.ServiceEndpoint
@@ -52,7 +52,7 @@ import org.scalatest.matchers.should.Matchers
 
 import java.nio.charset.StandardCharsets
 import java.util.UUID
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
 import scala.reflect.ClassTag
@@ -232,6 +232,22 @@ abstract class SdkBase(param: SdkParam,
     storeTheirKey(DidPair(apd.didPair.did, apd.didPair.verKey))
     agencyPublicDidOpt = Option(apd)
     apd
+  }
+
+  def buildProvToken(sponseeId: String,
+                     sponsorId: String,
+                     nonce: String,
+                     timestamp: String,
+                     testSponsor: TestSponsor): ProvisionToken = {
+    val sponsorSig = testSponsor.sign(nonce, sponseeId, sponsorId, timestamp, testSponsor.verKey)
+    ProvisionToken(
+      sponseeId,
+      sponsorId,
+      nonce,
+      timestamp,
+      sponsorSig,
+      testSponsor.verKey
+    )
   }
 
   protected def provisionVerityAgentBase(createAgentMsg: Any): AgentCreated = {

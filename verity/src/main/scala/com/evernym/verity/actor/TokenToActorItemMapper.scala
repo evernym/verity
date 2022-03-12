@@ -56,7 +56,7 @@ class TokenToActorItemMapper(val appConfig: AppConfig, executionContext: Executi
 
     case c: AddDetail => writeApplyAndSendItBack(TokenToActorItemMappingAdded(c.actorEntityId, c.uid, c.regionTypeName))
 
-    case GetDetail => sender ! actorItemDetail
+    case GetDetail => sender() ! actorItemDetail
   }
 
   /**

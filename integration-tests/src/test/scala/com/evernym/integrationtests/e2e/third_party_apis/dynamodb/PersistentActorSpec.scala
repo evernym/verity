@@ -125,7 +125,7 @@ class MockPersistentActor(val appConfig: AppConfig, executionContext: ExecutionC
     case PersistEvent(data) =>
       val me = MockEvent4(data)
       writeAndApply(me)
-      sender ! Done
+      sender() ! Done
   }
 
   override def receiveEvent: Receive = {

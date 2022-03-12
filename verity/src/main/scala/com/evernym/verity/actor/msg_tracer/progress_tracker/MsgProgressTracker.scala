@@ -146,14 +146,14 @@ class MsgProgressTracker(val appConfig: AppConfig, executionContext: ExecutionCo
   def handleConfigureTracking(ct: ConfigureTracking): Unit = {
     if (ct.stopNow) {
       MsgProgressTrackerCache(context.system).stopProgressTracking(entityId)
-      sender ! TrackingConfigured("tracking stopped")
+      sender() ! TrackingConfigured("tracking stopped")
       stopTracking()
     } else {
       if (ct.startOver) {
         cleanupState()
       }
       ct.trackForMinutes.foreach(setTrackingExpiryTime)
-      sender ! TrackingConfigured(s"tracking will be finished at: $finishTrackingAt")
+      sender() ! TrackingConfigured(s"tracking will be finished at: $finishTrackingAt")
       finishTrackingIfExceededTime()
     }
   }

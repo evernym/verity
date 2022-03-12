@@ -171,10 +171,10 @@ class ResourceBlockingStatusMngr(val aac: AgentActorContext, executionContext: E
     val groupedList = filteredByResources.grouped(100)
     if (groupedList.nonEmpty) {
       groupedList.zipWithIndex.foreach { case (chunk, ind) =>
-        sender ! UsageBlockingStatusChunk(chunk, ind + 1, groupedList.size)
+        sender() ! UsageBlockingStatusChunk(chunk, ind + 1, groupedList.size)
       }
     } else {
-      sender ! UsageBlockingStatusChunk(Map.empty, 1, 1)
+      sender() ! UsageBlockingStatusChunk(Map.empty, 1, 1)
     }
   }
 

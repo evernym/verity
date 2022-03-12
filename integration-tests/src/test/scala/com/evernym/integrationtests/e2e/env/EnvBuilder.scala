@@ -19,7 +19,7 @@ import org.apache.http.util.EntityUtils
 
 import java.io.File
 import java.nio.file.{Files, Path}
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration.Duration
 
 object Constants {
@@ -120,10 +120,10 @@ trait IntegrationTestEnvBuilder {
     .map(prepareVerity(_, ledgerConfig))
     .unzip
 
-    if (containsDuplicates(instanceList.map(_.name))) {
+    if (containsDuplicates(instanceList.map(_.name).toSeq)) {
       throw new RuntimeException(s"'$VERITY_INSTANCE_CONFIGS' should have unique names")
     }
-    if (containsDuplicates(sdkList.flatten.map(_.name))) {
+    if (containsDuplicates(sdkList.flatten.map(_.name).toSeq)) {
       throw new RuntimeException(s"'$SDK_CONFIGS' should have unique names")
     }
 

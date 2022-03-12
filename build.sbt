@@ -44,39 +44,40 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libVdrToolsVer = "0.8.2"
+val libVdrToolsVer = "0.8.4"
 val sharedLibDeps = Seq(
-  NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libindy.so"),
-  NonMatchingLib("libvcx", "0.13.0-bionic~675", "libvcx.so")  // For integration testing ONLY
+  NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libvdrtools.so"),
+  NonMatchingLib("libvcx", "0.14.0-bionic", "libvcx.so")  // For integration testing ONLY
 )
 
 //deb package dependencies versions
 val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 
 //dependency versions
-val vdrtoolsWrapperVer  = "0.8.2-1407"  // todo version to test new VDR Java wrapper API
-val akkaVer         = "2.6.17"
-val akkaHttpVer     = "10.2.7"
-val akkaMgtVer      = "1.1.3"
-val alpAkkaVer      = "3.0.3"
-val akkaPersistence = "1.1.1"
-val kamonVer        = "2.4.6"
-val kanelaAgentVer  = "1.0.14"
-val cinnamonVer     = "2.16.1-20210817-a2c7968"
-val jacksonVer      = "2.13.1"
-val sdnotifyVer     = "1.3"
+val vdrtoolsWrapperVer  = "0.8.4"
+val akkaVer             = "2.6.18"
+val akkaHttpVer         = "10.2.9"
+val akkaMgtVer          = "1.1.3"
+val alpAkkaS3Ver        = "3.0.3"
+val alpAkkaKafkaVer     = "2.1.1"
+val akkaPersistence     = "1.2.0-RC2"
+val kamonVer            = "2.4.8"
+val kanelaAgentVer      = "1.0.14"
+val cinnamonVer         = "2.16.2"
+val jacksonVer          = "2.13.1"
+val sdnotifyVer         = "1.3"
 
 //test dependency versions
-val scalatestVer    = "3.2.11"
-val mockitoVer      = "1.17.0"
-val veritySdkVer    = "0.6.1"
-val vcxWrapperVer   = "0.13.1.735"
+val scalatestVer        = "3.2.11"
+val mockitoVer          = "1.17.5"
+val veritySdkVer        = "0.6.1"
+val vcxWrapperVer       = "0.14.0"
 
 
-val flexmarkVer     = "0.62.2"
+val flexmarkVer         = "0.62.2"
 
 // compiler plugin versions
-val silencerVersion = "1.7.6"
+val silencerVersion     = "1.7.8"
 
 // a 'compileonly' configuration (see https://stackoverflow.com/questions/21515325/add-a-compile-time-only-dependency-in-sbt#answer-21516954)
 val COMPILE_TIME_ONLY = "compileonly"
@@ -133,7 +134,7 @@ lazy val integrationTests = (project in file("integration-tests"))
 
 lazy val settings = Seq(
   organization := "com.evernym",
-  scalaVersion := "2.12.15",
+  scalaVersion := "2.13.8",
 
   agentJars := Seq("kanela-agent"),
 
@@ -143,8 +144,7 @@ lazy val settings = Seq(
     "-deprecation",
     "-encoding",
     "utf8",
-    "-Xmax-classfile-name",
-    "128",
+    //Option -Xmax-classfile-name was removed from scalac: https://github.com/scala/scala/pull/7497
     "-Xfatal-warnings",
     "-P:silencer:pathFilters=.*/tictactoe/Role.scala;.*/deaddrop/Role.scala"
   ),
@@ -157,7 +157,7 @@ lazy val settings = Seq(
 //  resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public", // this shouldn't be necessay since we're publishing vdr-tools to maven central
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
 //  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",
-  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/27807222/packages/maven", // todo used to fetch java wrapper from main builds
+  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/27807222/packages/maven", // used to fetch java wrapper from main builds
 
   Test / parallelExecution := false,
   Test / logBuffered := false,
@@ -294,11 +294,14 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-persistence-typed" % akkaVer,
     akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
 
+    akkaGrp %% "akka-stream" % akkaVer,
+    akkaGrp %% "akka-stream-kafka" % alpAkkaKafkaVer,
+
     //akka persistence dependencies
     akkaGrp %% "akka-persistence-dynamodb" % akkaPersistence,
 
     //lightbend akka dependencies
-    "com.lightbend.akka" %% "akka-stream-alpakka-s3" % alpAkkaVer,
+    "com.lightbend.akka" %% "akka-stream-alpakka-s3" % alpAkkaS3Ver,
 
     "com.lightbend.akka.management" %% "akka-management" % akkaMgtVer,
     "com.lightbend.akka.management" %% "akka-management-cluster-http" % akkaMgtVer,
@@ -344,7 +347,7 @@ lazy val commonLibraryDependencies = {
     "commons-net" % "commons-net" % "3.8.0",      //used for CIDR based ip address validation/checking/comparision
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",
-    "org.msgpack" %% "msgpack-scala" % "0.8.13",  //used by legacy pack/unpack operations
+    "org.msgpack" % "msgpack-scala_2.13.0-M2" % "0.8.13",  //used by legacy pack/unpack operations
     "org.fusesource.jansi" % "jansi" % "2.4.0",    //used by protocol engine for customized logging
     "info.faljse" % "SDNotify" % sdnotifyVer,     //used by app state manager to notify to systemd
     "net.sourceforge.streamsupport" % "java9-concurrent-backport" % "2.0.5",  //used for libvdrtools sync api calls
@@ -378,7 +381,7 @@ lazy val commonLibraryDependencies = {
       exclude ("com.evernym.vdrtools", "vdr-tools"),
 
     "net.glxn" % "qrgen" % "1.4", // QR code generator
-    "com.google.guava" % "guava" % "31.0.1-jre",
+    "com.google.guava" % "guava" % "31.1-jre",
 
     "com.evernym" % "vcx" % vcxWrapperVer,
 
@@ -401,6 +404,7 @@ lazy val mergeStrategy: PartialFunction[String, MergeStrategy] = {
   case PathList("reference.conf")                                   => referenceConfMerge()
   case PathList("cinnamon-reference.conf")                          => MergeStrategy.concat
   case PathList("cinnamon", "instrument", "Instrumentations.class") => MergeStrategy.last
+  case PathList(ps @ _*) if ps.last equals "version.conf"           => MergeStrategy.concat
   case s if s.contains("kanela-agent")                              => MergeStrategy.discard
   case s                                                            => MergeStrategy.defaultMergeStrategy(s)
 }

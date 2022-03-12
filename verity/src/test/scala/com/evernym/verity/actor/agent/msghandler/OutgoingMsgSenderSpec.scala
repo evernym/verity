@@ -134,7 +134,7 @@ class MockAgentActor(appConfig: AppConfig, caller: ActorRef)
     case sm: SendMsgToMyDomain              => forwardToOutgoingMsgSender(sm.msgId, sm)
     case sm: SendMsgToTheirDomain           => forwardToOutgoingMsgSender(sm.msgId, sm)
 
-    case IsChildActorExists(msgId)          => sender ! context.child(msgId).isDefined
+    case IsChildActorExists(msgId)          => sender() ! context.child(msgId).isDefined
     case SetNextDeliveryAttemptAsFailed     => failNextDeliveryAttempt = true
     case SetNextDeliveryAttemptAsPassed     => failNextDeliveryAttempt = false
 

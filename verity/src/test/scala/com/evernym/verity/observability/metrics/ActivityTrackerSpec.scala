@@ -344,10 +344,10 @@ object MetricHelpers {
     tmw.allGaugeMetrics()
       .filter(e => names.contains(e._1.name))
       .groupBy(_._1.name)
-      .mapValues { m =>
+      .view.mapValues { m =>
         val total = m.values.sum
         val tags = m.filter(_._1.tags.nonEmpty).map { case (k, v) => k.tags -> v }
         MetricWithTags(m.head._1.name, total, tags)
-      }
+      }.toMap
   }
 }

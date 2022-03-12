@@ -321,7 +321,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
       s"[$issuerName] use write-schema protocol" in {
-        val schema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
+        val schema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toIndexedSeq: _*)
         schema.write(issuerSdk.context, endorserDid)
 
         expectSignal(msgReceiverSdk, WriteSchemaMsgFamily, "status-report") { msg =>
@@ -355,7 +355,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       var writeSchema: WriteSchemaV0_6 = null
 
       s"[$issuerName] use write-schema protocol" in {
-        writeSchema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
+        writeSchema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toIndexedSeq: _*)
         writeSchema.write(issuerSdk.context)
 
         var schemaId = ""
@@ -400,7 +400,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
       val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
       s"[$issuerName] use write-schema protocol" in {
-        val writeSchema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
+        val writeSchema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toIndexedSeq: _*)
         writeSchema.write(issuerSdk.context)
 
         expectSignal(msgReceiverSdk, WriteSchemaMsgFamily, "problem-report") { resp =>
@@ -441,7 +441,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
         }.getOrElse(false)
 
         if (!endorserDidOnLedger) {
-          val writeSchema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toArray: _*)
+          val writeSchema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toIndexedSeq: _*)
           writeSchema.write(issuerSdk.context)
 
           expectSignal(msgReceiverSdk, WriteSchemaMsgFamily, "needs-endorsement") { resp =>

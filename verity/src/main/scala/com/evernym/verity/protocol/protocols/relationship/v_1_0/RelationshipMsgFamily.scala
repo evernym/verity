@@ -116,7 +116,7 @@ object Ctl {
   case class ConnectionInvitation(shortInvite: Option[Boolean]=None) extends CreateInvitation
   case class OutOfBandInvitation(goalCode: Option[String]=None, goal: Option[String]=None, shortInvite: Option[Boolean]=None) extends CreateInvitation
   case class SMSConnectionInvitation(phoneNumber: String) extends CreateInvitation {
-    override def validate() {
+    override def validate(): Unit = {
       checkRequired("phoneNumber", phoneNumber)
       if (!isPhoneNumberInValidFormat(phoneNumber))
         throwInvalidFieldProtocolEngineException(
@@ -126,7 +126,7 @@ object Ctl {
     }
   }
   case class SMSOutOfBandInvitation(phoneNumber: String, goalCode: Option[String], goal: Option[String]) extends CreateInvitation {
-    override def validate() {
+    override def validate(): Unit = {
       checkRequired("phoneNumber", phoneNumber)
       if (!isPhoneNumberInValidFormat(phoneNumber))
         throwInvalidFieldProtocolEngineException(

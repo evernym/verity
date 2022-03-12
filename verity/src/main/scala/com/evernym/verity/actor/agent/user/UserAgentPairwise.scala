@@ -359,7 +359,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
                   rd.routingKeys))
               )
           )
-          sender ! OutboxParamResp(state.getAgentWalletId, state.thisAgentVerKeyReq, comMethods)
+          sender() ! OutboxParamResp(state.getAgentWalletId, state.thisAgentVerKeyReq, comMethods)
 
         case Some(Left(lrd: LegacyRoutingDetail)) =>
 //          val comMethods = Map(
@@ -570,7 +570,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
       val param = AgentMsgPackagingUtil.buildPackMsgParam(getEncParamBasedOnMsgSender, msgCreatedResp ++ otherRespMsgs, reqMsgContext.wrapInBundledMsg)
       logger.debug("param (during general proof/cred msgs): " + param)
       val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
-      sendRespMsg("SendRemoteMsgResp", rp, sender)
+      sendRespMsg("SendRemoteMsgResp", rp, sender())
     }
   }
 
@@ -628,7 +628,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
     val msgSentRespMsg = sendMsgV1(sendMsgReq.uids.map(uid => uid))
     val param = AgentMsgPackagingUtil.buildPackMsgParam(encParamFromThisAgentToOwner, msgSentRespMsg, reqMsgContext.wrapInBundledMsg)
     val rp = AgentMsgPackagingUtil.buildAgentMsg(reqMsgContext.msgPackFormatReq, param)(agentMsgTransformer, wap, metricsWriter)
-    sendRespMsg("SendMsgResp", rp, sender)
+    sendRespMsg("SendMsgResp", rp, sender())
   }
 
   def logErrorsIfFutureFails(f: Future[Any], op: String): Unit = {

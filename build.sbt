@@ -64,7 +64,7 @@ val akkaPersistence     = "1.2.0-RC2"
 val kamonVer            = "2.5.0"
 val kanelaAgentVer      = "1.0.14"
 val cinnamonVer         = "2.16.2"
-val jacksonVer          = "2.13.1"
+val jacksonVer          = "2.13.2"
 val sdnotifyVer         = "1.3"
 
 //test dependency versions

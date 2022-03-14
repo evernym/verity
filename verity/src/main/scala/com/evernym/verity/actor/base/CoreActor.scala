@@ -29,7 +29,7 @@ trait CoreActor
     handleCoreCommand(actualReceiver)
 
   private def handleCoreCommand(actualCmdReceiver: Receive): Receive = {
-    case GetActorDetail     => sender ! actorDetail
+    case GetActorDetail     => sender() ! actorDetail
 
     case cmd: ActorMessage if actualCmdReceiver.isDefinedAt(cmd) =>
       try {
@@ -37,7 +37,7 @@ trait CoreActor
         postCommandExecution(cmd)
       } catch {
         case e: Exception =>
-          handleException(e, sender)
+          handleException(e, sender())
       }
 
     case cmd if sysCmdHandler.isDefinedAt(cmd) =>
@@ -45,7 +45,7 @@ trait CoreActor
         sysCmdHandler(cmd)
       } catch {
         case e: Exception =>
-          handleException(e, sender)
+          handleException(e, sender())
       }
 
     case cmd if actualCmdReceiver.isDefinedAt(cmd) =>

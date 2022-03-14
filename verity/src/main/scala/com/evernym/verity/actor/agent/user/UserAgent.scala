@@ -143,7 +143,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
     case ads: AgentDetailSet                     => handleAgentDetailSet(ads)
     case GetSponsorRel                           => sendSponsorDetails()
     case GetTokenForUrl(forUrl, cmd)             => sendToOAuthAccessTokenHolder(forUrl, cmd)
-    case GetOutboxParam(destId)                  => sendOutboxParam(destId, sender)
+    case GetOutboxParam(destId)                  => sendOutboxParam(destId, sender())
     case hck: HandleCreateKeyWithThisAgentKey    =>
       handleCreateKeyWithThisAgentKey(hck.thisAgentKey, hck.createKeyReqMsg)(hck.reqMsgContext)
 
@@ -158,7 +158,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
     case SignalMsgParam(_: ConnReqReceived, _)                 => Future.successful(None)
     case SignalMsgParam(sm: SendMsgToRegisteredEndpoint, _)    => sendAgentMsgToRegisteredEndpoint(sm)
     case SignalMsgParam(prd: ProvideRecoveryDetails, _)        => registerRecoveryKey(prd.params.recoveryVk)
-    case SignalMsgParam(_: CreatePairwiseKey, _)               => createNewPairwiseEndpoint()
+    case SignalMsgParam(cpk: CreatePairwiseKey, _)             => createNewPairwiseEndpoint(cpk.label)
     case SignalMsgParam(pic: PublicIdentifierCreated, _)       => storePublicIdentity(pic.identifier.did, pic.identifier.verKey)
   }
 
@@ -204,13 +204,13 @@ class UserAgent(val agentActorContext: AgentActorContext,
     val batchSize = if (gp.batchSize > 0) gp.batchSize else ordered.size
     val remaining = ordered.splitAt(gp.totalItemsReceived)._2
     val batch = remaining.take(batchSize)
-    sender ! GetPairwiseRoutingDIDsResp(batch, remaining.size - batch.size)
+    sender() ! GetPairwiseRoutingDIDsResp(batch, remaining.size - batch.size)
   }
 
   def sendOutboxParam(destId: DestId, sndr: ActorRef): Unit = {
     //NOTE: below logic will have to be changed once we start supporting multiple destinations
     if (destId == DESTINATION_ID_DEFAULT) {
-      outboxActorRefs += destId -> sender
+      outboxActorRefs += destId -> sender()
       val comMethods =
         state.myDidDoc.flatMap(_.endpoints.map(_.endpoints)).getOrElse(Seq.empty)
           .map { ep =>
@@ -350,7 +350,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
 
   def handleAgentDetailSet(ads: AgentDetailSet): Unit = {
     if (state.relationshipAgentsContains(ads.forDID)) {
-      sender ! Done
+      sender() ! Done
     } else {
       writeApplyAndSendItBack(ads)
     }
@@ -371,7 +371,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
   def sendComMethodsByType(filterComMethodTypes: Seq[Int]): Unit = {
     logger.debug("about to send com methods...")
     val filteredComMethods = getComMethods(filterComMethodTypes)
-    sender ! filteredComMethods
+    sender() ! filteredComMethods
     logger.debug("com methods sent: " + filteredComMethods)
   }
 
@@ -434,17 +434,20 @@ class UserAgent(val agentActorContext: AgentActorContext,
     val futResp = createNewPairwiseEndpointBase(
       thisAgentKey,
       DidPair(createKeyReqMsg.forDID, createKeyReqMsg.forDIDVerKey),
-      Option(createKeyReqMsg.forDIDVerKey))
+      Option(createKeyReqMsg.forDIDVerKey),
+      None
+    )
     val sndr = sender()
     handleInitPairwiseConnResp(thisAgentKey.did, thisAgentKey.verKey, futResp, sndr)
   }
 
-  def createNewPairwiseEndpoint(): Future[Option[ControlMsg]] = {
+  def createNewPairwiseEndpoint(ownerName: Option[String]): Future[Option[ControlMsg]] = {
     walletAPI.executeAsync[NewKeyCreated](CreateNewKey()).flatMap { requesterKey =>
       val respFut = createNewPairwiseEndpointBase(
         requesterKey,
         requesterKey.didPair.toAgentDidPair,
-        Option(requesterKey.verKey)
+        Option(requesterKey.verKey),
+        ownerName
       )
       respFut.map { _ =>
         Option(
@@ -458,7 +461,8 @@ class UserAgent(val agentActorContext: AgentActorContext,
 
   def createNewPairwiseEndpointBase(thisAgentKey: NewKeyCreated,
                                     requesterDIDPair: DidPair,
-                                    requesterVerKeyOpt: Option[VerKeyStr]=None)
+                                    requesterVerKeyOpt: Option[VerKeyStr]=None,
+                                    ownerName: Option[String])
   : Future[Any] = {
     val requesterVerKeyFut = requesterVerKeyOpt match {
       case Some(vk) => Future.successful(vk)
@@ -474,12 +478,14 @@ class UserAgent(val agentActorContext: AgentActorContext,
     }
 
     endpointDIDPairFut.flatMap { endpointDIDPair =>
-      val cke = buildSetupCreateKeyEndpoint(requesterDIDPair, endpointDIDPair)
+      val cke = buildSetupCreateKeyEndpoint(requesterDIDPair, endpointDIDPair, ownerName)
       userAgentPairwiseRegion ? ForIdentifier(getNewActorId, cke)
     }
   }
 
-  def buildSetupCreateKeyEndpoint(forDIDPair: DidPair, newAgentPairwiseVerKeyDIDPair: DidPair): SetupCreateKeyEndpoint = {
+  def buildSetupCreateKeyEndpoint(forDIDPair: DidPair,
+                                  newAgentPairwiseVerKeyDIDPair: DidPair,
+                                  ownerName: Option[String]): SetupCreateKeyEndpoint = {
     SetupCreateKeyEndpoint(
       newAgentPairwiseVerKeyDIDPair,
       forDIDPair,
@@ -487,19 +493,21 @@ class UserAgent(val agentActorContext: AgentActorContext,
       state.thisAgentAuthKey.map(ak => DidPair(ak.keyId, ak.verKey)),
       agentWalletId,
       None,
-      state.publicIdentity.orElse(state.configs.get(PUBLIC_DID).map(c => DidPair(c.value))))
+      state.publicIdentity.orElse(state.configs.get(PUBLIC_DID).map(c => DidPair(c.value))),
+      ownerName
+    )
   }
 
   def handleFwdMsg(fwdMsg: FwdReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val efm = PackedMsgRouteParam(fwdMsg.`@fwd`, PackedMsg(fwdMsg.`@msg`), reqMsgContext)
-    agentActorContext.agentMsgRouter.forward(efm, sender)
+    agentActorContext.agentMsgRouter.forward(efm, sender())
   }
 
   def buildAndSendComMethodUpdatedRespMsg(comMethod: ComMethod)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val comMethodUpdatedRespMsg = UpdateComMethodMsgHelper.buildRespMsg(comMethod.id)(reqMsgContext.agentMsgContext)
     reqMsgContext.msgPackFormatReq match {
       case MPF_PLAIN =>
-        sender ! comMethodUpdatedRespMsg.head
+        sender() ! comMethodUpdatedRespMsg.head
 
         // to test if http endpoint is working send response also on it.
         if (comMethod.`type` == COM_METHOD_TYPE_HTTP_ENDPOINT) {
@@ -509,6 +517,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
               sendMsgToRegisteredEndpoint(
                 NotifyMsgDetail.withTrackingId(
                   "ComMethodUpdated",
+                  None,
                   Option(PayloadWrapper(
                     jsonMsg.getBytes,
                     Option(PayloadMetadata(resp.`@type`, MPF_PLAIN)))
@@ -975,6 +984,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
     metricsActorRef ! RemoveCollectionMetric(COLLECTION_METRIC_MND_MSGS_PAYLOADS_TAG, this.actorId)
   }
 
+  @annotation.nowarn
   private def updateOAuthAccessTokenHolder(): Unit = {
     httpComMethodsWithAuth.foreach { hc =>
       hc.authentication match {

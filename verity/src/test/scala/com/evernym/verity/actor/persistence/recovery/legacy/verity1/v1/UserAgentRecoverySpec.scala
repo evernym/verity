@@ -70,7 +70,7 @@ class UserAgentRecoverySpec
     uas.publicIdentity shouldBe None
     uas.sponsorRel shouldBe None
     uas.relationshipAgents shouldBe Map(myPairwiseRelDIDPair.did -> AgentDetail(myPairwiseRelDIDPair.did, myPairwiseRelAgentDIDPair.did))
-    uas.configs shouldBe Map("name" -> ConfigValue("name1", 1615697665879l), "logoUrl" -> ConfigValue("/logo_url.ico", 1615697665880l))
+    uas.configs shouldBe Map("name" -> ConfigValue("name1", 1615697665879L), "logoUrl" -> ConfigValue("/logo_url.ico", 1615697665880L))
     uas.msgAndDelivery shouldBe None
     uas.thisAgentKeyId shouldBe Option(mySelfRelAgentDIDPair.did)
     uas.agencyDIDPair shouldBe Option(myAgencyAgentDIDPair.toAgentDidPair)

@@ -46,6 +46,7 @@ object EntityIdentifier {
     def isShardedActor: Boolean = shard.isDefined
   }
 
+  @annotation.nowarn
   def parsePath(path: ActorPath): EntityIdentity = {
     val elements = path.elements.toSeq
 

@@ -5,7 +5,7 @@ import com.evernym.verity.util2.Status.VALIDATION_FAILED
 import com.typesafe.config.ConfigException.Missing
 import com.typesafe.config.{Config, ConfigException, ConfigObject}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
 object ConfigReadHelper extends ConfigReadHelperBase {
@@ -132,9 +132,13 @@ trait ConfigReaderHelper
     readOptionalConfig(config.getConfig, key)
   }
 
+  def getObjectListReq(key: String): Seq[ConfigObject] = {
+    readReqConfig(config.getObjectList, key).asScala.toSeq
+  }
+
   def getObjectListOption(key: String): Option[Seq[ConfigObject]] = {
     readOptionalConfig(config.getObjectList, key)
-      .map(_.asScala)
+      .map(_.asScala).map(_.toSeq)
   }
 
   def getDurationReq(key: String): FiniteDuration = {

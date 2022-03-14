@@ -391,7 +391,7 @@ trait ProtocolContext[P,R,M,E,S,I]
   def postAllAsyncOpsCompleted(): Unit = {
     if (isAllAsyncOpsCompleted) {
       removeStoredSegmentData()
-      recordEvents getOrElse finalizeState
+      recordEvents() getOrElse finalizeState()
     }
   }
 

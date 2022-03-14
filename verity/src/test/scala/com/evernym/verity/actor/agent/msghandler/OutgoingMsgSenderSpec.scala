@@ -35,7 +35,9 @@ class OutgoingMsgSenderSpec
             "msgId1",
             "msgType",
             "senderDID",
-            None)
+            None,
+            None
+          )
           expectMsgType[ProcessSendMsgToMyDomain]
           checkOutgoingMsgSenderActor("msgId1", shallExists = false)
         }
@@ -51,7 +53,9 @@ class OutgoingMsgSenderSpec
             "msgId2",
             "msgType",
             "senderDID",
-            None)
+            None,
+            None
+          )
           expectMsgType[ProcessSendMsgToMyDomain]
           checkOutgoingMsgSenderActor("msgId2", shallExists = true)
           (1 to 3).foreach { _ =>
@@ -130,7 +134,7 @@ class MockAgentActor(appConfig: AppConfig, caller: ActorRef)
     case sm: SendMsgToMyDomain              => forwardToOutgoingMsgSender(sm.msgId, sm)
     case sm: SendMsgToTheirDomain           => forwardToOutgoingMsgSender(sm.msgId, sm)
 
-    case IsChildActorExists(msgId)          => sender ! context.child(msgId).isDefined
+    case IsChildActorExists(msgId)          => sender() ! context.child(msgId).isDefined
     case SetNextDeliveryAttemptAsFailed     => failNextDeliveryAttempt = true
     case SetNextDeliveryAttemptAsPassed     => failNextDeliveryAttempt = false
 

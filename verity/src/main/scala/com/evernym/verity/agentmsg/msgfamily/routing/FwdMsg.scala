@@ -6,10 +6,14 @@ import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 import com.evernym.verity.protocol.engine.{MissingReqFieldProtocolEngineException, MsgBase}
+import com.evernym.verity.util.JsonObjectWrapper
 import org.json.JSONObject
 
 
-case class FwdReqMsg_MFV_0_5(`@type`: TypeDetail, `@fwd`: String, `@msg`: Array[Byte], fwdMsgType: Option[String]) extends MsgBase {
+case class FwdReqMsg_MFV_0_5(`@type`: TypeDetail,
+                             `@fwd`: String,
+                             `@msg`: Array[Byte],
+                             fwdMsgType: Option[String]) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@fwd", `@fwd`)
@@ -18,7 +22,11 @@ case class FwdReqMsg_MFV_0_5(`@type`: TypeDetail, `@fwd`: String, `@msg`: Array[
 
 }
 
-case class FwdReqMsg_MFV_1_0(`@type`: String, `@fwd`: String, `@msg`: JSONObject, fwdMsgType: Option[String]) extends MsgBase {
+case class FwdReqMsg_MFV_1_0(`@type`: String,
+                             `@fwd`: String,
+                             `@msg`: JSONObject,
+                             fwdMsgType: Option[String],
+                             fwdMsgSender: Option[String]) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@fwd", `@fwd`)
@@ -27,7 +35,11 @@ case class FwdReqMsg_MFV_1_0(`@type`: String, `@fwd`: String, `@msg`: JSONObject
 }
 
 //community forward message
-case class FwdReqMsg_MFV_1_0_1(`@type`: String, to: String, msg: JSONObject, fwdMsgType: Option[String]) extends MsgBase {
+case class FwdReqMsg_MFV_1_0_1(`@type`: String,
+                               to: String,
+                               msg: JSONObject,
+                               fwdMsgType: Option[String],
+                               fwdMsgSender: Option[String]) extends MsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("to", to)
@@ -35,7 +47,11 @@ case class FwdReqMsg_MFV_1_0_1(`@type`: String, to: String, msg: JSONObject, fwd
   }
 }
 
-case class FwdReqMsg(msgFamilyDetail: MsgFamilyDetail, `@fwd`: String, `@msg`: Array[Byte], fwdMsgType: Option[String])
+case class FwdReqMsg(msgFamilyDetail: MsgFamilyDetail,
+                     `@fwd`: String,
+                     `@msg`: Array[Byte],
+                     fwdMsgType: Option[String],
+                     fwdMsgSender: Option[String])
 
 object FwdMsgHelper {
 
@@ -46,23 +62,21 @@ object FwdMsgHelper {
   // TODO: stop using "Message Family" as terminology in our codebase.
   private def buildReqMsgFrom_MFV_0_5(implicit amw: AgentMsgWrapper): FwdReqMsg = {
     val msg = amw.headAgentMsg.convertTo[FwdReqMsg_MFV_0_5]
-    FwdReqMsg(amw.headAgentMsgDetail, msg.`@fwd`, msg.`@msg`, msg.fwdMsgType)
+    FwdReqMsg(amw.headAgentMsgDetail, msg.`@fwd`, msg.`@msg`, msg.fwdMsgType, None)
   }
 
   private def buildReqMsgFrom_MFV_1_0(implicit amw: AgentMsgWrapper): FwdReqMsg = {
     try {
       val fwdMsg = amw.headAgentMsg.convertTo[FwdReqMsg_MFV_1_0]
-      FwdReqMsg(amw.headAgentMsgDetail, fwdMsg.`@fwd`, fwdMsg.`@msg`.toString().getBytes, fwdMsg.fwdMsgType)
+      FwdReqMsg(amw.headAgentMsgDetail, fwdMsg.`@fwd`, fwdMsg.`@msg`.toString().getBytes, fwdMsg.fwdMsgType, fwdMsg.fwdMsgSender)
     } catch {
       case _: MissingReqFieldException | _: MissingReqFieldProtocolEngineException =>
-        val jsonObject = new JSONObject(amw.headAgentMsg.msg)
-        val to = jsonObject.get("to").toString
-        val msg = jsonObject.get("msg").toString.getBytes
-        val fwdMsgType =
-          if (jsonObject.has("fwdMsgType"))
-            Option(jsonObject.getString("fwdMsgType"))
-          else None
-        FwdReqMsg(amw.headAgentMsgDetail, to, msg, fwdMsgType)
+        val jsonObject = new JsonObjectWrapper(new JSONObject(amw.headAgentMsg.msg))
+        val to = jsonObject.getString("to")
+        val msg = jsonObject.getArrayBytes("msg")
+        val fwdMsgType = jsonObject.getStringOption("fwdMsgType")
+        val fwdMsgSender = jsonObject.getStringOption("fwdMsgSender")
+        FwdReqMsg(amw.headAgentMsgDetail, to, msg, fwdMsgType, fwdMsgSender)
     }
   }
 

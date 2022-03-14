@@ -130,7 +130,7 @@ class CheckerRegistry(checker: Checker*) {
     * @tparam A return type of the lambda
     * @return the result of the lambda
     */
-  def run[A](block: => A): A = compose(Set.empty)(block _)()
+  def run[A](block: => A): A = compose(Set.empty)(() => block)()
 
   /**
     * Executes the supplied lambda with all registered checkers
@@ -139,7 +139,7 @@ class CheckerRegistry(checker: Checker*) {
     * @tparam A return type of the lambda
     * @return the result of the lambda
     */
-  def run[A](tags: Set[String])(block: => A): A = compose(tags)(block _)()
+  def run[A](tags: Set[String])(block: => A): A = compose(tags)(() => block)()
 
   /**
     * Constructs a function that is a composition of all registered checkers.

@@ -7,7 +7,7 @@ import com.evernym.verity.actor.agent.maintenance.RegisteredRouteSummary
 import com.evernym.verity.actor.agent.msgrouter.RoutingAgentBucketMapperV1
 import com.evernym.verity.actor.agent.msgrouter.legacy.{GetRegisteredRouteSummary, MigratePending}
 import com.evernym.verity.actor.base.Done
-import com.evernym.verity.actor.persistence.{BasePersistentActor, BasePersistentTimeoutActor, DefaultPersistenceEncryption}
+import com.evernym.verity.actor.persistence.{BasePersistentTimeoutActor, DefaultPersistenceEncryption}
 import com.evernym.verity.actor.{ActorMessage, ForIdentifier, MigrationCandidatesRecorded, MigrationStatusRecorded}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
@@ -107,7 +107,7 @@ class AgentRoutesMigrator(val appConfig: AppConfig, executionContext: ExecutionC
     }
 
     val detail = if (gms.withDetail) Option(status) else None
-    sender ! MigrationStatusDetail(
+    sender() ! MigrationStatusDetail(
       timers.isTimerActive("migrate"),
       registered, completed, inProgress, detail
     )
@@ -137,17 +137,17 @@ class AgentRoutesMigrator(val appConfig: AppConfig, executionContext: ExecutionC
   def handleReset(): Unit = {
     stopAllScheduledJobs()
     deleteMessagesExtended(lastSequenceNr, Option(receiveOther))
-    sender ! Done
+    sender() ! Done
   }
 
   def handleStartJob(): Unit = {
     scheduleJob("migrate", scheduledJobInterval, RunMigration)
-    sender ! Done
+    sender() ! Done
   }
 
   def handleStopJob(): Unit = {
     stopAllScheduledJobs()
-    sender ! Done
+    sender() ! Done
   }
 
   override def postAllMsgsDeleted(): Unit = {

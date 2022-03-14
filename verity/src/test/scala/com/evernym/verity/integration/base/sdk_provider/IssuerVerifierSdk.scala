@@ -26,7 +26,6 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.Signal.{Complete,
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{ConnectionInvitation, Create, OutOfBandInvitation}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{Created, Invitation}
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResult
-import com.evernym.verity.testkit.TestSponsor
 import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.testkit.util.HttpUtil._
 import com.evernym.verity.util.Base58Util
@@ -39,12 +38,12 @@ import scala.concurrent.duration.{Duration, SECONDS}
 import scala.reflect.ClassTag
 
 abstract class VeritySdkBase(param: SdkParam,
-                             ec: ExecutionContext,
+                             executionContext: ExecutionContext,
                              oauthParam: Option[OAuthParam]=None)
-  extends SdkBase(param, ec) {
+  extends SdkBase(param, executionContext) {
 
   def registerWebhook(id: Option[String] = None, authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated
-  def sendCreateRelationship(connId: String): ReceivedMsgParam[Created]
+  def sendCreateRelationship(connId: String, label: Option[String]=None): ReceivedMsgParam[Created]
   def sendCreateConnectionInvitation(connId: String, thread: Option[MsgThread]): Invitation
 
   def expectConnectionComplete(connId: ConnId): Complete = {
@@ -90,23 +89,6 @@ abstract class VeritySdkBase(param: SdkParam,
                      applyToJsonMsg: String => String = { msg => msg},
                      expectedRespStatus: StatusCode = OK): HttpResponse
 
-  def buildProvToken(sponseeId: String,
-                     sponsorId: String,
-                     nonce: String,
-                     timestamp: String,
-                     testSponsor: TestSponsor
-                    ): ProvisionToken = {
-    val sponsorSig = testSponsor.sign(nonce, sponseeId, sponsorId, timestamp, testSponsor.verKey)
-    ProvisionToken(
-      sponseeId,
-      sponsorId,
-      nonce,
-      timestamp,
-      sponsorSig,
-      testSponsor.verKey
-    )
-  }
-
   def provisionVerityEdgeAgent(provToken: ProvisionToken): AgentCreated = {
     provisionVerityAgentBase(CreateEdgeAgent(localAgentDidPair.verKey, Option(provToken)))
   }
@@ -149,8 +131,6 @@ abstract class VeritySdkBase(param: SdkParam,
   def resetAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetAuthedMsgsCounter
   def resetFailedAuthedMsgsCounter: ReceivedMsgCounter = msgListener.resetFailedAuthedMsgsCounter
 
-  implicit val executionContext: ExecutionContext
-
 }
 
 /**
@@ -192,8 +172,8 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
     cmu
   }
 
-  def sendCreateRelationship(connId: String): ReceivedMsgParam[Created] = {
-    val jsonMsgBuilder = JsonMsgBuilder(Create(label = Option(connId), None))
+  def sendCreateRelationship(connId: String, label: Option[String]=None): ReceivedMsgParam[Created] = {
+    val jsonMsgBuilder = JsonMsgBuilder(Create(label = label, None))
     val routedPackedMsg = packForMyVerityAgent(jsonMsgBuilder.jsonMsg)
     checkOKResponse(sendPOST(routedPackedMsg))
     val receivedMsg = expectMsgOnWebhook[Created]()
@@ -324,8 +304,8 @@ case class IssuerRestSDK(param: SdkParam,
     cmu
   }
 
-  def sendCreateRelationship(connId: String): ReceivedMsgParam[Created] = {
-    val resp = sendMsg(Create(None, None))
+  def sendCreateRelationship(connId: String, label: Option[String]=None): ReceivedMsgParam[Created] = {
+    val resp = sendMsg(Create(label = label orElse Option(connId), None))
     resp.status shouldBe Accepted
     val rmp = expectMsgOnWebhook[Created]()
     myPairwiseRelationships += (connId -> PairwiseRel(None, Option(DidPair(rmp.msg.did, rmp.msg.verKey))))
@@ -419,7 +399,7 @@ case class IssuerRestSDK(param: SdkParam,
             ContentTypes.`application/json`,
             payload
           ),
-          headers = Seq(RawHeader("X-API-key", apiKey)).to[immutable.Seq]
+          headers = Seq(RawHeader("X-API-key", apiKey))
         )
       )
     )
@@ -432,7 +412,7 @@ case class IssuerRestSDK(param: SdkParam,
           method = HttpMethods.GET,
           uri = url,
           entity = HttpEntity.Empty,
-          headers = Seq(RawHeader("X-API-key", apiKey)).to[immutable.Seq]
+          headers = Seq(RawHeader("X-API-key", apiKey))
         )
       )
     )

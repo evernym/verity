@@ -359,7 +359,7 @@ abstract class TestsWalletBackup extends TestsProtocolsImpl(WalletBackupProtoDef
   }
 
   def ensureBackupSuccess(retrievedWallet: WalletBackupBytes, originalWallet: WalletBackupBytes): Unit =
-    assert(retrievedWallet.deep.equals(originalWallet.deep))
+    assert(retrievedWallet sameElements originalWallet)
 }
 
 object BackupSpecVars extends CanGenerateDid {

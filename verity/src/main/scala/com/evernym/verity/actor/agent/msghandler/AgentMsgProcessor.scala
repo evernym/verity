@@ -311,7 +311,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         // Other signals go regularly.
         case _ =>
           recordOutMsgDeliveryEvent(msgId)
-          sendToAgentActor(SendMsgToMyDomain(omp, msgId, msgType.msgName, ParticipantUtil.DID(omc.from), thread))
+          sendToAgentActor(SendMsgToMyDomain(omp, msgId, msgType.msgName, ParticipantUtil.DID(omc.from), None, thread))
       }
       NEXT_HOP_MY_EDGE_AGENT
     } else {
@@ -459,7 +459,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
       case e @ (_: NotFoundErrorException) =>
         forwardToAgentActor(UnhandledMsg(amw, reqMsgContext, e))
       case e: RuntimeException =>
-        handleException(e, sender)
+        handleException(e, sender())
     }
   }
 
@@ -556,7 +556,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
             routingMsgHandler(rmc, sndr)(amw)
           case None     => processUnhandledMsg(amw, rmc, e, sndr)
         }
-      case e: RuntimeException => handleException(e, sender)
+      case e: RuntimeException => handleException(e, sender())
     }
   }
 
@@ -718,7 +718,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
         }
       case _ => true
     }
-    if (isValid) Right(Unit) else Left(PAYLOAD_ERROR)
+    if (isValid) Right((): Unit) else Left(PAYLOAD_ERROR)
   }
 
   private def getLimitForMsgType(msgType: MsgType): Option[Config] = {
@@ -794,9 +794,9 @@ class AgentMsgProcessor(val appConfig: AppConfig,
                                                msgRespConfigOpt: Option[MsgRespConfig]): Unit = {
     // flow diagram: proto, step 11 -- send 200 OK
     msgRespConfigOpt match {
-      case None => sender ! Done
+      case None => sender() ! Done
       case Some(mrc) if msgRespContext.isEmpty =>
-        val respWaitingActorRef = if (mrc.isSyncReq) Some(sender) else None
+        val respWaitingActorRef = if (mrc.isSyncReq) Some(sender()) else None
         msgRespContext = Option(MsgRespContext(senderPartiId, mrc.packForVerKey, respWaitingActorRef))
       case _ =>
         //this would be the case wherein protocol sent a signal message to be handled by agent actor
@@ -837,6 +837,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
               msgId,
               fwdMsg.fwdMsgType.getOrElse(MSG_TYPE_UNKNOWN),
               ParticipantUtil.DID(param.selfParticipantId),
+              fwdMsg.fwdMsgSender,
               None
             )
           )
@@ -1057,6 +1058,7 @@ case class SendMsgToMyDomain(om: OutgoingMsgParam,
                              msgId: MsgId,
                              msgName: MsgName,
                              senderDID: DidStr,
+                             senderName: Option[String],
                              threadOpt: Option[Thread]) extends ActorMessage
 
 case class SendMsgToTheirDomain(om: OutgoingMsgParam,

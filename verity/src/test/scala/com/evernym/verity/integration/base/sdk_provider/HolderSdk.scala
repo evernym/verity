@@ -22,7 +22,7 @@ import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, 
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.protocol.engine.Constants.{MFV_0_6, MFV_1_0}
 import com.evernym.verity.protocol.engine.ThreadId
-import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateCloudAgent, RequesterKeys}
+import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, CreateCloudAgent, ProvisionToken, RequesterKeys}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg.{ConnRequest, ConnResponse, Connection}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, RequestCred}
@@ -73,9 +73,14 @@ case class HolderSdk(param: SdkParam,
     parseAndUnpackResponse[UpgradeInfoRespMsg_MFV_1_0](checkOKResponse(sendPOST(routedPackedMsg))).msg
   }
 
-  def provisionVerityCloudAgent(): AgentCreated = {
+  def provisionVerityCloudAgent(provToken: ProvisionToken): AgentCreated = {
+    fetchAgencyKey()
+    provisionVerityCloudAgent(Option(provToken))
+  }
+
+  def provisionVerityCloudAgent(provToken: Option[ProvisionToken] = None): AgentCreated = {
     val reqKeys = RequesterKeys(localAgentDidPair.did, localAgentDidPair.verKey)
-    provisionVerityAgentBase(CreateCloudAgent(reqKeys, None))
+    provisionVerityAgentBase(CreateCloudAgent(reqKeys, provToken))
   }
 
   def sendCreateNewKey(connId: String): PairwiseRel = {
@@ -289,7 +294,8 @@ case class HolderSdk(param: SdkParam,
       MPF_INDY_PACK,
       packedMsg,
       routingKeys,
-      fwdMsgType
+      fwdMsgType,
+      None
     )(
       new AgentMsgTransformer(
         testWalletAPI,
@@ -329,14 +335,19 @@ case class HolderSdk(param: SdkParam,
     )
   }
 
-  private def sendUpdateMsgStatusAsReviewedForConn(connId: String, msgId: MsgId): Unit = {
-    updateMsgStatusOnConn(connId, msgId, "MS-106")
+  private def sendUpdateMsgStatusAsReviewedForConn(msgId: MsgId, connId: Option[String]): Unit = {
+    updateMsgStatusOnConn(msgId, "MS-106", connId)
   }
 
-  def updateMsgStatusOnConn(connId: String, msgId: MsgId, statusCode: String): Unit = {
+  def updateMsgStatusOnConn(msgId: MsgId, statusCode: String, connId: Option[String]): Unit = {
     val updateMsgStatus = UpdateMsgStatusReqMsg_MFV_0_6(statusCode, List(msgId))
     val updateMsgStatusJson = JsonMsgUtil.createJsonString(MSG_TYPE_DETAIL_UPDATE_MSG_STATUS, updateMsgStatus)
-    val routedPackedMsg = packForMyPairwiseRel(connId, updateMsgStatusJson)
+    val routedPackedMsg = {
+      connId match {
+        case Some(cId) => packForMyPairwiseRel(cId, updateMsgStatusJson)
+        case None      => packForMyVerityAgent(updateMsgStatusJson)
+      }
+    }
     parseAndUnpackResponse[MsgStatusUpdatedRespMsg_MFV_0_6](checkOKResponse(sendPOST(routedPackedMsg)))
   }
 
@@ -372,8 +383,8 @@ case class HolderSdk(param: SdkParam,
       val msg = result.find(m => m.`type` == msgTypeStr && statusCodes.forall(scs => scs.contains(m.statusCode)))
       msg match {
         case Some(m) if excludePayload.contains(NO) && m.payload.isDefined =>
-          val unpackedMsg = unpackMsg(m.payload.get).copy(msgIdOpt = Option(m.uid))
-          connId.foreach(sendUpdateMsgStatusAsReviewedForConn(_, m.uid))
+          val unpackedMsg: ReceivedMsgParam[T] = unpackMsg(m.payload.get).copy(msgIdOpt = Option(m.uid))
+          sendUpdateMsgStatusAsReviewedForConn(m.uid, connId)
           return unpackedMsg
         case Some(m) if excludePayload.contains(NO) =>
           throw new RuntimeException("expected message found without payload: " + m)

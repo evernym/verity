@@ -147,7 +147,7 @@ object DevEnvironment {
   def checkScala(jdkVer: String, sbtVer: String, indent: Int = 2): Boolean = {
     printCheckHeading("Scala", Need.Core)
     val checkJdkVer = run("javac -version")
-    printDetection("JDK", checkJdkVer, eqVer(checkJdkVer, jdkVer.toDouble), indent)
+    printDetection("JDK", checkJdkVer, eqVer(checkJdkVer, jdkVer), indent)
 
     printDetection("SBT", sbtVer, hasVer(Try(sbtVer)), indent)
   }
@@ -242,6 +242,7 @@ case class Ubuntu(codeName: String, toolsCheck: Boolean) extends OS {
   val version: String = codeName match {
     case "bionic" => "18.04"
     case "xenial" => "16.04"
+    case "focal" => "20.04"
   }
 
   override def checkRepo(repo: DebianRepo, indent: Int = 2): Boolean = {
@@ -398,7 +399,7 @@ object DevEnvironmentUtil {
       })
   }
 
-  def eqVer(text: Try[String], ver: Double): Boolean = {
+  def eqVer(text: Try[String], ver: String): Boolean = {
     text
       .map(findVer)
       .map(_.contains(ver))
@@ -412,9 +413,9 @@ object DevEnvironmentUtil {
       .getOrElse(false)
   }
 
-  val FLOATING_POINT_VERSION_PAT: Regex = "(\\d+\\.\\d+)".r
+  val FLOATING_POINT_VERSION_PAT: Regex = "(\\d+\\.\\d+\\.\\d+)".r
 
-  def findVer(text:String): Option[Double] = {
-    FLOATING_POINT_VERSION_PAT.findFirstIn(text).map(_.toDouble)
+  def findVer(text:String): Option[String] = {
+    FLOATING_POINT_VERSION_PAT.findFirstIn(text)
   }
 }

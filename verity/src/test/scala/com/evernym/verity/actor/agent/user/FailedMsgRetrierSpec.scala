@@ -2,8 +2,8 @@ package com.evernym.verity.actor.agent.user
 
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.testkit.EventFilter
-import com.evernym.verity.util2.{ExecutionContextProvider, Status}
-import com.evernym.verity.actor.{ActorMessage, ForIdentifier, HasAppConfig, ItemUpdated, ShardUtil}
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.actor.{ActorMessage, ForIdentifier, HasAppConfig, MsgStatusUpdated, ShardUtil}
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.base.{Done, Ping, Stop}
@@ -134,17 +134,17 @@ class MockAgentActor(val appConfig: AppConfig, executionContext: ExecutionContex
   def agentCmd: Receive = {
     case um: UpdateMsgDeliveryStatus =>
       if (um.isFailed) {
-        writeAndApply(ItemUpdated(um.uid))
+        writeAndApply(MsgStatusUpdated(um.uid, Status.MSG_DELIVERY_STATUS_FAILED.statusCode))
       }
-      sender ! Done
+      sender() ! Done
 
-    case GetPending => sender ! PendingMsgs(pendingMsgs)
+    case GetPending => sender() ! PendingMsgs(pendingMsgs)
   }
 
   override def receiveCmd: Receive = agentCmd orElse retryCmdReceiver
 
   override def receiveEvent: Receive = {
-    case iu: ItemUpdated => pendingMsgs += iu.id
+    case msu: MsgStatusUpdated => pendingMsgs += msu.uid
   }
 
   var pendingMsgs = Set.empty[String]

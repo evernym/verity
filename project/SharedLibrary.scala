@@ -92,8 +92,8 @@ object SharedLibrary {
 
   private def modifyVer(os: Ubuntu, pkgName: String, pkgVer: String) = {
     pkgName match {
-      case "libindy" => s"$pkgVer-${os.codeName}"
-      case "libnullpay" => s"$pkgVer-${os.codeName}"
+      case "libvdrtools" => s"$pkgVer-${os.codeName}"
+      //case "libnullpay" => s"$pkgVer-${os.codeName}"
       case _ => pkgVer
     }
   }
@@ -103,7 +103,7 @@ object SharedLibrary {
   private def checkDeps(packageName: String, packageVersion: String, dest: Path): Unit = {
     val deps = findDeps(packageName, packageVersion, dest)
     packageName match {
-      case "libindy" =>
+      case "libvdrtools" =>
         deps.foreach{ d =>
           try {
             Seq(
@@ -113,12 +113,12 @@ object SharedLibrary {
             ).!!
           }
           catch {
-            case e:RuntimeException => throw new Exception(s"Dependency '$d' NOT found for libindy", e)
+            case e:RuntimeException => throw new Exception(s"Dependency '$d' NOT found for libvdrtools", e)
           }
         }
       case _ =>
-        if(!(deps.length == 1 && deps.head.contains("libindy"))) {
-          throw new Exception(s"'$packageName' has a dependency that is not libindy -- currently not allowed")
+        if(!(deps.length == 1 && deps.head.contains("libvdrtools"))) {
+          throw new Exception(s"'$packageName' has a dependency that is not libvdrtools -- currently not allowed")
         }
     }
   }

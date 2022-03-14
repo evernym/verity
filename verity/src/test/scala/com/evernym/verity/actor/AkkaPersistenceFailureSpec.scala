@@ -97,10 +97,10 @@ class DummyActor(executionContext: ExecutionContext) extends BasePersistentActor
       writeApplyAndSendItBack(MockEvent3(ad.did, ad.data))
 
     case gd: GetData =>
-      sender ! didData.get(gd.did)
+      sender() ! didData.get(gd.did)
 
     case bd: BadPersistenceData =>
-      persistExt(BackupStored(ByteString.copyFrom(bd.data)))(() => _)
+      persistExt(BackupStored(ByteString.copyFrom(bd.data)))(_ => {})
 
     case RestartNow =>
       val cre = new InternalServerErrorException(UNHANDLED.statusCode, Option(UNHANDLED.statusMsg))

@@ -6,8 +6,7 @@ import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityContext, Ent
 import akka.persistence.typed.{DeleteEventsCompleted, DeleteEventsFailed, DeleteSnapshotsFailed, PersistenceId, RecoveryCompleted, SnapshotCompleted, SnapshotFailed}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect, RetentionCriteria}
 import com.evernym.verity.util2.Status.StatusDetail
-import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.actor.itemmanager.ItemManagerEntityHelper
+import com.evernym.verity.actor.{ActorMessage, RetentionCriteriaBuilder}
 import com.evernym.verity.msgoutbox._
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta
 import com.evernym.verity.msgoutbox.message_meta.MessageMeta.MsgActivity
@@ -19,7 +18,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_packager.MsgPackagers
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.MsgTransports
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.actor.typed.base.{PersistentEventAdapter, PersistentStateAdapter}
-import com.evernym.verity.config.ConfigConstants.{OUTBOX, OUTBOX_BATCH_SIZE, OUTBOX_OAUTH_RECEIVE_TIMEOUT, OUTBOX_RECEIVE_TIMEOUT, OUTBOX_RETENTION_SNAPSHOT_AFTER_EVERY_EVENTS, OUTBOX_RETENTION_SNAPSHOT_DELETE_EVENTS_ON_SNAPSHOTS, OUTBOX_RETENTION_SNAPSHOT_KEEP_SNAPSHOTS, OUTBOX_SCHEDULED_JOB_INTERVAL, SALT_EVENT_ENCRYPTION}
+import com.evernym.verity.config.ConfigConstants.{OUTBOX, OUTBOX_BATCH_SIZE, OUTBOX_OAUTH_RECEIVE_TIMEOUT, OUTBOX_RECEIVE_TIMEOUT, OUTBOX_RETENTION_SNAPSHOT, OUTBOX_SCHEDULED_JOB_INTERVAL, SALT_EVENT_ENCRYPTION}
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.did.VerKeyStr
@@ -32,11 +31,12 @@ import com.evernym.verity.util.TimeZoneUtil
 import com.evernym.verity.util2.Status
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
+
 import java.time.ZonedDateTime
 import java.util.UUID
-
 import akka.pattern.StatusReply
 import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
+import com.evernym.verity.item_store.ItemStoreEntityHelper
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -157,7 +157,7 @@ object Outbox {
             dispatcher,
             relResolver,
             messageMetaReplyAdapter,
-            new ItemManagerEntityHelper(entityContext.entityId, TypeKey.name, actorContext.system),
+            new ItemStoreEntityHelper(entityContext.entityId, TypeKey.name, actorContext.system),
             timer,
             msgRepository
           )
@@ -255,7 +255,7 @@ object Outbox {
         rfa.isItANotification, rfa.isAnyRetryAttemptsLeft, st)
       Effect
         .persist(MsgSendingFailed(rfa.msgId, rfa.comMethodId, isDeliveryFailed))
-        .thenRun((_: State) => setup.itemManagerEntityHelper.register())
+        .thenRun((_: State) => setup.itemStoreEntityHelper.register())
         .thenRun((_: State) => if (rfa.sendAck) setup.dispatcher.ack(rfa.msgId))
         .thenRun((_: State) => if (isDeliveryFailed && ! rfa.isItANotification) {
           setup.metricsWriter.gaugeIncrement(AS_OUTBOX_MSG_DELIVERY_FAILED_COUNT, tags = comMethodTypeTags(st.comMethods.get(rfa.comMethodId)))
@@ -300,6 +300,7 @@ object Outbox {
         .noReply
   }
 
+  @annotation.nowarn
   private def updateConfigCommandHandler(st: States.Initialized)(implicit setup: SetupOutbox): UpdateOutboxCmd => ReplyEffect[Event, State] = {
     case Commands.UpdateOutboxParam(StatusReply.Success(WalletUpdateParam(walletId, senderVerKey, comMethods))) =>
       if (st.senderVerKey != senderVerKey || st.comMethods != comMethods) {
@@ -581,7 +582,7 @@ object Outbox {
   private def processPendingDeliveries(st: State)(implicit setup: SetupOutbox): Unit = {
     val pendingMsgs = getPendingMsgs(st)
     if (pendingMsgs.isEmpty) {
-      setup.itemManagerEntityHelper.deregister()
+      setup.itemStoreEntityHelper.deregister()
     } else {
       st match {
         case i: States.Initialized =>
@@ -670,24 +671,13 @@ object Outbox {
   def prepareEventEncryptionSalt(config: Config): String = config.getString(SALT_EVENT_ENCRYPTION)
 
   def prepareRetentionCriteria(config: Config): RetentionCriteria = {
-    val ch = ConfigReadHelper(config)
-
-    val rcsAfterEveryEvents: Int = ch.getIntOption(OUTBOX_RETENTION_SNAPSHOT_AFTER_EVERY_EVENTS)
-      .getOrElse(DEFAULT_RETENTION_SNAPSHOT_AFTER_EVERY_EVENTS)
-
-    val rcsKeepSnapshots: Int = ch.getIntOption(OUTBOX_RETENTION_SNAPSHOT_KEEP_SNAPSHOTS)
-      .getOrElse(DEFAULT_RETENTION_SNAPSHOT_KEEP_SNAPSHOTS)
-
-    val rcsDeleteEventsSnapshot: Boolean = ch.getBooleanOption(OUTBOX_RETENTION_SNAPSHOT_DELETE_EVENTS_ON_SNAPSHOTS)
-      .getOrElse(DEFAULT_RETENTION_SNAPSHOT_DELETE_EVENTS_ON_SNAPSHOTS)
-
-    val retentionCriteria = RetentionCriteria.snapshotEvery(numberOfEvents = rcsAfterEveryEvents,
-      keepNSnapshots = rcsKeepSnapshots)
-
-    if (rcsDeleteEventsSnapshot)
-      retentionCriteria.withDeleteEventsOnSnapshot
-    else
-      retentionCriteria
+    RetentionCriteriaBuilder.build(
+      config,
+      OUTBOX_RETENTION_SNAPSHOT,
+      DEFAULT_RETENTION_SNAPSHOT_AFTER_EVERY_EVENTS,
+      DEFAULT_RETENTION_SNAPSHOT_KEEP_SNAPSHOTS,
+      DEFAULT_RETENTION_SNAPSHOT_DELETE_EVENTS_ON_SNAPSHOTS
+    )
   }
 
   def prepareOutboxConfig(config: Config): OutboxConfig = {
@@ -744,6 +734,6 @@ case class SetupOutbox(actorContext: ActorContext[Cmd],
                        dispatcher: Dispatcher,
                        relResolver: RelResolver,
                        messageMetaReplyAdapter: ActorRef[MessageMeta.ProcessedForOutboxReply],
-                       itemManagerEntityHelper: ItemManagerEntityHelper,
+                       itemStoreEntityHelper: ItemStoreEntityHelper,
                        timer: TimerScheduler[Cmd],
                        msgRepository: MessageRepository)

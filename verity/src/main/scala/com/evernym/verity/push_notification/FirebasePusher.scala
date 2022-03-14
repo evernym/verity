@@ -11,8 +11,7 @@ import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgcodec.DecodingException
-import com.evernym.verity.config.{AppConfig, AppConfigWrapper}
-import com.evernym.verity.http.common.ConfigSvc
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.util2.Exceptions
 import com.typesafe.scalalogging.Logger
@@ -20,52 +19,37 @@ import com.typesafe.scalalogging.Logger
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
-case class FirebasePushNotifErrorResult(error: String)
-
-case class FirebasePushNotifSuccessResult(message_id: String)
-
-
-trait FirebasePushNotifCommonResponse {
-  def multicast_id: Long
-  def success: Int
-  def failure: Int
-  def canonical_ids: Int
-}
-
-case class FirebasePushNotifErrorResponse(
-                                           multicast_id: Long,
-                                           success: Int,
-                                           failure: Int,
-                                           canonical_ids: Int,
-                                           results: List[FirebasePushNotifErrorResult])
-  extends FirebasePushNotifCommonResponse
-
-case class FirebasePushNotifSuccessResponse(
-                                             multicast_id: Long,
-                                             success: Int,
-                                             failure: Int,
-                                             canonical_ids: Int,
-                                             results: List[FirebasePushNotifSuccessResult])
-  extends FirebasePushNotifCommonResponse
-
-
-class FirebasePusher(serviceParam: FirebasePushServiceParam, executionContext: ExecutionContext, ac: AppConfig)
-  extends PushServiceProvider
-    with ConfigSvc {
+class FirebasePusher(appConfig: AppConfig,
+                     executionContext: ExecutionContext,
+                     serviceParam: FirebasePushServiceParam)
+  extends PushServiceProvider {
 
   implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   lazy val logger: Logger = getLoggerByName("FirebasePusher")
-  lazy val appConfig: AppConfig = ac
 
   override lazy val comMethodPrefix= "FCM"
 
-  def convertToMsg[T: ClassTag](jsonString: String): T = {
-    try {
-      DefaultMsgCodec.fromJson(jsonString)
-    } catch {
-      case e: DecodingException =>
-        throw new BadRequestErrorException(UNHANDLED.statusCode, msgDetail=Option(e.getMessage))
+  def push(notifParam: PushNotifParam)
+          (implicit system: ActorSystem): Future[PushNotifResponse] = {
+
+    val pushContent = createPushContent(notifParam)
+    val httpClient = Http().outgoingConnectionHttps(serviceParam.host)
+    val auth = RawHeader("Authorization", s"key=${serviceParam.key}")
+    for {
+      response <-
+        Source.single(
+          HttpRequest(
+            method = HttpMethods.POST,
+            uri = Uri(serviceParam.path),
+            headers = List(auth)
+          ).withEntity(ContentTypes.`application/json`, pushContent)
+        )
+          .via(httpClient)
+          .mapAsync(1)(response => Unmarshal(response.entity).to[String])
+          .runWith(Sink.head)
+    } yield {
+      handleResponse(notifParam.comMethodValue, response, notifParam.regId)
     }
   }
 
@@ -108,28 +92,44 @@ class FirebasePusher(serviceParam: FirebasePushServiceParam, executionContext: E
     }
   }
 
-  def push(notifParam: PushNotifParam)
-          (implicit system: ActorSystem): Future[PushNotifResponse] = {
-
-    val pushContent = createPushContent(notifParam)
-    val httpClient = Http().outgoingConnectionHttps(serviceParam.host)
-    val auth = RawHeader("Authorization", s"key=${serviceParam.key}")
-    for {
-      response <-
-        Source.single(
-          HttpRequest(
-            method = HttpMethods.POST,
-            uri = Uri(serviceParam.path),
-            headers = List(auth)
-          ).withEntity(ContentTypes.`application/json`, pushContent)
-        )
-          .via(httpClient)
-          .mapAsync(1)(response => Unmarshal(response.entity).to[String])
-          .runWith(Sink.head)
-    } yield {
-      handleResponse(notifParam.comMethodValue, response, notifParam.regId)
+  private def convertToMsg[T: ClassTag](jsonString: String): T = {
+    try {
+      DefaultMsgCodec.fromJson(jsonString)
+    } catch {
+      case e: DecodingException =>
+        throw new BadRequestErrorException(UNHANDLED.statusCode, msgDetail=Option(e.getMessage))
     }
   }
+
 }
 
 case class FirebasePushServiceParam(key: String, host: String, path: String)
+
+case class FirebasePushNotifErrorResult(error: String)
+
+case class FirebasePushNotifSuccessResult(message_id: String)
+
+
+trait FirebasePushNotifCommonResponse {
+  def multicast_id: Long
+  def success: Int
+  def failure: Int
+  def canonical_ids: Int
+}
+
+case class FirebasePushNotifErrorResponse(
+                                           multicast_id: Long,
+                                           success: Int,
+                                           failure: Int,
+                                           canonical_ids: Int,
+                                           results: List[FirebasePushNotifErrorResult])
+  extends FirebasePushNotifCommonResponse
+
+case class FirebasePushNotifSuccessResponse(
+                                             multicast_id: Long,
+                                             success: Int,
+                                             failure: Int,
+                                             canonical_ids: Int,
+                                             results: List[FirebasePushNotifSuccessResult])
+  extends FirebasePushNotifCommonResponse
+

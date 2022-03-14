@@ -53,6 +53,15 @@ trait AgentCommon
 
   def agentCommonCmdReceiver[A]: Receive = {
     case _: AgentActorDetailSet    => //nothing to do
+    case SetMissingRoute =>
+      val sndr = sender()
+      state
+        .myDid
+        .map(d => setRoute(d, state.thisAgentKeyDID))
+        .getOrElse(Future.failed(throw new RuntimeException("myDID not set")))
+        .map { _ =>
+          sndr ! MissingRouteSet
+        }
   }
 
   def receiveAgentInitCmd: Receive = {
@@ -63,7 +72,7 @@ trait AgentCommon
       if (events.nonEmpty) {
         writeAllWithoutApply(events.toList)
       }
-      sender ! Done
+      sender() ! Done
     case FixAgentState => fixAgentState()
   }
 
@@ -379,7 +388,8 @@ case class SetupCreateKeyEndpoint(newAgentKeyDIDPair: DidPair,
                                   ownerAgentKeyDIDPair: Option[DidPair] = None,
                                   ownerAgentActorEntityId: Option[EntityId]=None,
                                   pid: Option[ProtocolIdDetail]=None,
-                                  publicIdentity: Option[DidPair]=None) extends ActorMessage {
+                                  publicIdentity: Option[DidPair]=None,
+                                  ownerName: Option[String]=None) extends ActorMessage {
 
   def ownerAgentKeyDIDPairReq: DidPair = ownerAgentKeyDIDPair.getOrElse(
     throw new RuntimeException("ownerAgentKeyDIDPair not supplied")
@@ -468,3 +478,6 @@ trait PayloadMetadataBase {
 }
 
 object FixAgentState extends ActorMessage
+
+case object SetMissingRoute extends ActorMessage
+case object MissingRouteSet extends ActorMessage

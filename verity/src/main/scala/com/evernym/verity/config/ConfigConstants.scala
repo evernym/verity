@@ -28,13 +28,12 @@ object ConfigConstants {
 
   val PUSH_NOTIF = s"$SERVICES.push-notif-service"
   val PUSH_NOTIF_ENABLED = s"$PUSH_NOTIF.enabled"
+
   private val FCM = s"$PUSH_NOTIF.fcm"
+  val FCM_PROVIDER = s"$FCM.provider"
   val FCM_API_HOST = s"$FCM.host"
   val FCM_API_PATH = s"$FCM.path"
   val FCM_API_KEY = s"$FCM.key"
-
-  val MCM_ENABLED = s"$PUSH_NOTIF.mcm.enabled"
-  val MCM_SEND_MSG = s"$PUSH_NOTIF.mcm.send-messages-to-endpoint"
 
   val PUSH_NOTIF_GENERAL_MSG_TITLE_TEMPLATE = s"$PUSH_NOTIF.general-msg-title-template"
   val PUSH_NOTIF_GENERAL_NEW_MSG_BODY_TEMPLATE = s"$PUSH_NOTIF.general-new-msg-body-template"
@@ -126,7 +125,6 @@ object ConfigConstants {
 
   val LIB_INDY_LEDGER_TAA_AGREEMENTS = s"$LIB_INDY_LEDGER_TAA.agreements"
   val LIB_INDY_LEDGER_TAA_ENABLED = s"$LIB_INDY_LEDGER_TAA.enabled"
-  val LIB_INDY_LEDGER_TAA_AUTO_ACCEPT = s"$LIB_INDY_LEDGER_TAA.auto-accept"
 
   private val LIB_INDY_LEDGER_POOL_CONFIG = s"$LIB_INDY_LEDGER.pool-config"
   val LIB_INDY_LEDGER_POOL_CONFIG_CONN_MANAGER_OPEN_TIMEOUT= s"$LIB_INDY_LEDGER_POOL_CONFIG.connection-manager-open-timeout"
@@ -261,15 +259,6 @@ object ConfigConstants {
   val APP_STATE_MANAGER_STATE_INITIALIZING = s"$APP_STATE_MANAGER_STATE.initializing"
   val APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_COUNT = s"$APP_STATE_MANAGER_STATE_INITIALIZING.max-retry-count"
   val APP_STATE_MANAGER_STATE_INITIALIZING_MAX_RETRY_DURATION = s"$APP_STATE_MANAGER_STATE_INITIALIZING.max-retry-duration"
-
-  val ITEM_CONTAINER = s"$VERITY.item-container"
-  val ITEM_CONTAINER_MAPPER_CLASS = s"$ITEM_CONTAINER.mapper.class"
-  val ITEM_CONTAINER_SCHEDULED_JOB = s"$ITEM_CONTAINER.scheduled-job"
-  val ITEM_CONTAINER_SCHEDULED_JOB_INTERVAL_IN_SECONDS = s"$ITEM_CONTAINER_SCHEDULED_JOB.interval-in-seconds"
-
-  val ITEM_CONTAINER_MIGRATION = s"$ITEM_CONTAINER.migration"
-  val ITEM_CONTAINER_MIGRATION_CHUNK_SIZE = s"$ITEM_CONTAINER_MIGRATION.chunk-size"
-  val ITEM_CONTAINER_MIGRATION_CHECK_RESULT_HISTORY_SIZE = s"$ITEM_CONTAINER_MIGRATION.check-result-history-size"
 
   val ITEM_WATCHER = s"$VERITY.item-watcher"
   val ITEM_WATCHER_BATCH_SIZE = s"$ITEM_WATCHER.batch-size"

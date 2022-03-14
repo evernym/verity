@@ -22,11 +22,3 @@ message ResourceUsageState {
     option (scalapb.message).extends = "com.evernym.verity.actor.State";
     repeated ResourceBucket resourceBuckets = 1;
 }
-
-message ItemManagerState {
-    option (scalapb.message).extends = "com.evernym.verity.actor.State";
-    int32 totalEverAllocatedContainers = 1;
-    string headContainerEntityId = 2;
-    string tailContainerEntityId = 3;
-    bool migrateItemsToNextLinkedContainer = 4;
-}

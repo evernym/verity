@@ -140,13 +140,13 @@ trait GetInviteRestEndpointHandler
             extractClientIP { implicit remoteAddress =>
               pathPrefix("invite") {
                 (get & pathEnd) {
-                  parameters('t) { token =>
+                  parameters(Symbol("t")) { token =>
                     handleGetInviteByTokenReq(token)
                   }
                 } ~
                 pathPrefix(Segment) { DID =>
                   (get & pathEnd) {
-                    parameters('uid) { uid =>
+                    parameters(Symbol("uid")) { uid =>
                       handleGetInviteByDIDAndUidReq(DID, uid)
                     }
                   }

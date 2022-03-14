@@ -37,7 +37,7 @@ class ResourceUsageTracker (val appConfig: AppConfig,
   override val receiveCmd: Receive = LoggingReceive.withLabel("receiveCmd") {
     case aru: AddResourceUsage              => addResourceUsage(aru)
     case gru: GetResourceUsage              => sendResourceUsage(gru)
-    case GetAllResourceUsages               => sender ! getResourceUsages
+    case GetAllResourceUsages               => sender() ! getResourceUsages
     case urul: UpdateResourcesUsageLimit    => updateResourceUsageLimit(urul)
     case uruc: UpdateResourcesUsageCounter  => updateResourceUsageCounter(uruc)
     case _ @ (_: UpdateBlockingStatus |
@@ -105,13 +105,13 @@ class ResourceUsageTracker (val appConfig: AppConfig,
         analyzeUsage(aru)
       }
       if (aru.sendBackAck)
-        sender ! Done
+        sender() ! Done
     }
   }
 
   def sendResourceUsage(gru: GetResourceUsage): Unit = {
     val ru = resourceUsageTracker.getResourceUsageByBuckets(gru.resourceName)
-    sender ! ru
+    sender() ! ru
   }
 
   def updateResourceUsageLimit(urul: UpdateResourcesUsageLimit): Unit = {
@@ -127,14 +127,14 @@ class ResourceUsageTracker (val appConfig: AppConfig,
       }
       writeAndApply(ResourceUsageLimitUpdated(srul.resourceName, srul.bucketId, newLimit))
     }
-    sender ! Done
+    sender() ! Done
   }
 
   def updateResourceUsageCounter(urul: UpdateResourcesUsageCounter): Unit = {
     urul.resourceUsageCounters.foreach { rc =>
       writeAndApply(ResourceUsageCounterUpdated(rc.resourceName, rc.bucketId, rc.newCount.getOrElse(0)))
     }
-    sender ! Done
+    sender() ! Done
   }
 
   /**

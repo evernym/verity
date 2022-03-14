@@ -153,7 +153,7 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
               checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
               pathPrefix("warned") {
                 (get & pathEnd) {
-                  parameters('onlyWarned ? "N", 'onlyUnwarned ? "N", 'onlyActive ? "Y", 'ids.?, 'resourceNames.?) {
+                  parameters(Symbol("onlyWarned") ? "N", Symbol("onlyUnwarned") ? "N", Symbol("onlyActive") ? "Y", Symbol("ids").?, Symbol("resourceNames").?) {
                     (onlyWarned, onlyUnwarned, onlyActive, ids, resourceNames) =>
                       handleGetWarnedList(onlyWarned, onlyUnwarned, onlyActive, ids, resourceNames)
                   }
@@ -161,7 +161,7 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
               } ~
                 pathPrefix("blocked") {
                   (get & pathEnd) {
-                    parameters('onlyBlocked ? "N", 'onlyUnblocked ? "N", 'onlyActive ? "Y", 'ids.?, 'resourceNames.?) {
+                    parameters(Symbol("onlyBlocked") ? "N", Symbol("onlyUnblocked") ? "N", Symbol("onlyActive") ? "Y", Symbol("ids").?, Symbol("resourceNames").?) {
                       (onlyBlocked, onlyUnblocked, onlyActive, ids, resourceNames) =>
                         handleGetBlockedList(onlyBlocked, onlyUnblocked, onlyActive, ids, resourceNames)
                     }

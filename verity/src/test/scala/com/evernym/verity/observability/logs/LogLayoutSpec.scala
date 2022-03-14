@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 
 class LogLayoutSpec extends BasicSpec with MockitoSugar {

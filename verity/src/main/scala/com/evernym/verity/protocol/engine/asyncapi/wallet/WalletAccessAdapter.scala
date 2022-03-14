@@ -244,6 +244,7 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
   }
 
   //AnonCredRequestsAPI
+  @annotation.nowarn
   lazy val masterSecretId: String = {
 
     val salt = appConfig.getStringReq(SALT_WALLET_NAME)

@@ -25,7 +25,7 @@ import java.util.UUID
 
 import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 @Integration
 class LedgerFlowSpec extends BasicSpec
@@ -127,10 +127,6 @@ class LedgerFlowSpec extends BasicSpec
                 ConfigConstants.LIB_INDY_LEDGER_TAA_ENABLED,
                 ConfigValueFactory.fromAnyRef(false)
               )
-              .withValue(
-                ConfigConstants.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT,
-                ConfigValueFactory.fromAnyRef(false)
-              )
               appConfig.setConfig(c)
               val caught = intercept[Exception] {
                 ledgerUtil.bootstrapNewDID(newDID.did, newDID.verKey, "ENDORSER")
@@ -158,10 +154,6 @@ class LedgerFlowSpec extends BasicSpec
                   agreementVersionPath,
                   ConfigValueFactory.fromMap(badConfig.asJava)
                 )
-                .withValue(
-                  ConfigConstants.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT,
-                  ConfigValueFactory.fromAnyRef(false)
-                )
               appConfig.setConfig(c1)
               val caught = intercept[Exception] {
                 ledgerUtil.bootstrapNewDID(newDID.did, newDID.verKey, "ENDORSER")
@@ -179,10 +171,6 @@ class LedgerFlowSpec extends BasicSpec
               val c2 = appConfig
                 .config
                 .withoutPath(agreementVersionPath)
-                .withValue(
-                  ConfigConstants.LIB_INDY_LEDGER_TAA_AUTO_ACCEPT,
-                  ConfigValueFactory.fromAnyRef(false)
-                )
               appConfig.setConfig(c2)
               val caught2 = intercept[Exception] {
                 ledgerUtil.bootstrapNewDID(newDID.did, newDID.verKey, "ENDORSER")

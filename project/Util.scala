@@ -12,7 +12,7 @@ import java.io.File
 import java.nio.file.Files
 import java.util.Optional
 import scala.annotation.tailrec
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration.{Duration, MILLISECONDS, SECONDS, _}
 import scala.language.postfixOps
 
@@ -80,6 +80,10 @@ object Util {
     val dirs = children.filter(_.isDirectory)
     val childDirs = dirs.flatMap(dirsContaining(filter))
     if (children.exists(f => f.isFile && filter(f))) directory :: childDirs  else childDirs
+  }
+
+  implicit class ToAbsolutePaths(paths: Seq[File]){
+    def absolutePaths: Seq[File] = paths.map(_.getAbsoluteFile)
   }
 
   def searchForAdditionalJars(dependencies: Classpath, jarNames: Seq[String]): Seq[(File, String)] = {

@@ -70,15 +70,15 @@ class ActorStateCleanupManager(val appConfig: AppConfig, executionContext: Execu
       completed.values.sum + inProgress.values.sum,
       cleanupStatus)
     if (gs.includeDetails) {
-      sender ! s.copy(registeredRouteStores = Some(registered), resetStatus = Option(resetStatus))
+      sender() ! s.copy(registeredRouteStores = Some(registered), resetStatus = Option(resetStatus))
     } else {
-      sender ! s
+      sender() ! s
     }
   }
 
   def handleStartJob(): Unit = {
     scheduleJob("periodic_job", scheduledJobInterval, ProcessPending)
-    sender ! Done
+    sender() ! Done
   }
 
   def handleStopJob(): Unit = {
@@ -86,7 +86,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig, executionContext: Execu
       sendMsgToActorStateCleanupExecutor(executorEntityId, StopJob)
     }
     stopAllScheduledJobs()
-    sender ! Done
+    sender() ! Done
   }
 
   def handleReset(): Unit = {
@@ -102,7 +102,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig, executionContext: Execu
     if (resetStatus.isAllExecutorDestroyed) {
       completeResetProcess()
     }
-    sender ! Done
+    sender() ! Done
   }
 
   def sendDestroyExecutors(): Unit = {
@@ -200,16 +200,16 @@ class ActorStateCleanupManager(val appConfig: AppConfig, executionContext: Execu
    */
   def handleRegister(r: RegisteredRouteSummary): Unit = {
     if (completed.contains(r.entityId)) {
-      sender ! AlreadyCompleted
+      sender() ! AlreadyCompleted
     } else if (registered.contains(r.entityId)) {
-      sender ! AlreadyRegistered
+      sender() ! AlreadyRegistered
     } else {
       writeApplyAndSendItBack(Registered(r.entityId, r.totalCandidateRoutes))
       if (r.totalCandidateRoutes <= 0 ) {
         handleCompleted(Completed(r.entityId, r.totalCandidateRoutes), duringRegistration = true)
       }
     }
-    sender ! Stop()   //stop route store actor
+    sender() ! Stop()   //stop route store actor
   }
 
   /**
@@ -221,7 +221,7 @@ class ActorStateCleanupManager(val appConfig: AppConfig, executionContext: Execu
     if (! completed.contains(c.entityId)) {
       writeAndApply(c)
     } else if (duringRegistration) {
-      sender ! AlreadyCompleted
+      sender() ! AlreadyCompleted
     }
     if (c.totalProcessedRoutes > 0) {
       //uncomment below line if you want to delete all events of the

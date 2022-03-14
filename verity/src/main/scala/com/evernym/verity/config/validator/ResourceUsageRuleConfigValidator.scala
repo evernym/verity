@@ -12,7 +12,7 @@ import com.evernym.verity.util.SubnetUtilsExt.{getSubnetUtilsExt, isIpAddressOrC
 import com.typesafe.config.ConfigException.Missing
 import com.typesafe.config.{Config, ConfigValue}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 //checks resource usage rule configuration
 object ResourceUsageRuleConfigValidator extends ConfigValidatorCreator {
@@ -61,7 +61,7 @@ class ResourceUsageRuleConfigValidator(val config: Config) extends ConfigValidat
     val r = c.getObject(key).asScala.map { case (k, _) =>
       k -> ResourceTypeUsageRule(getResourceUsageRules(c, s"$key.$k"))
     }.toMap
-    val resourceNameSummary = r.flatMap(_._2.resourceUsageRules.keys.filterNot(_ == "default")).groupBy(identity).mapValues(_.size).filter(_._2 > 1)
+    val resourceNameSummary = r.flatMap(_._2.resourceUsageRules.keys.filterNot(_ == "default")).groupBy(identity).view.mapValues(_.size).filter(_._2 > 1)
     if (resourceNameSummary.nonEmpty) {
       throw new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode,
         Option(s"duplicate resource names found: '${resourceNameSummary.keySet.mkString}'"))

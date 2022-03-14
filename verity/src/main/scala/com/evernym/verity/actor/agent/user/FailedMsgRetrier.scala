@@ -5,10 +5,10 @@ import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_PERSISTENCE_ID
 import com.evernym.verity.actor.{ActorMessage, HasAppConfig}
 import com.evernym.verity.actor.agent.{HasSingletonParentProxy, MsgPackFormat}
 import com.evernym.verity.actor.cluster_singleton.watcher.CheckWatchedItem
-import com.evernym.verity.actor.itemmanager.ItemManagerEntityHelper
 import com.evernym.verity.actor.persistence.BasePersistentActor
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
+import com.evernym.verity.item_store.ItemStoreEntityHelper
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
 
 import scala.concurrent.Future
@@ -106,12 +106,12 @@ trait FailedMsgRetrier
   }
 
   def addItemToWatcher(): Unit = {
-    itemManagerEntityHelper.register()
+    itemStoreEntityHelper.register()
     log.debug("item added to watcher: " + entityId)
   }
 
   def removeItemFromWatcher(): Unit = {
-    itemManagerEntityHelper.deregister()
+    itemStoreEntityHelper.deregister()
     log.debug("item removed from watcher: " + entityId)
   }
 
@@ -122,7 +122,7 @@ trait FailedMsgRetrier
   lazy val maxRetryCount: Int = appConfig.getIntOption(FAILED_MSG_RETRIER_MAX_RETRY_COUNT).getOrElse(5)
 
   import akka.actor.typed.scaladsl.adapter._
-  lazy val itemManagerEntityHelper = new ItemManagerEntityHelper(entityId, entityType, context.system.toTyped)
+  lazy val itemStoreEntityHelper = new ItemStoreEntityHelper(entityId, entityType, context.system.toTyped)
 
   def msgPackFormat(msgId: MsgId): MsgPackFormat
   def batchSize: Option[Int] = None   //can be overridden by implementing class

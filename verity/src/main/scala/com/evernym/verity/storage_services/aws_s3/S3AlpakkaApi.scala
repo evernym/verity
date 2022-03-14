@@ -22,7 +22,11 @@ import scala.language.postfixOps
 //NOTE: if at all this file gets moved to different package, then it will require configuration change
 // so until it is important, should avoid moving this to different package.
 
-class S3AlpakkaApi(config: AppConfig, executionContext: ExecutionContext, overrideConfig: Config = ConfigFactory.empty())(implicit val as: ActorSystem) extends StorageAPI(config, executionContext, overrideConfig) {
+class S3AlpakkaApi(config: AppConfig,
+                   executionContext: ExecutionContext,
+                   overrideConfig: Config = ConfigFactory.empty())(implicit val as: ActorSystem)
+  extends StorageAPI(config, executionContext, overrideConfig) {
+
   private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
   def s3Settings: S3Settings = S3Settings(overrideConfig.withFallback(config.config.getConfig("alpakka.s3")))

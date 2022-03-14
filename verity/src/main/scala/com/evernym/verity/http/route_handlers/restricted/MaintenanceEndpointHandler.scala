@@ -102,7 +102,7 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
     pathPrefix("route-migration") {
       path("status") {
         (get & pathEnd) {
-          parameters('detail.?) { detailOpt =>
+          parameters(Symbol("detail").?) { detailOpt =>
             complete {
               getAgentRouteStoreMigrationStatus(detailOpt).map[ToResponseMarshallable] {
                 case msd: MigrationStatusDetail => handleExpectedResponse(msd)
@@ -161,7 +161,7 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
       // After that, we will remove this.
       path("status") {
         (get & pathEnd) {
-          parameters('detail.?) { detailOpt =>
+          parameters(Symbol("detail").?) { detailOpt =>
             complete {
               getActorStateManagerCleanupStatus(detailOpt).map[ToResponseMarshallable] {
                 case s: ManagerStatus => handleExpectedResponse(s)
@@ -215,7 +215,7 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
           pathPrefix(Segment) { updaterEntityId =>
             path("status") {
               (get & pathEnd) {
-                parameters('detail.?) { detailOpt =>
+                parameters(Symbol("detail").?) { detailOpt =>
                   complete {
                     getActorStateCleanupExecutorStatus(updaterEntityId, detailOpt).map[ToResponseMarshallable] {
                       case s: ExecutorStatus => handleExpectedResponse(s)
@@ -233,7 +233,7 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
     pathPrefix("config") {
       path("reload") {
         (put & pathEnd) {
-          parameters('onAllNodes ? "N") { onAllNodes =>
+          parameters(Symbol("onAllNodes") ? "N") { onAllNodes =>
             complete {
               reloadConfig(onAllNodes).map[ToResponseMarshallable] {
                 case NodeConfigRefreshed => OK

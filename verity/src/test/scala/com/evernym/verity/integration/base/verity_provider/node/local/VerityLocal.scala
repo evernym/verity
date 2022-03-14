@@ -19,6 +19,9 @@ import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
 import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
 
+import com.evernym.verity.vdr.{TestLedgerRegistry, TestVdrToolsBuilder}
+import com.evernym.verity.vdr.service.VDRToolsFactory
+
 import java.nio.file.Path
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor}
@@ -62,7 +65,6 @@ object LocalVerity {
       verityNodeParam.portProfile,
       verityNodeParam.otherNodeArteryPorts,
       verityNodeParam.taaEnabled,
-      verityNodeParam.taaAutoAccept,
       verityNodeParam.serviceParam.flatMap(_.sharedEventStore))
 
     verityNodeParam.overriddenConfig match {
@@ -76,7 +78,6 @@ object LocalVerity {
       .withFallback(baseConfig)
   }
 
-
   private def waitTillUp(appStateManager: ActorRef): Unit = {
     TestKit.awaitCond(isListening(appStateManager), waitAtMost, 200.millis)
   }
@@ -87,17 +88,29 @@ object LocalVerity {
     Await.result(fut, 3.seconds).asInstanceOf[AppState] == ListeningState
   }
 
-  class Starter(appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider) {
-    class MockDefaultAgentActorContext(override val appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider)
+  class Starter(appConfig: AppConfig, serviceParam: Option[ServiceParam],
+                executionContextProvider: ExecutionContextProvider) {
+
+    class MockDefaultAgentActorContext(override val appConfig: AppConfig,
+                                       serviceParam: Option[ServiceParam],
+                                       executionContextProvider: ExecutionContextProvider)
       extends DefaultAgentActorContext(executionContextProvider, appConfig) {
 
       implicit val executor: ExecutionContextExecutor = system.dispatcher
       override lazy val poolConnManager: LedgerPoolConnManager = {
-        new InMemLedgerPoolConnManager(executionContextProvider.futureExecutionContext, serviceParam.flatMap(_.ledgerTxnExecutor))(executor)
+        new InMemLedgerPoolConnManager(
+          executionContextProvider.futureExecutionContext,
+          serviceParam.flatMap(_.ledgerTxnExecutor)
+        )(executor)
       }
       override lazy val storageAPI: StorageAPI = {
-        serviceParam.flatMap(_.storageAPI).getOrElse(StorageAPI.loadFromConfig(appConfig, executionContextProvider.futureExecutionContext))
+        serviceParam
+          .flatMap(_.storageAPI)
+          .getOrElse(StorageAPI.loadFromConfig(appConfig, executionContextProvider.futureExecutionContext))
       }
+
+      val testVdrLedgerRegistry = TestLedgerRegistry()
+      override lazy val vdrBuilderFactory: VDRToolsFactory = () => new TestVdrToolsBuilder(testVdrLedgerRegistry)
     }
 
     val platform: Platform = PlatformBuilder.build(
@@ -108,12 +121,16 @@ object LocalVerity {
   }
 
   object Starter {
-    def apply(appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider): Starter =
+    def apply(appConfig: AppConfig,
+              serviceParam: Option[ServiceParam],
+              executionContextProvider: ExecutionContextProvider): Starter =
       new Starter(appConfig, serviceParam, executionContextProvider)
   }
 
 
-  private def initializeApp(appConfig: AppConfig, serviceParam: Option[ServiceParam], executionContextProvider: ExecutionContextProvider): Platform = {
+  private def initializeApp(appConfig: AppConfig,
+                            serviceParam: Option[ServiceParam],
+                            executionContextProvider: ExecutionContextProvider): Platform = {
     val s = Starter(appConfig, serviceParam, executionContextProvider)
     assert(s.platform != null)
     s.platform
@@ -166,7 +183,6 @@ case class ServiceParam(ledgerSvcParam: Option[LedgerSvcParam]=None,
 }
 
 case class LedgerSvcParam(taaEnabled: Boolean = true,
-                          taaAutoAccept: Boolean = true,
                           ledgerTxnExecutor: Option[LedgerTxnExecutor]=None)
 
 case class VerityNodeParam(tmpDirPath: Path,
@@ -177,5 +193,4 @@ case class VerityNodeParam(tmpDirPath: Path,
                            overriddenConfig: Option[Config] = None) {
 
   def taaEnabled: Boolean = serviceParam.flatMap(_.ledgerSvcParam).forall(_.taaEnabled)
-  def taaAutoAccept: Boolean = serviceParam.flatMap(_.ledgerSvcParam).forall(_.taaAutoAccept)
 }

@@ -19,6 +19,8 @@ import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory}
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Millis, Seconds, Span}
 
 import java.util.UUID
 import scala.concurrent.ExecutionContext
@@ -26,7 +28,8 @@ import scala.concurrent.ExecutionContext
 
 class ConnectionMigrationSpec
   extends VerityProviderBaseSpec
-    with SdkProvider {
+    with SdkProvider
+    with Eventually {
 
   lazy val holderCAS = VerityEnvBuilder.default().build(CAS)
   lazy val issuerEAS = VerityEnvBuilder.default().withConfig(TEST_KIT_CONFIG).build(EAS)
@@ -87,6 +90,7 @@ class ConnectionMigrationSpec
             TheirPairwiseDidDoc(
               verity1ConnDetail.theirDidDoc.pairwiseDID, verity1ConnDetail.theirDidDoc.pairwiseDIDVerKey,
               verity1ConnDetail.theirDidDoc.pairwiseAgentDID, verity1ConnDetail.theirDidDoc.pairwiseAgentVerKey,
+              holderCAS.endpointProvider.availableNodeUrls.head + "/agency/msg",
               casAgencyDetail.DID, casAgencyDetail.verKey
             )
           )
@@ -103,21 +107,23 @@ class ConnectionMigrationSpec
   }
 
   def checkPersistedEvents(smc: SetupMigratedConnection): Unit = {
-    val pairwiseAgentActorEntityId = UUID.nameUUIDFromBytes((smc.agent.agentDID + smc.connection.myDidDoc.pairwiseDID).getBytes()).toString
-    issuerVAS.persStoreTestKit.getEvents(PersistenceIdParam(USER_AGENT_PAIRWISE_REGION_ACTOR_NAME, pairwiseAgentActorEntityId)).size shouldBe 3
-    issuerVAS.persStoreTestKit.getEvents(
-      PersistenceIdParam(ROUTE_REGION_ACTOR_NAME, smc.connection.myDidDoc.pairwiseDID),
-      Option(issuerVAS.nodes.head.asInstanceOf[VerityLocalNode].platform.appConfig.getStringReq(ConfigConstants.SECRET_ROUTING_AGENT))
-    ).size shouldBe 1
-    val pinstId = V0_2.resolve(
-      RelationshipDef,
-      smc.agent.agentDID,
-      Option(smc.agent.agentDID),
-      Option(UUID.nameUUIDFromBytes(smc.connection.myDidDoc.pairwiseDID.getBytes()).toString),
-      None,
-      None
-    )
-    issuerVAS.persStoreTestKit.getEvents(PersistenceIdParam("relationship-1.0-protocol", pinstId)).size shouldBe 7
+    eventually(timeout(Span(5, Seconds)), interval(Span(200, Millis))) {
+      val pairwiseAgentActorEntityId = UUID.nameUUIDFromBytes((smc.agent.agentDID + smc.connection.myDidDoc.pairwiseDID).getBytes()).toString
+      issuerVAS.persStoreTestKit.getEvents(PersistenceIdParam(USER_AGENT_PAIRWISE_REGION_ACTOR_NAME, pairwiseAgentActorEntityId)).size shouldBe 3
+      issuerVAS.persStoreTestKit.getEvents(
+        PersistenceIdParam(ROUTE_REGION_ACTOR_NAME, smc.connection.myDidDoc.pairwiseDID),
+        Option(issuerVAS.nodes.head.asInstanceOf[VerityLocalNode].platform.appConfig.getStringReq(ConfigConstants.SECRET_ROUTING_AGENT))
+      ).size shouldBe 1
+      val pinstId = V0_2.resolve(
+        RelationshipDef,
+        smc.agent.agentDID,
+        Option(smc.agent.agentDID),
+        Option(UUID.nameUUIDFromBytes(smc.connection.myDidDoc.pairwiseDID.getBytes()).toString),
+        None,
+        None
+      )
+      issuerVAS.persStoreTestKit.getEvents(PersistenceIdParam("relationship-1.0-protocol", pinstId)).size shouldBe 7
+    }
   }
 
   def setupVerity2EntAgent(): Unit = {

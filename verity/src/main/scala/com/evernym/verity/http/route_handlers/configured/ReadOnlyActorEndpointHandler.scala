@@ -55,7 +55,7 @@ trait ReadOnlyActorEndpointHandler
                   pathPrefix("data") {
                     path("summary") {
                       (get & pathEnd) {
-                        parameters('reload ? "N", 'recoverFromSnapshot ? "Y", 'persEncKey.?) {
+                        parameters(Symbol("reload") ? "N", Symbol("recoverFromSnapshot") ? "Y", Symbol("persEncKey").?) {
                           (reload, recoverFromSnapshot, persEncKey) =>
                           val actorParam = ActorParam(actorTypeName, actorEntityId, recoverFromSnapshot == YES, persEncKey)
                           handleRequest(actorParam, SendSummary, inHtml = NO, reload)
@@ -64,7 +64,7 @@ trait ReadOnlyActorEndpointHandler
                     } ~
                       path("aggregated") {
                         (get & pathEnd) {
-                          parameters('asHtml ? "N", 'reload ? "N", 'recoverFromSnapshot ? "Y", 'persEncKey.?) {
+                          parameters(Symbol("asHtml") ? "N", Symbol("reload") ? "N", Symbol("recoverFromSnapshot") ? "Y", Symbol("persEncKey").?) {
                             (inHtml, reload, recoverFromSnapshot, persEncKey) =>
                             val actorParam = ActorParam(actorTypeName, actorEntityId, recoverFromSnapshot == YES, persEncKey)
                             handleRequest(actorParam, SendAggregated, inHtml, reload)
@@ -73,7 +73,7 @@ trait ReadOnlyActorEndpointHandler
                       } ~
                         path("all") {
                           (get & pathEnd) {
-                            parameters('asHtml ? "N", 'withData ? "N",'reload ? "N", 'recoverFromSnapshot ? "Y", 'persEncKey.?) {
+                            parameters(Symbol("asHtml") ? "N", Symbol("withData") ? "N",Symbol("reload") ? "N", Symbol("recoverFromSnapshot") ? "Y", Symbol("persEncKey").?) {
                               (inHtml, withData, reload, recoverFromSnapshot, persEncKey) =>
                               val actorParam = ActorParam(actorTypeName, actorEntityId, recoverFromSnapshot == YES, persEncKey)
                               handleRequest(actorParam, SendAll(withData), inHtml, reload)

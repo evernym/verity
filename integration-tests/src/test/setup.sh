@@ -42,15 +42,15 @@ echoBoldAndAppendToLog(){
 
 prepare_jars(){
   appendToLogWithDashLinePrefix "preparing verity jars..."
-  appendToLogWithDashLinePrefix "libindy version installed info ..."
+  appendToLogWithDashLinePrefix "libvdrtools version installed info ..."
   # Best effort retrieval of libindy version. Do not fail if apt-cache is not
   # present (i.e. macos). This is important if -e is added to the shebang.
-  apt-cache policy libindy >> ${PROGRESS_LOG_FILE_PATH} || true
-  appendToLogWithDashLinePrefix "libindy version info finished"
+  apt-cache policy libvdrtools >> ${PROGRESS_LOG_FILE_PATH} || true
+  appendToLogWithDashLinePrefix "libvdrtools version info finished"
 
-  appendToLogWithDashLinePrefix "libindy file info..."
-  ls -lrt /usr/lib/libindy.so >> ${PROGRESS_LOG_FILE_PATH}
-  appendToLogWithDashLinePrefix "libindy file info finished"
+  appendToLogWithDashLinePrefix "libvdrtools file info..."
+  ls -lrt /usr/lib/libvdrtools.so >> ${PROGRESS_LOG_FILE_PATH}
+  appendToLogWithDashLinePrefix "libvdrtools file info finished"
 
   pushd ${PROJECT_DIR} > /dev/null
 
@@ -59,7 +59,7 @@ prepare_jars(){
   appendToProgressLog "is source code changed: ${source_code_changed}"
   #  Find application jars
   #  Build application jars if they don't exist
-  if find ${PROJECT_DIR}/verity/target/scala-2.12 -name '*.jar' 2>/dev/null  | grep -q '.'; then
+  if find ${PROJECT_DIR}/verity/target/scala-2.13 -name '*.jar' 2>/dev/null  | grep -q '.'; then
     if [[ "$source_code_changed" == "true" ]]; then
       delete_existing_app_jars
       sbt -mem 2048 assembly >> ${PROGRESS_LOG_FILE_PATH}
@@ -82,7 +82,7 @@ prepare_jars(){
 delete_existing_app_jars() {
   for app in ${APPLICATIONS[*]}
   do
-    rm -f ${PROJECT_DIR}/${app}/target/scala-2.12/*.jar
+    rm -f ${PROJECT_DIR}/${app}/target/scala-2.13/*.jar
   done
 }
 

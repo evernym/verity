@@ -23,6 +23,7 @@ import com.evernym.verity.sdk.utils.{AsJsonObject, Context}
 
 import java.lang
 import java.nio.file.Path
+import java.util.UUID
 import scala.sys.process.Process
 
 class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
@@ -63,15 +64,27 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
                          version: String,
                          func: String,
                          constructParams: Seq[Any] = Seq.empty,
-                         funcParams: Seq[Any] = Seq.empty): String = {
+                         funcParams: Seq[Any] = Seq.empty,
+                         injectThreadId: Option[String] = None): String = {
 
     val versionConversion = ProcessSdkProvider.versionToModule(version)
     val params = mkParams(constructParams)
     val fParams = Seq("context", mkParams(funcParams)).mkString(",")
+
+    val cmd: String = injectThreadId match {
+      case Some(injectThreadId) =>
+        s"""
+        const pp = new sdk.protocols.$versionConversion.$obj($params)
+        pp.threadId = ${stringParam(injectThreadId)}
+        await pp.$func($fParams)
+        """
+      case None => s"await new sdk.protocols.$versionConversion.$obj($params).$func($fParams)"
+    }
+
     executeOneLine(
       ctx,
       s"""require('$scopedModule')""",
-      s"await new sdk.protocols.$versionConversion.$obj($params).$func($fParams)"
+      cmd
     )
   }
 
@@ -150,9 +163,9 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
   override def writeSchema_0_6(name: String, ver: String, attrs: String*): WriteSchemaV0_6 =
     new UndefinedWriteSchema_0_6 {
       override def write(ctx: Context): Unit =
-        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq, None))
+        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq, None), Seq.empty, Some(myThreadId))
       override def write(ctx: Context, endorserDid: String): Unit =
-        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq, None), Seq(endorserDid))
+        executeCmd(ctx, "WriteSchema", this.version, "write", Seq(name, ver, attrs.toSeq, None), Seq(endorserDid), Some(myThreadId))
     }
 
   override def writeCredDef_0_6(name: String,
@@ -166,9 +179,20 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "WriteCredentialDefinition",
           this.version,
           "write",
-          Seq(name, schemaId, tag, revocationDetails.orNull, None))
+          Seq(name, schemaId, tag, revocationDetails.orNull, None),
+          Seq.empty,
+          Some(myThreadId)
+        )
       override def write(ctx: Context, endorserDid: String): Unit =
-        executeCmd(ctx, "WriteCredentialDefinition", this.version, "write", Seq(name, schemaId, tag, revocationDetails.orNull, None), Seq(endorserDid))
+        executeCmd(
+          ctx,
+          "WriteCredentialDefinition",
+          this.version,
+          "write",
+          Seq(name, schemaId, tag, revocationDetails.orNull, None),
+          Seq(endorserDid),
+          Some(myThreadId)
+        )
     }
 
   override def basicMessage_1_0(forRelationship: DidStr,
@@ -182,7 +206,9 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "BasicMessage",
           this.version,
           "message",
-          Seq(forRelationship, None, content, sentTime, localization)
+          Seq(forRelationship, None, content, sentTime, localization),
+          Seq.empty,
+          Some(myThreadId)
         )
     }
   }
@@ -200,20 +226,24 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "CommittedAnswer",
           this.version,
           "ask",
-          Seq(forRelationship, None, questionText, None, questionDescription, validResponses, requireSig)
+          Seq(forRelationship, None, questionText, None, questionDescription, validResponses, requireSig),
+          Seq.empty,
+          Some(myThreadId)
         )
     }
 
 
   override def committedAnswer_1_0(forRelationship: DidStr, threadId: String, answerStr: String): CommittedAnswerV1_0 =
     new UndefinedCommittedAnswer_1_0 {
+      override val myThreadId: String = threadId
+
       override def answer(ctx: Context): Unit =
         executeCmd(
           ctx,
           "CommittedAnswer",
           this.version,
           "answer",
-          Seq(forRelationship, threadId, None, answerStr, None, None, None)
+          Seq(forRelationship, myThreadId, None, answerStr, None, None, None)
         )
 
       override def status(ctx: Context): Unit =
@@ -222,19 +252,21 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "CommittedAnswer",
           this.version,
           "status",
-          Seq(forRelationship, threadId, None, answerStr, None, None, None)
+          Seq(forRelationship, myThreadId, None, answerStr, None, None, None)
         )
     }
 
   override def committedAnswer_1_0(forRelationship: DidStr, threadId: String): CommittedAnswerV1_0 =
     new UndefinedCommittedAnswer_1_0 {
+      override val myThreadId: String = threadId
+
       override def status(ctx: Context): Unit =
         executeCmd(
           ctx,
           "CommittedAnswer",
           this.version,
           "status",
-          Seq(forRelationship, threadId, None, None, None, None, None)
+          Seq(forRelationship, myThreadId, None, None, None, None, None)
         )
     }
 
@@ -246,20 +278,30 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def outOfBand_1_0(forRelationship: String, inviteURL: String): OutOfBandV1_0 = new UndefinedOutOfBand_1_0 {
     override def handshakeReuse(ctx: Context): Unit =
-      executeCmd(ctx, "OutOfBand", version, "handshakeReuse", Seq(None, None, forRelationship, inviteURL))
+      executeCmd(
+        ctx,
+        "OutOfBand",
+        version,
+        "handshakeReuse",
+        Seq(None, None, forRelationship, inviteURL),
+        Seq.empty,
+        Some(myThreadId)
+      )
   }
 
 
   override def relationship_1_0(label: String): RelationshipV1_0 = new UndefinedRelationship_1_0 {
     override def create(ctx: Context): Unit =
-      executeCmd(ctx, "Relationship", version, "create", Seq(None, None, label))
+      executeCmd(ctx, "Relationship", version, "create", Seq(None, None, label), Seq.empty, Some(myThreadId))
   }
 
   override def relationship_1_0(forRelationship: String, threadId: String): RelationshipV1_0 = new UndefinedRelationship_1_0 {
+    override val myThreadId: String = threadId
+
     override def connectionInvitation(ctx: Context, shortInvite: lang.Boolean): Unit =
-      executeCmd(ctx, "Relationship", version, "connectionInvitation", Seq(forRelationship, threadId), Seq(shortInvite))
+      executeCmd(ctx, "Relationship", version, "connectionInvitation", Seq(forRelationship, myThreadId), Seq(shortInvite))
     override def outOfBandInvitation(ctx: Context, shortInvite: lang.Boolean, goal: GoalCode): Unit =
-      executeCmd(ctx, "Relationship", version, "outOfBandInvitation", Seq(forRelationship, threadId), Seq(shortInvite, goal))
+      executeCmd(ctx, "Relationship", version, "outOfBandInvitation", Seq(forRelationship, myThreadId), Seq(shortInvite, goal))
   }
 
   override def issueCredential_1_0(forRelationship: String,
@@ -275,20 +317,23 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
         "IssueCredential",
         this.version,
         "offerCredential",
-        Seq(forRelationship, None, credDefId, credValues, comment, price, autoIssue, byInvitation)
+        Seq(forRelationship, None, credDefId, credValues, comment, price, autoIssue, byInvitation),
+        Seq.empty,
+        Some(myThreadId)
       )
     }
-
   }
 
   override def issueCredential_1_0(forRelationship: String, threadId: String): IssueCredentialV1_0 =
     new UndefinedIssueCredential_1_0 {
-    override def issueCredential(ctx: Context): Unit =
-      executeCmd(ctx, "IssueCredential", this.version, "issueCredential", Seq(forRelationship, threadId))
+      override val myThreadId: String = threadId
 
-    override def status(ctx: Context): Unit =
-      executeCmd(ctx, "IssueCredential", this.version, "status", Seq(forRelationship, threadId))
-  }
+      override def issueCredential(ctx: Context): Unit =
+        executeCmd(ctx, "IssueCredential", this.version, "issueCredential", Seq(forRelationship, myThreadId))
+
+      override def status(ctx: Context): Unit =
+        executeCmd(ctx, "IssueCredential", this.version, "status", Seq(forRelationship, myThreadId))
+    }
 
   override def issueCredentialComplete_1_0(): Unit = ???
 
@@ -304,7 +349,9 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
           "PresentProof",
           this.version,
           "request",
-          Seq(forRelationship, None, name, proofAttrs.toSeq, proofPredicate.toSeq, byInvitation)
+          Seq(forRelationship, None, name, proofAttrs.toSeq, proofPredicate.toSeq, byInvitation),
+          Seq.empty,
+          Some(myThreadId)
         )
       }
     }
@@ -312,12 +359,14 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
 
   override def presentProof_1_0(forRelationship: DidStr, threadId: String): PresentProofV1_0 = {
     new UndefinedPresentProof_1_0 {
+      override val myThreadId: String = threadId
+
       override def status(ctx: Context): Unit = {
-        executeCmd(ctx, "PresentProof", this.version, "status", Seq(forRelationship, threadId))
+        executeCmd(ctx, "PresentProof", this.version, "status", Seq(forRelationship, myThreadId))
       }
 
       override def acceptProposal(ctx: Context): Unit =
-        executeCmd(ctx, "PresentProof", this.version, "acceptProposal", Seq(forRelationship, threadId))
+        executeCmd(ctx, "PresentProof", this.version, "acceptProposal", Seq(forRelationship, myThreadId))
     }
   }
 

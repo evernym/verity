@@ -30,7 +30,7 @@ trait RequiredConfigValidatorBase extends ConfigValidatorBase {
     } else Set.empty
   }
 
-  def commonConfigsToBeValidated(): Set[ConfDetail] = Set (
+  def commonConfigsToBeValidated: Set[ConfDetail] = Set (
     ConfDetail(VERITY_ENDPOINT_HOST),
     ConfDetail(VERITY_ENDPOINT_PORT),
     ConfDetail(VERITY_ENDPOINT_PATH_PREFIX),

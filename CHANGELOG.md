@@ -1,7 +1,8 @@
-Note: When interacting with Verity, it will also be helpful to review [the Verity SDK Release Notes](https://gitlab.com/evernym/verity/verity-sdk/-/blob/main/CHANGELOG.md).
+Note: When interacting with Verity, it will also be helpful to review [the Verity SDK Release Notes](https://gitlab.com/evernym/verity/verity-sdk/-/blob/main/CHANGELOG.md) and [the VDR Tools Release Notes](https://gitlab.com/evernym/verity/vdr-tools/-/blob/main/CHANGELOG.md)
 
 # Release notes - Verity 2.17.3 release 1 March 2022
-Includes VDR Tools 0.8.2 works with Verity SDK 0.6.1
+Works with Verity SDK 0.6.1
+Includes VDR Tools 0.8.2
 
 ## Task
 * [VE-3357] Migrate legacy routing actors to new route actors
@@ -10,7 +11,8 @@ Includes VDR Tools 0.8.2 works with Verity SDK 0.6.1
 * [VE-3395] Update dependencies and refactor pre-launch checks to catch more failures
 
 # Release notes - Verity 2.17.2 release 16 Feb 2022
-Includes VDR Tools 0.8.2 works with Verity SDK 0.6.1
+Works with Verity SDK 0.6.1
+Includes VDR Tools 0.8.2
 
 ## Bug
 * [VE-3343] Fix v1 to v2 migration logic
@@ -31,7 +33,8 @@ Includes VDR Tools 0.8.2 works with Verity SDK 0.6.1
 
 
 # Release notes - Verity 2.17.1 release 1 Feb 2022
-Includes VDR Tools 0.8.2 works with Verity SDK 0.6.0
+Works with Verity SDK 0.6.1
+Includes VDR Tools 0.8.2
 
 ## Bug
 * [VE-3292] fix UPGRADE\_INFO not being sent after routing update on CAS

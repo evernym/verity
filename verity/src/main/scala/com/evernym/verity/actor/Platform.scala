@@ -448,7 +448,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
   lazy val eventConsumerAdapter: ConsumerPort = {
     import akka.actor.typed.scaladsl.adapter._
     val consumerSettingsProvider = ConsumerSettingsProvider(appConfig.config)
-    new KafkaConsumerAdapter(new ConsumedEventHandler, consumerSettingsProvider)(
+    new KafkaConsumerAdapter(new ConsumedEventHandler(singletonParentProxy), consumerSettingsProvider)(
       executionContextProvider.futureExecutionContext, actorSystem.toTyped)
   }
 }

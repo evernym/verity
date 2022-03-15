@@ -1,5 +1,6 @@
 package com.evernym.integrationtests.e2e.third_party_apis.kafka
 
+import akka.Done
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.adapter._
 import akka.kafka.ProducerSettings
@@ -174,9 +175,9 @@ class KafkaAdapterSpec
 class MockEventHandler(id: String) extends EventHandler {
   var events = List.empty[Event]
 
-  override def handleEvent(event: Event): Future[Unit] = {
+  override def handleEvent(event: Event): Future[Done] = {
     events = events :+ event
-    Future.successful(())
+    Future.successful(Done)
   }
 
   def getEvents: List[Event] = events

@@ -36,7 +36,7 @@ trait EventHandler {
    * @param event
    * @return
    */
-  def handleEvent(event: Event): Future[Unit]
+  def handleEvent(event: Event): Future[Done]
 }
 
 /**

@@ -28,7 +28,7 @@ import scala.concurrent.duration._
 
 /**
  * goal behind this spec is to test KafkaProducerAdapter and KafkaConsumerAdapter
- * depends on docker environment
+ * (this test depends on availability of docker environment and has NOT yet been added to run during the CI integration tests job)
  */
 class KafkaAdapterSpec
   extends KafkaSpecBase
@@ -146,7 +146,7 @@ class KafkaAdapterSpec
       .withSource(URI.create(s"http://example.com/$sourceId"))
       .withData("application/json", payload.getBytes())
       .withTime(OffsetDateTime.now(ZoneId.of("UTC")))
-      .withExtension("evernym", 1)
+      .withExtension("company", 1)
       .build()
   }
 

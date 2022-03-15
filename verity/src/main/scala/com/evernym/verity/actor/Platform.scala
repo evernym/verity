@@ -449,7 +449,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
     import akka.actor.typed.scaladsl.adapter._
     val consumerSettingsProvider = ConsumerSettingsProvider(appConfig.config)
     new KafkaConsumerAdapter(
-      new ConsumedMessageHandler(singletonParentProxy)(executionContextProvider.futureExecutionContext),
+      new ConsumedMessageHandler(appConfig.config, singletonParentProxy)(executionContextProvider.futureExecutionContext),
       consumerSettingsProvider)(executionContextProvider.futureExecutionContext, actorSystem.toTyped)
   }
 }

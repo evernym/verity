@@ -37,7 +37,7 @@ object EndorserRegistry {
   object Replies {
     case class EndorserAdded(ledger: String, did: DidStr, verKey: VerKeyStr) extends Reply
     case class EndorserRemoved(ledger: String, did: DidStr) extends Reply
-    case class LedgerEndorsers(endorsers: Seq[Endorser]) extends Reply
+    case class LedgerEndorsers(endorsers: Seq[Endorser], latestEndorser: Option[Endorser]) extends Reply
   }
 
   def apply(entityId: String, configuration: Config): Behavior[Cmd] = {
@@ -84,7 +84,7 @@ object EndorserRegistry {
     case (st: States.Initialized, cmd: GetEndorsers) =>
       val ledgerEndorsers = st.ledgerEndorsers.get(cmd.ledger).map(_.endorsers).getOrElse(Seq.empty)
       Effect
-        .reply(cmd.replyTo)(Replies.LedgerEndorsers(ledgerEndorsers))
+        .reply(cmd.replyTo)(Replies.LedgerEndorsers(ledgerEndorsers, ledgerEndorsers.lastOption))
   }
 
   private def eventHandler: (State, Event) => State = {

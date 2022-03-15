@@ -1,6 +1,5 @@
 package com.evernym.verity.event_bus.event_handlers
 
-import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.testkit.BasicSpec
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -8,7 +7,6 @@ import io.cloudevents.CloudEvent
 import io.cloudevents.core.CloudEventUtils.mapData
 import io.cloudevents.core.builder.CloudEventBuilder
 import io.cloudevents.core.provider.EventFormatProvider
-import io.cloudevents.core.v1.CloudEventV1
 import io.cloudevents.jackson.{JsonFormat, PojoCloudEventDataMapper}
 
 import java.net.URI

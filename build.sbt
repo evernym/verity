@@ -247,14 +247,14 @@ lazy val protoBufSettings = Seq(
   Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch, build).taskValue,
   // Since sbt-protoc 1.0.1 and later adds PB.protoSources to unmanagedResourceDirectories,
   // we need to exclude all extra dirs that contains .scala files. Same for Test config.
-  Compile / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main/scala")).absolutePaths,
+  Compile / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".scala"))(directory=file("verity/src/main/scala")).absolutePaths,
 
   Test / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths,
   Test / PB.targets := Seq(
     scalapb.gen(flatPackage = true) -> (Test / sourceManaged).value
   ),
   Test / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test")).absolutePaths,
-  Test / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test/scala")).absolutePaths,
+  Test / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".scala"))(directory=file("verity/src/test/scala")).absolutePaths,
   //
 )
 
@@ -294,6 +294,8 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-persistence-typed" % akkaVer,
     akkaGrp %% "akka-cluster-sharding-typed" % akkaVer,
 
+    akkaGrp %% "akka-discovery" % akkaVer,
+
     akkaGrp %% "akka-stream" % akkaVer,
     akkaGrp %% "akka-stream-kafka" % alpAkkaKafkaVer,
 
@@ -308,9 +310,6 @@ lazy val commonLibraryDependencies = {
     "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % akkaMgtVer,
 
     "com.lightbend.akka.discovery" %% "akka-discovery-kubernetes-api" % akkaMgtVer,
-
-    "com.typesafe.akka" %% "akka-discovery" % akkaVer,
-    "com.typesafe.akka" %% "akka-actor" % akkaVer,
 
     //other akka dependencies
     "com.twitter" %% "chill-akka" % "0.10.0",    //serialization/deserialization for akka remoting
@@ -372,6 +371,9 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-testkit" % akkaVer,
     akkaGrp %% "akka-persistence-testkit" % akkaVer,
     akkaGrp %% "akka-http-testkit" % akkaHttpVer,
+    akkaGrp %% "akka-stream-kafka-testkit" % alpAkkaKafkaVer,
+    "com.dimafeng" %% "testcontainers-scala-kafka" % "0.40.2",
+
     akkaGrp %% "akka-serialization-jackson" % akkaVer,
 
     "org.pegdown" % "pegdown" % "1.6.0",

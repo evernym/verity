@@ -1,14 +1,13 @@
-package com.evernym.verity.event_bus.adapters.kafka
+package com.evernym.verity.event_bus.adapters.consumer.kafka
 
 import akka.kafka.{CommitDelivery, CommitWhen}
-import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
-import com.evernym.verity.event_bus.adapters.consumer.kafka.ConsumerSettingsProvider
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.ConfigException.Missing
 import com.typesafe.config.ConfigFactory
 import org.apache.kafka.common.serialization.StringDeserializer
 
 import scala.concurrent.duration.{FiniteDuration, MILLISECONDS}
+
 
 class ConsumerSettingsProviderSpec
   extends BasicSpec {
@@ -18,7 +17,7 @@ class ConsumerSettingsProviderSpec
     "when constructed without sufficient configs" - {
       "should fail" in {
         intercept[Missing] {
-          ConsumerSettingsProvider(ActorSystemVanilla("test"))
+          ConsumerSettingsProvider(ConfigFactory.empty)
         }
       }
     }
@@ -29,25 +28,39 @@ class ConsumerSettingsProviderSpec
 
         val verityKafkaConfig = ConfigFactory.parseString(
             """
-              | verity.kafka.consumer: ${akka.kafka.consumer} {
-              |   service-name = "testkafka"
-              |   topics = ["endorsement"]
-              |   group-id = "verity"
+              | verity.kafka = ${akka.kafka} {
+              |   consumer = ${akka.kafka.consumer} {
+              |     kafka-clients = ${akka.kafka.consumer.kafka-clients} {
+              |       bootstrap.servers = "testkafka"
+              |       group.id = "verity"
+              |       client.id = "verity"
+              |       auto.offset.reset: "earliest"
+              |       session.timeout.ms: 60000
+              |     }
+              |
+              |     stop-timeout = 5 seconds
+              |
+              |     topics = ["endorsement"]
+              |     msg-handling-parallelism = 10
+              |   }
+              |
+              |   committer = ${akka.kafka.committer} {
+              |   }
               | }
               |""".stripMargin
             )
 
-        val settingsProvider = ConsumerSettingsProvider(ActorSystemVanilla("test", defaultAkkaKafkaConfig.withFallback(verityKafkaConfig).resolve()))
-        settingsProvider.bootstrapServers shouldBe "testkafka"
+        val settingsProvider = ConsumerSettingsProvider(verityKafkaConfig.withFallback(defaultAkkaKafkaConfig).resolve())
         settingsProvider.topics shouldBe List("endorsement")
-        settingsProvider.groupId shouldBe "verity"
 
         val kafkaConsumerSettings = settingsProvider.kafkaConsumerSettings()
         kafkaConsumerSettings.properties shouldBe Map(
-          "enable.auto.commit"  -> "false",
           "bootstrap.servers"   -> "testkafka",
           "group.id"            -> "verity",
-          "auto.offset.reset"   -> "earliest"
+          "client.id"           -> "verity",
+          "enable.auto.commit"  -> "false",
+          "auto.offset.reset"   -> "earliest",
+          "session.timeout.ms"  -> "60000"
         )
         kafkaConsumerSettings.keyDeserializerOpt.get shouldBe a[StringDeserializer]
         kafkaConsumerSettings.valueDeserializerOpt.get shouldBe a[StringDeserializer]

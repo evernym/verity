@@ -1,55 +1,91 @@
 package com.evernym.verity.event_bus.adapters.consumer.kafka
 
-import akka.actor.ActorSystem
 import akka.kafka.{CommitterSettings, ConsumerSettings}
-import com.typesafe.config.Config
-import org.apache.kafka.clients.consumer.ConsumerConfig
+import com.evernym.verity.config.validator.base.ConfigReadHelper
+import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.kafka.common.serialization.StringDeserializer
 
-import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
-
 
 case object ConsumerSettingsProvider {
 
-  def apply(system: ActorSystem): ConsumerSettingsProvider = {
-    new ConsumerSettingsProvider(system.settings.config, system)
+  def apply(config: Config): ConsumerSettingsProvider = {
+    new ConsumerSettingsProvider(config)
   }
 }
 
 /**
  * Consumer settings should look like this (inherited from `akka.kafka.consumer`)
  *
-   verity.kafka.consumer {
-      service-name = "kafkaService"
-      service-name = ${?KAFKA_SERVICE_NAME}
+   verity.kafka = ${akka.kafka} {
 
-      group-id = "verity"
-      group-id = ${?KAFKA_CONSUMER_GROUP_ID}
+     # https://github.com/akka/alpakka-kafka/blob/v3.0.0/core/src/main/resources/reference.conf#L50
+     consumer = ${akka.kafka.consumer} {
 
-      topics = ["endorsement"]
-      topics = ${?KAFKA_CONSUMER_TOPICS}
+       # https://github.com/akka/alpakka-kafka/blob/v3.0.0/core/src/main/resources/reference.conf#L99
+       kafka-clients = ${akka.kafka.consumer.kafka-clients} {
+         bootstrap.servers = "testkafka"
+         group.id = "verity"
+         client.id = "verity"
+         auto.offset.reset: "earliest"
+         session.timeout.ms: 60000
+       }
+
+       # override verity specific consumer configurations
+       stop-timeout = 5 seconds
+
+       # verity consumer adapter configuration
+       topics = ["endorsement"]
+       msg-handling-parallelism = 10
+     }
+
+     # https://github.com/akka/alpakka-kafka/blob/v3.0.0/core/src/main/resources/reference.conf#L165-L190
+     # override verity specific configurations
+     committer = ${akka.kafka.committer} {
+       max-batch = 10
+     }
    }
  *
  */
-final class ConsumerSettingsProvider(config: Config, system: ActorSystem) {
+final class ConsumerSettingsProvider(config: Config) {
+  val verityKafkaConfigReader: ConfigReadHelper = ConfigReadHelper(config.getConfig("verity.kafka").resolve())
 
-  val bootstrapServers: String = config.getString("verity.kafka.consumer.service-name")
-  val groupId: String = config.getString("verity.kafka.consumer.group-id")
-  val topics: Seq[String] = config.getStringList("verity.kafka.consumer.topics").asScala.toSeq
+  val topics: Seq[String] = verityKafkaConfigReader.getStringListReq("consumer.topics")
+  val msgHandlingParallelism: Int = verityKafkaConfigReader.getIntOption("consumer.msg-handling-parallelism").getOrElse(10)
+
+  val consumerConfig: Config =
+    verityKafkaConfigReader
+      .getConfigOption("consumer")
+      .getOrElse(throw new RuntimeException("required config not found at path: verity.kafka.consumer"))
+
+  val committerConfig: Config =
+    verityKafkaConfigReader
+      .getConfigOption("committer")
+      .getOrElse(throw new RuntimeException("required config not found at path: verity.kafka.committer"))
+
+  validateConfig()
+
+  def validateConfig(): Unit = {
+    val kafkaClientConfigs = consumerConfig
+      .getConfig("kafka-clients")
+      .entrySet().asScala.map(r => r.getKey -> r.getValue.unwrapped().toString).toMap
+
+    val requiredKafkaClientProperties = Set("bootstrap.servers", "group.id", "client.id", "auto.offset.reset", "session.timeout.ms")
+
+    if (!requiredKafkaClientProperties.subsetOf(kafkaClientConfigs.keySet)) {
+      throw new RuntimeException("required kafka client properties not found (at path: verity.kafka.consumer.kafka-clients): " + requiredKafkaClientProperties.diff(kafkaClientConfigs.keySet).mkString(", "))
+    }
+    val invalidReqConfigs = kafkaClientConfigs.filter{case (k, v) => v == null || v.isEmpty}
+    if (invalidReqConfigs.nonEmpty) {
+      throw new RuntimeException("required kafka client properties cannot be empty/null (at path: verity.kafka.consumer.kafka-clients): " + invalidReqConfigs.keySet.mkString(", "))
+    }
+  }
 
   def kafkaConsumerSettings(): ConsumerSettings[String, String] = {
-    //TODO: finalize the serializers (string, bytearray etc)
-    ConsumerSettings(system, new StringDeserializer, new StringDeserializer)
-      .withBootstrapServers(bootstrapServers)
-      .withGroupId(groupId)
-      .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")    //see related 'AUTO_OFFSET_RESET_DOC' for it's detail
-      .withStopTimeout(0.seconds)
+    ConsumerSettings(consumerConfig, new StringDeserializer, new StringDeserializer)
   }
 
   def kafkaCommitterSettings(): CommitterSettings = {
-    //TODO: finalize this
-    //will read default configs from `akka.kafka.committer`
-    CommitterSettings(system)
+    CommitterSettings(committerConfig)
   }
 }

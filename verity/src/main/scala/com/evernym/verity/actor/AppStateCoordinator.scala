@@ -1,7 +1,7 @@
 package com.evernym.verity.actor
 
 import akka.Done
-import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown}
+import akka.actor.{ActorSystem, CoordinatedShutdown}
 import akka.actor.CoordinatedShutdown._
 import com.evernym.verity.actor.appStateManager.StartDraining
 import com.evernym.verity.config.AppConfig
@@ -15,7 +15,7 @@ import scala.concurrent.duration._
 
 class AppStateCoordinator(appConfig: AppConfig,
                           system: ActorSystem,
-                          appStateManager: ActorRef)
+                          platform: Platform)
                          (implicit val ex: ExecutionContext) {
 
   def isDrainingStarted: Boolean = _isDrainingStarted.get()
@@ -41,12 +41,19 @@ class AppStateCoordinator(appConfig: AppConfig,
       .getOrElse(Duration(2, SECONDS))
 
     legacyStartDraining()
-    performDraining(maxCheckCount, checkInterval, Promise[Done]())
+    preDraining().flatMap { _ =>
+      performDraining(maxCheckCount, checkInterval, Promise[Done]())
+    }
   }
 
   //need to keep this till we support 'AppStateManager' and 'new probe APIs'
   private def legacyStartDraining(): Unit = {
-    appStateManager ! StartDraining
+    platform.appStateManager ! StartDraining
+  }
+
+  private def preDraining(): Future[Done] = {
+    Future.successful(Done)
+    //platform.eventConsumerAdapter.stop()    //TODO: to be enabled at later/final stage of event bus integration
   }
 
   private def performDraining(checkAttemptLeft: Int,

@@ -25,15 +25,19 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.container.actor.ActorProtocol
 import com.evernym.verity.util.TimeZoneUtil.UTCZoneId
 import com.evernym.verity.util.Util._
+
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
-
 import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyService, SysServiceNotifier, SysShutdownProvider, SysShutdownService}
 import com.evernym.verity.actor.metrics.activity_tracker.ActivityTracker
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.typed.base.UserGuardian
+import com.evernym.verity.event_bus.adapters.consumer.kafka.{ConsumerSettingsProvider, KafkaConsumerAdapter}
+import com.evernym.verity.event_bus.event_handlers.ConsumedEventHandler
+import com.evernym.verity.event_bus.ports.consumer.ConsumerPort
 import com.evernym.verity.vdrtools.Libraries
 import com.evernym.verity.util.healthcheck.HealthChecker
+
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -438,7 +442,15 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
   val appStateCoordinator = new AppStateCoordinator(
     appConfig,
     actorSystem,
-    appStateManager)(agentActorContext.futureExecutionContext)
+    this)(agentActorContext.futureExecutionContext)
+
+  //should be lazy and only used/created during startup process (post dependency check)
+  lazy val eventConsumerAdapter: ConsumerPort = {
+    import akka.actor.typed.scaladsl.adapter._
+    val consumerSettingsProvider = ConsumerSettingsProvider(appConfig.config)
+    new KafkaConsumerAdapter(new ConsumedEventHandler, consumerSettingsProvider)(
+      executionContextProvider.futureExecutionContext, actorSystem.toTyped)
+  }
 }
 
 trait PlatformServices {

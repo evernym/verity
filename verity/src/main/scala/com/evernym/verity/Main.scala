@@ -2,7 +2,7 @@ package com.evernym.verity
 
 import akka.management.cluster.bootstrap.ClusterBootstrap
 import akka.management.scaladsl.AkkaManagement
-import com.evernym.verity.app_launcher.{HttpServer, PlatformBuilder}
+import com.evernym.verity.app_launcher.{HttpServer, LaunchPreCheck, PlatformBuilder}
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.config.ConfigConstants.{AKKA_MNGMNT_CLUSTER_BOOTSTRAP_ENABLED, AKKA_MNGMNT_HTTP_ENABLED}
 import com.evernym.verity.http.route_handlers.HttpRouteHandler
@@ -18,6 +18,16 @@ object Main extends App {
 
   //create platform (actor system and region actors etc)
   val platform = PlatformBuilder.build(ecp, appConfig)
+
+  //check dependencies
+  LaunchPreCheck.waitForRequiredDepsIsOk(
+    platform.healthChecker,
+    platform.actorSystem,
+    platform.executionContextProvider.futureExecutionContext
+  )
+
+  //start event consumer adapter (TODO: to be enabled at later/final stage of event bus integration)
+  //platform.eventConsumerAdapter.start()
 
   //start akka management server (if enabled, by default it is turned off)
   platform.startExtensionIfEnabled(AkkaManagement, AKKA_MNGMNT_HTTP_ENABLED)(_.start())

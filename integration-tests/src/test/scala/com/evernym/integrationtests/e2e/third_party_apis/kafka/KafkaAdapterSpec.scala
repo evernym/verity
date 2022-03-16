@@ -8,10 +8,19 @@ import akka.kafka.testkit.KafkaTestkitTestcontainersSettings
 import akka.kafka.testkit.scaladsl.TestcontainersKafkaPerClassLike
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.event_bus.adapters.consumer.kafka.ConsumerSettingsProvider
-import com.evernym.verity.event_bus.ports.consumer.{Event, EventHandler, Message}
+import com.evernym.verity.event_bus.ports.consumer.{Message, MessageHandler}
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.scalatest.time.{Millis, Seconds, Span}
+import io.cloudevents.CloudEvent
+import io.cloudevents.core.builder.CloudEventBuilder
+import io.cloudevents.core.provider.EventFormatProvider
+import io.cloudevents.jackson.JsonFormat
+import org.json.JSONObject
 
+import java.net.URI
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.util.UUID
 import scala.jdk.CollectionConverters._
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -32,10 +41,10 @@ class KafkaAdapterSpec
   val REPLICATION_FACTOR = BROKERS_COUNT  //should be less than or equal to the `BROKERS_COUNT`
 
 
-  val topic1MsgBatch1 = (1 to 20).map(i => Message(s"""{"context":"{"batch-id": "1", "pinstid":"pinst-$i"}""", s"topic1-payload-$i"))
-  val topic2MsgBatch1 = (1 to 30).map(i => Message(s"""{"context":"{"batch-id": "1", "pinstid":"pinst-$i"}""", s"topic2-payload-$i"))
-  val topic1MsgBatch2 = (1 to 35).map(i => Message(s"""{"context":"{"batch-id": "2", "pinstid":"pinst-$i"}""", s"topic1-payload-$i"))
-  val topic2MsgBatch2 = (1 to 40).map(i => Message(s"""{"context":"{"batch-id": "2", "pinstid":"pinst-$i"}""", s"topic2-payload-$i"))
+  val topic1MsgBatch1 = (1 to 20).map(i => createCloudEvent(s"pinstId$i", s"""{"key":"topic1-payload-$i"}"""))
+  val topic2MsgBatch1 = (1 to 30).map(i => createCloudEvent(s"pinstId$i", s"""{"key":"topic1-payload-$i"}"""))
+  val topic1MsgBatch2 = (1 to 35).map(i => createCloudEvent(s"pinstId$i", s"""{"key":"topic1-payload-$i"}"""))
+  val topic2MsgBatch2 = (1 to 40).map(i => createCloudEvent(s"pinstId$i", s"""{"key":"topic1-payload-$i"}"""))
 
 
   "KafkaContainer" - {
@@ -54,30 +63,28 @@ class KafkaAdapterSpec
         val consumer1 = {
           val consumerSettingsProvider = createConsumerSettingsProvider(
             brokerContainers.head.getBootstrapServers, Seq(TOPIC_NAME_1, TOPIC_NAME_2))
-          createConsumer(new MockEventHandler("1"), consumerSettingsProvider)
+          createConsumer(new MockMessageHandler("1"), consumerSettingsProvider)
         }
         val consumer2 = {
           val consumerSettingsProvider = createConsumerSettingsProvider(
             brokerContainers.head.getBootstrapServers, Seq(TOPIC_NAME_1, TOPIC_NAME_2))
-          createConsumer(new MockEventHandler("2"), consumerSettingsProvider)
+          createConsumer(new MockMessageHandler("2"), consumerSettingsProvider)
         }
-        val eventProcessors = List(consumer1, consumer2).map(_.eventHandler.asInstanceOf[MockEventHandler])
-        eventProcessors.flatMap(_.getEvents).size shouldBe 0
+        val eventProcessors = List(consumer1, consumer2).map(_.messageHandler.asInstanceOf[MockMessageHandler])
+        eventProcessors.flatMap(_.getMessages).size shouldBe 0
 
         //publish first batch of messages to the event bus
 
         val allMsgs = topic1MsgBatch1 ++ topic2MsgBatch1
 
-        publishEvents(producerSettings, TOPIC_NAME_1, topic1MsgBatch1.map(msg => new String(msg.toByteArray)))
-        publishEvents(producerSettings, TOPIC_NAME_2, topic2MsgBatch1.map(msg => new String(msg.toByteArray)))
+        publishEvents(producerSettings, TOPIC_NAME_1, topic1MsgBatch1.map(serializedCloudEvent))
+        publishEvents(producerSettings, TOPIC_NAME_2, topic2MsgBatch1.map(serializedCloudEvent))
 
         //confirm consumers are able to receive those published messages and offset is committed accordingly
         eventually(timeout(Span(10, Seconds)), interval(Span(200, Millis))) {
-          eventProcessors.flatMap(_.getEvents).size shouldBe allMsgs.size
-          eventProcessors.flatMap(_.getEvents).filter(_.metadata.topic == TOPIC_NAME_1).map(_.message) shouldBe topic1MsgBatch1
-          eventProcessors.flatMap(_.getEvents).filter(_.metadata.topic == TOPIC_NAME_2).map(_.message) shouldBe topic2MsgBatch1
-          eventProcessors.flatMap(_.getEvents).filter(_.metadata.topic == TOPIC_NAME_1).map(_.metadata.offset).max shouldBe topic1MsgBatch1.size - 1
-          eventProcessors.flatMap(_.getEvents).filter(_.metadata.topic == TOPIC_NAME_2).map(_.metadata.offset).max shouldBe topic2MsgBatch1.size - 1
+          eventProcessors.flatMap(_.getMessages).size shouldBe allMsgs.size
+          compareReceivedMsgs(0, topic1MsgBatch1.map(toJsonObject).toList, eventProcessors, TOPIC_NAME_1)
+          compareReceivedMsgs(0, topic2MsgBatch1.map(toJsonObject).toList, eventProcessors, TOPIC_NAME_2)
         }
 
         //stop the current active consumers
@@ -92,28 +99,26 @@ class KafkaAdapterSpec
         val consumer3 = {
           val consumerSettingsProvider = createConsumerSettingsProvider(
             brokerContainers.head.getBootstrapServers, Seq(TOPIC_NAME_1, TOPIC_NAME_2))
-          createConsumer(new MockEventHandler("3"), consumerSettingsProvider)
+          createConsumer(new MockMessageHandler("3"), consumerSettingsProvider)
         }
         val consumer4 = {
           val consumerSettingsProvider = createConsumerSettingsProvider(
             brokerContainers.head.getBootstrapServers, Seq(TOPIC_NAME_1, TOPIC_NAME_2))
-          createConsumer(new MockEventHandler("4"), consumerSettingsProvider)
+          createConsumer(new MockMessageHandler("4"), consumerSettingsProvider)
         }
-        val eventProcessors = List(consumer3, consumer4).map(_.eventHandler.asInstanceOf[MockEventHandler])
+        val eventProcessors = List(consumer3, consumer4).map(_.messageHandler.asInstanceOf[MockMessageHandler])
 
         //publish second batch of messages to the event bus
         val allMsgs = topic1MsgBatch2 ++ topic2MsgBatch2
 
-        publishEvents(producerSettings, TOPIC_NAME_1, topic1MsgBatch2.map(msg => new String(msg.toByteArray)))
-        publishEvents(producerSettings, TOPIC_NAME_2, topic2MsgBatch2.map(msg => new String(msg.toByteArray)))
+        publishEvents(producerSettings, TOPIC_NAME_1, topic1MsgBatch2.map(serializedCloudEvent))
+        publishEvents(producerSettings, TOPIC_NAME_2, topic2MsgBatch2.map(serializedCloudEvent))
 
         //confirm new consumers are able to receive those newly published messages and offset is committed accordingly
         eventually(timeout(Span(15, Seconds)), interval(Span(200, Millis))) {
-          eventProcessors.flatMap(_.getEvents).size shouldBe allMsgs.size
-          eventProcessors.flatMap(_.getEvents).filter(_.metadata.topic == TOPIC_NAME_1).map(_.message) shouldBe topic1MsgBatch2
-          eventProcessors.flatMap(_.getEvents).filter(_.metadata.topic == TOPIC_NAME_2).map(_.message) shouldBe topic2MsgBatch2
-          eventProcessors.flatMap(_.getEvents).filter(_.metadata.topic == TOPIC_NAME_1).map(_.metadata.offset).max shouldBe (topic1MsgBatch1 ++ topic1MsgBatch2).size - 1
-          eventProcessors.flatMap(_.getEvents).filter(_.metadata.topic == TOPIC_NAME_2).map(_.metadata.offset).max shouldBe (topic2MsgBatch1 ++ topic2MsgBatch2).size - 1
+          eventProcessors.flatMap(_.getMessages).size shouldBe allMsgs.size
+          compareReceivedMsgs(topic1MsgBatch1.size, topic1MsgBatch2.map(toJsonObject).toList, eventProcessors, TOPIC_NAME_1)
+          compareReceivedMsgs(topic2MsgBatch1.size, topic2MsgBatch2.map(toJsonObject).toList, eventProcessors, TOPIC_NAME_2)
         }
 
         //stop the current active consumers
@@ -123,7 +128,40 @@ class KafkaAdapterSpec
     }
   }
 
-  lazy val producerSettings: ProducerSettings[String, String] = createProducerSettings(getDefaultProducerSettings())
+  def compareReceivedMsgs(alreadyReceivedMsgs: Int,
+                          expectedEvents: List[JSONObject],
+                          eventProcessors: List[MockMessageHandler],
+                          topicName: String): Unit = {
+    val actualMessages = eventProcessors.flatMap(_.getMessages).filter(_.metadata.topic == topicName)
+    actualMessages.map(_.metadata.offset).max shouldBe actualMessages.size + alreadyReceivedMsgs - 1 //as offset starts with 0
+    val actualEvents = actualMessages.map(_.cloudEvent)
+    actualEvents.map(_.toString) shouldBe expectedEvents.map(_.toString)
+  }
+
+  def createCloudEvent(sourceId: String, payload: String): CloudEvent = {
+    CloudEventBuilder
+      .v1()
+      .withId(UUID.randomUUID().toString)
+      .withType("example.event.type")
+      .withSource(URI.create(s"http://example.com/$sourceId"))
+      .withData("application/json", payload.getBytes())
+      .withTime(OffsetDateTime.now(ZoneId.of("UTC")))
+      .withExtension("evernym", 1)
+      .build()
+  }
+
+  def serializedCloudEvent(event: CloudEvent): Array[Byte] = {
+    EventFormatProvider
+      .getInstance
+      .resolveFormat(JsonFormat.CONTENT_TYPE)
+      .serialize(event)
+  }
+
+  def toJsonObject(event: CloudEvent): JSONObject = {
+    new JSONObject(new String(serializedCloudEvent(event)))
+  }
+
+  lazy val producerSettings: ProducerSettings[String, Array[Byte]] = createProducerSettings(getDefaultProducerSettings())
 
   lazy val defaultAkkaKafkaConfig: Config = ConfigFactory.load().withOnlyPath("akka.kafka")
 
@@ -172,13 +210,13 @@ class KafkaAdapterSpec
  *
  * @param id a unique id for this event processor (mostly may used for debugging/troubleshooting purposes only)
  */
-class MockEventHandler(id: String) extends EventHandler {
-  var events = List.empty[Event]
+class MockMessageHandler(id: String) extends MessageHandler {
+  var messages = List.empty[Message]
 
-  override def handleEvent(event: Event): Future[Done] = {
-    events = events :+ event
+  override def handleMessage(message: Message): Future[Done] = {
+    messages = messages :+ message
     Future.successful(Done)
   }
 
-  def getEvents: List[Event] = events
+  def getMessages: List[Message] = messages
 }

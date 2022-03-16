@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-package com.evernym.verity.event_bus.ports.consumer;
-
-message Message {
-  string context = 2;
-  string payload = 3;
-};

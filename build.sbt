@@ -66,6 +66,7 @@ val kanelaAgentVer      = "1.0.14"
 val cinnamonVer         = "2.16.2"
 val jacksonVer          = "2.13.2"
 val sdnotifyVer         = "1.3"
+val cloudEventsVersion  = "2.3.0"
 
 //test dependency versions
 val scalatestVer        = "3.2.11"
@@ -302,6 +303,10 @@ lazy val commonLibraryDependencies = {
     //akka persistence dependencies
     akkaGrp %% "akka-persistence-dynamodb" % akkaPersistence,
 
+    //to be used for event bus
+    "io.cloudevents" % "cloudevents-core" % cloudEventsVersion,
+    "io.cloudevents" % "cloudevents-json-jackson" % cloudEventsVersion,
+
     //lightbend akka dependencies
     "com.lightbend.akka" %% "akka-stream-alpakka-s3" % alpAkkaS3Ver,
 
@@ -372,20 +377,19 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-persistence-testkit" % akkaVer,
     akkaGrp %% "akka-http-testkit" % akkaHttpVer,
     akkaGrp %% "akka-stream-kafka-testkit" % alpAkkaKafkaVer,
-    "com.dimafeng" %% "testcontainers-scala-kafka" % "0.40.2",
-
     akkaGrp %% "akka-serialization-jackson" % akkaVer,
+
+    "com.evernym" % "vcx" % vcxWrapperVer,
+    "com.evernym.verity" % "verity-sdk" % veritySdkVer
+      exclude ("com.evernym.vdrtools", "vdr-tools"),
+
+    "com.dimafeng" %% "testcontainers-scala-kafka" % "0.40.2",
 
     "org.pegdown" % "pegdown" % "1.6.0",
     "org.abstractj.kalium" % "kalium" % "0.8.0",  // java binding for nacl
 
-    "com.evernym.verity" % "verity-sdk" % veritySdkVer
-      exclude ("com.evernym.vdrtools", "vdr-tools"),
-
     "net.glxn" % "qrgen" % "1.4", // QR code generator
     "com.google.guava" % "guava" % "31.1-jre",
-
-    "com.evernym" % "vcx" % vcxWrapperVer,
 
     //post akka 2.6 upgrade, had to add below test dependencies with given akka http version
     //need to come back to this and see if there is better way to fix it

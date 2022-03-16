@@ -4,6 +4,7 @@ import com.evernym.verity.actor.agent.relationship.{DidDoc, Relationship, Relati
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncapi.endorser.EndorserAccess
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
@@ -249,7 +250,7 @@ class Domain(override val domainId: DomainId,
   //  converted to a string.
   def startInteractionRel(rel: Relationship, ctl: Control): ThreadId = {
     val ctlEnvelope = MsgUtil.encloseCtl(ctl)
-    val ctnr = containerFor(ctl, ctlEnvelope.threadId, rel)
+    val container = containerFor(ctl, ctlEnvelope.threadId, rel)
     handleControlRel(ctlEnvelope, rel)
     ctlEnvelope.threadId
   }
@@ -342,6 +343,8 @@ trait SimpleLaunchesProtocol extends LaunchesProtocol with HasExecutionContextPr
 
   def ledgerAccessProvider: Option[() => LedgerAccess] = None
 
+  def endorserAccessProvider: Option[() => EndorserAccess] = None
+
   def urlShorteningAccessProvider: Option[() => UrlShorteningAccess] = None
 
   def provideInitParams: Map[String, String] = Map.empty
@@ -377,7 +380,8 @@ trait SimpleLaunchesProtocol extends LaunchesProtocol with HasExecutionContextPr
       val driver = protocolRegistry.find_!(protoDef.protoRef).driverGen map { _.apply(driverParam, futureExecutionContext) }
 
       val pce = ProtocolContainerElements( system, rel.myDid_!, pinstId, Option(threadId), protoDef,
-        initProvider, None, driver, journalContext, walletAccessProvider, ledgerAccessProvider, urlShorteningAccessProvider)
+        initProvider, None, driver, journalContext, walletAccessProvider, ledgerAccessProvider,
+        endorserAccessProvider, urlShorteningAccessProvider)
 
       val container = containerProvider(pce)
 

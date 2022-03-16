@@ -7,6 +7,7 @@ import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
 import com.evernym.verity.observability.metrics.{MetricsWriter, NoOpMetricsWriter}
 import com.evernym.verity.protocol.container.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncapi.endorser.EndorserAccess
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
@@ -33,6 +34,7 @@ case class ProtocolContainerElements[P,R,M,E,S,I](system: SimpleProtocolSystem,
                                                   parentLogContext: JournalContext=JournalContext(),
                                                   walletAccessProvider: Option[()=>WalletAccess] = None,
                                                   ledgerAccessProvider: Option[()=>LedgerAccess] = None,
+                                                  endorserAccessProvider: Option[()=>EndorserAccess] = None,
                                                   urlShorteningAccessProvider: Option[()=>UrlShorteningAccess] = None)
 
 /**
@@ -98,6 +100,11 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
     .map(_())
     .getOrElse(throw new RuntimeException("no ledger requests access provided to container"))
 
+  override def endorser: EndorserAccess = pce
+    .endorserAccessProvider
+    .map(_())
+    .getOrElse(throw new RuntimeException("no endorser access provided to container"))
+
   override def serviceEndpoint: ServiceEndpoint = s"http://www.example.com/$participantId"
 
   registerWithSystem()
@@ -132,6 +139,7 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
   override def executionContext: ExecutionContext = ec
 
   override def serviceKeyDidFormat: Boolean = ac.getBooleanReq(SERVICE_KEY_DID_FORMAT)
+
 }
 
 trait Logs {

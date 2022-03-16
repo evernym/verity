@@ -13,6 +13,7 @@ import com.evernym.verity.actor.persistence.{BasePersistentActor, DefaultPersist
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
+import com.evernym.verity.constants.ActorNameConstants.SINGLETON_PARENT_PROXY
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.did.didcomm.v1.messages.{MsgId, MsgType, TypedMsgLike}
 import com.evernym.verity.observability.logs.HasLogger
@@ -20,6 +21,7 @@ import com.evernym.verity.observability.logs.LoggingUtil.getAgentIdentityLoggerB
 import com.evernym.verity.observability.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.AsyncOpRunner
+import com.evernym.verity.protocol.engine.asyncapi.endorser.EndorserAccessAdapter
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessAdapter
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessAdapter
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessAdapter
@@ -31,6 +33,7 @@ import com.evernym.verity.protocol.protocols.connecting.common.SmsTools
 import com.evernym.verity.protocol.{Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
+import com.evernym.verity.util.Util.getActorRefFromSelection
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.{ActorResponse, Exceptions, ServiceEndpoint}
 import com.typesafe.scalalogging.Logger
@@ -321,6 +324,11 @@ class ActorProtocolContainer[
         wallet
     )
 
+  override lazy val endorser =
+    new EndorserAccessAdapter(
+      singletonParentProxyActor
+    )
+
   override lazy val urlShortening =
     new UrlShorteningAccessAdapter(
       executionContext
@@ -331,6 +339,8 @@ class ActorProtocolContainer[
         agentActorContext.storageAPI,
         getProtoRef
     )
+
+  lazy val singletonParentProxyActor: ActorRef = getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)
 
   /**
    * receive behaviour when async operation is in progress

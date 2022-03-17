@@ -40,7 +40,6 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.json.JSONObject
 import java.util.UUID
 
-import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.msgoutbox.outbox.OutboxIdParam
 
 import scala.concurrent.{Await, ExecutionContext, Future}

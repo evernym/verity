@@ -13,11 +13,10 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
 
-class EndorsementReqStatusMessageHandlerSpec
+class EndorsementMessageHandlerSpec
   extends EventHandlerSpecBase {
 
   val requestSourceStr: String = createSource("routeId", "write-schema", "0.6", "pinstId1")
-
 
   "EndorserReqStatusMessageHandler" - {
     "when received EndorserComplete cloud event message" - {
@@ -25,10 +24,10 @@ class EndorsementReqStatusMessageHandlerSpec
 
         val fut = endorserReqStatusEventHandler.handleMessage(
           Message(
-            Metadata(TOPIC_ENDORSEMENT_REQ_STATUS, partition = 1, offset = 0, Instant.now()),
+            Metadata(TOPIC_SSI_ENDORSEMENT, partition = 1, offset = 0, Instant.now()),
             toJsonObject(
               createCloudEvent(
-                TYPE_ENDORSEMENT_COMPLETE,
+                EVENT_ENDORSEMENT_COMPLETE,
                 "https://endorsment.com",
                 s"""{"request_source":"$requestSourceStr", "result":"100", "result_descr":"successful"}"""
               )
@@ -45,7 +44,7 @@ class EndorsementReqStatusMessageHandlerSpec
 
   lazy val agentMsgRouter = new MockAgentMsgRouter(appConfig, system, executionContext)
 
-  lazy val endorserReqStatusEventHandler = new EndorsementReqStatusMessageHandler(
+  lazy val endorserReqStatusEventHandler = new EndorsementMessageHandler(
     appConfig.config, agentMsgRouter)(executionContextProvider.futureExecutionContext)
 
 }

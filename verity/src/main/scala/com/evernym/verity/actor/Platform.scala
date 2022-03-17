@@ -35,6 +35,7 @@ import com.evernym.verity.actor.typed.base.UserGuardian
 import com.evernym.verity.event_bus.adapters.consumer.kafka.{ConsumerSettingsProvider, KafkaConsumerAdapter}
 import com.evernym.verity.event_bus.event_handlers.ConsumedMessageHandler
 import com.evernym.verity.event_bus.ports.consumer.ConsumerPort
+import com.evernym.verity.event_bus.ports.producer.ProducerPort
 import com.evernym.verity.vdrtools.Libraries
 import com.evernym.verity.util.healthcheck.HealthChecker
 

@@ -13,11 +13,11 @@ import com.typesafe.config.Config
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
-//responsible to handle various events related to 'endorser-registry' (active/inactive etc)
-//prepare appropriate command/message from the event and send it over to the appropriate actor
-class EndorserRegistryEventHandler(config: Config,
-                                   singletonParentProxy: ActorRef)
-                                  (implicit executionContext: ExecutionContext) {
+//responsible to handle various messages related to 'endorser' (active/inactive etc)
+//prepare appropriate command/message and send it over to the appropriate actor
+class EndorserMessageHandler(config: Config,
+                             singletonParentProxy: ActorRef)
+                            (implicit executionContext: ExecutionContext) {
 
   implicit lazy val timeout: Timeout = Timeout(30.seconds)    //TODO: may be use configuration for the timeout
 
@@ -31,17 +31,17 @@ class EndorserRegistryEventHandler(config: Config,
   private def createCmd(message: Message, ref: ActorRef): Cmd = {
     val cloudEvent = message.cloudEvent
 
-    cloudEvent.getString(EVENT_TYPE) match {
+    cloudEvent.getString(CLOUD_EVENT_TYPE) match {
 
-      case TYPE_ENDORSER_ACTIVE =>
-        val payload = cloudEvent.getJSONObject(EVENT_DATA)
+      case EVENT_ENDORSER_ACTIVATED =>
+        val payload = cloudEvent.getJSONObject(CLOUD_EVENT_DATA)
         val ledger = payload.getString(DATA_FIELD_LEDGER)
         val did = payload.getString(DATA_FIELD_DID)
         val verKey = payload.getString(DATA_FIELD_VER_KEY)
         Commands.AddEndorser(ledger, did, verKey, ref)
 
-      case TYPE_ENDORSER_INACTIVE =>
-        val payload = cloudEvent.getJSONObject(EVENT_DATA)
+      case EVENT_ENDORSER_DEACTIVATED =>
+        val payload = cloudEvent.getJSONObject(CLOUD_EVENT_DATA)
         val ledger = payload.getString(DATA_FIELD_LEDGER)
         val did = payload.getString(DATA_FIELD_DID)
         Commands.RemoveEndorser(ledger, did, ref)

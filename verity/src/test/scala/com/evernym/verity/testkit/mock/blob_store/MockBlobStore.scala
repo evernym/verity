@@ -26,7 +26,10 @@ class MockBlobStore(config: AppConfig, ec: ExecutionContext, overrideConfig: Con
     Future.successful(bucketStore(bucketName).get(dbKey))
   }
 
-  override def put(bucketName: String, id: String, data: Array[Byte], contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo] = {
+  override def put(bucketName: String,
+                   id: String,
+                   data: Array[Byte],
+                   contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo] = {
     synchronized {
       val dbKey = calcKey(bucketName, id)
       val bucketItems = bucketStore.getOrElse(bucketName, Map.empty) ++ Map(dbKey -> data)

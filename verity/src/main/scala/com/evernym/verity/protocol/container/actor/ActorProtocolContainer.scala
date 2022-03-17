@@ -20,7 +20,7 @@ import com.evernym.verity.observability.logs.HasLogger
 import com.evernym.verity.observability.logs.LoggingUtil.getAgentIdentityLoggerByName
 import com.evernym.verity.observability.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncapi.AsyncOpRunner
+import com.evernym.verity.protocol.engine.asyncapi.{AsyncOpRunner, RoutingContext}
 import com.evernym.verity.protocol.engine.asyncapi.endorser.EndorserAccessAdapter
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessAdapter
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessAdapter
@@ -35,7 +35,7 @@ import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
 import com.evernym.verity.util.Util.getActorRefFromSelection
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.{ActorResponse, Exceptions, ServiceEndpoint}
+import com.evernym.verity.util2.{ActorResponse, Exceptions, RouteId, ServiceEndpoint}
 import com.typesafe.scalalogging.Logger
 
 import java.util.UUID
@@ -144,7 +144,7 @@ class ActorProtocolContainer[
       logger.debug(s"$protocolIdForLog protocol instance created for first time")
       stash()
       metadata.foreach { m =>
-        setForwarderParams(m.walletId, m.forwarder)
+        setForwarderParams(m.walletId, m.forwarder, m.forwarderRouteId)
       }
       recoverOrInit()
   }
@@ -186,7 +186,7 @@ class ActorProtocolContainer[
 
     cmd.metadata.foreach { m =>
       storePackagingDetail(m.threadContextDetail)
-      setForwarderParams(m.walletId, m.forwarder)
+      setForwarderParams(m.walletId, m.forwarder, m.forwarderRouteId)
     }
 
     if(sender() != self) {
@@ -224,9 +224,10 @@ class ActorProtocolContainer[
     }
   }
 
-  def setForwarderParams(_walletSeed: String, forwarder: ActorRef): Unit = {
+  def setForwarderParams(walletSeed: String, forwarder: ActorRef, forwarderRouteId: RouteId): Unit = {
     msgForwarder.setForwarder(forwarder)
-    agentWalletId = Option(_walletSeed)
+    msgForwarder.setRouteId(forwarderRouteId)
+    agentWalletId = Option(walletSeed)
   }
 
   val eventRecorder: RecordsEvents = new RecordsEvents {
@@ -324,9 +325,14 @@ class ActorProtocolContainer[
         wallet
     )
 
+  //TODO: replace hardcoded "routeId" with correct routeId
   override lazy val endorser =
     new EndorserAccessAdapter(
-      singletonParentProxyActor
+      RoutingContext(msgForwarder.routeId.get, protoRef, pinstId),
+      agentActorContext.eventProducerAdapter,
+      agentActorContext.storageAPI,
+      singletonParentProxyActor,
+      dataRetentionPolicy
     )
 
   override lazy val urlShortening =
@@ -505,7 +511,8 @@ case class ProtocolCmd(msg: Any, metadata: Option[ProtocolMetadata]) extends Act
   which is then provided into driver and driver uses it to reach to the same agent (launcher)
   who originally forwarded the msg
  */
-case class ProtocolMetadata(forwarder: ActorRef,
+case class ProtocolMetadata(forwarderRouteId: RouteId,
+                            forwarder: ActorRef,
                             walletId: String,
                             threadContextDetail: ThreadContextDetail)
 /**
@@ -532,9 +539,14 @@ trait ServiceDecorator{
 }
 
 class MsgForwarder {
+  private var _routeId: Option[RouteId] = None
   private var _forwarder: Option[ActorRef] = None
+
   def setForwarder(actorRef: ActorRef): Unit = _forwarder = Option(actorRef)
   def forwarder:Option[ActorRef] = _forwarder
+
+  def setRouteId(routeId: RouteId): Unit = _routeId = Option(routeId)
+  def routeId:Option[RouteId] = _routeId
 }
 
 case class SetThreadContext(tcd: ThreadContextDetail) extends ActorMessage

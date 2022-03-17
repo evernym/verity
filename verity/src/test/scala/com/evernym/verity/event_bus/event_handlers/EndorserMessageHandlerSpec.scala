@@ -14,7 +14,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
-class EndorserRegistryMessageHandlerSpec
+class EndorserMessageHandlerSpec
   extends EventHandlerSpecBase {
 
   "EndorserRegistryEventHandler" - {
@@ -22,8 +22,8 @@ class EndorserRegistryMessageHandlerSpec
       "should handle it successfully" in {
         val fut = endorserRegistryEventHandler.handleMessage(
           Message(
-            Metadata(TOPIC_ENDORSER_REGISTRY, partition = 1, offset = 0, Instant.now()),
-            toJsonObject(createCloudEvent(TYPE_ENDORSER_ACTIVE, "pinstid1", """{"ledger":"ledger1", "did":"did1", "verKey": "verKey1"}"""))
+            Metadata(TOPIC_SSI_ENDORSER, partition = 1, offset = 0, Instant.now()),
+            toJsonObject(createCloudEvent(EVENT_ENDORSER_ACTIVATED, "pinstid1", """{"ledger":"ledger1", "did":"did1", "verKey": "verKey1"}"""))
           )
         )
         Await.result(fut, 500.seconds)
@@ -36,8 +36,8 @@ class EndorserRegistryMessageHandlerSpec
       "should handle it successfully" in {
         val fut = endorserRegistryEventHandler.handleMessage(
           Message(
-            Metadata(TOPIC_ENDORSER_REGISTRY, partition = 1, offset = 0, Instant.now()),
-            toJsonObject(createCloudEvent(TYPE_ENDORSER_ACTIVE, "111", """{"ledger":"ledger1", "did":"did2", "verKey": "verKey2"}"""))
+            Metadata(TOPIC_SSI_ENDORSER, partition = 1, offset = 0, Instant.now()),
+            toJsonObject(createCloudEvent(EVENT_ENDORSER_ACTIVATED, "111", """{"ledger":"ledger1", "did":"did2", "verKey": "verKey2"}"""))
           )
         )
         Await.result(fut, 500.seconds)
@@ -63,8 +63,8 @@ class EndorserRegistryMessageHandlerSpec
       "should handle it successfully" in {
         val fut = endorserRegistryEventHandler.handleMessage(
           Message(
-            Metadata(TOPIC_ENDORSER_REGISTRY, partition = 1, offset = 1, Instant.now()),
-            toJsonObject(createCloudEvent(TYPE_ENDORSER_INACTIVE, "222", """{"ledger":"ledger1", "did":"did1"}"""))
+            Metadata(TOPIC_SSI_ENDORSER, partition = 1, offset = 1, Instant.now()),
+            toJsonObject(createCloudEvent(EVENT_ENDORSER_DEACTIVATED, "222", """{"ledger":"ledger1", "did":"did1"}"""))
           )
         )
         Await.result(fut, 500.seconds)
@@ -85,6 +85,6 @@ class EndorserRegistryMessageHandlerSpec
     }
   }
 
-  lazy val endorserRegistryEventHandler = new EndorserRegistryEventHandler(appConfig.config, platform.singletonParentProxy)(
+  lazy val endorserRegistryEventHandler = new EndorserMessageHandler(appConfig.config, platform.singletonParentProxy)(
     executionContextProvider.futureExecutionContext)
 }

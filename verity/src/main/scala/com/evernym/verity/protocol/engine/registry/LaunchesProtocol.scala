@@ -3,7 +3,6 @@ package com.evernym.verity.protocol.engine.registry
 import com.evernym.verity.did.didcomm.v1.messages.{MsgType, TypedMsgLike}
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.registry.ProtocolRegistry.Entry
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy
 
 /**
   * Contains common code for anything that launches protocols.
@@ -39,13 +38,16 @@ trait LaunchesProtocol {
    *
    * mostly this is helpful if same protocol instances needs to be launched
    * from different context for same logical agent
-   * @param protoDef
+   * @param protoDef protocol definition
    * @return
    */
-  def getPinstId(protoDef: ProtoDef): Option[PinstId] = None
+  protected def getPinstId(protoDef: ProtoDef): Option[PinstId] = None
 
-  def resolvePinstId(protoDef: ProtoDef, resolver: PinstIdResolver, relationshipId: Option[RelationshipId],
-                        threadId: ThreadId, msg: Option[TypedMsgLike]=None): PinstId = {
+  def resolvePinstId(protoDef: ProtoDef,
+                     resolver: PinstIdResolver,
+                     relationshipId: Option[RelationshipId],
+                     threadId: ThreadId,
+                     msg: Option[TypedMsgLike]=None): PinstId = {
     resolver.resolve(
       protoDef,
       domainId,
@@ -56,21 +58,31 @@ trait LaunchesProtocol {
     )
   }
 
-  private def pinstIdForProtoDef(msg: TypedMsgLike, relationshipId: Option[RelationshipId],
-                                    threadId: ThreadId, protoDef: ProtoDef, resolver: PinstIdResolver): PinstId = {
+  protected def pinstIdForMsg_!(tms: TypedMsgLike,
+                                relationshipId: Option[RelationshipId],
+                                threadId: ThreadId): PinstIdPair = {
+    val entry = protocolRegistry.entryForMsg_!(tms)
+    PinstIdPair(pinstIdForProtoDef(tms, relationshipId, threadId, entry.protoDef, entry.pinstIdResol), entry.protoDef)
+  }
+
+  protected def pinstIdForUntypedMsg_![A](m: A,
+                                          relationshipId: Option[RelationshipId],
+                                          threadId: ThreadId): PinstIdPair = {
+    val tmsgPair = typedMsgPair(m)
+    registry.PinstIdPair(pinstIdForProtoDef(tmsgPair.typedMsg, relationshipId, threadId,
+      tmsgPair.entry.protoDef, tmsgPair.entry.pinstIdResol), tmsgPair.entry.protoDef)
+  }
+
+  private def pinstIdForProtoDef(msg: TypedMsgLike,
+                                 relationshipId: Option[RelationshipId],
+                                 threadId: ThreadId,
+                                 protoDef: ProtoDef,
+                                 resolver: PinstIdResolver): PinstId = {
     getPinstId(protoDef).getOrElse(resolvePinstId(protoDef, resolver, relationshipId, threadId, Option(msg)))
   }
 
-  protected def pinstIdForMsg(msg: TypedMsgLike, relationshipId: Option[RelationshipId],
-                                 threadId: ThreadId): Option[PinstIdPair] = {
-    protocolRegistry.entryForMsg(msg)
-      .map(e => PinstIdPair(pinstIdForProtoDef(msg, relationshipId, threadId, e.protoDef, e.pinstIdResol), e.protoDef))
-  }
-
-  protected def pinstIdForMsg_!(tms: TypedMsgLike, relationshipId: Option[RelationshipId],
-                                   threadId: ThreadId): PinstIdPair = {
-    val entry = protocolRegistry.entryForMsg_!(tms)
-    PinstIdPair(pinstIdForProtoDef(tms, relationshipId, threadId, entry.protoDef, entry.pinstIdResol), entry.protoDef)
+  protected def typedMsg(m: Any): TypedMsgLike = {
+    typedMsgPair(m).typedMsg
   }
 
   private def typedMsgPair(m: Any): TypedMsgPair = {
@@ -84,21 +96,6 @@ trait LaunchesProtocol {
         TypedMsg(m, MsgType(msgFamily.qualifier, msgFamily.name, msgFamily.version, m.getClass.getSimpleName))
     }
     registry.TypedMsgPair(typedMsg, entry)
-  }
-
-  protected def pinstIdForUntypedMsg_![A](m: A, relationshipId: Option[RelationshipId],
-                                   threadId: ThreadId): PinstIdPair = {
-    val tmsgPair = typedMsgPair(m)
-    registry.PinstIdPair(pinstIdForProtoDef(tmsgPair.typedMsg, relationshipId, threadId,
-      tmsgPair.entry.protoDef, tmsgPair.entry.pinstIdResol), tmsgPair.entry.protoDef)
-  }
-
-  def typedMsg(m: Any): TypedMsgLike = {
-    typedMsgPair(m).typedMsg
-  }
-
-  def segmentStoreStrategy(protoDef: ProtoDef): Option[SegmentStoreStrategy] = {
-    protocolRegistry.entries.find(_.protoDef == protoDef).flatMap(_.protoDef.segmentStoreStrategy)
   }
 }
 

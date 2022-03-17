@@ -1075,7 +1075,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
 
     values match {
       case Success((p, m)) =>
-        sendToAgentMsgProcessor(SendToProtocolActor(p, m, self))
+        sendToAgentMsgProcessor(SendToProtocolActor(p, m))
       case Failure(exception) => logger.warn(
         s"Unable to Move protocol from rel ${signal.fromRelationship} to ${signal.toRelationship} " +
           s"for thread: ${signal.threadId} on a ${signal.protoRefStr}",

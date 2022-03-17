@@ -33,7 +33,7 @@ import com.evernym.verity.actor.metrics.activity_tracker.ActivityTracker
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.typed.base.UserGuardian
 import com.evernym.verity.event_bus.adapters.consumer.kafka.{ConsumerSettingsProvider, KafkaConsumerAdapter}
-import com.evernym.verity.event_bus.event_handlers.ConsumedEventHandler
+import com.evernym.verity.event_bus.event_handlers.ConsumedMessageHandler
 import com.evernym.verity.event_bus.ports.consumer.ConsumerPort
 import com.evernym.verity.vdrtools.Libraries
 import com.evernym.verity.util.healthcheck.HealthChecker
@@ -448,8 +448,9 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
   lazy val eventConsumerAdapter: ConsumerPort = {
     import akka.actor.typed.scaladsl.adapter._
     val consumerSettingsProvider = ConsumerSettingsProvider(appConfig.config)
-    new KafkaConsumerAdapter(new ConsumedEventHandler, consumerSettingsProvider)(
-      executionContextProvider.futureExecutionContext, actorSystem.toTyped)
+    new KafkaConsumerAdapter(
+      new ConsumedMessageHandler(appConfig.config, singletonParentProxy)(executionContextProvider.futureExecutionContext),
+      consumerSettingsProvider)(executionContextProvider.futureExecutionContext, actorSystem.toTyped)
   }
 }
 

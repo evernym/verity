@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.endorser_registry.Events;
+
+message EndorserAdded {
+  option (scalapb.message).extends = "com.evernym.verity.endorser_registry.EndorserRegistry.Event";
+  string ledger = 1;
+  string did = 2;
+  string verKey = 3;
+}
+
+
+message EndorserRemoved {
+  option (scalapb.message).extends = "com.evernym.verity.endorser_registry.EndorserRegistry.Event";
+  string ledger = 1;
+  string did = 2;
+}

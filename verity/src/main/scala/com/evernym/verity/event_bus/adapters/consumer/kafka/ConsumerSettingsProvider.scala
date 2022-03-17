@@ -2,8 +2,8 @@ package com.evernym.verity.event_bus.adapters.consumer.kafka
 
 import akka.kafka.{CommitterSettings, ConsumerSettings}
 import com.evernym.verity.config.validator.base.ConfigReadHelper
-import com.typesafe.config.{Config, ConfigFactory}
-import org.apache.kafka.common.serialization.StringDeserializer
+import com.typesafe.config.Config
+import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
 
 import scala.jdk.CollectionConverters._
 
@@ -81,8 +81,8 @@ final class ConsumerSettingsProvider(config: Config) {
     }
   }
 
-  def kafkaConsumerSettings(): ConsumerSettings[String, String] = {
-    ConsumerSettings(consumerConfig, new StringDeserializer, new StringDeserializer)
+  def kafkaConsumerSettings(): ConsumerSettings[String, Array[Byte]] = {
+    ConsumerSettings(consumerConfig, new StringDeserializer, new ByteArrayDeserializer)
   }
 
   def kafkaCommitterSettings(): CommitterSettings = {

@@ -4,7 +4,7 @@ import akka.kafka.{CommitDelivery, CommitWhen}
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.ConfigException.Missing
 import com.typesafe.config.ConfigFactory
-import org.apache.kafka.common.serialization.StringDeserializer
+import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
 
 import scala.concurrent.duration.{FiniteDuration, MILLISECONDS}
 
@@ -63,7 +63,7 @@ class ConsumerSettingsProviderSpec
           "session.timeout.ms"  -> "60000"
         )
         kafkaConsumerSettings.keyDeserializerOpt.get shouldBe a[StringDeserializer]
-        kafkaConsumerSettings.valueDeserializerOpt.get shouldBe a[StringDeserializer]
+        kafkaConsumerSettings.valueDeserializerOpt.get shouldBe a[ByteArrayDeserializer]
 
         val kafkaCommitterSettings = settingsProvider.kafkaCommitterSettings()
         kafkaCommitterSettings.maxBatch shouldBe 1000

@@ -1,13 +1,14 @@
 package com.evernym.verity.event_bus.ports.consumer
 
 import akka.Done
+import org.json.JSONObject
 
 import java.time.Instant
 import scala.concurrent.Future
 
 
 /**
- * interface to be able to handle consumed events (from multiple topics?)
+ * interface to be able to handle consumed messages (from multiple topics?)
  */
 trait ConsumerPort {
 
@@ -26,26 +27,27 @@ trait ConsumerPort {
    * an event handler which implements `EventHandler` interface
    * @return
    */
-  def eventHandler: EventHandler
+  def messageHandler: MessageHandler
 }
 
-trait EventHandler {
+trait MessageHandler {
 
   /**
-   * handle given/parsed events (like sending those events to appropriate actors etc)
-   * @param event
+   * handle received/consumed message (like sending it to appropriate actors etc)
+   *
+   * @param message
    * @return
    */
-  def handleEvent(event: Event): Future[Unit]
+  def handleMessage(message: Message): Future[Done]
 }
 
 /**
- * parsed event which contains metadata and the actual published message
+ * parsed message which contains metadata and the actual published cloud event
  *
  * @param metadata event metadata
- * @param message event message (actual message submitted by publisher)
+ * @param cloudEvent event message (actual message submitted by publisher)
  */
-case class Event(metadata: Metadata, message: Message)
+case class Message(metadata: Metadata, cloudEvent: JSONObject)
 
 /**
  *

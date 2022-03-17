@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.endorser_registry.States;
+
+message Initialized {
+  option (scalapb.message).extends = "com.evernym.verity.endorser_registry.EndorserRegistry.State";
+  map<string, ListOfEndorser> ledgerEndorsers = 1;
+}
+
+message ListOfEndorser {
+  repeated Endorser endorsers = 1;
+}
+
+message Endorser {
+  string did = 1;
+  string verKey = 2;
+}

@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.cluster_singleton
 
+import akka.actor.typed.Behavior
 import akka.actor.{ActorRef, ActorSystem, Address, Props}
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent._
@@ -20,6 +21,7 @@ import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants.{AGENT_ROUTES_MIGRATOR, _}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
+import com.evernym.verity.endorser_registry.EndorserRegistry
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util2.Exceptions
@@ -72,14 +74,15 @@ class SingletonParent(val name: String, executionContext: ExecutionContext)(impl
   private val cluster: Cluster = akka.cluster.Cluster(context.system)
   private var nodes: Map[Address, NodeParam] = Map.empty[Address, NodeParam]
 
-  private def allSingletonPropsMap: Map[String, Props] =
+  private def allSingletonPropsMap: Map[String, Any] =
     Map(
       KeyValueMapper.name -> KeyValueMapper.props(futureExecutionContext),
       WatcherManager.name -> WatcherManager.props(appConfig, futureExecutionContext),
       ResourceBlockingStatusMngr.name -> ResourceBlockingStatusMngr.props(agentActorContext, futureExecutionContext),
       ResourceWarningStatusMngr.name -> ResourceWarningStatusMngr.props(agentActorContext, futureExecutionContext),
       ActorStateCleanupManager.name -> ActorStateCleanupManager.props(appConfig, futureExecutionContext),
-      AgentRoutesMigrator.name -> AgentRoutesMigrator.props(appConfig, futureExecutionContext)
+      AgentRoutesMigrator.name -> AgentRoutesMigrator.props(appConfig, futureExecutionContext),
+      EndorserRegistry.TypeKey.name -> EndorserRegistry("endorser-registry", appConfig.config)
     )
 
   implicit def appConfig: AppConfig = agentActorContext.appConfig
@@ -100,7 +103,9 @@ class SingletonParent(val name: String, executionContext: ExecutionContext)(impl
     }
   }
 
-  private def getRequiredActor(props: Props, name: String): ActorRef = context.child(name).getOrElse(context.actorOf(props, name))
+  private def getRequiredActor(name: String, param: Any): ActorRef = {
+    context.child(name).getOrElse(createChildActor(name, param))
+  }
 
   private def sendCmdToAllNodeSingletons(cmd: Any): Iterable[Future[Any]] = {
     nodes.map { case (address, nodeParam) =>
@@ -119,8 +124,8 @@ class SingletonParent(val name: String, executionContext: ExecutionContext)(impl
   }
 
   private def forwardToChild(actorName: String, cmd: Any): Unit = {
-    allSingletonPropsMap.get(actorName).foreach { props =>
-      val actor = getRequiredActor(props, actorName)
+    allSingletonPropsMap.get(actorName).foreach { param =>
+      val actor = getRequiredActor(actorName, param)
       actor forward cmd
     }
   }
@@ -192,9 +197,13 @@ class SingletonParent(val name: String, executionContext: ExecutionContext)(impl
     getActorRefFromSelection(s"$node$NODE_SINGLETON_PATH", context.system)
   }
 
-  private def createChildActors(): Unit = {
-    allSingletonPropsMap.foreach { e =>
-      context.actorOf(e._2, e._1)
+  private def createChildActors(): Unit = allSingletonPropsMap.foreach(e => createChildActor(e._1, e._2))
+
+  private def createChildActor(name: String, param: Any): ActorRef = {
+    import akka.actor.typed.scaladsl.adapter._
+    param match {
+      case props: Props            => context.actorOf(props, name)
+      case behaviour: Behavior[_]  => context.spawn(behaviour, name).ref.toClassic
     }
   }
 
@@ -205,6 +214,9 @@ trait ForSingletonChild extends ActorMessage {
   def getActorName: String
 }
 
+case class ForEndorserRegistry(override val cmd: Any) extends ForSingletonChild {
+  def getActorName: String = EndorserRegistry.TypeKey.name
+}
 case class ForKeyValueMapper(override val cmd: Any) extends ForSingletonChild {
   def getActorName: String = KEY_VALUE_MAPPER_ACTOR_NAME
 }

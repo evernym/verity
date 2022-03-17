@@ -7,9 +7,10 @@ import akka.kafka.Subscriptions
 import akka.kafka.scaladsl.Consumer.DrainingControl
 import akka.kafka.scaladsl.{Committer, Consumer}
 import akka.stream.scaladsl.Sink
-import com.evernym.verity.event_bus.ports.consumer.{ConsumerPort, Event, EventHandler, Message, Metadata}
+import com.evernym.verity.event_bus.ports.consumer.{ConsumerPort, Message, MessageHandler, Metadata}
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.typesafe.scalalogging.Logger
+import org.json.JSONObject
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
@@ -17,7 +18,7 @@ import scala.util.{Failure, Success, Try}
 
 
 object KafkaConsumerAdapter {
-  def apply(eventProcessor: EventHandler,
+  def apply(eventProcessor: MessageHandler,
             settingsProvider: ConsumerSettingsProvider)
            (implicit executionContext: ExecutionContext,
             actorSystem: TypedActorSystem[_]): Unit = {
@@ -29,7 +30,7 @@ object KafkaConsumerAdapter {
 //but one partition would be assigned only to "one consumer in the same consumer group"
 //offsets are always committed for a given consumer group (not for the consumer instance)
 //  (for example: `verity` consumer group's offset for partition 0 is 8)
-class KafkaConsumerAdapter(override val eventHandler: EventHandler,
+class KafkaConsumerAdapter(override val messageHandler: MessageHandler,
                            settingsProvider: ConsumerSettingsProvider)
                           (implicit executionContext: ExecutionContext,
                            actorSystem: TypedActorSystem[_])
@@ -48,13 +49,13 @@ class KafkaConsumerAdapter(override val eventHandler: EventHandler,
       .mapAsync(settingsProvider.msgHandlingParallelism) { committableMsg =>   //how many futures in parallel to process each received message
         Try {
           logger.debug(prepareLogMsgStr(committableMsg, s"committable message received: $committableMsg"))
-          val message = Message.parseFrom(committableMsg.record.value().getBytes())
           val createTime = Instant.ofEpochMilli(committableMsg.record.timestamp())
           val metadata = Metadata(committableMsg.record.topic(), committableMsg.record.partition(), committableMsg.record.offset(), createTime)
-          val event = Event(metadata, message)
+          val cloudEvent = new JSONObject(new String(committableMsg.record.value()))
+          val message = Message(metadata, cloudEvent)
           logger.debug(prepareLogMsgStr(committableMsg, s"committable message parsed successfully"))
-          eventHandler
-            .handleEvent(event)
+          messageHandler
+            .handleMessage(message)
             .map { _ =>
               logger.debug(prepareLogMsgStr(committableMsg, s"event handled successfully"))
               committableMsg.committableOffset
@@ -81,7 +82,7 @@ class KafkaConsumerAdapter(override val eventHandler: EventHandler,
     controller.map(_.isShutdown).getOrElse(Future.successful(Done))
   }
 
-  private def prepareLogMsgStr(msg: CommittableMessage[String, String], str: String): String = {
+  private def prepareLogMsgStr(msg: CommittableMessage[String, Array[Byte]], str: String): String = {
     s"[${msg.record.topic()}${Option(msg.record.key()).map(k => s":$k").getOrElse("")}:${msg.record.offset()}] $str"
   }
 }

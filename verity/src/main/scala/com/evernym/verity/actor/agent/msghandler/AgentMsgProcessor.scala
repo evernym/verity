@@ -113,7 +113,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     case pum: ProcessUnpackedMsg      => handleUnpackedMsg(pum.amw, pum.msgThread, pum.rmc)
 
     //from/to protocol container actor
-    case stp: SendToProtocolActor     => tellProtocolActor(stp.pinstIdPair, stp.msgEnvelope, stp.sndr)
+    case stp: SendToProtocolActor     => tellProtocolActor(stp.pinstIdPair, stp.msgEnvelope)
     case ipr: InitProtocolReq         => handleInitProtocolReq(ipr, param.sponsorRel)
   }
 
@@ -1087,8 +1087,7 @@ case class MsgRespConfig(isSyncReq:Boolean, packForVerKey: Option[VerKeyStr]=Non
 case class MsgRespContext(senderPartiId: ParticipantId, packForVerKey: Option[VerKeyStr]=None, senderActorRef:Option[ActorRef]=None)
 
 case class SendToProtocolActor(pinstIdPair: PinstIdPair,
-                               msgEnvelope: Any,
-                               sndr: ActorRef) extends ActorMessage
+                               msgEnvelope: Any) extends ActorMessage
 
 case class InternalEncryptedPayload(payload: Array[Byte], thread: Option[Thread])
 

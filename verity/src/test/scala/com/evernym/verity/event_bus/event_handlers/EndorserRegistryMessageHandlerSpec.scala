@@ -3,31 +3,19 @@ package com.evernym.verity.event_bus.event_handlers
 import akka.actor.ActorRef
 import akka.pattern.extended.ask
 import akka.actor.typed.scaladsl.adapter._
-import akka.util.Timeout
 import com.evernym.verity.actor.cluster_singleton.ForEndorserRegistry
-import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.endorser_registry.EndorserRegistry.Commands.GetEndorsers
 import com.evernym.verity.endorser_registry.EndorserRegistry.Replies.LedgerEndorsers
 import com.evernym.verity.endorser_registry.States.Endorser
 import com.evernym.verity.event_bus.ports.consumer.{Message, Metadata}
-import com.evernym.verity.testkit.BasicSpec
-import com.evernym.verity.util2.ExecutionContextProvider
-import io.cloudevents.CloudEvent
-import io.cloudevents.core.builder.CloudEventBuilder
-import io.cloudevents.core.provider.EventFormatProvider
-import io.cloudevents.jackson.JsonFormat
-import org.json.JSONObject
 
-import java.net.URI
-import java.time.{Instant, OffsetDateTime, ZoneId}
-import java.util.UUID
-import scala.concurrent.{Await, ExecutionContext}
+import java.time.Instant
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
 class EndorserRegistryMessageHandlerSpec
-  extends PersistentActorSpec
-    with BasicSpec {
+  extends EventHandlerSpecBase {
 
   "EndorserRegistryEventHandler" - {
     "when received AddEndorser cloud event message" - {
@@ -35,7 +23,7 @@ class EndorserRegistryMessageHandlerSpec
         val fut = endorserRegistryEventHandler.handleMessage(
           Message(
             Metadata(TOPIC_ENDORSER_REGISTRY, partition = 1, offset = 0, Instant.now()),
-            toJsonObject(createCloudEvent(TYPE_ENDORSER_ACTIVE, "pinsti1", """{"ledger":"ledger1", "did":"did1", "verKey": "verKey1"}"""))
+            toJsonObject(createCloudEvent(TYPE_ENDORSER_ACTIVE, "pinstid1", """{"ledger":"ledger1", "did":"did1", "verKey": "verKey1"}"""))
           )
         )
         Await.result(fut, 500.seconds)
@@ -97,33 +85,6 @@ class EndorserRegistryMessageHandlerSpec
     }
   }
 
-  private def createCloudEvent(typ: String, sourceId: String, payload: String): CloudEvent = {
-    CloudEventBuilder
-      .v1()
-      .withId(UUID.randomUUID().toString)
-      .withType(typ)
-      .withSource(URI.create(s"http://example.com/$sourceId"))
-      .withData("application/json", payload.getBytes())
-      .withTime(OffsetDateTime.now(ZoneId.of("UTC")))
-      .withExtension("company", 1)
-      .build()
-  }
-
-  private def toJsonObject(event: CloudEvent): JSONObject = {
-    new JSONObject(new String(serializedCloudEvent(event)))
-  }
-
-  private def serializedCloudEvent(event: CloudEvent): Array[Byte] = {
-    EventFormatProvider
-      .getInstance
-      .resolveFormat(JsonFormat.CONTENT_TYPE)
-      .serialize(event)
-  }
-
-  implicit val timeout: Timeout = Timeout(10.seconds)
   lazy val endorserRegistryEventHandler = new EndorserRegistryEventHandler(appConfig.config, platform.singletonParentProxy)(
     executionContextProvider.futureExecutionContext)
-  lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
-  implicit val executionContext: ExecutionContext = ecp.futureExecutionContext
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

@@ -15,7 +15,9 @@ import scala.concurrent.duration._
 
 //responsible to handle various events related to 'endorser-registry' (active/inactive etc)
 //prepare appropriate command/message from the event and send it over to the appropriate actor
-class EndorserRegistryEventHandler(config: Config, singletonParentProxy: ActorRef)(implicit executionContext: ExecutionContext) {
+class EndorserRegistryEventHandler(config: Config,
+                                   singletonParentProxy: ActorRef)
+                                  (implicit executionContext: ExecutionContext) {
 
   implicit lazy val timeout: Timeout = Timeout(30.seconds)    //TODO: may be use configuration for the timeout
 
@@ -27,24 +29,29 @@ class EndorserRegistryEventHandler(config: Config, singletonParentProxy: ActorRe
 
   //TODO: a high level implementation, it needs to be finalized/corrected as per final changes
   private def createCmd(message: Message, ref: ActorRef): Cmd = {
-    val jsonObject = message.cloudEvent
+    val cloudEvent = message.cloudEvent
 
-    jsonObject.getString("type") match {
+    cloudEvent.getString(EVENT_TYPE) match {
 
       case TYPE_ENDORSER_ACTIVE =>
-        val payload = jsonObject.getJSONObject("data")
-        val ledger = payload.getString("ledger")
-        val did = payload.getString("did")
-        val verKey = payload.getString("verKey")
+        val payload = cloudEvent.getJSONObject(EVENT_DATA)
+        val ledger = payload.getString(DATA_FIELD_LEDGER)
+        val did = payload.getString(DATA_FIELD_DID)
+        val verKey = payload.getString(DATA_FIELD_VER_KEY)
         Commands.AddEndorser(ledger, did, verKey, ref)
 
       case TYPE_ENDORSER_INACTIVE =>
-        val payload = jsonObject.getJSONObject("data")
-        val ledger = payload.getString("ledger")
-        val did = payload.getString("did")
+        val payload = cloudEvent.getJSONObject(EVENT_DATA)
+        val ledger = payload.getString(DATA_FIELD_LEDGER)
+        val did = payload.getString(DATA_FIELD_DID)
         Commands.RemoveEndorser(ledger, did, ref)
     }
   }
+
+  //constants
+  val DATA_FIELD_LEDGER = "ledger"
+  val DATA_FIELD_DID = "did"
+  val DATA_FIELD_VER_KEY = "verKey"
 
 }
 

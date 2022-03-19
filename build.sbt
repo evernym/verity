@@ -383,7 +383,7 @@ lazy val commonLibraryDependencies = {
     "com.evernym.verity" % "verity-sdk" % veritySdkVer
       exclude ("com.evernym.vdrtools", "vdr-tools"),
 
-    "com.dimafeng" %% "testcontainers-scala-kafka" % "0.40.2",
+    "com.dimafeng" %% "testcontainers-scala-kafka" % "0.40.3",
 
     "org.pegdown" % "pegdown" % "1.6.0",
     "org.abstractj.kalium" % "kalium" % "0.8.0",  // java binding for nacl

@@ -822,6 +822,8 @@ class RelationshipProtocolSpec
         requester ~ SMSSent(smsInviteMsg.invitationId, smsInviteMsg.inviteURL, shortUrl)
         val smsSentMsg = requester expect signal[Signal.SMSInvitationSent]
         smsSentMsg.invitationId shouldBe smsInviteMsg.invitationId
+        smsSentMsg.inviteURL shouldBe smsInviteMsg.inviteURL
+        smsSentMsg.shortInviteURL shouldBe Some(shortUrl)
 
         // could be sent again.
         requester ~ SMSConnectionInvitation(validPhoneNo)
@@ -831,6 +833,8 @@ class RelationshipProtocolSpec
         requester ~ SMSSent(smsInviteMsg2.invitationId, smsInviteMsg2.inviteURL, shortUrl)
         val smsSentMsg2 = requester expect signal[Signal.SMSInvitationSent]
         smsSentMsg2.invitationId shouldBe smsInviteMsg2.invitationId
+        smsSentMsg2.inviteURL shouldBe smsInviteMsg2.inviteURL
+        smsSentMsg2.shortInviteURL shouldBe Some(shortUrl)
       }
     }
 
@@ -885,6 +889,8 @@ class RelationshipProtocolSpec
           requester ~ SMSSent(smsInviteMsg2.invitationId, smsInviteMsg2.inviteURL, shortUrl)
           val smsSentMsg2 = requester expect signal[Signal.SMSInvitationSent]
           smsSentMsg2.invitationId shouldBe smsInviteMsg2.invitationId
+          smsSentMsg2.inviteURL shouldBe smsInviteMsg2.inviteURL
+          smsSentMsg2.shortInviteURL shouldBe Some(shortUrl)
         }
       }
     }
@@ -911,6 +917,8 @@ class RelationshipProtocolSpec
         requester ~ SMSSent(smsInviteMsg.invitationId, smsInviteMsg.inviteURL, shortUrl)
         val smsSentMsg = requester expect signal[Signal.SMSInvitationSent]
         smsSentMsg.invitationId shouldBe smsInviteMsg.invitationId
+        smsSentMsg.inviteURL shouldBe smsInviteMsg.inviteURL
+        smsSentMsg.shortInviteURL shouldBe Some(shortUrl)
 
         // could be sent again.
         requester ~ SMSOutOfBandInvitation(validPhoneNo, defGoalCode, defGoal)
@@ -920,6 +928,8 @@ class RelationshipProtocolSpec
         requester ~ SMSSent(smsInviteMsg2.invitationId, smsInviteMsg2.inviteURL, shortUrl)
         val smsSentMsg2 = requester expect signal[Signal.SMSInvitationSent]
         smsSentMsg2.invitationId shouldBe smsInviteMsg2.invitationId
+        smsSentMsg2.inviteURL shouldBe smsInviteMsg2.inviteURL
+        smsSentMsg2.shortInviteURL shouldBe Some(shortUrl)
       }
     }
 
@@ -974,6 +984,8 @@ class RelationshipProtocolSpec
           requester ~ SMSSent(smsInviteMsg2.invitationId, smsInviteMsg2.inviteURL, shortUrl)
           val smsSentMsg2 = requester expect signal[Signal.SMSInvitationSent]
           smsSentMsg2.invitationId shouldBe smsInviteMsg2.invitationId
+          smsSentMsg2.inviteURL shouldBe smsInviteMsg2.inviteURL
+          smsSentMsg2.shortInviteURL shouldBe Some(shortUrl)
         }
       }
     }

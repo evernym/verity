@@ -47,7 +47,7 @@ import com.evernym.verity.push_notification.PushNotifData
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
-import com.evernym.verity.util2.{ActorErrorResp, Exceptions, Status}
+import com.evernym.verity.util2.{ActorErrorResp, Exceptions, RouteId, Status}
 import com.evernym.verity.vault.operation_executor.{CryptoOpExecutor, VerifySigByVerKey}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
@@ -984,6 +984,7 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     param.protoInstances.flatMap(_.instances.get(protoDef.protoRef.toString))
   override def contextualId: Option[String] = Option(param.thisAgentAuthKey.keyId)
   override def domainId: DomainId = param.domainId
+  override def routeId: RouteId = param.relationshipId.getOrElse(throw new RuntimeException("route Id not available"))
 
   override def agentWalletIdReq: String = param.agentWalletId
   override def stateDetailsFor(p: ProtoRef): Future[PartialFunction[String, Parameter]] = Future(param.protoInitParams(p))

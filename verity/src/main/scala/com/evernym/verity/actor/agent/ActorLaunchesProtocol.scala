@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.agent
 
 import akka.actor.{ActorRef, ActorSystem}
-import com.evernym.verity.util2.HasExecutionContextProvider
+import com.evernym.verity.util2.{HasExecutionContextProvider, RouteId}
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
@@ -22,6 +22,7 @@ trait ActorLaunchesProtocol
   private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   def entityId: String
+  def routeId: RouteId
   def agentWalletIdReq: String
 
   override type ControllerProviderInputType = ActorDriverGenParam
@@ -63,7 +64,7 @@ trait ActorLaunchesProtocol
 
     val cmd = ProtocolCmd(
       msgEnvelope,
-      Some(ProtocolMetadata(self, agentWalletIdReq, threadContextDetail))
+      Some(ProtocolMetadata(routeId, self, agentWalletIdReq, threadContextDetail))
     )
     ActorProtocol(pinstIdPair.protoDef)
       .region

@@ -21,6 +21,7 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.registry.{PinstIdPair, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{PublicIdentifier, PublicIdentifierCreated}
 import com.evernym.verity.util.MsgIdProvider
+import com.evernym.verity.util2.RouteId
 import com.typesafe.scalalogging.Logger
 
 import java.util.UUID
@@ -126,6 +127,7 @@ abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorConte
    * keeps actor ref of the caller (test actor) to be used to send back any messages
    */
   var caller: ActorRef = ActorRef.noSender
+  var routeId: RouteId = "routeId"
 
   var controllerDataOpt: Option[ControllerData] = None
   def controllerData: ControllerData = controllerDataOpt.getOrElse(

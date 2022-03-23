@@ -10,7 +10,7 @@ import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
 
-//all consumed event should come to this event handler and then it will decide what to do with it
+//all consumed messages should come to this message handler and then it will decide what to do with it
 class ConsumedMessageHandler(config: Config,
                              agentMsgRouter: AgentMsgRouter,
                              singletonParentProxy: ActorRef)(implicit executionContext: ExecutionContext)
@@ -18,15 +18,15 @@ class ConsumedMessageHandler(config: Config,
 
   val logger: Logger = getLoggerByClass(getClass)
 
-  lazy val endorserRegistryEventHandler = new EndorserRegistryEventHandler(config, singletonParentProxy)
-  lazy val endorsementReqStatusMessageHandler = new EndorsementReqStatusMessageHandler(config, agentMsgRouter)
+  lazy val endorserRegistryEventHandler = new EndorserMessageHandler(config, singletonParentProxy)
+  lazy val endorsementReqStatusMessageHandler = new EndorsementMessageHandler(config, agentMsgRouter)
 
   override def handleMessage(message: Message): Future[Done] = {
     message.metadata.topic match {
-      case TOPIC_ENDORSER_REGISTRY =>
+      case TOPIC_SSI_ENDORSER =>
         endorserRegistryEventHandler.handleMessage(message)
 
-      case TOPIC_ENDORSEMENT_REQ_STATUS =>
+      case TOPIC_SSI_ENDORSEMENT =>
         endorsementReqStatusMessageHandler.handleMessage(message)
 
       case _ =>

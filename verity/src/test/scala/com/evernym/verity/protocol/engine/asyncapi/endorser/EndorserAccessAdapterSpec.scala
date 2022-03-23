@@ -115,8 +115,8 @@ class MockActorContainer(val appConfig: AppConfig,
 
 class MockProducerAdapter extends ProducerPort {
 
-  override def send(payload: String, topic: String): Future[Unit] =
-    Future.successful(())
+  override def send(topic: String, payload: Array[Byte]): Future[Done] =
+    Future.successful(Done)
 }
 
 case class Published(storageId: String) extends ActorMessage

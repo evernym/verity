@@ -325,7 +325,6 @@ class ActorProtocolContainer[
         wallet
     )
 
-  //TODO: replace hardcoded "routeId" with correct routeId
   override lazy val endorser =
     new EndorserAccessAdapter(
       RoutingContext(msgForwarder.routeId.get, protoRef, pinstId),

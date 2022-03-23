@@ -21,7 +21,7 @@ import com.evernym.verity.msgoutbox.outbox.msg_packager.didcom_v1.{DIDCommV1Pack
 import com.evernym.verity.msgoutbox.outbox.msg_transporter.{HttpTransporter, MsgTransports}
 import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver
 import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.actor.typed.BehaviourSpecBase
+import com.evernym.verity.actor.typed.{BehaviourSpecBase, TypedTestKit}
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, PackMsg, PackedMsg}
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
@@ -38,8 +38,8 @@ import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.typesafe.config.{Config, ConfigFactory}
 import org.json.JSONObject
-import java.util.UUID
 
+import java.util.UUID
 import com.evernym.verity.msgoutbox.outbox.OutboxIdParam
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -56,11 +56,13 @@ trait BaseMsgOutboxSpec extends HasExecutionContextProvider { this: BehaviourSpe
     PolicyElements(Duration.apply(20, DAYS), expireAfterTerminalState = true)
   )
 
-  lazy val APP_CONFIG: Config = ConfigFactory.parseString (
+  lazy val APP_CONFIG: Config = TypedTestKit.clusterConfig.withFallback(
+    ConfigFactory.parseString (
     s"""
        |verity.blob-store.storage-service = "com.evernym.verity.testkit.mock.blob_store.MockBlobStore"
        |verity.blob-store.bucket-name = "$BUCKET_NAME"
        |""".stripMargin
+    )
   )
 
   lazy val appConfig = new TestAppConfig(Option(APP_CONFIG), clearValidators = true)

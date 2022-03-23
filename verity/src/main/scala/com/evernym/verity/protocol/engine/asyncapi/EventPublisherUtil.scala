@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.engine.asyncapi
 
+import akka.Done
 import com.evernym.verity.event_bus.event_handlers.RequestSourceUtil
 import com.evernym.verity.event_bus.ports.producer.ProducerPort
 import com.evernym.verity.protocol.engine.{PinstId, ProtoRef}
@@ -19,7 +20,7 @@ import scala.concurrent.Future
 class EventPublisherUtil(routingContext: RoutingContext,
                          producerPort: ProducerPort) {
 
-  def publishToEventBus(payload: String, eventType: String, topic: String): Future[Unit] = {
+  def publishToEventBus(payload: String, eventType: String, topic: String): Future[Done] = {
     //TODO: Do we need to use `extension` in the cloud event?
     val event: CloudEvent = CloudEventBuilder.v1()
       .withId(UUID.randomUUID().toString)
@@ -34,7 +35,7 @@ class EventPublisherUtil(routingContext: RoutingContext,
       .resolveFormat(JsonFormat.CONTENT_TYPE)
       .serialize(event)
 
-    producerPort.send(new String(data), topic)
+    producerPort.send(topic, data)
   }
 
   private lazy val cloudEventSource = RequestSourceUtil.build(

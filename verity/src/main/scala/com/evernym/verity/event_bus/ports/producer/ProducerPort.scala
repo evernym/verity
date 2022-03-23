@@ -1,8 +1,9 @@
 package com.evernym.verity.event_bus.ports.producer
 
+import akka.Done
+
 import scala.concurrent.Future
 
 trait ProducerPort {
-  //TODO: the payload type would be String or Array[Byte]?
-  def send(payload: String, topic: String): Future[Unit]
+  def send(topic: String, payload: Array[Byte]): Future[Done]
 }

@@ -15,6 +15,7 @@ import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValue
 import com.evernym.verity.config.ConfigConstants.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
+import com.evernym.verity.event_bus.adapters.producer.kafka.{KafkaProducerAdapter, ProducerSettingsProvider}
 import com.evernym.verity.event_bus.ports.producer.ProducerPort
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
 import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
@@ -67,7 +68,9 @@ trait AgentActorContext
   lazy val vdrBuilderFactory: VDRToolsFactory = () => new VdrToolsBuilderImpl
   lazy val vdrAdapter: VDRAdapter = createVDRAdapter(vdrBuilderFactory, appConfig)
 
-  lazy val eventProducerAdapter: ProducerPort = null   //TODO: replace `null` with appropriate initialization code
+  lazy val eventProducerAdapter: ProducerPort = KafkaProducerAdapter(
+    ProducerSettingsProvider(appConfig.config)
+  )(futureExecutionContext, system.toTyped)
 
   //NOTE: this 'oAuthAccessTokenRefreshers' is only need here until we switch to the outbox solution
   val oAuthAccessTokenRefreshers: AccessTokenRefreshers = new AccessTokenRefreshers {

@@ -12,7 +12,7 @@ import com.evernym.verity.actor.ActorContext
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.cache.base.{Cache, FetcherParam}
 import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValueFetcher, EndpointCacheFetcher, KeyValueMapperFetcher, LedgerGetCredDefCacheFetcher, LedgerGetSchemaCacheFetcher, LedgerVerKeyCacheFetcher}
-import com.evernym.verity.config.ConfigConstants.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
+import com.evernym.verity.config.ConfigConstants.{EVENT_PRODUCER_BUILDER_CLASS, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.event_bus.adapters.producer.kafka.{KafkaProducerAdapter, ProducerSettingsProvider}
@@ -68,9 +68,15 @@ trait AgentActorContext
   lazy val vdrBuilderFactory: VDRToolsFactory = () => new VdrToolsBuilderImpl
   lazy val vdrAdapter: VDRAdapter = createVDRAdapter(vdrBuilderFactory, appConfig)
 
-  lazy val eventProducerAdapter: ProducerPort = KafkaProducerAdapter(
-    ProducerSettingsProvider(appConfig.config)
-  )(futureExecutionContext, system.toTyped)
+  lazy val eventProducerAdapter: ProducerPort = {
+    val clazz = appConfig.getStringReq(EVENT_PRODUCER_BUILDER_CLASS)
+    Class
+      .forName(clazz)
+      .getConstructor()
+      .newInstance()
+      .asInstanceOf[EventProducerAdapterBuilder]
+      .build(appConfig, futureExecutionContext, system)
+  }
 
   //NOTE: this 'oAuthAccessTokenRefreshers' is only need here until we switch to the outbox solution
   val oAuthAccessTokenRefreshers: AccessTokenRefreshers = new AccessTokenRefreshers {
@@ -121,5 +127,19 @@ class DefaultLedgerSvc(val system: ActorSystem,
 
   override def ledgerTxnExecutor: LedgerTxnExecutor = {
     ledgerPoolConnManager.txnExecutor(Some(walletAPI))
+  }
+}
+
+trait EventProducerAdapterBuilder {
+  def build(appConfig: AppConfig, executionContext: ExecutionContext, actorSystem: ActorSystem): ProducerPort
+}
+
+class KafkaEventProducerAdapterBuilder
+  extends EventProducerAdapterBuilder {
+
+  override def build(appConfig: AppConfig, executionContext: ExecutionContext, actorSystem: ActorSystem): ProducerPort = {
+    KafkaProducerAdapter(
+      ProducerSettingsProvider(appConfig.config)
+    )(executionContext, actorSystem.toTyped)
   }
 }

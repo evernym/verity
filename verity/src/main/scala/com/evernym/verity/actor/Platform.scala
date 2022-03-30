@@ -8,7 +8,7 @@ import com.evernym.verity.util2._
 import com.evernym.verity.actor.ShardUtil._
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.agency.{AgencyAgent, AgencyAgentPairwise}
-import com.evernym.verity.actor.agent.msgrouter.Route
+import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, Route}
 import com.evernym.verity.actor.agent.user.{UserAgent, UserAgentPairwise}
 import com.evernym.verity.actor.cluster_singleton.SingletonParent
 import com.evernym.verity.actor.metrics.{CollectionsMetricCollector, LibindyMetricsCollector}
@@ -35,11 +35,10 @@ import com.evernym.verity.actor.typed.base.UserGuardian
 import com.evernym.verity.event_bus.adapters.consumer.kafka.{ConsumerSettingsProvider, KafkaConsumerAdapter}
 import com.evernym.verity.event_bus.event_handlers.ConsumedMessageHandler
 import com.evernym.verity.event_bus.ports.consumer.ConsumerPort
-import com.evernym.verity.event_bus.ports.producer.ProducerPort
 import com.evernym.verity.vdrtools.Libraries
 import com.evernym.verity.util.healthcheck.HealthChecker
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 class Platform(val aac: AgentActorContext, services: PlatformServices, val executionContextProvider: ExecutionContextProvider)
@@ -447,13 +446,40 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
 
   //should be lazy and only used/created during startup process (post dependency check)
   lazy val eventConsumerAdapter: ConsumerPort = {
+    val clazz = appConfig.getStringReq(EVENT_CONSUMER_BUILDER_CLASS)
+    Class
+      .forName(clazz)
+      .getConstructor()
+      .newInstance()
+      .asInstanceOf[EventConsumerAdapterBuilder]
+      .build(appConfig, agentActorContext.agentMsgRouter, singletonParentProxy, executionContextProvider.futureExecutionContext, actorSystem)
+  }
+}
+
+trait EventConsumerAdapterBuilder {
+  def build(appConfig: AppConfig,
+            agentMsgRouter: AgentMsgRouter,
+            singletonParentProxy: ActorRef,
+            executionContext: ExecutionContext,
+            actorSystem: ActorSystem): ConsumerPort
+}
+
+
+class KafkaEventConsumerAdapterBuilder
+  extends EventConsumerAdapterBuilder {
+
+  override def build(appConfig: AppConfig,
+                     agentMsgRouter: AgentMsgRouter,
+                     singletonParentProxy: ActorRef,
+                     executionContext: ExecutionContext,
+                     actorSystem: ActorSystem): ConsumerPort = {
     import akka.actor.typed.scaladsl.adapter._
     val consumerSettingsProvider = ConsumerSettingsProvider(appConfig.config)
     new KafkaConsumerAdapter(
       new ConsumedMessageHandler(
         appConfig.config,
-        agentActorContext.agentMsgRouter, singletonParentProxy)(executionContextProvider.futureExecutionContext),
-      consumerSettingsProvider)(executionContextProvider.futureExecutionContext, actorSystem.toTyped)
+        agentMsgRouter, singletonParentProxy)(executionContext),
+      consumerSettingsProvider)(executionContext, actorSystem.toTyped)
   }
 }
 

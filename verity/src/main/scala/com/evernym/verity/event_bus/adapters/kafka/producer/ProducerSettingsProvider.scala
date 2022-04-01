@@ -1,4 +1,4 @@
-package com.evernym.verity.event_bus.adapters.producer.kafka
+package com.evernym.verity.event_bus.adapters.kafka.producer
 
 import akka.kafka.ProducerSettings
 import com.evernym.verity.config.validator.base.ConfigReadHelper

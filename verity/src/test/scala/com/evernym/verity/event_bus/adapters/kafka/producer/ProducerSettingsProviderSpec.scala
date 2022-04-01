@@ -1,4 +1,4 @@
-package com.evernym.verity.event_bus.adapters.producer.kafka
+package com.evernym.verity.event_bus.adapters.kafka.producer
 
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.ConfigException.Missing

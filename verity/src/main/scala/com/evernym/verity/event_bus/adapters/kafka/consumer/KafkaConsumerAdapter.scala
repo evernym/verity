@@ -1,4 +1,4 @@
-package com.evernym.verity.event_bus.adapters.consumer.kafka
+package com.evernym.verity.event_bus.adapters.kafka.consumer
 
 import akka.Done
 import akka.actor.typed.{ActorSystem => TypedActorSystem}
@@ -36,9 +36,9 @@ class KafkaConsumerAdapter(override val messageHandler: MessageHandler,
                            actorSystem: TypedActorSystem[_])
   extends ConsumerPort {
 
-  val logger: Logger = LoggingUtil.getLoggerByClass(getClass)
+  private val logger: Logger = LoggingUtil.getLoggerByClass(getClass)
 
-  var controller: Option[DrainingControl[_]] = None
+  private var controller: Option[DrainingControl[_]] = None
 
   override def start(): Unit = {
     controller = Option(

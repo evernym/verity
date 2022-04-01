@@ -16,12 +16,14 @@ object WriteSchemaMsgFamily extends MsgFamily {
 
   override protected val controlMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map(
     "write"                -> classOf[Write],
+    "endorsement-complete" -> classOf[EndorsementComplete]
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
-    classOf[StatusReport]     -> "status-report",
-    classOf[ProblemReport]    -> "problem-report",
-    classOf[NeedsEndorsement] -> "needs-endorsement"
+    classOf[StatusReport]           -> "status-report",
+    classOf[ProblemReport]          -> "problem-report",
+    classOf[NeedsEndorsement]       -> "needs-endorsement",
+    classOf[EndorsementInProgress]  -> "endorsement-in-progress"
   )
 }
 
@@ -40,6 +42,7 @@ sealed trait SignalMsg extends MsgBase
 case class StatusReport(schemaId: String)                         extends SignalMsg
 case class ProblemReport(message: String)                         extends SignalMsg
 case class NeedsEndorsement(schemaId: String, schemaJson: String) extends SignalMsg
+case class EndorsementInProgress(endorserDID: DidStr) extends SignalMsg
 
 /**
  * Control Messages
@@ -56,6 +59,8 @@ case class Write(name: String, version: String, attrNames: Seq[String], endorser
     }
   }
 }
+
+case class EndorsementComplete(code: String, description: String) extends Msg with SchemaControl
 
 /**
  * Errors

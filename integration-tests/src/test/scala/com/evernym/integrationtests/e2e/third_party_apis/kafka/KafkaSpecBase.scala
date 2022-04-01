@@ -6,12 +6,11 @@ import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.kafka.testkit.scaladsl.ScalatestKafkaSpec
 import akka.stream.scaladsl.Source
-import com.evernym.verity.event_bus.adapters.consumer.kafka.{ConsumerSettingsProvider, KafkaConsumerAdapter}
+import com.evernym.verity.event_bus.adapters.kafka.consumer.{ConsumerSettingsProvider, KafkaConsumerAdapter}
 import com.evernym.verity.event_bus.ports.consumer.MessageHandler
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.Config
 import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.clients.producer.{Producer => KafkaProducer}
 import org.apache.kafka.common.serialization.{ByteArraySerializer, StringSerializer}
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -34,10 +33,6 @@ abstract class KafkaSpecBase(kafkaPort: Int)
   def createProducerSettings(config: Config): ProducerSettings[String,Array[Byte]] = {
     ProducerSettings(config, new StringSerializer, new ByteArraySerializer)
         .withBootstrapServers(bootstrapServers)
-  }
-
-  def createProducer[K,V](producerSettings: ProducerSettings[K,V]): KafkaProducer[K,V] = {
-    producerSettings.createKafkaProducer()
   }
 
   def publishEvents[K,V](producerSettings: ProducerSettings[K,V], topic: String, events: Seq[V]): Future[Done] = {

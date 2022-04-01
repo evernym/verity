@@ -1,4 +1,4 @@
-package com.evernym.verity.event_bus.adapters.consumer.kafka
+package com.evernym.verity.event_bus.adapters.kafka.consumer
 
 import akka.kafka.{CommitterSettings, ConsumerSettings}
 import com.evernym.verity.config.validator.base.ConfigReadHelper

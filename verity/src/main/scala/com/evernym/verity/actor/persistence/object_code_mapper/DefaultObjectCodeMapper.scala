@@ -326,7 +326,8 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     266 -> AgentDetailRecorded,
     267 -> AgentActivityRecorded,
     268 -> ActivityState,
-    269 -> TheirRoutingUpdated
+    269 -> TheirRoutingUpdated,
+    270 -> writeSchema_v06.WaitingForEndorsement
   )
 
 }

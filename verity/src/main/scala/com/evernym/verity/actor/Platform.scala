@@ -32,7 +32,7 @@ import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyServic
 import com.evernym.verity.actor.metrics.activity_tracker.ActivityTracker
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.typed.base.UserGuardian
-import com.evernym.verity.event_bus.adapters.consumer.kafka.{ConsumerSettingsProvider, KafkaConsumerAdapter}
+import com.evernym.verity.event_bus.adapters.kafka.consumer.{ConsumerSettingsProvider, KafkaConsumerAdapter}
 import com.evernym.verity.event_bus.event_handlers.ConsumedMessageHandler
 import com.evernym.verity.event_bus.ports.consumer.ConsumerPort
 import com.evernym.verity.vdrtools.Libraries
@@ -79,17 +79,8 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       executionContextProvider.futureExecutionContext
     ), name = "app-state-manager")
 
-  val nodeSingleton: ActorRef = agentActorContext.system.actorOf(NodeSingleton.props(appConfig, executionContextProvider.futureExecutionContext), name = "node-singleton")
-
-  def buildProp(prop: Props, dispatcherNameOpt: Option[String]=None): Props = {
-    dispatcherNameOpt.map { dn =>
-      val cdnOpt = agentActorContext.appConfig.getConfigOption(dn)
-      cdnOpt.map { _ =>
-        agentActorContext.system.dispatchers.lookup(dn)
-        prop.withDispatcher(dn)
-      }.getOrElse(prop)
-    }.getOrElse(prop)
-  }
+  val nodeSingleton: ActorRef = agentActorContext.system.actorOf(NodeSingleton.props(appConfig,
+    executionContextProvider.futureExecutionContext), name = "node-singleton")
 
   //agency agent actor
   val agencyAgentRegion: ActorRef = createPersistentRegion(
@@ -422,21 +413,6 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
         singletonManagerPath = singletonManagerPath,
         settings = ClusterSingletonProxySettings(agentActorContext.system)),
       name = CLUSTER_SINGLETON_MANAGER_PROXY)
-  }
-
-  /**
-   * utility function to compute passivation time
-   * @param confName
-   * @param defaultDurationInSeconds
-   * @return
-   */
-  def passivateDuration(confName: String,
-                        defaultDurationInSeconds: FiniteDuration): FiniteDuration = {
-    //assumption is that the config duration is in seconds
-    appConfig.getIntOption(confName) match {
-      case Some(duration) => duration.second
-      case None           => defaultDurationInSeconds
-    }
   }
 
   val appStateCoordinator = new AppStateCoordinator(

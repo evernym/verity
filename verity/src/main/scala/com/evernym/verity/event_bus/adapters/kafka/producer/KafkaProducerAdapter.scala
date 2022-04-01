@@ -1,4 +1,4 @@
-package com.evernym.verity.event_bus.adapters.producer.kafka
+package com.evernym.verity.event_bus.adapters.kafka.producer
 
 import akka.Done
 import akka.actor.typed.{ActorSystem => TypedActorSystem}
@@ -11,6 +11,7 @@ import com.typesafe.scalalogging.Logger
 import org.apache.kafka.clients.producer.ProducerRecord
 
 import scala.concurrent.{ExecutionContext, Future}
+
 
 object KafkaProducerAdapter {
   def apply(settingsProvider: ProducerSettingsProvider)
@@ -27,12 +28,9 @@ class KafkaProducerAdapter(settingsProvider: ProducerSettingsProvider)
 
   val producerSettings: ProducerSettings[String, Array[Byte]] = settingsProvider.kafkaProducerSettings()
 
-  val settingsWithProducer: ProducerSettings[String, Array[Byte]] = producerSettings.withProducer(
-    producerSettings.createKafkaProducer()
-  )
-
   override def send(topic: String, payload: Array[Byte]): Future[Done] = {
-    Source.single(new ProducerRecord[String, Array[Byte]](topic, payload))
-      .runWith(Producer.plainSink(settingsWithProducer))
+    Source
+      .single(new ProducerRecord[String, Array[Byte]](topic, payload))
+      .runWith(Producer.plainSink(producerSettings))
   }
 }

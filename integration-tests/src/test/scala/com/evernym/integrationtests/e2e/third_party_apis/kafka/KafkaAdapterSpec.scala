@@ -7,7 +7,8 @@ import akka.kafka.ProducerSettings
 import akka.kafka.testkit.KafkaTestkitTestcontainersSettings
 import akka.kafka.testkit.scaladsl.TestcontainersKafkaPerClassLike
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
-import com.evernym.verity.event_bus.adapters.consumer.kafka.ConsumerSettingsProvider
+import com.evernym.verity.event_bus.adapters.kafka.consumer.ConsumerSettingsProvider
+import com.evernym.verity.event_bus.adapters.kafka.producer.ProducerSettingsProvider
 import com.evernym.verity.event_bus.ports.consumer.{Message, MessageHandler}
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.scalatest.time.{Millis, Seconds, Span}
@@ -163,6 +164,7 @@ class KafkaAdapterSpec
 
   lazy val producerSettings: ProducerSettings[String, Array[Byte]] = createProducerSettings(getDefaultProducerSettings())
 
+
   lazy val defaultAkkaKafkaConfig: Config = ConfigFactory.load().withOnlyPath("akka.kafka")
 
   lazy val verityKafkaConsumerConfig: Config = ConfigFactory.parseString(
@@ -184,6 +186,19 @@ class KafkaAdapterSpec
       |""".stripMargin
   )
 
+  lazy val verityKafkaProducerConfig: Config = ConfigFactory.parseString(
+    """
+      | verity.kafka = ${akka.kafka} {
+      |   producer = ${akka.kafka.producer} {
+      |     kafka-clients = ${akka.kafka.producer.kafka-clients} {
+      |       bootstrap.servers = "testkafka"
+      |       client.id = "verity"
+      |     }
+      |   }
+      | }
+      |""".stripMargin
+  )
+
   implicit lazy val actorSystem: ActorSystem[Nothing] = ActorSystemVanilla("test").toTyped
 
   def createConsumerSettingsProvider(bootstrapServer: String,
@@ -195,6 +210,14 @@ class KafkaAdapterSpec
       .withValue("verity.kafka.consumer.topics", ConfigValueFactory.fromIterable(topics.asJava))
 
     ConsumerSettingsProvider(config)
+  }
+
+  def createProducerSettingsProvider(bootstrapServer: String): ProducerSettingsProvider = {
+    val config = verityKafkaProducerConfig
+      .withFallback(defaultAkkaKafkaConfig)
+      .resolve()
+      .withValue("verity.kafka.producer.kafka-clients.bootstrap.servers", ConfigValueFactory.fromAnyRef(bootstrapServer))
+    ProducerSettingsProvider(config)
   }
 
   override val testcontainersSettings = KafkaTestkitTestcontainersSettings(actorSystem.classicSystem)

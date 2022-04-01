@@ -15,7 +15,7 @@ import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValue
 import com.evernym.verity.config.ConfigConstants.{EVENT_PRODUCER_BUILDER_CLASS, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.event_bus.adapters.producer.kafka.{KafkaProducerAdapter, ProducerSettingsProvider}
+import com.evernym.verity.event_bus.adapters.kafka.producer.{KafkaProducerAdapter, ProducerSettingsProvider}
 import com.evernym.verity.event_bus.ports.producer.ProducerPort
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
 import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager

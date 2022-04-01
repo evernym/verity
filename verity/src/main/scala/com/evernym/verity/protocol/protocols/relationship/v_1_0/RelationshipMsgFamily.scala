@@ -53,7 +53,7 @@ object Signal {
   case class Created(did: DidStr, verKey: VerKeyStr) extends SignalMsg
   case class Invitation(inviteURL: String, shortInviteURL: Option[String], invitationId: String) extends SignalMsg
   case class SendSMSInvite(invitationId: String, inviteURL: String, senderName: String, phoneNo: String) extends SignalMsg
-  case class SMSInvitationSent(invitationId: String)
+  case class SMSInvitationSent(inviteURL: String, shortInviteURL: Option[String], invitationId: String) extends SignalMsg
   case class ProblemReport(description: ProblemDescription) extends SignalMsg
   def buildProblemReport(description: String, code: String): Signal.ProblemReport = {
     Signal.ProblemReport(

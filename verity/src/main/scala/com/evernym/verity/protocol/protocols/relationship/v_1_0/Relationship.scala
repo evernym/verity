@@ -44,7 +44,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
     case (st: State.Created                 , m: Ctl.SMSOutOfBandInvitation ) =>
       outOfBandInvitation(st, m, ctx.serviceKeyDidFormat)
     case (_: State.Created        , m: Ctl.SMSSent                ) =>
-      ctx.signal(Signal.SMSInvitationSent(m.invitationId))
+      ctx.signal(Signal.SMSInvitationSent(m.longInviteUrl, Option(m.shortInviteUrl), m.invitationId))
     case (_: State.Created        , _: Ctl.SMSSendingFailed       ) =>
       ctx.signal(Signal.buildProblemReport("SMS sending failed", smsSendingFailed))
     case (st: State                         , m: Ctl                        ) => // unexpected state

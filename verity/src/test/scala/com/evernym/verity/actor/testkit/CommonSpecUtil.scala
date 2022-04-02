@@ -71,8 +71,8 @@ trait CanGenerateDid {
 
   def generateNewAgentDIDDetail(nameOpt: Option[String]=None, seedOpt: Option[String]=None): AgentDIDDetail = {
     val seed = getSeed(seedOpt)
-    val sk = TestUtil.getSigningKey(seed)
-    val vk = sk.getVerifyKey.toBytes
+    val kp = TestUtil.getSigningKeyPair(seed)
+    val vk = kp.getPublicKey.getAsBytes
     val verKey = Base58Util.encode(vk)
     val did = Base58Util.encode(vk.take(16))
     AgentDIDDetail(nameOpt.getOrElse(did), seed, did, verKey)

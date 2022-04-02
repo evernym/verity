@@ -1,12 +1,14 @@
 package com.evernym.verity.testkit.util
 
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
-import org.abstractj.kalium.keys.SigningKey
+import com.goterl.lazysodium.utils.{KeyPair, LibraryLoader}
+import com.goterl.lazysodium.{LazySodiumJava, SodiumJava}
 import org.iq80.leveldb.util.FileUtils
 
 object TestUtil {
 
   private val logger = getLoggerByClass(getClass)
+  private val lazySodium = new LazySodiumJava(new SodiumJava(LibraryLoader.Mode.PREFER_SYSTEM))
 
   def RISKY_deleteIndyClientContents(): Unit = {
     try {
@@ -26,8 +28,8 @@ object TestUtil {
     }
   }
 
-  def getSigningKey(seed: String): SigningKey = {
+  def getSigningKeyPair(seed: String): KeyPair = {
     val seedBytes = seed.getBytes.take(32)
-    new SigningKey(seedBytes)
+    lazySodium.cryptoSignSeedKeypair(seedBytes)
   }
 }

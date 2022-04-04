@@ -28,7 +28,7 @@ class ConsumerSettingsProviderSpec
 
         val verityKafkaConfig = ConfigFactory.parseString(
             """
-              | verity.kafka = ${akka.kafka} {
+              | verity.event-bus.kafka = ${akka.kafka} {
               |   consumer = ${akka.kafka.consumer} {
               |     kafka-clients = ${akka.kafka.consumer.kafka-clients} {
               |       bootstrap.servers = "testkafka"

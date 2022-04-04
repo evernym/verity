@@ -25,7 +25,7 @@ class ProducerSettingsProviderSpec
 
         val verityKafkaConfig = ConfigFactory.parseString(
             """
-              | verity.kafka = ${akka.kafka} {
+              | verity.event-bus.kafka = ${akka.kafka} {
               |   producer = ${akka.kafka.producer} {
               |     kafka-clients = ${akka.kafka.producer.kafka-clients} {
               |       bootstrap.servers = "testkafka"

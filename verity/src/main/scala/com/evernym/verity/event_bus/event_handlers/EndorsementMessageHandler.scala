@@ -3,9 +3,11 @@ package com.evernym.verity.event_bus.event_handlers
 import akka.Done
 import com.evernym.verity.actor.agent.msghandler.SendToProtocolActor
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
+import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.event_bus.event_handlers.RequestSourceUtil.extract
 import com.evernym.verity.event_bus.ports.consumer.Message
-import com.evernym.verity.protocol.container.actor.ProtocolCmd
+import com.evernym.verity.protocol.container.actor.MsgEnvelope
+import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.EndorsementResult
 import com.typesafe.config.Config
 import org.json.JSONObject
 
@@ -26,16 +28,20 @@ class EndorsementMessageHandler(config: Config,
   //TODO: a high level implementation, it needs to be finalized/corrected as per final integration changes
   private def createCmd(jsonObject: JSONObject): Any = {
     jsonObject.getString(CLOUD_EVENT_TYPE) match {
-      case EVENT_ENDORSEMENT_COMPLETE =>
+      case EVENT_ENDORSEMENT_COMPLETE_V1 =>
         val eventData = jsonObject.getJSONObject(CLOUD_EVENT_DATA)
-        val result = eventData.getString(DATA_FIELD_RESULT)
-        val resultDescr = eventData.getString(DATA_FIELD_RESULT_DESCR)
-        EndorsementCompleted(result, resultDescr)
+        val result = eventData.getJSONObject(DATA_FIELD_RESULT)
+        val resultCode = result.getString(DATA_FIELD_RESULT_CODE)
+        val resultDescr = result.getString(DATA_FIELD_RESULT_DESCR)
+        EndorsementResult(resultCode, resultDescr)
     }
   }
 
   private def sendToRouter(requestSource: RequestSource, cmd: Any): Future[Done] = {
-    val protoCmd = SendToProtocolActor(requestSource.pinstIdPair, ProtocolCmd(cmd, None))
+    val protoCmd = SendToProtocolActor(
+      requestSource.pinstIdPair,
+      MsgEnvelope(cmd, null, null, null, msgId = Option(MsgFamilyUtil.getNewMsgUniqueId), thId = Option(requestSource.threadId))
+    )
     agentMsgRouter
       .execute(InternalMsgRouteParam(requestSource.route, protoCmd))
       .map(_ => Done)
@@ -43,8 +49,6 @@ class EndorsementMessageHandler(config: Config,
 
   //constants
   val DATA_FIELD_RESULT = "result"
-  val DATA_FIELD_RESULT_DESCR = "result_descr"
+  val DATA_FIELD_RESULT_CODE = "code"
+  val DATA_FIELD_RESULT_DESCR = "descr"
 }
-
-//TODO: below command is declared here on temporary basis until it gets created in protocol side
-case class EndorsementCompleted(result: String, resultDescription: String)

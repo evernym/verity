@@ -169,7 +169,7 @@ class KafkaAdapterSpec
 
   lazy val verityKafkaConsumerConfig: Config = ConfigFactory.parseString(
     """
-      | verity.kafka = ${akka.kafka} {
+      | verity.event-bus.kafka = ${akka.kafka} {
       |   consumer = ${akka.kafka.consumer} {
       |     kafka-clients = ${akka.kafka.consumer.kafka-clients} {
       |       bootstrap.servers = "testkafka"
@@ -188,7 +188,7 @@ class KafkaAdapterSpec
 
   lazy val verityKafkaProducerConfig: Config = ConfigFactory.parseString(
     """
-      | verity.kafka = ${akka.kafka} {
+      | verity.event-bus.kafka = ${akka.kafka} {
       |   producer = ${akka.kafka.producer} {
       |     kafka-clients = ${akka.kafka.producer.kafka-clients} {
       |       bootstrap.servers = "testkafka"
@@ -206,8 +206,8 @@ class KafkaAdapterSpec
     val config = verityKafkaConsumerConfig
       .withFallback(defaultAkkaKafkaConfig)
       .resolve()
-      .withValue("verity.kafka.consumer.kafka-clients.bootstrap.servers", ConfigValueFactory.fromAnyRef(bootstrapServer))
-      .withValue("verity.kafka.consumer.topics", ConfigValueFactory.fromIterable(topics.asJava))
+      .withValue("verity.event-bus.kafka.consumer.kafka-clients.bootstrap.servers", ConfigValueFactory.fromAnyRef(bootstrapServer))
+      .withValue("verity.event-bus.kafka.consumer.topics", ConfigValueFactory.fromIterable(topics.asJava))
 
     ConsumerSettingsProvider(config)
   }
@@ -216,7 +216,7 @@ class KafkaAdapterSpec
     val config = verityKafkaProducerConfig
       .withFallback(defaultAkkaKafkaConfig)
       .resolve()
-      .withValue("verity.kafka.producer.kafka-clients.bootstrap.servers", ConfigValueFactory.fromAnyRef(bootstrapServer))
+      .withValue("verity.event-bus.kafka.producer.kafka-clients.bootstrap.servers", ConfigValueFactory.fromAnyRef(bootstrapServer))
     ProducerSettingsProvider(config)
   }
 

@@ -628,8 +628,7 @@ trait ProtocolContext[P,R,M,E,S,I]
 
   private def checkIfRegistered(msg: Any, msgCategory: String): Unit = {
     val result = msgCategory match {
-      case "control"  =>
-        classOf[Init] == msg.getClass || definition.msgFamily.isControlMsg(msg)
+      case "control"  => classOf[Init] == msg.getClass || definition.msgFamily.isControlMsg(msg)
       case "signal"   => definition.msgFamily.isSignalMsg(msg)
       case "protocol" => definition.msgFamily.isProtocolMsg(msg)
     }

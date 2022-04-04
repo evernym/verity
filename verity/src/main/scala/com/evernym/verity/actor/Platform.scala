@@ -32,6 +32,7 @@ import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyServic
 import com.evernym.verity.actor.metrics.activity_tracker.ActivityTracker
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.typed.base.UserGuardian
+import com.evernym.verity.event_bus.adapters.basic.event_store.BasicEventStoreAPI
 import com.evernym.verity.event_bus.adapters.kafka.consumer.{ConsumerSettingsProvider, KafkaConsumerAdapter}
 import com.evernym.verity.event_bus.event_handlers.ConsumedMessageHandler
 import com.evernym.verity.event_bus.ports.consumer.ConsumerPort
@@ -420,9 +421,13 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
     actorSystem,
     this)(agentActorContext.futureExecutionContext)
 
+  val basicEventStore: Option[BasicEventStoreAPI] = if (appConfig.getStringReq(EVENT_BUS_TYPE) == "basic") {
+    Option(new BasicEventStoreAPI(appConfig.config)(actorSystem, executionContextProvider.futureExecutionContext))
+  } else None
+
   //should be lazy and only used/created during startup process (post dependency check)
   lazy val eventConsumerAdapter: ConsumerPort = {
-    val clazz = appConfig.getStringReq(EVENT_CONSUMER_BUILDER_CLASS)
+    val clazz = appConfig.getStringReq(EVENT_BUS_CONSUMER_BUILDER_CLASS)
     Class
       .forName(clazz)
       .getConstructor()

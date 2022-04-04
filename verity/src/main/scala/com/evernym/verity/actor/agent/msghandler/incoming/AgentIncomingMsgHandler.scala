@@ -2,7 +2,7 @@ package com.evernym.verity.actor.agent.msghandler.incoming
 
 import java.util.UUID
 import akka.actor.{ActorRef, Props}
-import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, AgentMsgProcessor, ProcessUntypedMsgV2, StateParam, UnhandledMsg}
+import com.evernym.verity.actor.agent.msghandler.{AgentMsgHandler, AgentMsgProcessor, ProcessUntypedMsgV2, SendToProtocolActor, StateParam, UnhandledMsg}
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.persistence.AgentPersistentActor
 import com.evernym.verity.config.AgentAuthKeyUtil
@@ -15,10 +15,11 @@ import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.did.didcomm.v1.messages.MsgType
 import com.evernym.verity.observability.metrics.InternalSpan
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor =>
-  private implicit val executionContext = futureExecutionContext
+
+  private implicit val executionContext: ExecutionContext = futureExecutionContext
 
   def agentIncomingCommonCmdReceiver[A]: Receive = {
 
@@ -35,6 +36,8 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
 
     //agent-msg-processor-actor -> this actor
     case psm: ProcessSignalMsg            => handleSignalMsgFromDriver(psm)
+
+    case stpa: SendToProtocolActor        => sendToAgentMsgProcessor(stpa)
 
     //agent-msg-processor-actor -> this actor
     case um: UnhandledMsg                 =>

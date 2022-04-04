@@ -16,7 +16,7 @@ object WriteSchemaMsgFamily extends MsgFamily {
 
   override protected val controlMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map(
     "write"                -> classOf[Write],
-    "endorsement-complete" -> classOf[EndorsementComplete]
+    "endorsement-result"   -> classOf[EndorsementResult]
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
@@ -60,7 +60,7 @@ case class Write(name: String, version: String, attrNames: Seq[String], endorser
   }
 }
 
-case class EndorsementComplete(code: String, description: String) extends Msg with SchemaControl
+case class EndorsementResult(code: String, description: String) extends Msg with SchemaControl
 
 /**
  * Errors

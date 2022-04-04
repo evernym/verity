@@ -15,6 +15,7 @@ import com.evernym.verity.actor.cluster_singleton.maintenance.{GetMigrationStatu
 import com.evernym.verity.actor.maintenance.v1tov2migration.SetupMigratedConnection
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.actor.{ActorMessage, ConfigRefreshed, ForIdentifier, NodeConfigRefreshed, OverrideConfigOnAllNodes, OverrideNodeConfig, RefreshConfigOnAllNodes, RefreshNodeConfig}
+import com.evernym.verity.http.HttpUtil.entityAs
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 

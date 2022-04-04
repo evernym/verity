@@ -9,6 +9,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.appStateManager.{AllEvents, AppStateDetailed, CauseDetail, GetDetailedAppState, GetEvents, ManualUpdate, SuccessEvent}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
+import com.evernym.verity.http.HttpUtil.optionalEntityAs
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.typesafe.config.ConfigException.{BadPath, Missing}

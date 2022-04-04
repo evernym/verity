@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.engine.asyncapi
 import akka.Done
 import com.evernym.verity.event_bus.event_handlers.RequestSourceUtil
 import com.evernym.verity.event_bus.ports.producer.ProducerPort
-import com.evernym.verity.protocol.engine.{PinstId, ProtoRef}
+import com.evernym.verity.protocol.engine.{PinstId, ProtoRef, ThreadId}
 import com.evernym.verity.util2.RouteId
 import io.cloudevents.CloudEvent
 import io.cloudevents.core.builder.CloudEventBuilder
@@ -42,7 +42,8 @@ class EventPublisherUtil(routingContext: RoutingContext,
     "https://verity.avast.com",   //TODO: is this value ok and/or shall be configurable?
     routingContext.routeId,
     routingContext.protoRef,
-    routingContext.pinstId
+    routingContext.pinstId,
+    routingContext.threadId
   )
 }
 
@@ -51,5 +52,6 @@ class EventPublisherUtil(routingContext: RoutingContext,
  * @param routeId
  * @param protoRef
  * @param pinstId
+ * @param threadId
  */
-case class RoutingContext(routeId: RouteId, protoRef: ProtoRef, pinstId: PinstId)
+case class RoutingContext(routeId: RouteId, protoRef: ProtoRef, pinstId: PinstId, threadId: ThreadId)

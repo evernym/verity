@@ -33,14 +33,13 @@ class EndorserMessageHandler(config: Config,
 
     cloudEvent.getString(CLOUD_EVENT_TYPE) match {
 
-      case EVENT_ENDORSER_ACTIVATED =>
+      case EVENT_ENDORSER_ACTIVATED_V1 =>
         val payload = cloudEvent.getJSONObject(CLOUD_EVENT_DATA)
         val ledger = payload.getString(DATA_FIELD_LEDGER)
         val did = payload.getString(DATA_FIELD_DID)
-        val verKey = payload.getString(DATA_FIELD_VER_KEY)
-        Commands.AddEndorser(ledger, did, verKey, ref)
+        Commands.AddEndorser(ledger, did, ref)
 
-      case EVENT_ENDORSER_DEACTIVATED =>
+      case EVENT_ENDORSER_DEACTIVATED_V1 =>
         val payload = cloudEvent.getJSONObject(CLOUD_EVENT_DATA)
         val ledger = payload.getString(DATA_FIELD_LEDGER)
         val did = payload.getString(DATA_FIELD_DID)
@@ -49,9 +48,7 @@ class EndorserMessageHandler(config: Config,
   }
 
   //constants
-  val DATA_FIELD_LEDGER = "ledger"
-  val DATA_FIELD_DID = "did"
-  val DATA_FIELD_VER_KEY = "verKey"
-
+  val DATA_FIELD_LEDGER = "ledgerprefix"
+  val DATA_FIELD_DID = "endorserdid"
 }
 

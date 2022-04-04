@@ -192,13 +192,14 @@ class ActorProtocolContainer[
     if(sender() != self) {
       senderActorRef = Option(sender())
     }
-
     val (msgId, msgToBeSent) = cmd.msg match {
       case c: Control =>
         val newMsgId = MsgFamilyUtil.getNewMsgUniqueId
         (newMsgId, CtlEnvelope(c, newMsgId, DEFAULT_THREAD_ID))
+
       case MsgEnvelope(msg: Control, _, _, _, Some(msgId), Some(thId))  =>
         (msgId, CtlEnvelope(msg, msgId, thId))
+
       case MsgEnvelope(msg: Any, _, to, frm, Some(msgId), Some(thId))   =>
         (msgId, Envelope1(msg, to, frm, Some(msgId), Some(thId)))
     }
@@ -327,7 +328,7 @@ class ActorProtocolContainer[
 
   override lazy val endorser =
     new EndorserAccessAdapter(
-      RoutingContext(msgForwarder.routeId.get, protoRef, pinstId),
+      RoutingContext(msgForwarder.routeId.get, protoRef, pinstId, `threadId_!`),
       agentActorContext.eventProducerAdapter,
       agentActorContext.storageAPI,
       singletonParentProxyActor,

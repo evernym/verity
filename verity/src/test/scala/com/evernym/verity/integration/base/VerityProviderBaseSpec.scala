@@ -5,12 +5,13 @@ import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.{ServiceParam, VerityLocalNode}
 import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore, VerityEnv}
+import com.evernym.verity.ledger.LedgerTxnExecutor
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider}
 import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
 import com.typesafe.scalalogging.Logger
-import org.scalatest.{BeforeAndAfterAll, Suite, fullstacks}
+import org.scalatest.{BeforeAndAfterAll, Suite}
 
 import java.nio.file.{Files, Path}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
@@ -54,6 +55,10 @@ trait VerityProviderBaseSpec
 
     def withServiceParam(param: ServiceParam): VerityEnvBuilder = copy(serviceParam = Option(param))
     def withConfig(config: Config): VerityEnvBuilder = copy(overriddenConfig = Option(config))
+    def withLedgerTxnExecutor(ledgerTxnExecutor: LedgerTxnExecutor): VerityEnvBuilder = {
+      val newServiceParam = serviceParam.getOrElse(defaultSvcParam).withLedgerTxnExecutor(ledgerTxnExecutor)
+      copy(serviceParam = Option(newServiceParam))
+    }
 
     private val logger: Logger = LoggingUtil.getLoggerByName("VerityEnvBuilder")
 
@@ -131,7 +136,7 @@ trait VerityProviderBaseSpec
     }
 
     private def createEnvAsync(verityNodes: Seq[VerityNode], appSeed: String): Future[VerityEnv] = {
-      implicit val ec = futureExecutionContext
+      implicit val ec: ExecutionContext = futureExecutionContext
       logger.info(s"Start verity nodes with ports ${verityNodes.map(_.portProfile.artery)}")
       try {
         startVerityNodesAsync(verityNodes, VerityEnv.START_MAX_TIMEOUT) map { _ =>
@@ -160,7 +165,6 @@ trait VerityProviderBaseSpec
       Await.result(verityNodes.head.start(), maxStartTimeout)
       Future.sequence(otherNodes.map(_.start()))
     }
-
 
   }
 

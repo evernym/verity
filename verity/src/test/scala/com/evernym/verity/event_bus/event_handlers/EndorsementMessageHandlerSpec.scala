@@ -27,9 +27,9 @@ class EndorsementMessageHandlerSpec
             Metadata(TOPIC_SSI_ENDORSEMENT, partition = 1, offset = 0, Instant.now()),
             toJsonObject(
               createCloudEvent(
-                EVENT_ENDORSEMENT_COMPLETE,
+                EVENT_ENDORSEMENT_COMPLETE_V1,
                 "https://endorsment.com",
-                s"""{"request_source":"$requestSourceStr", "result":"100", "result_descr":"successful"}"""
+                s"""{"requestsource":"$requestSourceStr", "result": {"code":"100", "descr":"successful"}}"""
               )
             )
           )
@@ -40,7 +40,7 @@ class EndorsementMessageHandlerSpec
   }
 
   def createSource(routeId: RouteId, protocol: String, version: String, pinstId: PinstId): String =
-    s"http://verity.avast.com/route/$routeId/protocol/$protocol/version/$version/pinstid/$pinstId"
+    s"http://verity.avast.com/route/$routeId/protocol/$protocol/version/$version/pinstid/$pinstId?threadId=threadId"
 
   lazy val agentMsgRouter = new MockAgentMsgRouter(appConfig, system, executionContext)
 

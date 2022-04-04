@@ -23,7 +23,7 @@ class EndorserMessageHandlerSpec
         val fut = endorserRegistryEventHandler.handleMessage(
           Message(
             Metadata(TOPIC_SSI_ENDORSER, partition = 1, offset = 0, Instant.now()),
-            toJsonObject(createCloudEvent(EVENT_ENDORSER_ACTIVATED, "pinstid1", """{"ledger":"ledger1", "did":"did1", "verKey": "verKey1"}"""))
+            toJsonObject(createCloudEvent(EVENT_ENDORSER_ACTIVATED_V1, "pinstid1", """{"ledgerprefix":"ledger1", "endorserdid":"did1"}"""))
           )
         )
         Await.result(fut, 500.seconds)
@@ -37,7 +37,7 @@ class EndorserMessageHandlerSpec
         val fut = endorserRegistryEventHandler.handleMessage(
           Message(
             Metadata(TOPIC_SSI_ENDORSER, partition = 1, offset = 0, Instant.now()),
-            toJsonObject(createCloudEvent(EVENT_ENDORSER_ACTIVATED, "111", """{"ledger":"ledger1", "did":"did2", "verKey": "verKey2"}"""))
+            toJsonObject(createCloudEvent(EVENT_ENDORSER_ACTIVATED_V1, "111", """{"ledgerprefix":"ledger1", "endorserdid":"did2"}"""))
           )
         )
         Await.result(fut, 500.seconds)
@@ -52,8 +52,8 @@ class EndorserMessageHandlerSpec
           .ask{ ref: ActorRef => ForEndorserRegistry(GetEndorsers("ledger1", ref))}
           .mapTo[LedgerEndorsers]
         val ledgerEndorsers = Await.result(fut, 500.seconds)
-        ledgerEndorsers.endorsers shouldBe List(Endorser("did1", "verKey1"), Endorser("did2", "verKey2"))
-        ledgerEndorsers.latestEndorser shouldBe Option(Endorser("did2", "verKey2"))
+        ledgerEndorsers.endorsers shouldBe List(Endorser("did1"), Endorser("did2"))
+        ledgerEndorsers.latestEndorser shouldBe Option(Endorser("did2"))
       }
     }
   }
@@ -64,7 +64,7 @@ class EndorserMessageHandlerSpec
         val fut = endorserRegistryEventHandler.handleMessage(
           Message(
             Metadata(TOPIC_SSI_ENDORSER, partition = 1, offset = 1, Instant.now()),
-            toJsonObject(createCloudEvent(EVENT_ENDORSER_DEACTIVATED, "222", """{"ledger":"ledger1", "did":"did1"}"""))
+            toJsonObject(createCloudEvent(EVENT_ENDORSER_DEACTIVATED_V1, "222", """{"ledgerprefix":"ledger1", "endorserdid":"did1"}"""))
           )
         )
         Await.result(fut, 500.seconds)
@@ -79,8 +79,8 @@ class EndorserMessageHandlerSpec
           .ask{ ref: ActorRef => ForEndorserRegistry(GetEndorsers("ledger1", ref))}
           .mapTo[LedgerEndorsers]
         val ledgerEndorsers = Await.result(fut, 500.seconds)
-        ledgerEndorsers.endorsers shouldBe List(Endorser("did2", "verKey2"))
-        ledgerEndorsers.latestEndorser shouldBe Option(Endorser("did2", "verKey2"))
+        ledgerEndorsers.endorsers shouldBe List(Endorser("did2"))
+        ledgerEndorsers.latestEndorser shouldBe Option(Endorser("did2"))
       }
     }
   }

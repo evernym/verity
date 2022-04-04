@@ -15,13 +15,13 @@ class RequestSourceUtilSpec
       "when given valid request sources" - {
         "should be able process it successfully" in {
           checkRequestSource(
-            "http://verity.avast.com/route/routeId1/protocol/write-schema/version/0.6/pinstid/pinstId123",
-            RequestSource("routeId1", PinstIdPair("pinstId123", WriteSchemaDefinition))
+            "http://verity.avast.com/route/routeId1/protocol/write-schema/version/0.6/pinstid/pinstId123?threadId=threadId1",
+            RequestSource("routeId1", PinstIdPair("pinstId123", WriteSchemaDefinition), "threadId1")
           )
 
           checkRequestSource(
-            "https://verity.avast.com/route/routeId2/protocol/write-cred-def/version/0.6/pinstid/pinstId456",
-            RequestSource("routeId2", PinstIdPair("pinstId456", CredDefDefinition))
+            "https://verity.avast.com/route/routeId2/protocol/write-cred-def/version/0.6/pinstid/pinstId456?threadId=threadId1",
+            RequestSource("routeId2", PinstIdPair("pinstId456", CredDefDefinition), "threadId1")
           )
         }
       }
@@ -30,8 +30,8 @@ class RequestSourceUtilSpec
         "should throw error" in {
           intercept[RuntimeException] {
             checkRequestSource(
-              "http://verity.avast.com/route/routeId1/write-schema/version/0.6/pinstid/pinstId123",
-              RequestSource("routeId1", PinstIdPair("pinstId123", WriteSchemaDefinition))
+              "http://verity.avast.com/route/routeId1/write-schema/version/0.6/pinstid/pinstId123?threadId=threadId1",
+              RequestSource("routeId1", PinstIdPair("pinstId123", WriteSchemaDefinition), "threadId1")
             )
           }
         }
@@ -39,8 +39,8 @@ class RequestSourceUtilSpec
     }
     "build works" - {
       "when given valid input" in {
-        val reqSourceStr = RequestSourceUtil.build("https://verity.avast.com", "route123", ProtoRef("write-schema", "0.6"), "pinst123")
-        reqSourceStr shouldBe "https://verity.avast.com/route/route123/protocol/write-schema/version/0.6/pinstid/pinst123"
+        val reqSourceStr = RequestSourceUtil.build("https://verity.avast.com", "route123", ProtoRef("write-schema", "0.6"), "pinst123", "threadId1")
+        reqSourceStr shouldBe "https://verity.avast.com/route/route123/protocol/write-schema/version/0.6/pinstid/pinst123?threadId=threadId1"
       }
     }
   }

@@ -86,7 +86,7 @@ val CompileOnly = config(COMPILE_TIME_ONLY)
 
 val majorNum = "2"
 val minorNum = "17"
-val patchNum = "3"
+val patchNum = "4"
 
 // I'm not sure why setting this keys don't resolve in all
 // other scopes but it does not so we re-resolve it commonSettings

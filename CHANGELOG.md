@@ -1,5 +1,25 @@
 Note: When interacting with Verity, it will also be helpful to review [the Verity SDK Release Notes](https://gitlab.com/evernym/verity/verity-sdk/-/blob/main/CHANGELOG.md) and [the VDR Tools Release Notes](https://gitlab.com/evernym/verity/vdr-tools/-/blob/main/CHANGELOG.md)
 
+# Release notes - Verity 2.17.4 release TBD
+Works with Verity SDK 0.6.1
+Includes VDR Tools 0.8.4
+
+## Task
+* Dependency updates: scala, akka-http, mockito-scala-scalatest, compilerplugin, scalapb-runtime, akka-stream-kafka, logback-classic, kamon, jackson, flexmark
+* [VE-3380] Remove TAA auto-accept from tests
+* [VE-3439] Fix verity startup probe issue with ledger dep check
+* [VE-3402] Add port for producing events
+* [VE-3403] Add port for consuming events
+* [VE-3404] Event bus adapter for Kafka for producing events
+* [VE-3405] Event bus adapter for Kafka for consuming events
+* [VE-3407] Handle endorser registry events
+* [VE-3408] Handle endorsement request status events
+* [VE-3409] Add endorser access to protocols
+* [VE-3410] Add send/publish event support in protocol engine
+* [VE-3235] Expose invitation urls in sms invitation response
+* [VE-3459] Added new TAA digest
+* [VE-3462] Swap kalium with lazysodium for test utils
+
 # Release notes - Verity 2.17.3 release 1 March 2022
 Works with Verity SDK 0.6.1
 Includes VDR Tools 0.8.2

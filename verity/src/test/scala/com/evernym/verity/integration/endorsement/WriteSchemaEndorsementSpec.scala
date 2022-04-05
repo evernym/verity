@@ -12,7 +12,7 @@ import com.evernym.verity.ledger.{LedgerTxnExecutor, TxnResp}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
-import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{EndorsementInProgress, StatusReport, Write}
+import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{WaitingForEndorsementResult, NeedsEndorsement, StatusReport, Write}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.{Config, ConfigValueFactory}
@@ -54,7 +54,7 @@ class WriteSchemaEndorsementSpec
   "EndorserService" - {
     "when published active endorser event" - {
       "should be successful" in {
-        Await.result(EndorserUtil.registerActiveEndorser(EndorserUtil.endorserDid, eventProducer), 5.seconds)
+        Await.result(EndorserUtil.registerActiveEndorser(EndorserUtil.activeEndorserDid, eventProducer), 5.seconds)
       }
     }
   }
@@ -62,8 +62,23 @@ class WriteSchemaEndorsementSpec
   "WriteSchemaProtocol" - {
     "when sent Write message" - {
       "should be successful" in {
-        issuerSDK.sendMsg(Write("name", "1.0", Seq("name", "age"), endorserDID = Option(EndorserUtil.endorserDid)))
-        issuerSDK.expectMsgOnWebhook[EndorsementInProgress]()
+        issuerSDK.sendMsg(Write("name", "1.0", Seq("name", "age"), endorserDID = Option(EndorserUtil.inactiveEndorserDid)))
+        issuerSDK.expectMsgOnWebhook[NeedsEndorsement]()
+      }
+    }
+
+    "when sent Write message without any endorser DID" - {
+      "should be successful" in {
+        issuerSDK.sendMsg(Write("name", "1.0", Seq("name", "age")))
+        issuerSDK.expectMsgOnWebhook[WaitingForEndorsementResult]()
+        issuerSDK.expectMsgOnWebhook[StatusReport]()
+      }
+    }
+
+    "when sent Write message with active endorser DID" - {
+      "should be successful" in {
+        issuerSDK.sendMsg(Write("name", "1.0", Seq("name", "age"), endorserDID = Option(EndorserUtil.activeEndorserDid)))
+        issuerSDK.expectMsgOnWebhook[WaitingForEndorsementResult]()
         issuerSDK.expectMsgOnWebhook[StatusReport]()
       }
     }

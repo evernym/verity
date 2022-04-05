@@ -3,6 +3,7 @@ package com.evernym.verity.integration.base
 import akka.Done
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.event_bus.event_handlers.EndorserMessageHandler.{DATA_FIELD_ENDORSER_DID, DATA_FIELD_LEDGER_PREFIX}
 import com.evernym.verity.event_bus.event_handlers.{EVENT_ENDORSER_ACTIVATED_V1, TOPIC_SSI_ENDORSER}
 import com.evernym.verity.event_bus.ports.producer.ProducerPort
 import com.evernym.verity.protocol.engine.asyncapi.endorser.INDY_LEDGER_PREFIX
@@ -19,12 +20,14 @@ import scala.concurrent.Future
 
 object EndorserUtil {
 
-  val endorserDid: DidStr = CommonSpecUtil.generateNewDid().did
+  val inactiveEndorserDid: DidStr = CommonSpecUtil.generateNewDid().did
+
+  val activeEndorserDid: DidStr = CommonSpecUtil.generateNewDid().did
 
   def registerActiveEndorser(endorserDid: DidStr, eventProducer: ProducerPort): Future[Done] = {
     val jsonObject = new JSONObject()
-    jsonObject.put("endorserdid", endorserDid)
-    jsonObject.put("ledgerprefix", INDY_LEDGER_PREFIX)
+    jsonObject.put(DATA_FIELD_ENDORSER_DID, endorserDid)
+    jsonObject.put(DATA_FIELD_LEDGER_PREFIX, INDY_LEDGER_PREFIX)
 
     val event = CloudEventBuilder.v1()
       .withId(UUID.randomUUID().toString)

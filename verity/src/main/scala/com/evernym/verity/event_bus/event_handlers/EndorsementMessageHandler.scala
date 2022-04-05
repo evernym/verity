@@ -4,6 +4,7 @@ import akka.Done
 import com.evernym.verity.actor.agent.msghandler.SendToProtocolActor
 import com.evernym.verity.actor.agent.msgrouter.{AgentMsgRouter, InternalMsgRouteParam}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
+import com.evernym.verity.event_bus.event_handlers.EndorsementMessageHandler._
 import com.evernym.verity.event_bus.event_handlers.RequestSourceUtil.extract
 import com.evernym.verity.event_bus.ports.consumer.Message
 import com.evernym.verity.protocol.container.actor.MsgEnvelope
@@ -20,12 +21,11 @@ class EndorsementMessageHandler(config: Config,
   def handleMessage(message: Message): Future[Done] = {
     val jsonObject = message.cloudEvent
     val eventData = jsonObject.getJSONObject(CLOUD_EVENT_DATA)
-    val requestSource = extract(eventData.getString(CLOUD_EVENT_DATA_FIELD_REQUEST_SOURCE))
+    val requestSource = extract(eventData.getString(DATA_FIELD_REQUEST_SOURCE))
     val cmd = createCmd(jsonObject)
     sendToRouter(requestSource, cmd)
   }
 
-  //TODO: a high level implementation, it needs to be finalized/corrected as per final integration changes
   private def createCmd(jsonObject: JSONObject): Any = {
     jsonObject.getString(CLOUD_EVENT_TYPE) match {
       case EVENT_ENDORSEMENT_COMPLETE_V1 =>
@@ -46,8 +46,12 @@ class EndorsementMessageHandler(config: Config,
       .execute(InternalMsgRouteParam(requestSource.route, protoCmd))
       .map(_ => Done)
   }
+}
 
+object EndorsementMessageHandler {
   //constants
+  val DATA_FIELD_ENDORSEMENT_ID = "endorsementid"
+  val DATA_FIELD_SUBMITTER_DID = "submitterdid"
   val DATA_FIELD_RESULT = "result"
   val DATA_FIELD_RESULT_CODE = "code"
   val DATA_FIELD_RESULT_DESCR = "descr"

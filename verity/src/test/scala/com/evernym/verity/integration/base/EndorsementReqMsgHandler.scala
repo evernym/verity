@@ -1,10 +1,12 @@
 package com.evernym.verity.integration.base
 
 import akka.Done
-import com.evernym.verity.event_bus.event_handlers.{EVENT_ENDORSEMENT_COMPLETE_V1, EVENT_ENDORSEMENT_REQ_V1, TOPIC_SSI_ENDORSEMENT, TOPIC_SSI_ENDORSEMENT_REQ}
+import com.evernym.verity.event_bus.event_handlers.EndorsementMessageHandler._
+import com.evernym.verity.event_bus.event_handlers.EndorserMessageHandler._
+import com.evernym.verity.event_bus.event_handlers.{DATA_FIELD_REQUEST_SOURCE, CLOUD_EVENT_TYPE, EVENT_ENDORSEMENT_COMPLETE_V1, EVENT_ENDORSEMENT_REQ_V1, TOPIC_SSI_ENDORSEMENT, TOPIC_SSI_ENDORSEMENT_REQ}
 import com.evernym.verity.event_bus.ports.consumer.{Message, MessageHandler}
 import com.evernym.verity.event_bus.ports.producer.ProducerPort
-import com.evernym.verity.protocol.engine.asyncapi.endorser.INDY_LEDGER_PREFIX
+import com.evernym.verity.protocol.engine.asyncapi.endorser.{ENDORSEMENT_RESULT_SUCCESS_CODE, INDY_LEDGER_PREFIX}
 import io.cloudevents.core.builder.CloudEventBuilder
 import io.cloudevents.core.provider.EventFormatProvider
 import io.cloudevents.jackson.JsonFormat
@@ -22,7 +24,7 @@ class EndorsementReqMsgHandler(eventProducer: ProducerPort) extends MessageHandl
     message.metadata.topic match {
       case TOPIC_SSI_ENDORSEMENT_REQ =>
         val jsonObject = message.cloudEvent
-        jsonObject.get("type") match {
+        jsonObject.get(CLOUD_EVENT_TYPE) match {
           case EVENT_ENDORSEMENT_REQ_V1 => processEndorsementReq(jsonObject)
           case other => Future.successful(Done)
         }
@@ -33,14 +35,14 @@ class EndorsementReqMsgHandler(eventProducer: ProducerPort) extends MessageHandl
   private def processEndorsementReq(receivedEvent: JSONObject): Future[Done] = {
 
     val respJsonObject = new JSONObject()
-    respJsonObject.put("endorsementid", UUID.randomUUID().toString)
-    respJsonObject.put("ledgerprefix", INDY_LEDGER_PREFIX)
-    respJsonObject.put("requestsource", receivedEvent.getString("source"))
-    respJsonObject.put("submitterdid", "submitterdid")
+    respJsonObject.put(DATA_FIELD_ENDORSEMENT_ID, UUID.randomUUID().toString)
+    respJsonObject.put(DATA_FIELD_LEDGER_PREFIX, INDY_LEDGER_PREFIX)
+    respJsonObject.put(DATA_FIELD_REQUEST_SOURCE, receivedEvent.getString("source"))
+    respJsonObject.put(DATA_FIELD_SUBMITTER_DID, "submitterdid")
     val resultJSONObject = new JSONObject()
-    resultJSONObject.put("code", "ENDT-RES-0001")
-    resultJSONObject.put("descr", "Transaction Written to VDR (normally a ledger)")
-    respJsonObject.put("result", resultJSONObject)
+    resultJSONObject.put(DATA_FIELD_RESULT_CODE, ENDORSEMENT_RESULT_SUCCESS_CODE)
+    resultJSONObject.put(DATA_FIELD_RESULT_DESCR, "Transaction Written to VDR (normally a ledger)")
+    respJsonObject.put(DATA_FIELD_RESULT, resultJSONObject)
 
     val event = CloudEventBuilder.v1()
       .withId(UUID.randomUUID().toString)

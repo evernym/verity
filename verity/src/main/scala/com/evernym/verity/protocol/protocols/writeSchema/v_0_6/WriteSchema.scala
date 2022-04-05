@@ -57,37 +57,39 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
           case Success(_) =>
             ctx.apply(SchemaWritten(schemaCreated.schemaId))
             ctx.signal(StatusReport(schemaCreated.schemaId))
+
           case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
             ctx.logger.info(e.toString)
 
             val endorserDID = m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse(""))
 
-            if (endorserDID.nonEmpty) {
-              ctx.ledger.prepareSchemaForEndorsement(submitterDID, schemaCreated.schemaJson, endorserDID) {
-                case Success(ledgerRequest) =>
-                  ctx.endorser.withCurrentEndorser(INDY_LEDGER_PREFIX) {
-                    case Failure(exception) =>
-                      problemReport(exception)
+            ctx.endorser.withCurrentEndorser(INDY_LEDGER_PREFIX) {
+              case Failure(exception) => problemReport(exception)
 
-                    case Success(Some(endorser)) if endorser.did == endorserDID =>
-                      ctx.endorser.endorseTxn(ledgerRequest.req, endorserDID, INDY_LEDGER_PREFIX, VDR_TYPE_INDY) {
-                        case Failure(exception) =>
-                          problemReport(exception)
+              case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID == endorser.did =>
+                //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
+                ctx.ledger.prepareSchemaForEndorsement(submitterDID, schemaCreated.schemaJson, endorser.did) {
+                  case Success(ledgerRequest) =>
+                    ctx.endorser.endorseTxn(ledgerRequest.req, endorser.did, INDY_LEDGER_PREFIX, VDR_TYPE_INDY) {
+                      case Failure(exception) => problemReport(exception)
+                      case Success(value) =>
+                        //TODO: is this ok to send this new signal message or this will break existing functionality?
+                        ctx.signal(WaitingForEndorsementResult(endorser.did))
+                        ctx.apply(WaitingForEndorsement(schemaCreated.schemaId, ledgerRequest.req))
+                    }
+                  case Failure(e) =>
+                    problemReport(e)
+                }
 
-                        case Success(value) =>
-                          ctx.signal(EndorsementInProgress(endorserDID))
-                          ctx.apply(WaitingForEndorsement(schemaCreated.schemaId, ledgerRequest.req))
-                      }
-                    case other =>
-                      //no active endorser or active endorser is not the same as given/configured endorserDID
-                      ctx.signal(NeedsEndorsement(schemaCreated.schemaId, ledgerRequest.req))
-                      ctx.apply(AskedForEndorsement(schemaCreated.schemaId, ledgerRequest.req))
-                  }
-                case Failure(e) =>
-                  problemReport(e)
-              }
-            } else {
-              problemReport(new Exception("No default endorser defined"))
+              case other =>
+                //no active endorser or active endorser is NOT the same as given/configured endorserDID
+                ctx.ledger.prepareSchemaForEndorsement(submitterDID, schemaCreated.schemaJson, endorserDID) {
+                  case Success(ledgerRequest) =>
+                    ctx.signal(NeedsEndorsement(schemaCreated.schemaId, ledgerRequest.req))
+                    ctx.apply(AskedForEndorsement(schemaCreated.schemaId, ledgerRequest.req))
+                  case Failure(e) =>
+                    problemReport(e)
+                }
             }
           case Failure(e) =>
             problemReport(e)

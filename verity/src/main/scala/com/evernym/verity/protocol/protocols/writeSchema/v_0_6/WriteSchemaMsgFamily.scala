@@ -20,10 +20,10 @@ object WriteSchemaMsgFamily extends MsgFamily {
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map(
-    classOf[StatusReport]           -> "status-report",
-    classOf[ProblemReport]          -> "problem-report",
-    classOf[NeedsEndorsement]       -> "needs-endorsement",
-    classOf[EndorsementInProgress]  -> "endorsement-in-progress"
+    classOf[StatusReport]                 -> "status-report",
+    classOf[ProblemReport]                -> "problem-report",
+    classOf[NeedsEndorsement]             -> "needs-endorsement",
+    classOf[WaitingForEndorsementResult]  -> "waiting-for-endorsement-result"
   )
 }
 
@@ -42,7 +42,7 @@ sealed trait SignalMsg extends MsgBase
 case class StatusReport(schemaId: String)                         extends SignalMsg
 case class ProblemReport(message: String)                         extends SignalMsg
 case class NeedsEndorsement(schemaId: String, schemaJson: String) extends SignalMsg
-case class EndorsementInProgress(endorserDID: DidStr) extends SignalMsg
+case class WaitingForEndorsementResult(endorserDID: DidStr) extends SignalMsg
 
 /**
  * Control Messages

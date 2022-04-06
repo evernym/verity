@@ -31,6 +31,7 @@ object BasicEventStoreAPI {
 }
 
 
+//starts a http server to listen for event store api requests, and sends it to sharded TopicMsgStore actor
 class BasicEventStoreAPI(config: Config)(implicit system: ActorSystem, executionContext: ExecutionContext)
   extends ShardUtil {
 

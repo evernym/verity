@@ -73,8 +73,6 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
                     ctx.endorser.endorseTxn(ledgerRequest.req, endorser.did, INDY_LEDGER_PREFIX, VDR_TYPE_INDY) {
                       case Failure(exception) => problemReport(exception)
                       case Success(value) =>
-                        //TODO: is this ok to send this new signal message or this will break existing functionality?
-                        ctx.signal(WaitingForEndorsementResult(endorser.did))
                         ctx.apply(WaitingForEndorsement(schemaCreated.schemaId, ledgerRequest.req))
                     }
                   case Failure(e) =>

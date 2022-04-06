@@ -1,9 +1,6 @@
-This is default, basic, non-persistent and non-production version of the event bus adapter implementation.
-This is initial version and may/will get modified if needed.
+This is basic version of event bus adapter implementation (which depends on the basic event store implemented in verity)
+Below is the configuration required for the basic event store and corresponding basic adapter implementation.
 
-For production, it is recommended to use kafka adapters.
-
-Below is the configuration required for this basic adapter (and its event storage) implementation.
 
 ```
 verity {

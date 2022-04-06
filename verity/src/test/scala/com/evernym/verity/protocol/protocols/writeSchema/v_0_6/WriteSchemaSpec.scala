@@ -151,7 +151,6 @@ class WriteSchemaSpec
           withDefaultWalletAccess(f, {
             withDefaultLedgerAccess(f, {
               f.writer ~ Write(schemaName, schemaVersion, schemaAttrsJson, Some("endorserDid"))
-              f.writer expect signal[WaitingForEndorsementResult]
               f.writer ~ EndorsementResult(ENDORSEMENT_RESULT_SUCCESS_CODE, "successful")
               f.writer expect signal[StatusReport]
             })

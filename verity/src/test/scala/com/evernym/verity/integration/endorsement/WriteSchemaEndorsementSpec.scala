@@ -12,7 +12,7 @@ import com.evernym.verity.ledger.{LedgerTxnExecutor, TxnResp}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
-import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{WaitingForEndorsementResult, NeedsEndorsement, StatusReport, Write}
+import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{NeedsEndorsement, StatusReport, Write}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.{Config, ConfigValueFactory}
@@ -70,7 +70,6 @@ class WriteSchemaEndorsementSpec
     "when sent Write message without any endorser DID" - {
       "should be successful" in {
         issuerSDK.sendMsg(Write("name", "1.0", Seq("name", "age")))
-        issuerSDK.expectMsgOnWebhook[WaitingForEndorsementResult]()
         issuerSDK.expectMsgOnWebhook[StatusReport]()
       }
     }
@@ -78,7 +77,6 @@ class WriteSchemaEndorsementSpec
     "when sent Write message with active endorser DID" - {
       "should be successful" in {
         issuerSDK.sendMsg(Write("name", "1.0", Seq("name", "age"), endorserDID = Option(EndorserUtil.activeEndorserDid)))
-        issuerSDK.expectMsgOnWebhook[WaitingForEndorsementResult]()
         issuerSDK.expectMsgOnWebhook[StatusReport]()
       }
     }

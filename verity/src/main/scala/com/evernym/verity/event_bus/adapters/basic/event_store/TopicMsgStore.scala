@@ -18,10 +18,9 @@ import scala.concurrent.ExecutionContext.fromExecutor
 import scala.concurrent.duration._
 
 
-object TopicMsgStore {
-  def props(): Props = Props(new TopicMsgStore)
-}
-
+//non persistent (in-memory) topic message store, delivers the published/received events to subscribed consumers)
+// this is just a basic version to make verity working in non production environment
+// this implementation can be enhanced to make this more robust, reliable etc.
 class TopicMsgStore
   extends CoreActorExtended {
 
@@ -86,3 +85,7 @@ class TopicMsgStore
 case class AddMessage(msg: Array[Byte]) extends ActorMessage
 case class AddSubscriber(subscriber: Subscriber) extends ActorMessage
 case object PeriodicJob extends ActorMessage
+
+object TopicMsgStore {
+  def props(): Props = Props(new TopicMsgStore)
+}

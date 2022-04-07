@@ -18,6 +18,7 @@ import com.evernym.verity.util.JsonUtil.seqToJson
 
 import scala.util.{Failure, Success}
 
+
 class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, WriteSchemaState, String])
   extends Protocol[WriteSchema, Role, Msg, Any, WriteSchemaState, String](WriteSchemaDefinition) {
 
@@ -30,7 +31,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
   def mainHandleControl: (WriteSchemaState, Option[Role], Control) ?=> Any = {
     case (_, _, c: Init) => ctx.apply(ProtocolInitialized(c.parametersStored.toSeq))
     case (s: State.Initialized, _, m: Write) => writeSchemaToLedger(m, s)
-    case (s: State.WaitingForEndorsement, _, m: EndorsementResult) => handleEndorsementResult(m, s)
+    case (s: State.WaitingOnEndorser, _, m: EndorsementResult) => handleEndorsementResult(m, s)
     case _ => ctx.signal(ProblemReport("Unexpected message in current state"))
   }
 
@@ -43,14 +44,14 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
         ctx.getRoster.withAssignment(Writer() -> ctx.getRoster.selfIndex_!)
       )
     case (_: Processing, _, e: AskedForEndorsement)    => State.WaitingOnEndorser(e.schemaId, e.schemaJson)
-    case (_: Processing, _, e: WaitingForEndorsement)  => State.WaitingForEndorsement(e.schemaId, e.schemaJson)
-    case (s @ (_: Processing | _:State.WaitingForEndorsement), _, e: SchemaWritten)  => Done(e.schemaId)
-    case (s @ (_: Processing | _:State.WaitingForEndorsement), _, e: WriteFailed)    => Error(e.error)
+    case (_: Processing, _, e: WaitingForEndorsement)  => State.WaitingOnEndorser(e.schemaId, e.schemaJson)
+    case (s @ (_: Processing | _:State.WaitingOnEndorser), _, e: SchemaWritten)  => Done(e.schemaId)
+    case (s @ (_: Processing | _:State.WaitingOnEndorser), _, e: WriteFailed)    => Error(e.error)
   }
 
-  def writeSchemaToLedger(m: Write, init: State.Initialized): Unit = {
+  private def writeSchemaToLedger(m: Write, init: State.Initialized): Unit = {
     ctx.apply(RequestReceived(m.name, m.version, m.attrNames))
-    val submitterDID = _submitterDID(init)
+    val submitterDID = _submitterDID(init.parameters)
     ctx.wallet.createSchema(submitterDID, m.name, m.version, seqToJson(m.attrNames)) {
       case Success(schemaCreated: SchemaCreatedResult) =>
         ctx.ledger.writeSchema(submitterDID, schemaCreated.schemaJson) {
@@ -64,71 +65,75 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
             val endorserDID = m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse(""))
 
             ctx.endorser.withCurrentEndorser(INDY_LEDGER_PREFIX) {
-              case Failure(exception) => problemReport(exception)
-
               case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID == endorser.did =>
                 //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
                 ctx.ledger.prepareSchemaForEndorsement(submitterDID, schemaCreated.schemaJson, endorser.did) {
                   case Success(ledgerRequest) =>
                     ctx.endorser.endorseTxn(ledgerRequest.req, endorser.did, INDY_LEDGER_PREFIX, VDR_TYPE_INDY) {
                       case Failure(exception) => problemReport(exception)
-                      case Success(value) =>
-                        ctx.apply(WaitingForEndorsement(schemaCreated.schemaId, ledgerRequest.req))
+                      case Success(value) => ctx.apply(WaitingForEndorsement(schemaCreated.schemaId, ledgerRequest.req))
                     }
-                  case Failure(e) =>
-                    problemReport(e)
+                  case Failure(e) => problemReport(e)
                 }
 
               case other =>
-                //no active endorser or active endorser is NOT the same as given/configured endorserDID
-                ctx.ledger.prepareSchemaForEndorsement(submitterDID, schemaCreated.schemaJson, endorserDID) {
-                  case Success(ledgerRequest) =>
-                    ctx.signal(NeedsEndorsement(schemaCreated.schemaId, ledgerRequest.req))
-                    ctx.apply(AskedForEndorsement(schemaCreated.schemaId, ledgerRequest.req))
-                  case Failure(e) =>
-                    problemReport(e)
-                }
+                //any failure while getting active endorser, or no active endorser or active endorser is NOT the same as given/configured endorserDID
+                handleNeedsEndorsement(submitterDID, endorserDID, schemaCreated.schemaId, schemaCreated.schemaJson)
             }
-          case Failure(e) =>
-            problemReport(e)
+          case Failure(e) => problemReport(e)
         }
-      case Failure(e) =>
-        problemReport(e)
+      case Failure(e) => problemReport(e)
     }
   }
 
-  def handleEndorsementResult(m: EndorsementResult, wfe: State.WaitingForEndorsement): Unit = {
+  private def handleNeedsEndorsement(submitterDID: DidStr,
+                                     endorserDID: DidStr,
+                                     schemaId: String,
+                                     schemaJson: String): Unit = {
+    if (endorserDID.nonEmpty) {
+      ctx.ledger.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID) {
+        case Success(ledgerRequest) =>
+          ctx.signal(NeedsEndorsement(schemaId, ledgerRequest.req))
+          ctx.apply(AskedForEndorsement(schemaId, ledgerRequest.req))
+        case Failure(e) =>
+          problemReport(e)
+      }
+    } else {
+      problemReport(new Exception("No default endorser defined"))
+    }
+  }
+
+  private def handleEndorsementResult(m: EndorsementResult, woe: State.WaitingOnEndorser): Unit = {
     if (m.code == ENDORSEMENT_RESULT_SUCCESS_CODE) {
-      ctx.apply(SchemaWritten(wfe.schemaId))
-      ctx.signal(StatusReport(wfe.schemaId))
+      ctx.apply(SchemaWritten(woe.schemaId))
+      ctx.signal(StatusReport(woe.schemaId))
     } else {
       problemReport(new RuntimeException(s"error during endorsement => code: ${m.code}, description: ${m.description}"))
     }
   }
 
-  def problemReport(e: Throwable): Unit = {
+  private def problemReport(e: Throwable): Unit = {
     ctx.logger.error(e.toString)
     ctx.apply(WriteFailed(Option(e.getMessage).getOrElse("unknown error")))
     ctx.signal(ProblemReport(e.toString))
   }
 
-  def _submitterDID(init: State.Initialized): DidStr =
-    init
-      .parameters
+  private def _submitterDID(parameters: Parameters): DidStr =
+    parameters
       .initParams
       .find(_.name.equals(MY_ISSUER_DID))
       .map(_.value)
       .getOrElse(throw MissingIssuerDID)
 
-  def missingVkOrEndorserErr(did: DidStr, e: LedgerRejectException): Boolean =
+  private def missingVkOrEndorserErr(did: DidStr, e: LedgerRejectException): Boolean =
     e.msg.contains(s"verkey for $did cannot be found") || e.msg.contains("Not enough ENDORSER signatures")
 
-  def initialize(params: Seq[ParameterStored]): Roster[Role] = {
+  private def initialize(params: Seq[ParameterStored]): Roster[Role] = {
     //TODO: this still feels like boiler plate, need to come back and fix it
     ctx.updatedRoster(params.map(p => InitParamBase(p.name, p.value)))
   }
 
-  def getInitParams(params: ProtocolInitialized): Parameters =
+  private def getInitParams(params: ProtocolInitialized): Parameters =
     Parameters(params
       .parameters
       .map(p => Parameter(p.name, p.value))

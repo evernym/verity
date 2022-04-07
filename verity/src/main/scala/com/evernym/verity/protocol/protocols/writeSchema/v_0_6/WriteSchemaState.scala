@@ -10,7 +10,6 @@ object State {
   case class Initialized(parameters: Parameters)                           extends WriteSchemaState
   case class Processing(name: String, version: String, attrs: Seq[String]) extends WriteSchemaState
   case class WaitingOnEndorser(schemaId: String, schemaJson: String)       extends WriteSchemaState
-  case class WaitingForEndorsement(schemaId: String, schemaJson: String)   extends WriteSchemaState
   case class Done(schemaId: String)                                        extends WriteSchemaState
   case class Error(error: String)                                          extends WriteSchemaState
 }

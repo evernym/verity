@@ -12,7 +12,7 @@ import com.evernym.verity.ledger.{LedgerTxnExecutor, TxnResp}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
-import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{NeedsEndorsement, StatusReport, Write}
+import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{NeedsEndorsement, ProblemReport, StatusReport, Write}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.{Config, ConfigValueFactory}
@@ -51,6 +51,22 @@ class WriteSchemaEndorsementSpec
     Await.result(endorsementEventConsumer.start(), 10.seconds)
   }
 
+  "WriteSchemaProtocol" - {
+    "when sent Write message without any active endorserDID" - {
+      "should get NeedsEndorsement message" in {
+        issuerSDK.sendMsg(Write("name", "1.0", Seq("name", "age")))
+        val sigMsg = issuerSDK.expectMsgOnWebhook[ProblemReport]()
+        sigMsg.msg.message.contains("No default endorser defined") shouldBe true
+      }
+    }
+    "when sent Write message with an explicit endorserDID" - {
+      "should get NeedsEndorsement message" in {
+        issuerSDK.sendMsg(Write("name", "1.0", Seq("name", "age"), endorserDID = Option(EndorserUtil.inactiveEndorserDid)))
+        issuerSDK.expectMsgOnWebhook[NeedsEndorsement]()
+      }
+    }
+  }
+
   "EndorserService" - {
     "when published active endorser event" - {
       "should be successful" in {
@@ -60,8 +76,9 @@ class WriteSchemaEndorsementSpec
   }
 
   "WriteSchemaProtocol" - {
-    "when sent Write message" - {
-      "should be successful" in {
+
+    "when sent Write message with inactive endorser DID" - {
+      "should get NeedsEndorsement message" in {
         issuerSDK.sendMsg(Write("name", "1.0", Seq("name", "age"), endorserDID = Option(EndorserUtil.inactiveEndorserDid)))
         issuerSDK.expectMsgOnWebhook[NeedsEndorsement]()
       }

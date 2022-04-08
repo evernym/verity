@@ -35,7 +35,7 @@ import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
 import com.evernym.verity.util.Util.getActorRefFromSelection
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.{ActorResponse, Exceptions, RouteId, ServiceEndpoint}
+import com.evernym.verity.util2.{ActorResponse, Exceptions, ServiceEndpoint}
 import com.typesafe.scalalogging.Logger
 
 import java.util.UUID
@@ -144,7 +144,7 @@ class ActorProtocolContainer[
       logger.debug(s"$protocolIdForLog protocol instance created for first time")
       stash()
       metadata.foreach { m =>
-        setForwarderParams(m.walletId, m.forwarder, m.forwarderRouteId)
+        setForwarderParams(m.walletId, m.forwarder, m.forwarderRelId)
       }
       recoverOrInit()
   }
@@ -186,7 +186,7 @@ class ActorProtocolContainer[
 
     cmd.metadata.foreach { m =>
       storePackagingDetail(m.threadContextDetail)
-      setForwarderParams(m.walletId, m.forwarder, m.forwarderRouteId)
+      setForwarderParams(m.walletId, m.forwarder, m.forwarderRelId)
     }
 
     if(sender() != self) {
@@ -225,9 +225,9 @@ class ActorProtocolContainer[
     }
   }
 
-  def setForwarderParams(walletSeed: String, forwarder: ActorRef, forwarderRouteId: RouteId): Unit = {
+  def setForwarderParams(walletSeed: String, forwarder: ActorRef, forwarderRelationshipId: RelationshipId): Unit = {
     msgForwarder.setForwarder(forwarder)
-    msgForwarder.setRouteId(forwarderRouteId)
+    msgForwarder.setRelationshipId(forwarderRelationshipId)
     agentWalletId = Option(walletSeed)
   }
 
@@ -328,7 +328,7 @@ class ActorProtocolContainer[
 
   override lazy val endorser =
     new EndorserAccessAdapter(
-      RoutingContext(msgForwarder.routeId.get, protoRef, pinstId, `threadId_!`),
+      RoutingContext(domainId, msgForwarder.relationshipId.get, pinstId, `threadId_!`, protoRef),
       agentActorContext.eventProducerAdapter,
       agentActorContext.storageAPI,
       singletonParentProxyActor,
@@ -511,7 +511,7 @@ case class ProtocolCmd(msg: Any, metadata: Option[ProtocolMetadata]) extends Act
   which is then provided into driver and driver uses it to reach to the same agent (launcher)
   who originally forwarded the msg
  */
-case class ProtocolMetadata(forwarderRouteId: RouteId,
+case class ProtocolMetadata(forwarderRelId: RelationshipId,
                             forwarder: ActorRef,
                             walletId: String,
                             threadContextDetail: ThreadContextDetail)
@@ -539,14 +539,14 @@ trait ServiceDecorator{
 }
 
 class MsgForwarder {
-  private var _routeId: Option[RouteId] = None
+  private var _relationshipId: Option[RelationshipId] = None
   private var _forwarder: Option[ActorRef] = None
 
   def setForwarder(actorRef: ActorRef): Unit = _forwarder = Option(actorRef)
   def forwarder:Option[ActorRef] = _forwarder
 
-  def setRouteId(routeId: RouteId): Unit = _routeId = Option(routeId)
-  def routeId:Option[RouteId] = _routeId
+  def setRelationshipId(relationshipId: RelationshipId): Unit = _relationshipId = Option(relationshipId)
+  def relationshipId:Option[RelationshipId] = _relationshipId
 }
 
 case class SetThreadContext(tcd: ThreadContextDetail) extends ActorMessage

@@ -1,5 +1,6 @@
 package com.evernym.verity.event_bus.event_handlers
 
+import com.evernym.verity.event_bus.event_handlers.RequestSourceUtil.REQ_SOURCE_PREFIX
 import com.evernym.verity.protocol.engine.ProtoRef
 import com.evernym.verity.protocol.engine.registry.PinstIdPair
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.CredDefDefinition
@@ -14,14 +15,14 @@ class RequestSourceUtilSpec
     "extract works" - {
       "when given valid request sources" - {
         "should be able process it successfully" in {
-          checkRequestSource(
-            "http://verity.avast.com/route/routeId1/protocol/write-schema/version/0.6/pinstid/pinstId123?threadId=threadId1",
-            RequestSource("routeId1", PinstIdPair("pinstId123", WriteSchemaDefinition), "threadId1")
+          extractRequestSource(
+            s"$REQ_SOURCE_PREFIX/domainId1/relId1/protocol/write-schema/0.6/pinstId123?threadId=threadId1",
+            RequestSource("domainId1", "relId1", "threadId1", PinstIdPair("pinstId123", WriteSchemaDefinition))
           )
 
-          checkRequestSource(
-            "https://verity.avast.com/route/routeId2/protocol/write-cred-def/version/0.6/pinstid/pinstId456?threadId=threadId1",
-            RequestSource("routeId2", PinstIdPair("pinstId456", CredDefDefinition), "threadId1")
+          extractRequestSource(
+            s"$REQ_SOURCE_PREFIX/domainId2/relId2/protocol/write-cred-def/0.6/pinstId123?threadId=threadId2",
+            RequestSource("domainId2", "relId2", "threadId2", PinstIdPair("pinstId123", CredDefDefinition))
           )
         }
       }
@@ -29,23 +30,21 @@ class RequestSourceUtilSpec
       "when given invalid request sources" - {
         "should throw error" in {
           intercept[RuntimeException] {
-            checkRequestSource(
-              "http://verity.avast.com/route/routeId1/write-schema/version/0.6/pinstid/pinstId123?threadId=threadId1",
-              RequestSource("routeId1", PinstIdPair("pinstId123", WriteSchemaDefinition), "threadId1")
-            )
+            RequestSourceUtil.extract("http://verity.avast.com/route/routeId1/write-schema/0.6/pinstId123?threadId=threadId1")
           }
         }
       }
     }
+
     "build works" - {
       "when given valid input" in {
-        val reqSourceStr = RequestSourceUtil.build("https://verity.avast.com", "route123", ProtoRef("write-schema", "0.6"), "pinst123", "threadId1")
-        reqSourceStr shouldBe "https://verity.avast.com/route/route123/protocol/write-schema/version/0.6/pinstid/pinst123?threadId=threadId1"
+        val reqSourceStr = RequestSourceUtil.build(s"domainId", "relId", "pinst123", "threadId1", ProtoRef("write-schema", "0.6"))
+        reqSourceStr shouldBe "event-source://v1:ssi:protocol/domainId/relId/protocol/write-schema/0.6/pinst123?threadId=threadId1"
       }
     }
   }
 
-  private def checkRequestSource(str: String, expectedReqSource: RequestSource): Unit = {
+  private def extractRequestSource(str: String, expectedReqSource: RequestSource): Unit = {
     val requestSource = RequestSourceUtil.extract(str)
     requestSource shouldBe expectedReqSource
   }

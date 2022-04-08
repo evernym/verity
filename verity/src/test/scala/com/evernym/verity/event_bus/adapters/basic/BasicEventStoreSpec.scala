@@ -46,14 +46,14 @@ class BasicEventStoreSpec
         val producer = createBasicProducerAdapter()
 
         val event1 = buildEvent(
-          RequestSourceUtil.build("example.com", "routeId1", ProtoRef("write-schema", "0.6"), "pinstid11", "threadid1"),
+          RequestSourceUtil.build("domainId", "relId", "pinstid11", "threadid1", ProtoRef("write-schema", "0.6")),
           "event-type-1",
           """{"field1": "value1"}"""
         )
         producer.send("topic1", event1)
 
         val event2 = buildEvent(
-          RequestSourceUtil.build("example.com", "routeId1", ProtoRef("write-schema", "0.6"), "pinstid12", "threadid2"),
+          RequestSourceUtil.build("domainId", "relId", "pinstid12", "threadid2", ProtoRef("write-schema", "0.6")),
           "event-type-2",
           """{"field1": "value1"}"""
         )
@@ -77,7 +77,7 @@ class BasicEventStoreSpec
       "should be successful" in {
         val producer = createBasicProducerAdapter()
         val event = buildEvent(
-          RequestSourceUtil.build("example.com", "routeId1", ProtoRef("write-schema", "0.6"), "pinstid1", "threadid1"),
+          RequestSourceUtil.build("domainId", "relId", "pinstid1", "threadid1", ProtoRef("write-schema", "0.6")),
           "event-type-1",
           """{"field1": "value1"}"""
         )
@@ -91,7 +91,7 @@ class BasicEventStoreSpec
       "should be successful" in {
         val producer = createBasicProducerAdapter()
         val event = buildEvent(
-          RequestSourceUtil.build("example.com", "routeId2", ProtoRef("write-cred-def", "0.6"), "pinstid2", "threadid2"),
+          RequestSourceUtil.build("domainId", "relId", "pinstid2", "threadid2", ProtoRef("write-cred-def", "0.6")),
           "event-type-2",
           """{"field1": "value1"}"""
         )

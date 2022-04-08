@@ -43,7 +43,7 @@ class EndorsementMessageHandler(config: Config,
       MsgEnvelope(cmd, null, null, null, msgId = Option(MsgFamilyUtil.getNewMsgUniqueId), thId = Option(requestSource.threadId))
     )
     agentMsgRouter
-      .execute(InternalMsgRouteParam(requestSource.route, protoCmd))
+      .execute(InternalMsgRouteParam(requestSource.relationshipId, protoCmd))
       .map(_ => Done)
   }
 }

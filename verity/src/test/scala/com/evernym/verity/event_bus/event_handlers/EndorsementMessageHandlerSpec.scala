@@ -5,8 +5,7 @@ import akka.actor.ActorSystem
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.event_bus.ports.consumer.{Message, Metadata}
-import com.evernym.verity.protocol.engine.PinstId
-import com.evernym.verity.util2.RouteId
+import com.evernym.verity.protocol.engine.{DomainId, PinstId, ProtoRef, RelationshipId, ThreadId}
 
 import java.time.Instant
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -16,7 +15,7 @@ import scala.concurrent.duration._
 class EndorsementMessageHandlerSpec
   extends EventHandlerSpecBase {
 
-  val requestSourceStr: String = createSource("routeId", "write-schema", "0.6", "pinstId1")
+  val requestSourceStr: String = createSource("domainId", "relationshipId", "pinstId1", "threadId", "write-schema", "0.6")
 
   "EndorserReqStatusMessageHandler" - {
     "when received EndorserComplete cloud event message" - {
@@ -39,8 +38,12 @@ class EndorsementMessageHandlerSpec
     }
   }
 
-  def createSource(routeId: RouteId, protocol: String, version: String, pinstId: PinstId): String =
-    s"http://verity.avast.com/route/$routeId/protocol/$protocol/version/$version/pinstid/$pinstId?threadId=threadId"
+  def createSource(domainId: DomainId,
+                   relationshipId: RelationshipId,
+                   threadId: ThreadId,
+                   pinstId: PinstId,
+                   protocol: String, version: String): String =
+    RequestSourceUtil.build(domainId, relationshipId, pinstId, threadId, ProtoRef(protocol, version))
 
   lazy val agentMsgRouter = new MockAgentMsgRouter(appConfig, system, executionContext)
 

@@ -95,7 +95,7 @@ class MockActorContainer(val appConfig: AppConfig,
   override def postAllAsyncOpsCompleted(): Unit = {}
 
 
-  val routingContext: RoutingContext = RoutingContext("routeId", ProtoRef("write-schema", "0.6"), "pinstid124", "threadid1")
+  val routingContext: RoutingContext = RoutingContext("domainId", "relId", "pinstid124", "threadid1", ProtoRef("write-schema", "0.6"))
   val endorserAccessAdapter = new EndorserAccessAdapter(
     routingContext,
     new MockProducerAdapter,

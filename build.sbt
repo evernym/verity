@@ -86,7 +86,7 @@ val CompileOnly = config(COMPILE_TIME_ONLY)
 
 val majorNum = "2"
 val minorNum = "17"
-val patchNum = "3"
+val patchNum = "4"
 
 // I'm not sure why setting this keys don't resolve in all
 // other scopes but it does not so we re-resolve it commonSettings
@@ -383,10 +383,11 @@ lazy val commonLibraryDependencies = {
     "com.evernym.verity" % "verity-sdk" % veritySdkVer
       exclude ("com.evernym.vdrtools", "vdr-tools"),
 
-    "com.dimafeng" %% "testcontainers-scala-kafka" % "0.40.3",
+    "com.dimafeng" %% "testcontainers-scala-kafka" % "0.40.4",
 
     "org.pegdown" % "pegdown" % "1.6.0",
-    "org.abstractj.kalium" % "kalium" % "0.8.0",  // java binding for nacl
+    "com.goterl" % "lazysodium-java" % "5.1.1",
+    "net.java.dev.jna" % "jna" % "5.11.0",
 
     "net.glxn" % "qrgen" % "1.4", // QR code generator
     "com.google.guava" % "guava" % "31.1-jre",

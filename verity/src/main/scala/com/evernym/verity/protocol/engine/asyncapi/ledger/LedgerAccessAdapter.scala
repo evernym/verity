@@ -20,7 +20,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     with AsyncResultHandler {
 
   override def prepareSchemaTxn(schemaJson: String,
-                                fqSchemaId: FQSchemaId,
+                                fqSchemaId: FqSchemaId,
                                 submitterDID: DidStr,
                                 endorser: Option[String])
                                (handler: Try[PreparedTxn] => Unit): Unit = {
@@ -32,7 +32,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
 
 
   override def prepareCredDefTxn(credDefJson: String,
-                                 fqCredDefId: FQCredDefId,
+                                 fqCredDefId: FqCredDefId,
                                  submitterDID: DidStr,
                                  endorser: Option[String])
                                 (handler: Try[PreparedTxn] => Unit): Unit =
@@ -51,7 +51,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     )
 
 
-  override def resolveSchema(fqSchemaId: FQSchemaId,
+  override def resolveSchema(fqSchemaId: FqSchemaId,
                              cacheOption: Option[CacheOption]=None)(handler: Try[Schema] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
       {vdrTools.resolveSchema(fqSchemaId)},
@@ -59,14 +59,14 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     )
   }
 
-  override def resolveCredDef(fqCredDefId: FQCredDefId,
+  override def resolveCredDef(fqCredDefId: FqCredDefId,
                               cacheOption: Option[CacheOption]=None)(handler: Try[CredDef] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
       {vdrTools.resolveCredDef(fqCredDefId, cacheOption)},
       handleAsyncOpResult(handler)
     )
 
-  override def resolveSchemas(fqSchemaIds: Set[FQSchemaId],
+  override def resolveSchemas(fqSchemaIds: Set[FqSchemaId],
                               cacheOption: Option[CacheOption]=None)(handler: Try[Seq[Schema]] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
       {Future.sequence(fqSchemaIds.map(id => vdrTools.resolveSchema(id, cacheOption))).map(_.toSeq)},
@@ -74,7 +74,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     )
   }
 
-  override def resolveCredDefs(fqCredDefIds: Set[FQCredDefId],
+  override def resolveCredDefs(fqCredDefIds: Set[FqCredDefId],
                                cacheOption: Option[CacheOption]=None)(handler: Try[Seq[CredDef]] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
       {Future.sequence(fqCredDefIds.map(id => vdrTools.resolveCredDef(id, cacheOption))).map(_.toSeq)},
@@ -82,23 +82,23 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     )
   }
 
-  override def fqID(id: String): FQDid = {
-    LedgerUtil.toFQId(id, _vdrDefaultNamespace)
+  override def fqDID(did: String): FqDID = {
+    VDRUtil.toFqDID(did, _vdrDefaultNamespace)
   }
 
-  override def fqSchemaId(id: String): FQSchemaId  = {
-    LedgerUtil.toFQSchemaId(id, _vdrDefaultNamespace)
+  override def fqSchemaId(schemaId: String, issuerFqDID: Option[FqDID]): FqSchemaId  = {
+    VDRUtil.toFqSchemaId(schemaId, issuerFqDID, Option(_vdrDefaultNamespace))
   }
 
-  override def fqCredDefId(id: String): FQCredDefId = {
-    LedgerUtil.toFQCredDefId(id, _vdrDefaultNamespace)
+  override def fqCredDefId(credDefId: String, issuerFqDID: Option[FqDID]): FqCredDefId = {
+    VDRUtil.toFqCredDefId(credDefId, issuerFqDID, Option(_vdrDefaultNamespace))
   }
 
   override def walletAccess: WalletAccess = _walletAccess
 
-  //TODO: how to avoid dependency on libvdrtools exceptions here?
+  //TODO (VE-3368): how to avoid dependency on libvdrtools exceptions here?
   override def handleResult[T](result: Try[Any], handler: Try[T] => Unit): Unit = {
-    //TODO: fix error handling once new libvdrtools is available
+    //TODO (VE-3368): fix error handling once new libvdrtools is available
     handler(
       result match {
         case Failure(ex: LedgerInvalidTransactionException) =>

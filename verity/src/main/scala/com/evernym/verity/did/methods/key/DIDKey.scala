@@ -19,7 +19,7 @@ class DIDKey(did: String)
   private val splitted: Array[String] = did.split(":")
 
   override val methodIdentifier: KeyIdentifier = did.split(":").length match {
-    //TODO: confirm the change in below line with Mathew
+    //TODO (VE-3368): confirm the change in below line
     case 3 if splitted(1) == method =>  KeyIdentifier(did, method, splitted.last)
 
     case 1 => KeyIdentifier(

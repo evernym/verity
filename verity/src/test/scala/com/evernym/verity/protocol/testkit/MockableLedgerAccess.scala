@@ -8,7 +8,7 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException, LedgerUtil}
+import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessAdapter
 import com.evernym.verity.protocol.testkit.MockLedger.{TEST_INDY_SOVRIN_NAMESPACE, nonFqID}
@@ -17,7 +17,7 @@ import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vdr._
-import com.evernym.verity.vdr.base.{MOCK_VDR_DID_SOV_NAMESPACE, MOCK_VDR_SOV_NAMESPACE}
+import com.evernym.verity.vdr.base.{DEFAULT_VDR_NAMESPACE, SOV_LEDGER_NAME}
 import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
@@ -61,7 +61,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     "is required with additional metadata fees schema, Error: Fees are required for this txn type"
 
   override def prepareSchemaTxn(schemaJson: String,
-                                fqSchemaId: FQSchemaId,
+                                fqSchemaId: FqSchemaId,
                                 submitterDID: DidStr,
                                 endorser: Option[String])
                                (handler: Try[PreparedTxn] => Unit): Unit = {
@@ -78,7 +78,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
   }
 
   override def prepareCredDefTxn(credDefJson: String,
-                                 fqCredDefId: FQCredDefId,
+                                 fqCredDefId: FqCredDefId,
                                  submitterDID: DidStr,
                                  endorser: Option[String])
                                 (handler: Try[PreparedTxn] => Unit): Unit = {
@@ -101,15 +101,15 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         val submitterDID = extractSubmitterDID(preparedTxn)
-        if (submitterDID.equals(fqID(MOCK_NO_DID))) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
-        else if (submitterDID.equals(fqID(MOCK_NOT_ENDORSER))) Failure(LedgerRejectException(invalidEndorserError))
+        if (submitterDID.equals(fqDID(MOCK_NO_DID))) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
+        else if (submitterDID.equals(fqDID(MOCK_NOT_ENDORSER))) Failure(LedgerRejectException(invalidEndorserError))
         else Try(SubmittedTxn("{}"))
       }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 
-  override def resolveSchema(fqSchemaId: FQSchemaId, cacheOption: Option[CacheOption])(handler: Try[Schema] => Unit): Unit = {
+  override def resolveSchema(fqSchemaId: FqSchemaId, cacheOption: Option[CacheOption])(handler: Try[Schema] => Unit): Unit = {
     handler {
       if (ledgerAvailable) {
         Try{
@@ -121,7 +121,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
-  override def resolveSchemas(fqSchemaIds: Set[FQSchemaId], cacheOption: Option[CacheOption])(handler: Try[Seq[Schema]] => Unit): Unit = {
+  override def resolveSchemas(fqSchemaIds: Set[FqSchemaId], cacheOption: Option[CacheOption])(handler: Try[Seq[Schema]] => Unit): Unit = {
     handler {
       if (ledgerAvailable) {
         Try{
@@ -132,7 +132,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
-  override def resolveCredDef(fqCredDefId: FQCredDefId, cacheOption: Option[CacheOption])(handler: Try[CredDef] => Unit): Unit = {
+  override def resolveCredDef(fqCredDefId: FqCredDefId, cacheOption: Option[CacheOption])(handler: Try[CredDef] => Unit): Unit = {
     handler {
       if (ledgerAvailable) {
         Try{
@@ -144,12 +144,10 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
-  override def resolveCredDefs(fqCredDefIds: Set[FQCredDefId], cacheOption: Option[CacheOption])(handler: Try[Seq[CredDef]] => Unit): Unit = {
+  override def resolveCredDefs(fqCredDefIds: Set[FqCredDefId], cacheOption: Option[CacheOption])(handler: Try[Seq[CredDef]] => Unit): Unit = {
     handler {
       if (ledgerAvailable) {
         Try{
-          val unqualifiedCredDefIds = fqCredDefIds.map(nonFqID)
-          val storedCredDefIds = credDefs.keys
           credDefs.filter{ case (id, credDef) => fqCredDefIds.map(nonFqID).contains(id)}.values.toSeq
         }
       }
@@ -172,11 +170,11 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
 
   override val mockExecutionContext: ExecutionContext = executionContext
 
-  override def fqID(id: String): String = MockLedger.fqID(id)
+  override def fqDID(did: DidStr): FqDID = MockLedger.fqID(did)
 
-  override def fqSchemaId(id: String): String = MockLedger.fqSchemaID(id)
+  override def fqSchemaId(schemaId: String, issuerDid: Option[DidStr]): FqSchemaId = MockLedger.fqSchemaID(schemaId, issuerDid)
 
-  override def fqCredDefId(id: String): FQCredDefId = MockLedger.fqCredDefId(id)
+  override def fqCredDefId(credDefId: String, issuerDid: Option[DidStr]): FqCredDefId = MockLedger.fqCredDefId(credDefId, issuerDid)
 }
 
 
@@ -223,36 +221,42 @@ object MockLedgerData {
 
 object MockLedger {
 
-  val TEST_INDY_SOVRIN_NAMESPACE = MOCK_VDR_SOV_NAMESPACE
+  val TEST_INDY_SOVRIN_NAMESPACE = DEFAULT_VDR_NAMESPACE
 
   val NO_ENDORSEMENT = ""
 
   def fqID(id: String): String = {
-    LedgerUtil.toFQId(id, TEST_INDY_SOVRIN_NAMESPACE)
+    VDRUtil.toFqDID(id, TEST_INDY_SOVRIN_NAMESPACE)
   }
 
-  def fqSchemaID(id: String): String = {
-    LedgerUtil.toFQSchemaId(id, TEST_INDY_SOVRIN_NAMESPACE)
+  def fqSchemaID(id: String, issuerDid: Option[DidStr]): String = {
+    VDRUtil.toFqSchemaId(id, issuerDid, Option(TEST_INDY_SOVRIN_NAMESPACE))
   }
 
-  def fqCredDefId(id: String): String = {
-    LedgerUtil.toFQCredDefId(id, TEST_INDY_SOVRIN_NAMESPACE)
+  def fqCredDefId(id: String, issuerDid: Option[DidStr]): String = {
+    VDRUtil.toFqCredDefId(id, issuerDid, Option(TEST_INDY_SOVRIN_NAMESPACE))
   }
 
-  //TODO: come back to this
+  //TODO (VE-3368): come back to this
   def nonFqID(id: String): String = {
     id match {
       case fqIdRegEx(id)        => id
-      case fqSchemaIdRegEx(id)  => nonFqID(id)
-      case fqCredDefIdRegEx(id) => nonFqID(id).replace(s"$SCHEME_NAME_INDY_SCHEMA:$MOCK_VDR_DID_SOV_NAMESPACE:", "")
-      case other                => id
+      case fqSchemaIdRegEx(id)  =>
+        nonFqID(id)
+          .replace(s"$INDY_SCHEMA_ID_PREFIX:$SOV_LEDGER_NAME:did:$SOV_LEDGER_NAME:", "")
+      case fqCredDefIdRegEx(id) =>
+        nonFqID(id)
+          .replace(s"$INDY_CRED_DEF_ID_PREFIX:$SOV_LEDGER_NAME:did:$SOV_LEDGER_NAME:", "")
+          .replace(s"$INDY_SCHEMA_ID_PREFIX:$SOV_LEDGER_NAME:did:$SOV_LEDGER_NAME:", "")
+      case other                =>
+        id
     }
   }
 
-  val fqIdRegEx = s"$SCHEME_NAME_DID:$TEST_INDY_SOVRIN_NAMESPACE:(.*)".r
-  val fqSchemaIdRegEx = s"$SCHEME_NAME_INDY_SCHEMA:$MOCK_VDR_DID_SOV_NAMESPACE:(.*)".r
-  val fqCredDefIdRegEx = s"$SCHEME_NAME_INDY_CRED_DEF:$MOCK_VDR_DID_SOV_NAMESPACE:(.*)".r
+  val fqIdRegEx = s"$DID_PREFIX:$TEST_INDY_SOVRIN_NAMESPACE:(.*)".r
+  val fqSchemaIdRegEx = s"$INDY_SCHEMA_ID_PREFIX:$DEFAULT_VDR_NAMESPACE:did:$DEFAULT_VDR_NAMESPACE:(.*)".r
+  val fqCredDefIdRegEx = s"$INDY_CRED_DEF_ID_PREFIX:$DEFAULT_VDR_NAMESPACE:(.*)".r
 
   def toFqId(id: String): String =
-    LedgerUtil.toFQId(id, TEST_INDY_SOVRIN_NAMESPACE)
+    VDRUtil.toFqDID(id, TEST_INDY_SOVRIN_NAMESPACE)
 }

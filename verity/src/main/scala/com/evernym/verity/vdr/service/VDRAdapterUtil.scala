@@ -21,17 +21,17 @@ object VDRAdapterUtil {
     )
   }
 
-  def buildSchema(fqSchemaId: FQSchemaId, vdrSchema: VdrSchema): Schema = {
-    //TODO: why the "id" field inside the `vdrSchema' json string is not fully qualified?
+  def buildSchema(fqSchemaId: FqSchemaId, vdrSchema: VdrSchema): Schema = {
+    //TODO (VE-3368): will the "id" field inside the `vdrSchema' json string not be fully qualified?
     Schema(
       fqSchemaId,
       vdrSchema
     )
   }
 
-  def buildCredDef(fqCredDefId: FQCredDefId, vdrCredDef: VdrCredDef): CredDef = {
-    //TODO: check if "id" field inside the `vdrCredDef' json string is fully qualified?
-    //TODO: check if "schemaId" field inside the `vdrCredDef' json string is fully qualified?
+  def buildCredDef(fqCredDefId: FqCredDefId, vdrCredDef: VdrCredDef): CredDef = {
+    //TODO (VE-3368): will the "id" field inside the `vdrCredDef' json string not be fully qualified?
+    //TODO (VE-3368): will the "schemaId" field inside the `vdrCredDef' json string not be fully qualified?
 
     val json = new JSONObject(vdrCredDef)
     CredDef(
@@ -56,14 +56,14 @@ object VDRAdapterUtil {
   }
   
   def buildVDRSchemaParams(schemaJson: String,
-                           fqSchemaId: FQSchemaId): TxnSpecificParams = {
+                           fqSchemaId: FqSchemaId): TxnSpecificParams = {
     val json = new JSONObject(schemaJson)
     json.put("id", fqSchemaId)
     json.toString
   }
 
   def buildVDRCredDefParams(credDefJson: String,
-                            fqCredDefId: FQCredDefId): TxnSpecificParams = {
+                            fqCredDefId: FqCredDefId): TxnSpecificParams = {
     val json = new JSONObject(credDefJson)
     json.put("id", fqCredDefId)
     json.toString

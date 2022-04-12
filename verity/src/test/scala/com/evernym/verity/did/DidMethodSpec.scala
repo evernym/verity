@@ -12,12 +12,12 @@ class DidMethodSpec
   "when an invalid did string" - {
     "is asked to convert to a did method" - {
       "should throw error" in {
-        //TODO: add few more invalid entries if possible
-        val invalidDidStrs = List("did:abc", "sov:abc", "12345:indy")
-        invalidDidStrs.foreach { did =>
-          intercept[RuntimeException] {
+        val invalidDidStings = List("did:abc", "sov:abc", "12345:indy")
+        invalidDidStings.foreach { did =>
+          val ex = intercept[RuntimeException] {
             toDIDMethod(did)
           }
+          ex.getMessage shouldBe s"Unable to identify DID method for did string: $did"
         }
       }
     }
@@ -74,7 +74,7 @@ class DidMethodSpec
         //TODO: add any other possible valid did:indy:sovrin entries if possible
         val didKeyStrs = List(
           "did:indy:sovrin:2wJPyULfLLnYTEFYzByfUR",
-          "did:indy:sovrin:stage:2wJPyULfLLnYTEFYzByfUR",
+          "did:indy:sovrin:staging:2wJPyULfLLnYTEFYzByfUR",
           "did:indy:sovrin:builder:2wJPyULfLLnYTEFYzByfUR"
         )
         didKeyStrs.foreach { did =>

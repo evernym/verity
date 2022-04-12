@@ -47,8 +47,6 @@ trait VcxIssueCredential
     val threadId = JSONObjectUtil.threadId(payloadMsg)
 
     val i = interaction(threadId).asInstanceOf[HolderIssuanceInteraction]
-    println("### cred => i: " + i)
-
     val handle = i.handle.get
     CredentialApi.credentialUpdateState(handle).get()
     assert(CredentialApi.credentialGetState(handle).get() == 4)

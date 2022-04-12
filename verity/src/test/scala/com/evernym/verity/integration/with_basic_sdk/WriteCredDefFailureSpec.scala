@@ -17,9 +17,9 @@ import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.{Wr
 import com.evernym.verity.protocol.testkit.MockLedger
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.vdr.base.{InMemLedger, MOCK_VDR_SOV_NAMESPACE}
+import com.evernym.verity.vdr.base.{InMemLedger, DEFAULT_VDR_NAMESPACE}
 import com.evernym.verity.vdr.service.VdrTools
-import com.evernym.verity.vdr.{FQCredDefId, FQDid, FQSchemaId, MockIndyLedger, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
+import com.evernym.verity.vdr.{FqCredDefId, FqDID, FqSchemaId, MockIndyLedger, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -34,7 +34,7 @@ class WriteCredDefFailureSpec
   override lazy val defaultSvcParam: ServiceParam =
     ServiceParam
       .empty
-      .withVdrTools(new DummyVdrTools("sov", MockIndyLedger(List(MOCK_VDR_SOV_NAMESPACE), "genesis.txn file path", None))(futureExecutionContext))
+      .withVdrTools(new DummyVdrTools(DEFAULT_VDR_NAMESPACE, MockIndyLedger(DEFAULT_VDR_NAMESPACE, List(DEFAULT_VDR_NAMESPACE), "genesis.txn file path", None))(futureExecutionContext))
 
   lazy val issuerVerityApp = VerityEnvBuilder.default().build(VAS)
   lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext)
@@ -83,8 +83,7 @@ class WriteCredDefFailureSpec
                                endorser: Option[String]): Future[PreparedTxnResult] = {
       val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams)
       val id = json.get("id").asText
-      //TODO: why we wouldn't have to convert the schema id to fully qualified schema id in main code???
-      Future.successful(ledger.prepareSchemaTxn(txnSpecificParams, MockLedger.fqSchemaID(id), submitterDid, endorser))
+      Future.successful(ledger.prepareSchemaTxn(txnSpecificParams, MockLedger.fqSchemaID(id, Option(submitterDid)), submitterDid, endorser))
     }
 
     override def submitTxn(namespace: Namespace,
@@ -99,28 +98,30 @@ class WriteCredDefFailureSpec
       }
     }
 
-    override def resolveDid(fqDid: FQDid): Future[VdrDid] = ???
+    override def resolveDid(fqDid: FqDID): Future[VdrDid] = ???
 
-    override def resolveDid(fqDid: FQDid, cacheOptions: CacheOptions): Future[VdrDid] = ???
+    override def resolveDid(fqDid: FqDID, cacheOptions: CacheOptions): Future[VdrDid] = ???
 
-    override def resolveSchema(fqSchemaId: FQSchemaId): Future[VdrSchema] = {
+    override def resolveSchema(fqSchemaId: FqSchemaId): Future[VdrSchema] = {
       Future.successful(ledger.resolveSchema(fqSchemaId))
     }
 
-    override def resolveSchema(fqSchemaId: FQSchemaId, cacheOptions: CacheOptions): Future[VdrSchema] = {
+    override def resolveSchema(fqSchemaId: FqSchemaId, cacheOptions: CacheOptions): Future[VdrSchema] = {
       Future.successful(ledger.resolveSchema(fqSchemaId))
     }
 
-    override def resolveCredDef(fqCredDefId: FQCredDefId): Future[VdrCredDef] = ???
+    override def resolveCredDef(fqCredDefId: FqCredDefId): Future[VdrCredDef] = ???
 
-    override def resolveCredDef(fqCredDefId: FQCredDefId, cacheOptions: CacheOptions): Future[VdrCredDef] = ???
+    override def resolveCredDef(fqCredDefId: FqCredDefId, cacheOptions: CacheOptions): Future[VdrCredDef] = ???
 
     override def prepareDid(txnSpecificParams: TxnSpecificParams, submitterDid: DidStr, endorser: Option[String]): Future[PreparedTxnResult] = ???
 
-    override def prepareCredDef(txnSpecificParams: TxnSpecificParams, submitterDid: DidStr, endorser: Option[String]): Future[PreparedTxnResult] = {
+    override def prepareCredDef(txnSpecificParams: TxnSpecificParams,
+                                submitterDid: DidStr,
+                                endorser: Option[String]): Future[PreparedTxnResult] = {
       val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams);
       val id = json.get("id").asText()
-      Future.successful(ledger.prepareCredDefTxn(txnSpecificParams, MockLedger.fqSchemaID(id), submitterDid, endorser))
+      Future.successful(ledger.prepareCredDefTxn(txnSpecificParams, id, submitterDid, endorser))
     }
 
     override def submitRawTxn(namespace: Namespace, txnBytes: Array[Byte]): Future[TxnResult] = ???

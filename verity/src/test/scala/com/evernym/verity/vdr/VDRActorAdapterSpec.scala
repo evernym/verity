@@ -6,7 +6,7 @@ import com.evernym.verity.actor.testkit.HasBasicActorSystem
 import com.evernym.verity.protocol.testkit.MockLedger.TEST_INDY_SOVRIN_NAMESPACE
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.vdr.base.TestVDRDidDoc
+import com.evernym.verity.vdr.base.{DEFAULT_VDR_NAMESPACE, TestVDRDidDoc}
 import com.evernym.verity.vdr.service.{IndyLedger, Ledger, VDRToolsConfig}
 import org.json.JSONObject
 import org.scalatest.BeforeAndAfterEach
@@ -24,7 +24,7 @@ class VDRActorAdapterSpec
     with Eventually
     with BeforeAndAfterEach {
 
-  var testLedgerRegistry: MockLedgerRegistry = MockLedgerRegistry()
+  var testLedgerRegistry: MockLedgerRegistry = MockLedgerRegistry(DEFAULT_VDR_NAMESPACE)
 
   override protected def afterEach(): Unit = {
     testLedgerRegistry.cleanup()
@@ -78,7 +78,7 @@ class VDRActorAdapterSpec
     }
 
     "when asked to prepare schema txn with non fqdid" - {
-      "should result in failure" in {
+      "should be still successful" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val ex = intercept[RuntimeException] {
           Await.result(
@@ -91,7 +91,7 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid identifier: did1"
+        ex.getMessage shouldBe "could not extract namespace: did1"
       }
     }
 
@@ -109,7 +109,7 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid identifier: F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+        ex.getMessage shouldBe "non fully qualified schema id: F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
       }
     }
 
@@ -119,7 +119,7 @@ class VDRActorAdapterSpec
         Await.result(
           vdrAdapter.prepareSchemaTxn(
             "{}",
-            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "schema:indy:sovrin:did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           ),
@@ -134,7 +134,7 @@ class VDRActorAdapterSpec
         val result = for {
           preparedTxn <- vdrAdapter.prepareSchemaTxn(
             """{"field1":"value1"}""",
-            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "schema:indy:sovrin:did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           )
@@ -152,7 +152,7 @@ class VDRActorAdapterSpec
         val result = for {
           preparedTxn <- vdrAdapter.prepareSchemaTxn(
             """{"field1":"value1"}""",
-            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "schema:indy:sovrin:did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           )
@@ -173,7 +173,7 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid identifier: did1"
+        ex.getMessage shouldBe "could not extract namespace: did1"
       }
     }
 
@@ -182,7 +182,7 @@ class VDRActorAdapterSpec
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val ex = intercept[RuntimeException] {
           Await.result(
-            vdrAdapter.resolveSchema("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"),
+            vdrAdapter.resolveSchema("schema:indy:sovrin:did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"),
             apiTimeout
           )
         }

@@ -2,12 +2,13 @@ package com.evernym.verity
 
 package object vdr {
 
-  type Namespace = String
   type SignatureSpec = String
   type EndorsementSpec = String
-  type FQSchemaId = String
-  type FQCredDefId = String
-  type FQDid = String
+
+  type Namespace = String       // for example: "sov", "indy:sovrin", "indy:sovrin:staging" etc
+  type FqDID = String
+  type FqSchemaId = String
+  type FqCredDefId = String
 
   type VdrDid = String
   type VdrSchema = String
@@ -15,8 +16,8 @@ package object vdr {
   type TxnResult = String
   type TxnSpecificParams = String
 
-  val SCHEME_NAME_DID = "did"
-  val SCHEME_NAME_INDY_DID = s"did:sov"
-  val SCHEME_NAME_INDY_SCHEMA = s"schema:sov"
-  val SCHEME_NAME_INDY_CRED_DEF = s"creddef:sov"
+  val DID_PREFIX = "did"
+  val DID_METHOD_INDY = "indy"
+  val INDY_SCHEMA_ID_PREFIX = "schema"
+  val INDY_CRED_DEF_ID_PREFIX = "creddef"
 }

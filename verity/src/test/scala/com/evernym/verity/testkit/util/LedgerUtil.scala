@@ -17,6 +17,7 @@ import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 import com.evernym.vdrtools.ledger.Ledger._
 import com.evernym.vdrtools.pool.Pool
+import com.evernym.verity.vdr.VDRUtil
 
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
@@ -182,7 +183,8 @@ class LedgerUtil (val appConfig: AppConfig,
   }
 
   def checkSchemaOnLedger(did: DidStr, name: String, version:String): Unit = {
-    val schema_id = s"$did:2:$name:$version"
+    val identifier = VDRUtil.extractUnqualifiedDidStr(did)   //TODO (VE-3368): confirm this change
+    val schema_id = s"$identifier:2:$name:$version"
     val req = buildGetSchemaRequest(privateGetDID, schema_id).get
     val response = executeLedgerRequest(req)
 
@@ -209,7 +211,8 @@ class LedgerUtil (val appConfig: AppConfig,
     checkTxn(response)
 
     val data = findData(response)
-    assert(data.contains(did))
+    val identifier = VDRUtil.extractUnqualifiedDidStr(did)   //TODO (VE-3368): confirm this change
+    assert(data.contains(identifier))
     assert(data.contains(verkey))
 
     role match {

@@ -1,12 +1,15 @@
 package com.evernym.verity.vdr
 
-import com.evernym.verity.config.ConfigConstants.VDR_DEFAULT_NAMESPACE
+import com.evernym.verity.config.ConfigConstants.VDR_LEGACY_DEFAULT_NAMESPACE
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.util.TAAUtil
 import com.evernym.verity.vdr.service.{IndyLedger, VDRToolsConfig}
 import com.typesafe.config.ConfigFactory
 
 import java.io.{File, FileNotFoundException}
 import java.nio.file.Files
+import java.time.LocalDate
+
 
 class VdrToolsConfigSpec
   extends BasicSpec {
@@ -28,7 +31,7 @@ class VdrToolsConfigSpec
             s"""
               |verity {
               |  vdr: {
-              |    default-namespace = "sov"
+              |    legacy-default-namespace = "sov"
               |    ledgers = [
               |      {
               |        type: "indy"
@@ -37,7 +40,7 @@ class VdrToolsConfigSpec
               |        transaction-author-agreement: {
               |          version: "1"
               |          text: "lorem ipsum dolor"
-              |          time-of-acceptance: 1648037095
+              |          time-of-acceptance: ${TAAUtil.taaAcceptanceEpochDateTime(LocalDate.now().toString)}
               |          mechanism: "on_file"
               |        }
               |      }
@@ -60,7 +63,7 @@ class VdrToolsConfigSpec
         taa.getVersion shouldBe "1"
         taa.getText shouldBe "lorem ipsum dolor"
         taa.getAccMechType shouldBe "on_file"
-        taa.getTime shouldBe 1648037095
+        taa.getTime shouldBe expectedTimeOfAcceptance
       }
     }
 
@@ -73,7 +76,7 @@ class VdrToolsConfigSpec
             s"""
                |verity {
                |  vdr: {
-               |    default-namespace = "sov"
+               |    legacy-default-namespace = "sov"
                |
                |    ledgers: [
                |      {
@@ -108,7 +111,7 @@ class VdrToolsConfigSpec
             s"""
                |verity {
                |  vdr: {
-               |    default-namespace = "sov"
+               |    legacy-default-namespace = "sov"
                |    ledgers: [
                |      {
                |        type: "indy"
@@ -150,7 +153,7 @@ class VdrToolsConfigSpec
               """
                 |verity {
                 |  vdr: {
-                |    default-namespace = "sov"
+                |    legacy-default-namespace = "sov"
                 |    ledgers: []
                 |  }
                 |}
@@ -174,7 +177,7 @@ class VdrToolsConfigSpec
               s"""
                  |verity {
                  |  vdr: {
-                 |    default-namespace = "sov"
+                 |    legacy-default-namespace = "sov"
                  |    ledgers: [
                  |      {
                  |        type: "indy"
@@ -204,7 +207,7 @@ class VdrToolsConfigSpec
               s"""
                  |verity {
                  |  vdr: {
-                 |    default-namespace = "indy:sovrin"
+                 |    legacy-default-namespace = "indy:sovrin"
                  |    ledgers: [
                  |      {
                  |        type: "indy"
@@ -251,7 +254,7 @@ class VdrToolsConfigSpec
             )
           )
         }
-        ex.getMessage shouldBe "[VDR] required configuration not found: 'verity.vdr.default-namespace'"
+        ex.getMessage shouldBe "[VDR] required configuration not found: 'verity.vdr.legacy-default-namespace'"
       }
     }
 
@@ -264,7 +267,7 @@ class VdrToolsConfigSpec
               s"""
                  |verity {
                  |  vdr: {
-                 |    default-namespace = "test"
+                 |    legacy-default-namespace = "test"
                  |    ledgers: [
                  |      {
                  |        type: "indy"
@@ -279,8 +282,10 @@ class VdrToolsConfigSpec
             )
           )
         }
-        ex.getMessage shouldBe s"[VDR] '$VDR_DEFAULT_NAMESPACE' (test) is not found in registered ledger's namespaces (sov, indy:sovrin)"
+        ex.getMessage shouldBe s"[VDR] '$VDR_LEGACY_DEFAULT_NAMESPACE' (test) is not found in registered ledger's namespaces (sov, indy:sovrin)"
       }
     }
   }
+
+  val expectedTimeOfAcceptance: Long = TAAUtil.taaAcceptanceEpochDateTime(LocalDate.now().toString)
 }

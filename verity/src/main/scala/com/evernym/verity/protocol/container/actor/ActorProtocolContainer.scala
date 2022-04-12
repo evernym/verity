@@ -311,7 +311,7 @@ class ActorProtocolContainer[
   implicit def asyncOpRunner: AsyncOpRunner = this
 
 
-  lazy val vdrDefaultNamespace: String = appConfig.getStringReq(VDR_DEFAULT_NAMESPACE)
+  lazy val vdrDefaultNamespace: String = appConfig.getStringReq(VDR_LEGACY_DEFAULT_NAMESPACE)
 
   override lazy val wallet =
     new WalletAccessAdapter(

@@ -18,7 +18,7 @@ verity {
 
     # vdr (ledgers) specific configs (irrespective of which vdr-tools implementation gets used)
     vdr: {
-        default-namespace = "sov"
+        legacy-default-namespace = "sov"
         ledgers: [
             # there can be more than one ledger of same 'type'
             # it is just that the namespaces should be unique among all ledger entries in this section 

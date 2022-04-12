@@ -450,11 +450,11 @@ class PresentProof(implicit val ctx: PresentProofContext)
                             (handler: Try[(String, String)] => Unit): Unit = {
     val ids: mutable.Buffer[(String, String)] = mutable.Buffer()
     identifiers.foreach { identifier =>
-      val fqSchemaId = ctx.ledger.fqSchemaId(identifier.schema_id)
+      val fqSchemaId = ctx.ledger.fqSchemaId(identifier.schema_id, None)
       val fqCredDefId = {
-        //TODO: To be finalized (causing issues here and there)
+        //TODO (VE-3368): To be finalized
         val credDefId = identifier.cred_def_id.replace(identifier.schema_id, fqSchemaId)
-        ctx.ledger.fqCredDefId(credDefId)
+        ctx.ledger.fqCredDefId(credDefId, None)
       }
       ids.append((fqSchemaId, fqCredDefId))
     }

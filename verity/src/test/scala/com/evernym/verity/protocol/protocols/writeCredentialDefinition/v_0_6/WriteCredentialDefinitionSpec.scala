@@ -15,6 +15,7 @@ import org.json.JSONObject
 import scala.concurrent.ExecutionContext
 import scala.language.{implicitConversions, reflectiveCalls}
 
+
 class WriteCredentialDefinitionSpec
   extends TestsProtocolsImpl(CredDefDefinition)
     with BasicFixtureSpec {

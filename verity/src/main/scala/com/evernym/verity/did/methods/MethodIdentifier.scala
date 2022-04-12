@@ -3,7 +3,7 @@ package com.evernym.verity.did.methods
 // base trait for method identifier
 
 trait Identifier {
-  def didStr: String                          //did:indy:sovrin:123, did:indy:sovrin:builder:123  etc
+  def didStr: String                              //did:indy:sovrin:123, did:indy:sovrin:builder:123  etc
   override def toString: String = didStr
 }
 

@@ -5,7 +5,7 @@ import com.evernym.verity.did.methods.{DIDMethod, SelfValidated}
 
 /**
  *
- * @param did "did:indy:sovrin:123", "did:indy:sovrin:stage:123", "did:indy:sovrin:builder:123"
+ * @param did "did:indy:sovrin:123", "did:indy:sovrin:staging:123", "did:indy:sovrin:builder:123"
  */
 
 class DIDIndySovrin(did: String) extends DIDMethod with SelfValidated {
@@ -16,10 +16,8 @@ class DIDIndySovrin(did: String) extends DIDMethod with SelfValidated {
 
   override val methodIdentifier: IndySovrinIdentifier = splitted.length match {
     case x if x > 5 => throw new SubNameSpacesUnsupportedException(did) // TODO: implement support for sub namespaces
-    case 5 if splitted(1) == method && splitted(2) == namespace =>
-      IndySovrinIdentifier(did, method, splitted.takeRight(3).mkString(":"))
-    case 4 if splitted(1) == method && splitted(2) == namespace =>
-      IndySovrinIdentifier(did, method, splitted.takeRight(2).mkString(":"))
+    case 5 if splitted(1) == method && splitted(2) == namespace => IndySovrinIdentifier(did, method, splitted.takeRight(3).mkString(":"))
+    case 4 if splitted(1) == method && splitted(2) == namespace => IndySovrinIdentifier(did, method, splitted.takeRight(2).mkString(":"))
     case _ => throw new InvalidDidIndySovrinFormatException(did)
   }
 

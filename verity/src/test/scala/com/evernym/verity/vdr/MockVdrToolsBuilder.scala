@@ -1,6 +1,7 @@
 package com.evernym.verity.vdr
 
 import com.evernym.vdrtools.vdr.VdrParams
+import com.evernym.verity.vdr.base.DEFAULT_VDR_NAMESPACE
 import com.evernym.verity.vdr.service.{VdrTools, VdrToolsBuilder}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -9,7 +10,7 @@ class MockVdrToolsBuilder(ledgerRegistry: MockLedgerRegistry, givenVdrTools: Opt
   extends VdrToolsBuilder {
 
   override def registerIndyLedger(namespaceList: List[String], genesisTxnData: String, taaConfig: Option[VdrParams.TaaConfig]): Future[Unit] = {
-    ledgerRegistry.addLedger(MockIndyLedger(namespaceList, genesisTxnData, taaConfig))
+    ledgerRegistry.addLedger(MockIndyLedger(DEFAULT_VDR_NAMESPACE, namespaceList, genesisTxnData, taaConfig))
     Future.successful(())
   }
 

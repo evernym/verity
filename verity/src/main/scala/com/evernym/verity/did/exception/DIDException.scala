@@ -2,6 +2,9 @@ package com.evernym.verity.did.exception
 
 trait DIDException
 
+class InvalidUnqualifiedDIDException(did: String)
+  extends RuntimeException(s"invalid unqualified DID: $did") with DIDException
+
 class InvalidDidKeyFormatException(keyStr: String)
   extends RuntimeException(s"unable to parse received string: $keyStr") with DIDException
 

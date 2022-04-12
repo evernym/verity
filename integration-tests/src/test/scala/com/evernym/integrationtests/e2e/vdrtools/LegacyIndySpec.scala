@@ -11,7 +11,7 @@ import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, SignLedgerR
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigUtil.findTAAConfig
 import com.evernym.verity.ledger.{GetTAAResp, LedgerRequest, LedgerTAA, OpenConnException, Submitter, TransactionAuthorAgreement, TxnResp}
-import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerRejectException, LedgerUtil}
+import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.testkit.util.{LedgerUtil => LegacyLedgerUtil}
 import com.evernym.verity.testkit.{BasicSpec, LedgerClient, TestWallet}
 import com.evernym.verity.util.HashAlgorithm.SHA256
@@ -20,7 +20,7 @@ import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.util.JsonUtil.seqToJson
 import com.evernym.verity.util.Util.getMapWithAnyValueFromJsonString
 import com.evernym.verity.util2.Status.{StatusDetailException, TAA_INVALID_JSON, TAA_NOT_SET_ON_THE_LEDGER}
-import com.evernym.verity.vdr.FQDid
+import com.evernym.verity.vdr.{FqDID, VDRUtil}
 import com.evernym.verity.vdrtools.Libraries
 import com.evernym.verity.vdrtools.ledger.{IndyLedgerPoolConnManager, LedgerTxnUtil, V2TxnRespBuilder}
 import com.typesafe.config.{Config, ConfigFactory}
@@ -48,16 +48,16 @@ class LegacyIndySpec
 
   var trusteeWallet = new TestWallet(ec, createWallet = true)
   var trusteeKey: NewKeyCreated = trusteeWallet.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000Trustee1")))
-  var trusteeFqDid: FQDid = LedgerUtil.toFQId(trusteeKey.did, INDY_NAMESPACE)
+  var trusteeFqDid: FqDID = VDRUtil.toFqDID(trusteeKey.did, INDY_NAMESPACE)
 
   var issuerWallet = new TestWallet(ec, createWallet = true)
   var issuerKey: NewKeyCreated = issuerWallet.executeSync[NewKeyCreated](CreateNewKey())
-  var issuerFqDid: FQDid = LedgerUtil.toFQId(issuerKey.did, INDY_NAMESPACE)
+  var issuerFqDid: FqDID = VDRUtil.toFqDID(issuerKey.did, INDY_NAMESPACE)
   var issuerSubmitter: Submitter = Submitter(issuerKey.did, Some(issuerWallet.wap))
 
   val holderWallet = new TestWallet(ec, createWallet = true)
   var holderKey: NewKeyCreated = holderWallet.executeSync[NewKeyCreated](CreateNewKey())
-  var holderFqDid: FQDid = LedgerUtil.toFQId(holderKey.did, INDY_NAMESPACE)
+  var holderFqDid: FqDID = VDRUtil.toFqDID(holderKey.did, INDY_NAMESPACE)
 
   val legacyLedgerUtil: LegacyLedgerUtil = LedgerClient.buildLedgerUtil(
     config = new TestAppConfig(newConfig = Option(baseConfig), clearValidators = true),
@@ -219,7 +219,7 @@ class LegacyIndySpec
          |
          |  }
          |  vdr {
-         |    default-namespace = "$INDY_NAMESPACE"
+         |    legacy-default-namespace = "$INDY_NAMESPACE"
          |    ledgers: [
          |      {
          |        type = "indy"

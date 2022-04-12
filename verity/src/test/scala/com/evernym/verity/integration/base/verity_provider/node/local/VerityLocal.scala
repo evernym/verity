@@ -18,7 +18,7 @@ import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
 import com.evernym.verity.protocol.engine.MockVDRAdapter
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
-import com.evernym.verity.vdr.base.MOCK_VDR_SOV_NAMESPACE
+import com.evernym.verity.vdr.base.DEFAULT_VDR_NAMESPACE
 import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
 import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockVdrToolsBuilder, VDRAdapter}
 import com.evernym.verity.vdr.service.{VDRToolsFactory, VdrTools}
@@ -110,7 +110,7 @@ object LocalVerity {
           .getOrElse(StorageAPI.loadFromConfig(appConfig, executionContextProvider.futureExecutionContext))
       }
 
-      val testVdrLedgerRegistry = MockLedgerRegistry(List(MockIndyLedger(List(MOCK_VDR_SOV_NAMESPACE), "genesis.txn file path", None)))  //TODO: finalize this
+      val testVdrLedgerRegistry = MockLedgerRegistry(DEFAULT_VDR_NAMESPACE, List(MockIndyLedger(DEFAULT_VDR_NAMESPACE, List(DEFAULT_VDR_NAMESPACE), "genesis.txn file path", None)))  //TODO: finalize this
       override lazy val vdrBuilderFactory: VDRToolsFactory = () => new MockVdrToolsBuilder(testVdrLedgerRegistry, serviceParam.flatMap(_.vdrTools))
       override lazy val vdrAdapter: VDRAdapter = new MockVDRAdapter(vdrBuilderFactory)(futureExecutionContext)
     }

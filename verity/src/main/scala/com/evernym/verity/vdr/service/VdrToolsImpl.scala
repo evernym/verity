@@ -20,31 +20,31 @@ class VdrToolsImpl(val vdr: VDR) extends VdrTools {
     toFuture(fut)
   }
 
-  override def resolveDid(fqDid: FQDid): Future[VdrDid] = {
+  override def resolveDid(fqDid: FqDID): Future[VdrDid] = {
     toFuture(vdr.resolveDID(fqDid))
   }
 
-  override def resolveDid(fqDid: FQDid,
+  override def resolveDid(fqDid: FqDID,
                           cacheOptions: CacheOptions): Future[VdrDid] = {
     toFuture(vdr.resolveDID(fqDid, cacheOptions))
   }
 
-  override def resolveSchema(fqSchemaId: FQSchemaId): Future[VdrSchema] = {
+  override def resolveSchema(fqSchemaId: FqSchemaId): Future[VdrSchema] = {
     toFuture(vdr.resolveSchema(fqSchemaId))
   }
 
-  override def resolveSchema(fqSchemaId: FQSchemaId,
+  override def resolveSchema(fqSchemaId: FqSchemaId,
                              cacheOptions: CacheOptions): Future[VdrSchema] = {
-    toFuture(vdr.resolveSchema(fqSchemaId))   //TODO: fix issue with cacheOptions
+    toFuture(vdr.resolveSchema(fqSchemaId))   //TODO (VE-3368): fix issue with cacheOptions
   }
 
-  override def resolveCredDef(fqCredDefId: FQCredDefId): Future[VdrCredDef] = {
+  override def resolveCredDef(fqCredDefId: FqCredDefId): Future[VdrCredDef] = {
     toFuture(vdr.resolveCredDef(fqCredDefId))
   }
 
-  override def resolveCredDef(fqCredDefId: FQCredDefId,
+  override def resolveCredDef(fqCredDefId: FqCredDefId,
                               cacheOptions: CacheOptions): Future[VdrCredDef] = {
-    toFuture(vdr.resolveCredDef(fqCredDefId))   //TODO: fix issue with cacheOptions
+    toFuture(vdr.resolveCredDef(fqCredDefId))   //TODO (VE-3368): fix issue with cacheOptions
   }
 
   override def prepareDid(txnSpecificParams: TxnSpecificParams,

@@ -55,7 +55,6 @@ trait TestsProtocols[P,R,M,E,S,I] extends Eventually {
     }
   }
 
-
   def sendProtoMsg(sender: Container, to: Container, msg: M): Unit = {
     sender.submit(Envelope1(msg, to.participantId, sender.participantId, None))
   }

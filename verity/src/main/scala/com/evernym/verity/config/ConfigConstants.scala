@@ -102,7 +102,7 @@ object ConfigConstants {
   val TWILIO_APP_NAME = s"$TWILIO.app-name"
 
   private val VDR = s"$VERITY.vdr"
-  val VDR_DEFAULT_NAMESPACE = s"$VDR.default-namespace"
+  val VDR_LEGACY_DEFAULT_NAMESPACE = s"$VDR.legacy-default-namespace"
   val VDR_LEDGERS = s"$VDR.ledgers"
 
   private val LIB_VDRTOOLS = s"$VERITY.lib-vdrtools"

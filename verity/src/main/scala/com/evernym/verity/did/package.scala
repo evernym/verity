@@ -17,12 +17,17 @@ package object did {
   val VALID_DID_BYTE_LENGTH = 16
   val VALID_VER_KEY_BYTE_LENGTH = 32
 
+  /**
+   *
+   * @param did a did string (for ex: did:sov:123, did:indy:sovrin:123, did:indy:sovrin:staging:123, 123 etc)
+   * @return
+   */
   def toDIDMethod(did: DidStr): DIDMethod = {
     val splitted = did.split(":")
     splitted.length match {
       case x if x >= 3 =>
         splitted(1) match {
-          case "indy" => new DIDIndySovrin(did)     //TODO: is this look correct?
+          case "indy" => new DIDIndySovrin(did)     //TODO (VE-3368): is this look correct?
           case "sov"  => new DIDSov(did)
           case "key"  => new DIDKey(did)
           case _ => throw new UnrecognizedDIDMethodException(did, splitted(2))

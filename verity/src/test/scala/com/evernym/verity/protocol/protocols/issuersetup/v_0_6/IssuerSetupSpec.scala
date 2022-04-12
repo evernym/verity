@@ -4,7 +4,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.asyncapi.wallet.NewKeyResult
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.InteractionType.OneParty
-import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -41,6 +41,8 @@ class IssuerSetupSpec
         mockNewDid = () => Success(NewKeyResult("HSCj6zbP9BKYHSkF3hdPib", "9xXbnac6atQRyESyLWtnxFRwnTRCrLWEAA9rvJKp5Kt1"))
       )
 
+      s.owner ledgerAccess MockableLedgerAccess()
+
       s.owner ~ Create()
 
       s.owner.backState.roster.selfRole.value shouldBe Role.Owner
@@ -53,14 +55,14 @@ class IssuerSetupSpec
       s.owner.state shouldBe an [State.Created]
 
       val d = s.owner.state.asInstanceOf[State.Created].data
-      d.identity.value.did shouldBe "HSCj6zbP9BKYHSkF3hdPib"
+      d.identity.value.did shouldBe "did:sov:HSCj6zbP9BKYHSkF3hdPib"
       d.identity.value.verKey shouldBe "9xXbnac6atQRyESyLWtnxFRwnTRCrLWEAA9rvJKp5Kt1"
 
       s.owner ~ CurrentPublicIdentifier()
 
       val i: PublicIdentifier = s.owner expect signal [PublicIdentifier]
 
-      i.did shouldBe "HSCj6zbP9BKYHSkF3hdPib"
+      i.did shouldBe "did:sov:HSCj6zbP9BKYHSkF3hdPib"
       i.verKey shouldBe "9xXbnac6atQRyESyLWtnxFRwnTRCrLWEAA9rvJKp5Kt1"
     }
 
@@ -69,6 +71,7 @@ class IssuerSetupSpec
     }
 
   }
+
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
   /**
    * custom thread pool executor

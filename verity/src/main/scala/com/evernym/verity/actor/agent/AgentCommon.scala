@@ -22,7 +22,7 @@ import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
 import com.evernym.verity.cache.{AGENCY_IDENTITY_CACHE_FETCHER, AGENT_ACTOR_CONFIG_CACHE_FETCHER, KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER}
 import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
-import com.evernym.verity.config.ConfigConstants.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VERITY_ENDORSER_DEFAULT_DID}
+import com.evernym.verity.config.ConfigConstants.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VDR_LEGACY_DEFAULT_NAMESPACE, VERITY_ENDORSER_DEFAULT_DID}
 import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgType, TypedMsgLike}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.observability.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
@@ -31,6 +31,7 @@ import com.evernym.verity.protocol.container.actor.ProtocolIdDetail
 import com.evernym.verity.protocol.engine.registry.PinstIdResolver
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.evernym.verity.vdr.VDRUtil
 import com.google.protobuf.ByteString
 import com.typesafe.scalalogging.Logger
 
@@ -341,6 +342,10 @@ trait AgentCommon
     Future.traverse(didDocs) { dd =>
       DidDocBuilder(futureExecutionContext, dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
     }
+
+  def fqDid(did: DidStr): DidStr = VDRUtil.toFqDID(did, vdrDefaultNamespace)
+
+  lazy val vdrDefaultNamespace: String = appConfig.getStringReq(VDR_LEGACY_DEFAULT_NAMESPACE)
 
   lazy val isVAS: Boolean =
     appConfig

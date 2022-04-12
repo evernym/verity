@@ -54,19 +54,15 @@ trait VcxPresentProof
     new UndefinedPresentProof_1_0 {
       override def acceptRequest(context: Context): Unit = {
         val i = interaction(threadId).asInstanceOf[HolderProofInteraction]
-        println("### proof => i: " + i)
         val connHandle = connectionHandle(i.owningDid)
-        println("### i.request: " + i.request.toString())
+
         val handle = DisclosedProofApi.proofCreateWithRequest(threadId, i.request.toString()).get
 
         val creds = new JSONObject(
           DisclosedProofApi.proofRetrieveCredentials(handle).get()
         )
-        println("### proof => creds: " + creds)
         val attrsObject = creds.getJSONObject("attrs")
-        println("### proof => attrsObject: " + attrsObject)
         val attrs = attrsObject.keySet()
-        println("### proof => attrs: " + attrs)
         val selectedCredentials = new JSONObject
         attrs.forEach { el =>
           val credential = new JSONObject

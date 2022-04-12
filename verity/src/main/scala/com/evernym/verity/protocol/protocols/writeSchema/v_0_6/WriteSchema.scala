@@ -4,7 +4,7 @@ import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerRejectException, LedgerUtil, TxnForEndorsement}
+import com.evernym.verity.protocol.engine.asyncapi.ledger.{IndyLedgerUtil, LedgerRejectException, TxnForEndorsement}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.{SchemaCreatedResult, SignedMsgResult}
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.events.{ParameterStored, ProtocolInitialized}
@@ -14,7 +14,8 @@ import com.evernym.verity.protocol.protocols.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Role.Writer
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.State.{Done, Error, Initialized, Processing}
 import com.evernym.verity.util.JsonUtil.seqToJson
-import com.evernym.verity.vdr.{FQDid, FQSchemaId, PreparedTxn, SubmittedTxn}
+import com.evernym.verity.vdr.VDRUtil.extractUnqualifiedDidStr
+import com.evernym.verity.vdr.{FqDID, FqSchemaId, PreparedTxn, SubmittedTxn}
 
 import scala.util.{Failure, Success, Try}
 
@@ -29,8 +30,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
 
   def mainHandleControl: (WriteSchemaState, Option[Role], Control) ?=> Any = {
     case (_, _, c: Init) => ctx.apply(ProtocolInitialized(c.parametersStored.toSeq))
-    case (s: State.Initialized, _, m: Write) =>
-      writeSchema(m, s)
+    case (s: State.Initialized, _, m: Write) => writeSchema(m, s)
     case _ => ctx.signal(ProblemReport("Unexpected message in current state"))
   }
 
@@ -50,17 +50,16 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
   def writeSchema(m: Write, init: State.Initialized): Unit = {
     ctx.apply(RequestReceived(m.name, m.version, m.attrNames))
     val submitterDID = _submitterDID(init)
-    //TODO: Does submitterDID in below call needs to be fully qualified?
     ctx.wallet.createSchema(submitterDID, m.name, m.version, seqToJson(m.attrNames)) {
       case Success(schemaCreated: SchemaCreatedResult) =>
-        val fqSchemaId = ctx.ledger.fqSchemaId(schemaCreated.schemaId)
+        val fqSchemaId = ctx.ledger.fqSchemaId(schemaCreated.schemaId, Option(submitterDID))
         writeSchemaToLedger(submitterDID, fqSchemaId, schemaCreated.schemaJson) {
           case Success(SubmittedTxn(_)) =>
             ctx.apply(SchemaWritten(fqSchemaId))
             ctx.signal(StatusReport(fqSchemaId))
           case Failure(e: LedgerRejectException)  =>
             ctx.logger.info(e.toString)
-            val fqEndorserDID = ctx.ledger.fqID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
+            val fqEndorserDID = ctx.ledger.fqDID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
             if (fqEndorserDID.nonEmpty) {
               prepareTxnForEndorsement(submitterDID, fqSchemaId, schemaCreated.schemaJson, fqEndorserDID) {
                 case Success(data: TxnForEndorsement) =>
@@ -80,18 +79,19 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
     }
   }
 
-  private def writeSchemaToLedger(submitterDID: FQDid,
-                                  fqSchemaId: FQSchemaId,
+  private def writeSchemaToLedger(fqSubmitterDID: FqDID,
+                                  fqSchemaId: FqSchemaId,
                                   schemaJson: String)
                                  (handleResult: Try[SubmittedTxn] => Unit): Unit = {
     ctx.ledger
       .prepareSchemaTxn(
         schemaJson,
         fqSchemaId,
-        ctx.ledger.fqID(submitterDID),
+        ctx.ledger.fqDID(fqSubmitterDID),
         None) {
         case Success(pt: PreparedTxn) =>
-          ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(submitterDID)) {
+          //TODO (VE-3368): will signing api won't allow fq identifier (see below)
+          ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID))) {
             case Success(smr: SignedMsgResult) =>
               ctx.ledger.submitTxn(pt, smr.signatureResult.signature, Array.empty)(handleResult)
             case Failure(ex) =>
@@ -102,22 +102,23 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
       }
   }
 
-  private def prepareTxnForEndorsement(submitterDID: FQDid,
-                                       fqSchemaId: FQSchemaId,
+  private def prepareTxnForEndorsement(fqSubmitterDID: FqDID,
+                                       fqSchemaId: FqSchemaId,
                                        schemaJson: String,
-                                       fqEndorserDid: FQDid)
+                                       fqEndorserDid: FqDID)
                                       (handleResult: Try[TxnForEndorsement] => Unit): Unit = {
     ctx.ledger
       .prepareSchemaTxn(
         schemaJson,
         fqSchemaId,
-        ctx.ledger.fqID(submitterDID),
+        ctx.ledger.fqDID(fqSubmitterDID),
         Option(fqEndorserDid)) {
         case Success(pt: PreparedTxn) =>
-          ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(submitterDID)) {
+          ////TODO (VE-3368): will signing api won't allow fq identifier (see below)
+          ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID))) {
             case Success(smr: SignedMsgResult) =>
-              if (LedgerUtil.isIndyNamespace(pt.namespace)) {
-                val txn = LedgerUtil.buildIndyRequest(pt.txnBytes, Map(ctx.ledger.fqID(submitterDID) -> smr.signatureResult.toBase64))
+              if (IndyLedgerUtil.isIndyNamespace(pt.namespace)) {
+                val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(ctx.ledger.fqDID(fqSubmitterDID) -> smr.signatureResult.toBase64))
                 handleResult(Success(txn))
               } else {
                 handleResult(Failure(new RuntimeException("endorsement spec not supported:" + pt.endorsementSpec)))

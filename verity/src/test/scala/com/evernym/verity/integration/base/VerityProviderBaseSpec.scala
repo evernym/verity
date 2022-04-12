@@ -8,7 +8,7 @@ import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedE
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider}
-import com.evernym.verity.vdr.base.{MOCK_VDR_DID_SOV_NAMESPACE, MOCK_VDR_SOV_NAMESPACE}
+import com.evernym.verity.vdr.base.{VDR_DID_SOV_NAMESPACE, DEFAULT_VDR_NAMESPACE}
 import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockVdrTools}
 import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
 import com.typesafe.scalalogging.Logger
@@ -173,8 +173,8 @@ trait VerityProviderBaseSpec
   ServiceParam
     .empty
     .withLedgerTxnExecutor(new MockLedgerTxnExecutor(futureExecutionContext))
-    .withVdrTools(new MockVdrTools(MockLedgerRegistry(
-      List(MockIndyLedger(List(MOCK_VDR_SOV_NAMESPACE, MOCK_VDR_DID_SOV_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext))
+    .withVdrTools(new MockVdrTools(MockLedgerRegistry(DEFAULT_VDR_NAMESPACE,
+      List(MockIndyLedger(DEFAULT_VDR_NAMESPACE, List(DEFAULT_VDR_NAMESPACE, VDR_DID_SOV_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext))
 
   private def randomTmpDirPath(): Path = {
     val tmpDir = TempDir.findSuiteTempDir(this.suiteName)

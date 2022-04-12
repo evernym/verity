@@ -15,12 +15,12 @@ trait VDRAdapter {
                     endorser: Option[String]): Future[PreparedTxn]
 
   def prepareSchemaTxn(schemaJson: String,
-                       fqSchemaId: FQSchemaId,
+                       fqSchemaId: FqSchemaId,
                        submitterDID: VdrDid,
                        endorser: Option[String]): Future[PreparedTxn]
 
   def prepareCredDefTxn(credDefJson: String,
-                        fqCredDefId: FQCredDefId,
+                        fqCredDefId: FqCredDefId,
                         submitterDID: VdrDid,
                         endorser: Option[String]): Future[PreparedTxn]
 
@@ -28,11 +28,11 @@ trait VDRAdapter {
                 signature: Array[Byte],
                 endorsement: Array[Byte]): Future[SubmittedTxn]
 
-  def resolveSchema(schemaId: FQSchemaId, cacheOption: Option[CacheOption]=None): Future[Schema]
+  def resolveSchema(schemaId: FqSchemaId, cacheOption: Option[CacheOption]=None): Future[Schema]
 
-  def resolveCredDef(credDefId: FQCredDefId, cacheOption: Option[CacheOption]=None): Future[CredDef]
+  def resolveCredDef(credDefId: FqCredDefId, cacheOption: Option[CacheOption]=None): Future[CredDef]
 
-  def resolveDID(fqDid: FQDid, cacheOption: Option[CacheOption]=None): Future[DidDoc]
+  def resolveDID(fqDid: FqDID, cacheOption: Option[CacheOption]=None): Future[DidDoc]
 }
 
 
@@ -51,16 +51,16 @@ case class PreparedTxn(namespace: Namespace,
 
 case class SubmittedTxn(response: String)
 
-case class Schema(fqId: FQSchemaId, json: String)
+case class Schema(fqId: FqSchemaId, json: String)
 
-case class CredDef(fqId: FQCredDefId, fqSchemaId: FQSchemaId, json: String)
+case class CredDef(fqId: FqCredDefId, fqSchemaId: FqSchemaId, json: String)
 
-case class DidDoc(fqId: FQDid, verKey: VerKeyStr, endpoint: Option[String])
+case class DidDoc(fqId: FqDID, verKey: VerKeyStr, endpoint: Option[String])
 
 case class CacheOption(noCache: Boolean, noUpdate: Boolean, noStore: Boolean, minFresh: Int)
 
 object CacheOption {
 
-  //TODO: finalize the default values
+  //TODO (VE-3368): finalize the default values
   def default: CacheOption = CacheOption(noCache = true, noUpdate = true, noStore = true, minFresh = -1)
 }

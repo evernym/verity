@@ -5,14 +5,15 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerRejectException, LedgerUtil, TxnForEndorsement}
+import com.evernym.verity.protocol.engine.asyncapi.ledger.{IndyLedgerUtil, LedgerRejectException, TxnForEndorsement}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.{CredDefCreatedResult, SignedMsgResult}
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.events.{ParameterStored, ProtocolInitialized}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.Role.Writer
-import com.evernym.verity.vdr.{FQCredDefId, FQDid, PreparedTxn, SubmittedTxn}
+import com.evernym.verity.vdr.VDRUtil.extractUnqualifiedDidStr
+import com.evernym.verity.vdr.{FqCredDefId, FqDID, PreparedTxn, SubmittedTxn}
 
 import scala.util.{Failure, Success, Try}
 
@@ -53,8 +54,8 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
       val revocationDetails = m.revocationDetails.map(_.toString).getOrElse("{}")
 
       val submitterDID = _submitterDID(init)
-      val fqSubmitterId = ctx.ledger.fqID(submitterDID)
-      ctx.ledger.resolveSchema(ctx.ledger.fqSchemaId(m.schemaId)) {
+      val fqSubmitterId = ctx.ledger.fqDID(submitterDID)
+      ctx.ledger.resolveSchema(ctx.ledger.fqSchemaId(m.schemaId, Option(submitterDID))) {
         case Success (schema) =>
           ctx.wallet.createCredDef(
             fqSubmitterId,
@@ -64,7 +65,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
             revocationDetails=Some(revocationDetails)
           ) {
             case Success(credDefCreated: CredDefCreatedResult) =>
-              val fqCredDefId = ctx.ledger.fqCredDefId(credDefCreated.credDefId)
+              val fqCredDefId = ctx.ledger.fqCredDefId(credDefCreated.credDefId, Option(submitterDID))
 
               writeCredDefToLedger(submitterDID, fqCredDefId, credDefCreated.credDefJson) {
                 case Success(SubmittedTxn(_)) =>
@@ -72,7 +73,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                   ctx.signal(StatusReport(fqCredDefId))
                 case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
                   ctx.logger.info(e.toString)
-                  val fqEndorserDID = ctx.ledger.fqID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
+                  val fqEndorserDID = ctx.ledger.fqDID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
                   if (fqEndorserDID.nonEmpty) {
                     prepareTxnForEndorsement(fqSubmitterId, fqCredDefId, credDefCreated.credDefJson, fqEndorserDID) {
                       case Success(data: TxnForEndorsement) =>
@@ -95,18 +96,19 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
     }
   }
 
-  private def writeCredDefToLedger(submitterDID: FQDid,
-                                   fqCredDefId: FQCredDefId,
+  private def writeCredDefToLedger(fqSubmitterDID: FqDID,
+                                   fqCredDefId: FqCredDefId,
                                    credDefJson: String)
                                   (handleResult: Try[SubmittedTxn] => Unit): Unit = {
     ctx.ledger
       .prepareCredDefTxn(
         credDefJson,
         fqCredDefId,
-        ctx.ledger.fqID(submitterDID),
+        ctx.ledger.fqDID(fqSubmitterDID),
         None) {
         case Success(pt: PreparedTxn) =>
-          ctx.wallet.sign(pt.bytesToSign, pt.signatureSpec, signerDid = Option(submitterDID)) {
+          //TODO (VE-3368): will signing api won't allow fq identifier (see below)
+          ctx.wallet.sign(pt.bytesToSign, pt.signatureSpec, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID))) {
             case Success(smr: SignedMsgResult) =>
               ctx.ledger.submitTxn(pt, smr.signatureResult.signature, Array.empty)(handleResult)
             case Failure(ex) =>
@@ -117,22 +119,23 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
       }
   }
 
-  private def prepareTxnForEndorsement(submitterDID: FQDid,
-                                       fqCredDefId: FQCredDefId,
+  private def prepareTxnForEndorsement(fqSubmitterDID: FqDID,
+                                       fqCredDefId: FqCredDefId,
                                        credDefJson: String,
-                                       fqEndorserDid: FQDid)
+                                       fqEndorserDid: FqDID)
                                       (handleResult: Try[TxnForEndorsement] => Unit): Unit = {
     ctx.ledger
       .prepareCredDefTxn(
         credDefJson,
         fqCredDefId,
-        ctx.ledger.fqID(submitterDID),
+        ctx.ledger.fqDID(fqSubmitterDID),
         Option(fqEndorserDid)) {
         case Success(pt: PreparedTxn) =>
-          ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(submitterDID)) {
+          //TODO (VE-3368): will signing api won't allow fq identifier (see below)
+          ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID))) {
             case Success(smr: SignedMsgResult) =>
-              if (LedgerUtil.isIndyNamespace(pt.namespace)) {
-                val txn = LedgerUtil.buildIndyRequest(pt.txnBytes, Map(ctx.ledger.fqID(submitterDID) -> smr.signatureResult.toBase64))
+              if (IndyLedgerUtil.isIndyNamespace(pt.namespace)) {
+                val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(ctx.ledger.fqDID(fqSubmitterDID) -> smr.signatureResult.toBase64))
                 handleResult(Success(txn))
               } else {
                 handleResult(Failure(new RuntimeException("endorsement spec not supported:" + pt.endorsementSpec)))

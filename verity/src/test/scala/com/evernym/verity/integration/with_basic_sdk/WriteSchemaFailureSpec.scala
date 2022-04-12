@@ -16,9 +16,9 @@ import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, CurrentP
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Write
 import com.evernym.verity.protocol.testkit.MockLedger
 import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.vdr.base.{InMemLedger, MOCK_VDR_SOV_NAMESPACE}
+import com.evernym.verity.vdr.base.{InMemLedger, SOV_LEDGER_NAME, DEFAULT_VDR_NAMESPACE}
 import com.evernym.verity.vdr.service.VdrTools
-import com.evernym.verity.vdr.{FQCredDefId, FQDid, FQSchemaId, MockIndyLedger, MockLedgerRegistry, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
+import com.evernym.verity.vdr.{FqCredDefId, FqDID, FqSchemaId, MockIndyLedger, MockLedgerRegistry, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -33,7 +33,7 @@ class WriteSchemaFailureSpec
   override lazy val defaultSvcParam: ServiceParam =
     ServiceParam
       .empty
-      .withVdrTools(new DummyVdrTools(MockLedgerRegistry(List(MockIndyLedger(List(MOCK_VDR_SOV_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext))
+      .withVdrTools(new DummyVdrTools(MockLedgerRegistry(SOV_LEDGER_NAME, List(MockIndyLedger(DEFAULT_VDR_NAMESPACE, List(DEFAULT_VDR_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext))
 
   lazy val issuerVerityApp = VerityEnvBuilder.default().build(VAS)
   lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext)
@@ -70,7 +70,7 @@ class WriteSchemaFailureSpec
     // this class should evolve to reflect the same for its test implementation
 
     override def ping(namespaces: List[Namespace]): Future[Map[String, VdrResults.PingResult]] = {
-      val allNamespaces = if (namespaces.isEmpty) ledgerRegistry.ledgers.flatMap(_.namespaces) else namespaces
+      val allNamespaces = if (namespaces.isEmpty) ledgerRegistry.ledgers.flatMap(_.allSupportedNamespaces) else namespaces
       Future.successful(allNamespaces.map(n => n -> new VdrResults.PingResult("0", "SUCCESS")).toMap)
     }
 
@@ -80,8 +80,7 @@ class WriteSchemaFailureSpec
       ledgerRegistry.forLedger(submitterDid) { ledger: InMemLedger =>
         val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams)
         val id = json.get("id").asText
-        //TODO: why we wouldn't have to convert the schema id to fully qualified schema id in main code???
-        ledger.prepareSchemaTxn(txnSpecificParams, MockLedger.fqSchemaID(id), submitterDid, endorser)
+        ledger.prepareSchemaTxn(txnSpecificParams, MockLedger.fqSchemaID(id, Option(submitterDid)), submitterDid, endorser)
       }
     }
 
@@ -93,17 +92,17 @@ class WriteSchemaFailureSpec
       Future.failed(LedgerSvcException("invalid TAA"))
     }
 
-    override def resolveDid(fqDid: FQDid): Future[VdrDid] = ???
+    override def resolveDid(fqDid: FqDID): Future[VdrDid] = ???
 
-    override def resolveDid(fqDid: FQDid, cacheOptions: CacheOptions): Future[VdrDid] = ???
+    override def resolveDid(fqDid: FqDID, cacheOptions: CacheOptions): Future[VdrDid] = ???
 
-    override def resolveSchema(fqSchemaId: FQSchemaId): Future[VdrSchema] = ???
+    override def resolveSchema(fqSchemaId: FqSchemaId): Future[VdrSchema] = ???
 
-    override def resolveSchema(fqSchemaId: FQSchemaId, cacheOptions: CacheOptions): Future[VdrSchema] = ???
+    override def resolveSchema(fqSchemaId: FqSchemaId, cacheOptions: CacheOptions): Future[VdrSchema] = ???
 
-    override def resolveCredDef(fqCredDefId: FQCredDefId): Future[VdrCredDef] = ???
+    override def resolveCredDef(fqCredDefId: FqCredDefId): Future[VdrCredDef] = ???
 
-    override def resolveCredDef(fqCredDefId: FQCredDefId, cacheOptions: CacheOptions): Future[VdrCredDef] = ???
+    override def resolveCredDef(fqCredDefId: FqCredDefId, cacheOptions: CacheOptions): Future[VdrCredDef] = ???
 
     override def prepareCredDef(txnSpecificParams: TxnSpecificParams, submitterDid: DidStr, endorser: Option[String]): Future[PreparedTxnResult] = ???
 

@@ -11,19 +11,19 @@ trait VdrTools {
 
   def ping(namespaceList: List[Namespace]): Future[Map[Namespace, PingResult]]
 
-  def resolveDid(fqDid: FQDid): Future[VdrDid]
+  def resolveDid(fqDid: FqDID): Future[VdrDid]
 
-  def resolveDid(fqDid: FQDid,
+  def resolveDid(fqDid: FqDID,
                  cacheOptions: CacheOptions): Future[VdrDid]
 
-  def resolveSchema(fqSchemaId: FQSchemaId): Future[VdrSchema]
+  def resolveSchema(fqSchemaId: FqSchemaId): Future[VdrSchema]
 
-  def resolveSchema(fqSchemaId: FQSchemaId,
+  def resolveSchema(fqSchemaId: FqSchemaId,
                     cacheOptions: CacheOptions): Future[VdrSchema]
 
-  def resolveCredDef(fqCredDefId: FQCredDefId): Future[VdrCredDef]
+  def resolveCredDef(fqCredDefId: FqCredDefId): Future[VdrCredDef]
 
-  def resolveCredDef(fqCredDefId: FQCredDefId,
+  def resolveCredDef(fqCredDefId: FqCredDefId,
                      cacheOptions: CacheOptions): Future[VdrCredDef]
 
   def prepareDid(txnSpecificParams: TxnSpecificParams,

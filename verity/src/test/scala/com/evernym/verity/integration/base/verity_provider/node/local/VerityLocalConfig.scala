@@ -113,7 +113,7 @@ object VerityLocalConfig {
     ConfigFactory.parseString(
       s"""
          |verity.vdr {
-         |  default-namespace = "sov"
+         |  legacy-default-namespace = "sov"
          |  ledgers: []
          |}""".stripMargin
     )

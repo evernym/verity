@@ -18,7 +18,7 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
   // this class should evolve to reflect the same for its test implementation
 
   override def ping(namespaces: List[Namespace]): Future[Map[String, VdrResults.PingResult]] = {
-    val allNamespaces = if (namespaces.isEmpty) ledgerRegistry.ledgers.flatMap(_.namespaces) else namespaces
+    val allNamespaces = if (namespaces.isEmpty) ledgerRegistry.ledgers.flatMap(_.allSupportedNamespaces) else namespaces
     Future.successful(allNamespaces.map(n => n -> new VdrResults.PingResult("SUCCESS", "successful")).toMap)
   }
 
@@ -68,69 +68,44 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
   def submitQuery(namespace: Namespace,
                   query: String): Future[TxnResult] = ???
 
-  override def resolveSchema(schemaId: FQSchemaId): Future[VdrSchema] = {
+  override def resolveSchema(schemaId: FqSchemaId): Future[VdrSchema] = {
     ledgerRegistry.forLedger(schemaId) { ledger: InMemLedger =>
       ledger.resolveSchema(schemaId)
     }
   }
 
-  override def resolveSchema(schemaId: FQSchemaId,
+  override def resolveSchema(schemaId: FqSchemaId,
                              cacheOptions: CacheOptions): Future[VdrSchema] = {
     ledgerRegistry.forLedger(schemaId) { ledger: InMemLedger =>
       ledger.resolveSchema(schemaId)
     }
   }
 
-  override def resolveCredDef(credDefId: FQCredDefId): Future[VdrCredDef] = {
+  override def resolveCredDef(credDefId: FqCredDefId): Future[VdrCredDef] = {
     ledgerRegistry.forLedger(credDefId) { ledger: InMemLedger =>
       ledger.resolveCredDef(credDefId)
     }
   }
 
-  override def resolveCredDef(credDefId: FQCredDefId,
+  override def resolveCredDef(credDefId: FqCredDefId,
                               cacheOptions: CacheOptions): Future[VdrCredDef] = {
     ledgerRegistry.forLedger(credDefId) { ledger: InMemLedger =>
       ledger.resolveCredDef(credDefId)
     }
   }
 
-  override def resolveDid(fqDid: FQDid): Future[VdrDid] = {
+  override def resolveDid(fqDid: FqDID): Future[VdrDid] = {
     ledgerRegistry.forLedger(fqDid) { ledger: InMemLedger =>
       ledger.resolveDid(fqDid)
     }
   }
 
-  override def resolveDid(fqDid: FQDid,
+  override def resolveDid(fqDid: FqDID,
                           cacheOptions: CacheOptions): Future[VdrDid] = {
     ledgerRegistry.forLedger(fqDid) { ledger: InMemLedger =>
       ledger.resolveDid(fqDid)
     }
   }
 }
-
-//TODO: this is mainly to confirm the mock vdr implementation throws appropriate errors
-// if given identifiers are not correct FQIds
-object FQIdentifier {
-
-  val validSchemes = Set(SCHEME_NAME_INDY_SCHEMA, SCHEME_NAME_INDY_CRED_DEF)
-
-  def apply(fqId: String, validNamespaces: List[Namespace]):  FQIdentifier = {
-    val fqIdentifier = {
-      if (fqId.startsWith("did:sov")) FQIdentifier("sov", fqId.replace("did:sov:", ""))
-      else if (fqId.startsWith("did:indy:sovrin")) FQIdentifier("indy:sovrin", fqId.replace("did:indy:sovrin:", ""))
-      else if (fqId.startsWith("schema:sov")) FQIdentifier("sov", fqId.replace("schema:sov:", ""))
-      else if (fqId.startsWith("creddef:sov")) FQIdentifier("sov", fqId.replace("creddef:sov:", ""))
-      else throw new RuntimeException("invalid identifier: " + fqId)
-    }
-    if (! validNamespaces.contains(fqIdentifier.vdrNamespace )) {
-      throw new RuntimeException("namespace not supported: " + fqIdentifier.vdrNamespace)
-    }
-    fqIdentifier
-  }
-
-}
-
-case class FQIdentifier(vdrNamespace: String, methodIdentifier: String)
-
 
 class InvalidIdentifierException(msg: String) extends RuntimeException(msg)

@@ -46,15 +46,15 @@ object VDRActor {
                          endorsement: String,
                          replyTo: ActorRef[Replies.SubmitTxnResp]) extends Cmd
 
-    case class ResolveSchema(schemaId: FQSchemaId,
+    case class ResolveSchema(schemaId: FqSchemaId,
                              cacheOption: Option[CacheOption]=None,
                              replyTo: ActorRef[Replies.ResolveSchemaResp]) extends Cmd
 
-    case class ResolveCredDef(credDefId: FQCredDefId,
+    case class ResolveCredDef(credDefId: FqCredDefId,
                               cacheOption: Option[CacheOption]=None,
                               replyTo: ActorRef[Replies.ResolveCredDefResp]) extends Cmd
 
-    case class ResolveDID(fqDid: FQDid,
+    case class ResolveDID(fqDid: FqDID,
                           cacheOption: Option[CacheOption]=None,
                           replyTo: ActorRef[Replies.ResolveDIDResp]) extends Cmd
 

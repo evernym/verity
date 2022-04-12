@@ -12,7 +12,6 @@ import com.evernym.verity.actor.wallet.{CreateMasterSecret, CreateNewKey, CredCr
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerUtil
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.{CredIssued, CredOffered, CredRequested, IssueCredential}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredential.{buildCredPreview, extractCredOfferJson, extractCredReqJson, toAttachmentObject}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, RequestCred}
@@ -27,7 +26,7 @@ import com.evernym.verity.util.JsonUtil.seqToJson
 import com.evernym.verity.vault.KeyParam
 import com.evernym.verity.vault.operation_executor.FutureConverter
 import com.evernym.verity.vdr.service.{VDRToolsConfig, VDRToolsFactory, VdrToolsBuilderImpl}
-import com.evernym.verity.vdr.{CredDef, FQDid, LedgerStatus, PreparedTxn, Schema, SubmittedTxn, VDRActorAdapter, VDRAdapter}
+import com.evernym.verity.vdr.{CredDef, FqDID, LedgerStatus, VDRUtil, PreparedTxn, Schema, SubmittedTxn, VDRActorAdapter, VDRAdapter}
 import com.evernym.verity.vdrtools.Libraries
 import com.typesafe.config.{Config, ConfigFactory}
 import org.json.JSONObject
@@ -58,21 +57,21 @@ class IndyVdrSpec
 
   var trusteeWallet = new TestWallet(ec, createWallet = true)
   var trusteeKey: NewKeyCreated = trusteeWallet.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000Trustee1")))
-  var trusteeFqDid: FQDid = LedgerUtil.toFQId(trusteeKey.did, INDY_NAMESPACE)
+  var trusteeFqDid: FqDID = VDRUtil.toFqDID(trusteeKey.did, INDY_NAMESPACE)
 
   var issuerWalletExt = new TestWallet(ec, createWallet = true)
   var issuerKey: NewKeyCreated = issuerWalletExt.executeSync[NewKeyCreated](CreateNewKey())
-  var issuerFqDid: FQDid = LedgerUtil.toFQId(issuerKey.did, INDY_NAMESPACE)
+  var issuerFqDid: FqDID = VDRUtil.toFqDID(issuerKey.did, INDY_NAMESPACE)
   val issuerWallet: Wallet = issuerWalletExt.testWalletAPI.wallets.head._2.wallet
 
   var verifierWalletExt = new TestWallet(ec, createWallet = true)
   var verifierKey: NewKeyCreated = verifierWalletExt.executeSync[NewKeyCreated](CreateNewKey())
-  var verifierFqDid: FQDid = LedgerUtil.toFQId(verifierKey.did, INDY_NAMESPACE)
+  var verifierFqDid: FqDID = VDRUtil.toFqDID(verifierKey.did, INDY_NAMESPACE)
   val verifierWallet: Wallet = verifierWalletExt.testWalletAPI.wallets.head._2.wallet
 
   val holderWalletExt = new TestWallet(ec, createWallet = true)
   var holderKey: NewKeyCreated = holderWalletExt.executeSync[NewKeyCreated](CreateNewKey())
-  var holderFqDid: FQDid = LedgerUtil.toFQId(holderKey.did, INDY_NAMESPACE)
+  var holderFqDid: FqDID = VDRUtil.toFqDID(holderKey.did, INDY_NAMESPACE)
   val holderWallet: Wallet = holderWalletExt.testWalletAPI.wallets.head._2.wallet
   val holderMasterSecretId: String = UUID.randomUUID().toString
   holderWalletExt.executeSync[MasterSecretCreated](CreateMasterSecret(holderMasterSecretId))
@@ -104,7 +103,7 @@ class IndyVdrSpec
             seqToJson(List("name", "company"))
           ).get()
 
-          vdrAdapter.prepareSchemaTxn(schemaCreated.getSchemaJson, LedgerUtil.toFQSchemaId(schemaCreated.getSchemaId, INDY_NAMESPACE), issuerFqDid, None)
+          vdrAdapter.prepareSchemaTxn(schemaCreated.getSchemaJson, VDRUtil.toFqSchemaId(schemaCreated.getSchemaId, Option(issuerFqDid), Option(INDY_NAMESPACE)), issuerFqDid, None)
         }
 
         val ex = intercept[LedgerInvalidTransactionException] {
@@ -162,7 +161,7 @@ class IndyVdrSpec
           schemaCreated = Schema(result.getSchemaId, result.getSchemaJson)
           schemaCreated.fqId.startsWith("schema:sov:did:sov:") shouldBe true
           schemaCreated.fqId.endsWith(":2:employment:1.0") shouldBe true
-          vdrAdapter.prepareSchemaTxn(schemaCreated.json, LedgerUtil.toFQSchemaId(schemaCreated.fqId, INDY_NAMESPACE), issuerFqDid, None)
+          vdrAdapter.prepareSchemaTxn(schemaCreated.json, VDRUtil.toFqSchemaId(schemaCreated.fqId, Option(issuerFqDid), Option(INDY_NAMESPACE)), issuerFqDid, None)
         }
 
         val submittedTxn = signAndSubmitTxn(preparedTxn)
@@ -207,11 +206,10 @@ class IndyVdrSpec
              configJson
             ).map(r => CredDefCreated(r.getCredDefId, r.getCredDefJson)))
           credDefCreated = CredDef(result.credDefId, schema.fqId, result.credDefJson)
-          vdrAdapter.prepareCredDefTxn(credDefCreated.json, LedgerUtil.toFQSchemaId(credDefCreated.fqId, INDY_NAMESPACE), issuerFqDid, None)
+          vdrAdapter.prepareCredDefTxn(credDefCreated.json, VDRUtil.toFqSchemaId(credDefCreated.fqId, Option(issuerFqDid), Option(INDY_NAMESPACE)), issuerFqDid, None)
         }
 
         val submittedTxn = signAndSubmitTxn(preparedTxn)
-        println("submittedTxn: " + submittedTxn)
 
         val response = new JSONObject(submittedTxn.response)
         response.getString("op") shouldBe "REPLY"
@@ -412,7 +410,7 @@ class IndyVdrSpec
       |
       |  }
       |  vdr {
-      |    default-namespace = "$INDY_NAMESPACE"
+      |    legacy-default-namespace = "$INDY_NAMESPACE"
       |    ledgers: [
       |      {
       |        type = "indy"

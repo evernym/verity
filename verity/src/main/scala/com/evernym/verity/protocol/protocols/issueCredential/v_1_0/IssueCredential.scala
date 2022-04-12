@@ -251,7 +251,9 @@ trait IssueCredentialHelpers
 
   def senderId_!(): ParticipantId = ctx.getInFlight.sender.id_!
 
-  def handleInit(m: Ctl.Init): Unit = ctx.apply(buildInitialized(m.params))
+  def handleInit(m: Ctl.Init): Unit = {
+    ctx.apply(buildInitialized(m.params))
+  }
 
   def handleAttachedOffer(m: Ctl.AttachedOffer): Unit = {
     handleOfferCredReceived(m.offer, ctx.getRoster.otherId())
@@ -368,7 +370,7 @@ trait IssueCredentialHelpers
   }
 
   def handleRequest(m: Ctl.Request, myPwDid: DidStr, credOffer: OfferCred): Unit = {
-    ctx.ledger.resolveCredDef(ctx.ledger.fqCredDefId(m.cred_def_id)) {
+    ctx.ledger.resolveCredDef(ctx.ledger.fqCredDefId(m.cred_def_id, None)) {
       case Success(CredDef(_, _, cdj)) => sendCredRequest(m, myPwDid, credOffer, DefaultMsgCodec.toJson(cdj))
 
       case Failure(_)   =>

@@ -161,7 +161,6 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
       }.map { ledgerTaa: LedgerTAA =>
         val expectedDigest = HashUtil.hash(SHA256)(ledgerTaa.version + ledgerTaa.text).hex
         val configuredTaa: Option[TransactionAuthorAgreement] = findTAAConfig(appConfig, ledgerTaa.version)
-
         configuredTaa match {
           case Some(taa) =>
             if (expectedDigest.toLowerCase() != taa.digest.toLowerCase()) {

@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.engine.asyncapi.ledger
 
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.vdr.{CacheOption, CredDef, FQCredDefId, FQDid, FQSchemaId, PreparedTxn, Schema, SubmittedTxn}
+import com.evernym.verity.vdr.{CacheOption, CredDef, FqCredDefId, FqDID, FqSchemaId, PreparedTxn, Schema, SubmittedTxn}
 
 import scala.util.Try
 
@@ -13,13 +13,13 @@ trait LedgerAccess {
 
   //new vdr apis
   def prepareSchemaTxn(schemaJson: String,
-                       fqSchemaId: FQSchemaId,
+                       fqSchemaId: FqSchemaId,
                        submitterDID: DidStr,
                        endorser: Option[String])
                       (handler: Try[PreparedTxn] => Unit): Unit
 
   def prepareCredDefTxn(credDefJson: String,
-                        fqCredDefId: FQCredDefId,
+                        fqCredDefId: FqCredDefId,
                         submitterDID: DidStr,
                         endorser: Option[String])
                        (handler: Try[PreparedTxn] => Unit): Unit
@@ -29,27 +29,27 @@ trait LedgerAccess {
                 endorsement: Array[Byte])
                (handler: Try[SubmittedTxn] => Unit): Unit
 
-  def resolveSchema(fqSchemaId: FQSchemaId,
+  def resolveSchema(fqSchemaId: FqSchemaId,
                     cacheOption: Option[CacheOption]=None)
                    (handler: Try[Schema] => Unit): Unit
 
-  def resolveSchemas(fqSchemaIds: Set[FQSchemaId],
+  def resolveSchemas(fqSchemaIds: Set[FqSchemaId],
                      cacheOption: Option[CacheOption]=None)
                     (handler: Try[Seq[Schema]] => Unit): Unit
 
-  def resolveCredDef(fqCredDefId: FQCredDefId,
+  def resolveCredDef(fqCredDefId: FqCredDefId,
                      cacheOption: Option[CacheOption]=None)
                     (handler: Try[CredDef] => Unit): Unit
 
-  def resolveCredDefs(fqCredDefIds: Set[FQCredDefId],
+  def resolveCredDefs(fqCredDefIds: Set[FqCredDefId],
                       cacheOption: Option[CacheOption]=None)
                      (handler: Try[Seq[CredDef]] => Unit): Unit
 
-  def fqID(id: String): FQDid
+  def fqDID(did: String): FqDID
 
-  def fqSchemaId(id: String): FQSchemaId
+  def fqSchemaId(schemaId: String, issuerFqDID: Option[FqDID]): FqSchemaId
 
-  def fqCredDefId(id: String): FQCredDefId
+  def fqCredDefId(credDefId: String, issuerFqDID: Option[FqDID]): FqCredDefId
 }
 
 case class LedgerRejectException(msg: String) extends Exception(msg)

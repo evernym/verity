@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.engine
 
-import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyVersion}
+import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyVersion, msgQualifierFromQualifierStr}
 import com.evernym.verity.did.didcomm.v1.messages.MsgType
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.?=>

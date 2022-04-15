@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.testkit.actor
 
 import akka.actor.ActorSystem
-import com.evernym.vdrtools.ledger.Ledger.buildSchemaRequest
+import com.evernym.vdrtools.ledger.Ledger.{buildCredDefRequest, buildSchemaRequest}
 import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, StatusDetailException}
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
@@ -171,7 +171,11 @@ class MockLedgerTxnExecutor(ec: ExecutionContext)
   def prepareCredDefForEndorsement(submitterDID: DID,
                                    credDefJson: String,
                                    endorserDID: DID,
-                                   walletAccess: WalletAccess): Future[LedgerRequest] = ???
+                                   walletAccess: WalletAccess): Future[LedgerRequest] = {
+    toFuture(buildCredDefRequest(submitterDID, credDefJson)).map { req =>
+      LedgerRequest(req, needsSigning=false, taa=None)
+    }
+  }
 
   def getCredDef(submitter: Submitter, credDefId: String): Future[GetCredDefResp] = {
     Future(

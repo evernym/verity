@@ -18,13 +18,6 @@ message AskedForEndorsement {
     string schemaJson = 2;
 }
 
-message WaitingForEndorsement {
-    option (scalapb.message).extends = "Event";
-    string schemaId = 1;
-    string schemaJson = 2;
-
-}
-
 message SchemaWritten {
     option (scalapb.message).extends = "Event";
     string schemaId = 1;

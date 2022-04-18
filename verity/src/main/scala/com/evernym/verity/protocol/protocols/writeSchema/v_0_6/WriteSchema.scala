@@ -44,7 +44,6 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
         ctx.getRoster.withAssignment(Writer() -> ctx.getRoster.selfIndex_!)
       )
     case (_: Processing, _, e: AskedForEndorsement)    => State.WaitingOnEndorser(e.schemaId, e.schemaJson)
-    case (_: Processing, _, e: WaitingForEndorsement)  => State.WaitingOnEndorser(e.schemaId, e.schemaJson)
     case (s @ (_: Processing | _:State.WaitingOnEndorser), _, e: SchemaWritten)  => Done(e.schemaId)
     case (s @ (_: Processing | _:State.WaitingOnEndorser), _, e: WriteFailed)    => Error(e.error)
   }
@@ -71,7 +70,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
                   case Success(ledgerRequest) =>
                     ctx.endorser.endorseTxn(ledgerRequest.req, endorser.did, INDY_LEDGER_PREFIX, VDR_TYPE_INDY) {
                       case Failure(exception) => problemReport(exception)
-                      case Success(value) => ctx.apply(WaitingForEndorsement(schemaCreated.schemaId, ledgerRequest.req))
+                      case Success(value) => ctx.apply(AskedForEndorsement(schemaCreated.schemaId, ledgerRequest.req))
                     }
                   case Failure(e) => problemReport(e)
                 }

@@ -31,7 +31,6 @@ import com.evernym.verity.util2.{Exceptions, UrlParam}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.io.Source
-import scala.util.Left
 
 
 /**

@@ -1,12 +1,14 @@
 package com.evernym.verity.actor.testkit.actor
 
 import akka.actor.ActorSystem
+import com.evernym.vdrtools.ledger.Ledger.buildSchemaRequest
 import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, StatusDetailException}
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import org.json.JSONObject
 
+import scala.compat.java8.FutureConverters.{toScala => toFuture}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
 import scala.util.Random
@@ -123,7 +125,11 @@ class MockLedgerTxnExecutor(ec: ExecutionContext)
   def prepareSchemaForEndorsement(submitterDID: DID,
                                   schemaJson: String,
                                   endorserDID: DID,
-                                  walletAccess: WalletAccess): Future[LedgerRequest] = ???
+                                  walletAccess: WalletAccess): Future[LedgerRequest] = {
+    toFuture(buildSchemaRequest(submitterDID, schemaJson)).map { req =>
+      LedgerRequest(req, needsSigning=false, taa=None)
+    }
+  }
 
   def getSchema(submitter: Submitter, schemaId: String): Future[GetSchemaResp] = {
     Future {

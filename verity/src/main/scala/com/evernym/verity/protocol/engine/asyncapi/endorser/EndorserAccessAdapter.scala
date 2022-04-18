@@ -6,7 +6,7 @@ import akka.actor.typed.scaladsl.adapter._
 import com.evernym.verity.actor.cluster_singleton.ForEndorserRegistry
 import com.evernym.verity.endorser_registry.EndorserRegistry.Commands.GetEndorsers
 import com.evernym.verity.endorser_registry.EndorserRegistry.Replies.LedgerEndorsers
-import com.evernym.verity.event_bus.event_handlers.{EVENT_ENDORSEMENT_REQ, TOPIC_SSI_ENDORSEMENT_REQ}
+import com.evernym.verity.event_bus.event_handlers.{EVENT_ENDORSEMENT_REQ_V1, TOPIC_SSI_ENDORSEMENT_REQ}
 import com.evernym.verity.event_bus.ports.producer.ProducerPort
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.BaseAsyncAccessImpl
@@ -40,7 +40,7 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
       {singletonParentProxy
         .ask{ ref: ActorRef => ForEndorserRegistry(GetEndorsers(ledger, ref))}
         .mapTo[LedgerEndorsers]
-        .map(r => r.latestEndorser.map(e => Endorser(e.did, e.verKey)))
+        .map(r => r.latestEndorser.map(e => Endorser(e.did)))
       },
       handler
     )
@@ -49,7 +49,7 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
   override def endorseTxn(payload: String, endorser: String, vdr: String, vdrType: String)(handler: Try[Unit] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
       blobStorageUtil.saveInBlobStore(payload.getBytes(), dataRetentionPolicy)
-        .map { storageInfo =>
+        .flatMap { storageInfo =>
           val jsonPayload =
             s"""{
                |"$CLOUD_EVENT_DATA_FIELD_TXN_REF": "${storageInfo.endpoint}",
@@ -57,14 +57,14 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
                |"$CLOUD_EVENT_DATA_FIELD_VDR": "$vdr",
                |"$CLOUD_EVENT_DATA_FIELD_VDR_TYPE": "$vdrType",
                |}""".stripMargin
-          eventPublisherUtil.publishToEventBus(jsonPayload, EVENT_ENDORSEMENT_REQ, TOPIC_SSI_ENDORSEMENT_REQ)
+          eventPublisherUtil.publishToEventBus(jsonPayload, EVENT_ENDORSEMENT_REQ_V1, TOPIC_SSI_ENDORSEMENT_REQ)
         },
       handler
     )
   }
 
-  val CLOUD_EVENT_DATA_FIELD_TXN_REF = "txn_ref"
-  val CLOUD_EVENT_DATA_FIELD_ENDORSER = "endorser"
+  val CLOUD_EVENT_DATA_FIELD_TXN_REF = "txnref"
+  val CLOUD_EVENT_DATA_FIELD_ENDORSER = "endorserdid"
   val CLOUD_EVENT_DATA_FIELD_VDR = "vdr"
   val CLOUD_EVENT_DATA_FIELD_VDR_TYPE = "vdr_type"
 }

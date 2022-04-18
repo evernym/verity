@@ -5,12 +5,9 @@ import java.util.{Enumeration => JavaEnumeration}
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.MediaType.NotCompressible
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Directive1
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status.FORBIDDEN
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
-import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.ConfigConstants.INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.observability.metrics.CustomMetrics.{AS_ENDPOINT_HTTP_AGENT_MSG_COUNT, AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT, AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT}
@@ -19,7 +16,6 @@ import com.evernym.verity.util.SubnetUtilsExt
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.ExecutionContextExecutor
-import scala.reflect.ClassTag
 
 
 /**
@@ -65,23 +61,6 @@ trait HttpRouteBase
       }
     }
     allowedIPs.map(ip => new SubnetUtilsExt(ip))
-  }
-
-  def optionalEntityAs[T: ClassTag]: Directive1[Option[T]] = {
-    extractRequest.flatMap { req =>
-      if (req.entity.contentLengthOption.contains(0L)) {
-        provide(Option.empty[T])
-      } else {
-        entity(as[String]).flatMap { e =>
-          val nativeMsg = DefaultMsgCodec.fromJson(e)
-          provide(Some(nativeMsg))
-        }
-      }
-    }
-  }
-
-  def entityAs[T: ClassTag]: Directive1[T] = {
-    optionalEntityAs[T].map(_.getOrElse(throw new RuntimeException("entity not found")))
   }
 
   protected def checkIfApiCalledFromAllowedIPAddresses(callerIpAddress: String, allowedIpAddresses: List[SubnetUtilsExt])

@@ -8,7 +8,7 @@ import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffec
 import com.evernym.verity.actor.{ActorMessage, RetentionCriteriaBuilder}
 import com.evernym.verity.actor.typed.base.{PersistentEventAdapter, PersistentStateAdapter}
 import com.evernym.verity.config.ConfigConstants.{ENDORSER_REGISTRY_RETENTION_SNAPSHOT, SALT_EVENT_ENCRYPTION}
-import com.evernym.verity.did.{DidStr, VerKeyStr}
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.endorser_registry.EndorserRegistry.Commands.{AddEndorser, GetEndorsers, RemoveEndorser}
 import com.evernym.verity.endorser_registry.States.{Endorser, ListOfEndorser}
 import com.typesafe.config.Config
@@ -28,14 +28,14 @@ object EndorserRegistry {
 
   trait Cmd extends ActorMessage
   object Commands {
-    case class AddEndorser(ledger: String, did: DidStr, verKey: VerKeyStr, replyTo: ActorRef[Replies.EndorserAdded]) extends Cmd
+    case class AddEndorser(ledger: String, did: DidStr, replyTo: ActorRef[Replies.EndorserAdded]) extends Cmd
     case class RemoveEndorser(ledger: String, did: DidStr, replyTo: ActorRef[Replies.EndorserRemoved]) extends Cmd
     case class GetEndorsers(ledger: String, replyTo: ActorRef[Replies.LedgerEndorsers]) extends Cmd
   }
 
   trait Reply extends ActorMessage
   object Replies {
-    case class EndorserAdded(ledger: String, did: DidStr, verKey: VerKeyStr) extends Reply
+    case class EndorserAdded(ledger: String, did: DidStr) extends Reply
     case class EndorserRemoved(ledger: String, did: DidStr) extends Reply
     case class LedgerEndorsers(endorsers: Seq[Endorser], latestEndorser: Option[Endorser]) extends Reply
   }
@@ -63,11 +63,11 @@ object EndorserRegistry {
       val ledgerEndorsers = st.ledgerEndorsers.get(cmd.ledger).map(_.endorsers).getOrElse(Seq.empty)
       if (ledgerEndorsers.map(_.did).contains(cmd.did)) {
         Effect
-          .reply(cmd.replyTo)(Replies.EndorserAdded(cmd.ledger, cmd.did, cmd.verKey))
+          .reply(cmd.replyTo)(Replies.EndorserAdded(cmd.ledger, cmd.did))
       } else {
         Effect
-          .persist(Events.EndorserAdded(cmd.ledger, cmd.did, cmd.verKey))
-          .thenReply(cmd.replyTo)(_ => Replies.EndorserAdded(cmd.ledger, cmd.did, cmd.verKey))
+          .persist(Events.EndorserAdded(cmd.ledger, cmd.did))
+          .thenReply(cmd.replyTo)(_ => Replies.EndorserAdded(cmd.ledger, cmd.did))
       }
 
     case (st: States.Initialized, cmd: RemoveEndorser) =>
@@ -90,7 +90,7 @@ object EndorserRegistry {
   private def eventHandler: (State, Event) => State = {
     case (st: States.Initialized, event: Events.EndorserAdded) =>
       val ledgerEndorsers = st.ledgerEndorsers.get(event.ledger).map(_.endorsers).getOrElse(Seq.empty)
-      val updatedLedgerEndorsers = ledgerEndorsers :+ Endorser(event.did, event.verKey)
+      val updatedLedgerEndorsers = ledgerEndorsers :+ Endorser(event.did)
       st.copy(ledgerEndorsers = st.ledgerEndorsers ++ Map(event.ledger -> ListOfEndorser(updatedLedgerEndorsers)))
 
     case (st: States.Initialized, event: Events.EndorserRemoved) =>

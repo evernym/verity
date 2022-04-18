@@ -14,6 +14,7 @@ import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warnin
 import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr, ForResourceWarningStatusMngr}
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.resourceusagethrottling.tracking.{GetAllResourceUsages, ResourceUsages}
+import com.evernym.verity.http.HttpUtil.entityAs
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize

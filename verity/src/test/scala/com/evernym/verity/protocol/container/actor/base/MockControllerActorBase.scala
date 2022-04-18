@@ -21,7 +21,6 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.registry.{PinstIdPair, ProtocolRegistry}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{PublicIdentifier, PublicIdentifierCreated}
 import com.evernym.verity.util.MsgIdProvider
-import com.evernym.verity.util2.RouteId
 import com.typesafe.scalalogging.Logger
 
 import java.util.UUID
@@ -127,7 +126,7 @@ abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorConte
    * keeps actor ref of the caller (test actor) to be used to send back any messages
    */
   var caller: ActorRef = ActorRef.noSender
-  var routeId: RouteId = "routeId"
+  def relationshipId: RelationshipId = relationshipIdOpt.getOrElse(throw new RuntimeException("relationship id not defined"))
 
   var controllerDataOpt: Option[ControllerData] = None
   def controllerData: ControllerData = controllerDataOpt.getOrElse(
@@ -139,7 +138,7 @@ abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorConte
     controllerDataOpt.flatMap(_.theirDIDOpt)
     .getOrElse(CommonSpecUtil.generateNewDid().did)
 
-  lazy val relationshipId: Option[RelationshipId] = Option(controllerData.myDID)
+  lazy val relationshipIdOpt: Option[RelationshipId] = Option(controllerData.myDID)
 
   def sendSystemCmd(ssc: SendSystemCmd): Unit = {
     ActorProtocol(ssc.pinstIdPair.protoDef)
@@ -159,7 +158,7 @@ abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorConte
     val pinstId = resolvePinstId(
       gpp.protoDef,
       entry.pinstIdResol,
-      relationshipId,
+      relationshipIdOpt,
       gpp.threadId,
       None
     )
@@ -177,7 +176,7 @@ abstract class MockControllerActorBase(val appConfig: AppConfig, agentActorConte
 
   def getPinstIdPair(msg: Any, threadId: ThreadId): PinstIdPair = {
     val msgEnvelope = buildMsgEnvelope(msg, threadId)
-    pinstIdForMsg_!(msgEnvelope.typedMsg, relationshipId, threadId)
+    pinstIdForMsg_!(msgEnvelope.typedMsg, relationshipIdOpt, threadId)
   }
 
   def buildMsgEnvelope(msg: Any, threadId: ThreadId): MsgEnvelope = {

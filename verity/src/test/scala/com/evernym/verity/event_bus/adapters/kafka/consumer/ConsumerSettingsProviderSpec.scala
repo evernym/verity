@@ -1,4 +1,4 @@
-package com.evernym.verity.event_bus.adapters.consumer.kafka
+package com.evernym.verity.event_bus.adapters.kafka.consumer
 
 import akka.kafka.{CommitDelivery, CommitWhen}
 import com.evernym.verity.testkit.BasicSpec
@@ -28,7 +28,7 @@ class ConsumerSettingsProviderSpec
 
         val verityKafkaConfig = ConfigFactory.parseString(
             """
-              | verity.kafka = ${akka.kafka} {
+              | verity.event-bus.kafka = ${akka.kafka} {
               |   consumer = ${akka.kafka.consumer} {
               |     kafka-clients = ${akka.kafka.consumer.kafka-clients} {
               |       bootstrap.servers = "testkafka"

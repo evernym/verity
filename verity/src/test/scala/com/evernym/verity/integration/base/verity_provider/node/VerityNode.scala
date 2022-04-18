@@ -3,7 +3,7 @@ package com.evernym.verity.integration.base.verity_provider.node
 import akka.cluster.MemberStatus
 import com.evernym.verity.integration.base.verity_provider.PortProfile
 import com.evernym.verity.integration.base.verity_provider.node.local.{ServiceParam, VerityNodeParam}
-import com.typesafe.config.{Config, ConfigMergeable}
+import com.typesafe.config.Config
 
 import java.nio.file.Path
 import scala.concurrent.{ExecutionContext, Future}

@@ -1,4 +1,4 @@
-package com.evernym.verity.event_bus.adapters.producer.kafka
+package com.evernym.verity.event_bus.adapters.kafka.producer
 
 import akka.kafka.ProducerSettings
 import com.evernym.verity.config.validator.base.ConfigReadHelper
@@ -17,7 +17,7 @@ case object ProducerSettingsProvider {
 /**
  * Producer settings should look like this (inherited from `akka.kafka.producer`)
  *
-   verity.kafka = ${akka.kafka} {
+   verity.event-bus.kafka = ${akka.kafka} {
 
      # https://github.com/akka/alpakka-kafka/blob/v3.0.0/core/src/main/resources/reference.conf#L6
      producer = ${akka.kafka.producer} {
@@ -38,12 +38,12 @@ case object ProducerSettingsProvider {
  *
  */
 final class ProducerSettingsProvider(config: Config) {
-  val verityKafkaConfigReader: ConfigReadHelper = ConfigReadHelper(config.getConfig("verity.kafka").resolve())
+  val verityKafkaConfigReader: ConfigReadHelper = ConfigReadHelper(config.getConfig("verity.event-bus.kafka").resolve())
 
   val producerConfig: Config =
     verityKafkaConfigReader
       .getConfigOption("producer")
-      .getOrElse(throw new RuntimeException("required config not found at path: verity.kafka.producer"))
+      .getOrElse(throw new RuntimeException("required config not found at path: verity.event-bus.kafka.producer"))
 
   validateConfig()
 
@@ -55,11 +55,11 @@ final class ProducerSettingsProvider(config: Config) {
     val requiredKafkaClientProperties = Set("bootstrap.servers", "client.id")
 
     if (!requiredKafkaClientProperties.subsetOf(kafkaClientConfigs.keySet)) {
-      throw new RuntimeException("required kafka client properties not found (at path: verity.kafka.producer.kafka-clients): " + requiredKafkaClientProperties.diff(kafkaClientConfigs.keySet).mkString(", "))
+      throw new RuntimeException("required kafka client properties not found (at path: verity.event-bus.kafka.producer.kafka-clients): " + requiredKafkaClientProperties.diff(kafkaClientConfigs.keySet).mkString(", "))
     }
     val invalidReqConfigs = kafkaClientConfigs.filter{case (k, v) => v == null || v.isEmpty}
     if (invalidReqConfigs.nonEmpty) {
-      throw new RuntimeException("required kafka client properties cannot be empty/null (at path: verity.kafka.producer.kafka-clients): " + invalidReqConfigs.keySet.mkString(", "))
+      throw new RuntimeException("required kafka client properties cannot be empty/null (at path: verity.event-bus.kafka.producer.kafka-clients): " + invalidReqConfigs.keySet.mkString(", "))
     }
   }
 

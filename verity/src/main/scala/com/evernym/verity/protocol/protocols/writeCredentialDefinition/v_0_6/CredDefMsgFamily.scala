@@ -16,6 +16,7 @@ object CredDefMsgFamily extends MsgFamily {
 
   override protected val controlMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map(
     "write"                -> classOf[Write],
+    "endorsement-result"   -> classOf[EndorsementResult],
   )
 
 
@@ -75,6 +76,7 @@ case class Write(name: String,
     }
   }
 }
+case class EndorsementResult(code: String, description: String) extends Msg with CredDefControl
 
 /**
  * Errors

@@ -117,8 +117,8 @@ trait ActorSystemConfig {
     overrideConfig.getOrElse(ConfigFactory.empty())
       .withFallback(levelDBJournal(tdir)) //default persistence
       .withFallback(baseConfig)
-      .withValue("verity.event-bus.basic.store.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
-      .withValue("verity.event-bus.basic.consumer.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
+      .withValue("verity.eventing.basic-store.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
+      .withValue("verity.eventing.basic-source.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
   }
 
 

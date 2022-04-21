@@ -6,7 +6,7 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncapi.endorser.{ENDORSEMENT_RESULT_SUCCESS_CODE, INDY_LEDGER_PREFIX, VDR_TYPE_INDY}
+import com.evernym.verity.protocol.engine.asyncapi.endorser.{ENDORSEMENT_RESULT_SUCCESS_CODE, VDR_TYPE_INDY}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.protocol.engine.asyncapi.wallet.CredDefCreatedResult
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
@@ -77,12 +77,12 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                     init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
                   )
 
-                  ctx.endorser.withCurrentEndorser(INDY_LEDGER_PREFIX) {
+                  ctx.endorser.withCurrentEndorser(ctx.ledger.getIndyDefaultLegacyPrefix()) {
                     case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID == endorser.did =>
                       //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
                       ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefCreated.credDefJson, endorser.did) {
                         case Success(ledgerRequest) =>
-                          ctx.endorser.endorseTxn(ledgerRequest.req, endorser.did, INDY_LEDGER_PREFIX, VDR_TYPE_INDY) {
+                          ctx.endorser.endorseTxn(ledgerRequest.req, endorser.did, ctx.ledger.getIndyDefaultLegacyPrefix(), VDR_TYPE_INDY) {
                             case Success(_) =>
                               ctx.apply(AskedForEndorsement(credDefCreated.credDefId, ledgerRequest.req))
                             case Failure(e) =>

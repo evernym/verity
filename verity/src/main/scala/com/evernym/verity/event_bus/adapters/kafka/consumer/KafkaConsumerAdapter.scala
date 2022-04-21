@@ -1,4 +1,4 @@
-package com.evernym.verity.event_bus.adapters.consumer.kafka
+package com.evernym.verity.event_bus.adapters.kafka.consumer
 
 import akka.Done
 import akka.actor.typed.{ActorSystem => TypedActorSystem}
@@ -36,45 +36,46 @@ class KafkaConsumerAdapter(override val messageHandler: MessageHandler,
                            actorSystem: TypedActorSystem[_])
   extends ConsumerPort {
 
-  val logger: Logger = LoggingUtil.getLoggerByClass(getClass)
+  private val logger: Logger = LoggingUtil.getLoggerByClass(getClass)
 
-  var controller: Option[DrainingControl[_]] = None
+  private var controller: Option[DrainingControl[_]] = None
 
-  override def start(): Unit = {
+  override def start(): Future[Done] = {
     controller = Option(
       Consumer
-      .committableSource(settingsProvider.kafkaConsumerSettings(), Subscriptions.topics(settingsProvider.topics: _*))
-      //because we want to commit the offset I think, it makes sense to use `mapAsync` instead of `mapAsyncUnordered`
+        .committableSource(settingsProvider.kafkaConsumerSettings(), Subscriptions.topics(settingsProvider.topics: _*))
+        //because we want to commit the offset I think, it makes sense to use `mapAsync` instead of `mapAsyncUnordered`
         // otherwise the last offset which gets committed may be not the desired one (because futures can complete in any order)
-      .mapAsync(settingsProvider.msgHandlingParallelism) { committableMsg =>   //how many futures in parallel to process each received message
-        Try {
-          logger.debug(prepareLogMsgStr(committableMsg, s"committable message received: $committableMsg"))
-          val createTime = Instant.ofEpochMilli(committableMsg.record.timestamp())
-          val metadata = Metadata(committableMsg.record.topic(), committableMsg.record.partition(), committableMsg.record.offset(), createTime)
-          val cloudEvent = new JSONObject(new String(committableMsg.record.value()))
-          val message = Message(metadata, cloudEvent)
-          logger.debug(prepareLogMsgStr(committableMsg, s"committable message parsed successfully"))
-          messageHandler
-            .handleMessage(message)
-            .map { _ =>
-              logger.debug(prepareLogMsgStr(committableMsg, s"event handled successfully"))
-              committableMsg.committableOffset
-            }.recover {
-              case e: RuntimeException =>
-                logger.error(prepareLogMsgStr(committableMsg, s"error while handling consumer event: ${e.getMessage}"))
+        .mapAsync(settingsProvider.msgHandlingParallelism) { committableMsg =>   //how many futures in parallel to process each received message
+          Try {
+            logger.debug(prepareLogMsgStr(committableMsg, s"committable message received: $committableMsg"))
+            val createTime = Instant.ofEpochMilli(committableMsg.record.timestamp())
+            val metadata = Metadata(committableMsg.record.topic(), committableMsg.record.partition(), committableMsg.record.offset(), createTime)
+            val cloudEvent = new JSONObject(new String(committableMsg.record.value()))
+            val message = Message(metadata, cloudEvent)
+            logger.debug(prepareLogMsgStr(committableMsg, s"committable message parsed successfully"))
+            messageHandler
+              .handleMessage(message)
+              .map { _ =>
+                logger.debug(prepareLogMsgStr(committableMsg, s"event handled successfully"))
                 committableMsg.committableOffset
-            }
-        } match {
-          case Success(result: Future[CommittableOffset]) => result
-          case Failure(ex)     =>
-            logger.error(prepareLogMsgStr(committableMsg,s"error while parsing/processing consumer event: ${ex.getMessage}"))
-            Future.successful(committableMsg.committableOffset)
+              }.recover {
+                case e: RuntimeException =>
+                  logger.error(prepareLogMsgStr(committableMsg, s"error while handling consumer event: ${e.getMessage}"))
+                  committableMsg.committableOffset
+              }
+          } match {
+            case Success(result: Future[CommittableOffset]) => result
+            case Failure(ex)     =>
+              logger.error(prepareLogMsgStr(committableMsg,s"error while parsing/processing consumer event: ${ex.getMessage}"))
+              Future.successful(committableMsg.committableOffset)
+          }
         }
-      }
-      .via(Committer.flow(settingsProvider.kafkaCommitterSettings()))
-      .toMat(Sink.seq)(DrainingControl.apply)
-      .run()
+        .via(Committer.flow(settingsProvider.kafkaCommitterSettings()))
+        .toMat(Sink.seq)(DrainingControl.apply)
+        .run()
     )
+    Future.successful(Done)
   }
 
   override def stop(): Future[Done] = {

@@ -8,7 +8,6 @@ message EndorserAdded {
   option (scalapb.message).extends = "com.evernym.verity.endorser_registry.EndorserRegistry.Event";
   string ledger = 1;
   string did = 2;
-  string verKey = 3;
 }
 
 

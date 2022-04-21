@@ -7,6 +7,7 @@ import akka.pattern.extended.ask
 import akka.util.Timeout
 import com.evernym.verity.actor.cluster_singleton.ForEndorserRegistry
 import com.evernym.verity.endorser_registry.EndorserRegistry.{Cmd, Commands}
+import com.evernym.verity.event_bus.event_handlers.EndorserMessageHandler._
 import com.evernym.verity.event_bus.ports.consumer.Message
 import com.typesafe.config.Config
 
@@ -33,25 +34,24 @@ class EndorserMessageHandler(config: Config,
 
     cloudEvent.getString(CLOUD_EVENT_TYPE) match {
 
-      case EVENT_ENDORSER_ACTIVATED =>
+      case EVENT_ENDORSER_ACTIVATED_V1 =>
         val payload = cloudEvent.getJSONObject(CLOUD_EVENT_DATA)
-        val ledger = payload.getString(DATA_FIELD_LEDGER)
-        val did = payload.getString(DATA_FIELD_DID)
-        val verKey = payload.getString(DATA_FIELD_VER_KEY)
-        Commands.AddEndorser(ledger, did, verKey, ref)
+        val ledger = payload.getString(DATA_FIELD_LEDGER_PREFIX)
+        val did = payload.getString(DATA_FIELD_ENDORSER_DID)
+        Commands.AddEndorser(ledger, did, ref)
 
-      case EVENT_ENDORSER_DEACTIVATED =>
+      case EVENT_ENDORSER_DEACTIVATED_V1 =>
         val payload = cloudEvent.getJSONObject(CLOUD_EVENT_DATA)
-        val ledger = payload.getString(DATA_FIELD_LEDGER)
-        val did = payload.getString(DATA_FIELD_DID)
+        val ledger = payload.getString(DATA_FIELD_LEDGER_PREFIX)
+        val did = payload.getString(DATA_FIELD_ENDORSER_DID)
         Commands.RemoveEndorser(ledger, did, ref)
     }
   }
 
-  //constants
-  val DATA_FIELD_LEDGER = "ledger"
-  val DATA_FIELD_DID = "did"
-  val DATA_FIELD_VER_KEY = "verKey"
-
 }
 
+object EndorserMessageHandler {
+  //constants
+  val DATA_FIELD_LEDGER_PREFIX = "ledgerprefix"
+  val DATA_FIELD_ENDORSER_DID = "endorserdid"
+}

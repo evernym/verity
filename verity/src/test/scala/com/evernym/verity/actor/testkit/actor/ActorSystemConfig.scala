@@ -1,8 +1,8 @@
 package com.evernym.verity.actor.testkit.actor
 
 import java.net.ServerSocket
-
 import akka.actor.ActorSystem
+import com.evernym.verity.integration.base.PortProvider
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 
 trait ActorSystemConfig {
@@ -117,6 +117,8 @@ trait ActorSystemConfig {
     overrideConfig.getOrElse(ConfigFactory.empty())
       .withFallback(levelDBJournal(tdir)) //default persistence
       .withFallback(baseConfig)
+      .withValue("verity.event-bus.basic.store.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
+      .withValue("verity.event-bus.basic.consumer.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
   }
 
 

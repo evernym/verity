@@ -15,5 +15,4 @@ message ListOfEndorser {
 
 message Endorser {
   string did = 1;
-  string verKey = 2;
 }

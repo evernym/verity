@@ -18,7 +18,7 @@ class VerityLocalSpec extends BasicSpec with AgentReqBuilder with CommonSpecUtil
 
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
 
-  val defaultPorts: PortProfile = PortProfile(9002, 2552, 8552, 9095)
+  val defaultPorts: PortProfile = PortProfile(9002, 2552, 8552, 9095, 8900, 8901)
 
   override def deleteFiles: Boolean = false
 
@@ -50,10 +50,10 @@ class VerityLocalSpec extends BasicSpec with AgentReqBuilder with CommonSpecUtil
     "should be able to start multiple verity applications" ignore {
       val v1_dir = tempDir.resolve("v1")
       assert(v1_dir.toFile.mkdir())
-      val v1 = LocalVerity(v1_dir, "11111111111111111111111111111111", PortProfile(9002, 2552, 8552, 9095), ecp)
+      val v1 = LocalVerity(v1_dir, "11111111111111111111111111111111", PortProfile(9002, 2552, 8552, 9095, 8900, 8901), ecp)
       val v2_dir = tempDir.resolve("v2")
       assert(v2_dir.toFile.mkdir())
-      val v2 = LocalVerity(v2_dir, "11111111111111111111111111111111", PortProfile(9003, 2553, 8553, 9095), ecp)
+      val v2 = LocalVerity(v2_dir, "11111111111111111111111111111111", PortProfile(9003, 2553, 8553, 9095, 8900, 8901), ecp)
     }
   }
 }

@@ -20,14 +20,14 @@ class EndorserRegistrySpec
       "should be successful" in {
         val endorserRegistry = createEndorserRegistry()
         val probe1 = createTestProbe[Replies.EndorserAdded]()
-        endorserRegistry ! Commands.AddEndorser("ledger1", "did1", "verkey1", probe1.ref)
+        endorserRegistry ! Commands.AddEndorser("ledger1", "did1", probe1.ref)
         probe1.expectMessageType[Replies.EndorserAdded]
 
         val probe2 = createTestProbe[Replies.LedgerEndorsers]()
         endorserRegistry ! Commands.GetEndorsers("ledger1", probe2.ref)
         val ledgerEndorsers = probe2.expectMessageType[Replies.LedgerEndorsers]
-        ledgerEndorsers.endorsers shouldBe List(Endorser("did1", "verkey1"))
-        ledgerEndorsers.latestEndorser shouldBe Option(Endorser("did1", "verkey1"))
+        ledgerEndorsers.endorsers shouldBe List(Endorser("did1"))
+        ledgerEndorsers.latestEndorser shouldBe Option(Endorser("did1"))
       }
     }
 
@@ -36,20 +36,19 @@ class EndorserRegistrySpec
         val endorserRegistry = createEndorserRegistry()
         val probe = createTestProbe[Replies.EndorserAdded]()
 
-        endorserRegistry ! Commands.AddEndorser("ledger1", "did1", "verkey1", probe.ref)
+        endorserRegistry ! Commands.AddEndorser("ledger1", "did1", probe.ref)
         val endorserAdded1 = probe.expectMessageType[Replies.EndorserAdded]
         endorserAdded1.ledger shouldBe "ledger1"
         endorserAdded1.did shouldBe "did1"
-        endorserAdded1.verKey shouldBe "verkey1"
 
-        endorserRegistry ! Commands.AddEndorser("ledger1", "did1", "verkey1", probe.ref)
+        endorserRegistry ! Commands.AddEndorser("ledger1", "did1", probe.ref)
         probe.expectMessageType[Replies.EndorserAdded]
 
         val probe2 = createTestProbe[Replies.LedgerEndorsers]()
         endorserRegistry ! Commands.GetEndorsers("ledger1", probe2.ref)
         val ledgerEndorsers = probe2.expectMessageType[Replies.LedgerEndorsers]
-        ledgerEndorsers.endorsers shouldBe List(Endorser("did1", "verkey1"))
-        ledgerEndorsers.latestEndorser shouldBe Option(Endorser("did1", "verkey1"))
+        ledgerEndorsers.endorsers shouldBe List(Endorser("did1"))
+        ledgerEndorsers.latestEndorser shouldBe Option(Endorser("did1"))
       }
     }
 
@@ -58,17 +57,17 @@ class EndorserRegistrySpec
         val endorserRegistry = createEndorserRegistry()
         val probe = createTestProbe[Replies.EndorserAdded]()
 
-        endorserRegistry ! Commands.AddEndorser("ledger1", "did1", "verkey1", probe.ref)
+        endorserRegistry ! Commands.AddEndorser("ledger1", "did1", probe.ref)
         probe.expectMessageType[Replies.EndorserAdded]
 
-        endorserRegistry ! Commands.AddEndorser("ledger1", "did2", "verkey2", probe.ref)
+        endorserRegistry ! Commands.AddEndorser("ledger1", "did2", probe.ref)
         probe.expectMessageType[Replies.EndorserAdded]
 
         val probe2 = createTestProbe[Replies.LedgerEndorsers]()
         endorserRegistry ! Commands.GetEndorsers("ledger1", probe2.ref)
         val ledgerEndorsers = probe2.expectMessageType[Replies.LedgerEndorsers]
-        ledgerEndorsers.endorsers shouldBe Seq(Endorser("did1", "verkey1"), Endorser("did2", "verkey2"))
-        ledgerEndorsers.latestEndorser shouldBe Option(Endorser("did2", "verkey2"))
+        ledgerEndorsers.endorsers shouldBe Seq(Endorser("did1"), Endorser("did2"))
+        ledgerEndorsers.latestEndorser shouldBe Option(Endorser("did2"))
       }
     }
 
@@ -77,18 +76,18 @@ class EndorserRegistrySpec
         val endorserRegistry = createEndorserRegistry()
         val probe = createTestProbe[Replies.EndorserAdded]()
 
-        endorserRegistry ! Commands.AddEndorser("ledger1", "did1", "verkey1", probe.ref)
+        endorserRegistry ! Commands.AddEndorser("ledger1", "did1", probe.ref)
         probe.expectMessageType[Replies.EndorserAdded]
-        endorserRegistry ! Commands.AddEndorser("ledger1", "did2", "verkey2", probe.ref)
+        endorserRegistry ! Commands.AddEndorser("ledger1", "did2", probe.ref)
         probe.expectMessageType[Replies.EndorserAdded]
-        endorserRegistry ! Commands.AddEndorser("ledger1", "did3", "verkey3", probe.ref)
+        endorserRegistry ! Commands.AddEndorser("ledger1", "did3", probe.ref)
         probe.expectMessageType[Replies.EndorserAdded]
 
         val probe1 = createTestProbe[Replies.LedgerEndorsers]()
         endorserRegistry ! Commands.GetEndorsers("ledger1", probe1.ref)
         val ledgerEndorsers = probe1.expectMessageType[Replies.LedgerEndorsers]
-        ledgerEndorsers.endorsers shouldBe Seq(Endorser("did1", "verkey1"), Endorser("did2", "verkey2"), Endorser("did3", "verkey3"))
-        ledgerEndorsers.latestEndorser shouldBe Option(Endorser("did3", "verkey3"))
+        ledgerEndorsers.endorsers shouldBe Seq(Endorser("did1"), Endorser("did2"), Endorser("did3"))
+        ledgerEndorsers.latestEndorser shouldBe Option(Endorser("did3"))
 
         val probe2 = createTestProbe[Replies.EndorserRemoved]()
         endorserRegistry ! Commands.RemoveEndorser("ledger1", "did2", probe2.ref)
@@ -98,8 +97,8 @@ class EndorserRegistrySpec
 
         endorserRegistry ! Commands.GetEndorsers("ledger1", probe1.ref)
         val latestLedgerEndorsers = probe1.expectMessageType[Replies.LedgerEndorsers]
-        latestLedgerEndorsers.endorsers shouldBe Seq(Endorser("did1", "verkey1"), Endorser("did3", "verkey3"))
-        latestLedgerEndorsers.latestEndorser shouldBe Option(Endorser("did3", "verkey3"))
+        latestLedgerEndorsers.endorsers shouldBe Seq(Endorser("did1"), Endorser("did3"))
+        latestLedgerEndorsers.latestEndorser shouldBe Option(Endorser("did3"))
       }
     }
   }

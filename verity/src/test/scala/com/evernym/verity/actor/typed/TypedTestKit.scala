@@ -11,7 +11,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 abstract class BehaviourSpecBase
   extends ScalaTestWithActorTestKit(
     ActorTestKit(
-      "TestSystem",
+      "verity",
       TypedTestKit.clusterConfig
         .withFallback(TypedTestKit.serializationConfig)
         .withFallback(TypedTestKit.testKitConfig)
@@ -52,7 +52,7 @@ object TypedTestKit {
 
       cluster {
         seed-nodes = [
-          "akka://TestSystem@127.0.0.1:$randomPort",
+          "akka://verity@127.0.0.1:$randomPort",
         ]
         downing-provider-class = "akka.cluster.sbr.SplitBrainResolverProvider"
         jmx.multi-mbeans-in-same-jvm = on

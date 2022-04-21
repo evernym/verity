@@ -3,8 +3,7 @@ package com.evernym.verity.protocol.engine.asyncapi
 import akka.Done
 import com.evernym.verity.event_bus.event_handlers.RequestSourceUtil
 import com.evernym.verity.event_bus.ports.producer.ProducerPort
-import com.evernym.verity.protocol.engine.{PinstId, ProtoRef}
-import com.evernym.verity.util2.RouteId
+import com.evernym.verity.protocol.engine.{DomainId, PinstId, ProtoRef, RelationshipId, ThreadId}
 import io.cloudevents.CloudEvent
 import io.cloudevents.core.builder.CloudEventBuilder
 import io.cloudevents.core.provider.EventFormatProvider
@@ -39,17 +38,20 @@ class EventPublisherUtil(routingContext: RoutingContext,
   }
 
   private lazy val cloudEventSource = RequestSourceUtil.build(
-    "https://verity.avast.com",   //TODO: is this value ok and/or shall be configurable?
-    routingContext.routeId,
-    routingContext.protoRef,
-    routingContext.pinstId
+    routingContext.domainId,
+    routingContext.relationshipId,
+    routingContext.pinstId,
+    routingContext.threadId,
+    routingContext.protoRef
   )
 }
 
 /**
  * this is used to construct `source` used during publishing event
- * @param routeId
- * @param protoRef
+ * @param domainId
+ * @param relationshipId
  * @param pinstId
+ * @param threadId
+ * @param protoRef
  */
-case class RoutingContext(routeId: RouteId, protoRef: ProtoRef, pinstId: PinstId)
+case class RoutingContext(domainId: DomainId, relationshipId: RelationshipId, pinstId: PinstId, threadId: ThreadId, protoRef: ProtoRef)

@@ -5,7 +5,6 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.fixture.TempDir
 import com.evernym.integrationtests.e2e.env.AppType.AppType
 import com.evernym.integrationtests.e2e.env.PrintLineUtil._
-import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 import org.scalatest.{BeforeAndAfterAll, TestSuite}
 
 import scala.language.postfixOps

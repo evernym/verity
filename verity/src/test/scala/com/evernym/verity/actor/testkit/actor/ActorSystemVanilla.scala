@@ -60,7 +60,7 @@ object ActorSystemVanilla {
 
 
   def apply(name: String): ActorSystem = {
-    create(
+    apply(
       name,
       ConfigFactory.empty(), // Creates an ActorSystem unencumbered with Verity Config
       seedNodesWithRandomPorts = true
@@ -68,7 +68,7 @@ object ActorSystemVanilla {
   }
 
   def apply(name: String, config: Config): ActorSystem = {
-    create(
+    apply(
       name,
       config,
       seedNodesWithRandomPorts = true
@@ -76,7 +76,7 @@ object ActorSystemVanilla {
   }
 
 
-  private def create(name: String, config: Config, seedNodesWithRandomPorts: Boolean): ActorSystem = {
+  def apply(name: String, config: Config, seedNodesWithRandomPorts: Boolean): ActorSystem = {
     val configToBeUsed = if (seedNodesWithRandomPorts) seedNodesWithRandomPort(config) else config
     ActorSystem(
       name,

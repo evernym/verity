@@ -6,6 +6,7 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncapi.endorser.{ENDORSEMENT_RESULT_SUCCESS_CODE, INDY_LEDGER_PREFIX, VDR_TYPE_INDY}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.protocol.engine.asyncapi.wallet.CredDefCreatedResult
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
@@ -28,6 +29,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
   def mainHandleControl: (CredDefState, Option[Role], Control) ?=> Any = {
     case (_, _, c: Init) => ctx.apply(ProtocolInitialized(c.parametersStored.toSeq))
     case (s: State.Initialized, _, m: Write) => writeCredDef(m, s)
+    case (s: State.WaitingOnEndorser, _, m: EndorsementResult) => handleEndorsementResult(m, s)
     case _ => ctx.signal(ProblemReport("Unexpected message in current state"))
   }
 
@@ -40,8 +42,8 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
         ctx.getRoster.withAssignment(Writer() -> ctx.getRoster.selfIndex_!)
       )
     case (_: State.Processing, _, e: AskedForEndorsement) => State.WaitingOnEndorser(e.credDefId, e.credDefJson)
-    case (_: State.Processing, _, e: CredDefWritten) => State.Done(e.credDefId)
-    case (_: State.Processing, _, e: WriteFailed) => State.Error(e.error)
+    case (s @ (_: State.Processing | _: State.WaitingOnEndorser), _, e: CredDefWritten) => State.Done(e.credDefId)
+    case (s @ (_: State.Processing | _: State.WaitingOnEndorser), _, e: WriteFailed) => State.Error(e.error)
   }
 
   def writeCredDef(m: Write, init: State.Initialized): Unit = {
@@ -65,24 +67,45 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
             case Success(credDefCreated: CredDefCreatedResult) =>
               ctx.ledger.writeCredDef(submitterDID, credDefCreated.credDefJson) {
                 case Success(_) =>
+                  // issuer has endorser rights
                   ctx.apply(CredDefWritten(credDefCreated.credDefId))
                   ctx.signal(StatusReport(credDefCreated.credDefId))
                 case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
+                  // issuer has no endorser rights
                   ctx.logger.info(e.toString)
                   val endorserDID = m.endorserDID.getOrElse(
                     init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
                   )
-                  if (endorserDID.nonEmpty) {
-                    ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefCreated.credDefJson, endorserDID) {
-                      case Success(ledgerRequest) =>
-                        ctx.signal(NeedsEndorsement(credDefCreated.credDefId, ledgerRequest.req))
-                        ctx.apply(AskedForEndorsement(credDefCreated.credDefId, ledgerRequest.req))
-                      case Failure(e) => problemReport(e)
-                    }
-                  } else {
-                    problemReport(new Exception("No default endorser defined"))
+
+                  ctx.endorser.withCurrentEndorser(INDY_LEDGER_PREFIX) {
+                    case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID == endorser.did =>
+                      //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
+                      ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefCreated.credDefJson, endorser.did) {
+                        case Success(ledgerRequest) =>
+                          ctx.endorser.endorseTxn(ledgerRequest.req, endorser.did, INDY_LEDGER_PREFIX, VDR_TYPE_INDY) {
+                            case Success(_) =>
+                              ctx.apply(AskedForEndorsement(credDefCreated.credDefId, ledgerRequest.req))
+                            case Failure(e) =>
+                              problemReport(new Exception(e))
+                          }
+                        case Failure(e) => problemReport(new Exception(e))
+                      }
+                    case _ =>
+                      //no active endorser or active endorser is NOT the same as given/configured endorserDID
+                      if (endorserDID.nonEmpty) {
+                        ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefCreated.credDefJson, endorserDID) {
+                          case Success(ledgerRequest) =>
+                            ctx.signal(NeedsEndorsement(credDefCreated.credDefId, ledgerRequest.req))
+                            ctx.apply(AskedForEndorsement(credDefCreated.credDefId, ledgerRequest.req))
+                          case Failure(e) => problemReport(new Exception(e))
+                        }
+                      } else {
+                        problemReport(new Exception("No default endorser defined"))
+                      }
                   }
-                case Failure(e) => problemReport(e)
+                case Failure(e) =>
+                  // some other failure
+                  problemReport(e)
               }
             case Failure(e) => problemReport(e)
           }
@@ -91,6 +114,15 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
       }
     } catch {
       case e: Exception => problemReport(e)
+    }
+  }
+
+  def handleEndorsementResult(m: EndorsementResult, e: State.WaitingOnEndorser): Unit = {
+    if (m.code == ENDORSEMENT_RESULT_SUCCESS_CODE) {
+      ctx.apply(CredDefWritten(e.credDefId))
+      ctx.signal(StatusReport(e.credDefId))
+    } else {
+      problemReport(new RuntimeException(s"error during endorsement => code: ${m.code}, description: ${m.description}"))
     }
   }
 

@@ -15,6 +15,8 @@ import com.evernym.verity.cache.base.{GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.http.HttpUtil
+import com.evernym.verity.http.HttpUtil.optionalEntityAs
 import com.evernym.verity.util.Util.getNewActorId
 
 import scala.concurrent.Future

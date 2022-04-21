@@ -10,6 +10,7 @@ import com.evernym.verity.actor.{ForIdentifier, SendCmdToAllNodes, StartProgress
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.actor.node_singleton.{MsgProgressTrackerCache, TrackingParam, TrackingStatus}
 import com.evernym.verity.actor.base.Done
+import com.evernym.verity.http.HttpUtil.entityAs
 import com.evernym.verity.http.common.CustomExceptionHandler.exceptionHandler
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 

@@ -3,11 +3,11 @@ package com.evernym.integrationtests.e2e.third_party_apis.kafka
 import akka.Done
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.adapter._
-import akka.kafka.ProducerSettings
 import akka.kafka.testkit.KafkaTestkitTestcontainersSettings
 import akka.kafka.testkit.scaladsl.TestcontainersKafkaPerClassLike
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
-import com.evernym.verity.event_bus.adapters.consumer.kafka.ConsumerSettingsProvider
+import com.evernym.verity.event_bus.adapters.kafka.consumer.ConsumerSettingsProvider
+import com.evernym.verity.event_bus.adapters.kafka.producer.ProducerSettingsProvider
 import com.evernym.verity.event_bus.ports.consumer.{Message, MessageHandler}
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.scalatest.time.{Millis, Seconds, Span}
@@ -77,8 +77,8 @@ class KafkaAdapterSpec
 
         val allMsgs = topic1MsgBatch1 ++ topic2MsgBatch1
 
-        publishEvents(producerSettings, TOPIC_NAME_1, topic1MsgBatch1.map(serializedCloudEvent))
-        publishEvents(producerSettings, TOPIC_NAME_2, topic2MsgBatch1.map(serializedCloudEvent))
+        publishEvents(producerSettingsProvider, TOPIC_NAME_1, topic1MsgBatch1.map(serializedCloudEvent))
+        publishEvents(producerSettingsProvider, TOPIC_NAME_2, topic2MsgBatch1.map(serializedCloudEvent))
 
         //confirm consumers are able to receive those published messages and offset is committed accordingly
         eventually(timeout(Span(10, Seconds)), interval(Span(200, Millis))) {
@@ -111,8 +111,8 @@ class KafkaAdapterSpec
         //publish second batch of messages to the event bus
         val allMsgs = topic1MsgBatch2 ++ topic2MsgBatch2
 
-        publishEvents(producerSettings, TOPIC_NAME_1, topic1MsgBatch2.map(serializedCloudEvent))
-        publishEvents(producerSettings, TOPIC_NAME_2, topic2MsgBatch2.map(serializedCloudEvent))
+        publishEvents(producerSettingsProvider, TOPIC_NAME_1, topic1MsgBatch2.map(serializedCloudEvent))
+        publishEvents(producerSettingsProvider, TOPIC_NAME_2, topic2MsgBatch2.map(serializedCloudEvent))
 
         //confirm new consumers are able to receive those newly published messages and offset is committed accordingly
         eventually(timeout(Span(15, Seconds)), interval(Span(200, Millis))) {
@@ -135,7 +135,7 @@ class KafkaAdapterSpec
     val actualMessages = eventProcessors.flatMap(_.getMessages).filter(_.metadata.topic == topicName)
     actualMessages.map(_.metadata.offset).max shouldBe actualMessages.size + alreadyReceivedMsgs - 1 //as offset starts with 0
     val actualEvents = actualMessages.map(_.cloudEvent)
-    actualEvents.map(_.toString) shouldBe expectedEvents.map(_.toString)
+    actualEvents.map(_.toString).sorted shouldBe expectedEvents.map(_.toString).sorted
   }
 
   def createCloudEvent(sourceId: String, payload: String): CloudEvent = {
@@ -161,13 +161,13 @@ class KafkaAdapterSpec
     new JSONObject(new String(serializedCloudEvent(event)))
   }
 
-  lazy val producerSettings: ProducerSettings[String, Array[Byte]] = createProducerSettings(getDefaultProducerSettings())
+  lazy val producerSettingsProvider: ProducerSettingsProvider = createProducerSettingsProvider(brokerContainers.head.getBootstrapServers)
 
   lazy val defaultAkkaKafkaConfig: Config = ConfigFactory.load().withOnlyPath("akka.kafka")
 
   lazy val verityKafkaConsumerConfig: Config = ConfigFactory.parseString(
     """
-      | verity.kafka = ${akka.kafka} {
+      | verity.event-bus.kafka = ${akka.kafka} {
       |   consumer = ${akka.kafka.consumer} {
       |     kafka-clients = ${akka.kafka.consumer.kafka-clients} {
       |       bootstrap.servers = "testkafka"
@@ -184,6 +184,19 @@ class KafkaAdapterSpec
       |""".stripMargin
   )
 
+  lazy val verityKafkaProducerConfig: Config = ConfigFactory.parseString(
+    """
+      | verity.event-bus.kafka = ${akka.kafka} {
+      |   producer = ${akka.kafka.producer} {
+      |     kafka-clients = ${akka.kafka.producer.kafka-clients} {
+      |       bootstrap.servers = "testkafka"
+      |       client.id = "verity"
+      |     }
+      |   }
+      | }
+      |""".stripMargin
+  )
+
   implicit lazy val actorSystem: ActorSystem[Nothing] = ActorSystemVanilla("test").toTyped
 
   def createConsumerSettingsProvider(bootstrapServer: String,
@@ -191,10 +204,17 @@ class KafkaAdapterSpec
     val config = verityKafkaConsumerConfig
       .withFallback(defaultAkkaKafkaConfig)
       .resolve()
-      .withValue("verity.kafka.consumer.kafka-clients.bootstrap.servers", ConfigValueFactory.fromAnyRef(bootstrapServer))
-      .withValue("verity.kafka.consumer.topics", ConfigValueFactory.fromIterable(topics.asJava))
-
+      .withValue("verity.event-bus.kafka.consumer.kafka-clients.bootstrap.servers", ConfigValueFactory.fromAnyRef(bootstrapServer))
+      .withValue("verity.event-bus.kafka.consumer.topics", ConfigValueFactory.fromIterable(topics.asJava))
     ConsumerSettingsProvider(config)
+  }
+
+  def createProducerSettingsProvider(bootstrapServer: String): ProducerSettingsProvider = {
+    val config = verityKafkaProducerConfig
+      .withFallback(defaultAkkaKafkaConfig)
+      .resolve()
+      .withValue("verity.event-bus.kafka.producer.kafka-clients.bootstrap.servers", ConfigValueFactory.fromAnyRef(bootstrapServer))
+    ProducerSettingsProvider(config)
   }
 
   override val testcontainersSettings = KafkaTestkitTestcontainersSettings(actorSystem.classicSystem)

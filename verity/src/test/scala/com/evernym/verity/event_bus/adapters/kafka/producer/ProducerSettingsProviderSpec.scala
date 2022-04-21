@@ -1,4 +1,4 @@
-package com.evernym.verity.event_bus.adapters.producer.kafka
+package com.evernym.verity.event_bus.adapters.kafka.producer
 
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.ConfigException.Missing
@@ -25,7 +25,7 @@ class ProducerSettingsProviderSpec
 
         val verityKafkaConfig = ConfigFactory.parseString(
             """
-              | verity.kafka = ${akka.kafka} {
+              | verity.event-bus.kafka = ${akka.kafka} {
               |   producer = ${akka.kafka.producer} {
               |     kafka-clients = ${akka.kafka.producer.kafka-clients} {
               |       bootstrap.servers = "testkafka"

@@ -109,6 +109,15 @@ object VerityLocalConfig {
     )
   }
 
+  private def basicEventStoreConfig(portProfile: PortProfile) = {
+    ConfigFactory.parseString(
+      s"""
+         |verity.event-bus.basic.store.http-listener.port = ${portProfile.basicEventStorePort}
+         |verity.event-bus.basic.consumer.http-listener.port = ${portProfile.basicEventStoreConsumerPort}
+         |""".stripMargin
+    )
+  }
+
   private def configureLibIndy(taaEnabled: Boolean): Config = {
     ConfigFactory.parseString(
       s"""
@@ -185,6 +194,7 @@ object VerityLocalConfig {
       useLevelDBPersistence(tempDir, sharedEventStore),
       useDefaultWallet(tempDir),
       useCustomPort(port, otherNodeArteryPorts),
+      basicEventStoreConfig(port),
       configureLibIndy(taaEnabled),
       identityUrlShortener(),
       prometheusServer(port.prometheusPort),

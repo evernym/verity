@@ -3,9 +3,9 @@
 Allows quickly bring up, resting and down the external services for typical `verity` environment. Currently, it manages the following services:
 1. dynamodb - event storage
 2. mysql - for wallet data storage
-2. pool - indy ledger network
-2. s3 - large object storage
-2. yourls - url shortener
+3. pool - indy ledger network
+4. s3 - large object storage
+5. yourls - url shortener
 
 ## Install `devlab`
 Follow instructions at [the opensource devlab github repo](https://github.com/evernym/devlab):

@@ -15,7 +15,7 @@ trait ConsumerPort {
   /**
    * start the consumer
    */
-  def start(): Unit
+  def start(): Future[Done]
 
   /**
    * stop consumer

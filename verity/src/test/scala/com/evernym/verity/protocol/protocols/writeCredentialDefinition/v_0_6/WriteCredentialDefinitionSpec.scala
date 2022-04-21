@@ -1,14 +1,15 @@
 package com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6
 
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
+import com.evernym.verity.did.exception.DIDException
 import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
-import com.evernym.verity.did.exception.{DIDException, SubNameSpacesUnsupportedException}
+import com.evernym.verity.protocol.engine.asyncapi.endorser.{Endorser, INDY_LEDGER_PREFIX}
 import com.evernym.verity.protocol.testkit.DSL.signal
-import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{MockableEndorserAccess, MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.TestExecutionContextProvider
+import com.evernym.verity.util2.ExecutionContextProvider
 import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
@@ -17,7 +18,9 @@ import scala.language.{implicitConversions, reflectiveCalls}
 class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition)
   with BasicFixtureSpec {
 
-  private implicit def EnhancedScenario(s: Scenario) = new {
+  private implicit def EnhancedScenario(s: Scenario): Object {
+    val writer: TestEnvir
+  } = new {
     val writer: TestEnvir = s("writer")
   }
 
@@ -25,7 +28,7 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
   val userEndorser = "Vr9eqqnUJpJkBwcRV4cHnV"
   val sovrinEndorser = "did:sov:2wJPyULfLLnYTEFYzByfUR"
 
-  override val defaultInitParams = Map(
+  override val defaultInitParams: Map[ContainerName, ContainerName] = Map(
     DEFAULT_ENDORSER_DID -> defaultEndorser
   )
 
@@ -79,32 +82,36 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
           MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
         ))
         interaction(f.writer) {
-          withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
-              f.writer ~ Write(credDefName, schemaId, None, None)
+          withEndorserAccess(Map(INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
+            withDefaultWalletAccess(f, {
+              withDefaultLedgerAccess(f, {
+                f.writer ~ Write(credDefName, schemaId, None, None)
 
-              val needsEndorsement = f.writer expect signal[NeedsEndorsement]
-              val json = new JSONObject(needsEndorsement.credDefJson)
-              json.getString("endorser") shouldBe defaultEndorser
-              f.writer.state shouldBe a[State.WaitingOnEndorser]
+                val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+                val json = new JSONObject(needsEndorsement.credDefJson)
+                json.getString("endorser") shouldBe defaultEndorser
+                f.writer.state shouldBe a[State.WaitingOnEndorser]
+              })
             })
           })
         }
       }
 
-      "and use endorser from control msg if defined" in { f =>
+      "and use endorser did from control msg if defined" in { f =>
         f.writer.initParams(Map(
           MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
         ))
         interaction(f.writer) {
-          withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
-              f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
+          withEndorserAccess(Map(INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
+            withDefaultWalletAccess(f, {
+              withDefaultLedgerAccess(f, {
+                f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
 
-              val needsEndorsement = f.writer expect signal[NeedsEndorsement]
-              val json = new JSONObject(needsEndorsement.credDefJson)
-              json.getString("endorser") shouldBe userEndorser
-              f.writer.state shouldBe a[State.WaitingOnEndorser]
+                val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+                val json = new JSONObject(needsEndorsement.credDefJson)
+                json.getString("endorser") shouldBe userEndorser
+                f.writer.state shouldBe a[State.WaitingOnEndorser]
+              })
             })
           })
         }
@@ -117,14 +124,16 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
           MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
         ))
         interaction(f.writer) {
-          withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
-              f.writer ~ Write(credDefName, schemaId, None, None)
+          withEndorserAccess(Map(INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
+            withDefaultWalletAccess(f, {
+              withDefaultLedgerAccess(f, {
+                f.writer ~ Write(credDefName, schemaId, None, None)
 
-              val needsEndorsement = f.writer expect signal[NeedsEndorsement]
-              val json = new JSONObject(needsEndorsement.credDefJson)
-              json.getString("endorser") shouldBe defaultEndorser
-              f.writer.state shouldBe a[State.WaitingOnEndorser]
+                val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+                val json = new JSONObject(needsEndorsement.credDefJson)
+                json.getString("endorser") shouldBe defaultEndorser
+                f.writer.state shouldBe a[State.WaitingOnEndorser]
+              })
             })
           })
         }
@@ -135,14 +144,16 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
           MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
         ))
         interaction(f.writer) {
-          withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
-              f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
+          withEndorserAccess(Map(INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
+            withDefaultWalletAccess(f, {
+              withDefaultLedgerAccess(f, {
+                f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
 
-              val needsEndorsement = f.writer expect signal[NeedsEndorsement]
-              val json = new JSONObject(needsEndorsement.credDefJson)
-              json.getString("endorser") shouldBe userEndorser
-              f.writer.state shouldBe a[State.WaitingOnEndorser]
+                val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+                val json = new JSONObject(needsEndorsement.credDefJson)
+                json.getString("endorser") shouldBe userEndorser
+                f.writer.state shouldBe a[State.WaitingOnEndorser]
+              })
             })
           })
         }
@@ -154,20 +165,22 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
         MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
       ))
       interaction(f.writer) {
-        withDefaultWalletAccess(f, {
-          withDefaultLedgerAccess(f, {
-            f.writer ~ Write(credDefName, schemaId, None, None)
+        withEndorserAccess(Map(INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
+          withDefaultWalletAccess(f, {
+            withDefaultLedgerAccess(f, {
+              f.writer ~ Write(credDefName, schemaId, None, None)
 
-            val needsEndorsement = f.writer expect signal[NeedsEndorsement]
-            val json = new JSONObject(needsEndorsement.credDefJson)
-            json.getString("endorser") shouldBe defaultEndorser
-            f.writer.state shouldBe a[State.WaitingOnEndorser]
+              val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+              val json = new JSONObject(needsEndorsement.credDefJson)
+              json.getString("endorser") shouldBe defaultEndorser
+              f.writer.state shouldBe a[State.WaitingOnEndorser]
+            })
           })
         })
       }
     }
 
-    "should fail when issuer did doesn't have ledger permissions and endorser did is not defined" in {f =>
+    "should fail when issuer did doesn't have ledger permissions and endorser did is not defined" in { f =>
       f.writer.initParams(Map(
         MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID,
         DEFAULT_ENDORSER_DID -> ""
@@ -237,6 +250,11 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
 
   }
 
+  def withEndorserAccess(endorsers: Map[String, List[Endorser]], s: Scenario, f: => Unit): Unit = {
+    s.writer endorserAccess MockableEndorserAccess(endorsers)
+    f
+  }
+
   def withDefaultWalletAccess(s: Scenario, f: => Unit): Unit = {
     s.writer walletAccess MockableWalletAccess()
     f
@@ -250,6 +268,7 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
   override val containerNames: Set[ContainerName] = Set("writer")
 
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+
   /**
    * custom thread pool executor
    */

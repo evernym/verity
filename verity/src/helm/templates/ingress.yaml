@@ -20,6 +20,7 @@ metadata:
     {{- if .Values.ingress.wafv2_acl_arn }}
     alb.ingress.kubernetes.io/wafv2-acl-arn: {{ .Values.ingress.wafv2_acl_arn }}
     {{- end}}
+    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=access-logs-{{ .Values.service }}-eks-{{ .Values.env }}
     alb.ingress.kubernetes.io/healthcheck-path: {{ .Values.ingress.healthcheckPath }}
     alb.ingress.kubernetes.io/healthcheck-interval-seconds: "{{ .Values.ingress.healthcheckIntervalSeconds }}"
     alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "{{ .Values.ingress.healthcheckTimeoutSeconds }}"

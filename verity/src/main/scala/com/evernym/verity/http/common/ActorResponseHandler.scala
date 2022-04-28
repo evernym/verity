@@ -5,13 +5,13 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.server.ExceptionHandler
 import akka.pattern.AskTimeoutException
-import com.evernym.verity.constants.LogKeyConstants.{LOG_KEY_STATUS_CODE, LOG_KEY_STATUS_DETAIL}
-import com.evernym.verity.util2.Exceptions.{FeatureNotEnabledException, _}
-import com.evernym.verity.util2.Status.{StatusDetail, TIMEOUT, UNHANDLED}
-import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.constants.LogKeyConstants.{LOG_KEY_STATUS_CODE, LOG_KEY_STATUS_DETAIL}
+import com.evernym.verity.http.common.models.StatusDetailResp
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
-import com.evernym.verity.util2.{ActorErrorResp, ActorResponse, DoNotLogError, Exceptions, Status}
+import com.evernym.verity.util2.Exceptions._
+import com.evernym.verity.util2.Status.{TIMEOUT, UNHANDLED}
+import com.evernym.verity.util2.{ActorErrorResp, ActorResponse, DoNotLogError, Exceptions}
 import com.typesafe.scalalogging.Logger
 
 /**
@@ -26,14 +26,16 @@ trait ActorResponseHandler {
 
   /**
    * handles valid/expected response (case classes) from actor's incoming msg handler code
+   *
    * @return
    */
   def handleExpectedResponse: PartialFunction[Any, HttpResponse] = {
-    case native => HttpResponse(entity=DefaultMsgCodec.toJson(native))
+    case native => HttpResponse(entity = DefaultMsgCodec.toJson(native))
   }
 
   /**
    * handles invalid/unexpected response (mostly exceptions) from actor's incoming msg handler code
+   *
    * @param e unexpected response
    * @return
    */
@@ -42,7 +44,7 @@ trait ActorResponseHandler {
     val (statusCode, statusDetailResp) = convertToHttpResponseContext(e)
     logRespMsgIfNeeded(statusCode, statusDetailResp)
     val response = createResponse(statusDetailResp)
-    HttpResponse(statusCode, entity=HttpEntity(ContentType(MediaTypes.`application/json`), DefaultMsgCodec.toJson(response)))
+    HttpResponse(statusCode, entity = HttpEntity(ContentType(MediaTypes.`application/json`), DefaultMsgCodec.toJson(response)))
   }
 
   def exceptionHandler: ExceptionHandler = ExceptionHandler {
@@ -54,6 +56,7 @@ trait ActorResponseHandler {
 
   /**
    * converts given unexpected response to http response context (http response status and message)
+   *
    * @param e any unexpected response (mostly exception)
    * @return
    */
@@ -61,6 +64,7 @@ trait ActorResponseHandler {
 
   /**
    * should be overridden by implementing class
+   *
    * @param sdr status detail response
    * @return any native object (which can be converted to json)
    */
@@ -87,19 +91,7 @@ trait ActorResponseHandler {
       case _                          => //nothing
     }
   }
-}
 
-//NOTE: DON'T rename any fields of this case class, it is sent in http response
-//and will break the api
-case class StatusDetailResp(statusCode: String, statusMsg: String, detail: Option[String]) extends ActorMessage
-
-case object StatusDetailResp {
-  def apply(sd: StatusDetail, detail: Option[Any] = None): StatusDetailResp =
-    StatusDetailResp (sd.statusCode, sd.statusMsg, detail.map(_.toString))
-
-  def apply(br: ActorErrorResp): StatusDetailResp = {
-    StatusDetailResp (Status.getFromCode(br.statusCode).copy(statusMsg = br.respMsg))
-  }
 }
 
 object CustomExceptionHandler extends ActorResponseHandler {
@@ -134,13 +126,13 @@ object HttpResponseBuilder {
 
   def buildHttpResp(from: Any): (StatusCode, StatusDetailResp) = {
     from match {
-      case aer: ActorErrorResp        =>
+      case aer: ActorErrorResp =>
         httpStatusFromExceptionClass(aer.exceptionClass) -> StatusDetailResp(aer)
-      case ate: AskTimeoutException   =>
+      case ate: AskTimeoutException =>
         httpStatusFromException(ate) -> StatusDetailResp(TIMEOUT, Some(ate))
-      case rte: RuntimeException      =>
+      case rte: RuntimeException =>
         httpStatusFromException(rte) -> StatusDetailResp(ActorResponse(rte))
-      case _                          =>
+      case _ =>
         // Don't return Option(x.toString) to the caller as it reveals too much internal information
         InternalServerError -> StatusDetailResp(UNHANDLED, None)
     }

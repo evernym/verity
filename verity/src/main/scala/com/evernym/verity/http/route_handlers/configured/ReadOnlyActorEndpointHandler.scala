@@ -49,7 +49,7 @@ trait ReadOnlyActorEndpointHandler
         pathPrefix("agency" / "internal" / "maintenance") {
           extractRequest { implicit req =>
             extractClientIP { implicit remoteAddress =>
-              checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
+              checkIfAddressAllowed(remoteAddress, req.uri)
               pathPrefix("persistent-actor") {
                 pathPrefix(Segment / Segment) { (actorTypeName, actorEntityId) =>
                   pathPrefix("data") {

@@ -4,9 +4,9 @@ import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.constants.Constants.PUSH_COM_METHOD
 import com.evernym.verity.util2.Status.{MISSING_REQ_FIELD, MSG_STATUS_ACCEPTED, PAIRWISE_KEYS_ALREADY_IN_WALLET, SIGNATURE_VERIF_FAILED}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CONN_REQ, CREATE_MSG_TYPE_CONN_REQ_ANSWER}
-import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.http.base.open.{ExpectedMsgCriteria, ExpectedMsgDetail}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.http.common.models.StatusDetailResp
 import com.evernym.verity.testkit.mock.agent.MockEnv
 import org.scalatest.time.{Seconds, Span}
 

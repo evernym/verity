@@ -11,8 +11,11 @@ class HttpRouteHandler(val platform: Platform, executionContext: ExecutionContex
   extends EndpointHandlerBase {
 
   override def system: ActorSystem = platform.actorSystem
+
   override def appConfig: AppConfig = platform.appConfig
+
   override implicit def executor: ExecutionContextExecutor = system.dispatcher
+
   override val metricsWriter: MetricsWriter = platform.agentActorContext.metricsWriter
 
   /**

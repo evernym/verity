@@ -1,8 +1,7 @@
 package com.evernym.verity.http.route_handlers.restricted
 
-import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
-import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, get, handleExceptions, logRequestResult, pathPrefix}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.evernym.verity.actor.cluster_singleton.watcher.{ForEntityItemWatcher, GetItems}
@@ -12,7 +11,8 @@ import com.evernym.verity.item_store.ItemStore
 
 import scala.concurrent.Future
 
-trait ItemStoreEndpointHandler { this: HttpRouteWithPlatform =>
+trait ItemStoreEndpointHandler {
+  this: HttpRouteWithPlatform =>
 
   protected def getItems(): Future[Any] = {
     platform.singletonParentProxy ? ForEntityItemWatcher(GetItems)
@@ -24,7 +24,7 @@ trait ItemStoreEndpointHandler { this: HttpRouteWithPlatform =>
         extractRequest { implicit req =>
           extractClientIP { implicit remoteAddress =>
             pathPrefix("agency" / "internal" / "item-store") {
-              checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
+              checkIfAddressAllowed(remoteAddress, req.uri)
               (get & pathEnd) {
                 complete {
                   getItems().map[ToResponseMarshallable] {

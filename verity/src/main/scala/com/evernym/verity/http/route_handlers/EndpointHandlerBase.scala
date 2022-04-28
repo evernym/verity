@@ -4,11 +4,11 @@ import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.{HttpRequest, RemoteAddress}
 import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, get, handleExceptions, ignoreTrailingSlash, logRequestResult, parameters, pathPrefix, _}
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.{AgencyPublicDid, AppStateCoordinator}
 import com.evernym.verity.actor.agent.agency.GetLocalAgencyIdentity
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_ENDPOINT
+import com.evernym.verity.actor.{AgencyPublicDid, AppStateCoordinator}
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.common.HttpRouteBase
 import com.evernym.verity.http.route_handlers.configured.ConfiguredApiRoutes
@@ -29,18 +29,21 @@ trait EndpointHandlerBase
   /**
    * this is the route provided to http server, so the 'baseRoute' variable
    * should be combining all the routes this agency instance wants to support
+   *
    * @return
    */
   def baseRoute: Route = openApiRoutes ~ restrictedApiRoutes ~ configuredApiRoutes ~ agencyRoute
 
-  def endpointRoutes: Route = ignoreTrailingSlash { baseRoute }
+  def endpointRoutes: Route = ignoreTrailingSlash {
+    baseRoute
+  }
 
   override val healthChecker: HealthChecker = platform.healthChecker
   override val appStateCoordinator: AppStateCoordinator = platform.appStateCoordinator
 
   protected def msgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
-    case ai: AgencyPublicDid     => handleExpectedResponse(ai)
-    case e                       => handleUnexpectedResponse(e)
+    case ai: AgencyPublicDid => handleExpectedResponse(ai)
+    case e => handleUnexpectedResponse(e)
   }
 
   protected def sendToAgencyAgent(msg: Any): Future[Any] = {

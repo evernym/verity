@@ -3,9 +3,9 @@ package com.evernym.verity.http.base.open
 import akka.http.scaladsl.model.StatusCodes._
 import com.evernym.verity.util2.Status.KEY_ALREADY_CREATED
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
-import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.http.base.{EdgeEndpointBaseSpec, RemoteAgentAndAgencyIdentity}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.http.common.models.StatusDetailResp
 import com.evernym.verity.testkit.mock.agent.MockEnv
 
 trait ProvisionRelationshipSpec { this : EdgeEndpointBaseSpec =>

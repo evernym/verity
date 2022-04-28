@@ -1,41 +1,45 @@
 package com.evernym.verity.http.route_handlers.open
 
-import java.util.UUID
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.CustomHeader
 import akka.http.scaladsl.server.Directives.{complete, entity, handleExceptions, logRequestResult, pathPrefix, _}
 import akka.http.scaladsl.server.directives.BasicDirectives.extract
 import akka.http.scaladsl.server.directives.HeaderDirectives.optionalHeaderValueByName
 import akka.http.scaladsl.server.{Directive1, Route}
-import com.evernym.verity.constants.Constants.{API_KEY_HTTP_HEADER, CLIENT_REQUEST_ID_HTTP_HEADER}
-import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, FeatureNotEnabledException, UnauthorisedErrorException}
 import com.evernym.verity.actor.agent.msghandler.outgoing.JsonMsg
 import com.evernym.verity.actor.agent.msgrouter.RestMsgRouteParam
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.config.ConfigConstants.REST_API_ENABLED
+import com.evernym.verity.constants.Constants.{API_KEY_HTTP_HEADER, CLIENT_REQUEST_ID_HTTP_HEADER}
+import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgType}
 import com.evernym.verity.http.LoggingRouteUtil.{incomingLogMsg, outgoingLogMsg}
-import com.evernym.verity.http.common.{ActorResponseHandler, StatusDetailResp}
+import com.evernym.verity.http.common.ActorResponseHandler
+import com.evernym.verity.http.common.models.StatusDetailResp
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 import com.evernym.verity.protocol.engine.ProtoRef
 import com.evernym.verity.util.{ReqMsgContext, RestAuthContext, RestMsgContext}
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, FeatureNotEnabledException, UnauthorisedErrorException}
 import com.evernym.verity.util2.{ActorErrorResp, Status}
 import org.json.JSONObject
 
+import java.util.UUID
 import scala.util.Try
 
 
 final case class `API-REQUEST-ID`(id: String) extends CustomHeader {
   override def name(): String = CLIENT_REQUEST_ID_HTTP_HEADER
+
   override def value(): String = id
 
   override def renderInRequests(): Boolean = true
+
   override def renderInResponses(): Boolean = true
 }
 
-trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
+trait RestApiEndpointHandler {
+  this: HttpRouteWithPlatform =>
 
   lazy val restApiEnabled: Boolean = appConfig.getBooleanOption(REST_API_ENABLED).getOrElse(false)
 
@@ -47,7 +51,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   private def logIncoming(route: String,
-                          protoRef:ProtoRef,
+                          protoRef: ProtoRef,
                           thid: Option[String],
                           method: HttpMethod)
                          (implicit reqMsgContext: ReqMsgContext): Unit = {
@@ -64,7 +68,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   private def logOutgoing(route: String,
-                          protoRef:ProtoRef,
+                          protoRef: ProtoRef,
                           thid: Option[String],
                           status: StatusCode)
                          (implicit reqMsgContext: ReqMsgContext): Unit = {
@@ -81,8 +85,8 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   protected def handleRestMsgReq(route: String, protoRef: ProtoRef, auth: RestAuthContext, thid: Option[String])
-                      (implicit reqMsgContext: ReqMsgContext): Route = {
-    incrementAgentMsgCount
+                                (implicit reqMsgContext: ReqMsgContext): Route = {
+    incrementAgentMsgCount()
 
     logIncoming(route, protoRef, thid, HttpMethods.POST)
 
@@ -98,14 +102,14 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
 
       complete {
         platform.agentActorContext.agentMsgRouter.execute(RestMsgRouteParam(route, payload, restMsgContext))
-        .map (responseHandler(route, protoRef, thid))
+          .map(responseHandler(route, protoRef, thid))
       }
     }
   }
 
   protected def handleRestGetStatusReq(route: String, protoRef: ProtoRef, auth: RestAuthContext, thid: Option[String], params: Map[String, String])
-                            (implicit reqMsgContext: ReqMsgContext): Route = {
-    incrementAgentMsgCount
+                                      (implicit reqMsgContext: ReqMsgContext): Route = {
+    incrementAgentMsgCount()
 
     logIncoming(route, protoRef, thid, HttpMethods.GET)
 
@@ -115,38 +119,38 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
 
     complete {
       platform.agentActorContext.agentMsgRouter.execute(RestMsgRouteParam(route, msg, restMsgContext))
-      .map(responseHandler(route, protoRef, thid))
+        .map(responseHandler(route, protoRef, thid))
     }
   }
 
-  def withClientRequestId(resp: HttpResponse)(implicit reqMsgContext: ReqMsgContext) = {
+  def withClientRequestId(resp: HttpResponse)(implicit reqMsgContext: ReqMsgContext): HttpResponse = {
     reqMsgContext.clientReqId.map { id =>
       resp.withHeaders(`API-REQUEST-ID`(id))
     }.getOrElse(resp)
   }
 
   protected def responseHandler(route: String, protoRef: ProtoRef, thid: Option[String])(implicit reqMsgContext: ReqMsgContext): PartialFunction[Any, HttpResponse] = {
-    case br: ActorErrorResp  =>
+    case br: ActorErrorResp =>
       incrementAgentMsgFailedCount(Map("class" -> "ProcessFailure"))
       val resp = RestExceptionHandler.handleUnexpectedResponse(br)
       logOutgoing(route, protoRef, thid, resp.status)
       withClientRequestId(resp)
-    case Done             =>
-      incrementAgentMsgSucceedCount
+    case Done =>
+      incrementAgentMsgSucceedCount()
       val resp = HttpResponse(
         StatusCodes.Accepted,
-        entity=HttpEntity(
+        entity = HttpEntity(
           ContentType(MediaTypes.`application/json`),
           DefaultMsgCodec.toJson(RestAcceptedResponse())
         )
       )
       logOutgoing(route, protoRef, thid, resp.status)
       withClientRequestId(resp)
-    case respStr: String     =>
-      incrementAgentMsgSucceedCount
+    case respStr: String =>
+      incrementAgentMsgSucceedCount()
       val resp = HttpResponse(
         StatusCodes.OK,
-        entity=HttpEntity(
+        entity = HttpEntity(
           ContentType(MediaTypes.`application/json`),
           DefaultMsgCodec.toJson(RestOKResponse(respStr))
         )
@@ -154,21 +158,21 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
       logOutgoing(route, protoRef, thid, resp.status)
       withClientRequestId(resp)
     case jsonMsg: JsonMsg =>
-      incrementAgentMsgSucceedCount
+      incrementAgentMsgSucceedCount()
       val resp = HttpResponse(
         StatusCodes.OK,
-        entity=HttpEntity(
+        entity = HttpEntity(
           ContentType(MediaTypes.`application/json`),
           DefaultMsgCodec.toJson(RestOKResponse(new JSONObject(jsonMsg.msg)))
         )
       )
       logOutgoing(route, protoRef, thid, resp.status)
       withClientRequestId(resp)
-    case native: Any      =>
-      incrementAgentMsgSucceedCount
+    case native: Any =>
+      incrementAgentMsgSucceedCount()
       val resp = HttpResponse(
         StatusCodes.OK,
-        entity=HttpEntity(
+        entity = HttpEntity(
           ContentType(MediaTypes.`application/json`),
           DefaultMsgCodec.toJson(RestOKResponse(native))
         )
@@ -206,7 +210,7 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
     msgType.normalizedMsgType
     jsonMsg.put("@type", MsgFamily.typeStrFromMsgType(msgType))
     jsonMsg.put("@id", UUID.randomUUID.toString)
-    params.foreach{case (key, value) =>
+    params.foreach { case (key, value) =>
       jsonMsg.put(key, value)
     }
     jsonMsg.toString
@@ -240,13 +244,13 @@ trait RestApiEndpointHandler { this: HttpRouteWithPlatform =>
               checkIfRestApiEnabled()
               extractAuthHeader { auth =>
                 optionalHeaderValueByName(CLIENT_REQUEST_ID_HTTP_HEADER) { requestId =>
-                  path(Segment/Segment/Segment/Segment.?) { (route, protocolFamily, version, threadId) =>
+                  path(Segment / Segment / Segment / Segment.?) { (route, protocolFamily, version, threadId) =>
                     val protoRef = ProtoRef(protocolFamily, version)
                     implicit val reqMsgContext: ReqMsgContext = ReqMsgContext.empty
                       .withClientIpAddress(clientIpAddress)
                       .withClientReqId(requestId)
-                    MsgRespTimeTracker.recordReqReceived(reqMsgContext.id)       //tracing related
-                    parameterMap{ params =>
+                    MsgRespTimeTracker.recordReqReceived(reqMsgContext.id) //tracing related
+                    parameterMap { params =>
                       post {
                         handleRestMsgReq(route, protoRef, auth, threadId)
                       } ~
@@ -268,9 +272,11 @@ sealed trait RestResponse {
   def status: String
 }
 
-case class RestErrorResponse(errorCode: String, errorDetails: String, override val status: String="Error")  extends RestResponse
-case class RestAcceptedResponse(override val status: String="Accepted") extends RestResponse
-case class RestOKResponse(result: Any, override val status: String="OK") extends RestResponse
+case class RestErrorResponse(errorCode: String, errorDetails: String, override val status: String = "Error") extends RestResponse
+
+case class RestAcceptedResponse(override val status: String = "Accepted") extends RestResponse
+
+case class RestOKResponse(result: Any, override val status: String = "OK") extends RestResponse
 
 object RestExceptionHandler extends ActorResponseHandler {
   def createResponse(sdr: StatusDetailResp): Any = RestErrorResponse(sdr.statusCode, sdr.statusMsg)

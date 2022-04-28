@@ -44,9 +44,9 @@ trait HealthCheckEndpointHandlerV2 {
       val walletStorageFuture = healthChecker.checkWalletStorageStatus
       val blobStorageFuture = healthChecker.checkBlobStorageStatus
       for {
-        akkaStorage   <- akkaStorageFuture
+        akkaStorage <- akkaStorageFuture
         walletStorage <- walletStorageFuture
-        blobStorage   <- blobStorageFuture
+        blobStorage <- blobStorageFuture
       } yield ReadinessStatus(
         akkaStorage.status && walletStorage.status && blobStorage.status,
         akkaStorage.msg,

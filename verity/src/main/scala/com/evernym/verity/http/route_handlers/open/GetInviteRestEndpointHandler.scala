@@ -6,8 +6,6 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, get, handleExceptions, logRequestResult, parameters, pathPrefix, _}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, NotImplementedErrorException}
-import com.evernym.verity.util2.Status.{AGENT_NOT_YET_CREATED, DATA_NOT_FOUND, VALIDATION_FAILED}
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_ENDPOINT
@@ -25,6 +23,8 @@ import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{GetInviteDetail_MFV_0_5, ConnectingProtoDef => ConnectingProtoDef_v_0_5}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{GetInviteDetail_MFV_0_6, ConnectingProtoDef => ConnectingProtoDef_v_0_6}
 import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, NotImplementedErrorException}
+import com.evernym.verity.util2.Status.{AGENT_NOT_YET_CREATED, DATA_NOT_FOUND, VALIDATION_FAILED}
 import org.json.JSONObject
 
 import scala.concurrent.Future
@@ -34,7 +34,8 @@ import scala.concurrent.Future
  */
 
 trait GetInviteRestEndpointHandler
-  extends ResourceUsageCommon { this: HttpRouteWithPlatform =>
+  extends ResourceUsageCommon {
+  this: HttpRouteWithPlatform =>
 
   protected def getInviteMsgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
     case invDetail: InviteDetail  => handleExpectedResponse(invDetail)
@@ -50,9 +51,9 @@ trait GetInviteRestEndpointHandler
     implicit val actorEntityId: String = aid.actorEntityId
     val protocolDefs: Set[ProtoDef] = Set(ConnectingProtoDef_v_0_5, ConnectingProtoDef_v_0_6)
     val msg = protocolDefs.find(pd => ActorProtocol.buildTypeName(pd) == aid.regionTypeName) match {
-      case Some(ConnectingProtoDef_v_0_5)   => GetInviteDetail_MFV_0_5(aid.uid)
-      case Some(ConnectingProtoDef_v_0_6)   => GetInviteDetail_MFV_0_6(aid.uid)
-      case _                                =>
+      case Some(ConnectingProtoDef_v_0_5) => GetInviteDetail_MFV_0_5(aid.uid)
+      case Some(ConnectingProtoDef_v_0_6) => GetInviteDetail_MFV_0_6(aid.uid)
+      case _ =>
         throw new NotImplementedErrorException("get invite detail not supported for given token")
     }
 
@@ -85,7 +86,7 @@ trait GetInviteRestEndpointHandler
 
   protected def handleGetInviteDetailFut(fut: Future[Any]): Future[Any] = {
     fut map {
-      case ProtocolSyncRespMsg(msg: Any, _) => msg    //this is when msg is directly sent to connecting region actor
+      case ProtocolSyncRespMsg(msg: Any, _) => msg //this is when msg is directly sent to connecting region actor
       case id: InviteDetail => id
       case e => e
     }
@@ -119,7 +120,7 @@ trait GetInviteRestEndpointHandler
   protected def handleGetInvitationAries(base64inv: String)(implicit remoteAddress: RemoteAddress): Route = {
     addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_aries", clientIpAddress, None)
     complete {
-        getInviteMsgResponseHandler(decodeAriesInvitation(base64inv))
+      getInviteMsgResponseHandler(decodeAriesInvitation(base64inv))
     }
   }
 
@@ -144,24 +145,24 @@ trait GetInviteRestEndpointHandler
                     handleGetInviteByTokenReq(token)
                   }
                 } ~
-                pathPrefix(Segment) { DID =>
-                  (get & pathEnd) {
-                    parameters(Symbol("uid")) { uid =>
-                      handleGetInviteByDIDAndUidReq(DID, uid)
+                  pathPrefix(Segment) { DID =>
+                    (get & pathEnd) {
+                      parameters(Symbol("uid")) { uid =>
+                        handleGetInviteByDIDAndUidReq(DID, uid)
+                      }
                     }
                   }
-                }
               } ~
-              pathPrefix("msg") {
-                (get & pathEnd) {
-                  parameters("c_i") { inv =>
-                    handleGetInvitationAries(inv)
-                  } ~
-                    parameters("oob") { inv =>
+                pathPrefix("msg") {
+                  (get & pathEnd) {
+                    parameters("c_i") { inv =>
                       handleGetInvitationAries(inv)
-                    }
+                    } ~
+                      parameters("oob") { inv =>
+                        handleGetInvitationAries(inv)
+                      }
+                  }
                 }
-              }
             }
           }
         }

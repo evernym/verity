@@ -1,19 +1,10 @@
 package com.evernym.verity.http.common
 
-import java.net.{Inet4Address, InetAddress, NetworkInterface}
-import java.util.{Enumeration => JavaEnumeration}
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.MediaType.NotCompressible
 import akka.http.scaladsl.model._
-import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.Status.FORBIDDEN
 import com.evernym.verity.actor.persistence.HasActorResponseTimeout
-import com.evernym.verity.config.ConfigConstants.INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.observability.metrics.CustomMetrics.{AS_ENDPOINT_HTTP_AGENT_MSG_COUNT, AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT, AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT}
-import com.evernym.verity.observability.metrics.MetricsWriter
-import com.evernym.verity.util.SubnetUtilsExt
-import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -23,77 +14,9 @@ import scala.concurrent.ExecutionContextExecutor
  */
 trait HttpRouteBase
   extends RouteSvc
-   with HasActorResponseTimeout {
-
-  def logger: Logger
-  def appConfig: AppConfig
-
-  def metricsWriter: MetricsWriter
-
-  protected lazy val internalApiAllowedFromIpAddresses: List[SubnetUtilsExt] = {
-    var allowedIPs: List[String] = appConfig.getStringListReq(INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES)
-    if (allowedIPs.isEmpty) {
-      val interfaces: JavaEnumeration[NetworkInterface] = NetworkInterface.getNetworkInterfaces
-      while(interfaces.hasMoreElements)
-      {
-        val interface = interfaces.nextElement match {
-          case interface: NetworkInterface => interface
-          case _ => ???
-        }
-        val inetAddresses: JavaEnumeration[InetAddress] = interface.getInetAddresses
-        while (inetAddresses.hasMoreElements) {
-          inetAddresses.nextElement match {
-            case inetAddress: InetAddress =>
-              if((inetAddress.isSiteLocalAddress || inetAddress.isLoopbackAddress)
-                && inetAddress.isInstanceOf[Inet4Address]) {
-                val ip = inetAddress.toString.replace("/", "").concat("/32")
-                logger.debug(s"Adding site local address ${ip} to list of trusted IPs that can call" +
-                  s" the internal API endpoints")
-                allowedIPs = allowedIPs :+ ip
-              }
-            case _ => ???
-          }
-        }
-        logger.info(INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES + " undefined/empty. Defaulting to the current list of " +
-          "site local (10 dot, 127 dot, and 172 dot) network interface addresses")
-        logger.debug(INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES + s" is now ${allowedIPs.mkString(", ")}")
-        allowedIPs.map(ip => new SubnetUtilsExt(ip))
-      }
-    }
-    allowedIPs.map(ip => new SubnetUtilsExt(ip))
-  }
-
-  protected def checkIfApiCalledFromAllowedIPAddresses(callerIpAddress: String, allowedIpAddresses: List[SubnetUtilsExt])
-                                            (implicit req: HttpRequest): Unit = {
-    val allowedSubnetOpt = allowedIpAddresses.find { ipsn =>
-      ipsn.getInfo.isInRange(callerIpAddress)
-    }
-    allowedSubnetOpt match {
-      case Some(allowedIp: SubnetUtilsExt) =>
-        logger.debug(
-          s"'$callerIpAddress' matches allowed ip address rule (${allowedIp.getInfo.getCidrSignature}): ${req.getUri}",
-          ("caller_ip", callerIpAddress), ("req_uri", req.getUri))
-      case None =>
-        logger.warn(
-          s"'$callerIpAddress' does NOT match any configured/allowed ip addresses: ${req.getUri}",
-          ("caller_ip", callerIpAddress), ("req_uri", req.getUri))
-        logger.debug(s"Configured/Allowed ip addresses: " + internalApiAllowedFromIpAddresses.mkString(", "))
-        throw new BadRequestErrorException(FORBIDDEN.statusCode)
-    }
-  }
-
-  def checkIfInternalApiCalledFromAllowedIPAddresses(callerIpAddress: String)
-                                                    (implicit req: HttpRequest): Unit = {
-    checkIfApiCalledFromAllowedIPAddresses(callerIpAddress, internalApiAllowedFromIpAddresses)
-  }
-
-  def clientIpAddress(implicit remoteAddress: RemoteAddress): String =
-    remoteAddress.getAddress().get.getHostAddress
-
-  def incrementAgentMsgCount: Unit = metricsWriter.gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_COUNT)
-  def incrementAgentMsgSucceedCount: Unit = metricsWriter.gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_SUCCEED_COUNT)
-  def incrementAgentMsgFailedCount(tags: Map[String, String] = Map.empty): Unit =
-    metricsWriter.gaugeIncrement(AS_ENDPOINT_HTTP_AGENT_MSG_FAILED_COUNT, tags = tags)
+    with MetricsSupport
+    with AllowedIpsResolver
+    with HasActorResponseTimeout {
 }
 
 
@@ -103,12 +26,12 @@ object HttpCustomTypes {
   private val HTTP_MEDIA_SUB_TYPE_SSI_AGENT_WIRE = "ssi-agent-wire"
   private val HTTP_MEDIA_SUB_TYPE_DIDCOMM_ENVELOPE_ENC = "didcomm-envelope-enc"
 
-  lazy val MEDIA_TYPE_SSI_AGENT_WIRE = MediaType.customBinary(
+  lazy val MEDIA_TYPE_SSI_AGENT_WIRE: MediaType.Binary = MediaType.customBinary(
     HTTP_MEDIA_TYPE_APPLICATION,
     HTTP_MEDIA_SUB_TYPE_SSI_AGENT_WIRE,
     NotCompressible)
 
-  lazy val MEDIA_TYPE_DIDCOMM_ENVELOPE_ENC = MediaType.customBinary(
+  lazy val MEDIA_TYPE_DIDCOMM_ENVELOPE_ENC: MediaType.Binary = MediaType.customBinary(
     HTTP_MEDIA_TYPE_APPLICATION,
     HTTP_MEDIA_SUB_TYPE_DIDCOMM_ENVELOPE_ENC,
     NotCompressible)

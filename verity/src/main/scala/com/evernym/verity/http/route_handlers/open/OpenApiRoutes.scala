@@ -10,9 +10,10 @@ import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 
 trait OpenApiRoutes
   extends PackedMsgEndpointHandler
-  with RestApiEndpointHandler
-  with GetInviteRestEndpointHandler
-  with HeartbeatEndpointHandler { this: HttpRouteWithPlatform =>
+    with RestApiEndpointHandler
+    with GetInviteRestEndpointHandler
+    with HeartbeatEndpointHandler {
+  this: HttpRouteWithPlatform =>
 
   protected val openApiRoutes: Route = packedMsgRoute ~ restRoutes ~ getInviteRoute ~ heartbeatRoute
 }

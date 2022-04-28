@@ -2,16 +2,15 @@ package com.evernym.verity.http.route_handlers.restricted
 
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
-import akka.pattern.ask
 import akka.http.scaladsl.server.Directives.{extractClientIP, extractRequest, handleExceptions, logRequestResult, pathPrefix, post, _}
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.actor.msg_tracer.progress_tracker.{ConfigureTracking, GetState, MsgProgressTrackerHtmlGenerator, RecordedStates, TrackingConfigured}
-import com.evernym.verity.actor.{ForIdentifier, SendCmdToAllNodes, StartProgressTracking, StopProgressTracking}
-import com.evernym.verity.http.common.CustomExceptionHandler._
-import com.evernym.verity.actor.node_singleton.{MsgProgressTrackerCache, TrackingParam, TrackingStatus}
+import akka.pattern.ask
 import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.msg_tracer.progress_tracker._
+import com.evernym.verity.actor.node_singleton.{MsgProgressTrackerCache, TrackingParam, TrackingStatus}
+import com.evernym.verity.actor.{ForIdentifier, SendCmdToAllNodes, StartProgressTracking, StopProgressTracking}
 import com.evernym.verity.http.HttpUtil.entityAs
-import com.evernym.verity.http.common.CustomExceptionHandler.exceptionHandler
+import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
 
 import scala.concurrent.Future
@@ -20,7 +19,8 @@ import scala.concurrent.Future
  * this is not a feature code, it is just for troubleshooting purposes
  */
 
-trait MsgProgressTrackerEndpointHandler { this: HttpRouteWithPlatform =>
+trait MsgProgressTrackerEndpointHandler {
+  this: HttpRouteWithPlatform =>
 
   protected def configureTracking(trackingId: String, ct: ConfigureTracking): Future[Any] = {
     startTracking(trackingId).flatMap { _ =>
@@ -57,7 +57,7 @@ trait MsgProgressTrackerEndpointHandler { this: HttpRouteWithPlatform =>
         pathPrefix("agency" / "internal" / "msg-progress-tracker") {
           extractRequest { implicit req =>
             extractClientIP { implicit remoteAddress =>
-              checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
+              checkIfAddressAllowed(remoteAddress, req.uri)
               (get & pathEnd) {
                 complete {
                   getAllIdsBeingTracked map msgProgressBackendResponseHandler

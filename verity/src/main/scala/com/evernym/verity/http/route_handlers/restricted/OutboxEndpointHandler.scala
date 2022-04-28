@@ -13,7 +13,8 @@ import com.evernym.verity.msgoutbox.outbox.Outbox
 import scala.concurrent.Future
 
 // todo: should be switched to OutboxService usage after Outbox work finalization
-trait OutboxEndpointHandler { this: HttpRouteWithPlatform =>
+trait OutboxEndpointHandler {
+  this: HttpRouteWithPlatform =>
 
   import akka.actor.typed.scaladsl.adapter._
 
@@ -35,7 +36,7 @@ trait OutboxEndpointHandler { this: HttpRouteWithPlatform =>
         extractRequest { implicit req =>
           extractClientIP { implicit remoteAddress =>
             pathPrefix("agency" / "internal" / "outbox") {
-              checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
+              checkIfAddressAllowed(remoteAddress, req.uri)
               pathPrefix(Segment) { outboxId =>
                 (get & pathEnd) {
                   complete {

@@ -358,7 +358,7 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
         pathPrefix("agency" / "internal" / "maintenance") {
           extractRequest { implicit req =>
             extractClientIP { implicit remoteAddress =>
-              checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
+              checkIfAddressAllowed(remoteAddress, req.uri)
               actorStateCleanupMaintenanceRoutes ~
                 configMaintenanceRoutes ~
                 routeMigrationRoutes ~

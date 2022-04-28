@@ -1,14 +1,14 @@
 package com.evernym.verity.http.base.restricted
 
 import akka.http.scaladsl.model.StatusCodes._
-import com.evernym.verity.constants.Constants._
-import com.evernym.verity.util2.Status.UNSUPPORTED_MSG_TYPE
-import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
-import com.evernym.verity.http.base.EdgeEndpointBaseSpec
-import com.evernym.verity.http.common.StatusDetailResp
-import com.evernym.verity.testkit.util.TestConfigDetail
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
+import com.evernym.verity.constants.Constants._
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
+import com.evernym.verity.http.common.models.StatusDetailResp
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
+import com.evernym.verity.testkit.util.TestConfigDetail
+import com.evernym.verity.util2.Status.UNSUPPORTED_MSG_TYPE
 
 trait AgentConfigsSpec { this : EdgeEndpointBaseSpec =>
 

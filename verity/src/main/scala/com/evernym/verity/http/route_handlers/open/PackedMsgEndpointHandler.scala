@@ -2,29 +2,31 @@ package com.evernym.verity.http.route_handlers.open
 
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.StatusCodes.OK
-import akka.http.scaladsl.model.{HttpEntity, HttpMethod, HttpMethods, HttpRequest, MediaTypes, RemoteAddress, StatusCode}
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractClientIP, extractRequest, handleExceptions, logRequestResult, path, post, reject, _}
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.actor.agent.agency.AgencyPackedMsgHandler
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
 import com.evernym.verity.actor.base.Done
-import com.evernym.verity.http.common.HttpCustomTypes
-import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
-import com.evernym.verity.http.common.CustomExceptionHandler._
-import com.evernym.verity.util.{PackedMsgWrapper, ReqMsgContext}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.msgpacker.UnpackParam
 import com.evernym.verity.did.DidPair
 import com.evernym.verity.http.LoggingRouteUtil.{incomingLogMsg, outgoingLogMsg}
+import com.evernym.verity.http.common.CustomExceptionHandler._
+import com.evernym.verity.http.common.HttpCustomTypes
+import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
+import com.evernym.verity.util.{PackedMsgWrapper, ReqMsgContext}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 
 import scala.concurrent.Future
 
 
 trait PackedMsgEndpointHandler
-  extends AgencyPackedMsgHandler { this: HttpRouteWithPlatform =>
+  extends AgencyPackedMsgHandler {
+  this: HttpRouteWithPlatform =>
 
   def getAgencyDidPairFut: Future[DidPair]
+
   implicit def wap: WalletAPIParam
 
   private def logOutgoing(status: StatusCode)
@@ -44,7 +46,7 @@ trait PackedMsgEndpointHandler
   protected def handleAgentMsgResponse: PartialFunction[(Any, ReqMsgContext), ToResponseMarshallable] = {
 
     case (pm: PackedMsg, rmc) =>
-      incrementAgentMsgSucceedCount
+      incrementAgentMsgSucceedCount()
       logOutgoing(OK)(rmc)
       HttpEntity(MediaTypes.`application/octet-stream`, pm.msg)
 
@@ -62,6 +64,7 @@ trait PackedMsgEndpointHandler
   /**
    * PREFERABLE: sends the packed message to the agency agent
    * when used this approach, earlier we found performance
+   *
    * @param pmw packed msg wrapper
    * @return
    */
@@ -73,6 +76,7 @@ trait PackedMsgEndpointHandler
 
   /**
    * NOT-PREFERABLE: processes the packed message locally
+   *
    * @param pmw packed msg wrapper
    * @return
    */
@@ -115,10 +119,10 @@ trait PackedMsgEndpointHandler
 
   protected def handleAgentMsgReq(implicit req: HttpRequest, remoteAddress: RemoteAddress): Route = {
     // flow diagram: fwd + ctl + proto + legacy, step 1 -- Packed msg arrives.
-    incrementAgentMsgCount
+    incrementAgentMsgCount()
     implicit val reqMsgContext: ReqMsgContext = ReqMsgContext.empty.withClientIpAddress(clientIpAddress)
     logIncoming(HttpMethods.POST)
-    MsgRespTimeTracker.recordReqReceived(reqMsgContext.id)    //tracing metrics related
+    MsgRespTimeTracker.recordReqReceived(reqMsgContext.id) //tracing metrics related
     req.entity.contentType.mediaType match {
       case MediaTypes.`application/octet-stream` | HttpCustomTypes.MEDIA_TYPE_SSI_AGENT_WIRE | HttpCustomTypes.MEDIA_TYPE_DIDCOMM_ENVELOPE_ENC =>
         handleAgentMsgReqForOctetStreamContentType

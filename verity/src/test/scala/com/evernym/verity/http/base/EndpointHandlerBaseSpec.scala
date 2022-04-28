@@ -64,8 +64,8 @@ trait EdgeEndpointBaseSpec
   implicit def default(implicit system: ActorSystem): RouteTestTimeout =
     RouteTestTimeout(buildDurationInSeconds(appConfig.getIntReq(AKKA_HTTP_ROUTE_TEST_TIMEOUT_CONFIG_NAME)))
 
-  override def checkIfInternalApiCalledFromAllowedIPAddresses(callerIpAddress: String)(implicit req: HttpRequest): Unit = {
-    logger.debug("api request allowed from test case: " + req.uri, ("req_uri", req.uri))
+  override def checkIfAddressAllowed(remoteAddress: RemoteAddress, uri: Uri): Unit = {
+    logger.debug(s"api request allowed from test case: $uri", ("req_uri", uri))
   }
 
   def getInviteUrl(edgeAgent: MockEdgeAgent): String = {

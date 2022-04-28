@@ -6,22 +6,23 @@ import akka.http.scaladsl.server.Directives.{complete, pathEnd, _}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import akka.util.Timeout
-import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{BlockCaller, BlockResourceForCaller, GetBlockedList, UnblockCaller, UnblockResourceForCaller, UsageBlockingStatusChunk}
-import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{GetWarnedList, UnwarnCaller, UnwarnResourceForCaller, UsageWarningStatusChunk, WarnCaller, WarnResourceForCaller}
-import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr, ForResourceWarningStatusMngr}
 import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking._
+import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning._
+import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr, ForResourceWarningStatusMngr}
 import com.evernym.verity.actor.resourceusagethrottling.tracking.{GetAllResourceUsages, ResourceUsages}
 import com.evernym.verity.http.HttpUtil.entityAs
 import com.evernym.verity.http.common.CustomExceptionHandler._
 import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status._
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 
 import scala.concurrent.Future
 
-trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
+trait ResourceUsageEndpointHandler {
+  this: HttpRouteWithPlatform =>
 
   implicit val responseTimeout: Timeout
 
@@ -151,7 +152,7 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
         pathPrefix("agency" / "internal" / "resource-usage") {
           extractRequest { implicit req =>
             extractClientIP { implicit remoteAddress =>
-              checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
+              checkIfAddressAllowed(remoteAddress, req.uri)
               pathPrefix("warned") {
                 (get & pathEnd) {
                   parameters(Symbol("onlyWarned") ? "N", Symbol("onlyUnwarned") ? "N", Symbol("onlyActive") ? "Y", Symbol("ids").?, Symbol("resourceNames").?) {

@@ -21,7 +21,6 @@ import com.evernym.verity.observability.metrics.MetricsWriter
 import com.evernym.verity.vault.{EncryptParam, KeyParam, SealParam, WalletAPIParam}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Left
 
 /**
  * base class for handling a pairwise connection related functions

@@ -3,8 +3,9 @@ package com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.did.exception.DIDException
+import com.evernym.verity.integration.base.EndorserUtil
 import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
-import com.evernym.verity.protocol.engine.asyncapi.endorser.{Endorser, INDY_LEDGER_PREFIX}
+import com.evernym.verity.protocol.engine.asyncapi.endorser.Endorser
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{MockableEndorserAccess, MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
@@ -82,7 +83,7 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
           MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
         ))
         interaction(f.writer) {
-          withEndorserAccess(Map(INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
+          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
               withDefaultLedgerAccess(f, {
                 f.writer ~ Write(credDefName, schemaId, None, None)
@@ -102,7 +103,7 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
           MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
         ))
         interaction(f.writer) {
-          withEndorserAccess(Map(INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
+          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
               withDefaultLedgerAccess(f, {
                 f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
@@ -124,7 +125,7 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
           MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
         ))
         interaction(f.writer) {
-          withEndorserAccess(Map(INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
+          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
               withDefaultLedgerAccess(f, {
                 f.writer ~ Write(credDefName, schemaId, None, None)
@@ -144,7 +145,7 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
           MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
         ))
         interaction(f.writer) {
-          withEndorserAccess(Map(INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
+          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
               withDefaultLedgerAccess(f, {
                 f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
@@ -165,7 +166,7 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
         MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
       ))
       interaction(f.writer) {
-        withEndorserAccess(Map(INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
+        withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
             withDefaultLedgerAccess(f, {
               f.writer ~ Write(credDefName, schemaId, None, None)

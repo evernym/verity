@@ -166,6 +166,8 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
+  override def getIndyDefaultLegacyPrefix(): String = "did:sov"
+
   override val mockExecutionContext: ExecutionContext = executionContext
 }
 

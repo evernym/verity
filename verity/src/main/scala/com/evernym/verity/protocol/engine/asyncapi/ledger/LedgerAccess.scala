@@ -31,6 +31,8 @@ trait LedgerAccess {
   def prepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr)
                                   (handler: Try[LedgerRequest] => Unit): Unit
 
+  def getIndyDefaultLegacyPrefix(): String
+
   //new vdr apis
   def prepareSchemaTxn(schemaJson: String,
                        fqSchemaId: FQSchemaId,

@@ -82,6 +82,8 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     )
   }
 
+
+
   override def prepareSchemaTxn(schemaJson: String,
                                 fqSchemaId: FQSchemaId,
                                 submitterDID: DidStr,
@@ -161,4 +163,6 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
   }
 
   override def walletAccess: WalletAccess = _walletAccess
+
+  override lazy val getIndyDefaultLegacyPrefix: String = ledgerSvc.getIndyDefaultLegacyPrefix()
 }

@@ -1,12 +1,14 @@
 package com.evernym.verity.integration.base
 
 import akka.Done
-import com.evernym.verity.event_bus.event_handlers.EndorsementMessageHandler._
-import com.evernym.verity.event_bus.event_handlers.EndorserMessageHandler._
-import com.evernym.verity.event_bus.event_handlers.{DATA_FIELD_REQUEST_SOURCE, CLOUD_EVENT_TYPE, EVENT_ENDORSEMENT_COMPLETE_V1, EVENT_ENDORSEMENT_REQ_V1, TOPIC_SSI_ENDORSEMENT, TOPIC_SSI_ENDORSEMENT_REQ}
-import com.evernym.verity.event_bus.ports.consumer.{Message, MessageHandler}
-import com.evernym.verity.event_bus.ports.producer.ProducerPort
-import com.evernym.verity.protocol.engine.asyncapi.endorser.{ENDORSEMENT_RESULT_SUCCESS_CODE, INDY_LEDGER_PREFIX}
+import com.evernym.verity.config.ConfigConstants.LIB_INDY_LEDGER_DEFAULT_PREFIX
+import com.evernym.verity.eventing.event_handlers.EndorsementMessageHandler._
+import com.evernym.verity.eventing.event_handlers.EndorserMessageHandler._
+import com.evernym.verity.eventing.event_handlers.{CLOUD_EVENT_TYPE, DATA_FIELD_REQUEST_SOURCE, EVENT_ENDORSEMENT_COMPLETE_V1, EVENT_ENDORSEMENT_REQ_V1, TOPIC_SSI_ENDORSEMENT, TOPIC_SSI_ENDORSEMENT_REQ}
+import com.evernym.verity.eventing.ports.consumer.{Message, MessageHandler}
+import com.evernym.verity.eventing.ports.producer.ProducerPort
+import com.evernym.verity.protocol.engine.asyncapi.endorser.ENDORSEMENT_RESULT_SUCCESS_CODE
+import com.typesafe.config.Config
 import io.cloudevents.core.builder.CloudEventBuilder
 import io.cloudevents.core.provider.EventFormatProvider
 import io.cloudevents.jackson.JsonFormat
@@ -18,7 +20,9 @@ import java.time.ZoneId
 import java.util.UUID
 import scala.concurrent.Future
 
-class EndorsementReqMsgHandler(eventProducer: ProducerPort) extends MessageHandler {
+class EndorsementReqMsgHandler(config: Config, eventProducer: ProducerPort) extends MessageHandler {
+
+  lazy val indyLedgerPrefix: String = config.getString(LIB_INDY_LEDGER_DEFAULT_PREFIX)
 
   override def handleMessage(message: Message): Future[Done] = {
     message.metadata.topic match {
@@ -36,7 +40,7 @@ class EndorsementReqMsgHandler(eventProducer: ProducerPort) extends MessageHandl
 
     val respJsonObject = new JSONObject()
     respJsonObject.put(DATA_FIELD_ENDORSEMENT_ID, UUID.randomUUID().toString)
-    respJsonObject.put(DATA_FIELD_LEDGER_PREFIX, INDY_LEDGER_PREFIX)
+    respJsonObject.put(DATA_FIELD_LEDGER_PREFIX, indyLedgerPrefix)
     respJsonObject.put(DATA_FIELD_REQUEST_SOURCE, receivedEvent.getString("source"))
     respJsonObject.put(DATA_FIELD_SUBMITTER_DID, "submitterdid")
     val resultJSONObject = new JSONObject()

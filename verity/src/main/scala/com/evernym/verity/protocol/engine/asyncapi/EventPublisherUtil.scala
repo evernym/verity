@@ -1,8 +1,8 @@
 package com.evernym.verity.protocol.engine.asyncapi
 
 import akka.Done
-import com.evernym.verity.event_bus.event_handlers.RequestSourceUtil
-import com.evernym.verity.event_bus.ports.producer.ProducerPort
+import com.evernym.verity.eventing.event_handlers.RequestSourceUtil
+import com.evernym.verity.eventing.ports.producer.ProducerPort
 import com.evernym.verity.protocol.engine.{DomainId, PinstId, ProtoRef, RelationshipId, ThreadId}
 import io.cloudevents.CloudEvent
 import io.cloudevents.core.builder.CloudEventBuilder

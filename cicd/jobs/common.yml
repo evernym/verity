@@ -4,6 +4,7 @@
       - main
       - tags
       - merge_requests
+      - team1_test_endorsment
 
 .verity-main-only-rule:
   only:

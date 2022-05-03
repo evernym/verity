@@ -31,7 +31,7 @@ publish-docker:
     entrypoint: [""]
   extends:
     - .publish-common
-    - .main-or-manual-rule
+    - .base-rule
   needs:
     - package
   script:

@@ -40,8 +40,8 @@ trait UserAgentPairwiseSpecScaffolding
 
   implicit def msgPackagingContext: AgentMsgPackagingContext
 
-  val mockEntAgencyAdmin: MockEdgeAgent =
-    new MockEdgeAgent(UrlParam("localhost:9002"), platform.agentActorContext.appConfig, futureExecutionContext)
+  lazy val mockEntAgencyAdmin: MockEdgeAgent =
+    new MockEdgeAgent(UrlParam("localhost:9002"), platform.agentActorContext.appConfig, futureExecutionContext, system = system)
 
   lazy val mockRemoteEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockEntAgencyAdmin, futureExecutionContext)
 

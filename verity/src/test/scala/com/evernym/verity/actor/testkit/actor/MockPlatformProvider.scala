@@ -67,13 +67,14 @@ trait ProvidesMockPlatform
   lazy val userAgentRegionActor: ActorRef = platform.userAgentRegion
   lazy val userAgentPairwiseRegionActor: ActorRef = platform.userAgentPairwiseRegion
   lazy val activityTrackerRegionActor: ActorRef = platform.activityTrackerRegion
-  lazy val walletRegionActor: ActorRef = platform.walletActorRegion
+  lazy val walletRegionActor: ActorRef = agentActorContext.actorWalletService.walletActorRegion
 
   lazy val mockAgencyAdmin: MockEdgeAgent =
     new MockEdgeAgent(
       UrlParam(localAgencyEndpoint),
       platform.agentActorContext.appConfig,
-      executionContextProvider.futureExecutionContext
+      executionContextProvider.futureExecutionContext,
+      system = system
     )
 
   def getTotalAgentMsgsSentByCloudAgentToRemoteAgent: Int = {

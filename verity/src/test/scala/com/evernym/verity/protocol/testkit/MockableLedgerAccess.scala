@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.testkit
 
 import akka.actor.ActorRef
-import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.ledger._
@@ -9,7 +9,7 @@ import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessAdapter
-import com.evernym.verity.testkit.TestWallet
+import com.evernym.verity.testkit.{BasicSpecBase, TestWallet}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.evernym.verity.vault.WalletAPIParam
@@ -36,13 +36,13 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
                            val schemas: Map[String, GetSchemaResp] = MockLedgerData.schemas01,
                            val credDefs: Map[String, GetCredDefResp] = MockLedgerData.credDefs01,
                            val ledgerAvailable: Boolean = true)
-  extends LedgerAccess with MockAsyncOpRunner {
+  extends LedgerAccess with MockAsyncOpRunner with ActorSpec with BasicSpecBase{
 
   import MockableLedgerAccess._
 
   implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
-  val testWallet = new TestWallet(executionContext, false)
+  val testWallet = new TestWallet(executionContext, false, system)
   implicit val wap: WalletAPIParam = testWallet.wap
   override val walletAccess = new WalletAccessAdapter(
     testWallet.testWalletAPI,
@@ -167,6 +167,8 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
   }
 
   override val mockExecutionContext: ExecutionContext = executionContext
+
+  def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 

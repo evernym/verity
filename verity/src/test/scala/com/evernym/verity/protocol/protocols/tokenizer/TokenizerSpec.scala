@@ -2,14 +2,14 @@ package com.evernym.verity.protocol.protocols.tokenizer
 
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.user.ComMethodDetail
-import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.actor.wallet.SignedMsg
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignedMsgResult
 import com.evernym.verity.protocol.protocols.tokenizer.State.{TokenCreated, TokenFailed, TokenReceived}
 import com.evernym.verity.protocol.protocols.tokenizer.TokenizerMsgFamily.{AskForToken, Requester, SigningTokenErr, Tokenizer}
 import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
-import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}
+import com.evernym.verity.testkit.{BasicFixtureSpec, BasicSpecBase, HasTestWalletAPI}
 import com.evernym.verity.util.Base64Util.getBase64Encoded
 import com.evernym.verity.util.TestExecutionContextProvider
 
@@ -20,8 +20,7 @@ import scala.util.{Failure, Try}
 
 class TokenizerSpec
   extends TestsProtocolsImpl(TokenizerDefinition)
-    with BasicFixtureSpec
-    with HasTestWalletAPI {
+    with BasicFixtureSpec{
 
   import TestingVars._
 
@@ -111,7 +110,9 @@ class TokenizerSpec
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
-  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
+  implicit override lazy val appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
+
+  def executionContextProvider: ExecutionContextProvider = ecp
 }
 
 object TestingVars {

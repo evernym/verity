@@ -24,7 +24,6 @@ class AgencyAgentRecoverySpec
   override def beforeAll(): Unit = {
     super.beforeAll()
     setupBasicAgencyAgent()
-    closeClientWallets(Set(myAgencyAgentEntityId))
   }
 
   "Agency agent actor" - {

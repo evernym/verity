@@ -1,9 +1,11 @@
 package com.evernym.verity.integration.base.verity_provider
 
+import akka.actor.ActorSystem
 import akka.cluster.MemberStatus
 import akka.cluster.MemberStatus.{Down, Removed, Up}
 import akka.testkit.TestKit
 import com.evernym.verity.actor.persistence.recovery.base.PersistentStoreTestKit
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.integration.base.PortProvider
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
@@ -13,6 +15,7 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
 
+import java.util.UUID
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
@@ -116,9 +119,12 @@ case class VerityEnv(seed: String,
 
   lazy val endpointProvider: VerityEnvUrlProvider = VerityEnvUrlProvider(nodes)
 
-  lazy val persStoreTestKit = new PersistentStoreTestKit(getVerityLocalNode.platform.actorSystem, ec)
+  val system: ActorSystem = ActorSystemVanilla(UUID.randomUUID().toString)
+
+  lazy val persStoreTestKit = new PersistentStoreTestKit(ec, getVerityLocalNode.platform.actorSystem)
 
   lazy val getVerityLocalNode: VerityLocalNode = nodes.head.asInstanceOf[VerityLocalNode]
+
 }
 
 object VerityEnv {

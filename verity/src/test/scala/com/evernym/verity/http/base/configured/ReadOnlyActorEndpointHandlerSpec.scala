@@ -27,7 +27,6 @@ class ReadOnlyActorEndpointHandlerSpec
     super.beforeAll()
     setupBasicAgencyAgent()
     setupBasicUserAgent()
-    closeClientWallets(Set(myAgencyAgentEntityId, mySelfRelAgentEntityId))
   }
 
   val basePath = s"/agency/internal/maintenance/persistent-actor/$USER_AGENT_REGION_ACTOR_NAME/$mySelfRelAgentEntityId/data"

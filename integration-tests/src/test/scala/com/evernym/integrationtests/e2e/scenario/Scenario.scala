@@ -16,7 +16,6 @@ import com.evernym.verity.util2.{ExecutionContextProvider, UrlParam}
 import com.typesafe.config.ConfigFactory
 
 import java.nio.file.Path
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 
@@ -35,7 +34,8 @@ class ApplicationAdminExt(val scenario: Scenario,
     new MockEdgeAgent(
       urlParam,
       appConfig,
-      ecp.futureExecutionContext
+      ecp.futureExecutionContext,
+      system = system
     )
 
   val sdks: List[VeritySdkProvider] = sdkConfigs.map(VeritySdkProvider.fromSdkConfig(_, scenario))

@@ -68,16 +68,6 @@ trait BaseRecoverySpecLike
     apiCallCount
   }
 
-  /**
-   * closes client/test side of the wallets
-   * @param walletIds
-   */
-  def closeClientWallets(walletIds: Set[String]): Unit = {
-    walletIds.foreach { walletId =>
-      closeWallet(walletId)
-    }
-  }
-
   def assertPersistentActorDetail(pad: PersistentActorDetail,
                                   expectedPersistenceId: PersistenceIdParam,
                                   expectedRecoveredEvents: Int): Unit = {

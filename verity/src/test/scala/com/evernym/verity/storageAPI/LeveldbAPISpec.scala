@@ -1,17 +1,17 @@
 package com.evernym.verity.storageAPI
 
 import java.util.UUID
-
 import akka.Done
 import akka.actor.ActorSystem
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.integration.base.PortProvider
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.storage_services.leveldb.LeveldbAPI
 import com.evernym.verity.testkit.BasicAsyncSpec
-import com.typesafe.config.{Config, ConfigValueFactory}
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.BeforeAndAfterAll
 
@@ -25,8 +25,11 @@ class LeveldbAPISpec extends BasicAsyncSpec with BeforeAndAfterAll{
     super.afterAll()
     Await.result(system.terminate(), 10 seconds)
   }
+  val port: Int = PortProvider.getFreePort
+  val configPort: TestAppConfig = TestAppConfig(
+    Some(ConfigFactory.parseString(s"akka.remote.artery.canonical.port = $port")))
 
-  private def blobConfig(): Config = (new TestAppConfig)
+  private def blobConfig(): Config = configPort
     .config
     .withValue("verity.blob-store.storage-service", ConfigValueFactory.fromAnyRef("com.evernym.verity.storage_services.leveldb.LeveldbAPI"))
     .withValue("verity.blob-store.local-store-path", ConfigValueFactory.fromAnyRef(s"/tmp/verity/leveldb-spec-${UUID.randomUUID().toString}"))

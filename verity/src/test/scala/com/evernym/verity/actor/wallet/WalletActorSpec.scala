@@ -5,7 +5,6 @@ import akka.actor.PoisonPill
 import akka.testkit.ImplicitSender
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agentRegion
-import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.did.{DidPair, VerKeyStr}
@@ -68,12 +67,6 @@ class WalletActorSpec
       }
     }
 
-    "when sent Close to testActor" - {
-      "should be closed successfully" in {
-        testWalletActor ! Close()
-        expectMsgType[Done.type]
-      }
-    }
 
     "when sent CreateWallet command" - {
       "should respond with WalletCreated" in {
@@ -406,15 +399,6 @@ class WalletActorSpec
         newWalletActor ! GetVerKeyOpt(requesterVk)
         val gvkr3 = expectMsgType[GetVerKeyOptResp]
         gvkr3.verKey shouldBe None
-      }
-    }
-
-    "when sent Close command" - {
-      "should close wallet" in {
-        List(issuerWalletActor, holderWalletActor, verifierWalletActor).foreach { walletActor =>
-          walletActor ! Close()
-          expectMsgType[Done.type]
-        }
       }
     }
   }

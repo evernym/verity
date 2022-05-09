@@ -13,6 +13,7 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateComMethodReqMsg
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateKeyReqMsg_MFV_0_6, GetMsgsReqMsg_MFV_0_6, GetMsgsRespMsg_MFV_0_6, KeyCreatedRespMsg_MFV_0_6, MsgStatusUpdatedRespMsg_MFV_0_6, UpdateMsgStatusReqMsg_MFV_0_6}
 import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.{GetUpgradeInfo, UpgradeInfoRespMsg_MFV_1_0}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer}
+import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.NO
 import com.evernym.verity.did.DidPair
 import com.evernym.verity.integration.base.sdk_provider.MsgFamilyHelper.buildMsgTypeStr

@@ -28,7 +28,7 @@ trait AgencyAgentPairwiseSpecBase
   var agencyAgentPairwiseDID:DidStr = _
 
   override lazy val mockAgencyAdmin: MockEdgeAgent =
-    new MockEdgeAgent(UrlParam("localhost:9001"), platform.agentActorContext.appConfig, futureExecutionContext)
+    new MockEdgeAgent(UrlParam("localhost:9001"), platform.agentActorContext.appConfig, futureExecutionContext, system = system)
 
   override lazy val mockEdgeAgent: MockEdgeAgent = buildMockEdgeAgent(mockAgencyAdmin, futureExecutionContext)
 

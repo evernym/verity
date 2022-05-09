@@ -1,5 +1,6 @@
 package com.evernym.verity.testkit
 
+import akka.actor.ActorSystem
 import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, SignMsg, SignedMsg}
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.util.Base64Util
@@ -10,8 +11,9 @@ import scala.concurrent.ExecutionContext
 
 
 class TestSponsor(seed: String,
-                  futExecutionContext: ExecutionContext) {
-  val sponsorWallet = new TestWallet(futExecutionContext, createWallet = true)
+                  futExecutionContext: ExecutionContext,
+                  system: ActorSystem) {
+  val sponsorWallet = new TestWallet(futExecutionContext, createWallet = true, system)
   private val sponsorKey: NewKeyCreated = sponsorWallet.executeSync[NewKeyCreated](CreateNewKey(seed=Some(seed)))
   val verKey: VerKeyStr = sponsorKey.verKey
 

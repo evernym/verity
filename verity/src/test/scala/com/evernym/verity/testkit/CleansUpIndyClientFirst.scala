@@ -10,12 +10,13 @@ trait CleansUpIndyClientFirst extends BeforeAndAfterAll { this: Suite =>
     * sometimes it may be desired not to do so (if you are trying to run multiple test cases parallelly etc)
     * which can be achieved by overriding and setting it to false
     */
-  val deleteIndyClientContents: Boolean = true
+  lazy val deleteIndyClientContents: Boolean = System.getenv().getOrDefault("CLEANUP_INDY_DIR", "true").toBoolean
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    if (deleteIndyClientContents)
+    if (deleteIndyClientContents) {
       TestUtil.RISKY_deleteIndyClientContents()
+    }
   }
 
 }

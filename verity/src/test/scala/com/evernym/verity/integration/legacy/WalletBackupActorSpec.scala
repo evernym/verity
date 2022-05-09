@@ -1,10 +1,12 @@
 package com.evernym.verity.integration.legacy
 
+import akka.actor.ActorSystem
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.UserAgentSpecScaffolding
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.AkkaTestBasic
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -35,7 +37,7 @@ class WalletBackupActorSpec
   implicit val msgPackagingContext: AgentMsgPackagingContext =
     AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = false)
 
-  val walletBackupUtil = new WalletBackupSpecUtil(mockEdgeAgent, futureExecutionContext)
+  val walletBackupUtil = new WalletBackupSpecUtil(mockEdgeAgent, futureExecutionContext, system)
 
   override def overrideConfig: Option[Config] = Option {
     AkkaTestBasic.customJournal("com.evernym.verity.actor.FailsOnLargeEventTestJournal")
@@ -235,7 +237,7 @@ case class CloudAgentDetail(did: DidStr, verKey: VerKeyStr) {
 }
 
 
-class WalletBackupSpecUtil(mockEdgeAgent: MockEdgeAgent, executionContext: ExecutionContext) extends DeadDropSpecUtil {
+class WalletBackupSpecUtil(mockEdgeAgent: MockEdgeAgent, executionContext: ExecutionContext, override val system: ActorSystem) extends DeadDropSpecUtil {
 
   override def appConfig: AppConfig = mockEdgeAgent.appConfig
 

@@ -1,5 +1,6 @@
 package com.evernym.verity.testkit.mock.agent
 
+import akka.actor.ActorSystem
 import com.evernym.verity.actor.testkit.{AgentDIDDetail, CommonSpecUtil}
 import com.evernym.verity.actor.wallet.{StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.config.AppConfig
@@ -18,8 +19,9 @@ import scala.concurrent.ExecutionContext
 class MockCloudAgent(override val executionContext: ExecutionContext,
                      override val agencyEndpoint: UrlParam,
                      override val appConfig: AppConfig,
-                     override val myDIDDetail: AgentDIDDetail = CommonSpecUtil.generateNewAgentDIDDetail())
-  extends AgentWithMsgHelper {
+                     override val myDIDDetail: AgentDIDDetail = CommonSpecUtil.generateNewAgentDIDDetail(),
+                     override implicit val system: ActorSystem)
+  extends AgentWithMsgHelper{
 
   override def initSpecific(): Unit = {}
   var remoteAgentAndAgencyIdentityOpt: Option[RemoteAgentAndAgencyIdentity] = None

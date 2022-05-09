@@ -187,7 +187,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
           case _@(_: WalletDoesNotExist) =>
             SetWallet(None)
           case e =>
-            logger.error(s"unexpected error occurred while trying to open wallet: " + e.getMessage + e.getClass.getName)
+            logger.error(s"[$actorId] unexpected error occurred while trying to open wallet: " + e.getMessage + s" (${e.getClass.getName})")
             throw e
         }.pipeTo(self)
     }
@@ -205,7 +205,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
 
   def closeWallet(): Unit = {
     if (walletExtOpt.isEmpty) {
-      logger.debug("WalletActor try to close not opened wallet")
+      logger.debug(s"[$actorId] WalletActor try to close not opened wallet")
     } else {
       metricsWriter.runWithSpan("closeWallet", "WalletActor", InternalSpan) {
         walletProvider.close(walletExt)
@@ -316,8 +316,6 @@ case class CreateProof(proofRequest: String, requestedCredentials: String, schem
 case class SignLedgerRequest(request: LedgerRequest, submitterDetail: Submitter) extends WalletCommand
 
 case class MultiSignLedgerRequest(request: LedgerRequest, submitterDetail: Submitter) extends WalletCommand
-
-case class Close() extends WalletCommand
 
 //responses
 

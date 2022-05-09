@@ -6,7 +6,6 @@ import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.testkit.{BasicSpec, HasTestWalletAPI}
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.util2.HasExecutionContextProvider

@@ -17,7 +17,6 @@ import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
 import com.evernym.verity.actor.segmentedstates.SegmentedStateStore
 import com.evernym.verity.actor.url_mapper.UrlStore
-import com.evernym.verity.actor.wallet.WalletActor
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.constants.ActorNameConstants._
@@ -222,23 +221,6 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       ).toSeconds,
       TimeUnit.SECONDS
     ))
-  )
-
-  //wallet actor
-  val walletActorRegion: ActorRef = createNonPersistentRegion(
-    WALLET_REGION_ACTOR_NAME,
-    buildProp(
-      Props(
-        new WalletActor(
-          agentActorContext.appConfig,
-          agentActorContext.poolConnManager,
-          executionContextProvider.futureExecutionContext
-        )
-      )
-    ),
-    passivateIdleEntityAfter = Option(
-      passivateDuration(NON_PERSISTENT_WALLET_ACTOR_PASSIVATE_TIME_IN_SECONDS, 600.seconds)
-    )
   )
 
   //token manager

@@ -3,13 +3,12 @@ package com.evernym.verity.actor.agent.relationship
 import java.util.UUID
 
 import akka.actor.{ActorRef, Props}
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.ShardUtil
 import com.evernym.verity.actor.testkit.{HasBasicActorSystem, TestAppConfig}
 import com.evernym.verity.testkit.{BasicAsyncSpec, CleansUpIndyClientFirst, HasTestAgentWalletAPI}
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY}
 import com.evernym.verity.actor.base.Done
-import com.evernym.verity.actor.wallet.{Close, CreateNewKey, CreateWallet, NewKeyCreated, WalletActor, WalletCreatedBase}
+import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, WalletActor, WalletCreatedBase}
 import com.evernym.verity.constants.ActorNameConstants.WALLET_REGION_ACTOR_NAME
 import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.protocol.protocols.connecting.common.LegacyRoutingDetail
@@ -41,7 +40,6 @@ class DidDocBuilderSpec
     val thisAgentKey = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("0000000000000000000000000000TEST")))
     val otherAgentKey = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000000OTHER")))
     val theirAgentKey = testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000000THEIR")))          //key to represent their agent
-    testWalletAPI.executeSync[Done.type](Close())
     (relDIDPair, thisAgentKey, otherAgentKey, theirAgentKey)
   }
 

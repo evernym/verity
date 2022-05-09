@@ -3,7 +3,6 @@ package com.evernym.verity.vault.service
 import java.util.concurrent.ExecutionException
 import scala.concurrent.ExecutionContext
 
-import com.evernym.verity.actor.base.Done
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest}
@@ -39,13 +38,7 @@ object WalletMsgHandler {
       case sc: StoreCred                    => handleStoreCred(sc)
       case cfpr: CredForProofReq            => handleCredForProofReq(cfpr)
       case cp: CreateProof                  => handleCreateProof(cp)
-      case _: Close                         => handleCloseWallet()
     }
-  }
-
-  private def handleCloseWallet()(implicit wmp: WalletMsgParam, we: WalletExt, ec: ExecutionContext): Future[Done.type] = {
-    wmp.walletProvider.close(we)
-    Future(Done)
   }
 
   private def handleCreateProof(proof: CreateProof)(implicit we: WalletExt, ec: ExecutionContext): Future[ProofCreated] = {

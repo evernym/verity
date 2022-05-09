@@ -1,14 +1,17 @@
 package com.evernym.verity.protocol.protocols.deaddrop
 
+import akka.actor.ActorSystem
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
+import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil, TestAppConfig}
 import com.evernym.verity.protocol.engine.registry.PinstIdResolution
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.Bucket_2_Legacy
 import com.evernym.verity.protocol.testkit.{ContainerNotFoundException, TestsProtocolsImpl}
-import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.testkit.{BasicFixtureSpec, BasicSpecBase}
 import com.evernym.verity.util._
 import org.scalatest.concurrent.Eventually
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext
 
 
@@ -107,5 +110,7 @@ class DeadDropSpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  val system: ActorSystem = ActorSystemVanilla(UUID.randomUUID().toString)
 }
 

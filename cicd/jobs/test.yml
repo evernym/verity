@@ -44,8 +44,9 @@ coverage:
     paths:
       - verity/target/scala-2.13/scoverage-report/*
     reports:
-      cobertura:
-        - verity/target/scala-2.13/coverage-report/cobertura.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: verity/target/scala-2.13/coverage-report/cobertura.xml
   allow_failure: true
   when: manual
 

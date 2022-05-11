@@ -48,12 +48,12 @@ class KafkaConsumerAdapter(override val messageHandler: MessageHandler,
         // otherwise the last offset which gets committed may be not the desired one (because futures can complete in any order)
         .mapAsync(settingsProvider.msgHandlingParallelism) { committableMsg =>   //how many futures in parallel to process each received message
           Try {
-            logger.debug(prepareLogMsgStr(committableMsg, s"committable message received: $committableMsg"))
+            logger.info(prepareLogMsgStr(committableMsg, s"committable message received: $committableMsg"))
             val createTime = Instant.ofEpochMilli(committableMsg.record.timestamp())
             val metadata = Metadata(committableMsg.record.topic(), committableMsg.record.partition(), committableMsg.record.offset(), createTime)
             val cloudEvent = new JSONObject(new String(committableMsg.record.value()))
             val message = Message(metadata, cloudEvent)
-            logger.debug(prepareLogMsgStr(committableMsg, s"committable message parsed successfully"))
+            logger.info(prepareLogMsgStr(committableMsg, s"committable message parsed successfully"))
             messageHandler
               .handleMessage(message)
               .map { _ =>

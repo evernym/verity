@@ -22,6 +22,7 @@ class ConsumedMessageHandler(config: Config,
   lazy val endorsementReqStatusMessageHandler = new EndorsementMessageHandler(config, agentMsgRouter)
 
   override def handleMessage(message: Message): Future[Done] = {
+    logger.info("event received: " + message)
     message.metadata.topic match {
       case TOPIC_SSI_ENDORSER =>
         endorserRegistryEventHandler.handleMessage(message)

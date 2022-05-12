@@ -55,7 +55,7 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
                |"$CLOUD_EVENT_DATA_FIELD_TXN_REF": "${storageInfo.endpoint}",
                |"$CLOUD_EVENT_DATA_FIELD_ENDORSER": "$endorser",
                |"$CLOUD_EVENT_DATA_FIELD_VDR": "$vdr",
-               |"$CLOUD_EVENT_DATA_FIELD_VDR_TYPE": "$vdrType",
+               |"$CLOUD_EVENT_DATA_FIELD_VDR_TYPE": "$vdrType"
                |}""".stripMargin
           eventPublisherUtil.publishToEventBus(jsonPayload, EVENT_ENDORSEMENT_REQ_V1, TOPIC_REQUEST_ENDORSEMENT)
         },

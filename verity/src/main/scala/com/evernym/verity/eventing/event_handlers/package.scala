@@ -3,6 +3,9 @@ package com.evernym.verity.eventing
 
 package object event_handlers {
 
+  //common data field names
+  val DATA_FIELD_LEDGER_PREFIX = "ledgerprefix"
+
   //constants
   val CLOUD_EVENT_TYPE = "type"
   val CLOUD_EVENT_DATA = "data"

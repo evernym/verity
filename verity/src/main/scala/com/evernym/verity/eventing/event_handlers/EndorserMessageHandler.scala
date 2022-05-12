@@ -52,6 +52,5 @@ class EndorserMessageHandler(config: Config,
 
 object EndorserMessageHandler {
   //constants
-  val DATA_FIELD_LEDGER_PREFIX = "ledgerprefix"
   val DATA_FIELD_ENDORSER_DID = "endorserdid"
 }

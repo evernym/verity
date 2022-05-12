@@ -8,7 +8,7 @@ trait EndorserAccess {
 
   def withCurrentEndorser(ledger: String)(handler: Try[Option[Endorser]] => Unit): Unit
 
-  def endorseTxn(payload: String, endorser: String, vdr: String, vdrType: String)(handler: Try[Unit] => Unit): Unit
+  def endorseTxn(payload: String, vdrType: String)(handler: Try[Unit] => Unit): Unit
 }
 
 case class Endorser(did: DidStr)

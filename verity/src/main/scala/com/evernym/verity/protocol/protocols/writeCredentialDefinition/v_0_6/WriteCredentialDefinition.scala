@@ -82,7 +82,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                       //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
                       ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefCreated.credDefJson, endorser.did) {
                         case Success(ledgerRequest) =>
-                          ctx.endorser.endorseTxn(ledgerRequest.req, endorser.did, ctx.ledger.getIndyDefaultLegacyPrefix(), VDR_TYPE_INDY) {
+                          ctx.endorser.endorseTxn(ledgerRequest.req, VDR_TYPE_INDY) {
                             case Success(_) =>
                               ctx.apply(AskedForEndorsement(credDefCreated.credDefId, ledgerRequest.req))
                             case Failure(e) =>

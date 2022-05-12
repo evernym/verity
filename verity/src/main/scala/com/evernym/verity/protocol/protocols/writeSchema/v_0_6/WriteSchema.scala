@@ -68,7 +68,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
                 //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
                 ctx.ledger.prepareSchemaForEndorsement(submitterDID, schemaCreated.schemaJson, endorser.did) {
                   case Success(ledgerRequest) =>
-                    ctx.endorser.endorseTxn(ledgerRequest.req, endorser.did, ctx.ledger.getIndyDefaultLegacyPrefix(), VDR_TYPE_INDY) {
+                    ctx.endorser.endorseTxn(ledgerRequest.req, VDR_TYPE_INDY) {
                       case Failure(exception) => problemReport(exception)
                       case Success(value) => ctx.apply(AskedForEndorsement(schemaCreated.schemaId, ledgerRequest.req))
                     }

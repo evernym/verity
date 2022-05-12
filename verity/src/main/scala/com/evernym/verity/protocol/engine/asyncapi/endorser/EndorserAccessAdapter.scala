@@ -6,7 +6,7 @@ import akka.actor.typed.scaladsl.adapter._
 import com.evernym.verity.actor.cluster_singleton.ForEndorserRegistry
 import com.evernym.verity.endorser_registry.EndorserRegistry.Commands.GetEndorsers
 import com.evernym.verity.endorser_registry.EndorserRegistry.Replies.LedgerEndorsers
-import com.evernym.verity.eventing.event_handlers.{EVENT_ENDORSEMENT_REQ_V1, TOPIC_REQUEST_ENDORSEMENT}
+import com.evernym.verity.eventing.event_handlers.{DATA_FIELD_LEDGER_PREFIX, EVENT_ENDORSEMENT_REQ_V1, TOPIC_REQUEST_ENDORSEMENT}
 import com.evernym.verity.eventing.ports.producer.ProducerPort
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.BaseAsyncAccessImpl
@@ -46,16 +46,14 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
     )
   }
 
-  override def endorseTxn(payload: String, endorser: String, vdr: String, vdrType: String)(handler: Try[Unit] => Unit): Unit = {
+  override def endorseTxn(payload: String, vdrType: String)(handler: Try[Unit] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
       blobStorageUtil.saveInBlobStore(payload.getBytes(), dataRetentionPolicy)
         .flatMap { storageInfo =>
           val jsonPayload =
             s"""{
                |"$CLOUD_EVENT_DATA_FIELD_TXN_REF": "${storageInfo.endpoint}",
-               |"$CLOUD_EVENT_DATA_FIELD_ENDORSER": "$endorser",
-               |"$CLOUD_EVENT_DATA_FIELD_VDR": "$vdr",
-               |"$CLOUD_EVENT_DATA_FIELD_VDR_TYPE": "$vdrType"
+               |"$DATA_FIELD_LEDGER_PREFIX": "$vdrType"
                |}""".stripMargin
           eventPublisherUtil.publishToEventBus(jsonPayload, EVENT_ENDORSEMENT_REQ_V1, TOPIC_REQUEST_ENDORSEMENT)
         },
@@ -65,7 +63,5 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
 
   val CLOUD_EVENT_DATA_FIELD_TXN_REF = "txnref"
   val CLOUD_EVENT_DATA_FIELD_ENDORSER = "endorserdid"
-  val CLOUD_EVENT_DATA_FIELD_VDR = "vdr"
-  val CLOUD_EVENT_DATA_FIELD_VDR_TYPE = "vdr_type"
 }
 

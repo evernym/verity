@@ -75,7 +75,7 @@ class MockActorContainer(val appConfig: AppConfig,
 
   override def receiveCmd: Receive = {
     case EndorseTxn(payload, endorser, vdr, vdrType) =>
-      endorserAccessAdapter.endorseTxn(payload, endorser, vdr, vdrType)(handler(sender()))
+      endorserAccessAdapter.endorseTxn(payload, vdrType)(handler(sender()))
   }
 
   def handler(sender: ActorRef)(resp: Try[Unit]): Unit = {

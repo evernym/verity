@@ -6,7 +6,7 @@ import akka.actor.typed.scaladsl.adapter._
 import com.evernym.verity.actor.cluster_singleton.ForEndorserRegistry
 import com.evernym.verity.endorser_registry.EndorserRegistry.Commands.GetEndorsers
 import com.evernym.verity.endorser_registry.EndorserRegistry.Replies.LedgerEndorsers
-import com.evernym.verity.eventing.event_handlers.{EVENT_ENDORSEMENT_REQ_V1, TOPIC_SSI_ENDORSEMENT_REQ}
+import com.evernym.verity.eventing.event_handlers.{EVENT_ENDORSEMENT_REQ_V1, TOPIC_REQUEST_ENDORSEMENT}
 import com.evernym.verity.eventing.ports.producer.ProducerPort
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.BaseAsyncAccessImpl
@@ -57,7 +57,7 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
                |"$CLOUD_EVENT_DATA_FIELD_VDR": "$vdr",
                |"$CLOUD_EVENT_DATA_FIELD_VDR_TYPE": "$vdrType",
                |}""".stripMargin
-          eventPublisherUtil.publishToEventBus(jsonPayload, EVENT_ENDORSEMENT_REQ_V1, TOPIC_SSI_ENDORSEMENT_REQ)
+          eventPublisherUtil.publishToEventBus(jsonPayload, EVENT_ENDORSEMENT_REQ_V1, TOPIC_REQUEST_ENDORSEMENT)
         },
       handler
     )

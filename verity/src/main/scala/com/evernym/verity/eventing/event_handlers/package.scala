@@ -12,7 +12,7 @@ package object event_handlers {
   //TODO: below names may need to be finalized/corrected
 
   //SSI ENDORSEMENT REQ topic and related events (published by verity and consumed by endorser service)
-  val TOPIC_SSI_ENDORSEMENT_REQ = "public.event.ssi.endorsement_request"
+  val TOPIC_REQUEST_ENDORSEMENT = "public.request.endorsement"
   val EVENT_ENDORSEMENT_REQ_V1 = "endorsement.endorsement-request.v1"
 
   //SSI ENDORSEMENT topic and related events (published by endorser service and consumed by verity service)

@@ -4,7 +4,7 @@ import akka.Done
 import com.evernym.verity.config.ConfigConstants.LIB_INDY_LEDGER_DEFAULT_PREFIX
 import com.evernym.verity.eventing.event_handlers.EndorsementMessageHandler._
 import com.evernym.verity.eventing.event_handlers.EndorserMessageHandler._
-import com.evernym.verity.eventing.event_handlers.{CLOUD_EVENT_TYPE, DATA_FIELD_REQUEST_SOURCE, EVENT_ENDORSEMENT_COMPLETE_V1, EVENT_ENDORSEMENT_REQ_V1, TOPIC_SSI_ENDORSEMENT, TOPIC_SSI_ENDORSEMENT_REQ}
+import com.evernym.verity.eventing.event_handlers.{CLOUD_EVENT_TYPE, DATA_FIELD_REQUEST_SOURCE, EVENT_ENDORSEMENT_COMPLETE_V1, EVENT_ENDORSEMENT_REQ_V1, TOPIC_SSI_ENDORSEMENT, TOPIC_REQUEST_ENDORSEMENT}
 import com.evernym.verity.eventing.ports.consumer.{Message, MessageHandler}
 import com.evernym.verity.eventing.ports.producer.ProducerPort
 import com.evernym.verity.protocol.engine.asyncapi.endorser.ENDORSEMENT_RESULT_SUCCESS_CODE
@@ -26,7 +26,7 @@ class EndorsementReqMsgHandler(config: Config, eventProducer: ProducerPort) exte
 
   override def handleMessage(message: Message): Future[Done] = {
     message.metadata.topic match {
-      case TOPIC_SSI_ENDORSEMENT_REQ =>
+      case TOPIC_REQUEST_ENDORSEMENT =>
         val jsonObject = message.cloudEvent
         jsonObject.get(CLOUD_EVENT_TYPE) match {
           case EVENT_ENDORSEMENT_REQ_V1 => processEndorsementReq(jsonObject)

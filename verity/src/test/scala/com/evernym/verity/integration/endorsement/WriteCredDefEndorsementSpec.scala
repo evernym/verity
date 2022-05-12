@@ -4,7 +4,7 @@ import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.{ActorSystemVanilla, MockLedgerTxnExecutor}
 import com.evernym.verity.eventing.adapters.basic.consumer.BasicConsumerAdapter
 import com.evernym.verity.eventing.adapters.basic.producer.BasicProducerAdapter
-import com.evernym.verity.eventing.event_handlers.TOPIC_SSI_ENDORSEMENT_REQ
+import com.evernym.verity.eventing.event_handlers.TOPIC_REQUEST_ENDORSEMENT
 import com.evernym.verity.integration.base.sdk_provider.{IssuerSdk, SdkProvider}
 import com.evernym.verity.integration.base.verity_provider.VerityEnv
 import com.evernym.verity.integration.base._
@@ -111,7 +111,7 @@ class WriteCredDefEndorsementSpec
       .withValue("verity.eventing.basic-store.http-listener.port", ConfigValueFactory.fromAnyRef(issuerVAS.getVerityLocalNode.portProfile.basicEventStorePort))
       .withValue("verity.eventing.basic-source.id", ConfigValueFactory.fromAnyRef("endorser"))
       .withValue("verity.eventing.basic-source.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
-      .withValue("verity.eventing.basic-source.topics", ConfigValueFactory.fromIterable(List(TOPIC_SSI_ENDORSEMENT_REQ).asJava))
+      .withValue("verity.eventing.basic-source.topics", ConfigValueFactory.fromIterable(List(TOPIC_REQUEST_ENDORSEMENT).asJava))
 
   val ledgerTxnExecutor: LedgerTxnExecutor = new MockLedgerTxnExecutor(futureExecutionContext) {
 

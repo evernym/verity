@@ -24,7 +24,7 @@ class EndorserMessageHandler(config: Config,
 
   def handleMessage(message: Message): Future[Done] = {
     singletonParentProxy
-      .ask{ ref: ActorRef => ForEndorserRegistry(createCmd(message, ref))}
+      .ask { ref: ActorRef => ForEndorserRegistry(createCmd(message, ref)) }
       .map(_ => Done)
   }
 

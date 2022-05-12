@@ -23,16 +23,22 @@ class ConsumedMessageHandler(config: Config,
 
   override def handleMessage(message: Message): Future[Done] = {
     logger.info("event received: " + message)
-    message.metadata.topic match {
-      case TOPIC_SSI_ENDORSER =>
-        endorserRegistryEventHandler.handleMessage(message)
+    try {
+      message.metadata.topic match {
+        case TOPIC_SSI_ENDORSER =>
+          endorserRegistryEventHandler.handleMessage(message)
 
-      case TOPIC_SSI_ENDORSEMENT =>
-        endorsementReqStatusMessageHandler.handleMessage(message)
+        case TOPIC_SSI_ENDORSEMENT =>
+          endorsementReqStatusMessageHandler.handleMessage(message)
 
-      case _ =>
-        logger.info(s"unhandled consumed event: " + message.metadata)
-        Future.successful(Done)
+        case _ =>
+          logger.info(s"unhandled consumed event: " + message.metadata)
+          Future.successful(Done)
+      }
+    } catch {
+      case e: RuntimeException =>
+        logger.info(s"could not process incoming '${message.metadata.topic}' topic message: " + message)
+        throw e
     }
   }
 }

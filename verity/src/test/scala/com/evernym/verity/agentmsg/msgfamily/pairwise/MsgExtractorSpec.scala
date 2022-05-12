@@ -2,13 +2,13 @@ package com.evernym.verity.agentmsg.msgfamily.pairwise
 
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
+import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.{AgentMsgSpecBase, DefaultMsgCodec}
-import com.evernym.verity.protocol.engine
 import com.evernym.verity.protocol.engine.registry.ProtocolRegistry.Entry
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_V_0_6}
-import com.evernym.verity.testkit.{AwaitResult, BasicSpec}
+import com.evernym.verity.testkit.{AwaitResult, BasicSpec, BasicSpecBase}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.registry.{PinstIdResolution, ProtocolRegistry}
@@ -19,10 +19,11 @@ import scala.concurrent.ExecutionContext
 class MsgExtractorSpec
   extends BasicSpec
     with AgentMsgSpecBase
-    with AwaitResult {
+    with AwaitResult
+    with ActorSpec
+    with BasicSpecBase{
 
-  override def appConfig: AppConfig = testAppConfig
-
+  implicit override lazy val appConfig: AppConfig = testAppConfig
   lazy val ecp = new ExecutionContextProvider(appConfig)
   implicit lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
@@ -141,5 +142,7 @@ class MsgExtractorSpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = executionContext
+
+  def executionContextProvider: ExecutionContextProvider = ecp
 }
 

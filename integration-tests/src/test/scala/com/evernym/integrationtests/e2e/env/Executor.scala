@@ -23,7 +23,8 @@ class AgencyAgentSetupHelper {
         new MockCloudAgent(
           ecp.futureExecutionContext,
           urlParam,
-          appConfig
+          appConfig,
+          system = system
         )
     }
     agencyAgent.setupAgency(seedOpt orElse Option("0000000000000000000000000000" + up.port.toString.padTo(4, '0')))
@@ -42,7 +43,8 @@ class AgencyAgentSetupHelper {
         new MockCloudAgent(
           ecp.futureExecutionContext,
           urlParam,
-          appConfig
+          appConfig,
+          system = system
         )
     }
     agencyAgent.bootstrapAgencyAgentToLedger()
@@ -59,6 +61,7 @@ object Executor {
         urlParam,
         appConfig,
         ecp.futureExecutionContext,
+        system = system
       )
     override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
   }
@@ -71,6 +74,7 @@ object Executor {
         urlParam,
         appConfig,
         ecp.futureExecutionContext,
+        system = system
       )
     override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
   }
@@ -83,6 +87,7 @@ object Executor {
         urlParam,
         appConfig,
         ecp.futureExecutionContext,
+        system = system
       )
     override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
   }
@@ -95,6 +100,7 @@ object Executor {
         urlParam,
         appConfig,
         ecp.futureExecutionContext,
+        system = system
       )
     override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
   }

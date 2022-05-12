@@ -1,7 +1,8 @@
 package com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7
 
+import akka.actor.ActorSystem
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.util2.{Base64Encoded, ExecutionContextProvider}
-import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOneDomain
 import com.evernym.verity.did.VerKeyStr
@@ -15,6 +16,7 @@ import com.evernym.verity.util.Base64Util.getBase64Encoded
 import com.evernym.verity.constants.InitParamConstants.DATA_RETENTION_POLICY
 import com.evernym.verity.util.TestExecutionContextProvider
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import scala.language.{implicitConversions, reflectiveCalls}
@@ -242,7 +244,12 @@ class AgentProvisioningSpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
+
+  implicit override lazy val appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
+
+  def executionContextProvider: ExecutionContextProvider = ecp
+
+  val system: ActorSystem = ActorSystemVanilla(UUID.randomUUID().toString)
 }
 
 object TestingVars {

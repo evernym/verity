@@ -23,7 +23,6 @@ class UserAgentRecoverySpec
     super.beforeAll()
     setupBasicAgencyAgent()
     setupBasicUserAgent()
-    closeClientWallets(Set(myAgencyAgentEntityId, mySelfRelAgentEntityId))
   }
 
   "User agent actor" - {

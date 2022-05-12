@@ -1,5 +1,7 @@
 package com.evernym.verity.integration.with_basic_sdk
 
+import akka.actor.ActorSystem
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.sdk_provider.{IssuerSdk, SdkProvider}
@@ -72,8 +74,10 @@ class TokenizedAgentProvisioningSpec
     )
     configResult.configs.size shouldBe 2
   }
+  val system: ActorSystem = ActorSystemVanilla(UUID.randomUUID().toString)
 
-  val testSponsor = new TestSponsor("000000000000000000000000Trustee1", futureExecutionContext)
+  val testSponsor = new TestSponsor("000000000000000000000000Trustee1", futureExecutionContext, system)
+
 
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext

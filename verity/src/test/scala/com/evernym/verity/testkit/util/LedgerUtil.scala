@@ -1,5 +1,6 @@
 package com.evernym.verity.testkit.util
 
+import akka.actor.ActorSystem
 import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
@@ -17,6 +18,7 @@ import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 import com.evernym.vdrtools.ledger.Ledger._
 import com.evernym.vdrtools.pool.Pool
+
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 import scala.concurrent.{Await, ExecutionContext}
@@ -31,7 +33,8 @@ class LedgerUtil (val appConfig: AppConfig,
                   val submitterKeySeed: String = "000000000000000000000000Steward1",
                   val submitterRole: String = "STEWARD",
                   val taa: Option[TransactionAuthorAgreement] = None,
-                  val genesisTxnPath: Option[String] = None)
+                  val genesisTxnPath: Option[String] = None,
+                  override implicit val system: ActorSystem)
   extends CommonSpecUtil
     with HasDefaultTestWallet {
 

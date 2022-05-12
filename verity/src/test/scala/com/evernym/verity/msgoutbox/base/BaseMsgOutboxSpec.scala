@@ -70,7 +70,7 @@ trait BaseMsgOutboxSpec extends HasExecutionContextProvider { this: BehaviourSpe
   lazy val sharding: ClusterSharding = ClusterSharding(system)
   lazy val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()
 
-  lazy val testWallet = new TestWallet(futureExecutionContext, createWallet = true)
+  lazy val testWallet = new TestWallet(futureExecutionContext, createWallet = true, system.classicSystem)
   lazy val myKey1: NewKeyCreated = testWallet.executeSync[NewKeyCreated](CreateNewKey())
   lazy val recipKey1: NewKeyCreated = testWallet.executeSync[NewKeyCreated](CreateNewKey())
   lazy val routingKey1: NewKeyCreated = testWallet.executeSync[NewKeyCreated](CreateNewKey())

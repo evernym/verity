@@ -1,7 +1,6 @@
 package com.evernym.verity.vdrtools
 
 import akka.actor.ActorRef
-import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.did.{DidStr, VerKeyStr}
@@ -40,7 +39,6 @@ class WalletAccessAPISpec
     testWalletAPI.executeSync[WalletCreated.type](CreateWallet())
     val result = ParticipantUtil.participantId(
       testWalletAPI.executeSync[NewKeyCreated](CreateNewKey()).did, None)
-    testWalletAPI.executeSync[Done.type](Close())
     result
   }
 

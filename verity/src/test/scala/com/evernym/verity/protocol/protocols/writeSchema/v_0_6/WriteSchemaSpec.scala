@@ -1,5 +1,7 @@
 package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 
+import akka.actor.ActorSystem
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
@@ -15,6 +17,7 @@ import com.evernym.verity.util.TestExecutionContextProvider
 import org.json.JSONObject
 import org.scalatest.BeforeAndAfterAll
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.language.{implicitConversions, reflectiveCalls}
 
@@ -182,5 +185,10 @@ class WriteSchemaSpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
+
+  implicit override lazy val appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
+
+  def executionContextProvider: ExecutionContextProvider = ecp
+
+  val system: ActorSystem = ActorSystemVanilla(UUID.randomUUID().toString)
 }

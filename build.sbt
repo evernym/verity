@@ -131,6 +131,7 @@ lazy val integrationTests = (project in file("integration-tests"))
   .settings(
     name := "integration-tests",
     settings,
+    testSettings,
   ).dependsOn(verity % "test->test; compile->compile")
 
 lazy val settings = Seq(

@@ -80,7 +80,9 @@ kill_process(){
 }
 
 delete_indy_client_dir(){
-  rm -fr $HOME/.indy_client
+  if [ "$CLEANUP_INDY_DIR" == "true" ]; then
+    rm -fr $HOME/.indy_client
+  fi
 }
 
 # Retries a command on failure.

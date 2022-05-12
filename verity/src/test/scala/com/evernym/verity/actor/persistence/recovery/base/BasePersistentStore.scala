@@ -1,28 +1,27 @@
 package com.evernym.verity.actor.persistence.recovery.base
 
 import akka.actor.ActorSystem
-import akka.persistence.testkit.{PersistenceTestKitSnapshotPlugin, SnapshotMeta}
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
+import akka.persistence.testkit.{PersistenceTestKitSnapshotPlugin, SnapshotMeta}
 import com.evernym.vdrtools.wallet.Wallet
 import com.evernym.verity.actor.agent.msgrouter.RoutingAgentUtil
-import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.persistence.DefaultPersistenceEncryption
 import com.evernym.verity.actor.persistence.object_code_mapper.{DefaultObjectCodeMapper, ObjectCodeMapperBase}
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
-import com.evernym.verity.actor.testkit.actor.MockAppConfig
 import com.evernym.verity.actor.testkit.HasTestActorSystem
-import com.evernym.verity.actor.wallet.{Close, CreateDID, CreateNewKey, CreateWallet, NewKeyCreated, StoreTheirKey, TheirKeyStored, WalletCreated}
-import com.evernym.verity.actor.{DeprecatedEventMsg, DeprecatedStateMsg, LegacyRouteSet, MappingAdded, PersistentMsg, PersistentMultiEventMsg, RouteSet}
+import com.evernym.verity.actor.testkit.actor.MockAppConfig
+import com.evernym.verity.actor.wallet._
+import com.evernym.verity.actor._
 import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.config.ConfigConstants.SALT_EVENT_ENCRYPTION
 import com.evernym.verity.constants.ActorNameConstants._
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
-import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
-import com.evernym.verity.transformations.transformers.v1._
-import com.evernym.verity.transformations.transformers.legacy._
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine.MultiEvent
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.testkit.HasTestWalletAPI
+import com.evernym.verity.transformations.transformers.legacy._
+import com.evernym.verity.transformations.transformers.v1._
 import com.evernym.verity.transformations.transformers.{<=>, legacy, v1}
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vault.WalletUtil.{buildWalletConfig, generateWalletParamSync}
@@ -32,8 +31,8 @@ import com.typesafe.config.{Config, ConfigFactory}
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-class PersistentStoreTestKit(val system: ActorSystem,
-                             val futureExecutionContext: ExecutionContext)
+class PersistentStoreTestKit(val futureExecutionContext: ExecutionContext,
+                             override implicit val system: ActorSystem)
   extends BasePersistentStore
 
 /**
@@ -69,9 +68,6 @@ trait BasePersistentStore
     testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(theirDID, theirDIDVerKey))(WalletAPIParam(walletId))
   }
 
-  def closeWallet(walletId: String): Done.type = {
-    testWalletAPI.executeSync[Done.type](Close())(WalletAPIParam(walletId))
-  }
 
   private def deleteWallet(walletId: String): Unit = {
     val walletConfig = buildWalletConfig(testAppConfig)
@@ -231,6 +227,7 @@ trait BasePersistentStore
 
   def getTransformer(encrKey: String): Any <=> PersistentMsg = createPersistenceTransformerV1(encrKey,
     appConfig.getStringReq(SALT_EVENT_ENCRYPTION))
+
 }
 
 /**

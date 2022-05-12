@@ -18,7 +18,7 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
-import com.evernym.verity.testkit.{BasicSpec, LegacyWalletAPI, TestSponsor}
+import com.evernym.verity.testkit.{BasicSpec, TestSponsor}
 import com.evernym.verity.util.{Base64Util, MessagePackUtil, Util}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.util2.ServiceEndpoint
@@ -33,7 +33,7 @@ import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId}
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.integration.base.sdk_provider.JsonMsgUtil.createJsonString
 import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
-import com.evernym.verity.ledger.LedgerTxnExecutor
+import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
 import com.evernym.verity.observability.logs.LoggingUtil.{getLoggerByClass, getLoggerByName}
 import com.evernym.verity.observability.metrics.NoOpMetricsWriter
 import com.evernym.verity.protocol.engine.Constants.{MSG_TYPE_CONNECT, MSG_TYPE_CREATE_AGENT, MSG_TYPE_SIGN_UP, MTV_1_0}
@@ -46,6 +46,10 @@ import com.evernym.verity.testkit.util.{AcceptConnReq_MFV_0_6, AgentCreated_MFV_
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
 import com.evernym.verity.testkit.util.HttpUtil._
+import com.evernym.verity.vault.service.{ActorWalletService, WalletService}
+import com.evernym.verity.vault.wallet_api.{StandardWalletAPI, WalletAPI}
+import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.matchers.should.Matchers
@@ -397,9 +401,9 @@ abstract class SdkBase(param: SdkParam,
 
   val logger: Logger = getLoggerByClass(getClass)
 
-  protected lazy val testWalletAPI: LegacyWalletAPI = {
-    val walletProvider = LibIndyWalletProvider
-    val walletAPI = new LegacyWalletAPI(testAppConfig, walletProvider, None, NoOpMetricsWriter(), executionContext)
+  protected lazy val testWalletAPI: StandardWalletAPI = {
+    val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(system, testAppConfig, executionContext)
+    val walletAPI: StandardWalletAPI = new StandardWalletAPI(new ActorWalletService(system, testAppConfig, poolConnManager, executionContext))
     walletAPI.executeSync[WalletCreated.type](CreateWallet())
     walletAPI
   }

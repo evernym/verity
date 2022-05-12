@@ -6,7 +6,7 @@ package object event_handlers {
   //constants
   val CLOUD_EVENT_TYPE = "type"
   val CLOUD_EVENT_DATA = "data"
-  val DATA_FIELD_REQUEST_SOURCE = "requestsource"
+  val DATA_FIELD_REQUEST_SOURCE = "request_source"
 
 
   //TODO: below names may need to be finalized/corrected

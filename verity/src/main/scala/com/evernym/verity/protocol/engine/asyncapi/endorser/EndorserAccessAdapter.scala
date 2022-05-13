@@ -31,7 +31,9 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
     with BaseAsyncAccessImpl
     with FutureConverter {
 
-  val blobStorageUtil = new BlobStorageUtil(appConfig, storageAPI)
+  val bucketName: String = appConfig.config.getString("verity.endorsement.request.txn-store.bucket-name")
+
+  val blobStorageUtil = new BlobStorageUtil(bucketName, storageAPI)
   val eventPublisherUtil = new EventPublisherUtil(routingContext, producerPort)
 
   override def withCurrentEndorser(ledger: String)(handler: Try[Option[Endorser]] => Unit): Unit = {

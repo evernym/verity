@@ -1,20 +1,18 @@
 package com.evernym.verity.texter
 
-import java.net.HttpURLConnection._
-import com.evernym.verity.constants.Constants._
-import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.config.AppConfig
-import com.evernym.verity.http.common.ConfigSvc
+import com.evernym.verity.config.{AppConfig, ConfigSvc}
+import com.evernym.verity.config.ConfigConstants._
+import com.evernym.verity.constants.Constants._
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.jakarta.rs.json.JacksonJsonProvider
-
 import jakarta.ws.rs.client.{Client, ClientBuilder, Entity}
 import jakarta.ws.rs.core.MediaType
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature
 
-import scala.jdk.CollectionConverters._
+import java.net.HttpURLConnection._
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 case class Session(TextMessage: String)
 case class Variables(session: Session)

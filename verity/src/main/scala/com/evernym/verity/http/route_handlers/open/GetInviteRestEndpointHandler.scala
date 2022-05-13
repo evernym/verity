@@ -3,7 +3,7 @@ package com.evernym.verity.http.route_handlers.open
 import akka.cluster.sharding.ClusterSharding
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, get, handleExceptions, logRequestResult, parameters, pathPrefix, _}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.evernym.verity.actor.agent.msghandler.outgoing.ProtocolSyncRespMsg
@@ -15,8 +15,10 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil
 import com.evernym.verity.constants.Constants.{UNKNOWN_RECIP_PARTICIPANT_ID, UNKNOWN_SENDER_PARTICIPANT_ID}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
-import com.evernym.verity.http.common.CustomExceptionHandler._
-import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
+import com.evernym.verity.http.common.AllowedIpsResolver.extractIp
+import com.evernym.verity.http.common.BaseRequestHandler
+import com.evernym.verity.http.common.CustomResponseHandler._
+import com.evernym.verity.http.route_handlers.PlatformWithExecutor
 import com.evernym.verity.protocol.container.actor.{ActorProtocol, MsgEnvelope, ProtocolCmd}
 import com.evernym.verity.protocol.engine.{DEFAULT_THREAD_ID, ProtoDef}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
@@ -34,13 +36,13 @@ import scala.concurrent.Future
  */
 
 trait GetInviteRestEndpointHandler
-  extends ResourceUsageCommon {
-  this: HttpRouteWithPlatform =>
+  extends BaseRequestHandler {
+  this: PlatformWithExecutor with ResourceUsageCommon =>
 
   protected def getInviteMsgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
-    case invDetail: InviteDetail  => handleExpectedResponse(invDetail)
-    case jsonMsg: JSONObject      => HttpResponse(StatusCodes.OK, entity=HttpEntity(ContentType(MediaTypes.`application/json`), jsonMsg.toString(2)))
-    case e                        => handleUnexpectedResponse(e)
+    case invDetail: InviteDetail => handleExpectedResponse(invDetail)
+    case jsonMsg: JSONObject => HttpResponse(StatusCodes.OK, entity = HttpEntity(ContentType(MediaTypes.`application/json`), jsonMsg.toString(2)))
+    case e => handleUnexpectedResponse(e)
   }
 
   protected def getTokenFut(implicit token: String): Future[Any] = {
@@ -99,8 +101,8 @@ trait GetInviteRestEndpointHandler
     }
   }
 
-  protected def handleGetInviteByTokenReq(token: String)(implicit remoteAddress: RemoteAddress): Route = {
-    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite", clientIpAddress, None)
+  protected def handleGetInviteByTokenReq(token: String, ip: String): Route = {
+    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite", ip, None)
     complete {
       getInviteDetailByToken(token).map[ToResponseMarshallable] {
         getInviteMsgResponseHandler
@@ -108,8 +110,8 @@ trait GetInviteRestEndpointHandler
     }
   }
 
-  protected def handleGetInviteByDIDAndUidReq(DID: DidStr, uid: MsgId)(implicit remoteAddress: RemoteAddress): Route = {
-    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_did", clientIpAddress, None)
+  protected def handleGetInviteByDIDAndUidReq(DID: DidStr, uid: MsgId, ip: String): Route = {
+    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_did", ip, None)
     complete {
       getInviteDetailByDIDAndUid(DID, uid).map[ToResponseMarshallable] {
         getInviteMsgResponseHandler
@@ -117,8 +119,8 @@ trait GetInviteRestEndpointHandler
     }
   }
 
-  protected def handleGetInvitationAries(base64inv: String)(implicit remoteAddress: RemoteAddress): Route = {
-    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_aries", clientIpAddress, None)
+  protected def handleGetInvitationAries(base64inv: String, ip: String): Route = {
+    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_aries", ip, None)
     complete {
       getInviteMsgResponseHandler(decodeAriesInvitation(base64inv))
     }
@@ -134,38 +136,32 @@ trait GetInviteRestEndpointHandler
   }
 
   protected val getInviteRoute: Route =
-    handleExceptions(exceptionHandler) {
-      logRequestResult("agency-service") {
-        pathPrefix("agency") {
-          extractRequest { implicit req: HttpRequest =>
-            extractClientIP { implicit remoteAddress =>
-              pathPrefix("invite") {
-                (get & pathEnd) {
-                  parameters(Symbol("t")) { token =>
-                    handleGetInviteByTokenReq(token)
-                  }
-                } ~
-                  pathPrefix(Segment) { DID =>
-                    (get & pathEnd) {
-                      parameters(Symbol("uid")) { uid =>
-                        handleGetInviteByDIDAndUidReq(DID, uid)
-                      }
-                    }
-                  }
+    handleRequest(exceptionHandler) { (_, remoteAddress) =>
+      pathPrefix("agency") {
+        pathPrefix("invite") {
+          (get & pathEnd) {
+            parameters(Symbol("t")) { token =>
+              handleGetInviteByTokenReq(token, extractIp(remoteAddress))
+            }
+          } ~
+            pathPrefix(Segment) { DID =>
+              (get & pathEnd) {
+                parameters(Symbol("uid")) { uid =>
+                  handleGetInviteByDIDAndUidReq(DID, uid, extractIp(remoteAddress))
+                }
+              }
+            }
+        } ~
+          pathPrefix("msg") {
+            (get & pathEnd) {
+              parameters("c_i") { inv =>
+                handleGetInvitationAries(inv, extractIp(remoteAddress))
               } ~
-                pathPrefix("msg") {
-                  (get & pathEnd) {
-                    parameters("c_i") { inv =>
-                      handleGetInvitationAries(inv)
-                    } ~
-                      parameters("oob") { inv =>
-                        handleGetInvitationAries(inv)
-                      }
-                  }
+                parameters("oob") { inv =>
+                  handleGetInvitationAries(inv, extractIp(remoteAddress))
                 }
             }
           }
-        }
       }
     }
 }

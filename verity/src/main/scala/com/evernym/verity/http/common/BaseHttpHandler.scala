@@ -2,10 +2,12 @@ package com.evernym.verity.http.common
 
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives.complete
-import akka.http.scaladsl.server.ExceptionHandler
+import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, handleExceptions, logRequestResult, tprovide}
+import akka.http.scaladsl.server.{Directive, ExceptionHandler}
 import akka.pattern.AskTimeoutException
+import com.evernym.verity.actor.persistence.HasActorResponseTimeout
 import com.evernym.verity.agentmsg.DefaultMsgCodec
+import com.evernym.verity.config.ConfigSvc
 import com.evernym.verity.constants.LogKeyConstants.{LOG_KEY_STATUS_CODE, LOG_KEY_STATUS_DETAIL}
 import com.evernym.verity.http.common.models.StatusDetailResp
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
@@ -18,11 +20,13 @@ import com.typesafe.scalalogging.Logger
  * common logic to handle expected and/or unexpected response from actor
  */
 
-trait ActorResponseHandler {
+object CustomResponseHandler extends BaseResponseHandler
+
+trait BaseResponseHandler {
 
   import HttpResponseBuilder._
 
-  lazy val logger: Logger = getLoggerByClass(classOf[ActorResponseHandler])
+  lazy val logger: Logger = getLoggerByClass(classOf[BaseRequestHandler])
 
   /**
    * handles valid/expected response (case classes) from actor's incoming msg handler code
@@ -68,8 +72,7 @@ trait ActorResponseHandler {
    * @param sdr status detail response
    * @return any native object (which can be converted to json)
    */
-  def createResponse(sdr: StatusDetailResp): Any
-
+  def createResponse(sdr: StatusDetailResp): Any = sdr
 
   def logRespMsgIfNeeded(httpStatusCode: StatusCode, statusDetailResp: StatusDetailResp): Unit = {
     httpStatusCode match {
@@ -85,35 +88,41 @@ trait ActorResponseHandler {
 
   def logErrorIfNeeded(e: Any): Unit = {
     e match {
-      case _: DoNotLogError           => //nothing
-      case ate: AskTimeoutException   => logger.warn(Exceptions.getStackTraceAsSingleLineString(ate))
-      case e: Exception               => logger.error(Exceptions.getStackTraceAsSingleLineString(e))
-      case _                          => //nothing
+      case _: DoNotLogError => //nothing
+      case ate: AskTimeoutException => logger.warn(Exceptions.getStackTraceAsSingleLineString(ate))
+      case e: Exception => logger.error(Exceptions.getStackTraceAsSingleLineString(e))
+      case _ => //nothing
     }
   }
-
 }
 
-object CustomExceptionHandler extends ActorResponseHandler {
-  def createResponse(sdr: StatusDetailResp): Any = sdr
+trait BaseRequestHandler extends AllowedIpsResolver with ConfigSvc with HasActorResponseTimeout {
+
+  def handleRequest(handler: ExceptionHandler): Directive[(HttpRequest, RemoteAddress)] =
+    handleExceptions(handler) & logRequestResult("agency-service") & extractRequest & extractClientIP
+
+  def handleRestrictedRequest(handler: ExceptionHandler): Directive[(HttpRequest, RemoteAddress)] = handleRequest(handler).tflatMap {
+    case (req, remoteAddress) =>
+      checkIfAddressAllowed(remoteAddress, req.uri)
+      tprovide(req, remoteAddress)
+  }
 }
 
-object HttpResponseBuilder {
-  lazy val logger: Logger = getLoggerByClass(classOf[ActorResponseHandler])
 
+private object HttpResponseBuilder {
   /**
    * exception to http status code mapper
    */
   private val exceptionToHttpMapper: Map[Class[_], StatusCode] = Map(
-    classOf[BadRequestErrorException]     -> BadRequest,
-    classOf[InvalidValueException]        -> BadRequest,
+    classOf[BadRequestErrorException] -> BadRequest,
+    classOf[InvalidValueException] -> BadRequest,
     classOf[NotImplementedErrorException] -> NotImplemented,
-    classOf[NotEnabledErrorException]     -> NotImplemented,
-    classOf[FeatureNotEnabledException]   -> NotImplemented,
-    classOf[NotFoundErrorException]       -> NotFound,
-    classOf[ForbiddenErrorException]      -> Forbidden,
-    classOf[UnauthorisedErrorException]   -> Unauthorized,
-    classOf[AskTimeoutException]          -> ServiceUnavailable
+    classOf[NotEnabledErrorException] -> NotImplemented,
+    classOf[FeatureNotEnabledException] -> NotImplemented,
+    classOf[NotFoundErrorException] -> NotFound,
+    classOf[ForbiddenErrorException] -> Forbidden,
+    classOf[UnauthorisedErrorException] -> Unauthorized,
+    classOf[AskTimeoutException] -> ServiceUnavailable
   )
 
   def httpStatusFromExceptionClass(exClass: Class[_]): StatusCode = {

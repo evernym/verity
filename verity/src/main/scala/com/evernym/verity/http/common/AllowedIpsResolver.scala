@@ -1,8 +1,8 @@
 package com.evernym.verity.http.common
 
 import akka.http.scaladsl.model.{RemoteAddress, Uri}
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES
+import com.evernym.verity.config.ConfigSvc
 import com.evernym.verity.util.SubnetUtilsExt
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.Status.FORBIDDEN
@@ -11,11 +11,9 @@ import com.typesafe.scalalogging.Logger
 import java.net.{Inet4Address, NetworkInterface}
 import java.util.{Enumeration => JavaEnumeration}
 
-trait AllowedIpsResolver {
+trait AllowedIpsResolver extends ConfigSvc {
 
   def logger: Logger
-
-  def appConfig: AppConfig
 
   protected lazy val allowedIpAddresses: List[SubnetUtilsExt] = {
     val configured: List[String] = appConfig.getStringListReq(INTERNAL_API_ALLOWED_FROM_IP_ADDRESSES)
@@ -64,7 +62,8 @@ trait AllowedIpsResolver {
     }
   }
 
-  // TODO: remove after implicits refactoring/improving
-  def clientIpAddress(implicit remoteAddress: RemoteAddress): String =
-    remoteAddress.getAddress().get.getHostAddress
+}
+
+object AllowedIpsResolver {
+  def extractIp(remoteAddress: RemoteAddress): String = remoteAddress.getAddress().get.getHostAddress
 }

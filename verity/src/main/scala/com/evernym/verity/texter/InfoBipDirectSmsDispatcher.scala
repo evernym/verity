@@ -6,14 +6,13 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model.{HttpEntity, HttpMethods, HttpRequest, MediaTypes}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.evernym.verity.constants.Constants._
 import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.config.AppConfig
-import com.evernym.verity.http.common.ConfigSvc
+import com.evernym.verity.config.{AppConfig, ConfigSvc}
+import com.evernym.verity.constants.Constants._
 import org.json.JSONObject
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.collection.immutable
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 

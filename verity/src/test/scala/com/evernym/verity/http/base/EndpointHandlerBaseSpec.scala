@@ -11,7 +11,7 @@ import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.http.base.open._
 import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, AppStatusHealthCheckSpec, MockHealthChecker, RestrictedRestApiSpec}
-import com.evernym.verity.http.route_handlers.EndpointHandlerBase
+import com.evernym.verity.http.route_handlers.HttpRoutes
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
@@ -31,7 +31,7 @@ import scala.concurrent.duration._
 trait EdgeEndpointBaseSpec
   extends BasicSpecWithIndyCleanup
     with ScalatestRouteTest
-    with EndpointHandlerBase
+    with HttpRoutes
     with Eventually
     with CommonSpecUtil
     with ApiClientSpecCommon

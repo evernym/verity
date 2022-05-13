@@ -2,10 +2,9 @@ package com.evernym.verity.urlshortener
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ContentTypes, Uri}
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
+import com.evernym.verity.config.{AppConfig, ConfigSvc}
 import com.evernym.verity.constants.Constants.URL_SHORTENER_PROVIDER_ID_S3_SHORTENER
-import com.evernym.verity.http.common.ConfigSvc
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.util.Base64Util

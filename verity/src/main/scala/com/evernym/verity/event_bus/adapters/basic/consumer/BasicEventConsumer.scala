@@ -5,23 +5,23 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.StatusCodes.OK
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpMethods, HttpRequest, HttpResponse}
-import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, handleExceptions, pathPrefix, _}
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.actor.{ActorMessage, EventConsumerAdapterBuilder}
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
+import com.evernym.verity.actor.{ActorMessage, EventConsumerAdapterBuilder}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.event_bus.adapters.basic.{BaseEventAdapter, HttpServerParam}
 import com.evernym.verity.event_bus.adapters.basic.event_store.SubscribeTopic
+import com.evernym.verity.event_bus.adapters.basic.{BaseEventAdapter, HttpServerParam}
 import com.evernym.verity.event_bus.event_handlers.ConsumedMessageHandler
 import com.evernym.verity.event_bus.ports.consumer.{ConsumerPort, Message, MessageHandler, Metadata}
-import com.evernym.verity.http.common.CustomExceptionHandler.exceptionHandler
+import com.evernym.verity.http.common.CustomResponseHandler.exceptionHandler
 import org.json.JSONObject
 
 import java.time.Instant
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 

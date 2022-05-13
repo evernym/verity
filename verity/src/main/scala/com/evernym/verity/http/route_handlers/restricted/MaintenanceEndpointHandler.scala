@@ -1,28 +1,29 @@
 package com.evernym.verity.http.route_handlers.restricted
 
-import akka.pattern.ask
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.StatusCodes.OK
-import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, handleExceptions, logRequestResult, parameters, path, pathPrefix, put, _}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import akka.pattern.ask
 import akka.util.Timeout
-import com.evernym.verity.actor.agent.maintenance.{ExecutorStatus, GetExecutorStatus, GetManagerStatus, ManagerStatus, Reset, StartJob, StopJob}
+import com.evernym.verity.actor._
+import com.evernym.verity.actor.agent.maintenance._
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
-import com.evernym.verity.actor.agent.user.{GetPairwiseConnDetail, GetPairwiseConnDetailResp, GetPairwiseRoutingDIDs, GetPairwiseRoutingDIDsResp, GetWalletMigrationDetail, GetWalletMigrationDetailResp, UpdateTheirRouting}
-import com.evernym.verity.actor.cluster_singleton.{ForActorStateCleanupManager, ForAgentRoutesMigrator, maintenance}
+import com.evernym.verity.actor.agent.user._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.maintenance.{GetMigrationStatus, MigrationStatusDetail}
+import com.evernym.verity.actor.cluster_singleton.{ForActorStateCleanupManager, ForAgentRoutesMigrator, maintenance}
 import com.evernym.verity.actor.maintenance.v1tov2migration.SetupMigratedConnection
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.actor.{ActorMessage, ConfigRefreshed, ForIdentifier, NodeConfigRefreshed, OverrideConfigOnAllNodes, OverrideNodeConfig, RefreshConfigOnAllNodes, RefreshNodeConfig}
 import com.evernym.verity.http.HttpUtil.entityAs
-import com.evernym.verity.http.common.CustomExceptionHandler._
-import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
+import com.evernym.verity.http.common.BaseRequestHandler
+import com.evernym.verity.http.common.CustomResponseHandler._
+import com.evernym.verity.http.route_handlers.PlatformWithExecutor
 
 import scala.concurrent.Future
 
-
-trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
+trait MaintenanceEndpointHandler extends BaseRequestHandler {
+  this: PlatformWithExecutor =>
 
   implicit val responseTimeout: Timeout
 
@@ -113,46 +114,46 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
           }
         }
       } ~
-          path("restart") {
-            (post & pathEnd) {
-              complete {
-                restartAgentRoutesMigrator().map[ToResponseMarshallable] {
-                  case Done => OK
-                  case e => handleUnexpectedResponse(e)
-                }
+        path("restart") {
+          (post & pathEnd) {
+            complete {
+              restartAgentRoutesMigrator().map[ToResponseMarshallable] {
+                case Done => OK
+                case e => handleUnexpectedResponse(e)
               }
             }
-          } ~
-            path("stop") {
-              (post & pathEnd) {
-                complete {
-                  stopAgentRoutesMigrator().map[ToResponseMarshallable] {
-                    case Done => OK
-                    case e => handleUnexpectedResponse(e)
-                  }
-                }
+          }
+        } ~
+        path("stop") {
+          (post & pathEnd) {
+            complete {
+              stopAgentRoutesMigrator().map[ToResponseMarshallable] {
+                case Done => OK
+                case e => handleUnexpectedResponse(e)
               }
-            } ~
-              path("start") {
-                (post & pathEnd) {
-                  complete {
-                    startAgentRoutesMigrator().map[ToResponseMarshallable] {
-                      case Done => OK
-                      case e => handleUnexpectedResponse(e)
-                    }
-                  }
-                }
-              } ~
-              path("reset") {
-                (post & pathEnd) {
-                  complete {
-                    resetAgentRoutesMigrator().map[ToResponseMarshallable] {
-                      case Done => OK
-                      case e => handleUnexpectedResponse(e)
-                    }
-                  }
-                }
+            }
+          }
+        } ~
+        path("start") {
+          (post & pathEnd) {
+            complete {
+              startAgentRoutesMigrator().map[ToResponseMarshallable] {
+                case Done => OK
+                case e => handleUnexpectedResponse(e)
               }
+            }
+          }
+        } ~
+        path("reset") {
+          (post & pathEnd) {
+            complete {
+              resetAgentRoutesMigrator().map[ToResponseMarshallable] {
+                case Done => OK
+                case e => handleUnexpectedResponse(e)
+              }
+            }
+          }
+        }
     }
 
   private val actorStateCleanupMaintenanceRoutes: Route =
@@ -245,19 +246,19 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
           }
         }
       }
-//      ~ path("override") {
-//          (put & pathEnd & entity(as[String])) { configStr =>
-//            parameters('onAllNodes ? "Y") { onAllNodes =>
-//              complete {
-//                overrideConfig(onAllNodes, configStr).map[ToResponseMarshallable] {
-//                  case NodeConfigOverridden => OK
-//                  case ConfigOverridden => OK
-//                  case e => handleUnexpectedResponse(e)
-//                }
-//              }
-//            }
-//          }
-//        }
+      //      ~ path("override") {
+      //          (put & pathEnd & entity(as[String])) { configStr =>
+      //            parameters('onAllNodes ? "Y") { onAllNodes =>
+      //              complete {
+      //                overrideConfig(onAllNodes, configStr).map[ToResponseMarshallable] {
+      //                  case NodeConfigOverridden => OK
+      //                  case ConfigOverridden => OK
+      //                  case e => handleUnexpectedResponse(e)
+      //                }
+      //              }
+      //            }
+      //          }
+      //        }
     }
 
 
@@ -305,43 +306,28 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
             }
           }
         } ~
-          pathPrefix("VAS") {
-            pathPrefix("agent") {
-              pathPrefix(Segment) { agentDID =>
-                path("walletMigrationDetail") {
-                  (get & pathEnd) {
-                    complete {
-                      sendToAgent(agentDID, GetWalletMigrationDetail).map[ToResponseMarshallable] {
-                        case s: GetWalletMigrationDetailResp => handleExpectedResponse(s)
-                        case e => handleUnexpectedResponse(e)
-                      }
+        pathPrefix("VAS") {
+          pathPrefix("agent") {
+            pathPrefix(Segment) { agentDID =>
+              path("walletMigrationDetail") {
+                (get & pathEnd) {
+                  complete {
+                    sendToAgent(agentDID, GetWalletMigrationDetail).map[ToResponseMarshallable] {
+                      case s: GetWalletMigrationDetailResp => handleExpectedResponse(s)
+                      case e => handleUnexpectedResponse(e)
                     }
                   }
                 }
               }
-            } ~
-              pathPrefix("connection") {
-                pathPrefix(Segment) { pairwiseRoutingDID =>
-                  path("diddoc") {
-                    (post & entityAs[SetupMigratedConnection]) { smc =>
-                      complete {
-                        val connectionMigratorEntityId = smc.agent.agentDID + "-" + pairwiseRoutingDID
-                        sendToConnectionMigrator(connectionMigratorEntityId, smc).map[ToResponseMarshallable] {
-                          case Done => OK
-                          case e => handleUnexpectedResponse(e)
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+            }
           } ~
-            pathPrefix("CAS" / "connection") {
+            pathPrefix("connection") {
               pathPrefix(Segment) { pairwiseRoutingDID =>
-                path("routing") {
-                  (put & entityAs[UpdateTheirRouting]) { utpd =>
+                path("diddoc") {
+                  (post & entityAs[SetupMigratedConnection]) { smc =>
                     complete {
-                      sendToAgent(pairwiseRoutingDID, utpd).map[ToResponseMarshallable] {
+                      val connectionMigratorEntityId = smc.agent.agentDID + "-" + pairwiseRoutingDID
+                      sendToConnectionMigrator(connectionMigratorEntityId, smc).map[ToResponseMarshallable] {
                         case Done => OK
                         case e => handleUnexpectedResponse(e)
                       }
@@ -350,22 +336,31 @@ trait MaintenanceEndpointHandler { this: HttpRouteWithPlatform =>
                 }
               }
             }
-    }
-
-  protected val maintenanceRoutes: Route =
-    handleExceptions(exceptionHandler) {
-      logRequestResult("agency-service") {
-        pathPrefix("agency" / "internal" / "maintenance") {
-          extractRequest { implicit req =>
-            extractClientIP { implicit remoteAddress =>
-              checkIfAddressAllowed(remoteAddress, req.uri)
-              actorStateCleanupMaintenanceRoutes ~
-                configMaintenanceRoutes ~
-                routeMigrationRoutes ~
-                v1ToV2MigrationRoutes
+        } ~
+        pathPrefix("CAS" / "connection") {
+          pathPrefix(Segment) { pairwiseRoutingDID =>
+            path("routing") {
+              (put & entityAs[UpdateTheirRouting]) { utpd =>
+                complete {
+                  sendToAgent(pairwiseRoutingDID, utpd).map[ToResponseMarshallable] {
+                    case Done => OK
+                    case e => handleUnexpectedResponse(e)
+                  }
+                }
+              }
             }
           }
         }
+    }
+
+  protected val maintenanceRoutes: Route = {
+    handleRestrictedRequest(exceptionHandler) { (_, _) =>
+      pathPrefix("agency" / "internal" / "maintenance") {
+        actorStateCleanupMaintenanceRoutes ~
+          configMaintenanceRoutes ~
+          routeMigrationRoutes ~
+          v1ToV2MigrationRoutes
       }
     }
+  }
 }

@@ -4,7 +4,7 @@ import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.{HttpRequest, MediaTypes}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractRequest, handleExceptions, logRequestResult, pathPrefix, post, reject}
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.http.common.CustomExceptionHandler._
+import com.evernym.verity.http.common.CustomResponseHandler._
 import com.evernym.verity.util2.HasExecutionContextProvider
 
 import scala.concurrent.{ExecutionContext, Future}

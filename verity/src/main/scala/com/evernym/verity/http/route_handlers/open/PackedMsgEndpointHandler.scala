@@ -3,7 +3,7 @@ package com.evernym.verity.http.route_handlers.open
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives.{as, complete, entity, extractClientIP, extractRequest, handleExceptions, logRequestResult, path, post, reject, _}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.actor.agent.agency.AgencyPackedMsgHandler
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
@@ -12,9 +12,11 @@ import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.msgpacker.UnpackParam
 import com.evernym.verity.did.DidPair
 import com.evernym.verity.http.LoggingRouteUtil.{incomingLogMsg, outgoingLogMsg}
-import com.evernym.verity.http.common.CustomExceptionHandler._
-import com.evernym.verity.http.common.HttpCustomTypes
-import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
+import com.evernym.verity.http.common.CustomResponseHandler._
+import com.evernym.verity.http.common.models.HttpCustomTypes
+import com.evernym.verity.http.common.{BaseRequestHandler, MetricsSupport}
+import com.evernym.verity.http.route_handlers.HasExecutor
+import com.evernym.verity.msg_tracer.resp_time_tracker.MsgRespTimeTracker
 import com.evernym.verity.util.{PackedMsgWrapper, ReqMsgContext}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 
@@ -22,8 +24,8 @@ import scala.concurrent.Future
 
 
 trait PackedMsgEndpointHandler
-  extends AgencyPackedMsgHandler {
-  this: HttpRouteWithPlatform =>
+  extends AgencyPackedMsgHandler with BaseRequestHandler with MetricsSupport {
+  this: MsgRespTimeTracker with HasExecutor =>
 
   def getAgencyDidPairFut: Future[DidPair]
 
@@ -117,10 +119,11 @@ trait PackedMsgEndpointHandler
     }
   }
 
-  protected def handleAgentMsgReq(implicit req: HttpRequest, remoteAddress: RemoteAddress): Route = {
+  protected def handleAgentMsgReq(req: HttpRequest, remoteAddress: RemoteAddress): Route = {
     // flow diagram: fwd + ctl + proto + legacy, step 1 -- Packed msg arrives.
     incrementAgentMsgCount()
-    implicit val reqMsgContext: ReqMsgContext = ReqMsgContext.empty.withClientIpAddress(clientIpAddress)
+    val ip = remoteAddress.getAddress().get.getHostAddress
+    implicit val reqMsgContext: ReqMsgContext = ReqMsgContext.empty.withClientIpAddress(ip)
     logIncoming(HttpMethods.POST)
     MsgRespTimeTracker.recordReqReceived(reqMsgContext.id) //tracing metrics related
     req.entity.contentType.mediaType match {
@@ -134,16 +137,10 @@ trait PackedMsgEndpointHandler
   }
 
   protected val packedMsgRoute: Route =
-    handleExceptions(exceptionHandler) {
-      logRequestResult("agency-service") {
-        path("agency" / "msg") {
-          extractRequest { implicit req: HttpRequest =>
-            extractClientIP { implicit remoteAddress =>
-              post {
-                handleAgentMsgReq
-              }
-            }
-          }
+    handleRequest(exceptionHandler) { (req, remoteAddress) =>
+      path("agency" / "msg") {
+        post {
+          handleAgentMsgReq(req, remoteAddress)
         }
       }
     }

@@ -1,18 +1,18 @@
 package com.evernym.verity.http.route_handlers.configured
 
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
-import akka.http.scaladsl.server.Directives.{complete, handleExceptions, logRequestResult, pathPrefix, _}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.constants.Constants._
-import com.evernym.verity.util2.Exceptions.NotFoundErrorException
-import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.url_mapper.{AddUrl, GetActualUrl}
 import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.http.common.CustomExceptionHandler._
-import com.evernym.verity.http.common.HttpRouteBase
-import com.evernym.verity.http.route_handlers.PlatformServiceProvider
+import com.evernym.verity.constants.Constants._
+import com.evernym.verity.http.common.BaseRequestHandler
+import com.evernym.verity.http.common.CustomResponseHandler._
+import com.evernym.verity.http.route_handlers.PlatformWithExecutor
 import com.evernym.verity.urlmapper.UrlAdded
 import com.evernym.verity.util.Util._
+import com.evernym.verity.util2.Exceptions.NotFoundErrorException
+import com.evernym.verity.util2.Status._
 
 import scala.concurrent.Future
 
@@ -21,8 +21,8 @@ import scala.concurrent.Future
  * right now hosted on CAS (but it can be hosted separately as well)
  */
 trait UrlMapperEndpointHandler
-  extends HttpRouteBase
-    with PlatformServiceProvider {
+  extends BaseRequestHandler {
+  this: PlatformWithExecutor =>
 
   protected def createUrlMapping(urlJson: String): Future[Any] = {
     val agencyPayloadData = getMapWithStringValueFromJsonString(urlJson)
@@ -49,7 +49,7 @@ trait UrlMapperEndpointHandler
 
   protected def urlMapperResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
     case u: Url => handleExpectedResponse(u)
-    case e      => handleUnexpectedResponse(e)
+    case e => handleUnexpectedResponse(e)
   }
 
   protected val urlMapperRoute: Route =

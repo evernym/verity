@@ -5,7 +5,7 @@ import akka.http.scaladsl.model.headers.HttpCredentials
 import akka.http.scaladsl.model.{HttpRequest, MediaTypes}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractRequest, logRequestResult, pathPrefix, post, reject, _}
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.http.common.HttpCustomTypes
+import com.evernym.verity.http.common.models.HttpCustomTypes
 import com.evernym.verity.integration.base.sdk_provider.OAuthParam
 
 

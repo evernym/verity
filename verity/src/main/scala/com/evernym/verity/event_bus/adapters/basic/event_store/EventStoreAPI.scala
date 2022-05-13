@@ -7,7 +7,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.HttpRequest
 import akka.http.scaladsl.model.StatusCodes.OK
-import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, handleExceptions, pathPrefix, _}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import akka.util.Timeout
@@ -15,13 +15,13 @@ import com.evernym.verity.actor.{ActorMessage, ForIdentifier, ShardUtil}
 import com.evernym.verity.config.AppConfigWrapper
 import com.evernym.verity.event_bus.adapters.basic.HttpServerParam
 import com.evernym.verity.http.HttpUtil
-import com.evernym.verity.http.common.CustomExceptionHandler.exceptionHandler
+import com.evernym.verity.http.common.CustomResponseHandler.exceptionHandler
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 
 //basic event store api (http server, listens for publish/subscribe api request and sends it to appropriate topic actors)

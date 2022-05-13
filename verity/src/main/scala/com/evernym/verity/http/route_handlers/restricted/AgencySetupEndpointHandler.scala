@@ -2,7 +2,7 @@ package com.evernym.verity.http.route_handlers.restricted
 
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.StatusCodes.OK
-import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, handleExceptions, logRequestResult, path, pathPrefix, post, put, _}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.actor.agent.agency.{CreateKey, SetEndpoint, UpdateEndpoint}
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
@@ -12,8 +12,9 @@ import com.evernym.verity.cache.base.{GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.http.HttpUtil.optionalEntityAs
-import com.evernym.verity.http.common.CustomExceptionHandler._
-import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
+import com.evernym.verity.http.common.BaseRequestHandler
+import com.evernym.verity.http.common.CustomResponseHandler._
+import com.evernym.verity.http.route_handlers.PlatformWithExecutor
 import com.evernym.verity.util.Util.getNewActorId
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, ForbiddenErrorException}
 import com.evernym.verity.util2.Status.{AGENT_NOT_YET_CREATED, StatusDetail, getUnhandledError}
@@ -23,8 +24,8 @@ import scala.concurrent.Future
 /**
  * handles http routes used during setting up agency agent
  */
-trait AgencySetupEndpointHandler {
-  this: HttpRouteWithPlatform =>
+trait AgencySetupEndpointHandler extends BaseRequestHandler {
+  this: PlatformWithExecutor =>
 
   protected def getActorIdByDID(toDID: DidStr): Future[Either[StatusDetail, ActorAddressDetail]] = {
     val respFut = platform.agentActorContext.agentMsgRouter.execute(GetRoute(toDID))
@@ -76,48 +77,42 @@ trait AgencySetupEndpointHandler {
   }
 
   protected def adminMsgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
-    case _:EndpointSet        => OK
-    case ad: AgencyPublicDid  => handleExpectedResponse(ad)
-    case e                    => handleUnexpectedResponse(e)
+    case _: EndpointSet => OK
+    case ad: AgencyPublicDid => handleExpectedResponse(ad)
+    case e => handleUnexpectedResponse(e)
   }
 
-  protected val setupRoutes: Route =
-    handleExceptions(exceptionHandler) {
-      logRequestResult("agency-service") {
-        pathPrefix("agency" / "internal" / "setup") {
-          extractRequest { implicit req =>
-            extractClientIP { implicit remoteAddress =>
-              checkIfAddressAllowed(remoteAddress, req.uri)
-              path("key") {
-                (post & pathEnd & optionalEntityAs[CreateAgencyKey]) { cakOpt =>
-                  complete {
-                    createKey(cakOpt).map[ToResponseMarshallable] {
-                      adminMsgResponseHandler
-                    }
-                  }
-                }
-              } ~
-                path("endpoint") {
-                  (post & pathEnd) {
-                    complete {
-                      setEndpoint(SetEndpoint).map[ToResponseMarshallable] {
-                        adminMsgResponseHandler
-                      }
-                    }
-                  } ~
-                    (put & pathEnd) {
-                      complete {
-                        setEndpoint(UpdateEndpoint).map[ToResponseMarshallable] {
-                          adminMsgResponseHandler
-                        }
-                      }
-                    }
-                }
+  protected val setupRoutes: Route = {
+    handleRestrictedRequest(exceptionHandler) { (_, _) =>
+      pathPrefix("agency" / "internal" / "setup") {
+        path("key") {
+          (post & pathEnd & optionalEntityAs[CreateAgencyKey]) { cakOpt =>
+            complete {
+              createKey(cakOpt).map[ToResponseMarshallable] {
+                adminMsgResponseHandler
+              }
             }
           }
-        }
+        } ~
+          path("endpoint") {
+            (post & pathEnd) {
+              complete {
+                setEndpoint(SetEndpoint).map[ToResponseMarshallable] {
+                  adminMsgResponseHandler
+                }
+              }
+            } ~
+              (put & pathEnd) {
+                complete {
+                  setEndpoint(UpdateEndpoint).map[ToResponseMarshallable] {
+                    adminMsgResponseHandler
+                  }
+                }
+              }
+          }
       }
     }
+  }
 }
 
 case class CreateAgencyKey(seed: Option[String] = None)

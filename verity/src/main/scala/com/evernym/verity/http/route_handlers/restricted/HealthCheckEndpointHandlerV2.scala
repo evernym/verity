@@ -1,13 +1,14 @@
 package com.evernym.verity.http.route_handlers.restricted
 
 import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.server.Directives.{complete, _}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import com.evernym.verity.actor.AppStateCoordinator
-import com.evernym.verity.http.common.CustomExceptionHandler._
-import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
+import com.evernym.verity.http.common.BaseRequestHandler
+import com.evernym.verity.http.common.CustomResponseHandler._
+import com.evernym.verity.http.route_handlers.PlatformWithExecutor
 import com.evernym.verity.util.healthcheck.HealthChecker
-import spray.json.DefaultJsonProtocol.{StringJsonFormat, _}
+import spray.json.DefaultJsonProtocol._
 import spray.json.{RootJsonFormat, enrichAny}
 
 import scala.concurrent.Future
@@ -19,8 +20,9 @@ case class ReadinessStatus(status: Boolean = false,
                            blobStorageStatus: String = "")
 
 
-trait HealthCheckEndpointHandlerV2 {
-  this: HttpRouteWithPlatform =>
+trait HealthCheckEndpointHandlerV2 extends BaseRequestHandler {
+  this: PlatformWithExecutor =>
+
   val healthChecker: HealthChecker
   val appStateCoordinator: AppStateCoordinator
 

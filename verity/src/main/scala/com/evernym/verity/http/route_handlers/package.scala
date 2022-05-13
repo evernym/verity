@@ -2,16 +2,21 @@ package com.evernym.verity.http
 
 import akka.http.scaladsl.model.{HttpMethod, StatusCode}
 import com.evernym.verity.constants.Constants.CLIENT_IP_ADDRESS
-import com.evernym.verity.http.common.HttpRouteBase
 import com.evernym.verity.protocol.engine.{DomainId, DomainIdFieldName}
 import com.evernym.verity.util.ReqMsgContext
 
+import scala.concurrent.ExecutionContextExecutor
+
 package object route_handlers {
-  type HttpRouteWithPlatform = HttpRouteBase with PlatformServiceProvider
+  trait HasExecutor {
+    implicit def executor: ExecutionContextExecutor
+  }
+
+  type PlatformWithExecutor = PlatformServiceProvider with HasExecutor
 }
 
 package object LoggingRouteUtil {
-  private def toTuple(key:String)(value: String) = (key, value)
+  private def toTuple(key: String)(value: String) = (key, value)
 
   private def makeTuples(domainId: Option[DomainId],
                          outboundEventType: Option[String] = None)

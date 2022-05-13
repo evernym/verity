@@ -1,9 +1,10 @@
 package com.evernym.verity.http.route_handlers.configured
 
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.directives.RouteDirectives
 import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.directives.RouteDirectives
 import com.evernym.verity.config.ConfigConstants._
+import com.evernym.verity.http.route_handlers.PlatformWithExecutor
 
 /**
  * api routes which are available if enabled via configuration
@@ -12,6 +13,7 @@ import com.evernym.verity.config.ConfigConstants._
 trait ConfiguredApiRoutes
   extends UrlMapperEndpointHandler
     with ReadOnlyActorEndpointHandler {
+  this: PlatformWithExecutor =>
 
   protected def configuredApiRoutes: Route =
     routeIfConfigEnabled(INTERNAL_API_URL_MAPPER_ENABLED, urlMapperRoute) ~

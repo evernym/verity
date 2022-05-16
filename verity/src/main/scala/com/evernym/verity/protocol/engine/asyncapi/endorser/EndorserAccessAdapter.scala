@@ -37,11 +37,11 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
   override def withCurrentEndorser(ledger: String)(handler: Try[Option[Endorser]] => Unit): Unit = {
 
     asyncOpRunner.withFutureOpRunner(
-      {singletonParentProxy
+      singletonParentProxy
         .ask{ ref: ActorRef => ForEndorserRegistry(GetEndorsers(ledger, ref))}
         .mapTo[LedgerEndorsers]
         .map(r => r.latestEndorser.map(e => Endorser(e.did)))
-      },
+      ,
       handler
     )
   }

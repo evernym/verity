@@ -24,7 +24,7 @@ trait AsyncOpRunner {
    * @param op the async operation to be executed
    */
   protected def runAsyncOp(op: => Any): Unit
-  protected def runFutureAsyncOp(op: => Future[Any]): Unit
+  protected def runFutureAsyncOp(fut: Future[Any]): Unit
 
   final def withAsyncOpRunner[T](asyncOp: => Any,
                                  cbHandler: Try[T] => Unit): Unit = {
@@ -32,10 +32,10 @@ trait AsyncOpRunner {
     runAsyncOp(asyncOp)
   }
 
-  final def withFutureOpRunner[T](op: => Future[Any],
+  final def withFutureOpRunner[T](fut: Future[Any],
                                   cbHandler: Try[T] => Unit): Unit = {
     pushAsyncOpCallbackHandler(cbHandler)
-    runFutureAsyncOp(op)
+    runFutureAsyncOp(fut)
   }
 
   import scala.language.existentials

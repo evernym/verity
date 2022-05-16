@@ -413,12 +413,11 @@ class ActorProtocolContainer[
    * It's because for Future(Failure(..)) case all saved callbacks will be cleaned via abortTransaction()
    * But Failure case can be expected
    */
-  override protected def runFutureAsyncOp(op: => Future[Any]): Unit = {
+  override protected def runFutureAsyncOp(fut: Future[Any]): Unit = {
     setNewReceiveBehaviour(toAsyncOpInProgressBehaviour, discardOld = false)
     withHandleResp {
-      val result = op //given operation gets executed here
       val sndr = sender()
-      result.onComplete {
+      fut.onComplete {
         r => self.tell(AsyncOpResp(r), sndr)
       }
     }

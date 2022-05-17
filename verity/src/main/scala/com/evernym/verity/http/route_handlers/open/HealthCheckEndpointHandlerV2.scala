@@ -1,4 +1,4 @@
-package com.evernym.verity.http.route_handlers.restricted
+package com.evernym.verity.http.route_handlers.open
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
@@ -20,6 +20,8 @@ case class ReadinessStatus(status: Boolean = false,
                            blobStorageStatus: String = "")
 
 
+//this doesn't necessarily to be an open route
+// based on current use cases it is only used internally
 trait HealthCheckEndpointHandlerV2 extends BaseRequestHandler {
   this: PlatformWithExecutor =>
 

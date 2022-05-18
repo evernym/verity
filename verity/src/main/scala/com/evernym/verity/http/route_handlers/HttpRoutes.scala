@@ -23,7 +23,10 @@ trait HttpRoutes
    *
    * @return
    */
-  def baseRoute: Route = openApiRoutes ~ restrictedApiRoutes ~ configuredApiRoutes ~ agencyApiRoutes
+
+  //NOTE: make sure the `configuredApiRoutes` and `restrictedApiRoutes` are kept at the very last in below `baseRoute` declaration
+  // as it checks for the ip address and that may fail for other non restricted routes if they put after such routes.
+  def baseRoute: Route = openApiRoutes ~ agencyApiRoutes ~ configuredApiRoutes ~ restrictedApiRoutes
 
   def endpointRoutes: Route = ignoreTrailingSlash {
     baseRoute

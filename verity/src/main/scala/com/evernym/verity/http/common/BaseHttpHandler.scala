@@ -1,6 +1,7 @@
 package com.evernym.verity.http.common
 
 import akka.http.scaladsl.model.StatusCodes._
+import akka.http.scaladsl.model.Uri.Path
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.{complete, extractClientIP, extractRequest, handleExceptions, logRequestResult, tprovide}
 import akka.http.scaladsl.server.{Directive, ExceptionHandler}
@@ -101,11 +102,15 @@ trait BaseRequestHandler extends AllowedIpsResolver with ConfigSvc with HasActor
   def handleRequest(handler: ExceptionHandler): Directive[(HttpRequest, RemoteAddress)] =
     handleExceptions(handler) & logRequestResult("agency-service") & extractRequest & extractClientIP
 
-  def handleRestrictedRequest(handler: ExceptionHandler): Directive[(HttpRequest, RemoteAddress)] = handleRequest(handler).tflatMap {
-    case (req, remoteAddress) =>
-      checkIfAddressAllowed(remoteAddress, req.uri)
-      tprovide(req, remoteAddress)
-  }
+  def handleRestrictedRequest(handler: ExceptionHandler): Directive[(HttpRequest, RemoteAddress)] =
+    handleRequest(handler)
+      //below filter is to make sure it only performs the ip address check for internal apis
+      .tfilter{case (req, _) => req.uri.path.startsWith(Path("/agency/internal"))}
+      .tflatMap {
+        case (req, remoteAddress) =>
+          checkIfAddressAllowed(remoteAddress, req.uri)
+          tprovide(req, remoteAddress)
+    }
 }
 
 

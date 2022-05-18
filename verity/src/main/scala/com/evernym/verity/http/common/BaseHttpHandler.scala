@@ -105,7 +105,7 @@ trait BaseRequestHandler extends AllowedIpsResolver with ConfigSvc with HasActor
   def handleRestrictedRequest(handler: ExceptionHandler): Directive[(HttpRequest, RemoteAddress)] =
     handleRequest(handler)
       //below filter is to make sure it only performs the ip address check for internal apis
-      .tfilter{case (req, remoteAdd) => req.uri.path.startsWith(Path("agency/internal"))}
+      .tfilter{case (req, _) => req.uri.path.startsWith(Path("/agency/internal"))}
       .tflatMap {
         case (req, remoteAddress) =>
           checkIfAddressAllowed(remoteAddress, req.uri)

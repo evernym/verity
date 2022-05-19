@@ -27,7 +27,7 @@ object Main extends App {
   )
 
   //start event consumer adapter (TODO: to be enabled at later/final stage of event bus integration)
-  platform.eventConsumerAdapter.start()
+  platform.eventConsumerAdapter.map(_.start())
 
   //start akka management server (if enabled, by default it is turned off)
   platform.startExtensionIfEnabled(AkkaManagement, AKKA_MNGMNT_HTTP_ENABLED)(_.start())

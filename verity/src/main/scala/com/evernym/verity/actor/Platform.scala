@@ -425,16 +425,25 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
     Option(new BasicEventStoreAPI(appConfig.config)(actorSystem, executionContextProvider.futureExecutionContext))
   } else None
 
+  lazy val isVAS: Boolean =
+    appConfig
+      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
+      .contains("VerityAgent")
+
   //should be lazy and only used/created during startup process (post dependency check)
-  lazy val eventConsumerAdapter: ConsumerPort = {
-    val configPath = appConfig.getStringReq(EVENT_SOURCE)
-    val clazz = appConfig.getStringReq(s"$configPath.builder-class")
-    Class
-      .forName(clazz)
-      .getConstructor()
-      .newInstance()
-      .asInstanceOf[EventConsumerAdapterBuilder]
-      .build(appConfig, agentActorContext.agentMsgRouter, singletonParentProxy, executionContextProvider.futureExecutionContext, actorSystem)
+  lazy val eventConsumerAdapter: Option[ConsumerPort] = {
+    if (isVAS) {
+      val configPath = appConfig.getStringReq(EVENT_SOURCE)
+      val clazz = appConfig.getStringReq(s"$configPath.builder-class")
+      Option(
+        Class
+        .forName(clazz)
+        .getConstructor()
+        .newInstance()
+        .asInstanceOf[EventConsumerAdapterBuilder]
+        .build(appConfig, agentActorContext.agentMsgRouter, singletonParentProxy, executionContextProvider.futureExecutionContext, actorSystem)
+      )
+    } else None
   }
 }
 

@@ -118,7 +118,7 @@ object LocalVerity {
       appConfig,
       Option(new MockDefaultAgentActorContext(appConfig, serviceParam, executionContextProvider))
     )
-    platform.eventConsumerAdapter.start()
+    platform.eventConsumerAdapter.map(_.start())
   }
 
   object Starter {

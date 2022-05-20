@@ -15,6 +15,7 @@ import com.evernym.verity.http.HttpUtil.optionalEntityAs
 import com.evernym.verity.http.common.BaseRequestHandler
 import com.evernym.verity.http.common.CustomResponseHandler._
 import com.evernym.verity.http.route_handlers.PlatformWithExecutor
+import com.evernym.verity.http.route_handlers.restricted.models.CreateAgencyKey
 import com.evernym.verity.util.Util.getNewActorId
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, ForbiddenErrorException}
 import com.evernym.verity.util2.Status.{AGENT_NOT_YET_CREATED, StatusDetail, getUnhandledError}
@@ -88,7 +89,7 @@ trait AgencySetupEndpointHandler extends BaseRequestHandler {
         path("key") {
           (post & pathEnd & optionalEntityAs[CreateAgencyKey]) { cakOpt =>
             complete {
-              createKey(cakOpt).map[ToResponseMarshallable] {
+              createKey(cakOpt).map {
                 adminMsgResponseHandler
               }
             }
@@ -97,14 +98,14 @@ trait AgencySetupEndpointHandler extends BaseRequestHandler {
           path("endpoint") {
             (post & pathEnd) {
               complete {
-                setEndpoint(SetEndpoint).map[ToResponseMarshallable] {
+                setEndpoint(SetEndpoint).map {
                   adminMsgResponseHandler
                 }
               }
             } ~
               (put & pathEnd) {
                 complete {
-                  setEndpoint(UpdateEndpoint).map[ToResponseMarshallable] {
+                  setEndpoint(UpdateEndpoint).map {
                     adminMsgResponseHandler
                   }
                 }
@@ -114,5 +115,3 @@ trait AgencySetupEndpointHandler extends BaseRequestHandler {
     }
   }
 }
-
-case class CreateAgencyKey(seed: Option[String] = None)

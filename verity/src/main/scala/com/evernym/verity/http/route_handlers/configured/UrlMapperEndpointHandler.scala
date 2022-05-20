@@ -9,6 +9,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.http.common.BaseRequestHandler
 import com.evernym.verity.http.common.CustomResponseHandler._
 import com.evernym.verity.http.route_handlers.PlatformWithExecutor
+import com.evernym.verity.http.route_handlers.configured.models.Url
 import com.evernym.verity.urlmapper.UrlAdded
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util2.Exceptions.NotFoundErrorException
@@ -58,7 +59,7 @@ trait UrlMapperEndpointHandler
         pathPrefix("agency" / "url-mapper") {
           (post & entity(as[String])) { msg =>
             complete {
-              createUrlMapping(msg).map[ToResponseMarshallable] {
+              createUrlMapping(msg).map {
                 urlMapperResponseHandler
               }
             }
@@ -66,7 +67,7 @@ trait UrlMapperEndpointHandler
             pathPrefix(Segment) { implicit hashed =>
               (get & pathEnd) {
                 complete {
-                  getMappedUrl.map[ToResponseMarshallable] {
+                  getMappedUrl.map {
                     urlMapperResponseHandler
                   }
                 }
@@ -76,5 +77,3 @@ trait UrlMapperEndpointHandler
       }
     }
 }
-
-case class Url(url: String)

@@ -56,18 +56,24 @@ trait MsgProgressTrackerEndpointHandler extends BaseRequestHandler {
       pathPrefix("agency" / "internal" / "msg-progress-tracker") {
         (get & pathEnd) {
           complete {
-            getAllIdsBeingTracked map msgProgressBackendResponseHandler
+            getAllIdsBeingTracked.map {
+              msgProgressBackendResponseHandler
+            }
           }
         } ~
           pathPrefix(Segment) { trackingId =>
             post {
               complete {
-                startTracking(trackingId) map msgProgressBackendResponseHandler
+                startTracking(trackingId).map {
+                  msgProgressBackendResponseHandler
+                }
               }
             } ~
               delete {
                 complete {
-                  stopTracking(trackingId) map msgProgressBackendResponseHandler
+                  stopTracking(trackingId).map {
+                    msgProgressBackendResponseHandler
+                  }
                 }
               } ~
               get {
@@ -92,7 +98,9 @@ trait MsgProgressTrackerEndpointHandler extends BaseRequestHandler {
               path("configure") {
                 (put & entityAs[ConfigureTracking]) { ct =>
                   complete {
-                    configureTracking(trackingId, ct) map msgProgressBackendResponseHandler
+                    configureTracking(trackingId, ct).map {
+                      msgProgressBackendResponseHandler
+                    }
                   }
                 }
               }

@@ -7,18 +7,13 @@ import com.evernym.verity.actor.AppStateCoordinator
 import com.evernym.verity.http.common.BaseRequestHandler
 import com.evernym.verity.http.common.CustomResponseHandler._
 import com.evernym.verity.http.route_handlers.PlatformWithExecutor
+import com.evernym.verity.http.route_handlers.open.models.ReadinessStatus
 import com.evernym.verity.util.healthcheck.HealthChecker
 import spray.json.DefaultJsonProtocol._
 import spray.json.{RootJsonFormat, enrichAny}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
-
-case class ReadinessStatus(status: Boolean = false,
-                           akkaStorageStatus: String = "",
-                           walletStorageStatus: String = "",
-                           blobStorageStatus: String = "")
-
 
 //this doesn't necessarily to be an open route
 // based on current use cases it is only used internally

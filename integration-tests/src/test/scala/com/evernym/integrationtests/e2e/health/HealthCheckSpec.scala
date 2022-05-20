@@ -12,7 +12,7 @@ import com.evernym.integrationtests.e2e.scenario.Scenario.runScenario
 import com.evernym.integrationtests.e2e.scenario.{Scenario, ScenarioAppEnvironment}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.http.route_handlers.open.ReadinessStatus
+import com.evernym.verity.http.route_handlers.open.models.ReadinessStatus
 import com.evernym.verity.integration.base.verity_provider.VerityAdmin.actorSystem
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.BasicSpec

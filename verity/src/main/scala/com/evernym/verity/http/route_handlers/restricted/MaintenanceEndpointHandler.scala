@@ -106,7 +106,7 @@ trait MaintenanceEndpointHandler extends BaseRequestHandler {
         (get & pathEnd) {
           parameters(Symbol("detail").?) { detailOpt =>
             complete {
-              getAgentRouteStoreMigrationStatus(detailOpt).map[ToResponseMarshallable] {
+              getAgentRouteStoreMigrationStatus(detailOpt).map {
                 case msd: MigrationStatusDetail => handleExpectedResponse(msd)
                 case e => handleUnexpectedResponse(e)
               }

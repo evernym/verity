@@ -39,7 +39,7 @@ trait GetInviteRestEndpointHandler
   extends BaseRequestHandler {
   this: PlatformWithExecutor with ResourceUsageCommon =>
 
-  protected def getInviteMsgResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
+  protected def getInviteResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
     case invDetail: InviteDetail => handleExpectedResponse(invDetail)
     case jsonMsg: JSONObject => HttpResponse(StatusCodes.OK, entity = HttpEntity(ContentType(MediaTypes.`application/json`), jsonMsg.toString(2)))
     case e => handleUnexpectedResponse(e)
@@ -101,31 +101,6 @@ trait GetInviteRestEndpointHandler
     }
   }
 
-  protected def handleGetInviteByTokenReq(token: String, ip: String): Route = {
-    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite", ip, None)
-    complete {
-      getInviteDetailByToken(token).map[ToResponseMarshallable] {
-        getInviteMsgResponseHandler
-      }
-    }
-  }
-
-  protected def handleGetInviteByDIDAndUidReq(DID: DidStr, uid: MsgId, ip: String): Route = {
-    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_did", ip, None)
-    complete {
-      getInviteDetailByDIDAndUid(DID, uid).map[ToResponseMarshallable] {
-        getInviteMsgResponseHandler
-      }
-    }
-  }
-
-  protected def handleGetInvitationAries(base64inv: String, ip: String): Route = {
-    addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_aries", ip, None)
-    complete {
-      getInviteMsgResponseHandler(decodeAriesInvitation(base64inv))
-    }
-  }
-
   protected def decodeAriesInvitation(base64inv: String): JSONObject = {
     try {
       new JSONObject(new String(Base64Util.getBase64UrlDecoded(base64inv)))
@@ -141,13 +116,23 @@ trait GetInviteRestEndpointHandler
         pathPrefix("invite") {
           (get & pathEnd) {
             parameters(Symbol("t")) { token =>
-              handleGetInviteByTokenReq(token, extractIp(remoteAddress))
+              addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite", extractIp(remoteAddress), None)
+              complete {
+                getInviteDetailByToken(token).map {
+                  getInviteResponseHandler
+                }
+              }
             }
           } ~
             pathPrefix(Segment) { DID =>
               (get & pathEnd) {
                 parameters(Symbol("uid")) { uid =>
-                  handleGetInviteByDIDAndUidReq(DID, uid, extractIp(remoteAddress))
+                  addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_did", extractIp(remoteAddress), None)
+                  complete {
+                    getInviteDetailByDIDAndUid(DID, uid).map {
+                      getInviteResponseHandler
+                    }
+                  }
                 }
               }
             }
@@ -155,10 +140,16 @@ trait GetInviteRestEndpointHandler
           pathPrefix("msg") {
             (get & pathEnd) {
               parameters("c_i") { inv =>
-                handleGetInvitationAries(inv, extractIp(remoteAddress))
+                addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_aries", extractIp(remoteAddress), None)
+                complete {
+                  getInviteResponseHandler(decodeAriesInvitation(inv))
+                }
               } ~
                 parameters("oob") { inv =>
-                  handleGetInvitationAries(inv, extractIp(remoteAddress))
+                  addUserResourceUsage(RESOURCE_TYPE_ENDPOINT, "GET_agency_invite_aries", extractIp(remoteAddress), None)
+                  complete {
+                    getInviteResponseHandler(decodeAriesInvitation(inv))
+                  }
                 }
             }
           }

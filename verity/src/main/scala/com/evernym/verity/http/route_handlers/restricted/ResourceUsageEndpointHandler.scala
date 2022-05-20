@@ -16,10 +16,10 @@ import com.evernym.verity.http.HttpUtil.entityAs
 import com.evernym.verity.http.common.BaseRequestHandler
 import com.evernym.verity.http.common.CustomResponseHandler._
 import com.evernym.verity.http.route_handlers.PlatformWithExecutor
+import com.evernym.verity.http.route_handlers.restricted.models.{UpdateResourcesUsageCounter, UpdateResourcesUsageLimit, UpdateViolationDetail}
 import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status._
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 
 import scala.concurrent.Future
 
@@ -192,20 +192,3 @@ trait ResourceUsageEndpointHandler extends BaseRequestHandler with HasExecutionC
       }
     }
 }
-
-
-case class UpdateViolationDetail(msgType: String,
-                                 @JsonDeserialize(contentAs = classOf[Long]) period: Option[Long],
-                                 allResources: Option[String])
-
-case class ResourceUsageLimitDetail(resourceName: String, bucketId: Int,
-                                    newLimit: Option[Int] = None, addToCurrentUsedCount: Option[Int] = None) {
-  require(!(newLimit.isEmpty && addToCurrentUsedCount.isEmpty),
-    "one and only one of these should be specified: 'newLimit' or 'addToCurrentUsedCount'")
-}
-
-case class UpdateResourcesUsageLimit(resourceUsageLimits: List[ResourceUsageLimitDetail])
-
-case class ResourceUsageCounterDetail(resourceName: String, bucketId: Int, newCount: Option[Int])
-
-case class UpdateResourcesUsageCounter(resourceUsageCounters: List[ResourceUsageCounterDetail]) extends ActorMessage

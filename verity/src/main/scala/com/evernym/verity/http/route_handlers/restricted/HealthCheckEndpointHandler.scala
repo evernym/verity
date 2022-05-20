@@ -4,6 +4,7 @@ import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet}
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager._
 import com.evernym.verity.constants.Constants._
@@ -11,6 +12,7 @@ import com.evernym.verity.http.HttpUtil.optionalEntityAs
 import com.evernym.verity.http.common.BaseRequestHandler
 import com.evernym.verity.http.common.CustomResponseHandler._
 import com.evernym.verity.http.route_handlers.PlatformWithExecutor
+import com.evernym.verity.http.route_handlers.restricted.models.UpdateAppStatus
 import com.evernym.verity.util2.Status._
 import com.typesafe.config.ConfigException.{BadPath, Missing}
 import com.typesafe.config.ConfigValueType._
@@ -22,6 +24,12 @@ import scala.jdk.CollectionConverters._
 
 trait HealthCheckEndpointHandler extends BaseRequestHandler {
   this: PlatformWithExecutor =>
+
+  protected def healthCheckResponseHandler: PartialFunction[Any, ToResponseMarshallable] = {
+    case allEvents: AllEvents => handleExpectedResponse(allEvents.events.map(x => s"${x.state.toString}"))
+    case detailedState: AppStateDetailed => handleExpectedResponse(detailedState.toResp)
+    case e => handleUnexpectedResponse(e)
+  }
 
   protected def buildConfigRenderOptions(origComments: String, comments: String,
                                          formatted: String, json: String): ConfigRenderOptions = {
@@ -76,26 +84,18 @@ trait HealthCheckEndpointHandler extends BaseRequestHandler {
     handleRestrictedRequest(exceptionHandler) { (_, _) =>
       path("agency" / "internal" / "health-check" / "application-state") {
         (get & pathEnd) {
-          parameters(Symbol("detail").?) { detailOpt =>
+          parameters(Symbol("detail") ? NO) { detail =>
             complete {
-              val fut = if (detailOpt.map(_.toUpperCase).contains(YES)) {
-                askAppStateManager(GetDetailedAppState)
-              } else {
-                askAppStateManager(GetEvents)
-              }
-              fut.map[ToResponseMarshallable] {
-                case allEvents: AllEvents =>
-                  handleExpectedResponse(allEvents.events.map(x => s"${x.state.toString}"))
-                case detailedState: AppStateDetailed =>
-                  handleExpectedResponse(detailedState.toResp)
-                case e => handleUnexpectedResponse(e)
+              val cmd = if (detail == YES) GetDetailedAppState else GetEvents
+              askAppStateManager(cmd).map {
+                healthCheckResponseHandler
               }
             }
           }
         } ~
           (put & pathEnd & optionalEntityAs[UpdateAppStatus]) { uasOpt =>
             complete {
-              updateAppStatus(uasOpt.getOrElse(UpdateAppStatus())).map[ToResponseMarshallable] {
+              updateAppStatus(uasOpt.getOrElse(UpdateAppStatus())).map {
                 _ => OK
               }
             }
@@ -104,6 +104,3 @@ trait HealthCheckEndpointHandler extends BaseRequestHandler {
     }
   }
 }
-
-
-case class UpdateAppStatus(newStatus: String = STATUS_LISTENING, context: Option[String] = None, reason: Option[String] = None)

@@ -1,7 +1,6 @@
 package com.evernym.verity.http.route_handlers.restricted
 
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
-import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.StatusReply.Success
@@ -37,7 +36,7 @@ trait OutboxEndpointHandler extends BaseRequestHandler {
         pathPrefix(Segment) { outboxId =>
           (get & pathEnd) {
             complete {
-              getOutboxDeliveryStatus(outboxId).map[ToResponseMarshallable] {
+              getOutboxDeliveryStatus(outboxId).map {
                 case Success(ds: Outbox.Replies.DeliveryStatus) => handleExpectedResponse(ds)
                 case e => handleUnexpectedResponse(e)
               }
@@ -48,7 +47,7 @@ trait OutboxEndpointHandler extends BaseRequestHandler {
           pathPrefix(Segment) { messageId =>
             (get & pathEnd) {
               complete {
-                getMsgDeliveryStatus(messageId).map[ToResponseMarshallable] {
+                getMsgDeliveryStatus(messageId).map {
                   case Success(mds: MessageMeta.Replies.MsgDeliveryStatus) => handleExpectedResponse(mds)
                   case e => handleUnexpectedResponse(e)
                 }

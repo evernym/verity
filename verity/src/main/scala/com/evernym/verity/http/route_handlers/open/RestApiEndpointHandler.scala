@@ -18,6 +18,7 @@ import com.evernym.verity.http.LoggingRouteUtil.{incomingLogMsg, outgoingLogMsg}
 import com.evernym.verity.http.common.models.StatusDetailResp
 import com.evernym.verity.http.common.{BaseRequestHandler, BaseResponseHandler, MetricsSupport}
 import com.evernym.verity.http.route_handlers.PlatformWithExecutor
+import com.evernym.verity.http.route_handlers.open.models.{RestAcceptedResponse, RestErrorResponse, RestOKResponse}
 import com.evernym.verity.protocol.engine.ProtoRef
 import com.evernym.verity.util.{ReqMsgContext, RestAuthContext, RestMsgContext}
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, FeatureNotEnabledException, UnauthorisedErrorException}
@@ -272,13 +273,3 @@ trait RestApiEndpointHandler extends BaseRequestHandler with MetricsSupport {
 object RestResponseHandler extends BaseResponseHandler {
   override def createResponse(sdr: StatusDetailResp): RestErrorResponse = RestErrorResponse(sdr.statusCode, sdr.statusMsg)
 }
-
-sealed trait RestResponse {
-  def status: String
-}
-
-case class RestErrorResponse(errorCode: String, errorDetails: String, override val status: String = "Error") extends RestResponse
-
-case class RestAcceptedResponse(override val status: String = "Accepted") extends RestResponse
-
-case class RestOKResponse(result: Any, override val status: String = "OK") extends RestResponse

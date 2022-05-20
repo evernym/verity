@@ -24,7 +24,7 @@ trait ItemStoreEndpointHandler extends BaseRequestHandler {
       pathPrefix("agency" / "internal" / "item-store") {
         (get & pathEnd) {
           complete {
-            getItems.map[ToResponseMarshallable] {
+            getItems.map {
               case items: ItemStore.Replies.Items => handleExpectedResponse(items)
               case e => handleUnexpectedResponse(e)
             }

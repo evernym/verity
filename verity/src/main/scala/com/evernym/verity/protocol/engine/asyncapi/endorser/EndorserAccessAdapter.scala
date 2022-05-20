@@ -48,14 +48,14 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
     )
   }
 
-  override def endorseTxn(payload: String, vdrType: String)(handler: Try[Unit] => Unit): Unit = {
+  override def endorseTxn(payload: String, ledgerPrefix: String)(handler: Try[Unit] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
       blobStorageUtil.saveInBlobStore(payload.getBytes(), dataRetentionPolicy)
         .flatMap { storageInfo =>
           val jsonPayload =
             s"""{
                |"$CLOUD_EVENT_DATA_FIELD_TXN_REF": "${storageInfo.endpoint}",
-               |"$DATA_FIELD_LEDGER_PREFIX": "$vdrType"
+               |"$DATA_FIELD_LEDGER_PREFIX": "$ledgerPrefix"
                |}""".stripMargin
           eventPublisherUtil.publishToEventBus(jsonPayload, EVENT_ENDORSEMENT_REQ_V1, TOPIC_REQUEST_ENDORSEMENT)
         },

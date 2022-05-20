@@ -9,7 +9,9 @@ import com.evernym.verity.actor.cluster_singleton.ForEndorserRegistry
 import com.evernym.verity.endorser_registry.EndorserRegistry.{Cmd, Commands}
 import com.evernym.verity.eventing.event_handlers.EndorserMessageHandler._
 import com.evernym.verity.eventing.ports.consumer.Message
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -21,11 +23,18 @@ class EndorserMessageHandler(config: Config,
                             (implicit executionContext: ExecutionContext) {
 
   implicit lazy val timeout: Timeout = Timeout(30.seconds)    //TODO: may be use configuration for the timeout
+  val logger: Logger = getLoggerByClass(getClass)
 
   def handleMessage(message: Message): Future[Done] = {
-    singletonParentProxy
-      .ask { ref: ActorRef => ForEndorserRegistry(createCmd(message, ref)) }
-      .map(_ => Done)
+    try {
+      singletonParentProxy
+        .ask { ref: ActorRef => ForEndorserRegistry(createCmd(message, ref)) }
+        .map(_ => Done)
+    } catch {
+      case _: MatchError =>
+        logger.info("endorser message handler not handling event of type: " + message.cloudEvent.getString(CLOUD_EVENT_TYPE))
+        Future.successful(Done)
+    }
   }
 
   //TODO: a high level implementation, it needs to be finalized/corrected as per final changes

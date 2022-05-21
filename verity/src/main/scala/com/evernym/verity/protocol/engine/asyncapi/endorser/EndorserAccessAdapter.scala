@@ -42,7 +42,7 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
       {singletonParentProxy
         .ask{ ref: ActorRef => ForEndorserRegistry(GetEndorsers(ledger, ref))}
         .mapTo[LedgerEndorsers]
-        .map(r => r.latestEndorser.map(e => Endorser(e.did)))
+        .map(r => r.latestEndorser.map(e => Endorser(e.did.substring(e.did.lastIndexOf(":")+1))))
       },
       handler
     )

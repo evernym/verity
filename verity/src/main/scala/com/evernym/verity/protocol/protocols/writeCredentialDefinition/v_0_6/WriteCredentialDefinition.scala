@@ -6,7 +6,7 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncapi.endorser.{ENDORSEMENT_RESULT_SUCCESS_CODE, INDY_LEDGER_PREFIX, VDR_TYPE_INDY}
+import com.evernym.verity.protocol.engine.asyncapi.endorser.ENDORSEMENT_RESULT_SUCCESS_CODE
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.protocol.engine.asyncapi.wallet.CredDefCreatedResult
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
@@ -77,12 +77,13 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                     init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
                   )
 
-                  ctx.endorser.withCurrentEndorser(INDY_LEDGER_PREFIX) {
+                  ctx.endorser.withCurrentEndorser(ctx.ledger.getIndyDefaultLegacyPrefix()) {
                     case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID == endorser.did =>
+                      ctx.logger.info("registered endorser to be used for creddef endorsement: " + endorser)
                       //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
                       ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefCreated.credDefJson, endorser.did) {
                         case Success(ledgerRequest) =>
-                          ctx.endorser.endorseTxn(ledgerRequest.req, endorser.did, INDY_LEDGER_PREFIX, VDR_TYPE_INDY) {
+                          ctx.endorser.endorseTxn(ledgerRequest.req, ctx.ledger.getIndyDefaultLegacyPrefix()) {
                             case Success(_) =>
                               ctx.apply(AskedForEndorsement(credDefCreated.credDefId, ledgerRequest.req))
                             case Failure(e) =>
@@ -90,18 +91,10 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                           }
                         case Failure(e) => problemReport(new Exception(e))
                       }
-                    case _ =>
+                    case other =>
+                      ctx.logger.info("no active/matched endorser found to be used for creddef endorsement: " + other)
                       //no active endorser or active endorser is NOT the same as given/configured endorserDID
-                      if (endorserDID.nonEmpty) {
-                        ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefCreated.credDefJson, endorserDID) {
-                          case Success(ledgerRequest) =>
-                            ctx.signal(NeedsEndorsement(credDefCreated.credDefId, ledgerRequest.req))
-                            ctx.apply(AskedForEndorsement(credDefCreated.credDefId, ledgerRequest.req))
-                          case Failure(e) => problemReport(new Exception(e))
-                        }
-                      } else {
-                        problemReport(new Exception("No default endorser defined"))
-                      }
+                      handleNeedsEndorsement(submitterDID, endorserDID, credDefCreated.credDefId, credDefCreated.credDefJson)
                   }
                 case Failure(e) =>
                   // some other failure
@@ -114,6 +107,22 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
       }
     } catch {
       case e: Exception => problemReport(e)
+    }
+  }
+
+  def handleNeedsEndorsement(submitterDID: DidStr,
+                             endorserDID: DidStr,
+                             credDefId: String,
+                             credDefJson: String): Unit = {
+    if (endorserDID.nonEmpty) {
+      ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID) {
+        case Success(ledgerRequest) =>
+          ctx.signal(NeedsEndorsement(credDefId, ledgerRequest.req))
+          ctx.apply(AskedForEndorsement(credDefId, ledgerRequest.req))
+        case Failure(e) => problemReport(new Exception(e))
+      }
+    } else {
+      problemReport(new Exception("No default endorser defined"))
     }
   }
 

@@ -4,7 +4,8 @@ import java.time.ZonedDateTime
 import akka.actor.ActorSystem
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.did.{DidStr, DidPair}
+import com.evernym.verity.config.ConfigConstants.LIB_INDY_LEDGER_DEFAULT_PREFIX
+import com.evernym.verity.did.{DidPair, DidStr}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.util.TimeZoneUtil._
 import com.evernym.verity.vault.WalletAPIParam
@@ -257,6 +258,9 @@ trait LedgerSvc {
     }
   }
 
+  def getIndyDefaultLegacyPrefix(): String = {
+    system.settings.config.getString(LIB_INDY_LEDGER_DEFAULT_PREFIX)
+  }
 }
 
 class BaseLedgerSvcException extends Exception {

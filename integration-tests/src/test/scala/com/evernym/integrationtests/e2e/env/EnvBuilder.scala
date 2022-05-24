@@ -466,7 +466,10 @@ case class VerityInstance(name: String,
       EnvVar("VERITY_HTTP_PORT", listeningPort.get, uniqueValueAcrossEnv = true),
       EnvVar("VERITY_AKKA_REMOTE_PORT", verityAkkaRemotePort, uniqueValueAcrossEnv = true),
       EnvVar("VERITY_AKKA_MANAGEMENT_HTTP_PORT",  verityAkkaManagementPort, uniqueValueAcrossEnv = true),
-      EnvVar("GENESIS_TXN_FILE_LOCATION", ledgerConfig.genesisFilePath)
+      EnvVar("GENESIS_TXN_FILE_LOCATION", ledgerConfig.genesisFilePath),
+
+      EnvVar("VERITY_BASIC_EVENT_STORE_PORT", PortProvider.getFreePort),
+      EnvVar("VERITY_BASIC_CONSUMER_PORT", PortProvider.getFreePort)
     )
   }
 

@@ -437,11 +437,8 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
   //should be lazy and only used/created during startup process (post dependency check)
   lazy val eventConsumerAdapter: Option[ConsumerPort] = {
     if (isVAS) {
-      logger.info("[TTT] it is VAS")
       val configPath = appConfig.getStringReq(EVENT_SOURCE)
-      logger.info("[TTT] configPath: " + configPath)
       val clazz = appConfig.getStringReq(s"$configPath.builder-class")
-      logger.info("[TTT] clazz: " + clazz)
       Option(
         Class
           .forName(clazz)
@@ -450,10 +447,7 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
           .asInstanceOf[EventConsumerAdapterBuilder]
           .build(appConfig, agentActorContext.agentMsgRouter, singletonParentProxy, executionContextProvider.futureExecutionContext, actorSystem)
       )
-    } else {
-      logger.info("[TTT] it is NOT VAS")
-      None
-    }
+    } else None
   }
 }
 

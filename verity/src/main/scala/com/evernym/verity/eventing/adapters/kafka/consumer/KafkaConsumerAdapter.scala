@@ -41,7 +41,7 @@ class KafkaConsumerAdapter(override val messageHandler: MessageHandler,
   private var controller: Option[DrainingControl[_]] = None
 
   override def start(): Future[Done] = {
-    logger.info("[TTT] kafka consumer is about to start...")
+    logger.info("kafka consumer is about to start...")
     controller = Option(
       Consumer
         .committableSource(settingsProvider.kafkaConsumerSettings(), Subscriptions.topics(settingsProvider.topics: _*))
@@ -58,17 +58,19 @@ class KafkaConsumerAdapter(override val messageHandler: MessageHandler,
             messageHandler
               .handleMessage(message)
               .map { _ =>
-                logger.debug(prepareLogMsgStr(committableMsg, s"event handled successfully"))
+                logger.info(prepareLogMsgStr(committableMsg, s"event processed successfully"))
                 committableMsg.committableOffset
               }.recover {
-                case e: RuntimeException =>
-                  logger.error(prepareLogMsgStr(committableMsg, s"error while handling consumer event: ${e.getMessage}"))
+                case e: Throwable =>
+                  logger.error(prepareLogMsgStr(committableMsg, s"error while handling consumed event: ${e.getMessage}"))
                   committableMsg.committableOffset
               }
           } match {
-            case Success(result: Future[CommittableOffset]) => result
+            case Success(result: Future[CommittableOffset]) =>
+              logger.info(prepareLogMsgStr(committableMsg,s"event handled successfully"))
+              result
             case Failure(ex)     =>
-              logger.error(prepareLogMsgStr(committableMsg,s"error while parsing/processing consumer event: ${ex.getMessage}"))
+              logger.error(prepareLogMsgStr(committableMsg,s"error while parsing/processing consumed event: ${ex.getMessage}"))
               Future.successful(committableMsg.committableOffset)
           }
         }
@@ -76,17 +78,17 @@ class KafkaConsumerAdapter(override val messageHandler: MessageHandler,
         .toMat(Sink.seq)(DrainingControl.apply)
         .run()
     )
-    logger.info("[TTT] kafka consumer is started.")
+    logger.info("kafka consumer is started.")
     Future.successful(Done)
   }
 
   override def stop(): Future[Done] = {
-    logger.info("[TTT] kafka consumer is about to be stopped.")
+    logger.info("kafka consumer is about to be stopped.")
     controller.map(_.drainAndShutdown())
     controller.map(_.isShutdown).getOrElse(Future.successful(Done))
   }
 
   private def prepareLogMsgStr(msg: CommittableMessage[String, Array[Byte]], str: String): String = {
-    s"[${msg.record.topic()}${Option(msg.record.key()).map(k => s":$k").getOrElse("")}:${msg.record.offset()}] $str"
+    s"[${msg.record.topic()}-${msg.record.partition()}:${msg.record.offset()}] $str"
   }
 }

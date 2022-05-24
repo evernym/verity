@@ -41,11 +41,12 @@ class KafkaConsumerAdapter(override val messageHandler: MessageHandler,
   private var controller: Option[DrainingControl[_]] = None
 
   override def start(): Future[Done] = {
+    logger.info("kafka consumer is about to start...")
     controller = Option(
       Consumer
         .committableSource(settingsProvider.kafkaConsumerSettings(), Subscriptions.topics(settingsProvider.topics: _*))
-        //because we want to commit the offset I think, it makes sense to use `mapAsync` instead of `mapAsyncUnordered`
-        // otherwise the last offset which gets committed may be not the desired one (because futures can complete in any order)
+        //because we want to commit the offset, it makes sense to use `mapAsync` instead of `mapAsyncUnordered`
+        // otherwise the last offset which gets committed may not be the desired one (because futures can complete in any order)
         .mapAsync(settingsProvider.msgHandlingParallelism) { committableMsg =>   //how many futures in parallel to process each received message
           Try {
             logger.info(prepareLogMsgStr(committableMsg, s"committable message received: $committableMsg"))
@@ -75,6 +76,7 @@ class KafkaConsumerAdapter(override val messageHandler: MessageHandler,
         .toMat(Sink.seq)(DrainingControl.apply)
         .run()
     )
+    logger.info("kafka consumer is started.")
     Future.successful(Done)
   }
 

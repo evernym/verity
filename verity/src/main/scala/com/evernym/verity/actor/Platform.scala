@@ -36,8 +36,10 @@ import com.evernym.verity.eventing.adapters.basic.event_store.BasicEventStoreAPI
 import com.evernym.verity.eventing.adapters.kafka.consumer.{ConsumerSettingsProvider, KafkaConsumerAdapter}
 import com.evernym.verity.eventing.event_handlers.ConsumedMessageHandler
 import com.evernym.verity.eventing.ports.consumer.ConsumerPort
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.vdrtools.Libraries
 import com.evernym.verity.util.healthcheck.HealthChecker
+import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -430,20 +432,28 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
       .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
       .contains("VerityAgent")
 
+  val logger: Logger = getLoggerByClass(getClass)
+
   //should be lazy and only used/created during startup process (post dependency check)
   lazy val eventConsumerAdapter: Option[ConsumerPort] = {
     if (isVAS) {
+      logger.info("[TTT] it is VAS")
       val configPath = appConfig.getStringReq(EVENT_SOURCE)
+      logger.info("[TTT] configPath: " + configPath)
       val clazz = appConfig.getStringReq(s"$configPath.builder-class")
+      logger.info("[TTT] clazz: " + clazz)
       Option(
         Class
-        .forName(clazz)
-        .getConstructor()
-        .newInstance()
-        .asInstanceOf[EventConsumerAdapterBuilder]
-        .build(appConfig, agentActorContext.agentMsgRouter, singletonParentProxy, executionContextProvider.futureExecutionContext, actorSystem)
+          .forName(clazz)
+          .getConstructor()
+          .newInstance()
+          .asInstanceOf[EventConsumerAdapterBuilder]
+          .build(appConfig, agentActorContext.agentMsgRouter, singletonParentProxy, executionContextProvider.futureExecutionContext, actorSystem)
       )
-    } else None
+    } else {
+      logger.info("[TTT] it is NOT VAS")
+      None
+    }
   }
 }
 

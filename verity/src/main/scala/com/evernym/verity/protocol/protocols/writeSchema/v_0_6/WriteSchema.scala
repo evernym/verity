@@ -4,7 +4,7 @@ import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncapi.endorser.{ENDORSEMENT_RESULT_SUCCESS_CODE, VDR_TYPE_INDY}
+import com.evernym.verity.protocol.engine.asyncapi.endorser.ENDORSEMENT_RESULT_SUCCESS_CODE
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SchemaCreatedResult
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}

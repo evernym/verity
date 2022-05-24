@@ -41,7 +41,7 @@ class KafkaConsumerAdapter(override val messageHandler: MessageHandler,
   private var controller: Option[DrainingControl[_]] = None
 
   override def start(): Future[Done] = {
-    logger.info("kafka consumer is about to start...")
+    logger.info("[TTT] kafka consumer is about to start...")
     controller = Option(
       Consumer
         .committableSource(settingsProvider.kafkaConsumerSettings(), Subscriptions.topics(settingsProvider.topics: _*))
@@ -76,11 +76,12 @@ class KafkaConsumerAdapter(override val messageHandler: MessageHandler,
         .toMat(Sink.seq)(DrainingControl.apply)
         .run()
     )
-    logger.info("kafka consumer is started.")
+    logger.info("[TTT] kafka consumer is started.")
     Future.successful(Done)
   }
 
   override def stop(): Future[Done] = {
+    logger.info("[TTT] kafka consumer is about to be stopped.")
     controller.map(_.drainAndShutdown())
     controller.map(_.isShutdown).getOrElse(Future.successful(Done))
   }

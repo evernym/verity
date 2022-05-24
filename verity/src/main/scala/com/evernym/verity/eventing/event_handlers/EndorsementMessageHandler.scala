@@ -72,9 +72,8 @@ class EndorsementMessageHandler(config: Config,
       requestSource.pinstIdPair,
       MsgEnvelope(cmd, null, null, null, msgId = Option(MsgFamilyUtil.getNewMsgUniqueId), thId = Option(requestSource.threadId))
     )
-    agentMsgRouter
-      .execute(InternalMsgRouteParam(requestSource.relationshipId, protoCmd))
-      .map(_ => Done)
+    agentMsgRouter.execute(InternalMsgRouteParam(requestSource.relationshipId, protoCmd))
+    Future.successful(Done)
   }
 
 }

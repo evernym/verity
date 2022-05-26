@@ -2,9 +2,9 @@ package com.evernym.verity.integration.endorsement
 
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.{ActorSystemVanilla, MockLedgerTxnExecutor}
-import com.evernym.verity.event_bus.adapters.basic.consumer.BasicConsumerAdapter
-import com.evernym.verity.event_bus.adapters.basic.producer.BasicProducerAdapter
-import com.evernym.verity.event_bus.event_handlers.TOPIC_SSI_ENDORSEMENT_REQ
+import com.evernym.verity.eventing.adapters.basic.consumer.BasicConsumerAdapter
+import com.evernym.verity.eventing.adapters.basic.producer.BasicProducerAdapter
+import com.evernym.verity.eventing.event_handlers.TOPIC_REQUEST_ENDORSEMENT
 import com.evernym.verity.integration.base.{EndorsementReqMsgHandler, EndorserUtil, PortProvider, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.{IssuerSdk, SdkProvider}
 import com.evernym.verity.integration.base.verity_provider.VerityEnv
@@ -36,9 +36,10 @@ class WriteSchemaEndorsementSpec
   }
 
   lazy val endorsementEventConsumer: BasicConsumerAdapter = {
+    val testAppConfig = new TestAppConfig(Option(endorserServiceEventAdapters), clearValidators = true)
     val actorSystem = ActorSystemVanilla("event-consumer", endorserServiceEventAdapters)
-    new BasicConsumerAdapter(new TestAppConfig(Option(endorserServiceEventAdapters), clearValidators = true),
-      new EndorsementReqMsgHandler(eventProducer))(actorSystem, executionContextProvider.futureExecutionContext)
+    new BasicConsumerAdapter(testAppConfig,
+      new EndorsementReqMsgHandler(testAppConfig.config, eventProducer))(actorSystem, executionContextProvider.futureExecutionContext)
   }
 
   override def beforeAll(): Unit = {
@@ -70,7 +71,7 @@ class WriteSchemaEndorsementSpec
   "EndorserService" - {
     "when published active endorser event" - {
       "should be successful" in {
-        Await.result(EndorserUtil.registerActiveEndorser(EndorserUtil.activeEndorserDid, eventProducer), 5.seconds)
+        Await.result(EndorserUtil.registerActiveEndorser(EndorserUtil.activeEndorserDid, EndorserUtil.indyLedgerLegacyDefaultPrefix, eventProducer), 5.seconds)
       }
     }
   }
@@ -100,12 +101,13 @@ class WriteSchemaEndorsementSpec
   }
 
   lazy val endorserServiceEventAdapters: Config =
-    issuerVAS.getVerityLocalNode.platform.appConfig.config.getConfig("verity.event-bus")
-      .withValue("verity.event-bus.basic.store.http-listener.port", ConfigValueFactory.fromAnyRef(issuerVAS.getVerityLocalNode.portProfile.basicEventStorePort))
-      .withValue("verity.event-bus.basic.consumer.id", ConfigValueFactory.fromAnyRef("endorser"))
-      .withValue("verity.event-bus.basic.consumer.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
-      .withValue("verity.event-bus.basic.consumer.topics", ConfigValueFactory.fromIterable(List(TOPIC_SSI_ENDORSEMENT_REQ).asJava))
-      .withValue("verity.event-bus.basic.producer.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
+    issuerVAS
+      .getVerityLocalNode
+      .platform.appConfig.config.getConfig("verity.eventing")
+      .withValue("verity.eventing.basic-store.http-listener.port", ConfigValueFactory.fromAnyRef(issuerVAS.getVerityLocalNode.portProfile.basicEventStorePort))
+      .withValue("verity.eventing.basic-source.id", ConfigValueFactory.fromAnyRef("endorser"))
+      .withValue("verity.eventing.basic-source.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
+      .withValue("verity.eventing.basic-source.topics", ConfigValueFactory.fromIterable(List(TOPIC_REQUEST_ENDORSEMENT).asJava))
 
 
   val ledgerTxnExecutor: LedgerTxnExecutor = new MockLedgerTxnExecutor(futureExecutionContext) {

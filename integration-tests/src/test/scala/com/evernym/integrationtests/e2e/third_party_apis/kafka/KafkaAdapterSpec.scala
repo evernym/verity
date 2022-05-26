@@ -6,9 +6,9 @@ import akka.actor.typed.scaladsl.adapter._
 import akka.kafka.testkit.KafkaTestkitTestcontainersSettings
 import akka.kafka.testkit.scaladsl.TestcontainersKafkaPerClassLike
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
-import com.evernym.verity.event_bus.adapters.kafka.consumer.ConsumerSettingsProvider
-import com.evernym.verity.event_bus.adapters.kafka.producer.ProducerSettingsProvider
-import com.evernym.verity.event_bus.ports.consumer.{Message, MessageHandler}
+import com.evernym.verity.eventing.adapters.kafka.consumer.ConsumerSettingsProvider
+import com.evernym.verity.eventing.adapters.kafka.producer.ProducerSettingsProvider
+import com.evernym.verity.eventing.ports.consumer.{Message, MessageHandler}
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.scalatest.time.{Millis, Seconds, Span}
 import io.cloudevents.CloudEvent
@@ -163,22 +163,48 @@ class KafkaAdapterSpec
 
   lazy val producerSettingsProvider: ProducerSettingsProvider = createProducerSettingsProvider(brokerContainers.head.getBootstrapServers)
 
-  lazy val defaultAkkaKafkaConfig: Config = ConfigFactory.load().withOnlyPath("akka.kafka")
+  lazy val akkaKafkaConfig =
+    ConfigFactory.parseString(
+      """
+        | akka.kafka {
+        |   consumer {
+        |     kafka-clients {
+        |       security.protocol = PLAINTEXT
+        |       bootstrap.servers = ${verity.kafka.common.bootstrap-servers}
+        |       client.id = ${verity.kafka.common.client.id}
+        |
+        |       auto.offset.reset: "earliest"
+        |       session.timeout.ms: 60000
+        |     }
+        |     stop-timeout = 5 seconds
+        |   }
+        |   producer {
+        |     kafka-clients {
+        |       security.protocol = PLAINTEXT
+        |       bootstrap.servers = ${verity.kafka.common.bootstrap-servers}
+        |       client.id = ${verity.kafka.common.client.id}
+        |     }
+        |   }
+        | }
+        |""".stripMargin
+    ).withFallback(ConfigFactory.load().withOnlyPath("akka.kafka"))
 
   lazy val verityKafkaConsumerConfig: Config = ConfigFactory.parseString(
     """
-      | verity.event-bus.kafka = ${akka.kafka} {
-      |   consumer = ${akka.kafka.consumer} {
-      |     kafka-clients = ${akka.kafka.consumer.kafka-clients} {
-      |       bootstrap.servers = "testkafka"
-      |       group.id = "verity"
-      |       client.id = "verity"
-      |       auto.offset.reset: "earliest"
-      |       session.timeout.ms: 60000
-      |     }
-      |
+      | akka.kafka.consumer.kafka-clients {
+      |   group.id = ${verity.kafka.consumer.group.id}
+      | }
+      | verity.kafka {
+      |   common {
+      |     bootstrap-servers = "testkafka"
+      |     client.id = "verity"
+      |     auto.offset.reset: "earliest"
+      |     session.timeout.ms: 60000
+      |   }
+      |   consumer {
+      |     group.id = "verity"
       |     msg-handling-parallelism = 10
-      |     stop-timeout = 5 seconds
+      |     topics = [""]
       |   }
       | }
       |""".stripMargin
@@ -186,34 +212,36 @@ class KafkaAdapterSpec
 
   lazy val verityKafkaProducerConfig: Config = ConfigFactory.parseString(
     """
-      | verity.event-bus.kafka = ${akka.kafka} {
-      |   producer = ${akka.kafka.producer} {
-      |     kafka-clients = ${akka.kafka.producer.kafka-clients} {
-      |       bootstrap.servers = "testkafka"
-      |       client.id = "verity"
-      |     }
+      | verity.kafka {
+      |   common {
+      |     bootstrap-servers = "testkafka"
+      |     client.id = "verity"
+      |     auto.offset.reset: "earliest"
+      |     session.timeout.ms: 60000
       |   }
       | }
       |""".stripMargin
   )
 
-  implicit lazy val actorSystem: ActorSystem[Nothing] = ActorSystemVanilla("test").toTyped
+
+  val actorSystemConfig = verityKafkaConsumerConfig.withFallback(verityKafkaProducerConfig).withFallback(akkaKafkaConfig).resolve()
+  implicit lazy val actorSystem: ActorSystem[Nothing] = ActorSystemVanilla("test", actorSystemConfig).toTyped
 
   def createConsumerSettingsProvider(bootstrapServer: String,
                                      topics: Seq[String]):  ConsumerSettingsProvider = {
     val config = verityKafkaConsumerConfig
-      .withFallback(defaultAkkaKafkaConfig)
+      .withFallback(akkaKafkaConfig)
+      .withValue("verity.kafka.common.bootstrap-servers", ConfigValueFactory.fromAnyRef(bootstrapServer))
+      .withValue("verity.kafka.consumer.topics", ConfigValueFactory.fromIterable(topics.asJava))
       .resolve()
-      .withValue("verity.event-bus.kafka.consumer.kafka-clients.bootstrap.servers", ConfigValueFactory.fromAnyRef(bootstrapServer))
-      .withValue("verity.event-bus.kafka.consumer.topics", ConfigValueFactory.fromIterable(topics.asJava))
     ConsumerSettingsProvider(config)
   }
 
   def createProducerSettingsProvider(bootstrapServer: String): ProducerSettingsProvider = {
     val config = verityKafkaProducerConfig
-      .withFallback(defaultAkkaKafkaConfig)
+      .withFallback(akkaKafkaConfig)
+      .withValue("verity.kafka.common.bootstrap-servers", ConfigValueFactory.fromAnyRef(bootstrapServer))
       .resolve()
-      .withValue("verity.event-bus.kafka.producer.kafka-clients.bootstrap.servers", ConfigValueFactory.fromAnyRef(bootstrapServer))
     ProducerSettingsProvider(config)
   }
 

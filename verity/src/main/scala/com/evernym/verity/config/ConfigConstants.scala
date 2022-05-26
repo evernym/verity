@@ -114,6 +114,7 @@ object ConfigConstants {
   val LIB_INDY_LEDGER_POOL_NAME = s"$LIB_INDY_LEDGER.pool-name"
   val LIB_INDY_LEDGER_TXN_PROTOCOL_VERSION = s"$LIB_INDY_LEDGER.txn-protocol-version"
   val LIB_INDY_LEDGER_TAA = s"$LIB_INDY_LEDGER.transaction_author_agreement"
+  val LIB_INDY_LEDGER_DEFAULT_PREFIX = s"$LIB_INDY_LEDGER.legacy-default-prefix"
 
   private val INFO_BIP = s"$SMS_EXTERNAL_SVC.info-bip"
   val INFO_BIP_ENDPOINT = s"$INFO_BIP.endpoint"
@@ -421,10 +422,7 @@ object ConfigConstants {
   val ENDORSER_REGISTRY_RETENTION_SNAPSHOT_KEEP_SNAPSHOTS = s"$ENDORSER_REGISTRY_RETENTION_SNAPSHOT.keep-snapshots"
   val ENDORSER_REGISTRY_RETENTION_SNAPSHOT_DELETE_EVENTS_ON_SNAPSHOTS = s"$ENDORSER_REGISTRY_RETENTION_SNAPSHOT.delete-events-on-snapshots"
 
-  val EVENT_BUS = s"$VERITY.event-bus"
-  val EVENT_BUS_TYPE = s"$EVENT_BUS.type"
-  val EVENT_BUS_ADAPTERS = s"$EVENT_BUS.adapters"
-  val EVENT_BUS_CONSUMER_BUILDER_CLASS = s"$EVENT_BUS_ADAPTERS.consumer-builder-class"
-  val EVENT_BUS_PRODUCER_BUILDER_CLASS = s"$EVENT_BUS_ADAPTERS.producer-builder-class"
-
+  val EVENTING = s"$VERITY.eventing"
+  val EVENT_SOURCE = s"$EVENTING.event-source"
+  val EVENT_SINK = s"$EVENTING.event-sink"
 }

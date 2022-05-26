@@ -4,10 +4,9 @@ import akka.Done
 import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.did
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.event_bus.event_handlers.EndorserMessageHandler.{DATA_FIELD_ENDORSER_DID, DATA_FIELD_LEDGER_PREFIX}
-import com.evernym.verity.event_bus.event_handlers.{EVENT_ENDORSER_ACTIVATED_V1, EVENT_ENDORSER_DEACTIVATED_V1, TOPIC_SSI_ENDORSER}
-import com.evernym.verity.event_bus.ports.producer.ProducerPort
-import com.evernym.verity.protocol.engine.asyncapi.endorser.INDY_LEDGER_PREFIX
+import com.evernym.verity.eventing.event_handlers.EndorserMessageHandler.DATA_FIELD_ENDORSER_DID
+import com.evernym.verity.eventing.event_handlers.{DATA_FIELD_LEDGER_PREFIX, EVENT_ENDORSER_ACTIVATED_V1, EVENT_ENDORSER_DEACTIVATED_V1, TOPIC_SSI_ENDORSER}
+import com.evernym.verity.eventing.ports.producer.ProducerPort
 import io.cloudevents.core.builder.CloudEventBuilder
 import io.cloudevents.core.provider.EventFormatProvider
 import io.cloudevents.jackson.JsonFormat
@@ -25,11 +24,14 @@ object EndorserUtil {
 
   val activeEndorser: did.DidPair = CommonSpecUtil.generateNewDid()
   val activeEndorserDid: DidStr = activeEndorser.did
+  val indyLedgerLegacyDefaultPrefix: String = "did:sov"
 
-  def registerActiveEndorser(endorserDid: DidStr, eventProducer: ProducerPort): Future[Done] = {
+  def registerActiveEndorser(endorserDid: DidStr,
+                             ledgerPrefix: String,
+                             eventProducer: ProducerPort): Future[Done] = {
     val jsonObject = new JSONObject()
     jsonObject.put(DATA_FIELD_ENDORSER_DID, endorserDid)
-    jsonObject.put(DATA_FIELD_LEDGER_PREFIX, INDY_LEDGER_PREFIX)
+    jsonObject.put(DATA_FIELD_LEDGER_PREFIX, ledgerPrefix)
 
     val event = CloudEventBuilder.v1()
       .withId(UUID.randomUUID().toString)
@@ -47,10 +49,12 @@ object EndorserUtil {
     eventProducer.send(TOPIC_SSI_ENDORSER, payload)
   }
 
-  def unregisterActiveEndorser(endorserDid: DidStr, eventProducer: ProducerPort): Future[Done] = {
+  def unregisterActiveEndorser(endorserDid: DidStr,
+                               ledgerPrefix: String,
+                               eventProducer: ProducerPort): Future[Done] = {
     val jsonObject = new JSONObject()
     jsonObject.put(DATA_FIELD_ENDORSER_DID, endorserDid)
-    jsonObject.put(DATA_FIELD_LEDGER_PREFIX, INDY_LEDGER_PREFIX)
+    jsonObject.put(DATA_FIELD_LEDGER_PREFIX, ledgerPrefix)
 
     val event = CloudEventBuilder.v1()
       .withId(UUID.randomUUID().toString)

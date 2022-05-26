@@ -4,7 +4,7 @@ import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncapi.endorser.{INDY_LEDGER_PREFIX, ENDORSEMENT_RESULT_SUCCESS_CODE, VDR_TYPE_INDY}
+import com.evernym.verity.protocol.engine.asyncapi.endorser.ENDORSEMENT_RESULT_SUCCESS_CODE
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SchemaCreatedResult
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
@@ -63,12 +63,13 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
 
             val endorserDID = m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse(""))
 
-            ctx.endorser.withCurrentEndorser(INDY_LEDGER_PREFIX) {
+            ctx.endorser.withCurrentEndorser(ctx.ledger.getIndyDefaultLegacyPrefix()) {
               case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID == endorser.did =>
+                ctx.logger.info("registered endorser to be used for schema endorsement: " + endorser)
                 //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
                 ctx.ledger.prepareSchemaForEndorsement(submitterDID, schemaCreated.schemaJson, endorser.did) {
                   case Success(ledgerRequest) =>
-                    ctx.endorser.endorseTxn(ledgerRequest.req, endorser.did, INDY_LEDGER_PREFIX, VDR_TYPE_INDY) {
+                    ctx.endorser.endorseTxn(ledgerRequest.req, ctx.ledger.getIndyDefaultLegacyPrefix()) {
                       case Failure(exception) => problemReport(exception)
                       case Success(value) => ctx.apply(AskedForEndorsement(schemaCreated.schemaId, ledgerRequest.req))
                     }
@@ -76,6 +77,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
                 }
 
               case other =>
+                ctx.logger.info("no active/matched endorser found to be used for schema endorsement: " + other)
                 //any failure while getting active endorser, or no active endorser or active endorser is NOT the same as given/configured endorserDID
                 handleNeedsEndorsement(submitterDID, endorserDID, schemaCreated.schemaId, schemaCreated.schemaJson)
             }

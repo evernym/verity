@@ -22,7 +22,7 @@ class ActorWalletService(system: ActorSystem, appConfigParam: AppConfig, poolCon
   override def appConfig: AppConfig = appConfigParam
 
   override def futureExecutionContext: ExecutionContext = executionContext
-  lazy val walletActorRegion: ActorRef = createNonPersistentRegion(
+  val walletActorRegion: ActorRef = createNonPersistentRegion(
     WALLET_REGION_ACTOR_NAME,
     Props(
       new WalletActor(

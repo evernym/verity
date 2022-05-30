@@ -10,7 +10,7 @@ function stop_sig {
     fi
 }
 
-VAULT_SECRETS=("/vault/secrets/credentials-tf" "/vault/secrets/credentials")
+VAULT_SECRETS=("/vault/secrets/credentials-tf" "/vault/secrets/credentials" "/vault/secrets/app-confluent")
 
 # Source secret files injected from Vault (if they exist)
 for f in "${VAULT_SECRETS[@]}" ; do
@@ -18,7 +18,7 @@ for f in "${VAULT_SECRETS[@]}" ; do
         source $f
         # rm $f
     fi
-done 
+done
 
 # Start Verity
 /usr/bin/java \

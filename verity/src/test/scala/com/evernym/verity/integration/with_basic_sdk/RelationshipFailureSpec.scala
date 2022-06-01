@@ -6,16 +6,16 @@ import com.evernym.verity.util2.Status.{INVALID_VALUE, MISSING_REQ_FIELD}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
-import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.integration.base.{VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.{IssuerSdk, SdkProvider}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
+import com.evernym.verity.http.common.models.StatusDetailResp
 import com.evernym.verity.integration.base.verity_provider.VerityEnv
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{CurrentPublicIdentifier, PublicIdentifier, PublicIdentifierCreated, Create => CreatePublicIdentifier}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.{SMSConnectionInvitation, SMSOutOfBandInvitation}
-import java.nio.charset.Charset
 
+import java.nio.charset.Charset
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util.TestExecutionContextProvider
 

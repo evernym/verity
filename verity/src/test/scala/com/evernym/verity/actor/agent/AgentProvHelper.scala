@@ -50,7 +50,7 @@ trait AgentProvHelper
     mockAgencyAdmin.agencyPublicDid.foreach(ma.handleFetchAgencyKey)
   }
 
-  val testSponsor = new TestSponsor("000000000000000000000000Trustee1", futureExecutionContext)
+  val testSponsor = new TestSponsor("000000000000000000000000Trustee1", futureExecutionContext, system)
 
   def sponsorSig(nonce: String, id: String, sponsorId: String, vk: VerKeyStr, timestamp: String): Base64Encoded = {
     testSponsor.sign(nonce, id, sponsorId, timestamp, vk)

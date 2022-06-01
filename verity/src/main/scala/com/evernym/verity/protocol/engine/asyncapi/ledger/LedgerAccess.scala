@@ -11,6 +11,8 @@ trait LedgerAccess {
 
   def walletAccess: WalletAccess
 
+  def getIndyDefaultLegacyPrefix(): String
+
   //new vdr apis
   def prepareSchemaTxn(schemaJson: String,
                        fqSchemaId: FqSchemaId,

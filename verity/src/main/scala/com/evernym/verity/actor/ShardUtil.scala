@@ -9,7 +9,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants._
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 
 object ShardUtil {
 
@@ -54,6 +54,31 @@ case class ShardIdExtractor(appConfig: AppConfig, regionName: String) {
 trait ShardUtil {
 
   def appConfig: AppConfig
+
+  protected def buildProp(prop: Props, dispatcherNameOpt: Option[String]=None)(implicit system: ActorSystem): Props = {
+    dispatcherNameOpt.map { dn =>
+      val cdnOpt = appConfig.getConfigOption(dn)
+      cdnOpt.map { _ =>
+        system.dispatchers.lookup(dn)
+        prop.withDispatcher(dn)
+      }.getOrElse(prop)
+    }.getOrElse(prop)
+  }
+
+  /**
+   * utility function to compute passivation time
+   * @param confName
+   * @param defaultDurationInSeconds
+   * @return
+   */
+  def passivateDuration(confName: String,
+                        defaultDurationInSeconds: FiniteDuration): FiniteDuration = {
+    //assumption is that the config duration is in seconds
+    appConfig.getIntOption(confName) match {
+      case Some(duration) => duration.second
+      case None           => defaultDurationInSeconds
+    }
+  }
 
   private def createRegionBase(typeName: String,
                                props: Props,

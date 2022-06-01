@@ -1,5 +1,7 @@
 package com.evernym.verity.integration.push_notification.verity2
 
+import akka.actor.ActorSystem
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.{ComMethod, UpdateComMethodReqMsg, UpdateConfigReqMsg}
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
@@ -34,7 +36,9 @@ class SponsorPushNotifsSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  val testSponsor = new TestSponsor(seed = "000000000000000000000000Sponsor1", futExecutionContext = executionContext)
+  val system: ActorSystem = ActorSystemVanilla(UUID.randomUUID().toString)
+
+  val testSponsor = new TestSponsor(seed = "000000000000000000000000Sponsor1", futExecutionContext = executionContext, system)
 
   var issuerSDK: IssuerSdk = _
   var verifierSDK: VerifierSdk = _

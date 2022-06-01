@@ -12,11 +12,11 @@ import com.evernym.verity.actor.ActorContext
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.cache.base.{Cache, FetcherParam}
 import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValueFetcher, EndpointCacheFetcher, KeyValueMapperFetcher, LedgerVerKeyCacheFetcher}
-import com.evernym.verity.config.ConfigConstants.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
+import com.evernym.verity.config.ConfigConstants.{EVENT_SINK, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.event_bus.adapters.producer.kafka.{KafkaProducerAdapter, ProducerSettingsProvider}
-import com.evernym.verity.event_bus.ports.producer.ProducerPort
+import com.evernym.verity.eventing.adapters.kafka.producer.{KafkaProducerAdapter, ProducerSettingsProvider}
+import com.evernym.verity.eventing.ports.producer.ProducerPort
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
 import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher}
@@ -35,7 +35,7 @@ import com.evernym.verity.vdr.{VDRActorAdapter, VDRAdapter}
 import com.evernym.verity.vdr.service.{VDRToolsConfig, VDRToolsFactory, VdrToolsBuilderImpl}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Left
+
 
 trait AgentActorContext
   extends ActorContext
@@ -59,16 +59,24 @@ trait AgentActorContext
   lazy val smsSvc: SMSSender = createSmsSender()
   lazy val agentMsgRouter: AgentMsgRouter = new AgentMsgRouter(futureExecutionContext)
   lazy val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(system, appConfig, futureExecutionContext)
-  lazy val walletAPI: WalletAPI = new StandardWalletAPI(new ActorWalletService(system, appConfig, futureExecutionContext))
+  lazy val actorWalletService: ActorWalletService = new ActorWalletService(system, appConfig, poolConnManager, futureExecutionContext)
+  lazy val walletAPI: WalletAPI = new StandardWalletAPI(actorWalletService)
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, futureExecutionContext)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val storageAPI: StorageAPI = StorageAPI.loadFromConfig(appConfig, futureExecutionContext)
   lazy val vdrBuilderFactory: VDRToolsFactory = () => new VdrToolsBuilderImpl
   lazy val vdrAdapter: VDRAdapter = createVDRAdapter(vdrBuilderFactory, appConfig)
 
-  lazy val eventProducerAdapter: ProducerPort = KafkaProducerAdapter(
-    ProducerSettingsProvider(appConfig.config)
-  )(futureExecutionContext, system.toTyped)
+  lazy val eventProducerAdapter: ProducerPort = {
+    val configPath = appConfig.getStringReq(EVENT_SINK)
+    val clazz = appConfig.getStringReq(s"$configPath.builder-class")
+    Class
+      .forName(clazz)
+      .getConstructor()
+      .newInstance()
+      .asInstanceOf[EventProducerAdapterBuilder]
+      .build(appConfig, futureExecutionContext, system)
+  }
 
   //NOTE: this 'oAuthAccessTokenRefreshers' is only need here until we switch to the outbox solution
   val oAuthAccessTokenRefreshers: AccessTokenRefreshers = new AccessTokenRefreshers {
@@ -119,5 +127,19 @@ class DefaultLedgerSvc(val system: ActorSystem,
 
   override def ledgerTxnExecutor: LedgerTxnExecutor = {
     ledgerPoolConnManager.txnExecutor(Some(walletAPI))
+  }
+}
+
+trait EventProducerAdapterBuilder {
+  def build(appConfig: AppConfig, executionContext: ExecutionContext, actorSystem: ActorSystem): ProducerPort
+}
+
+class KafkaEventProducerAdapterBuilder
+  extends EventProducerAdapterBuilder {
+
+  override def build(appConfig: AppConfig, executionContext: ExecutionContext, actorSystem: ActorSystem): ProducerPort = {
+    KafkaProducerAdapter(
+      ProducerSettingsProvider(appConfig.config)
+    )(executionContext, actorSystem.toTyped)
   }
 }

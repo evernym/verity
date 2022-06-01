@@ -232,10 +232,10 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
       msgListener.moveTmpQueuedItemsToMainQueue()
       msgReceived
     } catch {
-      case ex: UnexpectedMsgException =>
+      case e: UnexpectedMsgException =>
         //TODO: This is temporary workaround to fix the intermittent failure around message ordering
         // should analyze it and see if there is any better way to fix it.
-        logger.info(s"found unexpected message (detail: ${ex.getMessage})")
+        logger.info(s"found unexpected message (detail: ${e.getMessage})")
         msgListener.addToTmpQueue(msg)
         expectMsgOnWebhook(timeout)
     }
@@ -266,7 +266,6 @@ case class IssuerRestSDK(param: SdkParam,
   extends VeritySdkBase(param, executionContext, oauthParam) {
 
   def appConfig: AppConfig = testAppConfig
-  import scala.collection.immutable
 
   def registerWebhookWithoutOAuth(): ComMethodUpdated = {
     registerWebhookBase(None, None)

@@ -84,5 +84,3 @@ object TypedTestKit {
       |""".stripMargin)
 
 }
-
-

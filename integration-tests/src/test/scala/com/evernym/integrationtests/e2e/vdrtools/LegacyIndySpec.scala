@@ -46,16 +46,16 @@ class LegacyIndySpec
   implicit val system: ActorSystem = ActorSystemVanilla("test", baseConfig)
   implicit val ec: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
 
-  var trusteeWallet = new TestWallet(ec, createWallet = true)
+  var trusteeWallet = new TestWallet(ec, createWallet = true, system)
   var trusteeKey: NewKeyCreated = trusteeWallet.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000Trustee1")))
   var trusteeFqDid: FqDID = VDRUtil.toFqDID(trusteeKey.did, INDY_NAMESPACE)
 
-  var issuerWallet = new TestWallet(ec, createWallet = true)
+  var issuerWallet = new TestWallet(ec, createWallet = true, system)
   var issuerKey: NewKeyCreated = issuerWallet.executeSync[NewKeyCreated](CreateNewKey())
   var issuerFqDid: FqDID = VDRUtil.toFqDID(issuerKey.did, INDY_NAMESPACE)
   var issuerSubmitter: Submitter = Submitter(issuerKey.did, Some(issuerWallet.wap))
 
-  val holderWallet = new TestWallet(ec, createWallet = true)
+  val holderWallet = new TestWallet(ec, createWallet = true, system)
   var holderKey: NewKeyCreated = holderWallet.executeSync[NewKeyCreated](CreateNewKey())
   var holderFqDid: FqDID = VDRUtil.toFqDID(holderKey.did, INDY_NAMESPACE)
 

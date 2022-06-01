@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.testkit
 
 import akka.actor.ActorRef
-import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.did.DidStr
@@ -12,7 +12,7 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerA
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessAdapter
 import com.evernym.verity.protocol.testkit.MockLedger.{TEST_INDY_SOVRIN_NAMESPACE, nonFqID}
-import com.evernym.verity.testkit.TestWallet
+import com.evernym.verity.testkit.{BasicSpecBase, TestWallet}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.evernym.verity.vault.WalletAPIParam
@@ -40,13 +40,13 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
                            val schemas: Map[String, Schema] = MockLedgerData.schemas01,
                            val credDefs: Map[String, CredDef] = MockLedgerData.credDefs01,
                            val ledgerAvailable: Boolean = true)
-  extends LedgerAccess with MockAsyncOpRunner {
+  extends LedgerAccess with MockAsyncOpRunner with ActorSpec with BasicSpecBase{
 
   import MockableLedgerAccess._
 
   implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
-  val testWallet = new TestWallet(executionContext, false)
+  val testWallet = new TestWallet(executionContext, false, system)
   implicit val wap: WalletAPIParam = testWallet.wap
   override val walletAccess = new WalletAccessAdapter(
     testWallet.testWalletAPI,
@@ -168,6 +168,8 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
 
   type TxnHash = Int
 
+  def executionContextProvider: ExecutionContextProvider = ecp
+
   override val mockExecutionContext: ExecutionContext = executionContext
 
   override def fqDID(did: DidStr): FqDID = MockLedger.fqID(did)
@@ -175,6 +177,8 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
   override def fqSchemaId(schemaId: String, issuerDid: Option[DidStr]): FqSchemaId = MockLedger.fqSchemaID(schemaId, issuerDid)
 
   override def fqCredDefId(credDefId: String, issuerDid: Option[DidStr]): FqCredDefId = MockLedger.fqCredDefId(credDefId, issuerDid)
+
+  override def getIndyDefaultLegacyPrefix(): VdrDid = "sov"
 }
 
 
@@ -196,6 +200,7 @@ object MockLedgerData {
           )
         )
       )
+
   )
 
   val credDefs01 = Map(

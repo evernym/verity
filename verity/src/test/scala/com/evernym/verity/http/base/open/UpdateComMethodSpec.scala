@@ -6,9 +6,9 @@ import com.evernym.verity.util2.Status.{INVALID_VALUE, MISSING_REQ_FIELD}
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.agentmsg.msgfamily.configs.ComMethodPackaging
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
-import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.testkit.util.TestComMethod
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.http.common.models.StatusDetailResp
 import com.evernym.verity.testkit.mock.agent.MockEnv
 
 trait UpdateComMethodSpec { this : EdgeEndpointBaseSpec =>

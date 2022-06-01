@@ -1,5 +1,6 @@
 package com.evernym.verity.testkit.mock.agent
 
+import akka.actor.ActorSystem
 import com.evernym.verity.actor.testkit.{AgentDIDDetail, CommonSpecUtil}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.AgentWithMsgHelper
@@ -18,7 +19,8 @@ object MockEdgeAgent {
 class MockEdgeAgent(override val agencyEndpoint: UrlParam,
                     override val appConfig: AppConfig,
                     executionContextParam: ExecutionContext,
-                    override val myDIDDetail: AgentDIDDetail = CommonSpecUtil.generateNewAgentDIDDetail()
+                    override val myDIDDetail: AgentDIDDetail = CommonSpecUtil.generateNewAgentDIDDetail(),
+                    override implicit val system: ActorSystem
                    ) extends AgentWithMsgHelper {
 
   import MockEdgeAgent._

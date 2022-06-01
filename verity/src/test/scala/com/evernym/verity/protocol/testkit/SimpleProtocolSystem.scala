@@ -194,35 +194,25 @@ class Domain(override val domainId: DomainId,
   }
 
   var usedWalletAccess: Option[WalletAccess] = None
-
-  def provideWalletAccess(): WalletAccess =
-    usedWalletAccess.getOrElse(throw new RuntimeException("no wallet access provided to container"))
-
+  def walletAccess(w: WalletAccess) : Unit = usedWalletAccess = Some(w)
+  def provideWalletAccess(): WalletAccess = usedWalletAccess.getOrElse(throw new RuntimeException("no wallet access provided to container"))
   override def walletAccessProvider: Option[() => WalletAccess] = Some(provideWalletAccess _)
 
-  def walletAccess(w: WalletAccess) : Unit = {
-    usedWalletAccess = Some(w)
-  }
+  var usedEndorserAccess: Option[EndorserAccess] = None
+  def endorserAccess(e: EndorserAccess) : Unit = usedEndorserAccess = Some(e)
+  def provideEndorserAccess(): EndorserAccess = usedEndorserAccess.getOrElse(throw new RuntimeException("no endorser access provided to container"))
+  override def endorserAccessProvider: Option[() => EndorserAccess] = Some(provideEndorserAccess _)
 
   var usedLedgerAccess: Option[LedgerAccess] = None
-
+  def ledgerAccess(w: LedgerAccess) : Unit = usedLedgerAccess = Some(w)
   def provideLedgerAccess(): LedgerAccess = usedLedgerAccess.get
-
   override def ledgerAccessProvider: Option[() => LedgerAccess] = Some(provideLedgerAccess _)
 
-  def ledgerAccess(w: LedgerAccess) : Unit = {
-    usedLedgerAccess = Some(w)
-  }
-
   var usedUrlShorteningAccess: Option[UrlShorteningAccess] = None
-
+  def urlShorteningAccess(url: UrlShorteningAccess) : Unit = usedUrlShorteningAccess = Some(url)
   def provideUrlShorteningAccess(): UrlShorteningAccess = usedUrlShorteningAccess.get
-
   override def urlShorteningAccessProvider: Option[() => UrlShorteningAccess] = Some(provideUrlShorteningAccess _)
 
-  def urlShorteningAccess(url: UrlShorteningAccess) : Unit = {
-    usedUrlShorteningAccess = Some(url)
-  }
 
   var usedInitParams: Option[Map[String, String]] = None
 

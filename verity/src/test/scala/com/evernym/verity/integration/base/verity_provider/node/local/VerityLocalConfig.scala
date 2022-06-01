@@ -109,6 +109,16 @@ object VerityLocalConfig {
     )
   }
 
+  private def basicEventStoreConfig(portProfile: PortProfile) = {
+    ConfigFactory.parseString(
+      s"""
+         |verity.eventing.basic-store.http-listener.port = ${portProfile.basicEventStorePort}
+         |verity.eventing.basic-source.http-listener.port = ${portProfile.basicEventStoreConsumerPort}
+         |""".stripMargin
+    )
+  }
+
+
   private def configureVDRs(): Config = {
     ConfigFactory.parseString(
       s"""
@@ -195,6 +205,7 @@ object VerityLocalConfig {
       useLevelDBPersistence(tempDir, sharedEventStore),
       useDefaultWallet(tempDir),
       useCustomPort(port, otherNodeArteryPorts),
+      basicEventStoreConfig(port),
       configureLibIndy(taaEnabled),
       configureVDRs(),
       identityUrlShortener(),

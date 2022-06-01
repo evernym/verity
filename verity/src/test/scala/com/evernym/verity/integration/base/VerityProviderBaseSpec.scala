@@ -5,10 +5,12 @@ import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.{ServiceParam, VerityLocalNode}
 import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore, VerityEnv}
+import com.evernym.verity.ledger.LedgerTxnExecutor
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider}
-import com.evernym.verity.vdr.base.{VDR_DID_SOV_NAMESPACE, DEFAULT_VDR_NAMESPACE}
+import com.evernym.verity.vdr.base.{DEFAULT_VDR_NAMESPACE, VDR_DID_SOV_NAMESPACE}
+import com.evernym.verity.vdr.service.VdrTools
 import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockVdrTools}
 import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
 import com.typesafe.scalalogging.Logger
@@ -56,6 +58,14 @@ trait VerityProviderBaseSpec
 
     def withServiceParam(param: ServiceParam): VerityEnvBuilder = copy(serviceParam = Option(param))
     def withConfig(config: Config): VerityEnvBuilder = copy(overriddenConfig = Option(config))
+    def withLedgerTxnExecutor(ledgerTxnExecutor: LedgerTxnExecutor): VerityEnvBuilder = {
+      val newServiceParam = serviceParam.getOrElse(defaultSvcParam).withLedgerTxnExecutor(ledgerTxnExecutor)
+      copy(serviceParam = Option(newServiceParam))
+    }
+    def withVdrTools(vdrTools: VdrTools): VerityEnvBuilder = {
+      val newServiceParam = serviceParam.getOrElse(defaultSvcParam).withVdrTools(vdrTools)
+      copy(serviceParam = Option(newServiceParam))
+    }
 
     private val logger: Logger = LoggingUtil.getLoggerByName("VerityEnvBuilder")
 
@@ -133,7 +143,7 @@ trait VerityProviderBaseSpec
     }
 
     private def createEnvAsync(verityNodes: Seq[VerityNode], appSeed: String): Future[VerityEnv] = {
-      implicit val ec = futureExecutionContext
+      implicit val ec: ExecutionContext = futureExecutionContext
       logger.info(s"Start verity nodes with ports ${verityNodes.map(_.portProfile.artery)}")
       try {
         startVerityNodesAsync(verityNodes, VerityEnv.START_MAX_TIMEOUT) map { _ =>

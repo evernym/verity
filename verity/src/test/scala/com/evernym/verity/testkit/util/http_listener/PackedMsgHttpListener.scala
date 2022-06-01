@@ -3,7 +3,7 @@ package com.evernym.verity.testkit.util.http_listener
 import akka.http.scaladsl.model.{HttpRequest, MediaTypes}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, extractRequest, logRequestResult, parameters, pathPrefix, post, reject, _}
 import akka.http.scaladsl.server.Route
-import com.evernym.verity.http.common.HttpCustomTypes
+import com.evernym.verity.http.common.models.HttpCustomTypes
 
 
 trait PackedMsgHttpListener

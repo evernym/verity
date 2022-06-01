@@ -5,9 +5,11 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
 import com.evernym.verity.did.exception.DIDException
+import com.evernym.verity.integration.base.EndorserUtil
+import com.evernym.verity.protocol.engine.asyncapi.endorser.Endorser
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.MockLedger.toFqId
-import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{MockableEndorserAccess, MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.TestExecutionContextProvider
 import org.json.JSONObject
@@ -82,32 +84,36 @@ class WriteCredentialDefinitionSpec
           MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
         ))
         interaction(f.writer) {
-          withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
-              f.writer ~ Write(credDefName, schemaId, None, None)
+          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+            withDefaultWalletAccess(f, {
+              withDefaultLedgerAccess(f, {
+                f.writer ~ Write(credDefName, schemaId, None, None)
 
-              val needsEndorsement = f.writer expect signal[NeedsEndorsement]
-              val json = new JSONObject(needsEndorsement.credDefJson)
-              json.getString("endorser") shouldBe toFqId(defaultEndorser)
-              f.writer.state shouldBe a[State.WaitingOnEndorser]
+                val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+                val json = new JSONObject(needsEndorsement.credDefJson)
+                json.getString("endorser") shouldBe toFqId(defaultEndorser)
+                f.writer.state shouldBe a[State.WaitingOnEndorser]
+              })
             })
           })
         }
       }
 
-      "and use endorser from control msg if defined" in { f =>
+      "and use endorser did from control msg if defined" in { f =>
         f.writer.initParams(Map(
           MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
         ))
         interaction(f.writer) {
-          withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
-              f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
+          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+            withDefaultWalletAccess(f, {
+              withDefaultLedgerAccess(f, {
+                f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
 
-              val needsEndorsement = f.writer expect signal[NeedsEndorsement]
-              val json = new JSONObject(needsEndorsement.credDefJson)
-              json.getString("endorser") shouldBe toFqId(userEndorser)
-              f.writer.state shouldBe a[State.WaitingOnEndorser]
+                val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+                val json = new JSONObject(needsEndorsement.credDefJson)
+                json.getString("endorser") shouldBe toFqId(userEndorser)
+                f.writer.state shouldBe a[State.WaitingOnEndorser]
+              })
             })
           })
         }
@@ -120,14 +126,16 @@ class WriteCredentialDefinitionSpec
           MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
         ))
         interaction(f.writer) {
-          withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
-              f.writer ~ Write(credDefName, schemaId, None, None)
+          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+            withDefaultWalletAccess(f, {
+              withDefaultLedgerAccess(f, {
+                f.writer ~ Write(credDefName, schemaId, None, None)
 
-              val needsEndorsement = f.writer expect signal[NeedsEndorsement]
-              val json = new JSONObject(needsEndorsement.credDefJson)
-              json.getString("endorser") shouldBe toFqId(defaultEndorser)
-              f.writer.state shouldBe a[State.WaitingOnEndorser]
+                val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+                val json = new JSONObject(needsEndorsement.credDefJson)
+                json.getString("endorser") shouldBe toFqId(defaultEndorser)
+                f.writer.state shouldBe a[State.WaitingOnEndorser]
+              })
             })
           })
         }
@@ -138,14 +146,16 @@ class WriteCredentialDefinitionSpec
           MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
         ))
         interaction(f.writer) {
-          withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
-              f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
+          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+            withDefaultWalletAccess(f, {
+              withDefaultLedgerAccess(f, {
+                f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
 
-              val needsEndorsement = f.writer expect signal[NeedsEndorsement]
-              val json = new JSONObject(needsEndorsement.credDefJson)
-              json.getString("endorser") shouldBe toFqId(userEndorser)
-              f.writer.state shouldBe a[State.WaitingOnEndorser]
+                val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+                val json = new JSONObject(needsEndorsement.credDefJson)
+                json.getString("endorser") shouldBe toFqId(userEndorser)
+                f.writer.state shouldBe a[State.WaitingOnEndorser]
+              })
             })
           })
         }
@@ -157,20 +167,22 @@ class WriteCredentialDefinitionSpec
         MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
       ))
       interaction(f.writer) {
-        withDefaultWalletAccess(f, {
-          withDefaultLedgerAccess(f, {
-            f.writer ~ Write(credDefName, schemaId, None, None)
+        withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+          withDefaultWalletAccess(f, {
+            withDefaultLedgerAccess(f, {
+              f.writer ~ Write(credDefName, schemaId, None, None)
 
-            val needsEndorsement = f.writer expect signal[NeedsEndorsement]
-            val json = new JSONObject(needsEndorsement.credDefJson)
-            json.getString("endorser") shouldBe toFqId(defaultEndorser)
-            f.writer.state shouldBe a[State.WaitingOnEndorser]
+              val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+              val json = new JSONObject(needsEndorsement.credDefJson)
+              json.getString("endorser") shouldBe toFqId(defaultEndorser)
+              f.writer.state shouldBe a[State.WaitingOnEndorser]
+            })
           })
         })
       }
     }
 
-    "should fail when issuer did doesn't have ledger permissions and endorser did is not defined" in {f =>
+    "should fail when issuer did doesn't have ledger permissions and endorser did is not defined" in { f =>
       f.writer.initParams(Map(
         MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID,
         DEFAULT_ENDORSER_DID -> ""
@@ -240,6 +252,11 @@ class WriteCredentialDefinitionSpec
 
   }
 
+  def withEndorserAccess(endorsers: Map[String, List[Endorser]], s: Scenario, f: => Unit): Unit = {
+    s.writer endorserAccess MockableEndorserAccess(endorsers)
+    f
+  }
+
   def withDefaultWalletAccess(s: Scenario, f: => Unit): Unit = {
     s.writer walletAccess MockableWalletAccess()
     f
@@ -253,6 +270,7 @@ class WriteCredentialDefinitionSpec
   override val containerNames: Set[ContainerName] = Set("writer")
 
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
+
   /**
    * custom thread pool executor
    */

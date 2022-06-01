@@ -5,15 +5,14 @@ import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives.ignoreTrailingSlash
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.testkit.AkkaTestBasic
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.http.base.AgentReqBuilder
-import com.evernym.verity.http.common.HttpRouteBase
-import com.evernym.verity.http.route_handlers.PlatformServiceProvider
+import com.evernym.verity.http.route_handlers.{HasExecutor, PlatformServiceProvider}
 import com.evernym.verity.http.route_handlers.open.PackedMsgEndpointHandler
 import com.evernym.verity.testkit.BasicSpec
+import com.evernym.verity.util2.ExecutionContextProvider
 
 import scala.concurrent.ExecutionContext
 
@@ -22,9 +21,9 @@ class RequestSizeSpec
   extends BasicSpec
     with ScalatestRouteTest
     with ProvidesMockPlatform
-    with HttpRouteBase
     with PlatformServiceProvider
     with PackedMsgEndpointHandler
+    with HasExecutor
     with AgentReqBuilder {
 
   def endpointRoutes: Route = ignoreTrailingSlash { packedMsgRoute }

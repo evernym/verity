@@ -30,7 +30,6 @@ class UserAgentPairwiseBeforeSep2019RecoverySpec
     setupBasicAgencyAgent()
     setupBasicUserAgent()
     setupBasicUserAgentPairwise()
-    closeClientWallets(Set(myAgencyAgentEntityId, mySelfRelAgentEntityId))
   }
 
   "UserAgentPairwise actor" - {

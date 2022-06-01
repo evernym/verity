@@ -5,10 +5,9 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model.{FormData, HttpMethods, HttpRequest, HttpResponse}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.{AppConfig, ConfigSvc}
 import com.evernym.verity.config.ConfigConstants.{YOURLS_API_PASSWORD, YOURLS_API_SIGNATURE, YOURLS_API_URL, YOURLS_API_USERNAME}
 import com.evernym.verity.constants.Constants.URL_SHORTENER_PROVIDER_ID_YOURLS
-import com.evernym.verity.http.common.ConfigSvc
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.util.OptionUtil
 import com.evernym.verity.util.Util.buildHandledError

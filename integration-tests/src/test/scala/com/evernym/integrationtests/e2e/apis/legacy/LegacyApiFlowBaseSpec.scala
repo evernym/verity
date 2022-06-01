@@ -1,5 +1,6 @@
 package com.evernym.integrationtests.e2e.apis.legacy
 
+import akka.actor.ActorSystem
 import com.evernym.integrationtests.e2e.TestConstants
 import com.evernym.integrationtests.e2e.client.{AdminClient, ApiClientCommon}
 import com.evernym.integrationtests.e2e.env.AppInstance.AppInstance
@@ -13,7 +14,8 @@ import com.evernym.integrationtests.e2e.util.HttpListenerUtil
 import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK}
 import com.evernym.verity.actor.agent.msghandler.outgoing.FwdMsg
-import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
+import com.evernym.verity.actor.testkit.{CommonSpecUtil, HasActorSystem, TestAppConfig}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
@@ -22,7 +24,7 @@ import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.http.common.StatusDetailResp
+import com.evernym.verity.http.common.models.StatusDetailResp
 import com.evernym.verity.protocol.engine.Constants.MTV_1_0
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.testkit.agentmsg._
@@ -38,6 +40,7 @@ import org.json.JSONObject
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
 import org.scalatest.time._
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.util.Random
 
@@ -52,19 +55,22 @@ trait LegacyApiFlowBaseSpec
     with ScalaFutures
     with HttpListenerUtil
     with CancelGloballyAfterFailure
-    with AwaitResult {
+    with AwaitResult{
 
   implicit override val patienceConfig: PatienceConfig =
     PatienceConfig(timeout = Span(25, Seconds), interval = Span(1, Seconds))
 
   override lazy val appConfig: AppConfig = new TestAppConfig
 
+  def system: ActorSystem = ActorSystemVanilla(UUID.randomUUID().toString)
+
   lazy val ledgerUtil = new LedgerUtil(
     appConfig,
     None,
     executionContextProvider.futureExecutionContext,
     taa = ConfigUtil.findTAAConfig(appConfig, "1.0.0"),
-    genesisTxnPath = Some(testEnv.ledgerConfig.genesisFilePath)
+    genesisTxnPath = Some(testEnv.ledgerConfig.genesisFilePath),
+    system = system
   )
 
   val edgeHttpEndpointForPackedMsg: PackedMsgHttpListener = {
@@ -76,7 +82,7 @@ trait LegacyApiFlowBaseSpec
     new EdgeHttpListenerForPushNotifMsg(appConfig, UrlParam("localhost:3456/json-msg"), executionContextProvider.futureExecutionContext)
   }
 
-  val edgeHtppEndpointForSponsors: PushNotifMsgHttpListener = edgeHttpEndpointForPushNotif
+  val edgeHttpEndpointForSponsors: PushNotifMsgHttpListener = edgeHttpEndpointForPushNotif
 
   val sendInviteToPhoneNo: Option[String] = Option(phoneNo)
 
@@ -262,7 +268,7 @@ trait LegacyApiFlowBaseSpec
     def receiveFwdMsgForSponsor(msgSending: () => Unit)(implicit scenario: Scenario, aae: AgencyAdminEnvironment): Unit = {
       "when cloud agent receives a msg and has registered a fwd com method a msg" - {
         "should be forwarded via http to specified endpoint" in withPreCheck {
-          val latestFwdMsg = withLatestPushMessage(edgeHtppEndpointForSponsors, {
+          val latestFwdMsg = withLatestPushMessage(edgeHttpEndpointForSponsors, {
             msgSending()
           })
           val fwdMsg: FwdMsg = DefaultMsgCodec.fromJson[FwdMsg](latestFwdMsg)

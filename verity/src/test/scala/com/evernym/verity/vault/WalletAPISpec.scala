@@ -1,19 +1,20 @@
 package com.evernym.verity.vault
 
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.CommonSpecUtil
+import com.evernym.verity.actor.testkit.{ActorSpec, CommonSpecUtil}
 import com.evernym.verity.actor.wallet.{CreateDID, CreateNewKey, GetVerKey, GetVerKeyResp, NewKeyCreated, StoreTheirKey, TheirKeyStored}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
-import com.evernym.verity.testkit.{BasicSpecWithIndyCleanup, HasTestWalletAPI}
+import com.evernym.verity.testkit.{BasicSpecBase, BasicSpecWithIndyCleanup, HasTestWalletAPI}
 
 import scala.concurrent.ExecutionContext
 
 class WalletAPISpec
   extends BasicSpecWithIndyCleanup
     with HasTestWalletAPI
-    with CommonSpecUtil {
-  override def appConfig: AppConfig = testAppConfig
+    with CommonSpecUtil
+    with ActorSpec
+    with BasicSpecBase{
 
   lazy val aliceWap: WalletAPIParam = createWallet("alice", testWalletAPI)
   lazy val bobWap: WalletAPIParam = createWallet("bob", testWalletAPI)
@@ -77,4 +78,8 @@ class WalletAPISpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
+
+  def executionContextProvider: ExecutionContextProvider = ecp
+
+  implicit override lazy val appConfig: AppConfig = testAppConfig
 }

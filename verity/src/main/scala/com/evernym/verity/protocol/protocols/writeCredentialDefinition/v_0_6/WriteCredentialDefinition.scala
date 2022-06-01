@@ -5,6 +5,7 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncapi.endorser.ENDORSEMENT_RESULT_SUCCESS_CODE
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{IndyLedgerUtil, LedgerRejectException, TxnForEndorsement}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.{CredDefCreatedResult, SignedMsgResult}
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
@@ -30,6 +31,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
   def mainHandleControl: (CredDefState, Option[Role], Control) ?=> Any = {
     case (_, _, c: Init) => ctx.apply(ProtocolInitialized(c.parametersStored.toSeq))
     case (s: State.Initialized, _, m: Write) => writeCredDef(m, s)
+    case (s: State.WaitingOnEndorser, _, m: EndorsementResult) => handleEndorsementResult(m, s)
     case _ => ctx.signal(ProblemReport("Unexpected message in current state"))
   }
 
@@ -42,8 +44,8 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
         ctx.getRoster.withAssignment(Writer() -> ctx.getRoster.selfIndex_!)
       )
     case (_: State.Processing, _, e: AskedForEndorsement) => State.WaitingOnEndorser(e.credDefId, e.credDefJson)
-    case (_: State.Processing, _, e: CredDefWritten) => State.Done(e.credDefId)
-    case (_: State.Processing, _, e: WriteFailed) => State.Error(e.error)
+    case (s @ (_: State.Processing | _: State.WaitingOnEndorser), _, e: CredDefWritten) => State.Done(e.credDefId)
+    case (s @ (_: State.Processing | _: State.WaitingOnEndorser), _, e: WriteFailed) => State.Error(e.error)
   }
 
   def writeCredDef(m: Write, init: State.Initialized): Unit = {
@@ -74,15 +76,30 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                 case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
                   ctx.logger.info(e.toString)
                   val fqEndorserDID = ctx.ledger.fqDID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
-                  if (fqEndorserDID.nonEmpty) {
-                    prepareTxnForEndorsement(fqSubmitterId, fqCredDefId, credDefCreated.credDefJson, fqEndorserDID) {
-                      case Success(data: TxnForEndorsement) =>
-                        ctx.signal(NeedsEndorsement(fqCredDefId, data))
-                        ctx.apply(AskedForEndorsement(fqCredDefId, data))
-                      case Failure(e) => problemReport(e)
-                    }
-                  } else {
-                    problemReport(new Exception("No default endorser defined"))
+                  println("### fqEndorserDID: " + fqEndorserDID)
+                  ctx.endorser.withCurrentEndorser(ctx.ledger.getIndyDefaultLegacyPrefix()) {
+                    case Success(Some(endorser)) if fqEndorserDID.isEmpty || fqEndorserDID.contains(endorser.did) =>
+                      ctx.logger.info("registered endorser to be used for creddef endorsement: " + endorser)
+                      //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
+                      prepareTxnForEndorsement(submitterDID, fqCredDefId, credDefCreated.credDefJson, endorser.did) {
+                        case Success(ledgerRequest) =>
+                          ctx.endorser.endorseTxn(ledgerRequest, ctx.ledger.getIndyDefaultLegacyPrefix()) {
+                            case Success(_) =>
+                              ctx.apply(AskedForEndorsement(credDefCreated.credDefId, ledgerRequest))
+                            case Failure(e) =>
+                              problemReport(new Exception(e))
+                          }
+                        case Failure(e) => problemReport(new Exception(e))
+                      }
+                    case other =>
+                      ctx.logger.info("no active/matched endorser found to be used for creddef endorsement: " + other)
+                      //no active endorser or active endorser is NOT the same as given/configured endorserDID
+                      prepareTxnForEndorsement(submitterDID, fqCredDefId, credDefCreated.credDefJson, fqEndorserDID) {
+                        case Success(data: TxnForEndorsement) =>
+                          ctx.signal(NeedsEndorsement(fqCredDefId, data))
+                          ctx.apply(AskedForEndorsement(fqCredDefId, data))
+                        case Failure(e) => problemReport(e)
+                      }
                   }
                 case Failure(e) => problemReport(e)
               }
@@ -124,28 +141,41 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                                        credDefJson: String,
                                        fqEndorserDid: FqDID)
                                       (handleResult: Try[TxnForEndorsement] => Unit): Unit = {
-    ctx.ledger
-      .prepareCredDefTxn(
-        credDefJson,
-        fqCredDefId,
-        ctx.ledger.fqDID(fqSubmitterDID),
-        Option(fqEndorserDid)) {
-        case Success(pt: PreparedTxn) =>
-          //TODO (VE-3368): will signing api won't allow fq identifier (see below)
-          ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID))) {
-            case Success(smr: SignedMsgResult) =>
-              if (IndyLedgerUtil.isIndyNamespace(pt.namespace)) {
-                val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(ctx.ledger.fqDID(fqSubmitterDID) -> smr.signatureResult.toBase64))
-                handleResult(Success(txn))
-              } else {
-                handleResult(Failure(new RuntimeException("endorsement spec not supported:" + pt.endorsementSpec)))
-              }
-            case Failure(ex) =>
-              handleResult(Failure(ex))
-          }
-        case Failure(ex) =>
-          handleResult(Failure(ex))
-      }
+    if (fqEndorserDid.nonEmpty) {
+      ctx.ledger
+        .prepareCredDefTxn(
+          credDefJson,
+          fqCredDefId,
+          ctx.ledger.fqDID(fqSubmitterDID),
+          Option(fqEndorserDid)) {
+          case Success(pt: PreparedTxn) =>
+            //TODO (VE-3368): will signing api won't allow fq identifier (see below)
+            ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID))) {
+              case Success(smr: SignedMsgResult) =>
+                if (IndyLedgerUtil.isIndyNamespace(pt.namespace)) {
+                  val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(ctx.ledger.fqDID(fqSubmitterDID) -> smr.signatureResult.toBase64))
+                  handleResult(Success(txn))
+                } else {
+                  handleResult(Failure(new RuntimeException("endorsement spec not supported:" + pt.endorsementSpec)))
+                }
+              case Failure(ex) =>
+                handleResult(Failure(ex))
+            }
+          case Failure(ex) =>
+            handleResult(Failure(ex))
+        }
+    } else {
+      handleResult(Failure(new Exception("No default endorser defined")))
+    }
+  }
+
+  def handleEndorsementResult(m: EndorsementResult, e: State.WaitingOnEndorser): Unit = {
+    if (m.code == ENDORSEMENT_RESULT_SUCCESS_CODE) {
+      ctx.apply(CredDefWritten(e.credDefId))
+      ctx.signal(StatusReport(e.credDefId))
+    } else {
+      problemReport(new RuntimeException(s"error during endorsement => code: ${m.code}, description: ${m.description}"))
+    }
   }
 
   def problemReport(e: Throwable): Unit = {

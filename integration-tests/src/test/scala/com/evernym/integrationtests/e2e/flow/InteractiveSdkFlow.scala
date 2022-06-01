@@ -438,6 +438,10 @@ trait InteractiveSdkFlow extends MetricsFlow {
         val endorserDidOnLedger = Try {
           ledgerUtil.checkDidOnLedger(issuerDID, issuerVerkey, "ENDORSER")
           true
+        }.recover {
+          case e =>
+            logger.error(s"Check did on ledger failed: $e")
+            throw e
         }.getOrElse(false)
 
         if (!endorserDidOnLedger) {
@@ -927,7 +931,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
                       inviteeMsgReceiverSdkProvider: VeritySdkProvider,
                       relationshipId: String,
                       inviteUrl: AtomicReference[String])
-                     (implicit scenario: Scenario) = {
+                     (implicit scenario: Scenario): Unit = {
     val inviterName = inviterSdk.sdkConfig.name
     val inviteeName = inviteeSdk.sdkConfig.name
 
@@ -978,7 +982,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
                   inviteeMsgReceiverSdkProvider: VeritySdkProvider,
                   relationshipId: String,
                   inviteUrl: AtomicReference[String])
-                 (implicit scenario: Scenario)= {
+                 (implicit scenario: Scenario): Unit = {
     val inviterName = inviteeSdk.sdkConfig.name
     val inviteeName = inviteeSdk.sdkConfig.name
 

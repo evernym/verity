@@ -2,7 +2,7 @@ package com.evernym.verity.http.base.restricted
 
 import akka.http.scaladsl.model.StatusCodes.{OK, ServiceUnavailable}
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
-import com.evernym.verity.http.route_handlers.restricted.ReadinessStatus
+import com.evernym.verity.http.route_handlers.open.models.ReadinessStatus
 import com.evernym.verity.util.healthcheck.{ApiStatus, HealthChecker}
 import org.mockito.MockitoSugar.when
 

@@ -9,7 +9,7 @@ import scala.util.Try
 object TAAUtil {
   val taaAcceptanceDatePattern = "yyyy-MM-dd"
   val taaAcceptanceFormat = DateTimeFormat.forPattern(taaAcceptanceDatePattern)
-
+  
   def taaAcceptanceDateParse(str: String): Option[LocalDateTime] = {
     Try(LocalDateTime.parse(str, taaAcceptanceFormat)).toOption
   }
@@ -22,9 +22,8 @@ object TAAUtil {
         // Remove time from the DateTime to avoid the InvalidClientTaaAcceptanceError "Txn Author Agreement acceptance
         // time <epoch time> is too precise and is a privacy risk" error message from libindy.
         sec - (sec % (60*60*24))
-      case None =>
-        throw new InvalidValueException(
-          Option(s"Invalid TAA Acceptance Date: $str. Date must be in $taaAcceptanceDatePattern format."))
+      case None => throw new InvalidValueException(
+        Option(s"Invalid TAA Acceptance Date: $str. Date must be in $taaAcceptanceDatePattern format."))
     }
   }
 }

@@ -11,7 +11,7 @@ import com.evernym.verity.actor.testkit.{AkkaTestBasic, CommonSpecUtil}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.http.base.open._
 import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, AppStatusHealthCheckSpec, MockHealthChecker, RestrictedRestApiSpec}
-import com.evernym.verity.http.route_handlers.EndpointHandlerBase
+import com.evernym.verity.http.route_handlers.HttpRoutes
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
@@ -29,10 +29,9 @@ import scala.reflect.ClassTag
 import scala.concurrent.duration._
 
 trait EdgeEndpointBaseSpec
-  extends
-    BasicSpecWithIndyCleanup
+  extends BasicSpecWithIndyCleanup
     with ScalatestRouteTest
-    with EndpointHandlerBase
+    with HttpRoutes
     with Eventually
     with CommonSpecUtil
     with ApiClientSpecCommon
@@ -65,8 +64,8 @@ trait EdgeEndpointBaseSpec
   implicit def default(implicit system: ActorSystem): RouteTestTimeout =
     RouteTestTimeout(buildDurationInSeconds(appConfig.getIntReq(AKKA_HTTP_ROUTE_TEST_TIMEOUT_CONFIG_NAME)))
 
-  override def checkIfInternalApiCalledFromAllowedIPAddresses(callerIpAddress: String)(implicit req: HttpRequest): Unit = {
-    logger.debug("api request allowed from test case: " + req.uri, ("req_uri", req.uri))
+  override def checkIfAddressAllowed(remoteAddress: RemoteAddress, uri: Uri): Unit = {
+    logger.debug(s"api request allowed from test case: $uri", ("req_uri", uri))
   }
 
   def getInviteUrl(edgeAgent: MockEdgeAgent): String = {

@@ -2,25 +2,29 @@ package com.evernym.verity.http.route_handlers.restricted
 
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model.StatusCodes._
-import akka.http.scaladsl.server.Directives.{complete, pathEnd, _}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import akka.util.Timeout
-import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.Status._
 import com.evernym.verity.actor._
-import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking.{BlockCaller, BlockResourceForCaller, GetBlockedList, UnblockCaller, UnblockResourceForCaller, UsageBlockingStatusChunk}
-import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning.{GetWarnedList, UnwarnCaller, UnwarnResourceForCaller, UsageWarningStatusChunk, WarnCaller, WarnResourceForCaller}
-import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr, ForResourceWarningStatusMngr}
 import com.evernym.verity.actor.base.Done
+import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking._
+import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.warning._
+import com.evernym.verity.actor.cluster_singleton.{ForResourceBlockingStatusMngr, ForResourceWarningStatusMngr}
 import com.evernym.verity.actor.resourceusagethrottling.tracking.{GetAllResourceUsages, ResourceUsages}
-import com.evernym.verity.http.common.CustomExceptionHandler._
-import com.evernym.verity.http.route_handlers.HttpRouteWithPlatform
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.evernym.verity.http.HttpUtil.entityAs
+import com.evernym.verity.http.common.BaseRequestHandler
+import com.evernym.verity.http.common.CustomResponseHandler._
+import com.evernym.verity.http.route_handlers.PlatformWithExecutor
+import com.evernym.verity.http.route_handlers.restricted.models.{UpdateResourcesUsageCounter, UpdateResourcesUsageLimit, UpdateViolationDetail}
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.HasExecutionContextProvider
+import com.evernym.verity.util2.Status._
 
 import scala.concurrent.Future
 
-trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
+trait ResourceUsageEndpointHandler extends BaseRequestHandler with HasExecutionContextProvider {
+  this: PlatformWithExecutor =>
 
   implicit val responseTimeout: Timeout
 
@@ -145,71 +149,46 @@ trait ResourceUsageEndpointHandler { this: HttpRouteWithPlatform =>
   }
 
   protected val resourceUsageRoute: Route =
-    handleExceptions(exceptionHandler) {
-      logRequestResult("agency-service") {
-        pathPrefix("agency" / "internal" / "resource-usage") {
-          extractRequest { implicit req =>
-            extractClientIP { implicit remoteAddress =>
-              checkIfInternalApiCalledFromAllowedIPAddresses(clientIpAddress)
-              pathPrefix("warned") {
-                (get & pathEnd) {
-                  parameters(Symbol("onlyWarned") ? "N", Symbol("onlyUnwarned") ? "N", Symbol("onlyActive") ? "Y", Symbol("ids").?, Symbol("resourceNames").?) {
-                    (onlyWarned, onlyUnwarned, onlyActive, ids, resourceNames) =>
-                      handleGetWarnedList(onlyWarned, onlyUnwarned, onlyActive, ids, resourceNames)
-                  }
-                }
+    handleRestrictedRequest(exceptionHandler) { (_, _) =>
+      pathPrefix("agency" / "internal" / "resource-usage") {
+        pathPrefix("warned") {
+          (get & pathEnd) {
+            parameters(Symbol("onlyWarned") ? "N", Symbol("onlyUnwarned") ? "N", Symbol("onlyActive") ? "Y", Symbol("ids").?, Symbol("resourceNames").?) {
+              (onlyWarned, onlyUnwarned, onlyActive, ids, resourceNames) =>
+                handleGetWarnedList(onlyWarned, onlyUnwarned, onlyActive, ids, resourceNames)
+            }
+          }
+        } ~
+          pathPrefix("blocked") {
+            (get & pathEnd) {
+              parameters(Symbol("onlyBlocked") ? "N", Symbol("onlyUnblocked") ? "N", Symbol("onlyActive") ? "Y", Symbol("ids").?, Symbol("resourceNames").?) {
+                (onlyBlocked, onlyUnblocked, onlyActive, ids, resourceNames) =>
+                  handleGetBlockedList(onlyBlocked, onlyUnblocked, onlyActive, ids, resourceNames)
+              }
+            }
+          } ~
+          pathPrefix("id") {
+            pathPrefix(Segment) { callerId =>
+              (get & pathEnd) {
+                handleGetResourceUsages(callerId)
               } ~
-                pathPrefix("blocked") {
-                  (get & pathEnd) {
-                    parameters(Symbol("onlyBlocked") ? "N", Symbol("onlyUnblocked") ? "N", Symbol("onlyActive") ? "Y", Symbol("ids").?, Symbol("resourceNames").?) {
-                      (onlyBlocked, onlyUnblocked, onlyActive, ids, resourceNames) =>
-                        handleGetBlockedList(onlyBlocked, onlyUnblocked, onlyActive, ids, resourceNames)
-                    }
+                (put & pathEnd & entityAs[UpdateViolationDetail]) { uvd =>
+                  handleUpdateCallerDetail(callerId, uvd)
+                } ~
+                pathPrefix("counter") {
+                  (put & pathEnd & entityAs[UpdateResourcesUsageCounter]) { uruc =>
+                    handleUpdateResourceUsageCounterDetails(callerId, uruc)
                   }
                 } ~
-                pathPrefix("id") {
-                  pathPrefix(Segment) { callerId =>
-                    (get & pathEnd) {
-                      handleGetResourceUsages(callerId)
-                    } ~
-                      (put & pathEnd & entityAs[UpdateViolationDetail]) { uvd =>
-                        handleUpdateCallerDetail(callerId, uvd)
-                      } ~
-                      pathPrefix("counter") {
-                        (put & pathEnd & entityAs[UpdateResourcesUsageCounter]) { uruc =>
-                          handleUpdateResourceUsageCounterDetails(callerId, uruc)
-                        }
-                      } ~
-                      pathPrefix("resource") {
-                        pathPrefix(Segments(1, 2)) { resourceSegments =>
-                          (put & pathEnd & entityAs[UpdateViolationDetail]) { uvd =>
-                            handleUpdateResourceDetail(callerId, resourceSegments.mkString("/"), uvd)
-                          }
-                        }
-                      }
+                pathPrefix("resource") {
+                  pathPrefix(Segments(1, 2)) { resourceSegments =>
+                    (put & pathEnd & entityAs[UpdateViolationDetail]) { uvd =>
+                      handleUpdateResourceDetail(callerId, resourceSegments.mkString("/"), uvd)
+                    }
                   }
                 }
             }
           }
-        }
       }
     }
 }
-
-
-case class UpdateViolationDetail(msgType: String,
-                                 @JsonDeserialize(contentAs = classOf[Long]) period: Option[Long],
-                                 allResources: Option[String])
-
-case class ResourceUsageLimitDetail(resourceName: String, bucketId: Int,
-                                    newLimit: Option[Int] = None, addToCurrentUsedCount: Option[Int] = None) {
-  require(!(newLimit.isEmpty && addToCurrentUsedCount.isEmpty),
-    "one and only one of these should be specified: 'newLimit' or 'addToCurrentUsedCount'")
-}
-
-case class UpdateResourcesUsageLimit(resourceUsageLimits: List[ResourceUsageLimitDetail])
-
-
-case class ResourceUsageCounterDetail(resourceName: String, bucketId: Int, newCount: Option[Int])
-
-case class UpdateResourcesUsageCounter(resourceUsageCounters: List[ResourceUsageCounterDetail]) extends ActorMessage

@@ -5,7 +5,7 @@ import com.evernym.verity.integration.base.PortProvider
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 
 import java.io.InputStream
-import java.net.URL
+import java.net.{InetAddress, URL}
 import java.util
 import java.util.Collections
 import scala.jdk.CollectionConverters._
@@ -34,7 +34,7 @@ private class ClassLoaderWrapper(wrapped: ClassLoader) extends ClassLoader {
 
 private class FilterLocalReferenceConfClassLoader(wrapped: ClassLoader) extends ClassLoaderWrapper(wrapped) {
   override def getResources(name: String): util.Enumeration[URL] = {
-    if(name.endsWith("reference.conf")) {
+    if (name.endsWith("reference.conf")) {
       Collections.enumeration(
         super.getResources(name)
           .asScala
@@ -58,25 +58,40 @@ private class FilterLocalReferenceConfClassLoader(wrapped: ClassLoader) extends 
  */
 object ActorSystemVanilla {
 
+  private def createConfig(name: String) = {
+    val port = PortProvider.getFreePort
+    val host = InetAddress.getLocalHost.getHostAddress
+    ConfigFactory.parseString(
+      s"""
+         |akka.actor.provider = cluster,
+         |akka.remote.artery.canonical.port = $port,
+         |akka.remote.artery.canonical.host = $host,
+         |akka.cluster.seed-nodes = [
+         |      "akka://$name@$host:$port"
+         |      ],
+         |akka.cluster.downing-provider-class = "akka.cluster.sbr.SplitBrainResolverProvider",
+         |akka.cluster.jmx.multi-mbeans-in-same-jvm = on
+         |""".stripMargin)
+  }
 
   def apply(name: String): ActorSystem = {
-    create(
+    val config = createConfig(name)
+    apply(
       name,
-      ConfigFactory.empty(), // Creates an ActorSystem unencumbered with Verity Config
-      seedNodesWithRandomPorts = true
+      config, // Creates an ActorSystem unencumbered with Verity Config
+      seedNodesWithRandomPorts = false
     )
   }
 
   def apply(name: String, config: Config): ActorSystem = {
-    create(
+    apply(
       name,
-      config,
-      seedNodesWithRandomPorts = true
+      config.withFallback(createConfig(name)),
+      seedNodesWithRandomPorts = false
     )
   }
 
-
-  private def create(name: String, config: Config, seedNodesWithRandomPorts: Boolean): ActorSystem = {
+  def apply(name: String, config: Config, seedNodesWithRandomPorts: Boolean): ActorSystem = {
     val configToBeUsed = if (seedNodesWithRandomPorts) seedNodesWithRandomPort(config) else config
     ActorSystem(
       name,
@@ -92,7 +107,7 @@ object ActorSystemVanilla {
       else List("akka://$systemName@127.0.0.1:25520")
 
     val updatedSeedNodes = existingSeedNodes
-      .map{ url =>
+      .map { url =>
         val lastIndex = url.lastIndexOf(":")
         val (prePort, port) = url.splitAt(lastIndex)
         prePort + ":" + PortProvider.getFreePort

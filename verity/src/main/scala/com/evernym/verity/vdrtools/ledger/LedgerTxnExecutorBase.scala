@@ -343,8 +343,7 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
             promise.completeWith(
               submitWriteRequest(Submitter(submitterDID, None), reqWithOptTAA.prepared(signedRequest.req))
             )
-          case Failure(ex) =>
-            promise.failure(ex)
+          case Failure(ex) => promise.failure(ex)
         }
         promise.future
       }

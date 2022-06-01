@@ -6,6 +6,7 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine.registry.ProtocolRegistry.{DriverGen, Entry}
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.asyncapi.endorser.EndorserAccess
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
@@ -410,6 +411,10 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] extends HasExecutionContextProvider {
       newOne.recoverOrInit()
       system.processAll()
       newOne
+    }
+
+    def endorserAccess(e: EndorserAccess): Unit = {
+      domain.endorserAccess(e)
     }
 
     def walletAccess(w: WalletAccess): Unit = {

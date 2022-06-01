@@ -19,6 +19,7 @@ unit-test:
     DD_SERVICE: "verity"
   script:
     - mkdir -p verity/target
+    - export CLEANUP_INDY_DIR=false
     - sbt test | tee verity/target/verity-unit-tests.log | grep -v -e '^\[WARN\|ERROR\|TRACE\|INFO\|DEBUG'
   after_script:
     - datadog-ci junit upload verity/target/test-reports
@@ -132,6 +133,7 @@ legacy:
     - .integration-common
   script:
     - export TAA_ACCEPT_DATE=$(date +%F)
+    - export CLEANUP_INDY_DIR=false
     - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.ApiFlowSpec"
   variables:
     TEST_SCENARIOS: "scenario1, scenario2"
@@ -141,6 +143,7 @@ legacy-with-restart:
     - .integration-common
   script:
     - export TAA_ACCEPT_DATE=$(date +%F)
+    - export CLEANUP_INDY_DIR=false
     - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.ApiFlowSpec"
   variables:
     TEST_SCENARIOS: "scenario1"
@@ -152,6 +155,7 @@ integration:
   script:
     - echo "Running 3rd party tests..."
     - export TAA_ACCEPT_DATE=$(date +%F)
+    - export CLEANUP_INDY_DIR=false
     - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.third_party_apis.s3.*"
     - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.third_party_apis.wallet_api.*"
     - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.legacy.vcx.*"
@@ -163,4 +167,5 @@ limits:
     - .integration-common
   script:
     - export TAA_ACCEPT_DATE=$(date +%F)
+    - export CLEANUP_INDY_DIR=false
     - sbt "integrationTests/testOnly com.evernym.integrationtests.e2e.apis.limits.* -- -n com.evernym.integrationtests.e2e.tag.annotation.Limits"

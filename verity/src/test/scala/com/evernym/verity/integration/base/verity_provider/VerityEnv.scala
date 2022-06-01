@@ -1,9 +1,11 @@
 package com.evernym.verity.integration.base.verity_provider
 
+import akka.actor.ActorSystem
 import akka.cluster.MemberStatus
 import akka.cluster.MemberStatus.{Down, Removed, Up}
 import akka.testkit.TestKit
 import com.evernym.verity.actor.persistence.recovery.base.PersistentStoreTestKit
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.integration.base.PortProvider
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
@@ -13,6 +15,7 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
 
+import java.util.UUID
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 
@@ -116,7 +119,12 @@ case class VerityEnv(seed: String,
 
   lazy val endpointProvider: VerityEnvUrlProvider = VerityEnvUrlProvider(nodes)
 
-  lazy val persStoreTestKit = new PersistentStoreTestKit(nodes.head.asInstanceOf[VerityLocalNode].platform.actorSystem, ec)
+  val system: ActorSystem = ActorSystemVanilla(UUID.randomUUID().toString)
+
+  lazy val persStoreTestKit = new PersistentStoreTestKit(ec, getVerityLocalNode.platform.actorSystem)
+
+  lazy val getVerityLocalNode: VerityLocalNode = nodes.head.asInstanceOf[VerityLocalNode]
+
 }
 
 object VerityEnv {
@@ -134,15 +142,19 @@ case class VerityEnvUrlProvider(private val _nodes: Seq[VerityNode]) {
 }
 
 object PortProfile {
+
   def random(): PortProfile = {
-    val arteryPort      = PortProvider.getFreePort
-    val akkaMgmtPort    = PortProvider.getFreePort
-    val httpPort        = PortProvider.getFreePort
-    val prometheusPort  = PortProvider.getFreePort
-    PortProfile(httpPort, arteryPort, akkaMgmtPort, prometheusPort)
+    val arteryPort          = PortProvider.getFreePort
+    val akkaMgmtPort        = PortProvider.getFreePort
+    val httpPort            = PortProvider.getFreePort
+    val prometheusPort      = PortProvider.getFreePort
+    val basicEventStorePort = PortProvider.getFreePort
+    val basicEventStoreConsumerPort = PortProvider.getFreePort
+
+    PortProfile(httpPort, arteryPort, akkaMgmtPort, prometheusPort, basicEventStorePort, basicEventStoreConsumerPort)
   }
 }
 
-case class PortProfile(http: Int, artery: Int, akkaManagement: Int, prometheusPort: Int) {
-  def ports: Seq[Int] = Seq(http, artery, akkaManagement, prometheusPort)
+case class PortProfile(http: Int, artery: Int, akkaManagement: Int, prometheusPort: Int, basicEventStorePort: Int, basicEventStoreConsumerPort: Int) {
+  def ports: Seq[Int] = Seq(http, artery, akkaManagement, prometheusPort, basicEventStorePort, basicEventStoreConsumerPort)
 }

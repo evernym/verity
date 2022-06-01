@@ -23,7 +23,6 @@ class UserAgentPairwiseRecoverySpec
     setupBasicAgencyAgent()
     setupBasicUserAgent()
     setupBasicUserAgentPairwise()
-    closeClientWallets(Set(myAgencyAgentEntityId, mySelfRelAgentEntityId))
   }
 
 

@@ -161,7 +161,6 @@ class ConnectionMigrationSpec
     issuerEAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelDIDPair)
     issuerEAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelAgentDIDPair)
     issuerEAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, theirAgencyAgentDIDPair)
-    issuerEAS.persStoreTestKit.closeWallet(mySelfRelAgentEntityId)
   }
 
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp

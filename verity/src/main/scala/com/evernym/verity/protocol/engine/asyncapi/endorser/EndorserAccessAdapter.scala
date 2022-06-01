@@ -6,8 +6,8 @@ import akka.actor.typed.scaladsl.adapter._
 import com.evernym.verity.actor.cluster_singleton.ForEndorserRegistry
 import com.evernym.verity.endorser_registry.EndorserRegistry.Commands.GetEndorsers
 import com.evernym.verity.endorser_registry.EndorserRegistry.Replies.LedgerEndorsers
-import com.evernym.verity.event_bus.event_handlers.{EVENT_ENDORSEMENT_REQ, TOPIC_SSI_ENDORSEMENT_REQ}
-import com.evernym.verity.event_bus.ports.producer.ProducerPort
+import com.evernym.verity.eventing.event_handlers.{DATA_FIELD_LEDGER_PREFIX, EVENT_ENDORSEMENT_REQ_V1, TOPIC_REQUEST_ENDORSEMENT}
+import com.evernym.verity.eventing.ports.producer.ProducerPort
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.BaseAsyncAccessImpl
 import com.evernym.verity.protocol.engine.asyncapi.{AsyncOpRunner, BlobStorageUtil, EventPublisherUtil, RoutingContext}
@@ -31,41 +31,40 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
     with BaseAsyncAccessImpl
     with FutureConverter {
 
-  val blobStorageUtil = new BlobStorageUtil(appConfig, storageAPI)
+  val bucketName: String = appConfig.config.getString("verity.endorsement.request.txn-store.bucket-name")
+
+  val blobStorageUtil = new BlobStorageUtil(bucketName, storageAPI)
   val eventPublisherUtil = new EventPublisherUtil(routingContext, producerPort)
 
   override def withCurrentEndorser(ledger: String)(handler: Try[Option[Endorser]] => Unit): Unit = {
 
     asyncOpRunner.withFutureOpRunner(
-      {singletonParentProxy
+      singletonParentProxy
         .ask{ ref: ActorRef => ForEndorserRegistry(GetEndorsers(ledger, ref))}
         .mapTo[LedgerEndorsers]
-        .map(r => r.latestEndorser.map(e => Endorser(e.did, e.verKey)))
-      },
+        //NOTE: until ledger starts supporting fully qualified DID, it needs to be truncated and then used (see next line)
+        .map(r => r.latestEndorser.map(e => Endorser(e.did.substring(e.did.lastIndexOf(":")+1))))
+      ,
       handler
     )
   }
 
-  override def endorseTxn(payload: String, endorser: String, vdr: String, vdrType: String)(handler: Try[Unit] => Unit): Unit = {
+  override def endorseTxn(payload: String, ledgerPrefix: String)(handler: Try[Unit] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
       blobStorageUtil.saveInBlobStore(payload.getBytes(), dataRetentionPolicy)
-        .map { storageInfo =>
+        .flatMap { storageInfo =>
           val jsonPayload =
             s"""{
                |"$CLOUD_EVENT_DATA_FIELD_TXN_REF": "${storageInfo.endpoint}",
-               |"$CLOUD_EVENT_DATA_FIELD_ENDORSER": "$endorser",
-               |"$CLOUD_EVENT_DATA_FIELD_VDR": "$vdr",
-               |"$CLOUD_EVENT_DATA_FIELD_VDR_TYPE": "$vdrType",
+               |"$DATA_FIELD_LEDGER_PREFIX": "$ledgerPrefix"
                |}""".stripMargin
-          eventPublisherUtil.publishToEventBus(jsonPayload, EVENT_ENDORSEMENT_REQ, TOPIC_SSI_ENDORSEMENT_REQ)
+          eventPublisherUtil.publishToEventBus(jsonPayload, EVENT_ENDORSEMENT_REQ_V1, TOPIC_REQUEST_ENDORSEMENT)
         },
       handler
     )
   }
 
-  val CLOUD_EVENT_DATA_FIELD_TXN_REF = "txn_ref"
-  val CLOUD_EVENT_DATA_FIELD_ENDORSER = "endorser"
-  val CLOUD_EVENT_DATA_FIELD_VDR = "vdr"
-  val CLOUD_EVENT_DATA_FIELD_VDR_TYPE = "vdr_type"
+  val CLOUD_EVENT_DATA_FIELD_TXN_REF = "txnref"
+  val CLOUD_EVENT_DATA_FIELD_ENDORSER = "endorserdid"
 }
 

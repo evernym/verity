@@ -1,21 +1,19 @@
 package com.evernym.verity.texter
 
-import com.evernym.verity.config.AppConfig
-
-import java.net.HttpURLConnection._
-import jakarta.ws.rs.client.{Client, ClientBuilder, Entity}
-import jakarta.ws.rs.core.MediaType
+import com.evernym.verity.config.ConfigConstants._
+import com.evernym.verity.config.{AppConfig, ConfigSvc}
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util2.Exceptions.{InternalServerErrorException, SmsSendingFailedException}
 import com.evernym.verity.util2.Status._
-import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.http.common.ConfigSvc
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.jakarta.rs.json.JacksonJsonProvider
+import jakarta.ws.rs.client.{Client, ClientBuilder, Entity}
+import jakarta.ws.rs.core.MediaType
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature
 
-import scala.jdk.CollectionConverters._
+import java.net.HttpURLConnection._
 import scala.concurrent.Future
+import scala.jdk.CollectionConverters._
 
 
 class BandwidthDispatcher(val appConfig: AppConfig)

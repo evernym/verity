@@ -52,8 +52,14 @@ class AppStateCoordinator(appConfig: AppConfig,
   }
 
   private def preDraining(): Future[Done] = {
-    Future.successful(Done)
-    //platform.eventConsumerAdapter.stop()    //TODO: to be enabled at later/final stage of event bus integration
+    val fut1 = platform.eventConsumerAdapter.map(_.stop()).getOrElse(Future.successful(Done))
+    val fut2 = platform.basicEventStore.map(_.stop()).getOrElse(Future.successful(Done))
+    for (
+      _ <- fut1;
+      _ <- fut2
+    ) yield {
+      Done
+    }
   }
 
   private def performDraining(checkAttemptLeft: Int,

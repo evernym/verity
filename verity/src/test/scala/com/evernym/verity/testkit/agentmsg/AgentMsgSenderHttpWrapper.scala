@@ -21,7 +21,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
-import com.evernym.verity.http.common.StatusDetailResp
+import com.evernym.verity.http.common.models.StatusDetailResp
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.observability.metrics.{MetricDetail, PrometheusMetricsParser}
 import com.evernym.verity.protocol.engine.Constants._

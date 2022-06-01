@@ -21,7 +21,6 @@ class UnhandledEventRecoverySpec
     setupBasicAgencyAgent()
     setupBasicUserAgent()
     addEventsToPersistentStorage(mySelfRelAgentPersistenceId, scala.collection.immutable.Seq(SignedUp()))
-    closeClientWallets(Set(myAgencyAgentEntityId, mySelfRelAgentEntityId))
   }
 
   "User agent actor" - {

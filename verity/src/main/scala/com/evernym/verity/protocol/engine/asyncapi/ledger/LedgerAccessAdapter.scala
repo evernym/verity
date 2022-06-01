@@ -25,7 +25,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
                                 endorser: Option[String])
                                (handler: Try[PreparedTxn] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      {vdrTools.prepareSchemaTxn(schemaJson, fqSchemaId, submitterDID, endorser)},
+      vdrTools.prepareSchemaTxn(schemaJson, fqSchemaId, submitterDID, endorser),
       handleAsyncOpResult(handler)
     )
   }
@@ -37,7 +37,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
                                  endorser: Option[String])
                                 (handler: Try[PreparedTxn] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
-      {vdrTools.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser)},
+      vdrTools.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser),
       handleAsyncOpResult(handler)
     )
 
@@ -46,7 +46,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
                          endorsement: Array[Byte])
                         (handler: Try[SubmittedTxn] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
-      {vdrTools.submitTxn(preparedTxn, signature, endorsement)},
+      vdrTools.submitTxn(preparedTxn, signature, endorsement),
       handleAsyncOpResult(handler)
     )
 
@@ -54,7 +54,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
   override def resolveSchema(fqSchemaId: FqSchemaId,
                              cacheOption: Option[CacheOption]=None)(handler: Try[Schema] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      {vdrTools.resolveSchema(fqSchemaId)},
+      vdrTools.resolveSchema(fqSchemaId, cacheOption),
       handleAsyncOpResult(handler)
     )
   }
@@ -62,7 +62,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
   override def resolveCredDef(fqCredDefId: FqCredDefId,
                               cacheOption: Option[CacheOption]=None)(handler: Try[CredDef] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
-      {vdrTools.resolveCredDef(fqCredDefId, cacheOption)},
+      vdrTools.resolveCredDef(fqCredDefId, cacheOption),
       handleAsyncOpResult(handler)
     )
 
@@ -103,9 +103,11 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
       result match {
         case Failure(ex: LedgerInvalidTransactionException) =>
           Failure(LedgerRejectException(ex.getMessage))
-        case other      =>
+        case other =>
           other.map(_.asInstanceOf[T])
       }
     )
   }
+
+  override lazy val getIndyDefaultLegacyPrefix: String = _vdrDefaultNamespace
 }

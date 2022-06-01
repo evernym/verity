@@ -1,7 +1,6 @@
 package com.evernym.integrationtests.e2e.env
 
 import java.nio.file.{Path, Paths}
-
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.fixture.TempDir
 import com.evernym.integrationtests.e2e.env.AppType.AppType

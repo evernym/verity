@@ -76,10 +76,10 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                   val endorserDID = m.endorserDID.getOrElse(
                     init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")
                   )
-
-                  ctx.endorser.withCurrentEndorser(ctx.ledger.getIndyDefaultLegacyPrefix()) {
+                  val ledgerDefaultLegacyPrefix = ctx.ledger.getIndyDefaultLegacyPrefix()
+                  ctx.endorser.withCurrentEndorser(ledgerDefaultLegacyPrefix) {
                     case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID == endorser.did =>
-                      ctx.logger.info("registered endorser to be used for creddef endorsement: " + endorser)
+                      ctx.logger.info(s"registered endorser to be used for creddef endorsement (prefix: $ledgerDefaultLegacyPrefix): " + endorser)
                       //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
                       ctx.ledger.prepareCredDefForEndorsement(submitterDID, credDefCreated.credDefJson, endorser.did) {
                         case Success(ledgerRequest) =>
@@ -92,7 +92,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                         case Failure(e) => problemReport(new Exception(e))
                       }
                     case other =>
-                      ctx.logger.info("no active/matched endorser found to be used for creddef endorsement: " + other)
+                      ctx.logger.info(s"no active/matched endorser found to be used for creddef endorsement (prefix: $ledgerDefaultLegacyPrefix): " + other)
                       //no active endorser or active endorser is NOT the same as given/configured endorserDID
                       handleNeedsEndorsement(submitterDID, endorserDID, credDefCreated.credDefId, credDefCreated.credDefJson)
                   }

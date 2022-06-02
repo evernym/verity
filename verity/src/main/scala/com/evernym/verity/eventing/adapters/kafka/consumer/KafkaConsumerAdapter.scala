@@ -89,6 +89,6 @@ class KafkaConsumerAdapter(override val messageHandler: MessageHandler,
   }
 
   private def prepareLogMsgStr(msg: CommittableMessage[String, Array[Byte]], str: String): String = {
-    s"[${msg.record.topic()}-${msg.record.partition()}:${msg.record.offset()}] $str"
+    s"[${msg.record.topic()}-${msg.record.partition()}:${msg.record.offset()}(committableOffset: ${msg.committableOffset})] $str"
   }
 }

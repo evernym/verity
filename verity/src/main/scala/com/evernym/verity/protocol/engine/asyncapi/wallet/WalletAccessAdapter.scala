@@ -227,8 +227,8 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
 
   //Allowed only for signType: SignType = SIGN_ED25519_SHA512_SINGLE
   private def runSign(msg: Array[Byte]): Unit = {
-      val did = getDIDFromParticipantId(selfParticipantId)
-      walletApi.tell(SignMsg(KeyParam.fromDID(did), msg))
+    val did = getDIDFromParticipantId(selfParticipantId)
+    walletApi.tell(SignMsg(KeyParam.fromDID(did), msg))
   }
 
   private def runSignRequest(submitterDID: DidStr, request: String): Unit = {

@@ -5,11 +5,8 @@ import com.evernym.vdrtools.vdr.VdrResults
 import com.evernym.verity.vdr._
 import org.json.JSONObject
 
-//currently only contains data transformation related functions
-// todo : add fq names conversion
+// implementation specific objects to interface objects converters
 object VDRAdapterUtil {
-
-  //implementation specific objects to interface objects converters
 
   def buildPreparedTxn(vdrTxn: VdrResults.PreparedTxnResult): PreparedTxn = {
     PreparedTxn(
@@ -22,7 +19,6 @@ object VDRAdapterUtil {
   }
 
   def buildSchema(fqSchemaId: FqSchemaId, vdrSchema: VdrSchema): Schema = {
-    //TODO (VE-3368): will the "id" field inside the `vdrSchema' json string not be fully qualified?
     Schema(
       fqSchemaId,
       vdrSchema
@@ -30,9 +26,6 @@ object VDRAdapterUtil {
   }
 
   def buildCredDef(fqCredDefId: FqCredDefId, vdrCredDef: VdrCredDef): CredDef = {
-    //TODO (VE-3368): will the "id" field inside the `vdrCredDef' json string not be fully qualified?
-    //TODO (VE-3368): will the "schemaId" field inside the `vdrCredDef' json string not be fully qualified?
-
     val json = new JSONObject(vdrCredDef)
     CredDef(
       fqCredDefId,
@@ -42,7 +35,7 @@ object VDRAdapterUtil {
   }
 
   def buildDidDoc(vdrDidDoc: VdrDid): DidDoc = {
-    // todo cheqd did will probably have another format
+    //TODO: cheqd did will probably have another format
     val json = new JSONObject(vdrDidDoc)
     DidDoc(
       json.getString("id"),
@@ -68,8 +61,6 @@ object VDRAdapterUtil {
     json.put("id", fqCredDefId)
     json.toString
   }
-
-  //interface objects to implementation specific objects converters
 
   def buildVDRPreparedTxn(txn: PreparedTxn): TxnDataHolder = {
     TxnDataHolder(

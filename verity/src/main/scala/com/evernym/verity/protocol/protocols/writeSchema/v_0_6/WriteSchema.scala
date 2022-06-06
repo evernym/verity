@@ -63,13 +63,16 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
             case Failure(e: LedgerRejectException) =>
               ctx.logger.info(e.toString)
               val fqEndorserDID = ctx.ledger.fqDID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
-              ctx.endorser.withCurrentEndorser(ctx.ledger.getIndyDefaultLegacyPrefix()) {
+              //NOTE: below code is assuming verity is only supporting indy ledgers,
+              // it should be changed when verity starts supporting different types of ledgers
+              val indyLedgerPrefix = ctx.ledger.getIndyDefaultLegacyPrefix()
+              ctx.endorser.withCurrentEndorser(indyLedgerPrefix) {
                 case Success(Some(endorser)) if fqEndorserDID.isEmpty || fqEndorserDID.contains(endorser.did) =>
-                  ctx.logger.info(s"registered endorser to be used for schema endorsement (ledger prefix: ${ctx.ledger.getIndyDefaultLegacyPrefix()}): " + endorser)
+                  ctx.logger.info(s"registered endorser to be used for schema endorsement (ledger prefix: $indyLedgerPrefix): " + endorser)
                   //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
                   prepareTxnForEndorsement(submitterDID, fqSchemaId, schemaCreated.schemaJson, endorser.did) {
                     case Success(ledgerRequest) =>
-                      ctx.endorser.endorseTxn(ledgerRequest, ctx.ledger.getIndyDefaultLegacyPrefix()) {
+                      ctx.endorser.endorseTxn(ledgerRequest, indyLedgerPrefix) {
                         case Failure(exception) => problemReport(exception)
                         case Success(value) => ctx.apply(AskedForEndorsement(schemaCreated.schemaId, ledgerRequest))
                       }
@@ -77,7 +80,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
                   }
 
                 case other =>
-                  ctx.logger.info(s"no active/matched endorser found to be used for schema endorsement (ledger prefix: ${ctx.ledger.getIndyDefaultLegacyPrefix()}): " + other)
+                  ctx.logger.info(s"no active/matched endorser found to be used for schema endorsement (ledger prefix: $indyLedgerPrefix): " + other)
                   //any failure while getting active endorser, or no active endorser or active endorser is NOT the same as given/configured endorserDID
                   prepareTxnForEndorsement(submitterDID, fqSchemaId, schemaCreated.schemaJson, fqEndorserDID) {
                     case Success(data: TxnForEndorsement) =>

@@ -331,115 +331,115 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
     }
   }
 
-  override def writeSchema(submitterDID: DidStr,
-                           schemaJson: String,
-                           walletAccess: WalletAccess): Future[TxnResp] = {
-    toFuture(buildSchemaRequest(submitterDID, schemaJson)) flatMap { req =>
-      val schemaReq = LedgerRequest(req, needsSigning=false, taa=None)
-      appendTAAToRequest(schemaReq, currentTAA) flatMap { reqWithOptTAA =>
-        val promise = Promise[TxnResp]()
-        walletAccess.signRequest(submitterDID, reqWithOptTAA.req) {
-          case Success(signedRequest) =>
-            promise.completeWith(
-              submitWriteRequest(Submitter(submitterDID, None), reqWithOptTAA.prepared(signedRequest.req))
-            )
-          case Failure(ex) => promise.failure(ex)
-        }
-        promise.future
-      }
-    }
-  }
-
-  override def prepareSchemaForEndorsement(submitterDID: DidStr,
-                                           schemaJson: String,
-                                           endorserDID: DidStr,
-                                           walletAccess: WalletAccess): Future[LedgerRequest] = {
-    toFuture(buildSchemaRequest(submitterDID, schemaJson)) flatMap { req =>
-      val schemaReq = LedgerRequest(req, needsSigning=false, taa=None)
-      appendTAAToRequest(schemaReq, currentTAA) flatMap { reqWithOptTAA =>
-        toFuture(appendRequestEndorser(reqWithOptTAA.req, endorserDID)) flatMap { reqWithEndorser =>
-          val promise = Promise[LedgerRequestResult]()
-          // TODO LedgerTxn should not need to know about walletAccess
-          walletAccess.multiSignRequest(submitterDID, reqWithEndorser){
-            promise.complete
-
-          }
-          promise.future.map(toLedgerRequest)
-        }
-      }
-    }
-  }
-
-  def writeCredDef(submitterDID: DidStr,
-                   credDefJson: String,
-                   walletAccess: WalletAccess): Future[TxnResp] = {
-    toFuture(buildCredDefRequest(submitterDID, credDefJson)) flatMap { req =>
-      val credDefReq = LedgerRequest(req, needsSigning=false, taa=None)
-      appendTAAToRequest(credDefReq, currentTAA) flatMap { reqWithOptTAA =>
-        val promise = Promise[TxnResp]()
-
-        walletAccess.signRequest(submitterDID, reqWithOptTAA.req) {
-          case Success(signedRequest) => promise.completeWith(
-            submitWriteRequest(Submitter(submitterDID, None), reqWithOptTAA.prepared(signedRequest.req))
-          )
-          case Failure(ex) => promise.failure(ex)
-        }
-        promise.future
-      }
-    }
-  }
-
-  override def prepareCredDefForEndorsement(submitterDID: DidStr,
-                                            credDefJson: String,
-                                            endorserDID: DidStr,
-                                            walletAccess: WalletAccess): Future[LedgerRequest] = {
-    toFuture(buildCredDefRequest(submitterDID, credDefJson)) flatMap { req =>
-      val credDefReq = LedgerRequest(req, needsSigning=false, taa=None)
-      appendTAAToRequest(credDefReq, currentTAA) flatMap { reqWithOptTAA =>
-        toFuture(appendRequestEndorser(reqWithOptTAA.req, endorserDID)) flatMap{ reqWithEndorser =>
-          val promise = Promise[LedgerRequestResult]()
-          walletAccess.multiSignRequest(submitterDID, reqWithEndorser)(promise.complete)
-          promise.future.map(toLedgerRequest)
-        }
-      }
-    }
-  }
-
-  override def getSchema(submitterDetail: Submitter, schemaId: String): Future[GetSchemaResp] = {
-    toFuture(buildGetSchemaRequest(submitterDetail.did, schemaId)) flatMap { req =>
-      submitGetRequest(submitterDetail, req, needsSigning=false).flatMap{ value =>
-        toFuture(Ledger.parseGetSchemaResponse(getJsonStringFromMap(value))).map( x =>
-          (
-            value,
-            Option(DefaultMsgCodec.fromJson[SchemaV1](x.getObjectJson))
-          )
-        ).recover {
-          case _: LedgerNotFoundException => (value, None)
-          case NonFatal(_) => throw StatusDetailException(LEDGER_DATA_INVALID)
-        }
-      }.map { r =>
-        GetSchemaResp(buildTxnRespForReadOp(r._1), r._2)
-      }
-    }
-  }
-
-  override def getCredDef(submitterDetail: Submitter, credDefId: String): Future[GetCredDefResp] = {
-    toFuture(buildGetCredDefRequest(submitterDetail.did, credDefId)) flatMap { req =>
-      submitGetRequest(submitterDetail, req, needsSigning=false).flatMap { value =>
-        toFuture(Ledger.parseGetCredDefResponse(getJsonStringFromMap(value))).map( x =>
-          (
-            value,
-            Option(DefaultMsgCodec.fromJson[CredDefV1](x.getObjectJson))
-          )
-        ).recover {
-          case _: LedgerNotFoundException => (value, None)
-          case NonFatal(_) => throw StatusDetailException(LEDGER_DATA_INVALID)
-        }
-      }.map { r =>
-        GetCredDefResp(buildTxnRespForReadOp(r._1), r._2)
-      }
-    }
-  }
+//  override def writeSchema(submitterDID: DidStr,
+//                           schemaJson: String,
+//                           walletAccess: WalletAccess): Future[TxnResp] = {
+//    toFuture(buildSchemaRequest(submitterDID, schemaJson)) flatMap { req =>
+//      val schemaReq = LedgerRequest(req, needsSigning=false, taa=None)
+//      appendTAAToRequest(schemaReq, currentTAA) flatMap { reqWithOptTAA =>
+//        val promise = Promise[TxnResp]()
+//        walletAccess.signRequest(submitterDID, reqWithOptTAA.req) {
+//          case Success(signedRequest) =>
+//            promise.completeWith(
+//              submitWriteRequest(Submitter(submitterDID, None), reqWithOptTAA.prepared(signedRequest.req))
+//            )
+//          case Failure(ex) => promise.failure(ex)
+//        }
+//        promise.future
+//      }
+//    }
+//  }
+//
+//  override def prepareSchemaForEndorsement(submitterDID: DidStr,
+//                                           schemaJson: String,
+//                                           endorserDID: DidStr,
+//                                           walletAccess: WalletAccess): Future[LedgerRequest] = {
+//    toFuture(buildSchemaRequest(submitterDID, schemaJson)) flatMap { req =>
+//      val schemaReq = LedgerRequest(req, needsSigning=false, taa=None)
+//      appendTAAToRequest(schemaReq, currentTAA) flatMap { reqWithOptTAA =>
+//        toFuture(appendRequestEndorser(reqWithOptTAA.req, endorserDID)) flatMap { reqWithEndorser =>
+//          val promise = Promise[LedgerRequestResult]()
+//          // TODO LedgerTxn should not need to know about walletAccess
+//          walletAccess.multiSignRequest(submitterDID, reqWithEndorser){
+//            promise.complete
+//
+//          }
+//          promise.future.map(toLedgerRequest)
+//        }
+//      }
+//    }
+//  }
+//
+//  def writeCredDef(submitterDID: DidStr,
+//                   credDefJson: String,
+//                   walletAccess: WalletAccess): Future[TxnResp] = {
+//    toFuture(buildCredDefRequest(submitterDID, credDefJson)) flatMap { req =>
+//      val credDefReq = LedgerRequest(req, needsSigning=false, taa=None)
+//      appendTAAToRequest(credDefReq, currentTAA) flatMap { reqWithOptTAA =>
+//        val promise = Promise[TxnResp]()
+//
+//        walletAccess.signRequest(submitterDID, reqWithOptTAA.req) {
+//          case Success(signedRequest) => promise.completeWith(
+//            submitWriteRequest(Submitter(submitterDID, None), reqWithOptTAA.prepared(signedRequest.req))
+//          )
+//          case Failure(ex) => promise.failure(ex)
+//        }
+//        promise.future
+//      }
+//    }
+//  }
+//
+//  override def prepareCredDefForEndorsement(submitterDID: DidStr,
+//                                            credDefJson: String,
+//                                            endorserDID: DidStr,
+//                                            walletAccess: WalletAccess): Future[LedgerRequest] = {
+//    toFuture(buildCredDefRequest(submitterDID, credDefJson)) flatMap { req =>
+//      val credDefReq = LedgerRequest(req, needsSigning=false, taa=None)
+//      appendTAAToRequest(credDefReq, currentTAA) flatMap { reqWithOptTAA =>
+//        toFuture(appendRequestEndorser(reqWithOptTAA.req, endorserDID)) flatMap{ reqWithEndorser =>
+//          val promise = Promise[LedgerRequestResult]()
+//          walletAccess.multiSignRequest(submitterDID, reqWithEndorser)(promise.complete)
+//          promise.future.map(toLedgerRequest)
+//        }
+//      }
+//    }
+//  }
+//
+//  override def getSchema(submitterDetail: Submitter, schemaId: String): Future[GetSchemaResp] = {
+//    toFuture(buildGetSchemaRequest(submitterDetail.did, schemaId)) flatMap { req =>
+//      submitGetRequest(submitterDetail, req, needsSigning=false).flatMap{ value =>
+//        toFuture(Ledger.parseGetSchemaResponse(getJsonStringFromMap(value))).map( x =>
+//          (
+//            value,
+//            Option(DefaultMsgCodec.fromJson[SchemaV1](x.getObjectJson))
+//          )
+//        ).recover {
+//          case _: LedgerNotFoundException => (value, None)
+//          case NonFatal(_) => throw StatusDetailException(LEDGER_DATA_INVALID)
+//        }
+//      }.map { r =>
+//        GetSchemaResp(buildTxnRespForReadOp(r._1), r._2)
+//      }
+//    }
+//  }
+//
+//  override def getCredDef(submitterDetail: Submitter, credDefId: String): Future[GetCredDefResp] = {
+//    toFuture(buildGetCredDefRequest(submitterDetail.did, credDefId)) flatMap { req =>
+//      submitGetRequest(submitterDetail, req, needsSigning=false).flatMap { value =>
+//        toFuture(Ledger.parseGetCredDefResponse(getJsonStringFromMap(value))).map( x =>
+//          (
+//            value,
+//            Option(DefaultMsgCodec.fromJson[CredDefV1](x.getObjectJson))
+//          )
+//        ).recover {
+//          case _: LedgerNotFoundException => (value, None)
+//          case NonFatal(_) => throw StatusDetailException(LEDGER_DATA_INVALID)
+//        }
+//      }.map { r =>
+//        GetCredDefResp(buildTxnRespForReadOp(r._1), r._2)
+//      }
+//    }
+//  }
 
   override def addNym(submitterDetail: Submitter, targetDid: DidPair): Future[TxnResp] = {
     toFuture(buildNymRequest(

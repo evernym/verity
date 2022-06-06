@@ -19,7 +19,7 @@ package object did {
 
   /**
    *
-   * @param did a did string (for ex: did:sov:123, did:indy:sovrin:123, did:indy:sovrin:staging:123, 123 etc)
+   * @param did a did string (for ex: did:sov:123, did:indy:sovrin:123, did:indy:sovrin:stage:123, 123 etc)
    * @return
    */
   def toDIDMethod(did: DidStr): DIDMethod = {

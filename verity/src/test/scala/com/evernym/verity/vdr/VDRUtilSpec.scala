@@ -5,7 +5,7 @@ import com.evernym.verity.testkit.BasicSpec
 class VDRUtilSpec
   extends BasicSpec {
 
-  val namespaces = List("sov", "indy:sovrin", "indy:sovrin:staging", "indy:sovrin:builder")
+  val namespaces = List("sov", "indy:sovrin", "indy:sovrin:stage", "indy:sovrin:builder")
 
   "VDRUtil" - {
     "when tried to extract information from fq did" - {

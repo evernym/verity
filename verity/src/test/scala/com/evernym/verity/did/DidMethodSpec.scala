@@ -74,7 +74,7 @@ class DidMethodSpec
         //TODO: add any other possible valid did:indy:sovrin entries if possible
         val didKeyStrs = List(
           "did:indy:sovrin:2wJPyULfLLnYTEFYzByfUR",
-          "did:indy:sovrin:staging:2wJPyULfLLnYTEFYzByfUR",
+          "did:indy:sovrin:stage:2wJPyULfLLnYTEFYzByfUR",
           "did:indy:sovrin:builder:2wJPyULfLLnYTEFYzByfUR"
         )
         didKeyStrs.foreach { did =>

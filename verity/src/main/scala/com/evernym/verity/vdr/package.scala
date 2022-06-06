@@ -5,7 +5,7 @@ package object vdr {
   type SignatureSpec = String
   type EndorsementSpec = String
 
-  type Namespace = String       // for example: "sov", "indy:sovrin", "indy:sovrin:staging" etc
+  type Namespace = String       // for example: "sov", "indy:sovrin", "indy:sovrin:stage" etc
   type FqDID = String
   type FqSchemaId = String
   type FqCredDefId = String

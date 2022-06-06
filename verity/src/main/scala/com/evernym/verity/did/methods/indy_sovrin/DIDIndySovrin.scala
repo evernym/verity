@@ -5,7 +5,7 @@ import com.evernym.verity.did.methods.{DIDMethod, SelfValidated}
 
 /**
  *
- * @param did "did:indy:sovrin:123", "did:indy:sovrin:staging:123", "did:indy:sovrin:builder:123"
+ * @param did "did:indy:sovrin:123", "did:indy:sovrin:stage:123", "did:indy:sovrin:builder:123"
  */
 
 class DIDIndySovrin(did: String) extends DIDMethod with SelfValidated {

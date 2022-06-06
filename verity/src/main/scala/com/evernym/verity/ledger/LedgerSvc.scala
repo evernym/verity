@@ -122,27 +122,27 @@ trait LedgerSvc {
     }
   }
 
-  private def _getSchema(schemaId: String): Future[GetSchemaResp] = {
-    _getSchemaFromLedger(Submitter(), schemaId)
-  }
+//  private def _getSchema(schemaId: String): Future[GetSchemaResp] = {
+//    _getSchemaFromLedger(Submitter(), schemaId)
+//  }
+//
+//  private def _getSchemaFromLedger(submitterDetail: Submitter, schemaId: String): Future[GetSchemaResp] = {
+//    ledgerTxnExecutor.getSchema(submitterDetail, schemaId) recover {
+//      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
+//        s"error while trying to get schema for $schemaId: " + e.getMessage))
+//    }
+//  }
 
-  private def _getSchemaFromLedger(submitterDetail: Submitter, schemaId: String): Future[GetSchemaResp] = {
-    ledgerTxnExecutor.getSchema(submitterDetail, schemaId) recover {
-      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
-        s"error while trying to get schema for $schemaId: " + e.getMessage))
-    }
-  }
+//  private def _getCredDef(credDefId: String): Future[GetCredDefResp] = {
+//    _getCredDefFromLedger(Submitter(), credDefId)
+//  }
 
-  private def _getCredDef(credDefId: String): Future[GetCredDefResp] = {
-    _getCredDefFromLedger(Submitter(), credDefId)
-  }
-
-  private def _getCredDefFromLedger(submitterDetail: Submitter, credDefId: String): Future[GetCredDefResp] = {
-    ledgerTxnExecutor.getCredDef(submitterDetail, credDefId) recover {
-      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
-        s"error while trying to get credDef for $credDefId: " + e.getMessage))
-    }
-  }
+//  private def _getCredDefFromLedger(submitterDetail: Submitter, credDefId: String): Future[GetCredDefResp] = {
+//    ledgerTxnExecutor.getCredDef(submitterDetail, credDefId) recover {
+//      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
+//        s"error while trying to get credDef for $credDefId: " + e.getMessage))
+//    }
+//  }
 
   //get attrib
   private def _getAttrib(submitterDetail: Submitter, id: String,
@@ -163,50 +163,50 @@ trait LedgerSvc {
     _getTAA(submitterDetail, version)
   }
 
-  final def getSchema(schemaId: String): Future[GetSchemaResp] = {
-    _getSchema(schemaId)
-  }
+//  final def getSchema(schemaId: String): Future[GetSchemaResp] = {
+//    _getSchema(schemaId)
+//  }
 
-  final def writeSchema(submitterDID: DidStr,
-                        schemaJson: String,
-                        walletAccess: WalletAccess): Future[TxnResp] = {
-    ledgerTxnExecutor.writeSchema(submitterDID, schemaJson, walletAccess) recover {
-      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
-        s"error while trying to add schema with DID $submitterDID: " + e.getMessage))
-    }
-  }
-
-  final def prepareSchemaForEndorsement(submitterDID: DidStr,
-                                        schemaJson: String,
-                                        endorserDID: DidStr,
-                                        walletAccess: WalletAccess): Future[LedgerRequest] = {
-    ledgerTxnExecutor.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)
-  }
-
-  final def writeCredDef(submitterDID: DidStr,
-                         credDefJson: String,
-                         walletAccess: WalletAccess): Future[TxnResp] = {
-    ledgerTxnExecutor.writeCredDef(submitterDID, credDefJson, walletAccess) recover {
-      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
-        s"error while trying to add credential definition with DID $submitterDID: " + e.getMessage))
-    }
-  }
-
-  final def prepareCredDefForEndorsement(submitterDID: DidStr,
-                                         credDefJson: String,
-                                         endorserDID: DidStr,
-                                         walletAccess: WalletAccess): Future[LedgerRequest] = {
-    try {
-      ledgerTxnExecutor.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID, walletAccess)
-    } catch {
-      case e: Throwable =>
-        Future.failed(e)
-    }
-  }
-
-  final def getCreDef(credDefId: String): Future[GetCredDefResp] = {
-    _getCredDef(credDefId)
-  }
+//  final def writeSchema(submitterDID: DidStr,
+//                        schemaJson: String,
+//                        walletAccess: WalletAccess): Future[TxnResp] = {
+//    ledgerTxnExecutor.writeSchema(submitterDID, schemaJson, walletAccess) recover {
+//      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
+//        s"error while trying to add schema with DID $submitterDID: " + e.getMessage))
+//    }
+//  }
+//
+//  final def prepareSchemaForEndorsement(submitterDID: DidStr,
+//                                        schemaJson: String,
+//                                        endorserDID: DidStr,
+//                                        walletAccess: WalletAccess): Future[LedgerRequest] = {
+//    ledgerTxnExecutor.prepareSchemaForEndorsement(submitterDID, schemaJson, endorserDID, walletAccess)
+//  }
+//
+//  final def writeCredDef(submitterDID: DidStr,
+//                         credDefJson: String,
+//                         walletAccess: WalletAccess): Future[TxnResp] = {
+//    ledgerTxnExecutor.writeCredDef(submitterDID, credDefJson, walletAccess) recover {
+//      case e: LedgerSvcException => throw StatusDetailException(UNHANDLED.withMessage(
+//        s"error while trying to add credential definition with DID $submitterDID: " + e.getMessage))
+//    }
+//  }
+//
+//  final def prepareCredDefForEndorsement(submitterDID: DidStr,
+//                                         credDefJson: String,
+//                                         endorserDID: DidStr,
+//                                         walletAccess: WalletAccess): Future[LedgerRequest] = {
+//    try {
+//      ledgerTxnExecutor.prepareCredDefForEndorsement(submitterDID, credDefJson, endorserDID, walletAccess)
+//    } catch {
+//      case e: Throwable =>
+//        Future.failed(e)
+//    }
+//  }
+//
+//  final def getCreDef(credDefId: String): Future[GetCredDefResp] = {
+//    _getCredDef(credDefId)
+//  }
 
   final def getNym(submitterDetail: Submitter, id: String): Future[GetNymResp] = {
     _getNym(submitterDetail, id)

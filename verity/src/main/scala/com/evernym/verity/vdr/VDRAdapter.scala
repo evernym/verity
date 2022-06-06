@@ -57,6 +57,14 @@ case class CredDef(fqId: FqCredDefId, fqSchemaId: FqSchemaId, json: String)
 
 case class DidDoc(fqId: FqDID, verKey: VerKeyStr, endpoint: Option[String])
 
+/**
+ * see details here: https://gitlab.com/evernym/verity/vdr-tools/-/blob/main/libvdrtools/include/indy_cache.h#L22-25
+ *
+ * @param noCache Skip usage of cache
+ * @param noUpdate Use only cached data, do not try to update
+ * @param noStore Skip storing fresh data if updated,
+ * @param minFresh Return cached data if not older than this many seconds. -1 means do not check age
+ */
 case class CacheOption(noCache: Boolean, noUpdate: Boolean, noStore: Boolean, minFresh: Int)
 
 object CacheOption {

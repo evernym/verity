@@ -19,13 +19,13 @@ class DidIndySovrinSpec
     }
   }
 
-  "When a did:indy:sovrin:staging object is created from a valid did string" - {
-    "the resulting did:indy:sovrin:staging should be correct" in {
-      val indySovrinStagingDid = "did:indy:sovrin:staging:2wJPyULfLLnYTEFYzByfUR"
+  "When a did:indy:sovrin:stage object is created from a valid did string" - {
+    "the resulting did:indy:sovrin:stage should be correct" in {
+      val indySovrinStagingDid = "did:indy:sovrin:stage:2wJPyULfLLnYTEFYzByfUR"
       val testDid: DIDIndySovrin = new DIDIndySovrin(indySovrinStagingDid)
       testDid.toString() shouldBe indySovrinStagingDid
-      testDid.methodIdentifier.toString shouldBe "sovrin:staging:2wJPyULfLLnYTEFYzByfUR"
-      testDid.methodIdentifier.namespace shouldBe "indy:sovrin:staging"
+      testDid.methodIdentifier.toString shouldBe "sovrin:stage:2wJPyULfLLnYTEFYzByfUR"
+      testDid.methodIdentifier.namespace shouldBe "indy:sovrin:stage"
       testDid.methodIdentifier.namespaceIdentifier shouldBe "2wJPyULfLLnYTEFYzByfUR"
       testDid.method shouldBe "indy"
     }

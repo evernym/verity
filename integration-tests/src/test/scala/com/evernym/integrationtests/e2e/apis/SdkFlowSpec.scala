@@ -115,9 +115,6 @@ class SdkFlowSpec
     setupIssuer(sdk, ledgerUtil)
 
     val schemaName = "license"+UUID.randomUUID().toString.substring(0, 8)
-    val schemaWithEndorserName = "license"+UUID.randomUUID().toString.substring(0, 8)
-
-    val endorserDid = "did:sov:GzUgM8dC2A31qweQCWG8Dn"
 
     writeSchemaNeedsEndorsement(
       sdk,
@@ -128,6 +125,7 @@ class SdkFlowSpec
       "first_name",
       "last_name")
 
+
     writeIssuerToLedger(sdk, ledgerUtil)
 
     updateConfigs(
@@ -137,7 +135,6 @@ class SdkFlowSpec
       "/logo_url.ico"
     )
 
-
     writeSchema(
       sdk,
       ledgerUtil,
@@ -148,16 +145,15 @@ class SdkFlowSpec
       "last_name"
     )
 
-    writeSchemaWithEndorserDid(
-      sdk,
-      ledgerUtil,
-      schemaWithEndorserName,
-      endorserDid,
-      "0.1",
-      "license_num",
-      "first_name",
-      "last_name"
-    )
+//    writeCredDefNeedsEndorsement(
+//      sdk,
+//      schemaName,
+//      "0.1",
+//      "cred_name1",
+//      "tag",
+//      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
+//      ledgerUtil
+//    )
 
     writeCredDef(
       sdk,
@@ -168,47 +164,6 @@ class SdkFlowSpec
       "0.1",
       ledgerUtil
     )
-
-    writeCredDefWithEndorserDid(
-      sdk,
-      "cred_name1",
-      "tag",
-      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
-      schemaName,
-      endorserDid,
-      "0.1",
-      ledgerUtil
-    )
-
-    val limitsSchema = "something"+UUID.randomUUID().toString.substring(0, 8)
-
-    writeSchema(
-      sdk,
-      ledgerUtil,
-      limitsSchema,
-      "0.1",
-      "attr0",
-      "attr1",
-      "attr2",
-      "attr3",
-      "attr4",
-      "attr5",
-      "attr6",
-      "attr7",
-      "attr8",
-      "attr9"
-    )
-
-    writeCredDef(
-      sdk,
-      limitsCredDefName,
-      "tag",
-      WriteCredentialDefinitionV0_6.disabledRegistryConfig(),
-      limitsSchema,
-      "0.1",
-      ledgerUtil
-    )
-
   }
 
   def sdkBasicInteractions(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {

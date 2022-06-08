@@ -18,10 +18,11 @@ class MetricsWriterExtensionImpl(system: ExtendedActorSystem) extends Extension 
   private val metricsWriter = {
     try {
       val metricsBackend: MetricsBackend = try {
-        if (config.getString(METRICS_ENABLED) == YES) {
+        if (config.hasPath(METRICS_ENABLED) && config.hasPath(METRICS_BACKEND) && config.getString(METRICS_ENABLED) == YES) {
           val className = config.getString(METRICS_BACKEND)
           Class.forName(className).getConstructor(classOf[ActorSystem]).newInstance(system).asInstanceOf[MetricsBackend]
         } else {
+          logger.info(s"Metrics not enabled or metrics backend not configured. Using fallback NoOpMetrics writer.")
           new NoOpMetricsBackend
         }
       } catch {

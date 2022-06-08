@@ -116,7 +116,7 @@ class OutboxRetentionPolicySpec
       |verity.outbox.retention-criteria.snapshot.after-every-events = 1
       |verity.outbox.retention-criteria.snapshot.keep-snapshots = 1
       |verity.outbox.retention-criteria.snapshot.delete-events-on-snapshots = true
-      |
+      |verity.outbox.scheduled-job-interval = 2000
       |verity.outbox.webhook.retry-policy.initial-interval = 2 millis
       |""".stripMargin
   }

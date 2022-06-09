@@ -101,6 +101,8 @@ ThisBuild / build := buildNum(
 ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}.${build.value}"
 maintainer := "Evernym Inc <dev@evernym.com>"
 
+ThisBuild / javaOptions += s"-Djna.tmpdir=${target.value.getAbsolutePath}"
+ThisBuild / javaOptions += s"-Djava.io.tmpdir=${target.value.getAbsolutePath}"
 ThisBuild / sharedLibraries := sharedLibDeps
 ThisBuild / envRepos := Seq(evernymDevRepo, evernymUbuntuRepo)
 
@@ -234,6 +236,8 @@ lazy val packageSettings = Seq (
   )
 )
 
+lazy val protoSources = dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths
+lazy val protoTestSources = dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test")).absolutePaths
 lazy val protoBufSettings = Seq(
   // Must set deleteTargetDirectory to false. When set to true (the default) other generated sources in the
   // sourceManaged directory get deleted. For example, version.scala being generated below.
@@ -241,22 +245,25 @@ lazy val protoBufSettings = Seq(
 
   //this 'PB.includePaths' is to make import works
   //There are used .absolutePaths because after update sbt-protoc to 1.0.6 sbt produce warnings about relative paths
-  Compile / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths,
+  Compile / PB.includePaths ++= protoSources,
   Compile / PB.targets := Seq(
     scalapb.gen(flatPackage = true) -> (Compile / sourceManaged).value
   ),
   Compile / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths,
   Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch, build).taskValue,
-  // Since sbt-protoc 1.0.1 and later adds PB.protoSources to unmanagedResourceDirectories,
+
+  // Since sbt-protoc 1.0.1 and later adds PB.protoSources to unmanagedResourceDirectories and unmanagedSourceDirectories
   // we need to exclude all extra dirs that contains .scala files. Same for Test config.
-  Compile / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".scala"))(directory=file("verity/src/main/scala")).absolutePaths,
+  Compile / unmanagedResourceDirectories --= protoSources,
+  Compile / unmanagedSourceDirectories --= protoSources,
 
   Test / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths,
   Test / PB.targets := Seq(
     scalapb.gen(flatPackage = true) -> (Test / sourceManaged).value
   ),
-  Test / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test")).absolutePaths,
-  Test / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".scala"))(directory=file("verity/src/test/scala")).absolutePaths,
+  Test / PB.protoSources := protoTestSources,
+  Test / unmanagedResourceDirectories --= protoTestSources,
+  Test / unmanagedSourceDirectories --= protoTestSources,
   //
 )
 

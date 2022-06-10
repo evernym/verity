@@ -48,8 +48,8 @@ object VDRToolsConfig {
 
     val mechanism = config.getStringReq("mechanism")
 
-    //TODO (VE-3368): didn't find a proper way to set taa environment variable programmatically as long value
-    // (instead of string) in tests for now, below added few Try blocks to check for below mentioned patterns
+    //TODO (VE-3368): didn't find a proper way to set TAA environment variable as long value (instead of string) in tests,
+    // below added few Try blocks to check for below mentioned patterns
     // either `time-of-acceptance` can be defined as `string` in date format (for ex: 2022-04-08) or epoch seconds
     // or it can be defined as `long` equivalent to epoch seconds
     val timeOfAcceptance =

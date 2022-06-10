@@ -2,8 +2,10 @@ package com.evernym.verity.vdr
 
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519
+import org.json.JSONObject
 
 import scala.concurrent.Future
+import scala.util.{Success, Try}
 
 //interface to be used by verity code to interact with VDR/Ledger services
 trait VDRAdapter {
@@ -47,6 +49,13 @@ case class PreparedTxn(namespace: Namespace,
                        endorsementSpec: EndorsementSpec) {
 
   def signatureType: String = if (signatureSpec == "") SIGN_ED25519 else signatureSpec
+
+  def isEndorsementSpecTypeIndy: Boolean = endorsementSpecType == Success("Indy")
+
+  def endorsementSpecType: Try[String] = Try{
+    val jsonObject = new JSONObject(endorsementSpec)
+    jsonObject.getString("type")
+  }
 }
 
 case class SubmittedTxn(response: String)

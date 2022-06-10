@@ -12,6 +12,7 @@ import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerA
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessAdapter
 import com.evernym.verity.protocol.testkit.MockLedger.{TEST_INDY_SOVRIN_NAMESPACE, nonFqID}
+import com.evernym.verity.protocol.testkit.MockableLedgerAccess.MOCK_NOT_ENDORSER
 import com.evernym.verity.testkit.{BasicSpecBase, TestWallet}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.{ExecutionContextProvider, Status}
@@ -24,8 +25,8 @@ import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Try}
 
 object MockableLedgerAccess {
-  val MOCK_NO_DID = "MOCK_NO_DID"
-  val MOCK_NOT_ENDORSER = "MOCK_NOT_ENDORSER"
+  val MOCK_NO_DID = "7Pt7EfStLXeYNSmpJJSktm"
+  val MOCK_NOT_ENDORSER = "GnJ79a5XAuTaxHXWSLRyqP"
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
 
   def apply(): MockableLedgerAccess = {
@@ -71,7 +72,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
         endorser.foreach(eid => jsonObject.put("endorser", eid))
         val json = jsonObject.toString()
         submitterDids += json.hashCode -> submitterDID
-        Try(PreparedTxn(TEST_INDY_SOVRIN_NAMESPACE, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, NO_ENDORSEMENT))
+        Try(PreparedTxn(TEST_INDY_SOVRIN_NAMESPACE, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, INDY_ENDORSEMENT))
       }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
@@ -88,7 +89,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
         endorser.foreach(eid => jsonObject.put("endorser", eid))
         val json = jsonObject.toString()
         submitterDids += json.hashCode -> submitterDID
-        Try(PreparedTxn(TEST_INDY_SOVRIN_NAMESPACE, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, NO_ENDORSEMENT))
+        Try(PreparedTxn(TEST_INDY_SOVRIN_NAMESPACE, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, INDY_ENDORSEMENT))
       }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
@@ -109,7 +110,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
-  override def resolveSchema(fqSchemaId: FqSchemaId, cacheOption: Option[CacheOption])(handler: Try[Schema] => Unit): Unit = {
+  override def resolveSchema(fqSchemaId: FqSchemaId)(handler: Try[Schema] => Unit): Unit = {
     handler {
       if (ledgerAvailable) {
         Try{
@@ -121,7 +122,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
-  override def resolveSchemas(fqSchemaIds: Set[FqSchemaId], cacheOption: Option[CacheOption])(handler: Try[Seq[Schema]] => Unit): Unit = {
+  override def resolveSchemas(fqSchemaIds: Set[FqSchemaId])(handler: Try[Seq[Schema]] => Unit): Unit = {
     handler {
       if (ledgerAvailable) {
         Try{
@@ -132,7 +133,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
-  override def resolveCredDef(fqCredDefId: FqCredDefId, cacheOption: Option[CacheOption])(handler: Try[CredDef] => Unit): Unit = {
+  override def resolveCredDef(fqCredDefId: FqCredDefId)(handler: Try[CredDef] => Unit): Unit = {
     handler {
       if (ledgerAvailable) {
         Try{
@@ -144,11 +145,11 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
-  override def resolveCredDefs(fqCredDefIds: Set[FqCredDefId], cacheOption: Option[CacheOption])(handler: Try[Seq[CredDef]] => Unit): Unit = {
+  override def resolveCredDefs(fqCredDefIds: Set[FqCredDefId])(handler: Try[Seq[CredDef]] => Unit): Unit = {
     handler {
       if (ledgerAvailable) {
         Try{
-          credDefs.filter{ case (id, credDef) => fqCredDefIds.map(nonFqID).contains(id)}.values.toSeq
+          credDefs.filter{ case (id, _) => fqCredDefIds.map(nonFqID).contains(id)}.values.toSeq
         }
       }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
@@ -164,7 +165,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
   var submitterDids: Map[TxnHash, DidStr] = Map.empty
 
   val NAMESPACE_INDY_SOVRIN = "indy:sovrin"
-  val NO_ENDORSEMENT = ""
+  val INDY_ENDORSEMENT = s"""{"endorserDid":"$MOCK_NOT_ENDORSER", "type": "Indy"}"""
 
   type TxnHash = Int
 
@@ -228,7 +229,7 @@ object MockLedger {
 
   val TEST_INDY_SOVRIN_NAMESPACE = DEFAULT_VDR_NAMESPACE
 
-  val NO_ENDORSEMENT = ""
+  val INDY_ENDORSEMENT = s"""{"endorserDid":"$MOCK_NOT_ENDORSER", "type": "Indy"}"""
 
   def fqID(id: String): String = {
     VDRUtil.toFqDID(id, TEST_INDY_SOVRIN_NAMESPACE)

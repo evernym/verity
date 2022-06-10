@@ -240,8 +240,8 @@ case class Ubuntu(codeName: String, toolsCheck: Boolean) extends OS {
   import DevEnvironmentUtil._
   import DevEnvironment.DebianRepo
   val version: String = codeName match {
-    case "bionic" => "18.04"
     case "xenial" => "16.04"
+    case "bionic" => "18.04"
     case "focal" => "20.04"
   }
 

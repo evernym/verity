@@ -4,7 +4,7 @@ import com.evernym.vdrtools.vdr.VdrResults.PreparedTxnResult
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
-import com.evernym.verity.protocol.testkit.MockLedger.NO_ENDORSEMENT
+import com.evernym.verity.protocol.testkit.MockLedger.INDY_ENDORSEMENT
 import com.evernym.verity.vdr.VDRUtil.extractNamespace
 import com.evernym.verity.vdr._
 
@@ -21,7 +21,7 @@ trait InMemLedger {
     val namespace = extractNamespace(Option(submitterDid), None)
     val schema = TestVDRDid(submitterDid, txnSpecificParams)
     val jsonPayload = JacksonMsgCodec.toJson(schema)
-    new PreparedTxnResult(namespace, jsonPayload.getBytes, SIGN_ED25519_SHA512_SINGLE, jsonPayload.getBytes, NO_ENDORSEMENT)
+    new PreparedTxnResult(namespace, jsonPayload.getBytes, SIGN_ED25519_SHA512_SINGLE, jsonPayload.getBytes, INDY_ENDORSEMENT)
   }
 
   def prepareSchemaTxn(txnSpecificParams: TxnSpecificParams,
@@ -32,7 +32,7 @@ trait InMemLedger {
     val submitterNamespace = extractNamespace(Option(submitterDid), None)
     val schema = TestVDRSchema(submitterDid, fqSchemaId, txnSpecificParams)
     val jsonPayload = JacksonMsgCodec.toJson(schema)
-    new PreparedTxnResult(submitterNamespace, jsonPayload.getBytes, SIGN_ED25519_SHA512_SINGLE, jsonPayload.getBytes, NO_ENDORSEMENT)
+    new PreparedTxnResult(submitterNamespace, jsonPayload.getBytes, SIGN_ED25519_SHA512_SINGLE, jsonPayload.getBytes, INDY_ENDORSEMENT)
   }
 
   def prepareCredDefTxn(txnSpecificParams: TxnSpecificParams,
@@ -43,7 +43,7 @@ trait InMemLedger {
     val namespace = extractNamespace(Option(submitterDid), None)
     val credDef = TestVDRCredDef(submitterDid, fQCredDefId, extractSchemaId(txnSpecificParams), txnSpecificParams)
     val jsonPayload = JacksonMsgCodec.toJson(credDef)
-    new PreparedTxnResult(namespace, jsonPayload.getBytes, SIGN_ED25519_SHA512_SINGLE, jsonPayload.getBytes, NO_ENDORSEMENT)
+    new PreparedTxnResult(namespace, jsonPayload.getBytes, SIGN_ED25519_SHA512_SINGLE, jsonPayload.getBytes, INDY_ENDORSEMENT)
   }
 
   def submitTxn(txnBytes: Array[Byte]): TxnResult = {

@@ -54,10 +54,8 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
     try {
       val tag = m.tag.getOrElse("latest")
       val revocationDetails = m.revocationDetails.map(_.toString).getOrElse("{}")
-
-      val submitterDID = _submitterDID(init)
-      val fqSubmitterId = ctx.ledger.fqDID(submitterDID)
-      ctx.ledger.resolveSchema(ctx.ledger.fqSchemaId(m.schemaId, Option(submitterDID))) {
+      val fqSubmitterId = ctx.ledger.fqDID(_submitterDID(init))
+      ctx.ledger.resolveSchema(ctx.ledger.fqSchemaId(m.schemaId, Option(fqSubmitterId))) {
         case Success (schema) =>
           ctx.wallet.createCredDef(
             fqSubmitterId,
@@ -67,13 +65,12 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
             revocationDetails=Some(revocationDetails)
           ) {
             case Success(credDefCreated: CredDefCreatedResult) =>
-              val fqCredDefId = ctx.ledger.fqCredDefId(credDefCreated.credDefId, Option(submitterDID))
-
-              writeCredDefToLedger(submitterDID, fqCredDefId, credDefCreated.credDefJson) {
+              val fqCredDefId = ctx.ledger.fqCredDefId(credDefCreated.credDefId, Option(fqSubmitterId))
+              writeCredDefToLedger(fqSubmitterId, fqCredDefId, credDefCreated.credDefJson) {
                 case Success(SubmittedTxn(_)) =>
                   ctx.apply(CredDefWritten(fqCredDefId))
                   ctx.signal(StatusReport(fqCredDefId))
-                case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(submitterDID, e) =>
+                case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(fqSubmitterId, e) =>
                   ctx.logger.info(e.toString)
                   val fqEndorserDID = ctx.ledger.fqDID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
                   //NOTE: below code is assuming verity is only supporting indy ledgers,
@@ -83,7 +80,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                     case Success(Some(endorser)) if fqEndorserDID.isEmpty || fqEndorserDID.contains(endorser.did) =>
                       ctx.logger.info(s"registered endorser to be used for creddef endorsement (ledger prefix: $indyLedgerPrefix): " + endorser)
                       //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
-                      prepareTxnForEndorsement(submitterDID, fqCredDefId, credDefCreated.credDefJson, endorser.did) {
+                      prepareTxnForEndorsement(fqSubmitterId, fqCredDefId, credDefCreated.credDefJson, endorser.did) {
                         case Success(ledgerRequest) =>
                           ctx.endorser.endorseTxn(ledgerRequest, indyLedgerPrefix) {
                             case Success(_) =>
@@ -96,7 +93,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                     case other =>
                       ctx.logger.info(s"no active/matched endorser found to be used for creddef endorsement (ledger prefix: $indyLedgerPrefix): " + other)
                       //no active endorser or active endorser is NOT the same as given/configured endorserDID
-                      prepareTxnForEndorsement(submitterDID, fqCredDefId, credDefCreated.credDefJson, fqEndorserDID) {
+                      prepareTxnForEndorsement(fqSubmitterId, fqCredDefId, credDefCreated.credDefJson, fqEndorserDID) {
                         case Success(data: TxnForEndorsement) =>
                           ctx.signal(NeedsEndorsement(fqCredDefId, data))
                           ctx.apply(AskedForEndorsement(fqCredDefId, data))
@@ -126,7 +123,8 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
         ctx.ledger.fqDID(fqSubmitterDID),
         None) {
         case Success(pt: PreparedTxn) =>
-          //TODO (VE-3368): will signing api won't allow fq identifier (see below)
+          //NOTE: once new version of issuer-setup protocol (which supports fq DID) is created/used
+          // the `signerDid` logic in below call will require change
           ctx.wallet.sign(pt.bytesToSign, pt.signatureSpec, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID))) {
             case Success(smr: SignedMsgResult) =>
               ctx.ledger.submitTxn(pt, smr.signatureResult.signature, Array.empty)(handleResult)
@@ -154,11 +152,12 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
             //TODO (VE-3368): will signing api won't allow fq identifier (see below)
             ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID))) {
               case Success(smr: SignedMsgResult) =>
-                if (IndyLedgerUtil.isIndyNamespace(pt.namespace)) {
+                //TODO (VE-3368): what about other endorsementSpecType (cheqd etc)
+                if (pt.isEndorsementSpecTypeIndy) {
                   val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(ctx.ledger.fqDID(fqSubmitterDID) -> smr.signatureResult.toBase64))
                   handleResult(Success(txn))
                 } else {
-                  handleResult(Failure(new RuntimeException("endorsement spec not supported:" + pt.endorsementSpec)))
+                  handleResult(Failure(new RuntimeException("endorsement spec type not supported: " + pt.endorsementSpec)))
                 }
               case Failure(ex) =>
                 handleResult(Failure(ex))
@@ -195,7 +194,10 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
     .getOrElse(throw MissingIssuerDID)
 
   def missingVkOrEndorserErr(did: DidStr, e: LedgerRejectException): Boolean =
-    e.msg.contains(s"verkey for $did cannot be found") || e.msg.contains("Not enough ENDORSER signatures")
+    e.msg.contains("Not enough ENDORSER signatures") ||
+      e.msg.contains(s"verkey for $did cannot be found") ||
+      e.msg.contains(s"verkey for ${extractUnqualifiedDidStr(did)} cannot be found")
+
 
   def initialize(params: Seq[ParameterStored]): Roster[Role] = {
     //TODO: this still feels like boiler plate, need to come back and fix it

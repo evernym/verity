@@ -41,9 +41,12 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     case (State.Uninitialized(), _, InitMsg(id)) => ctx.apply(RosterInitialized(id))
     case (State.Initialized(), _, Create()) =>
       ctx.logger.debug("Creating DID/Key pair for Issuer Identifier/Keys")
+      //TODO (VE-3368): in the new version of this protocol, we'll have to
+      // 1. get `fq prefix` (indy:sovrin etc) from the Create command (supplied from api caller)
+      // 2. pass it to `newDid` function call to make sure the new DID gets created with appropriate FQ prefix
       ctx.wallet.newDid() {
         case Success(keyCreated) =>
-          val fqId = ctx.ledger.fqDID(keyCreated.did)
+          val fqId = ctx.ledger.fqDID(keyCreated.did)   //TODO (VE-3368): this won't be needed in newer version of the protocol
           ctx.apply(CreatePublicIdentifierCompleted(fqId, keyCreated.verKey))
           ctx.signal(PublicIdentifierCreated(PublicIdentifier(fqId, keyCreated.verKey)))
         case Failure(e) =>
@@ -57,7 +60,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     case (State.Created(d), _, CurrentPublicIdentifier()) =>
       d.identity match {
         case Some(didDetails) =>
-          val fqId = ctx.ledger.fqDID(didDetails.did)
+          val fqId = ctx.ledger.fqDID(didDetails.did)   //TODO (VE-3368): this won't be needed in newer version of the protocol
           ctx.signal(PublicIdentifier(fqId, didDetails.verKey))
         case None => ctx.logger.warn(corruptedStateErrorMsg + " - Created state don't have did and/or verkey")
       }

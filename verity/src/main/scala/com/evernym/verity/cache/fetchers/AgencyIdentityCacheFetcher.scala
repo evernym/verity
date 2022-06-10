@@ -15,7 +15,7 @@ class AgencyIdentityCacheFetcher(val agentMsgRouter: AgentMsgRouter, val appConf
   extends AsyncCacheValueFetcher{
 
   override def futureExecutionContext: ExecutionContext = executionContext
-  private implicit val executionContextImplc: ExecutionContext = executionContext
+  private implicit val executionContextImpl: ExecutionContext = executionContext
 
   lazy val fetcherParam: FetcherParam = AGENCY_IDENTITY_CACHE_FETCHER
 

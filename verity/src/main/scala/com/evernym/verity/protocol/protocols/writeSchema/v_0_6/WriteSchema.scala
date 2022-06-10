@@ -52,15 +52,15 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
   def writeSchema(m: Write, init: State.Initialized): Unit = {
     try {
       ctx.apply(RequestReceived(m.name, m.version, m.attrNames))
-      val submitterDID = _submitterDID(init)
-      ctx.wallet.createSchema(submitterDID, m.name, m.version, seqToJson(m.attrNames)) {
+      val fqSubmitterDID = ctx.ledger.fqDID(_submitterDID(init))
+      ctx.wallet.createSchema(fqSubmitterDID, m.name, m.version, seqToJson(m.attrNames)) {
         case Success(schemaCreated: SchemaCreatedResult) =>
-          val fqSchemaId = ctx.ledger.fqSchemaId(schemaCreated.schemaId, Option(submitterDID))
-          writeSchemaToLedger(submitterDID, fqSchemaId, schemaCreated.schemaJson) {
+          val fqSchemaId = ctx.ledger.fqSchemaId(schemaCreated.schemaId, Option(fqSubmitterDID))
+          writeSchemaToLedger(fqSubmitterDID, fqSchemaId, schemaCreated.schemaJson) {
             case Success(SubmittedTxn(_)) =>
               ctx.apply(SchemaWritten(fqSchemaId))
               ctx.signal(StatusReport(fqSchemaId))
-            case Failure(e: LedgerRejectException) =>
+            case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(fqSubmitterDID, e) =>
               ctx.logger.info(e.toString)
               val fqEndorserDID = ctx.ledger.fqDID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
               //NOTE: below code is assuming verity is only supporting indy ledgers,
@@ -70,7 +70,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
                 case Success(Some(endorser)) if fqEndorserDID.isEmpty || fqEndorserDID.contains(endorser.did) =>
                   ctx.logger.info(s"registered endorser to be used for schema endorsement (ledger prefix: $indyLedgerPrefix): " + endorser)
                   //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
-                  prepareTxnForEndorsement(submitterDID, fqSchemaId, schemaCreated.schemaJson, endorser.did) {
+                  prepareTxnForEndorsement(fqSubmitterDID, fqSchemaId, schemaCreated.schemaJson, endorser.did) {
                     case Success(ledgerRequest) =>
                       ctx.endorser.endorseTxn(ledgerRequest, indyLedgerPrefix) {
                         case Failure(exception) => problemReport(exception)
@@ -82,7 +82,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
                 case other =>
                   ctx.logger.info(s"no active/matched endorser found to be used for schema endorsement (ledger prefix: $indyLedgerPrefix): " + other)
                   //any failure while getting active endorser, or no active endorser or active endorser is NOT the same as given/configured endorserDID
-                  prepareTxnForEndorsement(submitterDID, fqSchemaId, schemaCreated.schemaJson, fqEndorserDID) {
+                  prepareTxnForEndorsement(fqSubmitterDID, fqSchemaId, schemaCreated.schemaJson, fqEndorserDID) {
                     case Success(data: TxnForEndorsement) =>
                       ctx.signal(NeedsEndorsement(fqSchemaId, data))
                       ctx.apply(AskedForEndorsement(fqSchemaId, data))
@@ -112,7 +112,8 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
         ctx.ledger.fqDID(fqSubmitterDID),
         None) {
         case Success(pt: PreparedTxn) =>
-          //TODO (VE-3368): will signing api won't allow fq identifier (see below)?
+          //NOTE: once new version of issuer-setup protocol (which supports fq DID) is created/used
+          // the `signerDid` logic in below call will require change
           ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID))) {
             case Success(smr: SignedMsgResult) =>
               ctx.ledger.submitTxn(pt, smr.signatureResult.signature, Array.empty)(handleResult)
@@ -140,11 +141,12 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
             //TODO (VE-3368): will signing api won't allow fq identifier (see below)
             ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID))) {
               case Success(smr: SignedMsgResult) =>
-                if (IndyLedgerUtil.isIndyNamespace(pt.namespace)) {
+                //TODO (VE-3368): what about other endorsementSpecType (cheqd etc)
+                if (pt.isEndorsementSpecTypeIndy) {
                   val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(ctx.ledger.fqDID(fqSubmitterDID) -> smr.signatureResult.toBase64))
                   handleResult(Success(txn))
                 } else {
-                  handleResult(Failure(new RuntimeException("endorsement spec not supported:" + pt.endorsementSpec)))
+                  handleResult(Failure(new RuntimeException("endorsement spec type not supported: " + pt.endorsementSpec)))
                 }
               case Failure(ex) =>
                 handleResult(Failure(ex))
@@ -181,7 +183,10 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
       .getOrElse(throw MissingIssuerDID)
 
   private def missingVkOrEndorserErr(did: DidStr, e: LedgerRejectException): Boolean =
-    e.msg.contains(s"verkey for $did cannot be found") || e.msg.contains("Not enough ENDORSER signatures")
+    e.msg.contains("Not enough ENDORSER signatures") ||
+      e.msg.contains(s"verkey for $did cannot be found") ||
+      e.msg.contains(s"verkey for ${extractUnqualifiedDidStr(did)} cannot be found")
+
 
   private def initialize(params: Seq[ParameterStored]): Roster[Role] = {
     //TODO: this still feels like boiler plate, need to come back and fix it

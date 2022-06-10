@@ -12,6 +12,7 @@ import com.evernym.verity.vault.WalletExt
 import com.evernym.vdrtools.InvalidStructureException
 import com.evernym.vdrtools.did.{Did, DidJSONParameters}
 import com.evernym.vdrtools.wallet.WalletItemAlreadyExistsException
+import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -34,9 +35,11 @@ object DidOpExecutor extends OpExecutorBase {
   }
 
   def handleCreateDID(d: CreateDID)(implicit we: WalletExt, ec: ExecutionContext): Future[NewKeyCreated] = {
-    val didJson = s"""{"crypto_type": "${d.keyType}"}"""
+    val didJson = new JSONObject()
+    didJson.put("crypto_type", d.keyType)
+    d.methodName.foreach(mn => didJson.put("method_name", mn))
     Did
-      .createAndStoreMyDid(we.wallet, didJson)
+      .createAndStoreMyDid(we.wallet, didJson.toString)
       .map(r => NewKeyCreated(r.getDid, r.getVerkey))
       .recover {
         case e: Throwable =>

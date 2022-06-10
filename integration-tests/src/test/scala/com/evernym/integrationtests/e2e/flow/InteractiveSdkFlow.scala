@@ -440,7 +440,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
           true
         }.recover {
           case e =>
-            logger.error(s"Check did on ledger failed: $e")
+            logger.error(s"Check did on ledger failed: ${e.getMessage}")
             throw e
         }.getOrElse(false)
 

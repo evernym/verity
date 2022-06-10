@@ -323,6 +323,7 @@ class ActorProtocolContainer[
   override lazy val ledger =
     new LedgerAccessAdapter(
       agentActorContext.vdrAdapter,
+      agentActorContext.vdrCache,
       wallet,
       vdrDefaultNamespace
     )

@@ -259,7 +259,7 @@ case class SetupNewAgentWallet(ownerDidPair: Option[DidPair]) extends WalletComm
 
 case class CreateNewKey(DID: Option[DidStr] = None, seed: Option[String] = None) extends WalletCommand
 
-case class CreateDID(keyType: String) extends WalletCommand
+case class CreateDID(keyType: String, methodName: Option[String] = None) extends WalletCommand
 
 case class StoreTheirKey(theirDID: DidStr, theirDIDVerKey: VerKeyStr, ignoreIfAlreadyExists: Boolean = false)
   extends WalletCommand

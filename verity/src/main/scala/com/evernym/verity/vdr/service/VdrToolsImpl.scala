@@ -12,7 +12,7 @@ import scala.compat.java8.FutureConverters.{toScala => toFuture}
 import scala.concurrent.Future
 
 //A thin wrapper around VDRTools API for production code
-class VdrToolsImpl(val vdr: VDR) extends VdrTools {
+class VdrToolsImpl(vdr: VDR) extends VdrTools {
 
   override def ping(namespaceList: List[Namespace]): Future[Map[Namespace, PingResult]] = {
     val fut: CompletableFuture[Map[Namespace, PingResult]] =
@@ -26,7 +26,7 @@ class VdrToolsImpl(val vdr: VDR) extends VdrTools {
 
   override def resolveDid(fqDid: FqDID,
                           cacheOptions: CacheOptions): Future[VdrDid] = {
-    toFuture(vdr.resolveDID(fqDid)) //TODO (VE-3368): integrate with cacheOption related api (it requires wallet)
+    toFuture(vdr.resolveDID(fqDid))
   }
 
   override def resolveSchema(fqSchemaId: FqSchemaId): Future[VdrSchema] = {
@@ -35,7 +35,7 @@ class VdrToolsImpl(val vdr: VDR) extends VdrTools {
 
   override def resolveSchema(fqSchemaId: FqSchemaId,
                              cacheOptions: CacheOptions): Future[VdrSchema] = {
-    toFuture(vdr.resolveSchema(fqSchemaId)) //TODO (VE-3368): integrate with cacheOption related api (it requires wallet)
+    toFuture(vdr.resolveSchema(fqSchemaId))
   }
 
   override def resolveCredDef(fqCredDefId: FqCredDefId): Future[VdrCredDef] = {
@@ -44,7 +44,7 @@ class VdrToolsImpl(val vdr: VDR) extends VdrTools {
 
   override def resolveCredDef(fqCredDefId: FqCredDefId,
                               cacheOptions: CacheOptions): Future[VdrCredDef] = {
-    toFuture(vdr.resolveCredDef(fqCredDefId)) //TODO (VE-3368): integrate with cacheOption related api (it requires wallet)
+    toFuture(vdr.resolveCredDef(fqCredDefId))
   }
 
   override def prepareDid(txnSpecificParams: TxnSpecificParams,

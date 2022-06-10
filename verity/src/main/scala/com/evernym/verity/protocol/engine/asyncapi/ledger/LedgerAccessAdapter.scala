@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine.asyncapi.ledger
 
-import com.evernym.vdrtools.ledger.LedgerInvalidTransactionException
+import com.evernym.vdrtools.IndyException
+import com.evernym.verity.cache.providers.CacheProvider
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine.asyncapi._
@@ -10,7 +11,9 @@ import com.evernym.verity.vdr._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Try}
 
+
 class LedgerAccessAdapter(vdrTools: VDRAdapter,
+                          vdrCache: CacheProvider,
                           _walletAccess: WalletAccess,
                           _vdrDefaultNamespace: Namespace)
                          (implicit val asyncOpRunner: AsyncOpRunner,
@@ -51,33 +54,47 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     )
 
 
-  override def resolveSchema(fqSchemaId: FqSchemaId,
-                             cacheOption: Option[CacheOption]=None)(handler: Try[Schema] => Unit): Unit = {
+  override def resolveSchema(fqSchemaId: FqSchemaId)(handler: Try[Schema] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      vdrTools.resolveSchema(fqSchemaId, cacheOption),
+      getCachedItem[Schema](fqSchemaId)
+        .map(s => Future.successful(s))
+        .getOrElse(fetchAndCacheSchema(fqSchemaId)),
       handleAsyncOpResult(handler)
     )
   }
 
-  override def resolveCredDef(fqCredDefId: FqCredDefId,
-                              cacheOption: Option[CacheOption]=None)(handler: Try[CredDef] => Unit): Unit =
+  override def resolveCredDef(fqCredDefId: FqCredDefId)(handler: Try[CredDef] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
-      vdrTools.resolveCredDef(fqCredDefId, cacheOption),
+      getCachedItem[CredDef](fqCredDefId)
+        .map(s => Future.successful(s))
+        .getOrElse(fetchAndCacheCredDef(fqCredDefId)),
       handleAsyncOpResult(handler)
     )
 
-  override def resolveSchemas(fqSchemaIds: Set[FqSchemaId],
-                              cacheOption: Option[CacheOption]=None)(handler: Try[Seq[Schema]] => Unit): Unit = {
+  override def resolveSchemas(fqSchemaIds: Set[FqSchemaId])(handler: Try[Seq[Schema]] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      {Future.sequence(fqSchemaIds.map(id => vdrTools.resolveSchema(id, cacheOption))).map(_.toSeq)},
+      {
+        Future
+          .sequence(fqSchemaIds.map { id =>
+            getCachedItem[Schema](id).map(s => Future.successful(s)).getOrElse(
+              fetchAndCacheSchema(id))
+            })
+          .map(_.toSeq)
+      },
       handleAsyncOpResult(handler)
     )
   }
 
-  override def resolveCredDefs(fqCredDefIds: Set[FqCredDefId],
-                               cacheOption: Option[CacheOption]=None)(handler: Try[Seq[CredDef]] => Unit): Unit = {
+  override def resolveCredDefs(fqCredDefIds: Set[FqCredDefId])(handler: Try[Seq[CredDef]] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      {Future.sequence(fqCredDefIds.map(id => vdrTools.resolveCredDef(id, cacheOption))).map(_.toSeq)},
+      {
+        Future
+          .sequence(fqCredDefIds.map{ id =>
+            getCachedItem[CredDef](id).map(s => Future.successful(s))
+              .getOrElse(fetchAndCacheCredDef(id))
+          })
+          .map(_.toSeq)
+      },
       handleAsyncOpResult(handler)
     )
   }
@@ -94,15 +111,32 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     VDRUtil.toFqCredDefId(credDefId, issuerFqDID, Option(_vdrDefaultNamespace))
   }
 
+  private def getCachedItem[T](id: String): Option[T] = {
+    vdrCache.get(id).map(_.asInstanceOf[T])
+  }
+
+  private def fetchAndCacheSchema(id: String): Future[Schema] = {
+    vdrTools.resolveSchema(id, None).map { s =>
+      vdrCache.put(id, s)
+      s
+    }
+  }
+
+  private def fetchAndCacheCredDef(id: String): Future[CredDef] = {
+    vdrTools.resolveCredDef(id, None).map { cd =>
+      vdrCache.put(id, cd)
+      cd
+    }
+  }
+
   override def walletAccess: WalletAccess = _walletAccess
 
-  //TODO (VE-3368): how to avoid dependency on libvdrtools exceptions here?
   override def handleResult[T](result: Try[Any], handler: Try[T] => Unit): Unit = {
-    //TODO (VE-3368): fix error handling once new libvdrtools is available
     handler(
       result match {
-        case Failure(ex: LedgerInvalidTransactionException) =>
-          Failure(LedgerRejectException(ex.getMessage))
+        case Failure(ex: IndyException) =>
+          //NOTE: `ex.getSdkMessage` provides actual error message and hence it should be used instead of just e.getMessage etc.
+          Failure(LedgerRejectException(ex.getSdkMessage))
         case other =>
           other.map(_.asInstanceOf[T])
       }

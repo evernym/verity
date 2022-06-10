@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.engine.asyncapi.ledger
 
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.vdr.{CacheOption, CredDef, FqCredDefId, FqDID, FqSchemaId, PreparedTxn, Schema, SubmittedTxn}
+import com.evernym.verity.vdr.{CredDef, FqCredDefId, FqDID, FqSchemaId, PreparedTxn, Schema, SubmittedTxn}
 
 import scala.util.Try
 
@@ -31,20 +31,16 @@ trait LedgerAccess {
                 endorsement: Array[Byte])
                (handler: Try[SubmittedTxn] => Unit): Unit
 
-  def resolveSchema(fqSchemaId: FqSchemaId,
-                    cacheOption: Option[CacheOption]=None)
+  def resolveSchema(fqSchemaId: FqSchemaId)
                    (handler: Try[Schema] => Unit): Unit
 
-  def resolveSchemas(fqSchemaIds: Set[FqSchemaId],
-                     cacheOption: Option[CacheOption]=None)
+  def resolveSchemas(fqSchemaIds: Set[FqSchemaId])
                     (handler: Try[Seq[Schema]] => Unit): Unit
 
-  def resolveCredDef(fqCredDefId: FqCredDefId,
-                     cacheOption: Option[CacheOption]=None)
+  def resolveCredDef(fqCredDefId: FqCredDefId)
                     (handler: Try[CredDef] => Unit): Unit
 
-  def resolveCredDefs(fqCredDefIds: Set[FqCredDefId],
-                      cacheOption: Option[CacheOption]=None)
+  def resolveCredDefs(fqCredDefIds: Set[FqCredDefId])
                      (handler: Try[Seq[CredDef]] => Unit): Unit
 
   def fqDID(did: String): FqDID

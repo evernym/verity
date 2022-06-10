@@ -105,7 +105,7 @@ object VDRActor {
                                    executionContext: ExecutionContext): Behavior[Cmd] =
     Behaviors.receiveMessage {
       case LedgersRegistered =>
-        val vdrTools = vdrToolsBuilder.build();
+        val vdrTools = vdrToolsBuilder.build()
         buffer.unstashAll(ready(vdrTools))
       case other =>
         buffer.stash(other)

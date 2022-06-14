@@ -77,7 +77,5 @@ case class DidDoc(fqId: FqDID, verKey: VerKeyStr, endpoint: Option[String])
 case class CacheOption(noCache: Boolean, noUpdate: Boolean, noStore: Boolean, minFresh: Int)
 
 object CacheOption {
-
-  //TODO (VE-3368): finalize the default values
   def default: CacheOption = CacheOption(noCache = true, noUpdate = true, noStore = true, minFresh = -1)
 }

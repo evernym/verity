@@ -5,7 +5,8 @@ package object vdr {
   type SignatureSpec = String
   type EndorsementSpec = String
 
-  type Namespace = String       // for example: "sov", "indy:sovrin", "indy:sovrin:stage" etc
+  type LedgerPrefix = String
+  type Namespace = String       // for example: "indy:sovrin", "indy:sovrin:stage" etc
   type FqDID = String
   type FqSchemaId = String
   type FqCredDefId = String
@@ -17,7 +18,4 @@ package object vdr {
   type TxnSpecificParams = String
 
   val DID_PREFIX = "did"
-  val DID_METHOD_INDY = "indy"
-  val INDY_SCHEMA_ID_PREFIX = "schema"
-  val INDY_CRED_DEF_ID_PREFIX = "creddef"
 }

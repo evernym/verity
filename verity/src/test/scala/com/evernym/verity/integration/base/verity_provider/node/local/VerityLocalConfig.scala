@@ -123,7 +123,7 @@ object VerityLocalConfig {
     ConfigFactory.parseString(
       s"""
          |verity.vdr {
-         |  legacy-default-namespace = "sov"
+         |  unqualified-ledger-prefix = "did:indy:sovrin"
          |  ledgers: []
          |}""".stripMargin
     )

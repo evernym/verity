@@ -159,8 +159,8 @@ class PresentProofNonProtocolSpec extends BasicSpec with OptionValues {
       |                  "height":"175",
       |                  "sex":"male"
       |               },
-      |               "schema_id":"NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
-      |               "cred_def_id":"NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
+      |               "schema_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
+      |               "cred_def_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1",
       |               "rev_reg_id":null,
       |               "cred_rev_id":null
       |            },
@@ -180,8 +180,8 @@ class PresentProofNonProtocolSpec extends BasicSpec with OptionValues {
       |                  "age":"28",
       |                  "name":"Alex"
       |               },
-      |               "schema_id":"NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
-      |               "cred_def_id":"NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
+      |               "schema_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
+      |               "cred_def_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1",
       |               "rev_reg_id":null,
       |               "cred_rev_id":null
       |            },
@@ -200,8 +200,8 @@ class PresentProofNonProtocolSpec extends BasicSpec with OptionValues {
       |                  "height":"175",
       |                  "name":"Alex"
       |               },
-      |               "schema_id":"NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
-      |               "cred_def_id":"NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
+      |               "schema_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
+      |               "cred_def_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1",
       |               "rev_reg_id":null,
       |               "cred_rev_id":null
       |            },

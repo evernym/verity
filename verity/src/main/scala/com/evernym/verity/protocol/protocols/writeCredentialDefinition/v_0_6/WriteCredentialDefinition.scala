@@ -65,7 +65,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
             revocationDetails=Some(revocationDetails)
           ) {
             case Success(credDefCreated: CredDefCreatedResult) =>
-              val fqCredDefId = ctx.ledger.fqCredDefId(credDefCreated.credDefId, Option(fqSubmitterId))
+              val fqCredDefId = credDefCreated.credDefId
               writeCredDefToLedger(fqSubmitterId, fqCredDefId, credDefCreated.credDefJson) {
                 case Success(SubmittedTxn(_)) =>
                   ctx.apply(CredDefWritten(fqCredDefId))
@@ -75,7 +75,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                   val fqEndorserDID = ctx.ledger.fqDID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
                   //NOTE: below code is assuming verity is only supporting indy ledgers,
                   // it should be changed when verity starts supporting different types of ledgers
-                  val indyLedgerPrefix = ctx.ledger.getIndyDefaultLegacyPrefix()
+                  val indyLedgerPrefix = ctx.ledger.vdrUnqualifiedLedgerPrefix()
                   ctx.endorser.withCurrentEndorser(indyLedgerPrefix) {
                     case Success(Some(endorser)) if fqEndorserDID.isEmpty || fqEndorserDID.contains(endorser.did) =>
                       ctx.logger.info(s"registered endorser to be used for creddef endorsement (ledger prefix: $indyLedgerPrefix): " + endorser)
@@ -120,12 +120,10 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
       .prepareCredDefTxn(
         credDefJson,
         fqCredDefId,
-        ctx.ledger.fqDID(fqSubmitterDID),
+        fqSubmitterDID,
         None) {
         case Success(pt: PreparedTxn) =>
-          //NOTE: once new version of issuer-setup protocol (which supports fq DID) is created/used
-          // the `signerDid` logic in below call will require change
-          ctx.wallet.sign(pt.bytesToSign, pt.signatureSpec, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID))) {
+          signPreparedTxn(pt, fqSubmitterDID) {
             case Success(smr: SignedMsgResult) =>
               ctx.ledger.submitTxn(pt, smr.signatureResult.signature, Array.empty)(handleResult)
             case Failure(ex) =>
@@ -146,15 +144,14 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
         .prepareCredDefTxn(
           credDefJson,
           fqCredDefId,
-          ctx.ledger.fqDID(fqSubmitterDID),
+          fqSubmitterDID,
           Option(fqEndorserDid)) {
           case Success(pt: PreparedTxn) =>
-            //TODO (VE-3368): will signing api won't allow fq identifier (see below)
-            ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID))) {
+            signPreparedTxn(pt, fqSubmitterDID) {
               case Success(smr: SignedMsgResult) =>
-                //TODO (VE-3368): what about other endorsementSpecType (cheqd etc)
+                //NOTE: what about other endorsementSpecType (cheqd etc)
                 if (pt.isEndorsementSpecTypeIndy) {
-                  val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(ctx.ledger.fqDID(fqSubmitterDID) -> smr.signatureResult.toBase64))
+                  val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(fqSubmitterDID -> smr.signatureResult.toBase64))
                   handleResult(Success(txn))
                 } else {
                   handleResult(Failure(new RuntimeException("endorsement spec type not supported: " + pt.endorsementSpec)))
@@ -176,6 +173,18 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
       ctx.signal(StatusReport(e.credDefId))
     } else {
       problemReport(new RuntimeException(s"error during endorsement => code: ${m.code}, description: ${m.description}"))
+    }
+  }
+
+  //NOTE: handling legacy and new fqSubmitterDID (as legacy one would NOT have been created with namespace prefix)
+  private def signPreparedTxn(pt: PreparedTxn,
+                              fqSubmitterDID: FqDID)
+                             (handleResult: Try[SignedMsgResult] => Unit): Unit = {
+    ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(fqSubmitterDID)) {
+      case Success(resp) =>
+        handleResult(Try(resp))
+      case Failure(_) =>
+        ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID)))(handleResult)
     }
   }
 

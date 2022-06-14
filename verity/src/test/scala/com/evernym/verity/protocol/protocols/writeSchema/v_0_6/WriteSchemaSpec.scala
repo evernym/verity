@@ -11,7 +11,7 @@ import com.evernym.verity.integration.base.EndorserUtil
 import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
 import com.evernym.verity.protocol.engine.asyncapi.endorser.{ENDORSEMENT_RESULT_SUCCESS_CODE, Endorser}
 import com.evernym.verity.protocol.testkit.DSL.signal
-import com.evernym.verity.protocol.testkit.MockLedger.toFqId
+import com.evernym.verity.protocol.testkit.MockLedger.fqID
 import com.evernym.verity.protocol.testkit.MockableLedgerAccess.MOCK_NOT_ENDORSER
 import com.evernym.verity.protocol.testkit.{MockableEndorserAccess, MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}
@@ -46,7 +46,7 @@ class WriteSchemaSpec
 
   val defaultEndorser = "8XFh8yBzrpJQmNyZzgoTqB"
   val userEndorser = "Vr9eqqnUJpJkBwcRV4cHnV"
-  val sovrinEndorser = "did:sov:2wJPyULfLLnYTEFYzByfUR"
+  val sovrinEndorser = "did:indy:sovrin:2wJPyULfLLnYTEFYzByfUR"
 
   override val defaultInitParams = Map(
     DEFAULT_ENDORSER_DID -> defaultEndorser
@@ -104,7 +104,7 @@ class WriteSchemaSpec
 
                 val needsEndorsement = f.writer expect signal[NeedsEndorsement]
                 val json = new JSONObject(needsEndorsement.schemaJson)
-                json.getString("endorser") shouldBe toFqId("otherEndorser")
+                json.getString("endorser") shouldBe fqID("otherEndorser")
                 f.writer.state shouldBe a[State.WaitingOnEndorser]
               })
             })
@@ -126,7 +126,7 @@ class WriteSchemaSpec
 
                 val needsEndorsement = f.writer expect signal[NeedsEndorsement]
                 val json = new JSONObject(needsEndorsement.schemaJson)
-                json.getString("endorser") shouldBe toFqId(defaultEndorser)
+                json.getString("endorser") shouldBe fqID(defaultEndorser)
                 f.writer.state shouldBe a[State.WaitingOnEndorser]
               })
             })
@@ -146,7 +146,7 @@ class WriteSchemaSpec
 
                 val needsEndorsement = f.writer expect signal[NeedsEndorsement]
                 val json = new JSONObject(needsEndorsement.schemaJson)
-                json.getString("endorser") shouldBe toFqId(userEndorser)
+                json.getString("endorser") shouldBe fqID(userEndorser)
                 f.writer.state shouldBe a[State.WaitingOnEndorser]
               })
             })

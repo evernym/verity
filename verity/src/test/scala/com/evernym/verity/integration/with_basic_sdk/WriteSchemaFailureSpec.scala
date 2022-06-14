@@ -14,9 +14,8 @@ import com.evernym.verity.integration.base.verity_provider.node.local.ServicePar
 import com.evernym.verity.ledger.LedgerSvcException
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, CurrentPublicIdentifier, ProblemReport, PublicIdentifier, PublicIdentifierCreated}
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Write
-import com.evernym.verity.protocol.testkit.MockLedger
 import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.vdr.base.{InMemLedger, SOV_LEDGER_NAME, DEFAULT_VDR_NAMESPACE}
+import com.evernym.verity.vdr.base.{INDY_SOVRIN_NAMESPACE, InMemLedger}
 import com.evernym.verity.vdr.service.VdrTools
 import com.evernym.verity.vdr.{FqCredDefId, FqDID, FqSchemaId, MockIndyLedger, MockLedgerRegistry, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
 
@@ -33,7 +32,7 @@ class WriteSchemaFailureSpec
   override lazy val defaultSvcParam: ServiceParam =
     ServiceParam
       .empty
-      .withVdrTools(new DummyVdrTools(MockLedgerRegistry(SOV_LEDGER_NAME, List(MockIndyLedger(DEFAULT_VDR_NAMESPACE, List(DEFAULT_VDR_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext))
+      .withVdrTools(new DummyVdrTools(MockLedgerRegistry(List(MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext))
 
   lazy val issuerVerityApp = VerityEnvBuilder.default().build(VAS)
   lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext)
@@ -80,7 +79,7 @@ class WriteSchemaFailureSpec
       ledgerRegistry.forLedger(submitterDid) { ledger: InMemLedger =>
         val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams)
         val id = json.get("id").asText
-        ledger.prepareSchemaTxn(txnSpecificParams, MockLedger.fqSchemaID(id, Option(submitterDid)), submitterDid, endorser)
+        ledger.prepareSchemaTxn(txnSpecificParams, id, submitterDid, endorser)
       }
     }
 

@@ -8,75 +8,71 @@ import com.evernym.verity.did.{DidStr, toDIDMethod}
 import scala.util.Try
 
 
-//TODO (VE-3368): Need overall review, its usages and find out if there is better way to code this
 object VDRUtil {
 
-  def toFqDID(did: String, vdrDefaultNamespace: Namespace): FqDID = {
-    //TODO (VE-3368): how do we know what is the minimum prefix for the given id to know if it is fully qualified or not?
-    // below is only taking care of "did" prefix.
-    if (did.isEmpty || did.startsWith(DID_PREFIX)) {
-      did
+  val LEGACY_LEDGER_PREFIX = s"$DID_PREFIX:sov"
+
+  def toFqDID(did: String, vdrUnqualifiedLedgerPrefix: LedgerPrefix, vdrLegacyLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix]): FqDID = {
+    if (did.startsWith(LEGACY_LEDGER_PREFIX)) {
+      val aliasLedgerPrefix = vdrLegacyLedgerPrefixMappings(LEGACY_LEDGER_PREFIX)
+      did.replace(LEGACY_LEDGER_PREFIX, aliasLedgerPrefix)
+    } else if (did.nonEmpty && ! did.startsWith(s"$DID_PREFIX:")) {
+      s"$vdrUnqualifiedLedgerPrefix:$did"
     } else {
-      s"$DID_PREFIX:$vdrDefaultNamespace:$did"
+      did   // it must be fully qualified already
     }
   }
 
-  def toFqSchemaId(schemaId: String, issuerFqDid: Option[FqDID], vdrDefaultNamespace: Option[Namespace]): FqSchemaId = {
-    //TODO (VE-3368): how do we know what is the minimum prefix for the given id to know if it is fully qualified or not?
-    if (schemaId.startsWith(INDY_SCHEMA_ID_PREFIX)) {
+  def toFqSchemaId_v0(schemaId: String,
+                      issuerFqDid: Option[FqDID],
+                      vdrUnqualifiedLedgerPrefix: Option[LedgerPrefix]): FqSchemaId = {
+    if (schemaId.startsWith(DID_PREFIX)) {
       schemaId
     } else {
-      val namespace = extractNamespace(issuerFqDid, vdrDefaultNamespace)
-      val fqSchemaId = toFqDID(schemaId, namespace)
-      s"$INDY_SCHEMA_ID_PREFIX:$namespace:$fqSchemaId"
+      val splitted = schemaId.split(":")
+      val issuerDid = splitted(0)
+      val schemaName = splitted(2)
+      val schemaVersion = splitted(3)
+      val namespace = extractNamespace(issuerFqDid, vdrUnqualifiedLedgerPrefix)
+      s"$DID_PREFIX:$namespace:$issuerDid/anoncreds/v0/SCHEMA/$schemaName/$schemaVersion"
     }
   }
 
-  def toFqCredDefId(credDefId: String, issuerFqDid: Option[FqDID], vdrDefaultNamespace: Option[Namespace]): FqCredDefId = {
-    //TODO (VE-3368): how do we know what is the minimum prefix for the given id to know if it is fully qualified or not?
-    if (credDefId.startsWith(INDY_CRED_DEF_ID_PREFIX)) {
+  def toFqCredDefId_v0(credDefId: String,
+                       issuerFqDid: Option[FqDID],
+                       vdrUnqualifiedLedgerPrefix: Option[LedgerPrefix]): FqCredDefId = {
+    if (credDefId.startsWith(DID_PREFIX)) {
       credDefId
     } else {
-      val namespace = extractNamespace(issuerFqDid, vdrDefaultNamespace)
-      val fqCredDefId = toFqDID(credDefId, namespace)
-      s"$INDY_CRED_DEF_ID_PREFIX:$namespace:$fqCredDefId"
+      val splitted = credDefId.split(":")
+      val issuerDid = splitted(0)
+      val schemaSeqNo = splitted(3)
+      val credDefName = splitted(4)
+      val namespace = extractNamespace(issuerFqDid, vdrUnqualifiedLedgerPrefix)
+      s"$DID_PREFIX:$namespace:$issuerDid/anoncreds/v0/CLAIM_DEF/$schemaSeqNo/$credDefName"
     }
   }
 
   /**
    *
    * @param identifier can be fqDID, fqSchemaId or fqCredDefId
-   * @param vdrDefaultNamespace
+   * @param vdrUnqualifiedLedgerPrefix
    * @return
    */
-  def extractNamespace(identifier: Option[String], vdrDefaultNamespace: Option[Namespace]): Namespace = {
+  def extractNamespace(identifier: Option[String], vdrUnqualifiedLedgerPrefix: Option[LedgerPrefix]): Namespace = {
     Try {
-      (identifier, vdrDefaultNamespace) match {
-        case (Some(id), _ ) => extractNamespace(extractDidStr(id))
+      (identifier, vdrUnqualifiedLedgerPrefix) match {
+        case (Some(id), _ ) => extractNamespace(id)
         case (None, Some(namespace)) => namespace
-        case other => throw new RuntimeException(s"could not extract namespace for given identifier: $identifier (default namespace: $vdrDefaultNamespace)")
+        case _ =>
+          throw new RuntimeException(s"could not extract namespace for given identifier: $identifier (vdrUnqualifiedLedgerPrefix: $vdrUnqualifiedLedgerPrefix)")
       }
     }.getOrElse {
-      vdrDefaultNamespace.getOrElse {
-        throw new RuntimeException(s"could not extract namespace for given identifier: $identifier (default namespace: $vdrDefaultNamespace)")
+      vdrUnqualifiedLedgerPrefix.getOrElse {
+        throw new RuntimeException(s"could not extract namespace for given identifier: $identifier (vdrUnqualifiedLedgerPrefix: $vdrUnqualifiedLedgerPrefix)")
       }
     }
   }
-
-  /**
-   * extracts DID string from given identifier (which can be did, schema or cred identifier)
-   * @param id
-   * @return
-   */
-  private def extractDidStr(id: String): DidStr = {
-    if (id.startsWith(DID_PREFIX)) id
-    else if (id.startsWith(INDY_SCHEMA_ID_PREFIX))
-      id.substring(id.indexOf(DID_PREFIX), id.indexOf(":2:"))
-    else if (id.startsWith(INDY_CRED_DEF_ID_PREFIX))
-      id.substring(id.indexOf(DID_PREFIX), id.indexOf(":3:"))
-    else id
-  }
-
 
   /**
    * extracts unqualified DID from given fully qualified DID

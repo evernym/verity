@@ -27,7 +27,7 @@ package object did {
     splitted.length match {
       case x if x >= 3 =>
         splitted(1) match {
-          case "indy" => new DIDIndySovrin(did)     //TODO (VE-3368): is this look correct?
+          case "indy" => new DIDIndySovrin(did)
           case "sov"  => new DIDSov(did)
           case "key"  => new DIDKey(did)
           case _ => throw new UnrecognizedDIDMethodException(did, splitted(2))

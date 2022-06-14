@@ -184,8 +184,26 @@ class LedgerUtil (val appConfig: AppConfig,
     assert(txnTime.asInstanceOf[Int] > 0, "txnTime must be greater than zero")
   }
 
+  def checkDidOnLedger(did: DidStr, verkey: VerKeyStr, role: String = null): Unit = {
+    //NOTE: once we replace the ledger call (get nym) with vdrtools api,
+    // will have to change other logic in below lines accordingly
+    val req = buildGetNymRequest(privateGetDID, did).get
+    val response = executeLedgerRequest(req)
+    checkTxn(response)
+    val data = findData(response)
+    assert(data.contains(did) || data.contains(VDRUtil.extractUnqualifiedDidStr(did)))
+    assert(data.contains(verkey))
+
+    role match {
+      case "ENDORSER" => assert(data.contains("\"role\":\"101\""))
+      case _ =>
+    }
+  }
+
   def checkSchemaOnLedger(did: DidStr, name: String, version:String): Unit = {
-    val identifier = VDRUtil.extractUnqualifiedDidStr(did)   //TODO (VE-3368): confirm this change
+    //NOTE: once we replace the ledger call (get schema) with vdrtools api,
+    // will have to change other logic in below lines accordingly
+    val identifier = VDRUtil.extractUnqualifiedDidStr(did)
     val schema_id = s"$identifier:2:$name:$version"
     val req = buildGetSchemaRequest(privateGetDID, schema_id).get
     val response = executeLedgerRequest(req)
@@ -193,7 +211,6 @@ class LedgerUtil (val appConfig: AppConfig,
     checkTxn(response)
 
     val data = findData(response)
-
     assert(data.contains(name))
     assert(data.contains(version))
   }
@@ -206,22 +223,6 @@ class LedgerUtil (val appConfig: AppConfig,
     checkTxn(response)
   }
 
-  def checkDidOnLedger(did: DidStr, verkey: VerKeyStr, role: String = null): Unit = {
-    val req = buildGetNymRequest(privateGetDID, did).get
-    val response = executeLedgerRequest(req)
-
-    checkTxn(response)
-
-    val data = findData(response)
-    val identifier = VDRUtil.extractUnqualifiedDidStr(did)   //TODO (VE-3368): confirm this change
-    assert(data.contains(identifier))
-    assert(data.contains(verkey))
-
-    role match {
-      case "ENDORSER" => assert(data.contains("\"role\":\"101\""))
-      case _ =>
-    }
-  }
 
   /**
    * custom thread pool executor

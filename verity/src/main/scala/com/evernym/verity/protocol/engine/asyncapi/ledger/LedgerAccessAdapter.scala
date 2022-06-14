@@ -15,7 +15,8 @@ import scala.util.{Failure, Try}
 class LedgerAccessAdapter(vdrTools: VDRAdapter,
                           vdrCache: CacheProvider,
                           _walletAccess: WalletAccess,
-                          _vdrDefaultNamespace: Namespace)
+                          _vdrUnqualifiedLedgerPrefix: LedgerPrefix,
+                          _vdrLegacyLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix])
                          (implicit val asyncOpRunner: AsyncOpRunner,
                           implicit val asyncAPIContext: AsyncAPIContext,
                           implicit val ec: ExecutionContext)
@@ -100,15 +101,17 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
   }
 
   override def fqDID(did: String): FqDID = {
-    VDRUtil.toFqDID(did, _vdrDefaultNamespace)
+    VDRUtil.toFqDID(did, _vdrUnqualifiedLedgerPrefix, _vdrLegacyLedgerPrefixMappings)
   }
 
-  override def fqSchemaId(schemaId: String, issuerFqDID: Option[FqDID]): FqSchemaId  = {
-    VDRUtil.toFqSchemaId(schemaId, issuerFqDID, Option(_vdrDefaultNamespace))
+  override def fqSchemaId(schemaId: String,
+                          issuerFqDID: Option[FqDID]): FqSchemaId  = {
+    VDRUtil.toFqSchemaId_v0(schemaId, issuerFqDID, Option(_vdrUnqualifiedLedgerPrefix))
   }
 
-  override def fqCredDefId(credDefId: String, issuerFqDID: Option[FqDID]): FqCredDefId = {
-    VDRUtil.toFqCredDefId(credDefId, issuerFqDID, Option(_vdrDefaultNamespace))
+  override def fqCredDefId(credDefId: String,
+                           issuerFqDID: Option[FqDID]): FqCredDefId = {
+    VDRUtil.toFqCredDefId_v0(credDefId, issuerFqDID, Option(_vdrUnqualifiedLedgerPrefix))
   }
 
   private def getCachedItem[T](id: String): Option[T] = {
@@ -143,5 +146,5 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     )
   }
 
-  override lazy val getIndyDefaultLegacyPrefix: String = _vdrDefaultNamespace
+  override lazy val vdrUnqualifiedLedgerPrefix: String = _vdrUnqualifiedLedgerPrefix
 }

@@ -20,7 +20,5 @@ case class IndySovrinIdentifier(didStr: String, method: String, methodIdentifier
     case _ => throw new UnrecognizedMethodIdentifierException(method, methodIdentifier)
   }
 
-  override val namespaceIdentifier: String =
-    if (splitted.last.matches("^[1-9A-HJ-NP-Za-km-z]{21,22}$")) splitted.last
-    else throw new UnrecognizedMethodIdentifierException(method, methodIdentifier)
+  override val namespaceIdentifier: String = splitted.last
 }

@@ -269,7 +269,7 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
         case c: CredOfferCreated => CredOfferCreatedResult(c.offer)
         case c: CredReqCreated => CredReqCreatedResult(c.credReqJson, c.credReqMetadataJson)
         case c: CredCreated => CredCreatedResult(c.cred)
-        case c: CredStored => CredStoredResult(c.cred)
+        case c: CredStored => CredStoredResult(c.credId)
         case c: CredForProofReqCreated => CredForProofResult(c.cred)
 
         case c: ProofCreated => ProofCreatedResult(c.proof)

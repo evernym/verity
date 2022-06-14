@@ -1,6 +1,6 @@
 package com.evernym.verity.vdr
 
-import com.evernym.verity.config.ConfigConstants.VDR_LEGACY_DEFAULT_NAMESPACE
+import com.evernym.verity.config.ConfigConstants.VDR_UNQUALIFIED_LEDGER_PREFIX
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util.TAAUtil
 import com.evernym.verity.vdr.service.{IndyLedger, VDRToolsConfig}
@@ -31,11 +31,14 @@ class VdrToolsConfigSpec
             s"""
               |verity {
               |  vdr: {
-              |    legacy-default-namespace = "sov"
+              |    unqualified-ledger-prefix = "did:indy:sovrin"
+              |    legacy-ledger-prefix-mappings {
+              |      "did:sov": "did:indy:sovrin"    # the value is expected to not changed based on environments
+              |    }
               |    ledgers = [
               |      {
               |        type: "indy"
-              |        namespaces: ["sov", "indy:sovrin"]
+              |        namespaces: ["indy:sovrin"]
               |        genesis-txn-file-location: "$genesisTxnFile"
               |        transaction-author-agreement: {
               |          version: "1"
@@ -55,7 +58,7 @@ class VdrToolsConfigSpec
         vdrToolsConfig.ledgers.length shouldBe 1
 
         val ledger = vdrToolsConfig.ledgers.head.asInstanceOf[IndyLedger]
-        ledger.namespaces shouldBe List("sov", "indy:sovrin")
+        ledger.namespaces shouldBe List("indy:sovrin")
         ledger.genesisTxnData shouldBe "genesis txn data"
         ledger.taaConfig should not be empty
 
@@ -76,8 +79,10 @@ class VdrToolsConfigSpec
             s"""
                |verity {
                |  vdr: {
-               |    legacy-default-namespace = "sov"
-               |
+               |    unqualified-ledger-prefix = "did:indy:sovrin"
+               |    legacy-ledger-prefix-mappings {
+               |      "did:sov": "did:indy:sovrin"    # the value is expected to not changed based on environments
+               |    }
                |    ledgers: [
                |      {
                |        type: "indy"
@@ -111,7 +116,10 @@ class VdrToolsConfigSpec
             s"""
                |verity {
                |  vdr: {
-               |    legacy-default-namespace = "sov"
+               |    unqualified-ledger-prefix = "did:indy:sovrin"
+               |    legacy-ledger-prefix-mappings {
+               |      "did:sov": "did:indy:sovrin"    # the value is expected to not changed based on environments
+               |    }
                |    ledgers: [
                |      {
                |        type: "indy"
@@ -153,7 +161,10 @@ class VdrToolsConfigSpec
               """
                 |verity {
                 |  vdr: {
-                |    legacy-default-namespace = "sov"
+                |    unqualified-ledger-prefix = "did:indy:sovrin"
+                |    legacy-ledger-prefix-mappings {
+                |      "did:sov": "did:indy:sovrin"    # the value is expected to not changed based on environments
+                |    }
                 |    ledgers: []
                 |  }
                 |}
@@ -177,7 +188,10 @@ class VdrToolsConfigSpec
               s"""
                  |verity {
                  |  vdr: {
-                 |    legacy-default-namespace = "sov"
+                 |    unqualified-ledger-prefix = "did:indy:sovrin"
+                 |    legacy-ledger-prefix-mappings {
+                 |      "did:sov": "did:indy:sovrin"    # the value is expected to not changed based on environments
+                 |    }
                  |    ledgers: [
                  |      {
                  |        type: "indy"
@@ -207,16 +221,19 @@ class VdrToolsConfigSpec
               s"""
                  |verity {
                  |  vdr: {
-                 |    legacy-default-namespace = "indy:sovrin"
+                 |    unqualified-ledger-prefix = "did:indy:sovrin"
+                 |    legacy-ledger-prefix-mappings {
+                 |      "did:sov": "did:indy:sovrin"    # the value is expected to not changed based on environments
+                 |    }
                  |    ledgers: [
                  |      {
                  |        type: "indy"
-                 |        namespaces: ["sov", "indy:sovrin"]
+                 |        namespaces: ["indy:sovrin", "indy:sovrin:stage"]
                  |        genesis-txn-file-location: "$genesisTxnFileA"
                  |      },
                  |      {
                  |        type: "indy"
-                 |        namespaces: ["sov"]
+                 |        namespaces: ["indy:sovrin:stage"]
                  |        genesis-txn-file-location: "$genesisTxnFileB"
                  |      }
                  |    ]
@@ -254,7 +271,7 @@ class VdrToolsConfigSpec
             )
           )
         }
-        ex.getMessage shouldBe "[VDR] required configuration not found: 'verity.vdr.legacy-default-namespace'"
+        ex.getMessage shouldBe "[VDR] required configuration not found: 'verity.vdr.unqualified-ledger-prefix'"
       }
     }
 
@@ -267,11 +284,14 @@ class VdrToolsConfigSpec
               s"""
                  |verity {
                  |  vdr: {
-                 |    legacy-default-namespace = "test"
+                 |    unqualified-ledger-prefix = "did:test"
+                 |    legacy-ledger-prefix-mappings {
+                 |      "did:sov": "did:indy:sovrin"    # the value is expected to not changed based on environments
+                 |    }
                  |    ledgers: [
                  |      {
                  |        type: "indy"
-                 |        namespaces: ["sov", "indy:sovrin"]
+                 |        namespaces: ["indy:sovrin"]
                  |        genesis-txn-file-location: "$genesisTxnFile"
                  |      }
                  |    ]
@@ -282,7 +302,7 @@ class VdrToolsConfigSpec
             )
           )
         }
-        ex.getMessage shouldBe s"[VDR] '$VDR_LEGACY_DEFAULT_NAMESPACE' (test) is not found in registered ledger's namespaces (sov, indy:sovrin)"
+        ex.getMessage shouldBe s"[VDR] '$VDR_UNQUALIFIED_LEDGER_PREFIX' namespace (test) is not found in registered ledger's namespaces (indy:sovrin)"
       }
     }
   }

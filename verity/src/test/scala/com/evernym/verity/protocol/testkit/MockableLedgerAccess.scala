@@ -11,14 +11,14 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessAdapter
-import com.evernym.verity.protocol.testkit.MockLedger.{TEST_INDY_SOVRIN_NAMESPACE, nonFqID}
+import com.evernym.verity.protocol.testkit.MockLedger.TEST_INDY_SOVRIN_NAMESPACE
 import com.evernym.verity.protocol.testkit.MockableLedgerAccess.MOCK_NOT_ENDORSER
 import com.evernym.verity.testkit.{BasicSpecBase, TestWallet}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vdr._
-import com.evernym.verity.vdr.base.{DEFAULT_VDR_NAMESPACE, SOV_LEDGER_NAME}
+import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
@@ -114,7 +114,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         Try{
-          val schemaResp = schemas.getOrElse(nonFqID(fqSchemaId), throw new Exception("Unknown schema"))
+          val schemaResp = schemas.getOrElse(fqSchemaId, throw new Exception("Unknown schema"))
           Schema(fqSchemaId, schemaResp.json)
         }
       }
@@ -126,7 +126,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         Try{
-          schemas.filter{ case (id, schema) => fqSchemaIds.map(nonFqID).contains(id)}.values.toSeq
+          schemas.filter{ case (id, schema) => fqSchemaIds.contains(id)}.values.toSeq
         }
       }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
@@ -137,7 +137,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         Try{
-          val credDefResp = credDefs.getOrElse(nonFqID(fqCredDefId), throw new Exception("Unknown cred def"))
+          val credDefResp = credDefs.getOrElse(fqCredDefId, throw new Exception("Unknown cred def"))
           CredDef(fqCredDefId, credDefResp.fqSchemaId, credDefResp.json)
         }
       }
@@ -149,7 +149,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         Try{
-          credDefs.filter{ case (id, _) => fqCredDefIds.map(nonFqID).contains(id)}.values.toSeq
+          credDefs.filter{ case (id, _) => fqCredDefIds.contains(id)}.values.toSeq
         }
       }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
@@ -164,7 +164,6 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
 
   var submitterDids: Map[TxnHash, DidStr] = Map.empty
 
-  val NAMESPACE_INDY_SOVRIN = "indy:sovrin"
   val INDY_ENDORSEMENT = s"""{"endorserDid":"$MOCK_NOT_ENDORSER", "type": "Indy"}"""
 
   type TxnHash = Int
@@ -179,7 +178,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
 
   override def fqCredDefId(credDefId: String, issuerDid: Option[DidStr]): FqCredDefId = MockLedger.fqCredDefId(credDefId, issuerDid)
 
-  override def getIndyDefaultLegacyPrefix(): VdrDid = "sov"
+  override def vdrUnqualifiedLedgerPrefix(): VdrDid = "did:indy:sovrin"
 }
 
 
@@ -187,12 +186,12 @@ object MockLedgerData {
   val txnResp = MockLedgerTxnExecutor.buildTxnResp("5XwZzMweuePeFZzArqvepR", None, None, "107")
 
   val schemas01 = Map(
-    "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0" ->
+    "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0" ->
       Schema(
-        "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
+        "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
         DefaultMsgCodec.toJson(
           SchemaV1(
-            "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
+            "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
             "schema-name",
             "0.1",
             Seq("attr-1", "attr2"),
@@ -205,15 +204,15 @@ object MockLedgerData {
   )
 
   val credDefs01 = Map(
-    "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1" ->
+    "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1" ->
       CredDef(
-        "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
-        "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
+        "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1",
+        "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
         DefaultMsgCodec.toJson(
           CredDefV1(
-            "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
+            "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1",
             "CL",
-            "55",
+            "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
             "tag",
             "1.0",
             Map.empty
@@ -227,42 +226,22 @@ object MockLedgerData {
 
 object MockLedger {
 
-  val TEST_INDY_SOVRIN_NAMESPACE = DEFAULT_VDR_NAMESPACE
+  val TEST_INDY_SOVRIN_NAMESPACE = INDY_SOVRIN_NAMESPACE
+  val TEST_INDY_LEDGER_PREFIX = s"$DID_PREFIX:$TEST_INDY_SOVRIN_NAMESPACE"
+  val legacyLedgerPrefixMappings = Map ("did:sov" -> "did:indy:sovrin")
 
   val INDY_ENDORSEMENT = s"""{"endorserDid":"$MOCK_NOT_ENDORSER", "type": "Indy"}"""
 
   def fqID(id: String): String = {
-    VDRUtil.toFqDID(id, TEST_INDY_SOVRIN_NAMESPACE)
+    VDRUtil.toFqDID(id, TEST_INDY_LEDGER_PREFIX, legacyLedgerPrefixMappings)
   }
 
   def fqSchemaID(id: String, issuerDid: Option[DidStr]): String = {
-    VDRUtil.toFqSchemaId(id, issuerDid, Option(TEST_INDY_SOVRIN_NAMESPACE))
+    VDRUtil.toFqSchemaId_v0(id, issuerDid, Option(TEST_INDY_LEDGER_PREFIX))
   }
 
   def fqCredDefId(id: String, issuerDid: Option[DidStr]): String = {
-    VDRUtil.toFqCredDefId(id, issuerDid, Option(TEST_INDY_SOVRIN_NAMESPACE))
+    VDRUtil.toFqCredDefId_v0(id, issuerDid, Option(TEST_INDY_LEDGER_PREFIX))
   }
 
-  //TODO (VE-3368): come back to this
-  def nonFqID(id: String): String = {
-    id match {
-      case fqIdRegEx(id)        => id
-      case fqSchemaIdRegEx(id)  =>
-        nonFqID(id)
-          .replace(s"$INDY_SCHEMA_ID_PREFIX:$SOV_LEDGER_NAME:did:$SOV_LEDGER_NAME:", "")
-      case fqCredDefIdRegEx(id) =>
-        nonFqID(id)
-          .replace(s"$INDY_CRED_DEF_ID_PREFIX:$SOV_LEDGER_NAME:did:$SOV_LEDGER_NAME:", "")
-          .replace(s"$INDY_SCHEMA_ID_PREFIX:$SOV_LEDGER_NAME:did:$SOV_LEDGER_NAME:", "")
-      case other                =>
-        id
-    }
-  }
-
-  val fqIdRegEx = s"$DID_PREFIX:$TEST_INDY_SOVRIN_NAMESPACE:(.*)".r
-  val fqSchemaIdRegEx = s"$INDY_SCHEMA_ID_PREFIX:$DEFAULT_VDR_NAMESPACE:did:$DEFAULT_VDR_NAMESPACE:(.*)".r
-  val fqCredDefIdRegEx = s"$INDY_CRED_DEF_ID_PREFIX:$DEFAULT_VDR_NAMESPACE:(.*)".r
-
-  def toFqId(id: String): String =
-    VDRUtil.toFqDID(id, TEST_INDY_SOVRIN_NAMESPACE)
 }

@@ -382,7 +382,8 @@ class PresentProof(implicit val ctx: PresentProofContext)
               )
             )
           }
-        case Failure(e) => signal(
+        case Failure(e) =>
+          signal(
           Sig.buildProblemReport(s"Ledger assets unavailable -- ${e.getMessage}", ledgerAssetsUnavailable)
         )
 
@@ -469,7 +470,7 @@ class PresentProof(implicit val ctx: PresentProofContext)
     }
 
     def doSchemaRetrieval(ids: Set[String])(handler: Try[String] => Unit): Unit = {
-      ctx.ledger.resolveSchemas(ids) {
+      ctx.ledger.resolveSchemas(ids.map(ctx.ledger.fqSchemaId(_, None))) {
         case Success(schemas) if schemas.size == ids.size =>
           val retrievedSchemasJson = schemas.map { schema =>
             s""""${schema.fqId}": ${schema.json}"""
@@ -483,10 +484,10 @@ class PresentProof(implicit val ctx: PresentProofContext)
 
     def doCredDefRetrieval(schemas: String, credDefIds: Set[String])
                           (handler: Try[(String, String)] => Unit): Unit = {
-      ctx.ledger.resolveCredDefs(credDefIds) {
+      ctx.ledger.resolveCredDefs(credDefIds.map(ctx.ledger.fqCredDefId(_, None))) {
         case Success(credDefs) if credDefs.size == ids.size =>
           val retrievedCredDefJson = credDefs.map { credDef =>
-            s""""${credDef.fqId}": ${credDef.json}"""
+            s""""${ctx.ledger.fqCredDefId(credDef.fqId, None)}": ${credDef.json}"""
           }.mkString("{", ",", "}")
           handler(Success((schemas, retrievedCredDefJson)))
         case Success(_) => throw new Exception("Unable to retrieve cred def from ledger")

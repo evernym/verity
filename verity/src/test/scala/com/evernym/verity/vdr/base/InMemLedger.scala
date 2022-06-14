@@ -7,11 +7,11 @@ import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25
 import com.evernym.verity.protocol.testkit.MockLedger.INDY_ENDORSEMENT
 import com.evernym.verity.vdr.VDRUtil.extractNamespace
 import com.evernym.verity.vdr._
+import org.json.JSONObject
 
 
 //base implementation for any VDR based mock ledgers (Indy, Cheqd etc)
 trait InMemLedger {
-  def defaultNamespace: Namespace
 
   def allSupportedNamespaces: List[Namespace]
 
@@ -28,7 +28,7 @@ trait InMemLedger {
                        fqSchemaId: FqSchemaId,
                        submitterDid: VdrDid,
                        endorser: Option[String]): PreparedTxnResult = {
-    isFqSchemaId(fqSchemaId, submitterDid)
+    checkSchemaId(fqSchemaId)
     val submitterNamespace = extractNamespace(Option(submitterDid), None)
     val schema = TestVDRSchema(submitterDid, fqSchemaId, txnSpecificParams)
     val jsonPayload = JacksonMsgCodec.toJson(schema)
@@ -39,7 +39,7 @@ trait InMemLedger {
                         fQCredDefId: FqCredDefId,
                         submitterDid: VdrDid,
                         endorser: Option[String]): PreparedTxnResult = {
-    isFqCredDefId(fQCredDefId, submitterDid)
+    checkCredDefId(fQCredDefId)
     val namespace = extractNamespace(Option(submitterDid), None)
     val credDef = TestVDRCredDef(submitterDid, fQCredDefId, extractSchemaId(txnSpecificParams), txnSpecificParams)
     val jsonPayload = JacksonMsgCodec.toJson(credDef)
@@ -51,7 +51,9 @@ trait InMemLedger {
     node.get("payloadType").asText() match {
       case "schema" =>
         val s = JacksonMsgCodec.fromJson[TestVDRSchema](new String(txnBytes))
-        schemas = schemas + (s.schemaId -> s.json.getBytes)
+        val schemaJson = new JSONObject(s.json)
+        schemaJson.put("seqNo", 10)
+        schemas = schemas + (s.schemaId -> schemaJson.toString.getBytes)
 
       case "creddef" =>
         val cd = JacksonMsgCodec.fromJson[TestVDRCredDef](new String(txnBytes))
@@ -63,37 +65,15 @@ trait InMemLedger {
     "{}"
   }
 
-  def isFqSchemaId(schemaId: String): Unit = {
-    if (! schemaId.startsWith("schema:indy:sovrin:") && ! schemaId.startsWith("schema:sov:"))
-      throw new RuntimeException(s"non fully qualified schema id: $schemaId")
-  }
-
-  def isFqCredDefId(credDefId: String): Unit = {
-    if (! credDefId.startsWith("creddef:indy:sovrin:") && ! credDefId.startsWith("creddef:sov:"))
-      throw new RuntimeException(s"non fully qualified cred def id: $credDefId")
-  }
-
-  def isFqSchemaId(schemaId: String, issuerDid: FqDID): Unit = {
-    if (VDRUtil.toFqSchemaId(schemaId, Option(issuerDid), None) != schemaId)
-      throw new RuntimeException(s"non fully qualified schema id: $schemaId")
-  }
-
-  def isFqCredDefId(credDefId: String, issuerDid: FqDID): Unit = {
-    if (VDRUtil.toFqCredDefId(credDefId, Option(issuerDid), None) != credDefId)
-      throw new RuntimeException(s"non fully qualified cred def id: $credDefId")
-  }
-
   def resolveSchema(fqSchemaId: FqSchemaId): VdrSchema = {
-    isFqSchemaId(fqSchemaId)
-    val data = schemas.getOrElse(fqSchemaId, throw new RuntimeException("schema not found for given id: " +
-      fqSchemaId + s" (available schemas: ${schemas.keys.mkString(", ")})"))
+    checkSchemaId(fqSchemaId)
+    val data = schemas.getOrElse(fqSchemaId, throw new RuntimeException("schema not found for given id: " + fqSchemaId))
     new String(data)
   }
 
   def resolveCredDef(fqCredDefId: FqCredDefId): VdrCredDef = {
-    isFqCredDefId(fqCredDefId)
-    val data = credDefs.getOrElse(fqCredDefId, throw new RuntimeException("cred def not found for given id: " +
-      fqCredDefId + s" (available cred defs: ${credDefs.keys.mkString(", ")})"))
+    checkCredDefId(fqCredDefId)
+    val data = credDefs.getOrElse(fqCredDefId, throw new RuntimeException("cred def not found for given id: " + fqCredDefId))
     new String(data)
   }
 
@@ -112,6 +92,27 @@ trait InMemLedger {
     val node = JacksonMsgCodec.docFromStrUnchecked(json)
     node.get("schemaId").asText()
   }
+
+  def checkSchemaId(schemaId: String): Unit = {
+    if (! schemaId.startsWith("did:indy:"))
+      throw new RuntimeException(s"non fully qualified schema id: $schemaId")
+  }
+
+  def checkCredDefId(credDefId: String): Unit = {
+    if (! credDefId.startsWith("did:"))
+      throw new RuntimeException(s"non fully qualified cred def id: $credDefId")
+  }
+
+  //  def isFqSchemaId(schemaId: String, issuerDid: FqDID): Unit = {
+  //    if (VDRUtil.toFqSchemaId_v0(schemaId, Option(issuerDid), None) != schemaId)
+  //      throw new RuntimeException(s"non fully qualified schema id: $schemaId")
+  //  }
+  //
+  //  def isFqCredDefId(credDefId: String, issuerDid: FqDID): Unit = {
+  //    if (VDRUtil.toFqCredDefId_v0(credDefId, Option(issuerDid), None) != credDefId)
+  //      throw new RuntimeException(s"non fully qualified cred def id: $credDefId")
+  //  }
+
 
   private var schemas: Map[FqSchemaId, Payload] = Map.empty
   private var credDefs: Map[FqCredDefId, Payload] = Map.empty

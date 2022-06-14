@@ -11,7 +11,7 @@ trait LedgerAccess {
 
   def walletAccess: WalletAccess
 
-  def getIndyDefaultLegacyPrefix(): String
+  def vdrUnqualifiedLedgerPrefix(): String
 
   //new vdr apis
   def prepareSchemaTxn(schemaJson: String,
@@ -45,9 +45,11 @@ trait LedgerAccess {
 
   def fqDID(did: String): FqDID
 
-  def fqSchemaId(schemaId: String, issuerFqDID: Option[FqDID]): FqSchemaId
+  def fqSchemaId(schemaId: String,
+                 issuerFqDID: Option[FqDID]): FqSchemaId
 
-  def fqCredDefId(credDefId: String, issuerFqDID: Option[FqDID]): FqCredDefId
+  def fqCredDefId(credDefId: String,
+                  issuerFqDID: Option[FqDID]): FqCredDefId
 }
 
 case class LedgerRejectException(msg: String) extends Exception(msg)

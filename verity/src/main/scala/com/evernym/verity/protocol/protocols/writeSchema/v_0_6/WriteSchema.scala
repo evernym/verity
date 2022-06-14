@@ -55,9 +55,9 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
       val fqSubmitterDID = ctx.ledger.fqDID(_submitterDID(init))
       ctx.wallet.createSchema(fqSubmitterDID, m.name, m.version, seqToJson(m.attrNames)) {
         case Success(schemaCreated: SchemaCreatedResult) =>
-          val fqSchemaId = ctx.ledger.fqSchemaId(schemaCreated.schemaId, Option(fqSubmitterDID))
+          val fqSchemaId = schemaCreated.schemaId
           writeSchemaToLedger(fqSubmitterDID, fqSchemaId, schemaCreated.schemaJson) {
-            case Success(SubmittedTxn(_)) =>
+            case Success(SubmittedTxn(resp)) =>
               ctx.apply(SchemaWritten(fqSchemaId))
               ctx.signal(StatusReport(fqSchemaId))
             case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(fqSubmitterDID, e) =>
@@ -65,14 +65,14 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
               val fqEndorserDID = ctx.ledger.fqDID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
               //NOTE: below code is assuming verity is only supporting indy ledgers,
               // it should be changed when verity starts supporting different types of ledgers
-              val indyLedgerPrefix = ctx.ledger.getIndyDefaultLegacyPrefix()
-              ctx.endorser.withCurrentEndorser(indyLedgerPrefix) {
+              val ledgerPrefix = ctx.ledger.vdrUnqualifiedLedgerPrefix()
+              ctx.endorser.withCurrentEndorser(ledgerPrefix) {
                 case Success(Some(endorser)) if fqEndorserDID.isEmpty || fqEndorserDID.contains(endorser.did) =>
-                  ctx.logger.info(s"registered endorser to be used for schema endorsement (ledger prefix: $indyLedgerPrefix): " + endorser)
+                  ctx.logger.info(s"registered endorser to be used for schema endorsement (ledger prefix: $ledgerPrefix): " + endorser)
                   //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
                   prepareTxnForEndorsement(fqSubmitterDID, fqSchemaId, schemaCreated.schemaJson, endorser.did) {
                     case Success(ledgerRequest) =>
-                      ctx.endorser.endorseTxn(ledgerRequest, indyLedgerPrefix) {
+                      ctx.endorser.endorseTxn(ledgerRequest, ledgerPrefix) {
                         case Failure(exception) => problemReport(exception)
                         case Success(value) => ctx.apply(AskedForEndorsement(schemaCreated.schemaId, ledgerRequest))
                       }
@@ -80,7 +80,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
                   }
 
                 case other =>
-                  ctx.logger.info(s"no active/matched endorser found to be used for schema endorsement (ledger prefix: $indyLedgerPrefix): " + other)
+                  ctx.logger.info(s"no active/matched endorser found to be used for schema endorsement (ledger prefix: $ledgerPrefix): " + other)
                   //any failure while getting active endorser, or no active endorser or active endorser is NOT the same as given/configured endorserDID
                   prepareTxnForEndorsement(fqSubmitterDID, fqSchemaId, schemaCreated.schemaJson, fqEndorserDID) {
                     case Success(data: TxnForEndorsement) =>
@@ -109,12 +109,10 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
       .prepareSchemaTxn(
         schemaJson,
         fqSchemaId,
-        ctx.ledger.fqDID(fqSubmitterDID),
+        fqSubmitterDID,
         None) {
         case Success(pt: PreparedTxn) =>
-          //NOTE: once new version of issuer-setup protocol (which supports fq DID) is created/used
-          // the `signerDid` logic in below call will require change
-          ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID))) {
+          signPreparedTxn(pt, fqSubmitterDID) {
             case Success(smr: SignedMsgResult) =>
               ctx.ledger.submitTxn(pt, smr.signatureResult.signature, Array.empty)(handleResult)
             case Failure(ex) =>
@@ -135,15 +133,14 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
         .prepareSchemaTxn(
           schemaJson,
           fqSchemaId,
-          ctx.ledger.fqDID(fqSubmitterDID),
+          fqSubmitterDID,
           Option(fqEndorserDid)) {
           case Success(pt: PreparedTxn) =>
-            //TODO (VE-3368): will signing api won't allow fq identifier (see below)
-            ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID))) {
+            signPreparedTxn(pt, fqSubmitterDID) {
               case Success(smr: SignedMsgResult) =>
-                //TODO (VE-3368): what about other endorsementSpecType (cheqd etc)
+                //NOTE: what about other endorsementSpecType (cheqd etc)
                 if (pt.isEndorsementSpecTypeIndy) {
-                  val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(ctx.ledger.fqDID(fqSubmitterDID) -> smr.signatureResult.toBase64))
+                  val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(fqSubmitterDID -> smr.signatureResult.toBase64))
                   handleResult(Success(txn))
                 } else {
                   handleResult(Failure(new RuntimeException("endorsement spec type not supported: " + pt.endorsementSpec)))
@@ -172,6 +169,18 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
     ctx.logger.error(e.toString)
     ctx.apply(WriteFailed(Option(e.getMessage).getOrElse("unknown error")))
     ctx.signal(ProblemReport(e.toString))
+  }
+
+  //NOTE: handling legacy and new fqSubmitterDID (as legacy one would NOT have been created in wallet with namespace prefix)
+  private def signPreparedTxn(pt: PreparedTxn,
+                              fqSubmitterDID: FqDID)
+                             (handleResult: Try[SignedMsgResult] => Unit): Unit = {
+    ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(fqSubmitterDID)) {
+      case Success(resp) =>
+        handleResult(Try(resp))
+      case Failure(_) =>
+        ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID)))(handleResult)
+    }
   }
 
   private def _submitterDID(init: State.Initialized): DidStr =

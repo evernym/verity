@@ -28,7 +28,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.{Interval, Timeout}
 
-import java.time.Instant
+import java.time.{Instant, LocalDate}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
@@ -48,16 +48,16 @@ class LegacyIndySpec
 
   var trusteeWallet = new TestWallet(ec, createWallet = true, system)
   var trusteeKey: NewKeyCreated = trusteeWallet.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000Trustee1")))
-  var trusteeFqDid: FqDID = VDRUtil.toFqDID(trusteeKey.did, INDY_NAMESPACE)
+  var trusteeFqDid: FqDID = VDRUtil.toFqDID(trusteeKey.did, UNQUALIFIED_LEDGER_PREFIX, legacyLedgerPrefixMapping)
 
   var issuerWallet = new TestWallet(ec, createWallet = true, system)
   var issuerKey: NewKeyCreated = issuerWallet.executeSync[NewKeyCreated](CreateNewKey())
-  var issuerFqDid: FqDID = VDRUtil.toFqDID(issuerKey.did, INDY_NAMESPACE)
+  var issuerFqDid: FqDID = VDRUtil.toFqDID(issuerKey.did, UNQUALIFIED_LEDGER_PREFIX, legacyLedgerPrefixMapping)
   var issuerSubmitter: Submitter = Submitter(issuerKey.did, Some(issuerWallet.wap))
 
   val holderWallet = new TestWallet(ec, createWallet = true, system)
   var holderKey: NewKeyCreated = holderWallet.executeSync[NewKeyCreated](CreateNewKey())
-  var holderFqDid: FqDID = VDRUtil.toFqDID(holderKey.did, INDY_NAMESPACE)
+  var holderFqDid: FqDID = VDRUtil.toFqDID(holderKey.did, UNQUALIFIED_LEDGER_PREFIX, legacyLedgerPrefixMapping)
 
   val legacyLedgerUtil: LegacyLedgerUtil = LedgerClient.buildLedgerUtil(
     config = new TestAppConfig(newConfig = Option(baseConfig), clearValidators = true),
@@ -171,7 +171,9 @@ class LegacyIndySpec
     Await.result(f, 15.seconds)
   }
 
-  lazy val INDY_NAMESPACE = "sov"
+  lazy val INDY_NAMESPACE = "indy:sovrin"
+  lazy val UNQUALIFIED_LEDGER_PREFIX = s"did:$INDY_NAMESPACE"
+  lazy val legacyLedgerPrefixMapping = Map("did:sov" -> UNQUALIFIED_LEDGER_PREFIX)
 
   lazy val baseConfig: Config = {
     ConfigFactory.parseString(
@@ -201,7 +203,7 @@ class LegacyIndySpec
          |            "1.0.0" {
          |               "digest" = "a0ab0aada7582d4d211bf9355f36482e5cb33eeb46502a71e6cc7fea57bb8305"
          |               "mechanism" = "on_file"
-         |               "time-of-acceptance" = "2022-03-25"
+         |               "time-of-acceptance" = ${LocalDate.now().toString}
          |             }
          |          }
          |        }
@@ -219,7 +221,7 @@ class LegacyIndySpec
          |
          |  }
          |  vdr {
-         |    legacy-default-namespace = "$INDY_NAMESPACE"
+         |    unqualified-ledger-prefix = "$UNQUALIFIED_LEDGER_PREFIX"
          |    ledgers: [
          |      {
          |        type = "indy"

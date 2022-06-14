@@ -21,7 +21,7 @@ import com.evernym.verity.texter.SMSSender
 
 import scala.concurrent.{ExecutionContext, Future}
 import com.evernym.verity.transports.MsgSendingSvc
-import com.evernym.verity.vdr.base.DEFAULT_VDR_NAMESPACE
+import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockVdrToolsBuilder, VDRAdapter}
 import com.evernym.verity.vdr.service.VDRToolsFactory
 
@@ -48,7 +48,11 @@ class MockAgentActorContext(val system: ActorSystem,
 
   override lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, executionContext)
 
-  lazy val ledgerRegistry: MockLedgerRegistry = MockLedgerRegistry(DEFAULT_VDR_NAMESPACE, List(MockIndyLedger(DEFAULT_VDR_NAMESPACE, List(DEFAULT_VDR_NAMESPACE), "genesis.txn file path", None)))  //TODO: finalize this
+  lazy val ledgerRegistry: MockLedgerRegistry = MockLedgerRegistry(
+    List(
+      MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None)
+    )
+  )  //TODO: finalize this
 
   override lazy val vdrBuilderFactory: VDRToolsFactory = () => new MockVdrToolsBuilder(ledgerRegistry)
 

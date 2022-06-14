@@ -5,64 +5,51 @@ import com.evernym.verity.testkit.BasicSpec
 class VDRUtilSpec
   extends BasicSpec {
 
-  val namespaces = List("sov", "indy:sovrin", "indy:sovrin:stage", "indy:sovrin:builder")
+  val vdrUnqualifiedLedgerPrefixes: Seq[VdrDid] = List("did:indy:sovrin", "did:indy:sovrin:stage", "did:indy:sovrin:builder")
+  val unqualifiedIssuerDid = "2wJPyULfLLnYTEFYzByfUR"
+  val schemaName = "degree"
+  val schemaVersion = "1.0"
+  val schemaSeqNo = 10
+  val credDefTag = "tag1"
 
   "VDRUtil" - {
     "when tried to extract information from fq did" - {
       "should be successful" in {
-        namespaces.foreach { namespace =>
-          val fqId = VDRUtil.toFqDID("2wJPyULfLLnYTEFYzByfUR", namespace)
-          VDRUtil.extractNamespace(Option(fqId), Option("sov")) shouldBe namespace
-          VDRUtil.extractUnqualifiedDidStr(fqId) shouldBe "2wJPyULfLLnYTEFYzByfUR"
+        vdrUnqualifiedLedgerPrefixes.foreach { vdrUnqualifiedLedgerPrefix =>
+          val fqId = VDRUtil.toFqDID(unqualifiedIssuerDid, vdrUnqualifiedLedgerPrefix, Map("did:sov" -> "did:indy:sovrin"))
+          VDRUtil.toFqDID(fqId, vdrUnqualifiedLedgerPrefix, Map("did:sov" -> "did:indy:sovrin")) shouldBe fqId
+          fqId shouldBe s"$vdrUnqualifiedLedgerPrefix:$unqualifiedIssuerDid"
+          VDRUtil.extractNamespace(Option(fqId), Option(vdrUnqualifiedLedgerPrefix)) shouldBe vdrUnqualifiedLedgerPrefix.replace("did:", "")
+          VDRUtil.extractUnqualifiedDidStr(fqId) shouldBe unqualifiedIssuerDid
         }
       }
     }
 
     "when tried to extract information from fq schema id" - {
       "should be successful" in {
-        namespaces.foreach { namespace =>
-          val issuerFqDid = VDRUtil.toFqDID("2wJPyULfLLnYTEFYzByfUR", namespace)
-          val fqSchemaId = VDRUtil.toFqSchemaId("2wJPyULfLLnYTEFYzByfUR:2:name:1.0", Option(issuerFqDid), Option("sov"))
-          VDRUtil.extractNamespace(Option(fqSchemaId), Option("sov")) shouldBe namespace
+        vdrUnqualifiedLedgerPrefixes.foreach { vdrUnqualifiedLedgerPrefix =>
+          List(s"$unqualifiedIssuerDid:2:$schemaName:$schemaVersion",
+            s"$vdrUnqualifiedLedgerPrefix:$unqualifiedIssuerDid/anoncreds/v0/SCHEMA/$schemaName/$schemaVersion").foreach { schemaId =>
+            val issuerFqDid = VDRUtil.toFqDID(unqualifiedIssuerDid, vdrUnqualifiedLedgerPrefix, Map("did:sov" -> "did:indy:sovrin"))
+            val fqSchemaId = VDRUtil.toFqSchemaId_v0(schemaId, Option(issuerFqDid), Option(vdrUnqualifiedLedgerPrefix))
+            VDRUtil.toFqSchemaId_v0(fqSchemaId, Option(issuerFqDid), Option(vdrUnqualifiedLedgerPrefix)) shouldBe fqSchemaId
+            fqSchemaId shouldBe s"$vdrUnqualifiedLedgerPrefix:$unqualifiedIssuerDid/anoncreds/v0/SCHEMA/$schemaName/$schemaVersion"
+            VDRUtil.extractNamespace(Option(fqSchemaId), Option(vdrUnqualifiedLedgerPrefix)) shouldBe vdrUnqualifiedLedgerPrefix.replace("did:", "")
+          }
         }
       }
     }
 
     "when tried to extract information from fq cred def id" - {
       "should be successful" in {
-        namespaces.foreach { namespace =>
-          val issuerFqDid = VDRUtil.toFqDID("2wJPyULfLLnYTEFYzByfUR", namespace)
-          val fqCredDefId = VDRUtil.toFqCredDefId("2wJPyULfLLnYTEFYzByfUR:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1", Option(issuerFqDid), Option("sov"))
-          VDRUtil.extractNamespace(Option(fqCredDefId), Option("sov")) shouldBe namespace
-        }
-      }
-    }
-
-    "when tried make fqDID" - {
-      "should be successful" in {
-        namespaces.foreach { namespace =>
-          VDRUtil.toFqDID("2wJPyULfLLnYTEFYzByfUR", namespace) shouldBe s"did:$namespace:2wJPyULfLLnYTEFYzByfUR"
-        }
-      }
-    }
-
-    "when tried make fqSchemaId" - {
-      "should be successful" in {
-        namespaces.foreach { issuerNamespace =>
-          val issuerDid = s"did:$issuerNamespace:2wJPyULfLLnYTEFYzByfUR"
-          namespaces.foreach { legacyDefaultNamespace =>
-            VDRUtil.toFqSchemaId("2wJPyULfLLnYTEFYzByfUR:2:name:1.0", Option(issuerDid), Option(legacyDefaultNamespace)) shouldBe s"schema:$issuerNamespace:did:$issuerNamespace:2wJPyULfLLnYTEFYzByfUR:2:name:1.0"
-          }
-        }
-      }
-    }
-
-    "when tried make fqCredDefId" - {
-      "should be successful" in {
-        namespaces.foreach { issuerNamespace =>
-          val issuerDid = s"did:$issuerNamespace:2wJPyULfLLnYTEFYzByfUR"
-          namespaces.foreach { legacyDefaultNamespace =>
-            VDRUtil.toFqCredDefId("2wJPyULfLLnYTEFYzByfUR:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1", Option(issuerDid), Option(legacyDefaultNamespace)) shouldBe s"creddef:$issuerNamespace:did:$issuerNamespace:2wJPyULfLLnYTEFYzByfUR:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1"
+        vdrUnqualifiedLedgerPrefixes.foreach { vdrUnqualifiedLedgerPrefix =>
+          List(s"$unqualifiedIssuerDid:3:CL:$schemaSeqNo:$credDefTag",
+            s"$vdrUnqualifiedLedgerPrefix:$unqualifiedIssuerDid/anoncreds/v0/CLAIM_DEF/$schemaSeqNo/$credDefTag").foreach { credDefId =>
+            val issuerFqDid = VDRUtil.toFqDID(unqualifiedIssuerDid, vdrUnqualifiedLedgerPrefix, Map("did:sov" -> "did:indy:sovrin"))
+            val fqCredDefId = VDRUtil.toFqCredDefId_v0(credDefId, Option(issuerFqDid), Option(vdrUnqualifiedLedgerPrefix))
+            VDRUtil.toFqCredDefId_v0(fqCredDefId, Option(issuerFqDid), Option(vdrUnqualifiedLedgerPrefix)) shouldBe fqCredDefId
+            fqCredDefId shouldBe s"$vdrUnqualifiedLedgerPrefix:$unqualifiedIssuerDid/anoncreds/v0/CLAIM_DEF/$schemaSeqNo/$credDefTag"
+            VDRUtil.extractNamespace(Option(fqCredDefId), Option(vdrUnqualifiedLedgerPrefix)) shouldBe vdrUnqualifiedLedgerPrefix.replace("did:", "")
           }
         }
       }

@@ -14,7 +14,7 @@ import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicId
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{NeedsEndorsement, ProblemReport, StatusReport, Write}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.vdr.base.{DEFAULT_VDR_NAMESPACE, SOV_LEDGER_NAME}
+import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import com.evernym.verity.vdr.{FqCredDefId, MockIndyLedger, MockLedgerRegistry, MockVdrTools, Namespace, TxnResult}
 import com.typesafe.config.{Config, ConfigValueFactory}
 
@@ -113,7 +113,12 @@ class WriteSchemaEndorsementSpec
       .withValue("verity.eventing.basic-source.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
       .withValue("verity.eventing.basic-source.topics", ConfigValueFactory.fromIterable(List(TOPIC_REQUEST_ENDORSEMENT).asJava))
 
-  val dummyVdrTools = new DummyVdrTools(MockLedgerRegistry(SOV_LEDGER_NAME, List(MockIndyLedger(DEFAULT_VDR_NAMESPACE, List(DEFAULT_VDR_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext)
+  val dummyVdrTools = new DummyVdrTools(
+    MockLedgerRegistry(
+      List(
+        MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None)
+      )
+    ))(futureExecutionContext)
 
   override lazy val executionContextProvider: ExecutionContextProvider = TestExecutionContextProvider.ecp
   override lazy val futureExecutionContext: ExecutionContext = executionContextProvider.futureExecutionContext

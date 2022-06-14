@@ -1,8 +1,6 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Offer, Request, Status}
@@ -26,7 +24,7 @@ abstract class IssueCredSpecBase
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
-  def createTest1CredDef: String = "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1"
+  def createTest1CredDef: String = "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1"
 
   val orgName = "Acme Corp"
   val logoUrl = "https://robohash.org/234"

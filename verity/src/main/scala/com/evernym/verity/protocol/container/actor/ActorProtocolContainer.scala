@@ -312,7 +312,8 @@ class ActorProtocolContainer[
   implicit def asyncOpRunner: AsyncOpRunner = this
 
 
-  lazy val vdrDefaultNamespace: String = appConfig.getStringReq(VDR_LEGACY_DEFAULT_NAMESPACE)
+  lazy val vdrUnqualifiedLedgerPrefix: String = appConfig.getStringReq(VDR_UNQUALIFIED_LEDGER_PREFIX)
+  lazy val vdrLegacyLedgerPrefixMappings: Map[String, String] = appConfig.getMap(VDR_LEGACY_LEDGER_PREFIX_MAPPINGS)
 
   override lazy val wallet =
     new WalletAccessAdapter(
@@ -325,7 +326,8 @@ class ActorProtocolContainer[
       agentActorContext.vdrAdapter,
       agentActorContext.vdrCache,
       wallet,
-      vdrDefaultNamespace
+      vdrUnqualifiedLedgerPrefix,
+      vdrLegacyLedgerPrefixMappings
     )
 
   override lazy val endorser =

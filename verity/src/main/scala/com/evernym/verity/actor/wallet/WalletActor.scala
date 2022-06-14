@@ -361,7 +361,7 @@ case class CredReqCreated(credReqJson: String, credReqMetadataJson: String) exte
 
 case class CredCreated(cred: String) extends WalletCmdSuccessResponse
 
-case class CredStored(cred: String) extends WalletCmdSuccessResponse
+case class CredStored(credId: String) extends WalletCmdSuccessResponse
 
 case class CredForProofReqCreated(cred: String) extends WalletCmdSuccessResponse
 

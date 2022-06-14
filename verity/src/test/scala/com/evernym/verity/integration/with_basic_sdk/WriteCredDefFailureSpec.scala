@@ -14,10 +14,9 @@ import com.evernym.verity.ledger.LedgerSvcException
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6._
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{StatusReport => WriteSchemaStatusReport, Write => WriteSchema}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.{Write => WriteCredDef}
-import com.evernym.verity.protocol.testkit.MockLedger
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.vdr.base.{InMemLedger, DEFAULT_VDR_NAMESPACE}
+import com.evernym.verity.vdr.base.{INDY_SOVRIN_NAMESPACE, InMemLedger}
 import com.evernym.verity.vdr.service.VdrTools
 import com.evernym.verity.vdr.{FqCredDefId, FqDID, FqSchemaId, MockIndyLedger, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
 
@@ -34,7 +33,7 @@ class WriteCredDefFailureSpec
   override lazy val defaultSvcParam: ServiceParam =
     ServiceParam
       .empty
-      .withVdrTools(new DummyVdrTools(DEFAULT_VDR_NAMESPACE, MockIndyLedger(DEFAULT_VDR_NAMESPACE, List(DEFAULT_VDR_NAMESPACE), "genesis.txn file path", None))(futureExecutionContext))
+      .withVdrTools(new DummyVdrTools(MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None))(futureExecutionContext))
 
   lazy val issuerVerityApp = VerityEnvBuilder.default().build(VAS)
   lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext)
@@ -68,14 +67,18 @@ class WriteCredDefFailureSpec
   }
 
   //in-memory version of VDRTools to be used in tests unit/integration tests
-  class DummyVdrTools(namespace: String, ledger: InMemLedger)(implicit ec: ExecutionContext)
+  class DummyVdrTools(ledger: InMemLedger)(implicit ec: ExecutionContext)
     extends VdrTools {
 
     //TODO: as we add/integrate actual VDR apis and their tests,
     // this class should evolve to reflect the same for its test implementation
 
     override def ping(namespaces: List[Namespace]): Future[Map[String, VdrResults.PingResult]] = {
-      Future.successful(Map(namespace -> new VdrResults.PingResult("0", "SUCCESS")))
+      Future.successful(
+        namespaces.map { namespace =>
+          namespace -> new VdrResults.PingResult("0", "SUCCESS")
+        }.toMap
+      )
     }
 
     override def prepareSchema(txnSpecificParams: TxnSpecificParams,
@@ -83,7 +86,7 @@ class WriteCredDefFailureSpec
                                endorser: Option[String]): Future[PreparedTxnResult] = {
       val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams)
       val id = json.get("id").asText
-      Future.successful(ledger.prepareSchemaTxn(txnSpecificParams, MockLedger.fqSchemaID(id, Option(submitterDid)), submitterDid, endorser))
+      Future.successful(ledger.prepareSchemaTxn(txnSpecificParams, id, submitterDid, endorser))
     }
 
     override def submitTxn(namespace: Namespace,

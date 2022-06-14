@@ -3,10 +3,10 @@ package com.evernym.verity.vdr
 import akka.actor.typed.scaladsl.adapter._
 import akka.testkit.TestKitBase
 import com.evernym.verity.actor.testkit.HasBasicActorSystem
-import com.evernym.verity.protocol.testkit.MockLedger.TEST_INDY_SOVRIN_NAMESPACE
+import com.evernym.verity.protocol.testkit.MockLedger.{TEST_INDY_LEDGER_PREFIX, TEST_INDY_SOVRIN_NAMESPACE, legacyLedgerPrefixMappings}
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.vdr.base.{DEFAULT_VDR_NAMESPACE, TestVDRDidDoc}
+import com.evernym.verity.vdr.base.TestVDRDidDoc
 import com.evernym.verity.vdr.service.{IndyLedger, Ledger, VDRToolsConfig}
 import org.json.JSONObject
 import org.scalatest.BeforeAndAfterEach
@@ -24,7 +24,7 @@ class VDRActorAdapterSpec
     with Eventually
     with BeforeAndAfterEach {
 
-  var testLedgerRegistry: MockLedgerRegistry = MockLedgerRegistry(DEFAULT_VDR_NAMESPACE)
+  var testLedgerRegistry: MockLedgerRegistry = MockLedgerRegistry()
 
   override protected def afterEach(): Unit = {
     testLedgerRegistry.cleanup()
@@ -84,14 +84,14 @@ class VDRActorAdapterSpec
           Await.result(
             vdrAdapter.prepareSchemaTxn(
               "{}",
-              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1",
               "did1",
               None
             ),
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "could not extract namespace: did1"
+        ex.getMessage shouldBe "could not extract namespace for given identifier: Some(did1) (vdrUnqualifiedLedgerPrefix: None)"
       }
     }
 
@@ -102,14 +102,14 @@ class VDRActorAdapterSpec
           Await.result(
             vdrAdapter.prepareSchemaTxn(
               "{}",
-              "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+              "F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/schema-name/1.2.3",
               "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
               None
             ),
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "non fully qualified schema id: F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+        ex.getMessage shouldBe "non fully qualified schema id: F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/schema-name/1.2.3"
       }
     }
 
@@ -119,7 +119,7 @@ class VDRActorAdapterSpec
         Await.result(
           vdrAdapter.prepareSchemaTxn(
             "{}",
-            "schema:indy:sovrin:did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           ),
@@ -134,7 +134,7 @@ class VDRActorAdapterSpec
         val result = for {
           preparedTxn <- vdrAdapter.prepareSchemaTxn(
             """{"field1":"value1"}""",
-            "schema:indy:sovrin:did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           )
@@ -152,7 +152,7 @@ class VDRActorAdapterSpec
         val result = for {
           preparedTxn <- vdrAdapter.prepareSchemaTxn(
             """{"field1":"value1"}""",
-            "schema:indy:sovrin:did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           )
@@ -173,7 +173,7 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "could not extract namespace: did1"
+        ex.getMessage shouldBe "could not extract namespace for given identifier: Some(did1) (vdrUnqualifiedLedgerPrefix: None)"
       }
     }
 
@@ -182,11 +182,11 @@ class VDRActorAdapterSpec
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val ex = intercept[RuntimeException] {
           Await.result(
-            vdrAdapter.resolveSchema("schema:indy:sovrin:did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"),
+            vdrAdapter.resolveSchema("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1"),
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "schema not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1 (available schemas: )"
+        ex.getMessage shouldBe "schema not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1"
       }
     }
 
@@ -196,17 +196,17 @@ class VDRActorAdapterSpec
         val result = for {
           preparedTxn <- vdrAdapter.prepareSchemaTxn(
             """{"field1":"value1"}""",
-            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           )
           _ <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
-          schema <- vdrAdapter.resolveSchema("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1")
+          schema <- vdrAdapter.resolveSchema("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1")
         } yield {
-          schema.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+          schema.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1"
           val json = new JSONObject(schema.json)
           json.getString("field1") shouldBe "value1"
-          json.getString("id") shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+          json.getString("id") shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1"
         }
         Await.result(result, apiTimeout)
       }
@@ -219,14 +219,14 @@ class VDRActorAdapterSpec
           Await.result(
             vdrAdapter.prepareCredDefTxn(
               """{"schemaId":"schema-id"}""",
-              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1 (validNamespaces: 'indy:sovrin, sov')",
+              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:/anoncreds/v0/CLAIM_DEF/466/cred-def-name",
               "did1",
               None
             ),
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid identifier: did1"
+        ex.getMessage shouldBe "could not extract namespace for given identifier: Some(did1) (vdrUnqualifiedLedgerPrefix: None)"
       }
     }
 
@@ -237,14 +237,14 @@ class VDRActorAdapterSpec
           Await.result(
             vdrAdapter.prepareCredDefTxn(
               """{"schemaId":"schema-id"}""",
-              "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+              "F72i3Y3Q4i466efjYJYCHM:/anoncreds/v0/CLAIM_DEF/466/cred-def-name",
               "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
               None
             ),
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid identifier: F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+        ex.getMessage shouldBe "non fully qualified cred def id: F72i3Y3Q4i466efjYJYCHM:/anoncreds/v0/CLAIM_DEF/466/cred-def-name"
       }
     }
 
@@ -290,7 +290,7 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid identifier: did1"
+        ex.getMessage shouldBe "could not extract namespace for given identifier: Some(did1) (vdrUnqualifiedLedgerPrefix: None)"
       }
     }
 
@@ -299,11 +299,11 @@ class VDRActorAdapterSpec
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val ex = intercept[RuntimeException] {
           Await.result(
-            vdrAdapter.resolveCredDef("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"),
+            vdrAdapter.resolveCredDef("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/CLAIM_DEF/466/cred-def-name"),
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "cred def not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1 (available cred defs: )"
+        ex.getMessage shouldBe "cred def not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/CLAIM_DEF/466/cred-def-name"
       }
     }
 
@@ -312,19 +312,19 @@ class VDRActorAdapterSpec
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val result = for {
           preparedTxn <- vdrAdapter.prepareCredDefTxn(
-            """{"schemaId":"schema-id"}""",
-            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            """{"schemaId":"did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1"}""",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/CLAIM_DEF/466/cred-def-name",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           )
           _ <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
-          credDef <- vdrAdapter.resolveCredDef("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1")
+          credDef <- vdrAdapter.resolveCredDef("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/CLAIM_DEF/466/cred-def-name")
         } yield {
-          credDef.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
-          credDef.fqSchemaId shouldBe "schema-id"
+          credDef.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/CLAIM_DEF/466/cred-def-name"
+          credDef.fqSchemaId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1"
           val json = new JSONObject(credDef.json)
-          json.getString("schemaId") shouldBe "schema-id"
-          json.getString("id") shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+          json.getString("schemaId") shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1"
+          json.getString("id") shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/CLAIM_DEF/466/cred-def-name"
         }
         Await.result(result, apiTimeout)
       }
@@ -339,7 +339,7 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid identifier: did1"
+        ex.getMessage shouldBe "could not extract namespace for given identifier: Some(did1) (vdrUnqualifiedLedgerPrefix: None)"
       }
     }
 
@@ -388,7 +388,7 @@ class VDRActorAdapterSpec
 
     val testVdrToolsBuilder = new MockVdrToolsBuilder(testLedgerRegistry)
     val testVDRToolsFactory = { () => testVdrToolsBuilder }
-    val vdrToolsConfig = VDRToolsConfig(TEST_INDY_SOVRIN_NAMESPACE, ledgers)
+    val vdrToolsConfig = VDRToolsConfig(TEST_INDY_LEDGER_PREFIX, legacyLedgerPrefixMappings, ledgers)
     new VDRActorAdapter(testVDRToolsFactory, vdrToolsConfig, None)(ec, system.toTyped)
   }
 

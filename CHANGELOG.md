@@ -28,6 +28,7 @@ Includes VDR Tools 0.8.4
 * [VE-3501] "/agency" api returning "forbidden"
 * [VE-3506] WalletActor: The system sometimes tried to register to a coordinator without acknowledgement
 * [VE-3521] Intermittent issues around write schema and cred def
+* [VE-3526] Fix a message to include only insensitive data
 
 
 # Release notes - Verity 2.17.4 release 11 April 2022

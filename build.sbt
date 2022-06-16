@@ -367,6 +367,8 @@ lazy val commonLibraryDependencies = {
     //"org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0",   //commented as seemed not used
 
     "org.iq80.leveldb" % "leveldb" % "0.12",      //used as alternate StorageAPI to S3
+
+    "org.json" % "json" % "20220320",
   )
 
   //for macro libraries that are compile-time-only
@@ -405,6 +407,7 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-http-spray-json" % akkaHttpVer,
     akkaGrp %% "akka-http-xml" % akkaHttpVer,
 
+    "org.apache.httpcomponents" % "httpcore" % "4.4.15",
   ).map(_ % "test")
 
   coreDeps ++ compileTimeOnlyDeps ++ testDeps

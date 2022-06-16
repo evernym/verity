@@ -8,7 +8,7 @@ import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import scalapb.GeneratedMessage
 
 /**
- * each actor incoming/outgoing command/response/message is supposed to extend from this base class
+ * each actor's incoming/outgoing command/response/message is supposed to extend from this base class
  * which helps choosing correct serializer/deserializer if that message needs to use
  * akka remoting (in other way, when a message has to cross a jvm boundary)
  */

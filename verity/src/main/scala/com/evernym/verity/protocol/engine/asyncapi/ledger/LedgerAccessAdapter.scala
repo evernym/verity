@@ -32,7 +32,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
 
   def getCredDef(credDefId: String)(handler: Try[GetCredDefResp] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      {getCredDefsBase(Set(credDefId)).map { r => r(credDefId)} },
+      {getCredDefsBase(Set(credDefId)).map { r => r(credDefId) }},
       handler
     )
   }
@@ -81,6 +81,8 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
       handler
     )
   }
+
+
 
   override def prepareSchemaTxn(schemaJson: String,
                                 fqSchemaId: FQSchemaId,
@@ -161,4 +163,6 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
   }
 
   override def walletAccess: WalletAccess = _walletAccess
+
+  override lazy val getIndyDefaultLegacyPrefix: String = ledgerSvc.getIndyDefaultLegacyPrefix()
 }

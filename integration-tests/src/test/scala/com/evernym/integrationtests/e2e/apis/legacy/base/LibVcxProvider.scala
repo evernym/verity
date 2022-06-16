@@ -52,7 +52,8 @@ trait LibVcxProvider
     None,
     executionContextProvider.futureExecutionContext,
     taa = ConfigUtil.findTAAConfig(appConfig, "1.0.0"),
-    genesisTxnPath = Option(genesisTxnFilePath)
+    genesisTxnPath = Option(genesisTxnFilePath),
+    system = system
   )
 
   def identityOwner(ownerName: IdentityOwnerName): IdentityOwner = {

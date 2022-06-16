@@ -23,7 +23,7 @@ trait WalletBackupAndRecoverySpec { this : EndpointHandlerBaseSpec =>
   // is already added before this test runs.
   def testWalletBackupAndRecovery(mockEdgeAgent: MockEdgeAgent, mockNewEdgeAgent: MockEdgeAgent): Unit = {
 
-    val walletBackupUtil = new WalletBackupSpecUtil(mockEdgeAgent, futureExecutionContext)
+    val walletBackupUtil = new WalletBackupSpecUtil(mockEdgeAgent, futureExecutionContext, system)
 
     implicit val msgPackagingContext: AgentMsgPackagingContext =
       agentmsg.AgentMsgPackagingContext(MPF_INDY_PACK, MTV_1_0, packForAgencyRoute = true)

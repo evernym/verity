@@ -61,7 +61,7 @@ val akkaMgtVer          = "1.1.3"
 val alpAkkaS3Ver        = "3.0.3"
 val alpAkkaKafkaVer     = "3.0.0"
 val akkaPersistence     = "1.2.0-RC2"
-val kamonVer            = "2.5.0"
+val kamonVer            = "2.5.1"
 val kanelaAgentVer      = "1.0.14"
 val cinnamonVer         = "2.16.2"
 val jacksonVer          = "2.13.2"
@@ -85,8 +85,8 @@ val COMPILE_TIME_ONLY = "compileonly"
 val CompileOnly = config(COMPILE_TIME_ONLY)
 
 val majorNum = "2"
-val minorNum = "17"
-val patchNum = "4"
+val minorNum = "18"
+val patchNum = "0"
 
 // I'm not sure why setting this keys don't resolve in all
 // other scopes but it does not so we re-resolve it commonSettings
@@ -101,6 +101,8 @@ ThisBuild / build := buildNum(
 ThisBuild / version := s"${major.value}.${minor.value}.${patch.value}.${build.value}"
 maintainer := "Evernym Inc <dev@evernym.com>"
 
+ThisBuild / javaOptions += s"-Djna.tmpdir=${target.value.getAbsolutePath}"
+ThisBuild / javaOptions += s"-Djava.io.tmpdir=${target.value.getAbsolutePath}"
 ThisBuild / sharedLibraries := sharedLibDeps
 ThisBuild / envRepos := Seq(evernymDevRepo, evernymUbuntuRepo)
 
@@ -131,6 +133,7 @@ lazy val integrationTests = (project in file("integration-tests"))
   .settings(
     name := "integration-tests",
     settings,
+    testSettings,
   ).dependsOn(verity % "test->test; compile->compile")
 
 lazy val settings = Seq(
@@ -233,6 +236,8 @@ lazy val packageSettings = Seq (
   )
 )
 
+lazy val protoSources = dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths
+lazy val protoTestSources = dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test")).absolutePaths
 lazy val protoBufSettings = Seq(
   // Must set deleteTargetDirectory to false. When set to true (the default) other generated sources in the
   // sourceManaged directory get deleted. For example, version.scala being generated below.
@@ -240,22 +245,25 @@ lazy val protoBufSettings = Seq(
 
   //this 'PB.includePaths' is to make import works
   //There are used .absolutePaths because after update sbt-protoc to 1.0.6 sbt produce warnings about relative paths
-  Compile / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths,
+  Compile / PB.includePaths ++= protoSources,
   Compile / PB.targets := Seq(
     scalapb.gen(flatPackage = true) -> (Compile / sourceManaged).value
   ),
   Compile / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths,
   Compile / sourceGenerators += SourceGenerator.generateVersionFile(major, minor, patch, build).taskValue,
-  // Since sbt-protoc 1.0.1 and later adds PB.protoSources to unmanagedResourceDirectories,
+
+  // Since sbt-protoc 1.0.1 and later adds PB.protoSources to unmanagedResourceDirectories and unmanagedSourceDirectories
   // we need to exclude all extra dirs that contains .scala files. Same for Test config.
-  Compile / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".scala"))(directory=file("verity/src/main/scala")).absolutePaths,
+  Compile / unmanagedResourceDirectories --= protoSources,
+  Compile / unmanagedSourceDirectories --= protoSources,
 
   Test / PB.includePaths ++= dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/main")).absolutePaths,
   Test / PB.targets := Seq(
     scalapb.gen(flatPackage = true) -> (Test / sourceManaged).value
   ),
-  Test / PB.protoSources := dirsContaining(_.getName.endsWith(".proto"))(directory=file("verity/src/test")).absolutePaths,
-  Test / unmanagedResourceDirectories --= dirsContaining(_.getName.endsWith(".scala"))(directory=file("verity/src/test/scala")).absolutePaths,
+  Test / PB.protoSources := protoTestSources,
+  Test / unmanagedResourceDirectories --= protoTestSources,
+  Test / unmanagedSourceDirectories --= protoTestSources,
   //
 )
 
@@ -359,6 +367,8 @@ lazy val commonLibraryDependencies = {
     //"org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0",   //commented as seemed not used
 
     "org.iq80.leveldb" % "leveldb" % "0.12",      //used as alternate StorageAPI to S3
+
+    "org.json" % "json" % "20220320",
   )
 
   //for macro libraries that are compile-time-only
@@ -383,7 +393,7 @@ lazy val commonLibraryDependencies = {
     "com.evernym.verity" % "verity-sdk" % veritySdkVer
       exclude ("com.evernym.vdrtools", "vdr-tools"),
 
-    "com.dimafeng" %% "testcontainers-scala-kafka" % "0.40.4",
+    "com.dimafeng" %% "testcontainers-scala-kafka" % "0.40.5",
 
     "org.pegdown" % "pegdown" % "1.6.0",
     "com.goterl" % "lazysodium-java" % "5.1.1",
@@ -397,6 +407,7 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-http-spray-json" % akkaHttpVer,
     akkaGrp %% "akka-http-xml" % akkaHttpVer,
 
+    "org.apache.httpcomponents" % "httpcore" % "4.4.15",
   ).map(_ % "test")
 
   coreDeps ++ compileTimeOnlyDeps ++ testDeps

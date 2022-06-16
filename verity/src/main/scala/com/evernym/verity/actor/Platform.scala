@@ -17,7 +17,6 @@ import com.evernym.verity.actor.node_singleton.NodeSingleton
 import com.evernym.verity.actor.resourceusagethrottling.tracking.ResourceUsageTracker
 import com.evernym.verity.actor.segmentedstates.SegmentedStateStore
 import com.evernym.verity.actor.url_mapper.UrlStore
-import com.evernym.verity.actor.wallet.WalletActor
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.{AppConfig, ConfigUtil}
 import com.evernym.verity.constants.ActorNameConstants._
@@ -32,12 +31,14 @@ import com.evernym.verity.actor.appStateManager.{AppStateManager, SDNotifyServic
 import com.evernym.verity.actor.metrics.activity_tracker.ActivityTracker
 import com.evernym.verity.actor.resourceusagethrottling.helper.UsageViolationActionExecutor
 import com.evernym.verity.actor.typed.base.UserGuardian
-import com.evernym.verity.event_bus.adapters.basic.event_store.BasicEventStoreAPI
-import com.evernym.verity.event_bus.adapters.kafka.consumer.{ConsumerSettingsProvider, KafkaConsumerAdapter}
-import com.evernym.verity.event_bus.event_handlers.ConsumedMessageHandler
-import com.evernym.verity.event_bus.ports.consumer.ConsumerPort
+import com.evernym.verity.eventing.adapters.basic.event_store.BasicEventStoreAPI
+import com.evernym.verity.eventing.adapters.kafka.consumer.{ConsumerSettingsProvider, KafkaConsumerAdapter}
+import com.evernym.verity.eventing.event_handlers.ConsumedMessageHandler
+import com.evernym.verity.eventing.ports.consumer.ConsumerPort
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.vdrtools.Libraries
 import com.evernym.verity.util.healthcheck.HealthChecker
+import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -224,23 +225,6 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
     ))
   )
 
-  //wallet actor
-  val walletActorRegion: ActorRef = createNonPersistentRegion(
-    WALLET_REGION_ACTOR_NAME,
-    buildProp(
-      Props(
-        new WalletActor(
-          agentActorContext.appConfig,
-          agentActorContext.poolConnManager,
-          executionContextProvider.futureExecutionContext
-        )
-      )
-    ),
-    passivateIdleEntityAfter = Option(
-      passivateDuration(NON_PERSISTENT_WALLET_ACTOR_PASSIVATE_TIME_IN_SECONDS, 600.seconds)
-    )
-  )
-
   //token manager
   val tokenToActorItemMapperRegion: ActorRef = createPersistentRegion(
     TOKEN_TO_ACTOR_ITEM_MAPPER_REGION_ACTOR_NAME,
@@ -421,19 +405,31 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
     actorSystem,
     this)(agentActorContext.futureExecutionContext)
 
-  val basicEventStore: Option[BasicEventStoreAPI] = if (appConfig.getStringReq(EVENT_BUS_TYPE) == "basic") {
+  val basicEventStore: Option[BasicEventStoreAPI] = if (appConfig.getStringReq(EVENT_SOURCE) == "verity.eventing.basic-source") {
     Option(new BasicEventStoreAPI(appConfig.config)(actorSystem, executionContextProvider.futureExecutionContext))
   } else None
 
+  lazy val isVAS: Boolean =
+    appConfig
+      .getStringOption(AKKA_SHARDING_REGION_NAME_USER_AGENT)
+      .contains("VerityAgent")
+
+  val logger: Logger = getLoggerByClass(getClass)
+
   //should be lazy and only used/created during startup process (post dependency check)
-  lazy val eventConsumerAdapter: ConsumerPort = {
-    val clazz = appConfig.getStringReq(EVENT_BUS_CONSUMER_BUILDER_CLASS)
-    Class
-      .forName(clazz)
-      .getConstructor()
-      .newInstance()
-      .asInstanceOf[EventConsumerAdapterBuilder]
-      .build(appConfig, agentActorContext.agentMsgRouter, singletonParentProxy, executionContextProvider.futureExecutionContext, actorSystem)
+  lazy val eventConsumerAdapter: Option[ConsumerPort] = {
+    if (isVAS) {
+      val configPath = appConfig.getStringReq(EVENT_SOURCE)
+      val clazz = appConfig.getStringReq(s"$configPath.builder-class")
+      Option(
+        Class
+          .forName(clazz)
+          .getConstructor()
+          .newInstance()
+          .asInstanceOf[EventConsumerAdapterBuilder]
+          .build(appConfig, agentActorContext.agentMsgRouter, singletonParentProxy, executionContextProvider.futureExecutionContext, actorSystem)
+      )
+    } else None
   }
 }
 

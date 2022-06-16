@@ -1,17 +1,16 @@
 package com.evernym.verity.texter
 
-import com.evernym.verity.config.AppConfig
+import com.evernym.verity.config.ConfigConstants._
+import com.evernym.verity.config.{AppConfig, ConfigSvc}
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util2.Exceptions.{InternalServerErrorException, SmsSendingFailedException}
 import com.evernym.verity.util2.Status._
-import com.evernym.verity.constants.Constants._
-import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.http.common.ConfigSvc
-import com.twilio.sdk.{TwilioRestClient, TwilioRestException}
 import com.twilio.sdk.resource.factory.SmsFactory
+import com.twilio.sdk.{TwilioRestClient, TwilioRestException}
 
 import java.util.concurrent.atomic.AtomicReference
+import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
-import scala.concurrent.{Future}
 
 
 class TwilioDispatcher(val appConfig: AppConfig)

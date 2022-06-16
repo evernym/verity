@@ -144,7 +144,6 @@ class RoutingMigrationSpec
     holderCAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelDIDPair)
     holderCAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelAgentDIDPair)
     holderCAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, theirAgencyAgentDIDPair)
-    holderCAS.persStoreTestKit.closeWallet(mySelfRelAgentEntityId)
 
     verity1HolderSDK.createNewKey(Option(myPairwiseRelDIDKeySeed))
     verity1HolderSDK.updatePairwiseAgentDidPair("connId1", myPairwiseRelDIDPair, myPairwiseRelAgentDIDPair)

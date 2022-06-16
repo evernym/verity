@@ -6,9 +6,9 @@ import com.evernym.verity.util2.Status.{AGENT_ALREADY_CREATED, AGENT_NOT_YET_CRE
 import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.http.base.EdgeEndpointBaseSpec
-import com.evernym.verity.http.common.StatusDetailResp
 import com.evernym.verity.testkit.util.TestConfigDetail
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.http.common.models.StatusDetailResp
 import com.evernym.verity.testkit.mock.agent.MockEnv
 
 

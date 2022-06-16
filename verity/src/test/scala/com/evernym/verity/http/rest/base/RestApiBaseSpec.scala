@@ -1,7 +1,5 @@
 package com.evernym.verity.http.rest.base
 
-import java.time.LocalDateTime
-import java.util.UUID
 import akka.http.scaladsl.model.ContentTypes._
 import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model.headers.{RawHeader, `Content-Type`}
@@ -10,22 +8,21 @@ import akka.util.ByteString
 import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.actor.wallet.{PackedMsg, SignMsg, SignedMsg}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
+import com.evernym.verity.http.base.EdgeEndpointBaseSpec
 import com.evernym.verity.http.base.open.{AgentProvisioningSpec, AriesInvitationDecodingSpec, ProvisionRelationshipSpec, UpdateComMethodSpec}
 import com.evernym.verity.http.base.restricted.{AgencySetupSpec, AgentConfigsSpec, RestrictedRestApiSpec}
-import com.evernym.verity.http.base.EdgeEndpointBaseSpec
-import com.evernym.verity.http.route_handlers.open.RestAcceptedResponse
-import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
+import com.evernym.verity.http.route_handlers.open.models.RestAcceptedResponse
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent._
 import com.evernym.verity.testkit.mock.agent.MockEnv
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vault.KeyParam
-import com.google.protobuf.duration.Duration.defaultInstance.seconds
-import org.joda.time.DurationFieldType.millis
 import org.json.JSONObject
 import org.scalatest.time.{Millis, Seconds, Span}
 
-import scala.concurrent.duration.DurationInt
+import java.time.LocalDateTime
+import java.util.UUID
 import scala.reflect.ClassTag
 import scala.util.Try
 

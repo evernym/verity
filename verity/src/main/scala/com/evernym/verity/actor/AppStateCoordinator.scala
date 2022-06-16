@@ -52,7 +52,7 @@ class AppStateCoordinator(appConfig: AppConfig,
   }
 
   private def preDraining(): Future[Done] = {
-    val fut1 = platform.eventConsumerAdapter.stop()
+    val fut1 = platform.eventConsumerAdapter.map(_.stop()).getOrElse(Future.successful(Done))
     val fut2 = platform.basicEventStore.map(_.stop()).getOrElse(Future.successful(Done))
     for (
       _ <- fut1;
@@ -120,7 +120,7 @@ class AppStateCoordinator(appConfig: AppConfig,
   private def addLogDuringPhase(phase: String, taskName: String): Unit = {
     CoordinatedShutdown(system)
       .addTask(phase, taskName) { () =>
-        logger.info(s"Coordinated shutdown [$phase:$taskName]")
+        logger.info(s"Coordinated shutdown [${system.name}][$phase:$taskName]")
         Future.successful(Done)
       }
   }

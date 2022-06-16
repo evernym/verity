@@ -66,7 +66,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
       handleSignalMsgs(psm.smp)
         .recover({
           case e: Exception =>
-            logger.error(s"An error occurred while handling signal msg(${psm.smp.signalMsg.getClass.getName})")
+            logger.error(s"An error occurred while handling signal msg (${psm.smp.signalMsg.getClass.getName}): ${e.getMessage}")
             throw e
         })
         .foreach { dmOpt =>
@@ -85,7 +85,7 @@ trait AgentIncomingMsgHandler { this: AgentMsgHandler with AgentPersistentActor 
           }
         }
     } else {
-      throw new RuntimeException(s"[$persistenceId] msg sent by driver not handled by agent: " + psm.smp.signalMsg)
+      throw new RuntimeException(s"[$persistenceId] msg sent by driver not handled by agent: " + psm.smp.signalMsg.getClass.getSimpleName)
     }
   }
 

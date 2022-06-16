@@ -16,14 +16,14 @@ class ApiFlowSpec
   def appNameEAS: String = APP_NAME_EAS_1
 
   //test all apis without server restart in between
-  val scenario1 = Scenario(
+  lazy val scenario1 = Scenario(
     "API caller scenario 1 (general)",
     requiredAppInstances,
     suiteTempDir,
     projectDir,
     connIds = Set("connId1", "connId2")
   )
-  val clientEnv1 = ClientEnvironment (
+  lazy val clientEnv1 = ClientEnvironment (
     scenario1,
     consumerAgencyEndpoint = consumerAgencyEndpoint,
     enterpriseAgencyEndpoint = enterpriseAgencyEndpoint)

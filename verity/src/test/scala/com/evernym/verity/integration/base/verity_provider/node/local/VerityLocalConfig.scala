@@ -112,8 +112,8 @@ object VerityLocalConfig {
   private def basicEventStoreConfig(portProfile: PortProfile) = {
     ConfigFactory.parseString(
       s"""
-         |verity.event-bus.basic.store.http-listener.port = ${portProfile.basicEventStorePort}
-         |verity.event-bus.basic.consumer.http-listener.port = ${portProfile.basicEventStoreConsumerPort}
+         |verity.eventing.basic-store.http-listener.port = ${portProfile.basicEventStorePort}
+         |verity.eventing.basic-source.http-listener.port = ${portProfile.basicEventStoreConsumerPort}
          |""".stripMargin
     )
   }

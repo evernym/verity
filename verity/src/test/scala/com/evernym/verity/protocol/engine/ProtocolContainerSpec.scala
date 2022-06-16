@@ -1,3 +1,4 @@
+
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT

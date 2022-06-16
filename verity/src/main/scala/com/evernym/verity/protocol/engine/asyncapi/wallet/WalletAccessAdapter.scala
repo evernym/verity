@@ -123,9 +123,9 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                             data:  String)
                            (handler: Try[SchemaCreatedResult] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
-      {issuerCreateSchema(issuerDID, name, version, data).map { result =>
+      issuerCreateSchema(issuerDID, name, version, data).map { result =>
         SchemaCreated(result.getSchemaId, result.getSchemaJson)
-      }},
+      },
       handleAsyncOpResult(handler)
     )
 
@@ -200,7 +200,7 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                            revocRegs: String)
                           (handler: Try[ProofVerificationResult] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      {AnoncredsWalletOpExecutor.verifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)},
+      AnoncredsWalletOpExecutor.verifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs),
       handleAsyncOpResult(handler)
     )
   }
@@ -227,8 +227,8 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
 
   //Allowed only for signType: SignType = SIGN_ED25519_SHA512_SINGLE
   private def runSign(msg: Array[Byte]): Unit = {
-      val did = getDIDFromParticipantId(selfParticipantId)
-      walletApi.tell(SignMsg(KeyParam.fromDID(did), msg))
+    val did = getDIDFromParticipantId(selfParticipantId)
+    walletApi.tell(SignMsg(KeyParam.fromDID(did), msg))
   }
 
   private def runSignRequest(submitterDID: DidStr, request: String): Unit = {

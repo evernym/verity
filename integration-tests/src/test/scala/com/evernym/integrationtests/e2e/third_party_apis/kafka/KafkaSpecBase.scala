@@ -4,9 +4,9 @@ import akka.Done
 import akka.actor.typed.ActorSystem
 import akka.kafka.ProducerSettings
 import akka.kafka.testkit.scaladsl.ScalatestKafkaSpec
-import com.evernym.verity.event_bus.adapters.kafka.consumer.{ConsumerSettingsProvider, KafkaConsumerAdapter}
-import com.evernym.verity.event_bus.adapters.kafka.producer.{KafkaProducerAdapter, ProducerSettingsProvider}
-import com.evernym.verity.event_bus.ports.consumer.MessageHandler
+import com.evernym.verity.eventing.adapters.kafka.consumer.{ConsumerSettingsProvider, KafkaConsumerAdapter}
+import com.evernym.verity.eventing.adapters.kafka.producer.{KafkaProducerAdapter, ProducerSettingsProvider}
+import com.evernym.verity.eventing.ports.consumer.MessageHandler
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.Config
 import org.apache.kafka.common.serialization.{ByteArraySerializer, StringSerializer}
@@ -25,12 +25,8 @@ abstract class KafkaSpecBase(kafkaPort: Int)
 
   protected def this() = this(kafkaPort = -1)
 
-  def getDefaultProducerSettings(): Config =
-    system.settings.config.getConfig("akka.kafka.producer")
-
   def createProducerSettings(config: Config): ProducerSettings[String,Array[Byte]] = {
     ProducerSettings(config, new StringSerializer, new ByteArraySerializer)
-      .withBootstrapServers(bootstrapServers)
   }
 
   def publishEvents(producerSettingsProvider: ProducerSettingsProvider,

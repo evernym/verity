@@ -1,6 +1,5 @@
 package com.evernym.verity.actor.resourceusagethrottling
 
-import com.evernym.verity.util2.Exceptions.BadRequestErrorException
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton._
@@ -12,11 +11,12 @@ import com.evernym.verity.actor.testkit.CommonSpecUtil
 import com.evernym.verity.actor.testkit.checks.{UNSAFE_IgnoreAkkaEvents, UNSAFE_IgnoreLog}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.constants.Constants._
-import com.evernym.verity.http.route_handlers.restricted.{ResourceUsageCounterDetail, UpdateResourcesUsageCounter}
+import com.evernym.verity.http.route_handlers.restricted.models.{ResourceUsageCounterDetail, UpdateResourcesUsageCounter}
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.scalalogging.Logger
 import org.scalatest.time.{Seconds, Span}
-import com.evernym.verity.util2.ExecutionContextProvider
 
 
 class ResourceUsageViolationSpec

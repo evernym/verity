@@ -105,12 +105,14 @@ class ReadOnlyPersistentActor(val appConfig: AppConfig, actorParam: ActorParam, 
   }
 }
 
-case object SendSummary extends ActorMessage
-case object SendAggregated extends ActorMessage
+trait ActorCommand extends ActorMessage
+
+case object SendSummary extends ActorCommand
+case object SendAggregated extends ActorCommand
 object SendAll {
   def apply(withData: String): SendAll = SendAll(withData == YES)
 }
-case class SendAll(withData: Boolean) extends ActorMessage
+case class SendAll(withData: Boolean) extends ActorCommand
 
 /**
  *

@@ -1,6 +1,37 @@
 Note: When interacting with Verity, it will also be helpful to review [the Verity SDK Release Notes](https://gitlab.com/evernym/verity/verity-sdk/-/blob/main/CHANGELOG.md) and [the VDR Tools Release Notes](https://gitlab.com/evernym/verity/vdr-tools/-/blob/main/CHANGELOG.md)
 
-# Release notes - Verity 2.17.4 release TBD
+
+# Release notes - Verity 2.18.0 release TBD
+Works with Verity SDK 0.6.1
+Includes VDR Tools 0.8.4
+
+## Features
+* [VE-1436] Automate Sovrin Network writes using an Evernym Endorser service
+  * Coordinate services using Kafka / Confluent for event streaming
+  * [VE-3411] Modify WriteSchema to request endorsement
+  * [VE-3412] Modify WriteCredDef to request endorsement
+  * [VE-3416] Modify Verity SDK sample apps to take advantage of endorser capabilities
+  * [VE-3417] Minimal Full Qualified DID for Endorser Service Integration
+  * [VE-3496] Prepare Deployment configuration for use of the Endorser service
+* [VE-3462] Minimal Verity dev env for MacOS on Apple M1
+
+## Task
+* Updates to the development environment: sbt-git, testcontainers-scala-kafka
+* Remove proto buf dirs from SourceDirectories
+* Cleanup of tests for Outbox and Modify / Add Schema / Cred-Def
+* [VE-3181] Tech Debt: Improve exception handling in protocol engine
+* [VE-3189] Tech Debt: Remove LegacyWalletAPI
+* [VE-3448] Update VCX to 0.8.5 VDR-Tools
+* [VE-3494] Tech Debt: Simplify Verity HTTP layer
+
+## Bug
+* [VE-3501] "/agency" api returning "forbidden"
+* [VE-3506] WalletActor: The system sometimes tried to register to a coordinator without acknowledgement
+* [VE-3521] Intermittent issues around write schema and cred def
+* [VE-3526] Fix a message to include only insensitive data
+
+
+# Release notes - Verity 2.17.4 release 11 April 2022
 Works with Verity SDK 0.6.1
 Includes VDR Tools 0.8.4
 
@@ -20,6 +51,7 @@ Includes VDR Tools 0.8.4
 * [VE-3459] Added new TAA digest
 * [VE-3462] Swap kalium with lazysodium for test utils
 
+
 # Release notes - Verity 2.17.3 release 1 March 2022
 Works with Verity SDK 0.6.1
 Includes VDR Tools 0.8.2
@@ -29,6 +61,7 @@ Includes VDR Tools 0.8.2
 * [VE-3034] Replace VDRTools and VDRToolsImpl with actual VDRTools wrapper api and its object types
 * [VE-2753] Allow msg type based push notification templates
 * [VE-3395] Update dependencies and refactor pre-launch checks to catch more failures
+
 
 # Release notes - Verity 2.17.2 release 16 Feb 2022
 Works with Verity SDK 0.6.1

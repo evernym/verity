@@ -17,7 +17,7 @@ class MockableEndorserAccess(endorsers: Map[String, List[Endorser]])
     handler(Try(endorsers.get(ledger).flatMap(_.headOption)))
   }
 
-  override def endorseTxn(payload: String, endorser: String, vdr: String, vdrType: String)(handler: Try[Unit] => Unit): Unit = {
+  override def endorseTxn(payload: String, ledgerPrefix: String)(handler: Try[Unit] => Unit): Unit = {
     handler(Try(()))
   }
 }

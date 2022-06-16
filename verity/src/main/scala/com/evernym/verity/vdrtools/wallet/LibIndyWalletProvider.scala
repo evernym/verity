@@ -86,15 +86,15 @@ object LibIndyWalletProvider
 
   private def walletExceptionMapper(id: String): Throwable ?=> RuntimeException = {
     case e: WalletExistsException =>
-      WalletAlreadyExist(s"wallet already exists: '$id' (${e.getMessage})")
+      WalletAlreadyExist(s"wallet already exists: '$id' [${e.getMessage} (${e.getSdkErrorCode}: ${e.getSdkMessage})]")
     case e: WalletAlreadyOpenedException =>
-      WalletAlreadyOpened(s"wallet already opened: '$id' (${e.getMessage})")
+      WalletAlreadyOpened(s"wallet already opened: '$id' [${e.getMessage} (${e.getSdkErrorCode}: ${e.getSdkMessage})]")
     case e: WalletNotFoundException =>
-      WalletDoesNotExist(s"wallet does not exist: '$id' (${e.getMessage})")
+      WalletDoesNotExist(s"wallet not found: '$id' [${e.getMessage} (${e.getSdkErrorCode}: ${e.getSdkMessage})]")
     case e: IOException if e.getSdkErrorCode == 114 =>
-      WalletDoesNotExist(s"wallet/table does not exist: '$id' (${e.getMessage})")
+      WalletDoesNotExist(s"wallet/table does not exist: '$id' [${e.getMessage} (${e.getSdkErrorCode}: ${e.getSdkMessage})]")
     case e: InvalidStateException =>
-      WalletInvalidState(s"wallet is in invalid state: '$id' (${e.getMessage})")
+      WalletInvalidState(s"wallet is in invalid state: '$id' [${e.getMessage} (${e.getSdkErrorCode}: ${e.getSdkMessage})]")
   }
 
 }

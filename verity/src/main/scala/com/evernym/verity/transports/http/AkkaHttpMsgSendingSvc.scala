@@ -3,21 +3,21 @@ package com.evernym.verity.transports.http
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.StatusCodes.{Accepted, BadRequest, GatewayTimeout, OK, Unauthorized}
+import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.scaladsl.{Sink, Source}
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.ConfigConstants._
-import com.evernym.verity.util2.Exceptions.HandledErrorException
-import com.evernym.verity.util2.Status.{BAD_REQUEST, StatusDetail, UNAUTHORIZED, UNHANDLED}
 import com.evernym.verity.config.validator.base.ConfigReadHelper
-import com.evernym.verity.http.common.HttpCustomTypes
+import com.evernym.verity.http.common.models.HttpCustomTypes
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.observability.metrics.{ClientSpan, MetricsWriter}
 import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.util.Util.buildHandledError
+import com.evernym.verity.util2.Exceptions.HandledErrorException
+import com.evernym.verity.util2.Status.{BAD_REQUEST, StatusDetail, UNAUTHORIZED, UNHANDLED}
 import com.evernym.verity.util2.{Exceptions, UrlParam}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger

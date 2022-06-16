@@ -240,7 +240,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
         sendHttpPostReq(context, writeSchemaJson.toString, ProtoRef("write-schema", "0.6"), Option(myThreadId))
       }
       override def write(ctx: Context, endorserDid: String): Unit = {
-        writeSchemaJson.put("endorserDid", endorserDid)
+        writeSchemaJson.put("endorserDID", endorserDid)
         logger.debug(s"write schema json: ${writeSchemaJson.toString}")
         sendHttpPostReq(context, writeSchemaJson.toString, ProtoRef("write-schema", "0.6"), Option(myThreadId))
       }
@@ -268,7 +268,7 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
         sendHttpPostReq(context, writeCredDefJson.toString, ProtoRef("write-cred-def", "0.6"), Option(myThreadId))
       }
       override def write(ctx: Context, endorserDid: String): Unit = {
-        writeCredDefJson.put("endorserDid", endorserDid)
+        writeCredDefJson.put("endorserDID", endorserDid)
         logger.debug(s"write cred def json: ${writeCredDefJson.toString}")
         sendHttpPostReq(context, writeCredDefJson.toString, ProtoRef("write-cred-def", "0.6"), Option(myThreadId))
       }

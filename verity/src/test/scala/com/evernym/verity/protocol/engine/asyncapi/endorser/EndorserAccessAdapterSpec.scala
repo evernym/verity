@@ -9,7 +9,7 @@ import com.evernym.verity.actor.base.CoreActor
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.event_bus.ports.producer.ProducerPort
+import com.evernym.verity.eventing.ports.producer.ProducerPort
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine.ProtoRef
@@ -75,7 +75,7 @@ class MockActorContainer(val appConfig: AppConfig,
 
   override def receiveCmd: Receive = {
     case EndorseTxn(payload, endorser, vdr, vdrType) =>
-      endorserAccessAdapter.endorseTxn(payload, endorser, vdr, vdrType)(handler(sender()))
+      endorserAccessAdapter.endorseTxn(payload, vdrType)(handler(sender()))
   }
 
   def handler(sender: ActorRef)(resp: Try[Unit]): Unit = {
@@ -87,9 +87,7 @@ class MockActorContainer(val appConfig: AppConfig,
 
   override protected def runFutureAsyncOp(op: => Future[Any]): Unit = {
     val result = op
-    result.onComplete { r =>
-      executeCallbackHandler(r)
-    }
+    result.onComplete(r => executeCallbackHandler(r))
   }
 
   override def postAllAsyncOpsCompleted(): Unit = {}

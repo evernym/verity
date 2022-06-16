@@ -1,12 +1,15 @@
 package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 
+import akka.actor.ActorSystem
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.exception.DIDException
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
+import com.evernym.verity.integration.base.EndorserUtil
 import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
-import com.evernym.verity.protocol.engine.asyncapi.endorser.{Endorser, INDY_LEDGER_PREFIX, ENDORSEMENT_RESULT_SUCCESS_CODE}
+import com.evernym.verity.protocol.engine.asyncapi.endorser.{ENDORSEMENT_RESULT_SUCCESS_CODE, Endorser}
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.MockableLedgerAccess.MOCK_NOT_ENDORSER
 import com.evernym.verity.protocol.testkit.{MockableEndorserAccess, MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
@@ -15,6 +18,7 @@ import com.evernym.verity.util.TestExecutionContextProvider
 import org.json.JSONObject
 import org.scalatest.BeforeAndAfterAll
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.language.{implicitConversions, reflectiveCalls}
 
@@ -92,7 +96,7 @@ class WriteSchemaSpec
           MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
         ))
         interaction(f.writer) {
-          withEndorserAccess(Map(INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
+          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
               withDefaultLedgerAccess(f, {
                 f.writer ~ Write(schemaName, schemaVersion, schemaAttrsJson, Option("otherEndorser"))
@@ -147,7 +151,7 @@ class WriteSchemaSpec
         MY_ISSUER_DID -> MOCK_NOT_ENDORSER
       ))
       interaction(f.writer) {
-        withEndorserAccess(Map(INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
+        withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
             withDefaultLedgerAccess(f, {
               f.writer ~ Write(schemaName, schemaVersion, schemaAttrsJson, Some("endorserDid"))
@@ -182,5 +186,10 @@ class WriteSchemaSpec
    * custom thread pool executor
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
+
+  implicit override lazy val appConfig: AppConfig = TestExecutionContextProvider.testAppConfig
+
+  def executionContextProvider: ExecutionContextProvider = ecp
+
+  val system: ActorSystem = ActorSystemVanilla(UUID.randomUUID().toString)
 }

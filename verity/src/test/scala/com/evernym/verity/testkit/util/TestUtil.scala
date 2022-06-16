@@ -5,6 +5,7 @@ import com.goterl.lazysodium.utils.{KeyPair, LibraryLoader}
 import com.goterl.lazysodium.{LazySodiumJava, SodiumJava}
 import org.iq80.leveldb.util.FileUtils
 
+
 object TestUtil {
 
   private val logger = getLoggerByClass(getClass)
@@ -32,4 +33,5 @@ object TestUtil {
     val seedBytes = seed.getBytes.take(32)
     lazySodium.cryptoSignSeedKeypair(seedBytes)
   }
+
 }

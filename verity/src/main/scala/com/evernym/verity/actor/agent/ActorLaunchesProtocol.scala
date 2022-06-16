@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.agent
 
+import akka.Done
 import akka.actor.{ActorRef, ActorSystem}
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.ForIdentifier
@@ -91,5 +92,7 @@ trait ActorLaunchesProtocol
         ForIdentifier(pinstIdPair.id, cmd),
         sndr
       )
+
+    sndr ! Done
   }
 }

@@ -3,7 +3,7 @@ package com.evernym.integrationtests.e2e.env
 import com.evernym.integrationtests.e2e.env.AppInstance.{AppInstance, Consumer, Enterprise, Verity}
 import com.evernym.integrationtests.e2e.env.AppType.AppType
 import com.evernym.integrationtests.e2e.env.SdkType.SdkType
-import com.evernym.integrationtests.e2e.util.PortProvider
+import com.evernym.verity.integration.base.PortProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.LIB_INDY_LEDGER_POOL_TXN_FILE_LOCATION
@@ -466,7 +466,10 @@ case class VerityInstance(name: String,
       EnvVar("VERITY_HTTP_PORT", listeningPort.get, uniqueValueAcrossEnv = true),
       EnvVar("VERITY_AKKA_REMOTE_PORT", verityAkkaRemotePort, uniqueValueAcrossEnv = true),
       EnvVar("VERITY_AKKA_MANAGEMENT_HTTP_PORT",  verityAkkaManagementPort, uniqueValueAcrossEnv = true),
-      EnvVar("GENESIS_TXN_FILE_LOCATION", ledgerConfig.genesisFilePath)
+      EnvVar("GENESIS_TXN_FILE_LOCATION", ledgerConfig.genesisFilePath),
+
+      EnvVar("VERITY_BASIC_EVENT_STORE_PORT", PortProvider.getFreePort),
+      EnvVar("VERITY_BASIC_CONSUMER_PORT", PortProvider.getFreePort)
     )
   }
 

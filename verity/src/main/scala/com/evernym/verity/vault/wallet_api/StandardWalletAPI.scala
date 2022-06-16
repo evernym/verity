@@ -8,7 +8,9 @@ import com.evernym.verity.vault.service._
 import com.evernym.verity.vault.WalletAPIParam
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.Future
+import java.util.concurrent.TimeUnit
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.FiniteDuration
 import scala.language.implicitConversions
 
 class StandardWalletAPI(walletService: WalletService)
@@ -19,6 +21,11 @@ class StandardWalletAPI(walletService: WalletService)
 
   def executeAsync[T](cmd: WalletCommand)(implicit wap: WalletAPIParam): Future[T] = {
     walletService.executeAsync(wap.walletId, cmd)
+  }
+
+  //TODO This is to minimize initial changes in tests
+  final def executeSync[T](cmd: WalletCommand)(implicit wap: WalletAPIParam): T = {
+    Await.result(executeAsync(cmd), FiniteDuration(60, TimeUnit.SECONDS))
   }
 
   def tell(cmd: WalletCommand)(implicit wap: WalletAPIParam, sender: ActorRef): Unit = {

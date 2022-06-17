@@ -28,7 +28,7 @@ object JnaPath {
     augmentJnaWithPaths(findJnaPaths(), propKey)
   }
 
-  def augmentJnaWithPaths(paths: Seq[String], propKey: String = "jna.library.path") = {
+  def augmentJnaWithPaths(paths: Seq[String], propKey: String = "jna.library.path"): Unit = {
     if(isRecognizedCmd()){
       val currentJnaPath = sys.props.get(propKey)
       val filteredPaths = filterJnaPaths(
@@ -45,9 +45,9 @@ object JnaPath {
 
   // Set of partial CMD that are recognized that the application
   // is running in SBT or IntelliJ
-  val recognizedCmd = Set(
+  val recognizedCmd: Set[String] = Set(
     "jetbrains.plugins.scala",
-    "sbt-launch.jar"
+    "sbt-launch"
   )
 
   def isRecognizedCmd(propKey: String = "sun.java.command"): Boolean = {
@@ -55,7 +55,7 @@ object JnaPath {
     // during startup over a very small set
     sys
       .props
-      .get("sun.java.command")
+      .get(propKey)
       .flatMap(_.split("\\s").toList.headOption)
       .exists{ x =>
         recognizedCmd.exists(x.contains(_))

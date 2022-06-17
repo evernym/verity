@@ -68,7 +68,7 @@ trait RestApiEndpointHandler extends BaseRequestHandler with MetricsSupport {
         Some(route),
         Some("REST_API")
       )
-      logger.info(buildLogMsg._1, buildLogMsg._2: _*)
+      logger.underlying.info(buildLogMsg._1, buildLogMsg._2: _*)
     }
   }
 
@@ -87,7 +87,7 @@ trait RestApiEndpointHandler extends BaseRequestHandler with MetricsSupport {
         Some(route),
         Some("REST_API")
       )
-      logger.info(buildLogMsg._1, buildLogMsg._2: _*)
+      logger.underlying.info(buildLogMsg._1, buildLogMsg._2: _*)
     }
   }
 

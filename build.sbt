@@ -60,7 +60,7 @@ val akkaHttpVer         = "10.2.9"
 val akkaMgtVer          = "1.1.3"
 val alpAkkaS3Ver        = "3.0.3"
 val alpAkkaKafkaVer     = "3.0.0"
-val akkaPersistence     = "1.2.0-RC2"
+val dynamoDbPersistence = "1.2.0-RC2"
 val kamonVer            = "2.5.4"
 val kanelaAgentVer      = "1.0.14"
 val cinnamonVer         = "2.16.5"
@@ -309,7 +309,7 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-stream-kafka" % alpAkkaKafkaVer,
 
     //akka persistence dependencies
-    akkaGrp %% "akka-persistence-dynamodb" % akkaPersistence,
+    akkaGrp %% "akka-persistence-dynamodb" % dynamoDbPersistence,
 
     //to be used for event bus
     "io.cloudevents" % "cloudevents-core" % cloudEventsVersion,
@@ -384,6 +384,7 @@ lazy val commonLibraryDependencies = {
     "com.vladsch.flexmark" % "flexmark-all" % flexmarkVer,
 
     akkaGrp %% "akka-testkit" % akkaVer,
+    akkaGrp %% "akka-stream-testkit" % akkaVer,
     akkaGrp %% "akka-persistence-testkit" % akkaVer,
     akkaGrp %% "akka-http-testkit" % akkaHttpVer,
     akkaGrp %% "akka-stream-kafka-testkit" % alpAkkaKafkaVer,

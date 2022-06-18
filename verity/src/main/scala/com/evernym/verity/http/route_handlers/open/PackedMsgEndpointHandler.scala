@@ -41,7 +41,7 @@ trait PackedMsgEndpointHandler
         None,
         None
       )
-      logger.info(buildLogMsg._1, buildLogMsg._2: _*)
+      logger.underlying.info(buildLogMsg._1, buildLogMsg._2: _*)
     }
   }
 
@@ -115,7 +115,7 @@ trait PackedMsgEndpointHandler
         None,
         None
       )
-      logger.info(buildLogMsg._1, buildLogMsg._2: _*)
+      logger.underlying.info(buildLogMsg._1, buildLogMsg._2: _*)
     }
   }
 

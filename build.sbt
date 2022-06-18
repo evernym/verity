@@ -60,17 +60,17 @@ val akkaHttpVer         = "10.2.9"
 val akkaMgtVer          = "1.1.3"
 val alpAkkaS3Ver        = "3.0.3"
 val alpAkkaKafkaVer     = "3.0.0"
-val akkaPersistence     = "1.2.0-RC2"
-val kamonVer            = "2.5.1"
+val dynamoDbPersistence = "1.2.0-RC2"
+val kamonVer            = "2.5.4"
 val kanelaAgentVer      = "1.0.14"
-val cinnamonVer         = "2.16.2"
-val jacksonVer          = "2.13.2"
+val cinnamonVer         = "2.16.5"
+val jacksonVer          = "2.13.3"
 val sdnotifyVer         = "1.3"
 val cloudEventsVersion  = "2.3.0"
 
 //test dependency versions
-val scalatestVer        = "3.2.11"
-val mockitoVer          = "1.17.5"
+val scalatestVer        = "3.2.12"
+val mockitoVer          = "1.17.7"
 val veritySdkVer        = "0.6.1"
 val vcxWrapperVer       = "0.14.0"
 
@@ -78,7 +78,7 @@ val vcxWrapperVer       = "0.14.0"
 val flexmarkVer         = "0.64.0"
 
 // compiler plugin versions
-val silencerVersion     = "1.7.8"
+val silencerVersion     = "1.7.9"
 
 // a 'compileonly' configuration (see https://stackoverflow.com/questions/21515325/add-a-compile-time-only-dependency-in-sbt#answer-21516954)
 val COMPILE_TIME_ONLY = "compileonly"
@@ -309,7 +309,7 @@ lazy val commonLibraryDependencies = {
     akkaGrp %% "akka-stream-kafka" % alpAkkaKafkaVer,
 
     //akka persistence dependencies
-    akkaGrp %% "akka-persistence-dynamodb" % akkaPersistence,
+    akkaGrp %% "akka-persistence-dynamodb" % dynamoDbPersistence,
 
     //to be used for event bus
     "io.cloudevents" % "cloudevents-core" % cloudEventsVersion,
@@ -331,7 +331,7 @@ lazy val commonLibraryDependencies = {
     "com.evernym.vdrtools" % "vdr-tools" % vdrtoolsWrapperVer,
 
     //logging dependencies
-    "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4",
+    "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
     "ch.qos.logback" % "logback-classic" % "1.2.11",
     akkaGrp %% "akka-slf4j" % akkaVer,
 
@@ -350,12 +350,12 @@ lazy val commonLibraryDependencies = {
     //sms service implementation dependencies
     "com.fasterxml.jackson.jakarta.rs" % "jackson-jakarta-rs-json-provider" % jacksonVer,
     //"com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % jacksonVer,     //used by "BandwidthDispatcher"/"OpenMarketDispatcherMEP" class
-    "org.glassfish.jersey.core" % "jersey-client" % "3.0.4"
+    "org.glassfish.jersey.core" % "jersey-client" % "3.0.5"
       excludeAll ExclusionRule(organization = "jakarta.inject"),                      //TODO: (should fix this) excluded to avoid issue found during 'sbt assembly' after upgrading to sbt 1.3.8
     "com.twilio.sdk" % "twilio-java-sdk" % "6.3.0",                                 //used by "TwilioDispatcher" class
 
     //other dependencies
-    "com.github.blemale" %% "scaffeine" % "5.1.2",
+    "com.github.blemale" %% "scaffeine" % "5.2.0",
     "commons-net" % "commons-net" % "3.8.0",      //used for CIDR based ip address validation/checking/comparision
                                                     // (for internal apis and may be few other places)
     "commons-codec" % "commons-codec" % "1.15",
@@ -384,6 +384,7 @@ lazy val commonLibraryDependencies = {
     "com.vladsch.flexmark" % "flexmark-all" % flexmarkVer,
 
     akkaGrp %% "akka-testkit" % akkaVer,
+    akkaGrp %% "akka-stream-testkit" % akkaVer,
     akkaGrp %% "akka-persistence-testkit" % akkaVer,
     akkaGrp %% "akka-http-testkit" % akkaHttpVer,
     akkaGrp %% "akka-stream-kafka-testkit" % alpAkkaKafkaVer,

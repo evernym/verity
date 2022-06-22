@@ -8,7 +8,7 @@ import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkOptionalNotEmpty, checkRequired}
-import com.evernym.verity.protocol.engine.{MsgBase, ThreadId}
+import com.evernym.verity.protocol.engine.ThreadId
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, InviteDetail, InviteDetailAbbreviated}
 import com.evernym.verity.util.MsgIdProvider
 
@@ -18,16 +18,17 @@ import com.evernym.verity.agentmsg.DefaultMsgCodec
 case class InviteDetailMsg(`@type`: TypeDetail,
                            inviteDetail: InviteDetail,
                            urlToInviteDetail: String,
-                           urlToInviteDetailEncoded: String) extends MsgBase
+                           urlToInviteDetailEncoded: String) extends LegacyMsgBase
 
-case class ConnReqMsg_MFV_0_6(`@type`: String, `@id`: String,
+case class ConnReqMsg_MFV_0_6(`@type`: String,
+                              `@id`: String,
                               sendMsg: Boolean,
                               keyDlgProof: Option[AgentKeyDlgProof] = None,
                               phoneNo: Option[String] = None,
                               targetName: Option[String] = None,
                               includePublicDID: Option[Boolean] = None,
                               `~thread`: Option[Thread] = None
-                             ) extends MsgBase {
+                             ) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@id", `@id`)
@@ -53,7 +54,7 @@ case class ConnReqRespMsg_MFV_0_6(`@type`: String,
                                   truncatedInviteDetail: Option[InviteDetailAbbreviated],
                                   urlToInviteDetail: String,
                                   urlToInviteDetailEncoded: String,
-                                  sourceId: Option[String]=None) extends MsgBase
+                                  sourceId: Option[String]=None) extends LegacyMsgBase
 
 object ConnReqMsgHelper {
 

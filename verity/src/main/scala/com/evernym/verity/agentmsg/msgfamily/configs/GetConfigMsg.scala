@@ -1,13 +1,12 @@
 package com.evernym.verity.agentmsg.msgfamily.configs
 
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_CONFIGS
-import com.evernym.verity.agentmsg.msgfamily.{AgentMsgContext, ConfigDetail, TypeDetail}
+import com.evernym.verity.agentmsg.msgfamily.{AgentMsgContext, ConfigDetail, LegacyMsgBase, TypeDetail}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
-case class GetConfigsReqMsg_MFV_0_5(configs: Set[String]) extends MsgBase {
+case class GetConfigsReqMsg_MFV_0_5(configs: Set[String]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("configs", configs)
   }
@@ -15,7 +14,7 @@ case class GetConfigsReqMsg_MFV_0_5(configs: Set[String]) extends MsgBase {
 
 case class GetConfigsReqMsg(msgFamilyDetail: MsgFamilyDetail, configs: Set[String])
 
-case class GetConfigsRespMsg_MFV_0_5(`@type`: TypeDetail, configs: Set[ConfigDetail])
+case class GetConfigsRespMsg_MFV_0_5(`@type`: TypeDetail, configs: Set[ConfigDetail]) extends LegacyMsgBase
 
 object GetConfigsMsgHelper {
 

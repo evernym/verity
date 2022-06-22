@@ -1,11 +1,11 @@
 package com.evernym.verity.agentmsg.msgfamily.routing
 
 import com.evernym.verity.util2.Exceptions.MissingReqFieldException
-import com.evernym.verity.agentmsg.msgfamily.TypeDetail
+import com.evernym.verity.agentmsg.msgfamily.{LegacyMsgBase, TypeDetail}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
-import com.evernym.verity.protocol.engine.{MissingReqFieldProtocolEngineException, MsgBase}
+import com.evernym.verity.protocol.engine.MissingReqFieldProtocolEngineException
 import com.evernym.verity.util.JsonObjectWrapper
 import org.json.JSONObject
 
@@ -13,7 +13,7 @@ import org.json.JSONObject
 case class FwdReqMsg_MFV_0_5(`@type`: TypeDetail,
                              `@fwd`: String,
                              `@msg`: Array[Byte],
-                             fwdMsgType: Option[String]) extends MsgBase {
+                             fwdMsgType: Option[String]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@fwd", `@fwd`)
@@ -26,7 +26,7 @@ case class FwdReqMsg_MFV_1_0(`@type`: String,
                              `@fwd`: String,
                              `@msg`: JSONObject,
                              fwdMsgType: Option[String],
-                             fwdMsgSender: Option[String]) extends MsgBase {
+                             fwdMsgSender: Option[String]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@fwd", `@fwd`)
@@ -39,7 +39,7 @@ case class FwdReqMsg_MFV_1_0_1(`@type`: String,
                                to: String,
                                msg: JSONObject,
                                fwdMsgType: Option[String],
-                               fwdMsgSender: Option[String]) extends MsgBase {
+                               fwdMsgSender: Option[String]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("to", to)

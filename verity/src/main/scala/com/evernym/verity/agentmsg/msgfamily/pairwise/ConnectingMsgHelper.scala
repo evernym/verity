@@ -152,47 +152,47 @@ object ConnectingMsgHelper {
 
 }
 
-case class InviteAnswerPayloadMsg(senderDetail: SenderDetail) extends MsgBase {
+case class InviteAnswerPayloadMsg(senderDetail: SenderDetail) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("senderDetail", senderDetail)
   }
 }
 
-case class RedirectPayloadMsg_0_5(senderDetail: SenderDetail, redirectDetail: JSONObject) extends MsgBase {
-  override def validate(): Unit = {
-    checkRequired("senderDetail", senderDetail)
-    checkRequired("redirectDetail", redirectDetail)
-  }
-}
-
-case class RedirectPayloadMsg_0_6(senderDetail: SenderDetail, redirectDetail: JSONObject) extends MsgBase {
+case class RedirectPayloadMsg_0_5(senderDetail: SenderDetail, redirectDetail: JSONObject) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("senderDetail", senderDetail)
     checkRequired("redirectDetail", redirectDetail)
   }
 }
 
-case class PayloadMsg_MFV_0_5(`@type`: TypeDetail, `@msg`: Array[Byte]) extends MsgBase {
+case class RedirectPayloadMsg_0_6(senderDetail: SenderDetail, redirectDetail: JSONObject) extends LegacyMsgBase {
+  override def validate(): Unit = {
+    checkRequired("senderDetail", senderDetail)
+    checkRequired("redirectDetail", redirectDetail)
+  }
+}
+
+case class PayloadMsg_MFV_0_5(`@type`: TypeDetail, `@msg`: Array[Byte]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@msg", `@msg`)
   }
 }
 
-case class PayloadMsg_MFV_0_6(`@type`: String, `@msg`: JSONObject, sourceId: Option[String]=None) extends MsgBase {
+case class PayloadMsg_MFV_0_6(`@type`: String, `@msg`: JSONObject, sourceId: Option[String]=None) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@msg", `@msg`)
   }
 }
 
-case class AcceptedInviteAnswerMsg_0_6(`@msg`: InviteAnswerPayloadMsg, sourceId: Option[String]=None) extends MsgBase {
+case class AcceptedInviteAnswerMsg_0_6(`@msg`: InviteAnswerPayloadMsg, sourceId: Option[String]=None) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@msg", `@msg`)
   }
 }
 
-case class RedirectedInviteAnswerMsg_0_6(`@msg`: RedirectPayloadMsg_0_6) extends MsgBase {
+case class RedirectedInviteAnswerMsg_0_6(`@msg`: RedirectPayloadMsg_0_6) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@msg", `@msg`)
   }

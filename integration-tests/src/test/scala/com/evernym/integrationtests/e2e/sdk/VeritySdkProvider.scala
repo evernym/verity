@@ -9,7 +9,7 @@ import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
-import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
+import com.evernym.verity.sdk.protocols.issuersetup.v0_7.IssuerSetupV0_7
 import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate, ProposedAttribute, ProposedPredicate}
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
@@ -80,7 +80,7 @@ trait VeritySdkProvider {
   def provision_0_7: ProvisionV0_7
   def provision_0_7(token: String): ProvisionV0_7
 
-  def issuerSetup_0_6: IssuerSetupV0_6
+  def issuerSetup_0_7: IssuerSetupV0_7
 
   def updateEndpoint_0_6: UpdateEndpointV0_6
 

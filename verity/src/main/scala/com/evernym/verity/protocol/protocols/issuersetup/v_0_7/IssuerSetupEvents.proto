@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.protocol.protocols.issuersetup.v_0_7;
+
+message RosterInitialized {
+    option (scalapb.message).extends = "Event";
+    string selfIdValue = 1;
+}
+
+// Not used anymore but must leave for recoded events
+message CreatePublicIdentifierInitiated {
+    option (scalapb.message).extends = "Event";
+    string nonce = 1;
+}
+
+message CreatePublicIdentifierCompleted {
+    option (scalapb.message).extends = "Event";
+    string did = 1;
+    string verKey = 2;
+}
+
+message AskedForEndorsement {
+    option (scalapb.message).extends = "Event";
+    string did = 1;
+    string ledgerPrefix = 2;
+    string didJson = 3;
+}
+
+message PublicIdentifierWrittenToLedger {
+    option (scalapb.message).extends = "Event";
+    string did = 1;
+    string ledgerPrefix = 2;
+}
+
+message WriteFailed {
+    option (scalapb.message).extends = "Event";
+    string error = 1;
+}

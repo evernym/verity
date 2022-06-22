@@ -64,6 +64,12 @@ class VdrToolsImpl(val vdr: VDR) extends VdrTools {
     toFuture(vdr.prepareCredDef(txnSpecificParams, submitterDid, endorser.orNull))
   }
 
+  override def prepareDIDTxn(txnSpecificParams: TxnSpecificParams,
+                             submitterDid: DidStr,
+                             endorser: Option[String]): Future[VdrResults.PreparedTxnResult] = {
+    toFuture(vdr.prepareDID(txnSpecificParams, submitterDid, endorser.orNull))
+  }
+
   override def submitTxn(namespace: Namespace,
                          txnBytes: Array[Byte],
                          signatureSpec: String,

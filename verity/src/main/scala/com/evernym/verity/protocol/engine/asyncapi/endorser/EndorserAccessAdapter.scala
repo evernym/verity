@@ -36,11 +36,11 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
   val blobStorageUtil = new BlobStorageUtil(bucketName, storageAPI)
   val eventPublisherUtil = new EventPublisherUtil(routingContext, producerPort)
 
-  override def withCurrentEndorser(ledger: String)(handler: Try[Option[Endorser]] => Unit): Unit = {
+  override def withCurrentEndorser(ledgerPrefix: String)(handler: Try[Option[Endorser]] => Unit): Unit = {
 
     asyncOpRunner.withFutureOpRunner(
       singletonParentProxy
-        .ask{ ref: ActorRef => ForEndorserRegistry(GetEndorsers(ledger, ref))}
+        .ask{ ref: ActorRef => ForEndorserRegistry(GetEndorsers(ledgerPrefix, ref))}
         .mapTo[LedgerEndorsers]
         //NOTE: until ledger starts supporting fully qualified DID, it needs to be truncated and then used (see next line)
         .map(r => r.latestEndorser.map(e => Endorser(e.did.substring(e.did.lastIndexOf(":")+1))))

@@ -154,13 +154,15 @@ trait InteractiveSdkFlow extends MetricsFlow {
     }
   }
 
-  def setupIssuer(sdk: VeritySdkProvider, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
-    setupIssuer(sdk, sdk, ledgerUtil)
+  def setupIssuer(sdk: VeritySdkProvider, ledgerUtil: LedgerUtil, endorser: Option[String])(implicit scenario: Scenario): Unit = {
+    setupIssuer(sdk, sdk, ledgerUtil, endorser)
   }
 
   def setupIssuer(issuerSdk: VeritySdkProvider,
                   msgReceiverSdkProvider: VeritySdkProvider,
-                  ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
+                  ledgerUtil: LedgerUtil,
+                  endorser: Option[String]
+                 )(implicit scenario: Scenario): Unit = {
     val issuerName = issuerSdk.sdkConfig.name
     s"create issuer public identifier on $issuerName" - {
 
@@ -168,18 +170,35 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
       s"[$issuerName] use issuer-setup protocol" in {
 
-        issuerSdk.issuerSetup_0_6.currentPublicIdentifier(issuerSdk.context)
+        issuerSdk.issuerSetup_0_7.currentPublicIdentifier(issuerSdk.context)
 
         receiverSdk.checkMsg(){ resp =>
           if(resp.getString(`@TYPE`).contains("problem-report")) {
-            issuerSdk.issuerSetup_0_6
-              .create(issuerSdk.context)
+            endorser match {
+              case Some(endorser) => {
+                issuerSdk.issuerSetup_0_7
+                  .create(issuerSdk.context, "did:indy:sovrin:builder", endorser)
 
-            receiverSdk.expectMsg("public-identifier-created") { resp =>
-              resp shouldBe an[JSONObject]
+                receiverSdk.expectMsg("public-identifier-created") { resp =>
+                  resp shouldBe an[JSONObject]
 
-              assert(resp.getJSONObject("identifier").has("verKey"))
-              assert(resp.getJSONObject("identifier").has("did"))
+                  assert(resp.getJSONObject("identifier").has("verKey"))
+                  assert(resp.getJSONObject("identifier").has("did"))
+                  assert(resp.getJSONObject("identifier").has("WrittenToVDR"))
+                }
+              }
+              case None => {
+                issuerSdk.issuerSetup_0_7
+                  .create(issuerSdk.context, "did:indy:sovrin:builder")
+
+                receiverSdk.expectMsg("public-identifier-created") { resp =>
+                  resp shouldBe an[JSONObject]
+
+                  assert(resp.getJSONObject("identifier").has("verKey"))
+                  assert(resp.getJSONObject("identifier").has("did"))
+                  assert(resp.getJSONObject("identifier").has("WrittenToVDR"))
+                }
+              }
             }
           }
           else if (resp.getString(`@TYPE`).contains("public-identifier")) {
@@ -1857,7 +1876,7 @@ object InteractiveSdkFlow {
                       msgReceiverSdk: VeritySdkProvider with MsgReceiver)(implicit scenario: Scenario): (DidStr, VerKeyStr) = {
     var did = ""
     var verkey = ""
-    issuerSdk.issuerSetup_0_6.currentPublicIdentifier(issuerSdk.context)
+    issuerSdk.issuerSetup_0_7.currentPublicIdentifier(issuerSdk.context)
 
     msgReceiverSdk.expectMsg("public-identifier") { resp =>
       did = resp.getString("did")

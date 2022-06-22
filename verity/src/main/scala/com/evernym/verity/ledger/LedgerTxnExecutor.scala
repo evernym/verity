@@ -40,6 +40,12 @@ trait LedgerTxnExecutor {
                                    endorserDID: DidStr,
                                    walletAccess: WalletAccess): Future[LedgerRequest]
 
+  def prepareDIDForEndorsement(submitterDID: DidStr,
+                               targetDID: String,
+                               verkey: String,
+                               endorserDID: DidStr,
+                               walletAccess: WalletAccess): Future[LedgerRequest]
+
   def getCredDef(submitter: Submitter, credDefId: String): Future[GetCredDefResp]
 
   def getAttrib(submitter: Submitter, did: DidStr, attrName: String): Future[GetAttribResp]

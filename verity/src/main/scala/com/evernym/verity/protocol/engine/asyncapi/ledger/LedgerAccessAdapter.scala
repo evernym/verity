@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.engine.asyncapi.ledger
 import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{GetCredDef, GetSchema}
 import com.evernym.verity.cache.{LEDGER_GET_CRED_DEF_FETCHER, LEDGER_GET_SCHEMA_FETCHER}
-import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine.asyncapi._
@@ -82,7 +82,16 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     )
   }
 
-
+  override def prepareDIDTxnForEndorsement(submitterDID: DidStr,
+                                           targetDID: String,
+                                           verkey: String,
+                                           endorserDID: DidStr)
+                                          (handler: Try[LedgerRequest] => Unit): Unit = {
+    asyncOpRunner.withFutureOpRunner(
+      {ledgerSvc.prepareDIDForEndorsement(submitterDID, targetDID, verkey, endorserDID, walletAccess)},
+      handler
+    )
+  }
 
   override def prepareSchemaTxn(schemaJson: String,
                                 fqSchemaId: FQSchemaId,
@@ -103,6 +112,15 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
                                 (handler: Try[PreparedTxn] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
       {vdrTools.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser)},
+      handler
+    )
+
+  override def prepareDIDTxn(didJson: String,
+                             submitterDID: DidStr,
+                             endorser: Option[String])
+                            (handler: Try[PreparedTxn] => Unit): Unit =
+    asyncOpRunner.withAsyncOpRunner(
+      {vdrTools.prepareDIDTxn(didJson, submitterDID, endorser)},
       handler
     )
 
@@ -165,4 +183,5 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
   override def walletAccess: WalletAccess = _walletAccess
 
   override lazy val getIndyDefaultLegacyPrefix: String = ledgerSvc.getIndyDefaultLegacyPrefix()
+
 }

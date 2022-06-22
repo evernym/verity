@@ -251,7 +251,7 @@ class VcxSdkProvider(val sdkConfig: SdkConfig)
 
 
   // VCX don't have this capability, so tests should not use this!
-  override def issuerSetup_0_6: IssuerSetupV0_6 = throw new NotImplementedError
+  override def issuerSetup_0_7: IssuerSetupV0_6 = throw new NotImplementedError
 
   // VCX could support his if we want to implement it
   override def writeSchema_0_6(name: String, version: String, attrs: String*): WriteSchemaV0_6 =

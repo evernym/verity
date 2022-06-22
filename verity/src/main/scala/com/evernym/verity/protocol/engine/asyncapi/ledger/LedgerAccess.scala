@@ -1,7 +1,7 @@
 package com.evernym.verity.protocol.engine.asyncapi.ledger
 
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerRequest, TxnResp}
-import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.vdr.{CredDef, FQCredDefId, FQSchemaId, PreparedTxn, Schema, SubmittedTxn}
 
@@ -31,6 +31,9 @@ trait LedgerAccess {
   def prepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr)
                                   (handler: Try[LedgerRequest] => Unit): Unit
 
+  def prepareDIDTxnForEndorsement(submitterDID: DidStr, targetDID: String, verkey: String, endorserDID: DidStr)
+                                 (handler: Try[LedgerRequest] => Unit): Unit
+
   def getIndyDefaultLegacyPrefix(): String
 
   //new vdr apis
@@ -45,6 +48,11 @@ trait LedgerAccess {
                         submitterDID: DidStr,
                         endorser: Option[String])
                        (handler: Try[PreparedTxn] => Unit): Unit
+
+  def prepareDIDTxn(didJson: String,
+                    submitterDID: DidStr,
+                    endorser: Option[String])
+                   (handler: Try[PreparedTxn] => Unit): Unit
 
   def submitTxn(preparedTxn: PreparedTxn,
                 signature: Array[Byte],

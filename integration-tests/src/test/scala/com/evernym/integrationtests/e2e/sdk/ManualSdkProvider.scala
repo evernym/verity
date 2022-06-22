@@ -81,7 +81,7 @@ class ManualSdkProvider(val sdkConfig: SdkConfig)
 
   override def updateConfigs_0_6(): UpdateConfigsV0_6 = throw new NotImplementedError
 
-  override def issuerSetup_0_6: IssuerSetupV0_6 = throw new NotImplementedError
+  override def issuerSetup_0_7: IssuerSetupV0_6 = throw new NotImplementedError
 
   override def writeSchema_0_6(name: String,
                                version: String,

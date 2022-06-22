@@ -209,6 +209,18 @@ trait LedgerSvc {
     _getCredDef(credDefId)
   }
 
+  final def prepareDIDForEndorsement(submitterDID: DidStr,
+                                     targetDID: String,
+                                     verkey: String,
+                                     endorserDID: DidStr,
+                                     walletAccess: WalletAccess): Future[LedgerRequest] = {
+    try {
+      ledgerTxnExecutor.prepareDIDForEndorsement(submitterDID, targetDID, verkey, endorserDID, walletAccess)
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
+    }
+  }
   final def getNym(submitterDetail: Submitter, id: String): Future[GetNymResp] = {
     _getNym(submitterDetail, id)
   }

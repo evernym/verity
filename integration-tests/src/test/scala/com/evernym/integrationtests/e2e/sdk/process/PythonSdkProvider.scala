@@ -159,7 +159,7 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
         executeCmd(ctx, "UpdateConfigs", this.version, "status")
     }
 
-  override def issuerSetup_0_6: IssuerSetupV0_6 = {
+  override def issuerSetup_0_7: IssuerSetupV0_6 = {
     new UndefinedIssuerSetup_0_6 {
       override def create(ctx: Context): Unit =
         executeCmd(ctx, "IssuerSetup", this.version, "create")

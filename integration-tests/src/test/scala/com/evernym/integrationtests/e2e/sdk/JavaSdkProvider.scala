@@ -50,7 +50,7 @@ class JavaSdkProvider(val sdkConfig: SdkConfig, val testDir: Option[Path] = None
 
   override def updateConfigs_0_6(): UpdateConfigsV0_6 = UpdateConfigs.v0_6()
 
-  override def issuerSetup_0_6: IssuerSetupV0_6 = IssuerSetup.v0_6()
+  override def issuerSetup_0_7: IssuerSetupV0_6 = IssuerSetup.v0_6()
 
   override def writeSchema_0_6(name: String, version: String, attrs: String*): WriteSchemaV0_6 =
     WriteSchema.v0_6(name, version, attrs.toArray: _*)

@@ -26,6 +26,7 @@ import com.typesafe.scalalogging.Logger
 import com.evernym.vdrtools.IndyException
 import com.evernym.vdrtools.ledger.Ledger
 import com.evernym.vdrtools.ledger.Ledger._
+import com.evernym.vdrtools.vdr.VDR
 import com.evernym.vdrtools.pool.{LedgerNotFoundException, Pool}
 
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
@@ -414,6 +415,23 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
                                             endorserDID: DidStr,
                                             walletAccess: WalletAccess): Future[LedgerRequest] = {
     toFuture(buildCredDefRequest(submitterDID, credDefJson)) flatMap { req =>
+      val credDefReq = LedgerRequest(req, needsSigning=false, taa=None)
+      appendTAAToRequest(credDefReq, currentTAA) flatMap { reqWithOptTAA =>
+        toFuture(appendRequestEndorser(reqWithOptTAA.req, endorserDID)) flatMap{ reqWithEndorser =>
+          val promise = Promise[LedgerRequestResult]()
+          walletAccess.multiSignRequest(submitterDID, reqWithEndorser)(promise.complete)
+          promise.future.map(toLedgerRequest)
+        }
+      }
+    }
+  }
+
+  override def prepareDIDForEndorsement(submitterDID: DidStr,
+                                        targetDID: String,
+                                        verkey: String,
+                                        endorserDID: DidStr,
+                                        walletAccess: WalletAccess): Future[LedgerRequest] = {
+    toFuture(buildNymRequest(submitterDID, targetDID, verkey, null, null)) flatMap { req =>
       val credDefReq = LedgerRequest(req, needsSigning=false, taa=None)
       appendTAAToRequest(credDefReq, currentTAA) flatMap { reqWithOptTAA =>
         toFuture(appendRequestEndorser(reqWithOptTAA.req, endorserDID)) flatMap{ reqWithEndorser =>

@@ -13,8 +13,8 @@ object MockableEndorserAccess {
 class MockableEndorserAccess(endorsers: Map[String, List[Endorser]])
   extends EndorserAccess {
 
-  override def withCurrentEndorser(ledger: String)(handler: Try[Option[Endorser]] => Unit): Unit = {
-    handler(Try(endorsers.get(ledger).flatMap(_.headOption)))
+  override def withCurrentEndorser(ledgerPrefix: String)(handler: Try[Option[Endorser]] => Unit): Unit = {
+    handler(Try(endorsers.get(ledgerPrefix).flatMap(_.headOption)))
   }
 
   override def endorseTxn(payload: String, ledgerPrefix: String)(handler: Try[Unit] => Unit): Unit = {

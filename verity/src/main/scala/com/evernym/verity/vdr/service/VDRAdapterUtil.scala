@@ -1,6 +1,7 @@
 package com.evernym.verity.vdr.service
 
 import com.evernym.vdrtools.vdr.VdrResults
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.vdr._
 import org.json.JSONObject
 

@@ -38,6 +38,10 @@ trait VdrTools {
                      submitterDid: DidStr,
                      endorser: Option[String]): Future[PreparedTxnResult]
 
+  def prepareDIDTxn(txnSpecificParams: TxnSpecificParams,
+                    submitterDid: DidStr,
+                    endorser: Option[String]): Future[PreparedTxnResult]
+
   def submitTxn(namespace: Namespace,
                 txnBytes: Array[Byte],
                 signatureSpec: String,

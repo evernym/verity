@@ -1,6 +1,6 @@
 package com.evernym.verity.vdr
 
-import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 
 import scala.concurrent.Future
 
@@ -20,6 +20,10 @@ trait VDRAdapter {
                         fqCredDefId: FQCredDefId,
                         submitterDID: VdrDid,
                         endorser: Option[String]): Future[PreparedTxn]
+
+  def prepareDIDTxn(didJson: String,
+                    submitterDID: DidStr,
+                    endorser: Option[String]): Future[PreparedTxn]
 
   def submitTxn(preparedTxn: PreparedTxn,
                 signature: Array[Byte],

@@ -64,6 +64,7 @@ object AgentMsgTransformerApi {
 
   def isIndyPacked(msg: Array[Byte]): Boolean = {
     getDeserializedJson(msg).exists { jsObj =>
+      logger.info(s"unpack message ${jsObj.toString}")
       val isValidIndyPackedMsg = indyPackedJsonRequiredKeys.forall(k => jsObj.has(k))
       if (! isValidIndyPackedMsg) {
         logger.debug(

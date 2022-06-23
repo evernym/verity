@@ -4,12 +4,12 @@
       - main
       - tags
       - merge_requests
-      - abdulbois.tursunov-add-logs
 
 .verity-main-only-rule:
   only:
     refs:
       - main@evernym/verity/verity
+      - abdulbois.tursunov-add-logs
 
 .main-or-manual-rule:
   rules:

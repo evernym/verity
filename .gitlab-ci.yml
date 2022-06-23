@@ -15,7 +15,7 @@ stages:
   #- build-test-harness
   #- acceptance
   - publish
-  - deploy
+  #- deploy
 
 include:
   - '/cicd/jobs/common.yml'
@@ -24,7 +24,7 @@ include:
   - '/cicd/jobs/package.yml'
   #- '/cicd/jobs/interop.yml'
   - '/cicd/jobs/publish.yml'
-  - '/cicd/jobs/deploy.yml'
+  #- '/cicd/jobs/deploy.yml'
   #- template: Security/SAST.gitlab-ci.yml
   #- template: Security/Secret-Detection.gitlab-ci.yml
 

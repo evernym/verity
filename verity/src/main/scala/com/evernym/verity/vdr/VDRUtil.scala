@@ -12,7 +12,9 @@ object VDRUtil {
 
   val LEGACY_LEDGER_PREFIX = s"$DID_PREFIX:sov"
 
-  def toFqDID(did: String, vdrUnqualifiedLedgerPrefix: LedgerPrefix, vdrLegacyLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix]): FqDID = {
+  def toFqDID(did: String,
+              vdrUnqualifiedLedgerPrefix: LedgerPrefix,
+              vdrLegacyLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix]): FqDID = {
     if (did.startsWith(LEGACY_LEDGER_PREFIX)) {
       val aliasLedgerPrefix = vdrLegacyLedgerPrefixMappings(LEGACY_LEDGER_PREFIX)
       did.replace(LEGACY_LEDGER_PREFIX, aliasLedgerPrefix)
@@ -59,18 +61,23 @@ object VDRUtil {
    * @param vdrUnqualifiedLedgerPrefix
    * @return
    */
-  def extractNamespace(identifier: Option[String], vdrUnqualifiedLedgerPrefix: Option[LedgerPrefix]): Namespace = {
+  def extractNamespace(identifier: Option[String],
+                       vdrUnqualifiedLedgerPrefix: Option[LedgerPrefix]): Namespace = {
     Try {
       (identifier, vdrUnqualifiedLedgerPrefix) match {
-        case (Some(id), _ ) => extractNamespace(id)
-        case (None, Some(namespace)) => namespace
+        case (Some(id), _ ) =>
+          extractNamespaceFromDIDStr(id)
+        case (None, Some(ledgerPrefix)) =>
+          extractNamespaceFromLedgerPrefix(ledgerPrefix)
         case _ =>
           throw new RuntimeException(s"could not extract namespace for given identifier: $identifier (vdrUnqualifiedLedgerPrefix: $vdrUnqualifiedLedgerPrefix)")
       }
     }.getOrElse {
-      vdrUnqualifiedLedgerPrefix.getOrElse {
-        throw new RuntimeException(s"could not extract namespace for given identifier: $identifier (vdrUnqualifiedLedgerPrefix: $vdrUnqualifiedLedgerPrefix)")
-      }
+      vdrUnqualifiedLedgerPrefix
+        .map(extractNamespaceFromLedgerPrefix)
+        .getOrElse {
+          throw new RuntimeException(s"could not extract namespace for given identifier: $identifier (vdrUnqualifiedLedgerPrefix: $vdrUnqualifiedLedgerPrefix)")
+        }
     }
   }
 
@@ -95,13 +102,22 @@ object VDRUtil {
    * @param did
    * @return
    */
-  def extractNamespace(did: FqDID): DidStr = {
+  private def extractNamespaceFromDIDStr(did: FqDID): DidStr = {
     toDIDMethod(did) match {
       case _: UnqualifiedDID => throw new RuntimeException(s"unqualified DID found: $did")
       case ni: DIDIndySovrin => ni.methodIdentifier.namespace
       case si: SovIdentifier => si.method
       case other => other.method
     }
+  }
+
+  /**
+   * extracts namespace from given fully qualified DID
+   * @param did
+   * @return
+   */
+  private def extractNamespaceFromLedgerPrefix(ledgerPrefix: LedgerPrefix): Namespace = {
+    ledgerPrefix.split(":").tail.mkString(":")   //removes the leading `did:` string
   }
 
 }

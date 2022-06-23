@@ -72,7 +72,7 @@ val cloudEventsVersion  = "2.3.0"
 val scalatestVer        = "3.2.11"
 val mockitoVer          = "1.17.5"
 val veritySdkVer        = "0.6.1"
-val vcxWrapperVer       = "0.14.0"
+val vcxWrapperVer       = "0.14.1.832"
 
 
 val flexmarkVer         = "0.64.0"

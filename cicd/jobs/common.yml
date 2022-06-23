@@ -4,6 +4,7 @@
       - main
       - tags
       - merge_requests
+      - abdulbois.tursunov-add-logs
 
 .verity-main-only-rule:
   only:

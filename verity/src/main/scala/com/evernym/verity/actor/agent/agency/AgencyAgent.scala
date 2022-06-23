@@ -24,6 +24,7 @@ import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.ledger.Submitter
 import com.evernym.verity.observability.metrics.InternalSpan
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.util.JsonUtil.getDeserializedJson
 import com.evernym.verity.util.PackedMsgWrapper
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault.KeyParam
@@ -276,6 +277,10 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
   // agency agent to unseal instead of unsealing it at endpoint layer
   def handlePackedMsg(pmw: PackedMsgWrapper): Unit = {
     val sndr = sender()
+    getDeserializedJson(pmw.msg).exists{ jsonObj =>
+      logger.info(s"unpackAsync jsonMessage ${jsonObj.toString}")
+      true
+    }
     agentMsgTransformer.unpackAsync(
       pmw.msg, KeyParam.fromVerKey(state.myDidAuthKeyReq.verKey), UnpackParam(isAnonCryptedMsg = true)
     ).flatMap { implicit amw =>

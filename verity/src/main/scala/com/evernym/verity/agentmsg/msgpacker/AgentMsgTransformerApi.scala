@@ -43,7 +43,10 @@ object AgentMsgTransformerApi {
                   fromVerKeyParam: Option[KeyParam],
                   unpackParam: UnpackParam = UnpackParam())
                  (implicit wap: WalletAPIParam, walletAPI: WalletAPI, ec: ExecutionContext): Future[AgentMsgWrapper] = {
-
+    getDeserializedJson(msg).exists{ jsonObj =>
+      logger.info(s"unpackAsync jsonMessage ${jsonObj.toString}")
+      true
+    }
     val (transformer, fromVerKeyParamFinal) = if (isIndyPacked(msg)) {
       (indyPackTransformer, None)
     } else {

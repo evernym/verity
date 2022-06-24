@@ -15,6 +15,7 @@ import com.evernym.verity.vault.service._
 import com.evernym.vdrtools.{InvalidParameterException, InvalidStructureException}
 import com.evernym.vdrtools.crypto.Crypto
 import com.evernym.vdrtools.wallet.WalletItemNotFoundException
+import com.evernym.verity.util.JsonUtil.getDeserializedJson
 
 import scala.concurrent.Future
 
@@ -83,7 +84,13 @@ object CryptoOpExecutor extends OpExecutorBase {
 
   def handleUnpackMsg(um: UnpackMsg)(implicit we: WalletExt, ec: ExecutionContext): Future[UnpackedMsg] = {
     Crypto.unpackMessage(we.wallet, um.msg)
-      .map(r => UnpackedMsg(r, None, None))
+      .map(r => {
+        getDeserializedJson(r).exists { jsObj =>
+          logger.info(s"handleUnpackMsg unpacked message ${jsObj.toString}")
+          true
+        }
+        UnpackedMsg(r, None, None)
+      })
       .recover {
         case e: BadRequestErrorException =>
           throw e

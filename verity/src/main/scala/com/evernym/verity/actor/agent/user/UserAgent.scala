@@ -1,12 +1,9 @@
 package com.evernym.verity.actor.agent.user
 
-import akka.actor.typed.scaladsl.adapter._
 import akka.actor.ActorRef
+import akka.actor.typed.scaladsl.adapter._
 import akka.event.LoggingReceive
 import akka.pattern.ask
-import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
-import com.evernym.verity.util2.Status._
-import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent._
@@ -14,21 +11,17 @@ import com.evernym.verity.actor.agent.msghandler.incoming.{ControlMsg, SignalMsg
 import com.evernym.verity.actor.agent.msghandler.outgoing.{MsgNotifierForUserAgent, NotifyMsgDetail}
 import com.evernym.verity.actor.agent.msgrouter.{InternalMsgRouteParam, PackedMsgRouteParam, RouteAlreadySet}
 import com.evernym.verity.actor.agent.relationship.Tags.{CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY, RECOVERY_KEY}
-import com.evernym.verity.actor.agent.relationship.{EndpointType, PackagingContext, SelfRelationship, _}
+import com.evernym.verity.actor.agent.relationship._
 import com.evernym.verity.actor.agent.state.base.AgentStateImplBase
 import com.evernym.verity.actor.agent.user.UserAgent._
 import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.metrics.{RemoveCollectionMetric, UpdateCollectionMetric}
 import com.evernym.verity.actor.msg_tracer.progress_tracker.ChildEvent
-import com.evernym.verity.msgoutbox.DestId
-import com.evernym.verity.msgoutbox.rel_resolver.GetOutboxParam
-import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.OutboxParamResp
 import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_MESSAGE
 import com.evernym.verity.actor.resourceusagethrottling.helper.ResourceUsageUtil
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.observability.metrics.CustomMetrics._
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.configs._
 import com.evernym.verity.agentmsg.msgfamily.pairwise._
@@ -44,30 +37,37 @@ import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.ledger.TransactionAuthorAgreement
-import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
+import com.evernym.verity.msgoutbox.DestId
+import com.evernym.verity.msgoutbox.outbox.Outbox.DESTINATION_ID_DEFAULT
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.UpdateParams
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher
+import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.AUTH_TYPE_OAUTH2
+import com.evernym.verity.msgoutbox.rel_resolver.GetOutboxParam
+import com.evernym.verity.msgoutbox.rel_resolver.RelationshipResolver.Commands.OutboxParamResp
+import com.evernym.verity.observability.metrics.CustomMetrics._
+import com.evernym.verity.observability.metrics.MetricsUnit
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.CreateKeyEndpointDetail
 import com.evernym.verity.protocol.protocols.connecting.common.{ConnReqReceived, SendMsgToRegisteredEndpoint}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.PublicIdentifierCreated
-import com.evernym.verity.protocol.protocols.relationship.v_1_0.{Ctl, RelationshipDef}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.CreatePairwiseKey
+import com.evernym.verity.protocol.protocols.relationship.v_1_0.{Ctl, RelationshipDef}
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily.{ProvideRecoveryDetails, RecoveryKeyRegistered}
 import com.evernym.verity.push_notification.PusherUtil
+import com.evernym.verity.util.JsonUtil.getDeserializedJson
 import com.evernym.verity.util.Util._
 import com.evernym.verity.util._
-import com.evernym.verity.vault._
-import com.evernym.verity.{actor, msgoutbox}
-import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder
-import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.OAuthAccessTokenHolder.Commands.UpdateParams
-import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher
-import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthAccessTokenRefresher.AUTH_TYPE_OAUTH2
-import com.evernym.verity.msgoutbox.outbox.Outbox.DESTINATION_ID_DEFAULT
-import com.evernym.verity.observability.metrics.MetricsUnit
-import com.evernym.verity.util2.ActorErrorResp
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
+import com.evernym.verity.util2.Status._
+import com.evernym.verity.util2.{ActorErrorResp, UrlParam}
 import com.evernym.verity.vault.WalletUtil.generateWalletParamAsync
+import com.evernym.verity.vault._
+import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
+import com.evernym.verity.{actor, msgoutbox}
 import org.json.JSONObject
 
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
@@ -500,6 +500,11 @@ class UserAgent(val agentActorContext: AgentActorContext,
 
   def handleFwdMsg(fwdMsg: FwdReqMsg)(implicit reqMsgContext: ReqMsgContext): Unit = {
     val efm = PackedMsgRouteParam(fwdMsg.`@fwd`, PackedMsg(fwdMsg.`@msg`), reqMsgContext)
+    getDeserializedJson(efm.packedMsg.msg).exists { jsObj =>
+      logger.info(s"handleFwdMsg forward message ${jsObj.toString}")
+      logger.info(s"handleFwdMsg forward routeId ${efm.toRoute}")
+      true
+    }
     agentActorContext.agentMsgRouter.forward(efm, sender())
   }
 

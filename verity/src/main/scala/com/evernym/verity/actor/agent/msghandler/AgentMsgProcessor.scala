@@ -44,7 +44,6 @@ import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvis
 import com.evernym.verity.protocol.protocols.connecting.common.GetInviteDetail
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingProtoDef => ConnectingProtoDef_v_0_6}
 import com.evernym.verity.push_notification.PushNotifData
-import com.evernym.verity.util.JsonUtil.getDeserializedJson
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util.{Base58Util, MsgUtil, ParticipantUtil, ReqMsgContext, RestAuthContext}
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, NotFoundErrorException, UnauthorisedErrorException}
@@ -394,10 +393,6 @@ class AgentMsgProcessor(val appConfig: AppConfig,
     val sndr = sender()
     // flow diagram: fwd + ctl + proto + legacy, step 7 -- Receive and decrypt.
     logger.debug(s"incoming packed msg: " + ppm.packedMsg.msg)
-    getDeserializedJson(ppm.packedMsg.msg).exists{ jsonObj =>
-      logger.info(s"unpackAsync jsonMessage ${jsonObj.toString}")
-      true
-    }
     recordRoutingChildEvent(ppm.reqMsgContext.id, childEventWithDetail(s"packed msg received"))
     msgExtractor.unpackAsync(ppm.packedMsg, unpackParam = UnpackParam(ParseParam(useInsideMsgIfPresent = true))).map { amw =>
       recordRoutingChildEvent(ppm.reqMsgContext.id, childEventWithDetail(s"packed msg unpacked", sndr))

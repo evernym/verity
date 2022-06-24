@@ -5,7 +5,7 @@ import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.util.Util.jsonArray
 
 import scala.concurrent.ExecutionContext
-import com.evernym.verity.util2.Status.{INVALID_VALUE, SIGNATURE_VERIF_FAILED, UNHANDLED}
+import com.evernym.verity.util2.Status.{INVALID_VALUE, SIGNATURE_VERIF_FAILED, UNHANDLED, logger}
 import com.evernym.verity.actor.wallet.{LegacyPackMsg, LegacyUnpackMsg, PackMsg, PackedMsg, SignMsg, SignedMsg, UnpackMsg, UnpackedMsg, VerifySigResult}
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.util2.Exceptions
@@ -93,6 +93,7 @@ object CryptoOpExecutor extends OpExecutorBase {
             Option(e.getMessage),
             errorDetail = Option(Exceptions.getStackTraceAsSingleLineString(e)))
         case e: InvalidStructureException =>
+          logger.info(s" handleUnpack BadRequestErrorException trace = ${Exceptions.getStackTraceAsSingleLineString(e)}")
           throw new BadRequestErrorException(
             INVALID_VALUE.statusCode,
             Option("invalid packed message: " + e.getMessage),

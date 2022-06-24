@@ -43,12 +43,28 @@ object CryptoOpExecutor extends OpExecutorBase {
     val result = for (
       fromVerKeyResp <- verKeyFuture(lum.fromVerKeyParam.toSet, ledgerPoolManager).map(_.head)
     ) yield {
+      getDeserializedJson(lum.msg).exists { jsObj =>
+        logger.info(s"handleLegacyUnpackMsg message before unpack ${jsObj.toString}")
+        true
+      }
       val result = if (lum.isAnonCryptedMsg) {
         Crypto.anonDecrypt(we.wallet, fromVerKeyResp.verKey, lum.msg)
-          .map(dm => UnpackedMsg(dm, None, None))
+          .map(dm => {
+            getDeserializedJson(lum.msg).exists { jsObj =>
+              logger.info(s"handleLegacyUnpackMsg anonDecrypt ${jsObj.toString}")
+              true
+            }
+            UnpackedMsg(dm, None, None)
+          })
       } else {
         Crypto.authDecrypt(we.wallet, fromVerKeyResp.verKey, lum.msg)
-          .map(dr => UnpackedMsg(dr.getDecryptedMessage, Option(dr.getVerkey), None))
+          .map(dr => {
+            getDeserializedJson(lum.msg).exists { jsObj =>
+              logger.info(s"handleLegacyUnpackMsg authDecrypt ${jsObj.toString}")
+              true
+            }
+            UnpackedMsg(dr.getDecryptedMessage, Option(dr.getVerkey), None)
+          })
       }
       result.recover {
         case e: InvalidStructureException =>

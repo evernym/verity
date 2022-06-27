@@ -43,6 +43,7 @@ object CryptoOpExecutor extends OpExecutorBase {
     val result = for (
       fromVerKeyResp <- verKeyFuture(lum.fromVerKeyParam.toSet, ledgerPoolManager).map(_.head)
     ) yield {
+      logger.info(s"handleLegacyUnpackMsg message before unpack isAnonCryptedMsg = ${lum.isAnonCryptedMsg.toString}")
       logger.info(s"handleLegacyUnpackMsg message before unpack ${lum.msg.map(_.toChar).mkString}")
       val result = if (lum.isAnonCryptedMsg) {
         Crypto.anonDecrypt(we.wallet, fromVerKeyResp.verKey, lum.msg)

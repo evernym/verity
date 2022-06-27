@@ -15,7 +15,7 @@ object IssuerSetupDefinition extends ProtocolDefinition[IssuerSetup, Role, Msg, 
   override val roles: Set[Role] = Role.roles
 
   override def supportedMsgs: ProtoReceive = {
-    case _: Ctl =>
+    case _: IssuerSetupControl =>
   }
 
   override def createInitMsg(params: Parameters): Control = InitMsg(params.paramValueRequired(SELF_ID))

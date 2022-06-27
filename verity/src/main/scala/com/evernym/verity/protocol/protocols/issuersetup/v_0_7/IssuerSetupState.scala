@@ -15,9 +15,9 @@ object State {
   case class Identity(did: DidStr, verKey: VerKeyStr)
   case class StateData(createNonce: Option[Nonce], identity: Option[Identity])
 
-  case class WaitingOnEndorser(ledgerPrefix: String, req: String) extends State
+  case class WaitingOnEndorser(ledgerPrefix: String, data: StateData) extends State
 
-  case class Done(did: String) extends State
+  case class Done(data: StateData) extends State
 
   case class Error(error: String) extends State
 

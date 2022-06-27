@@ -52,17 +52,6 @@ class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory,
       .map(resp => buildPreparedTxn(resp))
   }
 
-  override def prepareDIDTxn(didJson: String,
-                             did: DidStr,
-                             submitterDID: DidStr,
-                             endorser: Option[String]): Future[PreparedTxn] = {
-    vdrActorRef
-      .ask(ref => VDRActor.Commands.PrepareDIDTxn(didJson, submitterDID, endorser, ref))
-      .flatMap(reply => Future.fromTry(reply.preparedTxn))
-      .map(resp => buildPreparedTxn(resp))
-  }
-
-
   override def submitTxn(preparedTxn: PreparedTxn,
                          signature: Array[Byte],
                          endorsement: Array[Byte]): Future[SubmittedTxn] = {

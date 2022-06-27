@@ -27,8 +27,10 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
       ctx.logger.debug(s"CreatePublicIdentifierCompleted: $did - $verKey")
       State.Created(StateData(None, Option(State.Identity(did, verKey))))
 
-    case (_: State.Created, _, e: AskedForEndorsement)    => State.WaitingOnEndorser(e.ledgerPrefix, e.didJson)
-    case (s @ (_: State.Created | _:State.WaitingOnEndorser), _, e: DIDWritten)  => State.Done(e.did)
+    case (s: State.Created, _, e: NeedsManualEndorsement) => State.Done(s.data)
+    case (s: State.Created, _, e: AskedForEndorsement)    => State.WaitingOnEndorser(e.ledgerPrefix, s.data)
+    case (s: State.Created, _, e: DIDWritten)  => State.Done(s.data)
+    case (s: State.WaitingOnEndorser, _, e: DIDWritten)  => State.Done(s.data)
     case (s @ (_: State.Created | _:State.WaitingOnEndorser), _, e: WriteFailed)    => State.Error(e.error)
 
     // These case are not possible from the code NOW but must be left for already
@@ -46,30 +48,53 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     case (State.Uninitialized(), _, InitMsg(id)) => ctx.apply(RosterInitialized(id))
     case (State.Initialized(), _, Create(ledgerPrefix, endorserDID)) => writeDIDToLedger(ledgerPrefix, endorserDID)
     case (s: State.WaitingOnEndorser, _, m: EndorsementResult) => handleEndorsementResult(m, s)
+    case (State.Creating(_) | State.Created(_), _,  Create(ledgerPrefix, endorser)) =>
+      ctx.signal(ProblemReport(alreadyCreatingProblem))
+    //******** Query *************
+    case (State.Created(d), _, CurrentPublicIdentifier()) =>
+      d.identity match {
+        case Some(didDetails) => ctx.signal(PublicIdentifier(didDetails.did, didDetails.verKey))
+        case None => ctx.logger.warn(corruptedStateErrorMsg + " - Created state doesn't have did and/or verkey")
+      }
+    case (State.WaitingOnEndorser(l,d), _, CurrentPublicIdentifier()) =>
+      d.identity match {
+        case Some(didDetails) => ctx.signal(PublicIdentifier(didDetails.did, didDetails.verKey))
+        case None => ctx.logger.warn(corruptedStateErrorMsg + " - WaitingOnEndorser state doesn't have did and/or verkey")
+      }
+    case (State.Done(d), _, CurrentPublicIdentifier()) =>
+      d.identity match {
+        case Some(didDetails) => ctx.signal(PublicIdentifier(didDetails.did, didDetails.verKey))
+        case None => ctx.logger.warn(corruptedStateErrorMsg + " - Done state doesn't have did and/or verkey")
+      }
+    case (_, _, CurrentPublicIdentifier()) => ctx.signal(ProblemReport(identifierNotCreatedProblem))
+    case (s: State, _, msg: Control) =>
+      throw new Exception(s"Unrecognized state, message combination: ${s}, $msg")
   }
 
   private def writeDIDToLedger(ledgerPrefix: String, endorserDID: Option[String]): Unit = {
-    ctx.logger.debug("Creating DID/Key pair for Issuer Identifier/Keys")
+    ctx.logger.debug(s"Creating DID/Key pair for Issuer Identifier/Keys for ledger prefix: $ledgerPrefix with endorser: ${endorserDID.getOrElse("default")}")
     ctx.wallet.newDid() {
       case Success(keyCreated) =>
         ctx.apply(CreatePublicIdentifierCompleted(keyCreated.did, keyCreated.verKey))
+        ctx.signal(PublicIdentifierCreated(PublicIdentifier(keyCreated.did, keyCreated.verKey)))
         val ledgerDefaultLegacyPrefix = ctx.ledger.getIndyDefaultLegacyPrefix()
         ctx.endorser.withCurrentEndorser(ledgerPrefix) {
           case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID.getOrElse("") == endorser.did =>
             ctx.logger.info(s"registered endorser to be used for schema endorsement (prefix: $ledgerDefaultLegacyPrefix): " + endorser)
             //no explicit endorser given/configured or the given/configured endorser matches an active endorser for the ledger prefix
             ctx.ledger.prepareDIDTxnForEndorsement(keyCreated.did, keyCreated.did, keyCreated.verKey, endorser.did) {
-              case Success(txn) => ctx.endorser.endorseTxn(txn.req, ledgerPrefix) {
-                case Success(value) => ctx.apply(AskedForEndorsement(keyCreated.did, ledgerPrefix, txn.req))
-                case Failure(e) => problemReport(e)
-              }
+              case Success(txn) =>
+                ctx.endorser.endorseTxn(txn.req, ledgerPrefix) {
+                  case Success(value) => ctx.apply(AskedForEndorsement(keyCreated.did, ledgerPrefix, txn.req))
+                  case Failure(e) => problemReport(e)
+                }
+              case Failure(e) => problemReport(e)
             }
           case other => {
-            ctx.logger.info(s"no active/matched endorser found to be used for schema endorsement (prefix: $ledgerDefaultLegacyPrefix): " + other)
+            ctx.logger.info(s"no active/matched endorser found to be used for issuer endorsement (prefix: $ledgerDefaultLegacyPrefix): " + other)
             //any failure while getting active endorser, or no active endorser or active endorser is NOT the same as given/configured endorserDID
-            handleNeedsEndorsement(keyCreated.did, keyCreated.did, keyCreated.verKey, endorserDID.getOrElse(), ledgerPrefix)
+            handleNeedsEndorsement(keyCreated.did, keyCreated.did, keyCreated.verKey, endorserDID.getOrElse(""), ledgerPrefix)
           }
-          case Failure(e) => problemReport(e)
         }
       case Failure(e) => problemReport(e)
     }
@@ -83,8 +108,8 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     if (endorserDID.nonEmpty) {
       ctx.ledger.prepareDIDTxnForEndorsement(submitterDID, targetDID, verkey, endorserDID) {
         case Success(ledgerRequest) =>
-          ctx.signal(NeedsEndorsement(targetDID, ledgerRequest.req))
-          ctx.apply(AskedForEndorsement(targetDID, ledgerPrefix, ledgerRequest.req))
+          ctx.signal(NeedsEndorsement(ledgerRequest.req))
+          ctx.apply(NeedsManualEndorsement(targetDID, verkey, ledgerPrefix))
         case Failure(e) =>
           problemReport(e)
       }

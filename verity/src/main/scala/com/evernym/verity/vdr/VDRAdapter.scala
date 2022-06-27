@@ -21,10 +21,6 @@ trait VDRAdapter {
                         submitterDID: VdrDid,
                         endorser: Option[String]): Future[PreparedTxn]
 
-  def prepareDIDTxn(didJson: String,
-                    submitterDID: DidStr,
-                    endorser: Option[String]): Future[PreparedTxn]
-
   def submitTxn(preparedTxn: PreparedTxn,
                 signature: Array[Byte],
                 endorsement: Array[Byte]): Future[SubmittedTxn]

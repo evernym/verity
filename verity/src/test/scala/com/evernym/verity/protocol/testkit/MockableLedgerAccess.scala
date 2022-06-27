@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.testkit
 
 import akka.actor.ActorRef
+import com.evernym.vdrtools.ledger.Ledger.buildNymRequest
 import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.did.DidStr
@@ -14,6 +15,8 @@ import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vdr._
+import scala.compat.java8.FutureConverters.{toScala => toFuture}
+
 import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
@@ -106,6 +109,21 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
+  override def prepareDIDTxnForEndorsement(submitterDID: DidStr,
+                                           targetDID: String,
+                                           verkey: String,
+                                           endorserDID: DidStr)
+                                          (handler: Try[LedgerRequest] => Unit): Unit = {
+    handler {
+      Try(
+        LedgerRequest(
+          buildNymRequest(submitterDID, targetDID, verkey, null, null).get()
+        )
+      )
+    }
+  }
+
+
   override def getSchemas(schemaIds: Set[String])(handler: Try[Map[String, GetSchemaResp]] => Unit): Unit = {
     handler {
       if (ledgerAvailable) Try(schemas.view.filterKeys(s => schemaIds.contains(s)).toMap)
@@ -171,6 +189,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
   override val mockExecutionContext: ExecutionContext = executionContext
 
   def executionContextProvider: ExecutionContextProvider = ecp
+
 }
 
 

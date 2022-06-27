@@ -7,6 +7,7 @@ import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
+import com.evernym.verity.sdk.protocols.issuersetup.v0_7.IssuerSetupV0_7
 import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate, ProposedAttribute, ProposedPredicate}
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
@@ -81,7 +82,9 @@ class ManualSdkProvider(val sdkConfig: SdkConfig)
 
   override def updateConfigs_0_6(): UpdateConfigsV0_6 = throw new NotImplementedError
 
-  override def issuerSetup_0_7: IssuerSetupV0_6 = throw new NotImplementedError
+  override def issuerSetup_0_6: IssuerSetupV0_6 = throw new NotImplementedError
+
+  override def issuerSetup_0_7: IssuerSetupV0_7 = throw new NotImplementedError
 
   override def writeSchema_0_6(name: String,
                                version: String,

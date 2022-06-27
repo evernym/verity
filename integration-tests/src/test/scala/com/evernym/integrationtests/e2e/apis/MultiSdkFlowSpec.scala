@@ -137,7 +137,7 @@ class MultiSdkFlowSpec
 
         updateVerityAuthedKeys(apps, List(issuerSdk2, issuerSdk3))
 
-        setupIssuer(issuerSdk2, issuerMsgReceiverSdk, ledgerUtil)
+        setupIssuer(issuerSdk2, issuerMsgReceiverSdk, ledgerUtil, None)
         writeIssuerToLedger(issuerSdk2, issuerMsgReceiverSdk, ledgerUtil)
 
         writeSchema(

@@ -49,11 +49,6 @@ trait LedgerAccess {
                         endorser: Option[String])
                        (handler: Try[PreparedTxn] => Unit): Unit
 
-  def prepareDIDTxn(didJson: String,
-                    submitterDID: DidStr,
-                    endorser: Option[String])
-                   (handler: Try[PreparedTxn] => Unit): Unit
-
   def submitTxn(preparedTxn: PreparedTxn,
                 signature: Array[Byte],
                 endorsement: Array[Byte])

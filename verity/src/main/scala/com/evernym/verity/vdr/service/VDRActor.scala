@@ -34,11 +34,6 @@ object VDRActor {
                                  endorser: Option[String],
                                  replyTo: ActorRef[Replies.PrepareTxnResp]) extends Cmd
 
-    case class PrepareDIDTxn(txnSpecificParams: TxnSpecificParams,
-                             submitterDID: DidStr,
-                             endorser: Option[String],
-                             replyTo: ActorRef[Replies.PrepareTxnResp]) extends Cmd
-
     case class SubmitTxn(namespace: Namespace,
                          txnBytes: Array[Byte],
                          signatureSpec: String,
@@ -114,7 +109,6 @@ object VDRActor {
       case p: Ping => handlePing(vdrTools, p)
       case pst: PrepareSchemaTxn => handlePrepareSchemaTxn(vdrTools, pst)
       case pcdt: PrepareCredDefTxn => handlePrepareCredDefTxn(vdrTools, pcdt)
-      case pdt: PrepareDIDTxn => handlePrepareDIDTxn(vdrTools, pdt)
       case st: SubmitTxn => handleSubmitTxn(vdrTools, st)
 
       case rs: ResolveSchema => handleResolveSchema(vdrTools, rs)
@@ -146,15 +140,6 @@ object VDRActor {
     vdrTools
       .prepareCredDef(pcdt.txnSpecificParams, pcdt.submitterDid, pcdt.endorser)
       .onComplete(resp => pcdt.replyTo ! PrepareTxnResp(resp))
-    Behaviors.same
-  }
-
-  private def handlePrepareDIDTxn(vdrTools: VdrTools,
-                                  pnt: PrepareDIDTxn)
-                                 (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
-    vdrTools
-      .prepareDIDTxn(pnt.txnSpecificParams, pnt.submitterDID, pnt.endorser)
-      .onComplete(resp => pnt.replyTo ! PrepareTxnResp(resp))
     Behaviors.same
   }
 

@@ -25,11 +25,18 @@ message CreatePublicIdentifierCompleted {
 message AskedForEndorsement {
     option (scalapb.message).extends = "Event";
     string did = 1;
-    string ledgerPrefix = 2;
-    string didJson = 3;
+    string verkey = 2;
+    string ledgerPrefix = 3;
 }
 
-message PublicIdentifierWrittenToLedger {
+message NeedsManualEndorsement {
+    option (scalapb.message).extends = "Event";
+    string did = 1;
+    string verkey = 2;
+    string ledgerPrefix = 3;
+}
+
+message DIDWritten {
     option (scalapb.message).extends = "Event";
     string did = 1;
     string ledgerPrefix = 2;

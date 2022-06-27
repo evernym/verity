@@ -13,6 +13,7 @@ import com.evernym.verity.protocol.protocols.connections.{v_1_0 => connections_1
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.{legacy => issueCredential_legacy}
 import com.evernym.verity.protocol.protocols.issueCredential.{v_1_0 => issueCredential_v10}
 import com.evernym.verity.protocol.protocols.issuersetup.{v_0_6 => issuerSetup_v06}
+import com.evernym.verity.protocol.protocols.issuersetup.{v_0_7 => issuerSetup_v07}
 import com.evernym.verity.protocol.protocols.outofband.{v_1_0 => outOfBand_v10}
 import com.evernym.verity.protocol.protocols.presentproof.{v_1_0 => presentProof_v10}
 import com.evernym.verity.protocol.protocols.questionAnswer.{v_1_0 => questionAnswer_v10}
@@ -326,7 +327,14 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     266 -> AgentDetailRecorded,
     267 -> AgentActivityRecorded,
     268 -> ActivityState,
-    269 -> TheirRoutingUpdated
+    269 -> TheirRoutingUpdated,
+
+    270 -> issuerSetup_v07.RosterInitialized,
+    271 -> issuerSetup_v07.CreatePublicIdentifierInitiated,
+    272 -> issuerSetup_v07.CreatePublicIdentifierCompleted,
+    273 -> issuerSetup_v07.DIDWritten,
+    274 -> issuerSetup_v07.AskedForEndorsement,
+    275 -> issuerSetup_v07.WriteFailed
   )
 
 }

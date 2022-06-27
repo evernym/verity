@@ -154,10 +154,6 @@ trait InteractiveSdkFlow extends MetricsFlow {
     }
   }
 
-  def setupIssuer(sdk: VeritySdkProvider, ledgerUtil: LedgerUtil, endorser: Option[String])(implicit scenario: Scenario): Unit = {
-    setupIssuer(sdk, sdk, ledgerUtil, endorser)
-  }
-
   def setupIssuer(issuerSdk: VeritySdkProvider,
                   msgReceiverSdkProvider: VeritySdkProvider,
                   ledgerUtil: LedgerUtil,
@@ -174,31 +170,14 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
         receiverSdk.checkMsg(){ resp =>
           if(resp.getString(`@TYPE`).contains("problem-report")) {
-            endorser match {
-              case Some(endorser) => {
-                issuerSdk.issuerSetup_0_7
-                  .create(issuerSdk.context, "did:indy:sovrin:builder", endorser)
+            issuerSdk.issuerSetup_0_7
+              .create(issuerSdk.context, "did:indy:sovrin:builder")
 
-                receiverSdk.expectMsg("public-identifier-created") { resp =>
-                  resp shouldBe an[JSONObject]
+            receiverSdk.expectMsg("public-identifier-created") { resp =>
+              resp shouldBe an[JSONObject]
 
-                  assert(resp.getJSONObject("identifier").has("verKey"))
-                  assert(resp.getJSONObject("identifier").has("did"))
-                  assert(resp.getJSONObject("identifier").has("WrittenToVDR"))
-                }
-              }
-              case None => {
-                issuerSdk.issuerSetup_0_7
-                  .create(issuerSdk.context, "did:indy:sovrin:builder")
-
-                receiverSdk.expectMsg("public-identifier-created") { resp =>
-                  resp shouldBe an[JSONObject]
-
-                  assert(resp.getJSONObject("identifier").has("verKey"))
-                  assert(resp.getJSONObject("identifier").has("did"))
-                  assert(resp.getJSONObject("identifier").has("WrittenToVDR"))
-                }
-              }
+              assert(resp.getJSONObject("identifier").has("verKey"))
+              assert(resp.getJSONObject("identifier").has("did"))
             }
           }
           else if (resp.getString(`@TYPE`).contains("public-identifier")) {

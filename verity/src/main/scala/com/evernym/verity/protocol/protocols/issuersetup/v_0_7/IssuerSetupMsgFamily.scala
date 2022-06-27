@@ -5,6 +5,7 @@ import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgF
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkOptionalNotEmpty, checkRequired, checkValidDID}
 
 object IssuerSetupMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.EVERNYM_QUALIFIER
@@ -15,13 +16,15 @@ object IssuerSetupMsgFamily extends MsgFamily {
     "InitMsg"                   -> classOf[InitMsg],
     "create"                    -> classOf[Create],
     "current-public-identifier" -> classOf[CurrentPublicIdentifier],
+    "endorsement-result"        -> classOf[EndorsementResult],
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map (
     classOf[ProblemReport]            -> "problem-report",
     classOf[NeedsEndorsement]         -> "needs-endorsement",
     classOf[PublicIdentifierCreated]  -> "public-identifier-created",
-    classOf[PublicIdentifier]         -> "public-identifier"
+    classOf[PublicIdentifier]         -> "public-identifier",
+    classOf[WrittenToLedger]          -> "written-to-ledger"
   )
 
   override protected val protocolMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map.empty
@@ -30,19 +33,25 @@ object IssuerSetupMsgFamily extends MsgFamily {
 
 sealed trait Msg extends MsgBase
 
-trait Ctl extends Control with Msg
-case class InitMsg(selfId: ParameterValue) extends Ctl
-case class Create(ledgerPrefix: String, endorserDID: Option[String]) extends Ctl
-case class CurrentPublicIdentifier() extends Ctl
-case class EndorsementResult(code: String, description: String) extends Ctl
-object Ctl  {
+trait IssuerSetupControl extends Control with MsgBase
+case class InitMsg(selfId: ParameterValue) extends IssuerSetupControl
+case class Create(ledgerPrefix: String, endorserDID: Option[String]) extends Msg with IssuerSetupControl {
+  override def validate(): Unit = {
+    checkRequired("ledgerPrefix", ledgerPrefix)
+    checkOptionalNotEmpty("endorserDID", endorserDID)
+    endorserDID.foreach{ endorser =>
+      checkValidDID("endorserDID", endorser)
+    }
+  }
 }
+case class CurrentPublicIdentifier() extends IssuerSetupControl
+case class EndorsementResult(code: String, description: String) extends IssuerSetupControl
 
 sealed trait Sig extends Msg
-case class PublicIdentifier(did: DidStr, verKey: VerKeyStr, writtenToVDR: Boolean) extends Sig
+case class PublicIdentifier(did: DidStr, verKey: VerKeyStr) extends Sig
 case class PublicIdentifierCreated(identifier: PublicIdentifier) extends Sig
 case class ProblemReport(message: String) extends Sig
-case class NeedsEndorsement(did: DidStr, verkey: VerKeyStr) extends Sig
+case class NeedsEndorsement(ledgerRequest: String) extends Sig
 case class WrittenToLedger(ledgerPrefix: String) extends Sig
 object Sig {
 }

@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_7
 
-import com.evernym.verity.did.{DidStr, VerKeyStr}
+import com.evernym.verity.did.{DidStr, VerKeyStr, validateVerKey}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.endorser.ENDORSEMENT_RESULT_SUCCESS_CODE
@@ -76,7 +76,6 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     ctx.wallet.newDid() {
       case Success(keyCreated) =>
         ctx.apply(CreatePublicIdentifierCompleted(keyCreated.did, keyCreated.verKey))
-        ctx.signal(PublicIdentifierCreated(PublicIdentifier(keyCreated.did, keyCreated.verKey)))
         val ledgerDefaultLegacyPrefix = ctx.ledger.getIndyDefaultLegacyPrefix()
         ctx.endorser.withCurrentEndorser(ledgerPrefix) {
           case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID.getOrElse("") == endorser.did =>
@@ -85,7 +84,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
             ctx.ledger.prepareDIDTxnForEndorsement(keyCreated.did, keyCreated.did, keyCreated.verKey, endorser.did) {
               case Success(txn) =>
                 ctx.endorser.endorseTxn(txn.req, ledgerPrefix) {
-                  case Success(value) => ctx.apply(AskedForEndorsement(keyCreated.did, ledgerPrefix, txn.req))
+                  case Success(value) => ctx.apply(AskedForEndorsement(keyCreated.did, ledgerPrefix, ledgerPrefix))
                   case Failure(e) => problemReport(e)
                 }
               case Failure(e) => problemReport(e)
@@ -108,7 +107,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     if (endorserDID.nonEmpty) {
       ctx.ledger.prepareDIDTxnForEndorsement(submitterDID, targetDID, verkey, endorserDID) {
         case Success(ledgerRequest) =>
-          ctx.signal(NeedsEndorsement(ledgerRequest.req))
+          ctx.signal(PublicIdentifierCreated(PublicIdentifier(targetDID, verkey), NeedsEndorsement(ledgerRequest.req)))
           ctx.apply(NeedsManualEndorsement(targetDID, verkey, ledgerPrefix))
         case Failure(e) =>
           problemReport(e)
@@ -121,7 +120,12 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
   private def handleEndorsementResult(m: EndorsementResult, woe: State.WaitingOnEndorser): Unit = {
     if (m.code == ENDORSEMENT_RESULT_SUCCESS_CODE) {
       ctx.apply(DIDWritten(woe.ledgerPrefix))
-      ctx.signal(WrittenToLedger(woe.ledgerPrefix))
+      woe.data.identity match {
+        case Some(identity) =>
+          ctx.signal(PublicIdentifierCreated(PublicIdentifier(identity.did, identity.verKey), WrittenToLedger(woe.ledgerPrefix)))
+        case None =>
+          problemReport(new Exception(corruptedStateErrorMsg))
+      }
     } else {
       problemReport(new RuntimeException(s"error during endorsement => code: ${m.code}, description: ${m.description}"))
     }

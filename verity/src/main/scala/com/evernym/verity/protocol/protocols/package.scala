@@ -80,4 +80,7 @@ package object protocols {
       .getOrElse { throw new NoSuchElementException("protocol def not found for proto ref: " + protoRef) }
       .protoDef
   }
+
+  type ledgerRequestStr = String
+  type ledgerPrefixStr = String
 }

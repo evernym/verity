@@ -106,7 +106,7 @@ class IssuerSetupSpec
                 pi.identifier.did shouldBe a[String]
                 pi.identifier.verKey shouldBe a[String]
 
-                f.owner expect signal[NeedsEndorsement]
+                pi.status shouldBe a[NeedsEndorsement]
                 f.owner.state shouldBe a[State.Done]
               })
             })
@@ -143,8 +143,8 @@ class IssuerSetupSpec
 
               f.owner ~ Create(ledgerPrefix, Some(userEndorser))
 
-              f.owner expect signal[PublicIdentifierCreated]
-              f.owner expect signal[NeedsEndorsement]
+              val sig = f.owner expect signal[PublicIdentifierCreated]
+              sig.status shouldBe a[NeedsEndorsement]
               f.owner.state shouldBe a[State.Done]
             })
           })
@@ -164,8 +164,37 @@ class IssuerSetupSpec
             withDefaultLedgerAccess(f, {
               f.owner ~ Create(ledgerPrefix, Some("endorserDid"))
               f.owner ~ EndorsementResult(ENDORSEMENT_RESULT_SUCCESS_CODE, "successful")
-              f.owner expect signal[PublicIdentifierCreated]
-              f.owner expect signal[WrittenToLedger]
+              val sig = f.owner expect signal[PublicIdentifierCreated]
+              sig.status shouldBe a[WrittenToLedger]
+
+              sig.status match {
+                case wtl: WrittenToLedger => wtl.writtenToLedger shouldBe EndorserUtil.indyLedgerLegacyDefaultPrefix
+                case _ => throw new AssertionError
+              }
+            })
+          })
+        })
+      }
+    }
+  }
+
+  "should signal NeedsEndorsement" - {
+    "when endorsement service has no active endorser for the ledger" in { f =>
+      f.owner.initParams(Map(
+        MY_ISSUER_DID -> MOCK_NOT_ENDORSER
+      ))
+      interaction(f.owner) {
+        withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+          withDefaultWalletAccess(f, {
+            withDefaultLedgerAccess(f, {
+              f.owner ~ Create(ledgerPrefix, Some("otherDID"))
+              val sig = f.owner expect signal[PublicIdentifierCreated]
+              sig.status shouldBe a[NeedsEndorsement]
+
+              sig.status match {
+                case ne: NeedsEndorsement => ne.needsEndorsement shouldBe a[String]
+                case _ => throw new AssertionError
+              }
             })
           })
         })
@@ -201,8 +230,8 @@ class IssuerSetupSpec
           withDefaultWalletAccess(f, {
             withDefaultLedgerAccess(f, {
               f.owner ~ Create(ledgerPrefix, Some("otherDid"))
-              f.owner expect signal[PublicIdentifierCreated]
-              f.owner expect signal[NeedsEndorsement]
+              val sig = f.owner expect signal[PublicIdentifierCreated]
+              sig.status shouldBe a[NeedsEndorsement]
               f.owner ~ CurrentPublicIdentifier()
               f.owner expect signal[PublicIdentifier]
             })

@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.protocols.issuersetup.v_0_7
 
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.IssuerSetup.Nonce
+import com.evernym.verity.protocol.protocols.ledgerPrefixStr
 
 trait Event
 
@@ -15,7 +16,7 @@ object State {
   case class Identity(did: DidStr, verKey: VerKeyStr)
   case class StateData(createNonce: Option[Nonce], identity: Option[Identity])
 
-  case class WaitingOnEndorser(ledgerPrefix: String, data: StateData) extends State
+  case class WaitingOnEndorser(ledgerPrefix: ledgerPrefixStr, data: StateData) extends State
 
   case class Done(data: StateData) extends State
 

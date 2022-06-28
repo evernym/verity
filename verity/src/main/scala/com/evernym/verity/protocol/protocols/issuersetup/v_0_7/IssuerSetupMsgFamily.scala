@@ -6,6 +6,7 @@ import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkOptionalNotEmpty, checkRequired, checkValidDID}
+import com.evernym.verity.protocol.protocols.{ledgerPrefixStr, ledgerRequestStr}
 
 object IssuerSetupMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.EVERNYM_QUALIFIER
@@ -21,10 +22,8 @@ object IssuerSetupMsgFamily extends MsgFamily {
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map (
     classOf[ProblemReport]            -> "problem-report",
-    classOf[NeedsEndorsement]         -> "needs-endorsement",
     classOf[PublicIdentifierCreated]  -> "public-identifier-created",
     classOf[PublicIdentifier]         -> "public-identifier",
-    classOf[WrittenToLedger]          -> "written-to-ledger"
   )
 
   override protected val protocolMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map.empty
@@ -49,9 +48,15 @@ case class EndorsementResult(code: String, description: String) extends IssuerSe
 
 sealed trait Sig extends Msg
 case class PublicIdentifier(did: DidStr, verKey: VerKeyStr) extends Sig
-case class PublicIdentifierCreated(identifier: PublicIdentifier) extends Sig
+case class PublicIdentifierCreated(identifier: PublicIdentifier, status: EndorsementStatus) extends Sig
 case class ProblemReport(message: String) extends Sig
-case class NeedsEndorsement(ledgerRequest: String) extends Sig
-case class WrittenToLedger(ledgerPrefix: String) extends Sig
+
+sealed trait EndorsementStatus
+case class NeedsEndorsement(needsEndorsement: ledgerRequestStr) extends Sig with EndorsementStatus
+case class WrittenToLedger(writtenToLedger: ledgerPrefixStr) extends Sig with EndorsementStatus
+
 object Sig {
 }
+
+
+

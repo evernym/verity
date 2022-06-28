@@ -938,12 +938,14 @@ class AgentMsgProcessor(val appConfig: AppConfig,
    * @param senderVerKey message sender ver key
    */
   private def preMsgProcessing(msgType: MsgType, senderVerKey: Option[VerKeyStr])(implicit reqMsgContext: ReqMsgContext): Unit = {
+    logger.info("### msgType: " + msgType)
     val userId = param.userIdForResourceUsageTracking(senderVerKey)
     reqMsgContext.clientIpAddress.foreach { ipAddress =>
       addUserResourceUsage(RESOURCE_TYPE_MESSAGE, getResourceName(msgType), ipAddress, userId)
     }
     senderVerKey.foreach { svk =>
       if (! param.allowedUnAuthedMsgTypes.contains(msgType)) {
+        logger.info("### self: " + param.agentActorRef)
         AgentMsgProcessor.checkIfMsgSentByAuthedMsgSenders(param.allAuthedKeys, svk)
       }
     }

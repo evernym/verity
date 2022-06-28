@@ -1,3 +1,4 @@
+
 package com.evernym.verity.protocol.engine
 
 import com.evernym.verity.config.ConfigConstants.SERVICE_KEY_DID_FORMAT
@@ -70,7 +71,7 @@ class ProtocolContainerSpec extends BasicSpec {
 
           override def runAsyncOp(op: => Any): Unit = ???
 
-          override def runFutureAsyncOp(fut: Future[Any]): Unit = ???
+          override def runFutureAsyncOp(op: => Future[Any]): Unit = ???
 
           lazy val executionContext: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
 

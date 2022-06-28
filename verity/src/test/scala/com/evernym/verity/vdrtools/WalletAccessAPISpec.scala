@@ -113,8 +113,8 @@ class WalletAccessAPISpec
 
   override def runAsyncOp(op: => Any): Unit = op
 
-  override def runFutureAsyncOp(fut: Future[Any]): Unit =
-    fut.onComplete{r => executeCallbackHandler(r)}(executionContextProvider.futureExecutionContext)
+  override def runFutureAsyncOp(op: => Future[Any]): Unit =
+    op.onComplete{r => executeCallbackHandler(r)}(executionContextProvider.futureExecutionContext)
 
   override def abortTransaction(): Unit = {}
   def postAllAsyncOpsCompleted(): Unit = {}

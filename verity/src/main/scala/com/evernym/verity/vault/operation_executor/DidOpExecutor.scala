@@ -11,7 +11,7 @@ import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.WalletExt
 import com.evernym.vdrtools.InvalidStructureException
 import com.evernym.vdrtools.did.{Did, DidJSONParameters}
-import com.evernym.vdrtools.wallet.WalletItemAlreadyExistsException
+import com.evernym.vdrtools.wallet.{WalletItemAlreadyExistsException, WalletItemNotFoundException}
 import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
@@ -30,7 +30,7 @@ object DidOpExecutor extends OpExecutorBase {
     result
       .map(vk => GetVerKeyResp(vk))
       .recover {
-        case e: Exception => throw new ExecutionException(e)
+          case e: Exception => throw new ExecutionException(e)
       }
   }
 
@@ -64,6 +64,11 @@ object DidOpExecutor extends OpExecutorBase {
       case e: ExecutionException =>
         e.getCause match {
           case e: InvalidStructureException =>
+            throw new BadRequestErrorException(
+              INVALID_VALUE.statusCode,
+              Option(e.getMessage),
+              errorDetail = Option(Exceptions.getStackTraceAsSingleLineString(e)))
+          case e: WalletItemNotFoundException =>
             throw new BadRequestErrorException(
               INVALID_VALUE.statusCode,
               Option(e.getMessage),

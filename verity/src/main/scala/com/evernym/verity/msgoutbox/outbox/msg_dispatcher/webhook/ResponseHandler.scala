@@ -20,7 +20,6 @@ object ResponseHandler {
       case Left(sd: StatusDetail) =>
         val updatedRetryParam = param.retryParam.map(_.withFailedAttemptIncremented)
         val isAnyRetryAttemptsLeft = updatedRetryParam.exists(_.isRetryAttemptsLeft)
-
         param.replyTo ! RecordFailedAttempt(
           param.msgId,
           param.comMethodId,

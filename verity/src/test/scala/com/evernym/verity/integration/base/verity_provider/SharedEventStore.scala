@@ -1,6 +1,7 @@
 package com.evernym.verity.integration.base.verity_provider
 
 import akka.actor.{ActorSystem, ExtendedActorSystem}
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.integration.base.PortProvider
 import com.typesafe.config.{Config, ConfigFactory}
 
@@ -20,14 +21,15 @@ import java.nio.file.{Files, Path}
 class SharedEventStore(tempDir: Path) {
 
   val arteryPort: Int = PortProvider.getFreePort
-
+  val systemName = "shared-event-store"
   val actorSystem: ActorSystem = {
     val parts = Seq(
+      messageSerialization(),
       sharedEventStoreConfig(),
-      otherAkkaConfig(arteryPort)
+      otherAkkaConfig(systemName, arteryPort)
     )
     val config = parts.fold(ConfigFactory.empty())(_.withFallback(_).resolve())
-    ActorSystem("shared-event-store", config)
+    ActorSystemVanilla(systemName, config)
   }
 
   //address used by other nodes to point to this system as a journal/snapshot storage
@@ -61,7 +63,7 @@ class SharedEventStore(tempDir: Path) {
     )
   }
 
-  def otherAkkaConfig(port: Int): Config = {
+  def otherAkkaConfig(systemName: String, port: Int): Config = {
     ConfigFactory.parseString(
       s"""
          |akka.actor.provider = cluster
@@ -69,7 +71,26 @@ class SharedEventStore(tempDir: Path) {
          |akka.cluster.jmx.multi-mbeans-in-same-jvm = on
          |akka.remote.artery.canonical.hostname = ${InetAddress.getLocalHost.getHostAddress}
          |akka.remote.artery.canonical.port = $port
+         |akka.cluster.seed-nodes = [
+         |  "akka://$systemName@${InetAddress.getLocalHost.getHostAddress}:$port"
+         |]
     """.stripMargin
+    )
+  }
+
+  private def messageSerialization(): Config = {
+    ConfigFactory.parseString(
+      //TODO: once we fix root cause behind serialization issue, then we should turn this on again.
+      """akka.actor {
+         allow-java-serialization = on
+         serializers {
+           protoser = "com.evernym.verity.actor.serializers.ProtoBufSerializer"
+         }
+         serialization-bindings {
+            "com.evernym.verity.actor.PersistentMsg" = protoser
+          }
+      }
+        """.stripMargin
     )
   }
 

@@ -29,7 +29,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
                                 endorser: Option[String])
                                (handler: Try[PreparedTxn] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      vdrTools.prepareSchemaTxn(schemaJson, fqSchemaId, submitterDID, endorser),
+      {vdrTools.prepareSchemaTxn(schemaJson, fqSchemaId, submitterDID, endorser)},
       handleAsyncOpResult(handler)
     )
   }
@@ -41,7 +41,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
                                  endorser: Option[String])
                                 (handler: Try[PreparedTxn] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
-      vdrTools.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser),
+      {vdrTools.prepareCredDefTxn(credDefJson, fqCredDefId, submitterDID, endorser)},
       handleAsyncOpResult(handler)
     )
 
@@ -50,25 +50,29 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
                          endorsement: Array[Byte])
                         (handler: Try[SubmittedTxn] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
-      vdrTools.submitTxn(preparedTxn, signature, endorsement),
+      {vdrTools.submitTxn(preparedTxn, signature, endorsement)},
       handleAsyncOpResult(handler)
     )
 
 
   override def resolveSchema(fqSchemaId: FqSchemaId)(handler: Try[Schema] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      getCachedItem[Schema](fqSchemaId)
-        .map(s => Future.successful(s))
-        .getOrElse(fetchAndCacheSchema(fqSchemaId)),
+      {
+        getCachedItem[Schema](fqSchemaId)
+          .map(s => Future.successful(s))
+          .getOrElse(fetchAndCacheSchema(fqSchemaId))
+      },
       handleAsyncOpResult(handler)
     )
   }
 
   override def resolveCredDef(fqCredDefId: FqCredDefId)(handler: Try[CredDef] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
-      getCachedItem[CredDef](fqCredDefId)
-        .map(s => Future.successful(s))
-        .getOrElse(fetchAndCacheCredDef(fqCredDefId)),
+      {
+        getCachedItem[CredDef](fqCredDefId)
+          .map(s => Future.successful(s))
+          .getOrElse(fetchAndCacheCredDef(fqCredDefId))
+      },
       handleAsyncOpResult(handler)
     )
 

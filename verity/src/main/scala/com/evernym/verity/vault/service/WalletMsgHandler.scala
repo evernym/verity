@@ -1,8 +1,8 @@
 package com.evernym.verity.vault.service
 
-import java.util.concurrent.ExecutionException
-import scala.concurrent.ExecutionContext
+import com.evernym.vdrtools.wallet.WalletItemNotFoundException
 
+import scala.concurrent.ExecutionContext
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest}
@@ -156,7 +156,10 @@ object WalletMsgHandler {
     handleGetVerKey(GetVerKey(gvko.did, gvko.getKeyFromPool))
       .map(gvk => GetVerKeyOptResp(Option(gvk.verKey)))
       .recover {
-        case _: ExecutionException => GetVerKeyOptResp(None)
+        case _: WalletItemNotFoundException =>
+          GetVerKeyOptResp(None)
+        case other =>
+          GetVerKeyOptResp(None)
       }
   }
 

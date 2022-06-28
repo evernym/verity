@@ -236,7 +236,7 @@ trait WalletCommand extends ActorMessage {
   //overridden to make sure if this codebase is logging this wallet command anywhere
   // it doesn't log any critical/private information
   val name: String = getClass.getSimpleName
-  val id: String = UUID.randomUUID().toString //only for logging purposes
+  val id: String = s"${UUID.randomUUID().toString} ($name)"
 }
 
 //NOTE:

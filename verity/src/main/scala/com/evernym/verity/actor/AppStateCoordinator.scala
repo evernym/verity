@@ -120,7 +120,7 @@ class AppStateCoordinator(appConfig: AppConfig,
   private def addLogDuringPhase(phase: String, taskName: String): Unit = {
     CoordinatedShutdown(system)
       .addTask(phase, taskName) { () =>
-        logger.info(s"Coordinated shutdown [$phase:$taskName]")
+        logger.info(s"Coordinated shutdown [${system.name}][$phase:$taskName]")
         Future.successful(Done)
       }
   }

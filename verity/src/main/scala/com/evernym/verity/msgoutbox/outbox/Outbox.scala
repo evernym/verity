@@ -421,15 +421,15 @@ object Outbox {
       st.copy(messages = st.messages - msgId)
 
     case (st: States.Initialized, Events.ConfigUpdated(cfg)) =>
-      updateTimeouts(cfg, dispatcher.outboxActorContext, timer)
+      updateTimeouts(cfg, timer)
       st.copy(config = cfg)
 
     case (st: States.Uninitialized, Events.ConfigUpdated(cfg)) =>
-      updateTimeouts(cfg, dispatcher.outboxActorContext, timer)
+      updateTimeouts(cfg, timer)
       st.copy(config = cfg)
 
     case (st: States.MetadataReceived, Events.ConfigUpdated(cfg)) =>
-      updateTimeouts(cfg, dispatcher.outboxActorContext, timer)
+      updateTimeouts(cfg, timer)
       st.copy(config = cfg)
   }
 
@@ -442,9 +442,9 @@ object Outbox {
       }
       if (st.config != config) {
         setup.actorContext.self ! Commands.UpdateConfig(config)
-        updateTimeouts(config, setup.actorContext, setup.timer)
+        updateTimeouts(config, setup.timer)
       } else {
-        updateTimeouts(st.config, setup.actorContext, setup.timer)
+        updateTimeouts(st.config, setup.timer)
       }
       setup.metricsWriter.gaugeUpdate(AS_OUTBOX_MSG_DELIVERY_PENDING_COUNT, getPendingMsgs(st).size)
       updateDispatcher(setup.dispatcher, st)
@@ -550,7 +550,7 @@ object Outbox {
     removeProcessedMsgs(st)
   }
 
-  private def updateTimeouts(config: OutboxConfig, actorContext: ActorContext[Cmd], timer: TimerScheduler[Cmd]): Unit = {
+  private def updateTimeouts(config: OutboxConfig, timer: TimerScheduler[Cmd]): Unit = {
     timer.cancel("process-delivery")
     timer.startTimerWithFixedDelay("process-delivery", ProcessDelivery,
       FiniteDuration.apply(config.scheduledJobIntervalMs,MILLISECONDS))

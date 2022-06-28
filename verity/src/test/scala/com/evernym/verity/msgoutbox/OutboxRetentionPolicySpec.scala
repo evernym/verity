@@ -78,11 +78,14 @@ class OutboxRetentionPolicySpec
         "there should be delivery status found for this outbox" in {
           storedMsgs.foreach { msgId =>
             val probe = createTestProbe[MsgDeliveryStatus]()
-            eventually(timeout(Span(10, Seconds)), interval(Span(2, Seconds))) {
+            eventually(timeout(Span(15, Seconds)), interval(Span(2, Seconds))) {
               messageMetaRegion ! ShardingEnvelope(msgId, MessageMeta.Commands.GetDeliveryStatus(probe.ref))
               val msgDeliveryStatus = probe.expectMessageType[MsgDeliveryStatus]
               outboxIds.foreach { outboxId =>
                 val outboxDeliveryStatus = msgDeliveryStatus.outboxDeliveryStatus(outboxId.entityId.toString)
+                //the status is expected to be FAILED because how this test is configured to make it fail
+                // see `failCount` query parameter in `plainIndyWebhookComMethod` variable defined at the bottom and
+                // how `TestHttpTransport` uses it to adjust its functioning
                 outboxDeliveryStatus.status shouldBe Status.MSG_DELIVERY_STATUS_FAILED.statusCode
                 outboxDeliveryStatus.msgActivities.size shouldBe 6
               }
@@ -113,7 +116,7 @@ class OutboxRetentionPolicySpec
       |verity.outbox.retention-criteria.snapshot.after-every-events = 1
       |verity.outbox.retention-criteria.snapshot.keep-snapshots = 1
       |verity.outbox.retention-criteria.snapshot.delete-events-on-snapshots = true
-      |
+      |verity.outbox.scheduled-job-interval = 2000
       |verity.outbox.webhook.retry-policy.initial-interval = 2 millis
       |""".stripMargin
   }

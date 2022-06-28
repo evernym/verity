@@ -1,6 +1,7 @@
 package com.evernym.verity.actor.agent.msghandler
 
 import akka.actor.ActorRef
+import com.evernym.verity.actor.ExceptionHandler.getClass
 import com.evernym.verity.actor.{ActorMessage, HasAppConfig}
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN, Unrecognized}
 import com.evernym.verity.actor.agent.TypeFormat.STANDARD_TYPE_FORMAT
@@ -34,6 +35,7 @@ import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EvernymQualifier, M
 import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId, MsgType, TypedMsgLike}
 import com.evernym.verity.msg_tracer.MsgTraceProvider
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.observability.logs.{HasLogger, LoggingUtil}
 import com.evernym.verity.protocol.container.actor.{ActorDriverGenParam, InitProtocolReq, MsgEnvelope}
 import com.evernym.verity.protocol.engine.Constants._
@@ -1103,7 +1105,11 @@ object AgentMsgProcessor {
   val REST_LIMIT = "rest-limit"
   val PACKED_MSG_LIMIT = "packed-msg-limit"
 
+  private val logger = getLoggerByClass(getClass)
+
+
   def checkIfMsgSentByAuthedMsgSenders(allAuthKeys:Set[VerKeyStr], msgSenderVerKey: VerKeyStr): Unit = {
+    logger.info(s"allAuthKeys = $allAuthKeys msgSenderVerKey = $msgSenderVerKey")
     if (allAuthKeys.nonEmpty && ! allAuthKeys.contains(msgSenderVerKey)) {
       throw new UnauthorisedErrorException
     }

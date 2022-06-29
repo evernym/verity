@@ -4,15 +4,17 @@
       - main
       - tags
       - merge_requests
+      - rajesh.kalaria_ve3368_migrate-protocols-to-use-vdr-apis
 
 .verity-main-only-rule:
   only:
     refs:
       - main@evernym/verity/verity
+      - rajesh.kalaria_ve3368_migrate-protocols-to-use-vdr-apis
 
 .main-or-manual-rule:
   rules:
-    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "main" # Main branch build
+    - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_REF_NAME == "rajesh.kalaria_ve3368_migrate-protocols-to-use-vdr-apis" # Main branch build
       when: on_success
     - if: $CI_PROJECT_NAMESPACE == "evernym/verity" && $CI_COMMIT_TAG # Tag build
       when: on_success

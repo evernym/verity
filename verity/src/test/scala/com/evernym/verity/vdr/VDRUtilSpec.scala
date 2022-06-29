@@ -54,5 +54,13 @@ class VDRUtilSpec
         }
       }
     }
+
+    "when tried to extract ledger prefix from fq DID" - {
+      "should be successful" in {
+        VDRUtil.extractLedgerPrefix(s"did:indy:sovrin:$unqualifiedIssuerDid") shouldBe "did:indy:sovrin"
+        VDRUtil.extractLedgerPrefix(s"did:indy:sovrin:builder:$unqualifiedIssuerDid") shouldBe "did:indy:sovrin:builder"
+        VDRUtil.extractLedgerPrefix(s"did:indy:sovrin:stage:$unqualifiedIssuerDid") shouldBe "did:indy:sovrin:stage"
+      }
+    }
   }
 }

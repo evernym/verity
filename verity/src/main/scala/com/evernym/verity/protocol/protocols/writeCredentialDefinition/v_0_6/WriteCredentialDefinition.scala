@@ -75,14 +75,14 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                   val fqEndorserDID = ctx.ledger.fqDID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
                   //NOTE: below code is assuming verity is only supporting indy ledgers,
                   // it should be changed when verity starts supporting different types of ledgers
-                  val indyLedgerPrefix = ctx.ledger.vdrUnqualifiedLedgerPrefix()
-                  ctx.endorser.withCurrentEndorser(indyLedgerPrefix) {
+                  val ledgerPrefix = ctx.ledger.extractLedgerPrefix(fqSubmitterId, fqEndorserDID)
+                  ctx.endorser.withCurrentEndorser(ledgerPrefix) {
                     case Success(Some(endorser)) if fqEndorserDID.isEmpty || fqEndorserDID.contains(endorser.did) =>
-                      ctx.logger.info(s"registered endorser to be used for creddef endorsement (ledger prefix: $indyLedgerPrefix): " + endorser)
+                      ctx.logger.info(s"registered endorser to be used for creddef endorsement (ledger prefix: $ledgerPrefix): " + endorser)
                       //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
                       prepareTxnForEndorsement(fqSubmitterId, fqCredDefId, credDefCreated.credDefJson, endorser.did) {
                         case Success(ledgerRequest) =>
-                          ctx.endorser.endorseTxn(ledgerRequest, indyLedgerPrefix) {
+                          ctx.endorser.endorseTxn(ledgerRequest, ledgerPrefix) {
                             case Success(_) =>
                               ctx.apply(AskedForEndorsement(credDefCreated.credDefId, ledgerRequest))
                             case Failure(e) =>
@@ -91,7 +91,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                         case Failure(e) => problemReport(new Exception(e))
                       }
                     case other =>
-                      ctx.logger.info(s"no active/matched endorser found to be used for creddef endorsement (ledger prefix: $indyLedgerPrefix): " + other)
+                      ctx.logger.info(s"no active/matched endorser found to be used for creddef endorsement (ledger prefix: $ledgerPrefix): " + other)
                       //no active endorser or active endorser is NOT the same as given/configured endorserDID
                       prepareTxnForEndorsement(fqSubmitterId, fqCredDefId, credDefCreated.credDefJson, fqEndorserDID) {
                         case Success(data: TxnForEndorsement) =>

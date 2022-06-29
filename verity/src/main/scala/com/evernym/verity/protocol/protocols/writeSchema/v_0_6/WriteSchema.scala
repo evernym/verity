@@ -65,7 +65,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
               val fqEndorserDID = ctx.ledger.fqDID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
               //NOTE: below code is assuming verity is only supporting indy ledgers,
               // it should be changed when verity starts supporting different types of ledgers
-              val ledgerPrefix = ctx.ledger.vdrUnqualifiedLedgerPrefix()
+              val ledgerPrefix = ctx.ledger.extractLedgerPrefix(fqSubmitterDID, fqEndorserDID)
               ctx.endorser.withCurrentEndorser(ledgerPrefix) {
                 case Success(Some(endorser)) if fqEndorserDID.isEmpty || fqEndorserDID.contains(endorser.did) =>
                   ctx.logger.info(s"registered endorser to be used for schema endorsement (ledger prefix: $ledgerPrefix): " + endorser)

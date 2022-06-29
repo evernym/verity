@@ -1,11 +1,10 @@
 package com.evernym.verity.vdr
 
 import com.evernym.verity.did.methods.indy_sovrin.DIDIndySovrin
-import com.evernym.verity.did.methods.sov.SovIdentifier
 import com.evernym.verity.did.methods.UnqualifiedDID
 import com.evernym.verity.did.{DidStr, toDIDMethod}
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 
 object VDRUtil {
@@ -57,67 +56,81 @@ object VDRUtil {
 
   /**
    *
-   * @param identifier can be fqDID, fqSchemaId or fqCredDefId
+   * @param fqDID fqDID
    * @param vdrUnqualifiedLedgerPrefix
    * @return
    */
-  def extractNamespace(identifier: Option[String],
+  def extractNamespace(fqDID: Option[FqDID],
                        vdrUnqualifiedLedgerPrefix: Option[LedgerPrefix]): Namespace = {
     Try {
-      (identifier, vdrUnqualifiedLedgerPrefix) match {
+      (fqDID, vdrUnqualifiedLedgerPrefix) match {
         case (Some(id), _ ) =>
           extractNamespaceFromDIDStr(id)
         case (None, Some(ledgerPrefix)) =>
           extractNamespaceFromLedgerPrefix(ledgerPrefix)
         case _ =>
-          throw new RuntimeException(s"could not extract namespace for given identifier: $identifier (vdrUnqualifiedLedgerPrefix: $vdrUnqualifiedLedgerPrefix)")
+          throw new RuntimeException(s"could not extract namespace for given identifier: $fqDID (vdrUnqualifiedLedgerPrefix: $vdrUnqualifiedLedgerPrefix)")
       }
     }.getOrElse {
       vdrUnqualifiedLedgerPrefix
         .map(extractNamespaceFromLedgerPrefix)
         .getOrElse {
-          throw new RuntimeException(s"could not extract namespace for given identifier: $identifier (vdrUnqualifiedLedgerPrefix: $vdrUnqualifiedLedgerPrefix)")
+          throw new RuntimeException(s"could not extract namespace for given identifier: $fqDID (vdrUnqualifiedLedgerPrefix: $vdrUnqualifiedLedgerPrefix)")
         }
     }
   }
 
   /**
-   * extracts unqualified DID from given fully qualified DID
-   * @param did
-   * @return
+   * extracts ledger prefix from given fully qualified DID
+   * @param fqDID (for example: "did:indy:sovrin:123")
+   * @return ledger prefix (for example: "did:indy:sovrin", "did:indy:sovrin:stage" etc)
    */
-  def extractUnqualifiedDidStr(did: FqDID): DidStr = {
+  def extractLedgerPrefix(fqDID: FqDID): LedgerPrefix = {
+    Try {
+      toDIDMethod(fqDID) match {
+        case ni: DIDIndySovrin => s"${ni.scheme}:${ni.methodIdentifier.namespace}"
+        case other => throw new RuntimeException(s"unsupported did method: '${other.method}'")
+      }
+    } match {
+      case Success(value) => value
+      case Failure(exception) =>
+        throw new RuntimeException(s"error while extracting ledger prefix from fqDID: '$fqDID' (${exception.getMessage})")
+    }
+  }
+
+  /**
+   * extracts unqualified DID from given fully qualified DID
+   * @param did (for example: "did:indy:sovrin:123", "123")
+   * @return unqualified DID str (for example: "123")
+   */
+  def extractUnqualifiedDidStr(did: DidStr): DidStr = {
     Try {
       toDIDMethod(did) match {
-        case _: UnqualifiedDID => throw new RuntimeException(s"unqualified DID found: $did")
+        case _: UnqualifiedDID => did
         case ni: DIDIndySovrin => ni.methodIdentifier.namespaceIdentifier
-        case si: SovIdentifier => si.methodIdentifier
-        case other => other.methodIdentifier.toString
       }
     }.getOrElse(did)
   }
 
   /**
    * extracts namespace from given fully qualified DID
-   * @param did
-   * @return
+   * @param fqDID (for example: "did:indy:sovrin:123")
+   * @return namespace (for example: "indy:sovrin", "indy:sovrin:stage")
    */
-  private def extractNamespaceFromDIDStr(did: FqDID): DidStr = {
-    toDIDMethod(did) match {
-      case _: UnqualifiedDID => throw new RuntimeException(s"unqualified DID found: $did")
+  private def extractNamespaceFromDIDStr(fqDID: FqDID): Namespace = {
+    toDIDMethod(fqDID) match {
+      case _: UnqualifiedDID => throw new RuntimeException(s"unqualified DID found: $fqDID")
       case ni: DIDIndySovrin => ni.methodIdentifier.namespace
-      case si: SovIdentifier => si.method
-      case other => other.method
     }
   }
 
   /**
-   * extracts namespace from given fully qualified DID
-   * @param did
-   * @return
+   * extracts namespace from given ledger prefix
+   * @param ledgerPrefix for example ("did:indy:sovrin", "did:indy:sovrin:stage" etc)
+   * @return namespace (for example: "indy:sovrin", "indy:sovrin:stage")
    */
   private def extractNamespaceFromLedgerPrefix(ledgerPrefix: LedgerPrefix): Namespace = {
-    ledgerPrefix.split(":").tail.mkString(":")   //removes the leading `did:` string
+    ledgerPrefix.split(":").tail.mkString(":")   //removes the scheme (for example: `did:`)
   }
 
 }

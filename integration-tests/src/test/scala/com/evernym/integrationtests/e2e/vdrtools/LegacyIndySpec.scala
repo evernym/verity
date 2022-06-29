@@ -48,16 +48,16 @@ class LegacyIndySpec
 
   var trusteeWallet = new TestWallet(ec, createWallet = true, system)
   var trusteeKey: NewKeyCreated = trusteeWallet.executeSync[NewKeyCreated](CreateNewKey(seed = Option("000000000000000000000000Trustee1")))
-  var trusteeFqDid: FqDID = VDRUtil.toFqDID(trusteeKey.did, UNQUALIFIED_LEDGER_PREFIX, legacyLedgerPrefixMapping)
+  var trusteeFqDid: FqDID = VDRUtil.toFqDID(trusteeKey.did, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
 
   var issuerWallet = new TestWallet(ec, createWallet = true, system)
   var issuerKey: NewKeyCreated = issuerWallet.executeSync[NewKeyCreated](CreateNewKey())
-  var issuerFqDid: FqDID = VDRUtil.toFqDID(issuerKey.did, UNQUALIFIED_LEDGER_PREFIX, legacyLedgerPrefixMapping)
+  var issuerFqDid: FqDID = VDRUtil.toFqDID(issuerKey.did, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
   var issuerSubmitter: Submitter = Submitter(issuerKey.did, Some(issuerWallet.wap))
 
   val holderWallet = new TestWallet(ec, createWallet = true, system)
   var holderKey: NewKeyCreated = holderWallet.executeSync[NewKeyCreated](CreateNewKey())
-  var holderFqDid: FqDID = VDRUtil.toFqDID(holderKey.did, UNQUALIFIED_LEDGER_PREFIX, legacyLedgerPrefixMapping)
+  var holderFqDid: FqDID = VDRUtil.toFqDID(holderKey.did, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
 
   val legacyLedgerUtil: LegacyLedgerUtil = LedgerClient.buildLedgerUtil(
     config = new TestAppConfig(newConfig = Option(baseConfig), clearValidators = true),
@@ -173,7 +173,7 @@ class LegacyIndySpec
 
   lazy val INDY_NAMESPACE = "indy:sovrin"
   lazy val UNQUALIFIED_LEDGER_PREFIX = s"did:$INDY_NAMESPACE"
-  lazy val legacyLedgerPrefixMapping = Map("did:sov" -> UNQUALIFIED_LEDGER_PREFIX)
+  lazy val ledgerPrefixMapping = Map("did:sov" -> UNQUALIFIED_LEDGER_PREFIX)
 
   lazy val baseConfig: Config = {
     ConfigFactory.parseString(

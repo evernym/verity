@@ -236,12 +236,12 @@ object MockLedger {
 
   val TEST_INDY_SOVRIN_NAMESPACE = INDY_SOVRIN_NAMESPACE
   val TEST_INDY_LEDGER_PREFIX = s"$DID_PREFIX:$TEST_INDY_SOVRIN_NAMESPACE"
-  val legacyLedgerPrefixMappings = Map ("did:sov" -> "did:indy:sovrin")
+  val ledgerPrefixMappings = Map ("did:sov" -> "did:indy:sovrin")
 
   val INDY_ENDORSEMENT = s"""{"endorserDid":"$MOCK_NOT_ENDORSER", "type": "Indy"}"""
 
   def fqID(id: String): String = {
-    VDRUtil.toFqDID(id, TEST_INDY_LEDGER_PREFIX, legacyLedgerPrefixMappings)
+    VDRUtil.toFqDID(id, TEST_INDY_LEDGER_PREFIX, ledgerPrefixMappings)
   }
 
   def fqSchemaID(id: String, issuerDid: Option[DidStr]): String = {

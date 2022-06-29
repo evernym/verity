@@ -13,9 +13,9 @@ object VDRUtil {
 
   def toFqDID(did: String,
               vdrUnqualifiedLedgerPrefix: LedgerPrefix,
-              vdrLegacyLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix]): FqDID = {
+              vdrLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix]): FqDID = {
     if (did.startsWith(LEGACY_LEDGER_PREFIX)) {
-      val aliasLedgerPrefix = vdrLegacyLedgerPrefixMappings(LEGACY_LEDGER_PREFIX)
+      val aliasLedgerPrefix = vdrLedgerPrefixMappings(LEGACY_LEDGER_PREFIX)
       did.replace(LEGACY_LEDGER_PREFIX, aliasLedgerPrefix)
     } else if (did.nonEmpty && ! did.startsWith(s"$DID_PREFIX:")) {
       s"$vdrUnqualifiedLedgerPrefix:$did"

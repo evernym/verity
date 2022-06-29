@@ -103,7 +103,7 @@ object ConfigConstants {
 
   private val VDR = s"$VERITY.vdr"
   val VDR_UNQUALIFIED_LEDGER_PREFIX = s"$VDR.unqualified-ledger-prefix"
-  val VDR_LEGACY_LEDGER_PREFIX_MAPPINGS = s"$VDR.legacy-ledger-prefix-mappings"
+  val VDR_LEDGER_PREFIX_MAPPINGS = s"$VDR.ledger-prefix-mappings"
   val VDR_LEDGERS = s"$VDR.ledgers"
 
   private val LIB_VDRTOOLS = s"$VERITY.lib-vdrtools"

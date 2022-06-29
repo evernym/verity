@@ -1,7 +1,7 @@
 package com.evernym.verity.vdr.service
 
 import com.evernym.vdrtools.vdr.VdrParams.TaaConfig
-import com.evernym.verity.config.ConfigConstants.{VDR_LEGACY_LEDGER_PREFIX_MAPPINGS, VDR_UNQUALIFIED_LEDGER_PREFIX}
+import com.evernym.verity.config.ConfigConstants.{VDR_LEDGER_PREFIX_MAPPINGS, VDR_UNQUALIFIED_LEDGER_PREFIX}
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.util.TAAUtil
 import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
@@ -22,7 +22,7 @@ case class IndyLedger(namespaces: List[Namespace],
                       taaConfig: Option[TaaConfig]) extends Ledger
 
 case class VDRToolsConfig(unqualifiedLedgerPrefix: LedgerPrefix,
-                          legacyLedgerPrefixMapping: Map[LedgerPrefix, LedgerPrefix],
+                          ledgerPrefixMapping: Map[LedgerPrefix, LedgerPrefix],
                           ledgers: List[Ledger]) {
   def validate(): Unit = {
     if (ledgers.isEmpty) {
@@ -40,9 +40,9 @@ case class VDRToolsConfig(unqualifiedLedgerPrefix: LedgerPrefix,
       throw new RuntimeException(s"[VDR] '$VDR_UNQUALIFIED_LEDGER_PREFIX' namespace ($unqualifiedLedgerNamespace) is not found in " +
         s"registered ledger's namespaces (${allNamespaces.mkString(", ")})")
     }
-    val legacyMappedLedgerPrefixes = legacyLedgerPrefixMapping.values.map(_.replace(s"$DID_PREFIX:", ""))
-    if (! allNamespaces.containsSlice(legacyMappedLedgerPrefixes.toList)) {
-      throw new RuntimeException(s"[VDR] '$VDR_LEGACY_LEDGER_PREFIX_MAPPINGS' has entry for ledger namespace which is not registered")
+    val prefixValueNamespaces = ledgerPrefixMapping.values.map(_.replace(s"$DID_PREFIX:", ""))
+    if (! allNamespaces.containsSlice(prefixValueNamespaces.toList)) {
+      throw new RuntimeException(s"[VDR] '$VDR_LEDGER_PREFIX_MAPPINGS' has entry for ledger namespace which is not registered")
     }
 
   }
@@ -116,10 +116,10 @@ object VDRToolsConfig {
       confReadHelper
         .getStringOption(VDR_UNQUALIFIED_LEDGER_PREFIX)
         .getOrElse(throw new RuntimeException(s"[VDR] required configuration not found: '$VDR_UNQUALIFIED_LEDGER_PREFIX'"))
-    val legacyLedgerPrefixMappings =
+    val ledgerPrefixMappings =
       confReadHelper
-        .getMap(VDR_LEGACY_LEDGER_PREFIX_MAPPINGS)
+        .getMap(VDR_LEDGER_PREFIX_MAPPINGS)
     val ledgersConfig = confReadHelper.getObjectListReq("verity.vdr.ledgers").map(_.toConfig)
-    VDRToolsConfig(unqualifiedLedgerPrefix, legacyLedgerPrefixMappings, ledgersConfig.map(loadLedger).toList)
+    VDRToolsConfig(unqualifiedLedgerPrefix, ledgerPrefixMappings, ledgersConfig.map(loadLedger).toList)
   }
 }

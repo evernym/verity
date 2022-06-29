@@ -32,9 +32,7 @@ class VdrToolsConfigSpec
               |verity {
               |  vdr: {
               |    unqualified-ledger-prefix = "did:indy:sovrin"
-              |    legacy-ledger-prefix-mappings {
-              |      "did:sov": "did:indy:sovrin"    # the value is expected to not changed based on environments
-              |    }
+              |    prefix-mapping-legacy-did-sov = "did:indy:sovrin"
               |    ledgers = [
               |      {
               |        type: "indy"
@@ -80,9 +78,7 @@ class VdrToolsConfigSpec
                |verity {
                |  vdr: {
                |    unqualified-ledger-prefix = "did:indy:sovrin"
-               |    legacy-ledger-prefix-mappings {
-               |      "did:sov": "did:indy:sovrin"    # the value is expected to not changed based on environments
-               |    }
+               |    prefix-mapping-legacy-did-sov = "did:indy:sovrin"
                |    ledgers: [
                |      {
                |        type: "indy"
@@ -117,9 +113,7 @@ class VdrToolsConfigSpec
                |verity {
                |  vdr: {
                |    unqualified-ledger-prefix = "did:indy:sovrin"
-               |    legacy-ledger-prefix-mappings {
-               |      "did:sov": "did:indy:sovrin"    # the value is expected to not changed based on environments
-               |    }
+               |    prefix-mapping-legacy-did-sov = "did:indy:sovrin"
                |    ledgers: [
                |      {
                |        type: "indy"
@@ -162,9 +156,7 @@ class VdrToolsConfigSpec
                 |verity {
                 |  vdr: {
                 |    unqualified-ledger-prefix = "did:indy:sovrin"
-                |    legacy-ledger-prefix-mappings {
-                |      "did:sov": "did:indy:sovrin"    # the value is expected to not changed based on environments
-                |    }
+                |    prefix-mapping-legacy-did-sov = "did:indy:sovrin"
                 |    ledgers: []
                 |  }
                 |}
@@ -189,9 +181,7 @@ class VdrToolsConfigSpec
                  |verity {
                  |  vdr: {
                  |    unqualified-ledger-prefix = "did:indy:sovrin"
-                 |    legacy-ledger-prefix-mappings {
-                 |      "did:sov": "did:indy:sovrin"    # the value is expected to not changed based on environments
-                 |    }
+                 |    prefix-mapping-legacy-did-sov = "did:indy:sovrin"
                  |    ledgers: [
                  |      {
                  |        type: "indy"
@@ -222,9 +212,7 @@ class VdrToolsConfigSpec
                  |verity {
                  |  vdr: {
                  |    unqualified-ledger-prefix = "did:indy:sovrin"
-                 |    legacy-ledger-prefix-mappings {
-                 |      "did:sov": "did:indy:sovrin"    # the value is expected to not changed based on environments
-                 |    }
+                 |    prefix-mapping-legacy-did-sov = "did:indy:sovrin"
                  |    ledgers: [
                  |      {
                  |        type: "indy"
@@ -285,9 +273,7 @@ class VdrToolsConfigSpec
                  |verity {
                  |  vdr: {
                  |    unqualified-ledger-prefix = "did:test"
-                 |    legacy-ledger-prefix-mappings {
-                 |      "did:sov": "did:indy:sovrin"    # the value is expected to not changed based on environments
-                 |    }
+                 |    prefix-mapping-legacy-did-sov = "did:indy:sovrin"
                  |    ledgers: [
                  |      {
                  |        type: "indy"

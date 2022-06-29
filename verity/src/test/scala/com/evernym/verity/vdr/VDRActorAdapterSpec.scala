@@ -3,7 +3,7 @@ package com.evernym.verity.vdr
 import akka.actor.typed.scaladsl.adapter._
 import akka.testkit.TestKitBase
 import com.evernym.verity.actor.testkit.HasBasicActorSystem
-import com.evernym.verity.protocol.testkit.MockLedger.{TEST_INDY_LEDGER_PREFIX, TEST_INDY_SOVRIN_NAMESPACE, legacyLedgerPrefixMappings}
+import com.evernym.verity.protocol.testkit.MockLedger.{TEST_INDY_LEDGER_PREFIX, TEST_INDY_SOVRIN_NAMESPACE, ledgerPrefixMappings}
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vdr.base.TestVDRDidDoc
@@ -388,7 +388,7 @@ class VDRActorAdapterSpec
 
     val testVdrToolsBuilder = new MockVdrToolsBuilder(testLedgerRegistry)
     val testVDRToolsFactory = { () => testVdrToolsBuilder }
-    val vdrToolsConfig = VDRToolsConfig(TEST_INDY_LEDGER_PREFIX, legacyLedgerPrefixMappings, ledgers)
+    val vdrToolsConfig = VDRToolsConfig(TEST_INDY_LEDGER_PREFIX, ledgerPrefixMappings, ledgers)
     new VDRActorAdapter(testVDRToolsFactory, vdrToolsConfig, None)(ec, system.toTyped)
   }
 

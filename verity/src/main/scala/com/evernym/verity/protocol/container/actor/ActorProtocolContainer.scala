@@ -313,7 +313,7 @@ class ActorProtocolContainer[
 
 
   lazy val vdrUnqualifiedLedgerPrefix: String = appConfig.getStringReq(VDR_UNQUALIFIED_LEDGER_PREFIX)
-  lazy val vdrLegacyLedgerPrefixMappings: Map[String, String] = appConfig.getMap(VDR_LEGACY_LEDGER_PREFIX_MAPPINGS)
+  lazy val vdrLedgerPrefixMappings: Map[String, String] = appConfig.getMap(VDR_LEDGER_PREFIX_MAPPINGS)
 
   override lazy val wallet =
     new WalletAccessAdapter(
@@ -327,7 +327,7 @@ class ActorProtocolContainer[
       agentActorContext.vdrCache,
       wallet,
       vdrUnqualifiedLedgerPrefix,
-      vdrLegacyLedgerPrefixMappings
+      vdrLedgerPrefixMappings
     )
 
   override lazy val endorser =

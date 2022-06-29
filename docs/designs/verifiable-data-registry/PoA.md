@@ -123,7 +123,7 @@ verity {
    }
 
    case class VDRToolsConfig(unqualifiedLedgerPrefix: LedgerPrefix,
-                             legacyLedgerPrefixMapping: Map[LedgerPrefix, LedgerPrefix], 
+                             ledgerPrefixMapping: Map[LedgerPrefix, LedgerPrefix], 
                              ledgers: List[Ledger])   
    sealed trait Ledger
    case class IndyLedger(namespaces: List[Namespace], genesisTxnFilePath: String, taaConfig: Option[TAAConfig]) 

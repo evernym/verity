@@ -61,19 +61,19 @@ class IndyVdrSpec
 
   var trusteeWallet: Wallet = createOrOpenWallet("trusteeWallet")
   var trusteeKey: NewKeyCreated = createNewKey(trusteeWallet, CreateNewKey(seed = Option("000000000000000000000000Trustee1")))
-  var trusteeFqDid: FqDID = VDRUtil.toFqDID(trusteeKey.did, UNQUALIFIED_LEDGER_PREFIX, legacyLedgerPrefixMapping)
+  var trusteeFqDid: FqDID = VDRUtil.toFqDID(trusteeKey.did, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
 
   var issuerWallet: Wallet = createOrOpenWallet("issuerWallet")
   var issuerKey: NewKeyCreated = createNewKey(issuerWallet, CreateNewKey())
-  var issuerFqDid: FqDID = VDRUtil.toFqDID(issuerKey.did, UNQUALIFIED_LEDGER_PREFIX, legacyLedgerPrefixMapping)
+  var issuerFqDid: FqDID = VDRUtil.toFqDID(issuerKey.did, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
 
   var verifierWallet: Wallet = createOrOpenWallet("verifierWallet")
   var verifierKey: NewKeyCreated = createNewKey(verifierWallet, CreateNewKey())
-  var verifierFqDid: FqDID = VDRUtil.toFqDID(verifierKey.did, UNQUALIFIED_LEDGER_PREFIX, legacyLedgerPrefixMapping)
+  var verifierFqDid: FqDID = VDRUtil.toFqDID(verifierKey.did, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
 
   val holderWallet: Wallet = createOrOpenWallet("holderWallet")
   var holderKey: NewKeyCreated = createNewKey(holderWallet, CreateNewKey())
-  var holderFqDid: FqDID = VDRUtil.toFqDID(holderKey.did, UNQUALIFIED_LEDGER_PREFIX, legacyLedgerPrefixMapping)
+  var holderFqDid: FqDID = VDRUtil.toFqDID(holderKey.did, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
 
   val holderMasterSecretId: String = UUID.randomUUID().toString
   runAsSync(Anoncreds.proverCreateMasterSecret(holderWallet, holderMasterSecretId).map(ms => MasterSecretCreated(ms)))
@@ -417,7 +417,7 @@ class IndyVdrSpec
 
   lazy val INDY_NAMESPACE = "indy:sovrin"
   lazy val UNQUALIFIED_LEDGER_PREFIX = s"did:$INDY_NAMESPACE"
-  lazy val legacyLedgerPrefixMapping = Map("did:sov" -> UNQUALIFIED_LEDGER_PREFIX)
+  lazy val ledgerPrefixMapping = Map("did:sov" -> UNQUALIFIED_LEDGER_PREFIX)
 
   lazy val vdrConfig: Config = ConfigFactory.parseString(
     s"""

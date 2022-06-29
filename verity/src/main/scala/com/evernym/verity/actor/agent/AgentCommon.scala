@@ -22,7 +22,7 @@ import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
 import com.evernym.verity.cache.{AGENCY_IDENTITY_CACHE_FETCHER, AGENT_ACTOR_CONFIG_CACHE_FETCHER, KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER}
 import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail}
 import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
-import com.evernym.verity.config.ConfigConstants.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VDR_LEGACY_LEDGER_PREFIX_MAPPINGS, VDR_UNQUALIFIED_LEDGER_PREFIX, VERITY_ENDORSER_DEFAULT_DID}
+import com.evernym.verity.config.ConfigConstants.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VDR_LEDGER_PREFIX_MAPPINGS, VDR_UNQUALIFIED_LEDGER_PREFIX, VERITY_ENDORSER_DEFAULT_DID}
 import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgType, TypedMsgLike}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.observability.metrics.CustomMetrics.AS_ACTOR_AGENT_STATE_SIZE
@@ -343,10 +343,10 @@ trait AgentCommon
       DidDocBuilder(futureExecutionContext, dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
     }
 
-  def fqDid(did: DidStr): DidStr = VDRUtil.toFqDID(did, vdrUnqualifiedLedgerPrefix, vdrLegacyLedgerPrefixMappings)
+  def fqDid(did: DidStr): DidStr = VDRUtil.toFqDID(did, vdrUnqualifiedLedgerPrefix, vdrLedgerPrefixMappings)
 
   lazy val vdrUnqualifiedLedgerPrefix: String = appConfig.getStringReq(VDR_UNQUALIFIED_LEDGER_PREFIX)
-  lazy val vdrLegacyLedgerPrefixMappings: Map[String, String] = appConfig.getMap(VDR_LEGACY_LEDGER_PREFIX_MAPPINGS)
+  lazy val vdrLedgerPrefixMappings: Map[String, String] = appConfig.getMap(VDR_LEDGER_PREFIX_MAPPINGS)
 
   lazy val isVAS: Boolean =
     appConfig

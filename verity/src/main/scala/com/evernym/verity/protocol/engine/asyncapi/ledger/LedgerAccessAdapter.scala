@@ -16,7 +16,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
                           vdrCache: CacheProvider,
                           _walletAccess: WalletAccess,
                           _vdrUnqualifiedLedgerPrefix: LedgerPrefix,
-                          _vdrLegacyLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix])
+                          _vdrLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix])
                          (implicit val asyncOpRunner: AsyncOpRunner,
                           implicit val asyncAPIContext: AsyncAPIContext,
                           implicit val ec: ExecutionContext)
@@ -105,7 +105,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
   }
 
   override def fqDID(did: String): FqDID = {
-    VDRUtil.toFqDID(did, _vdrUnqualifiedLedgerPrefix, _vdrLegacyLedgerPrefixMappings)
+    VDRUtil.toFqDID(did, _vdrUnqualifiedLedgerPrefix, _vdrLedgerPrefixMappings)
   }
 
   override def fqSchemaId(schemaId: String,

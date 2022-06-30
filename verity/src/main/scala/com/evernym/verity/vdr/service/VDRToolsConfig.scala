@@ -40,11 +40,6 @@ case class VDRToolsConfig(unqualifiedLedgerPrefix: LedgerPrefix,
       throw new RuntimeException(s"[VDR] '$VDR_UNQUALIFIED_LEDGER_PREFIX' namespace ($unqualifiedLedgerNamespace) is not found in " +
         s"registered ledger's namespaces (${allNamespaces.mkString(", ")})")
     }
-    val prefixValueNamespaces = ledgerPrefixMapping.values.map(_.replace(s"$DID_PREFIX:", ""))
-    if (! allNamespaces.containsSlice(prefixValueNamespaces.toList)) {
-      throw new RuntimeException(s"[VDR] '$VDR_LEDGER_PREFIX_MAPPINGS' has entry for ledger namespace which is not registered")
-    }
-
   }
 
   validate()

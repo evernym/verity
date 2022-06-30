@@ -121,13 +121,17 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
         fqSubmitterDID,
         None) {
         case Success(pt: PreparedTxn) =>
+          logger.info(s"write-schema => prepare successful: " + pt)
           signPreparedTxn(pt, fqSubmitterDID) {
             case Success(smr: SignedMsgResult) =>
+              logger.info(s"write-schema => sign successful: " + pt)
               ctx.ledger.submitTxn(pt, smr.signatureResult.signature, Array.empty)(handleResult)
             case Failure(ex) =>
+              logger.info(s"write-schema => sign failed: " + pt)
               handleResult(Failure(ex))
           }
         case Failure(ex) =>
+          logger.info(s"write-schema => prepare failed: " + ex.getMessage)
           handleResult(Failure(ex))
       }
   }

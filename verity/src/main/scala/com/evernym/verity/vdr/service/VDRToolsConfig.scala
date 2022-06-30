@@ -75,7 +75,7 @@ object VDRToolsConfig {
     } else if (digest.isDefined ) {
       new TaaConfig(digest.get, mechanism, timeOfAcceptance)
     } else {
-      throw new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode, Some("either taa digest or text and version should be defined"))
+      throw new ConfigLoadingFailedException(VALIDATION_FAILED.statusCode, Some("either taa 'digest' or 'text and version' should be defined"))
     }
   }
 

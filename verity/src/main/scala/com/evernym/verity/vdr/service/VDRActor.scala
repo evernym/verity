@@ -6,9 +6,11 @@ import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import com.evernym.vdrtools.vdr.VdrResults.{PingResult, PreparedTxnResult}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.vdr.service.VDRActor.Commands._
 import com.evernym.verity.vdr.service.VDRActor.Replies._
 import com.evernym.verity.vdr._
+import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -16,10 +18,12 @@ import scala.util.{Failure, Success, Try}
 //interacts with provided VDR object
 object VDRActor {
 
+  val logger: Logger = getLoggerByClass(getClass)
+
   sealed trait Cmd extends ActorMessage
 
   object Commands {
-    case object LedgersRegistered extends Cmd
+    case class LedgersRegistered(namespaces: List[String]) extends Cmd
 
     case class Ping(namespaces: List[Namespace],
                     replyTo: ActorRef[Replies.PingResp]) extends Cmd
@@ -94,8 +98,11 @@ object VDRActor {
                   (implicit buffer: StashBuffer[Cmd],
                    actorContext: ActorContext[Cmd],
                    executionContext: ExecutionContext): Behavior[Cmd] = {
+    logger.info("vdr tools initialization started")
     val vdrToolsBuilder = vdrToolsFactory()
-    buildVdrTools(vdrToolsBuilder, vdrToolsConfig)
+    logger.info("vdr tools registration started")
+    registerVdrTools(vdrToolsBuilder, vdrToolsConfig)
+    logger.info("vdr tools registration waiting for response")
     waitingForLedgerRegistration(vdrToolsBuilder)
   }
 
@@ -104,7 +111,8 @@ object VDRActor {
                                    actorContext: ActorContext[Cmd],
                                    executionContext: ExecutionContext): Behavior[Cmd] =
     Behaviors.receiveMessage {
-      case LedgersRegistered =>
+      case LedgersRegistered(namespaces) =>
+        logger.info("ledger registered: " + namespaces)
         val vdrTools = vdrToolsBuilder.build()
         buffer.unstashAll(ready(vdrTools))
       case other =>
@@ -198,23 +206,27 @@ object VDRActor {
     Behaviors.same
   }
 
-  private def buildVdrTools(vdrToolsBuilder: VdrToolsBuilder,
-                            vdrToolsConfig: VDRToolsConfig)
-                           (implicit actorContext: ActorContext[Cmd],
-                            executionContext: ExecutionContext): Unit = {
+  private def registerVdrTools(vdrToolsBuilder: VdrToolsBuilder,
+                               vdrToolsConfig: VDRToolsConfig)
+                              (implicit actorContext: ActorContext[Cmd],
+                               executionContext: ExecutionContext): Unit = {
     val futures = Future.sequence(
       vdrToolsConfig.ledgers.map {
         case il: IndyLedger =>
-          vdrToolsBuilder.registerIndyLedger(
-            il.namespaces,
-            il.genesisTxnData,
-            il.taaConfig
-          )
+          logger.info("ledger registration started for namespaces: " + il.namespaces)
+          vdrToolsBuilder
+            .registerIndyLedger(
+              il.namespaces,
+              il.genesisTxnData,
+              il.taaConfig
+            ).map(_ => il.namespaces.mkString(", "))
       }
     )
     actorContext.pipeToSelf(futures) {
-      case Success(_) => LedgersRegistered
-      case Failure(ex) => throw ex
+      case Success(namespaces) => LedgersRegistered(namespaces)
+      case Failure(ex) =>
+        logger.error("error during ledger registration: " + ex.getMessage)
+        throw ex
     }
   }
 }

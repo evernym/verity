@@ -3,11 +3,13 @@ package com.evernym.verity.vdr.service
 import com.evernym.vdrtools.vdr.VdrParams.TaaConfig
 import com.evernym.verity.config.ConfigConstants.{VDR_LEDGER_PREFIX_MAPPINGS, VDR_UNQUALIFIED_LEDGER_PREFIX}
 import com.evernym.verity.config.validator.base.ConfigReadHelper
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.util.TAAUtil
 import com.evernym.verity.util2.Exceptions.ConfigLoadingFailedException
 import com.evernym.verity.util2.Status.VALIDATION_FAILED
 import com.evernym.verity.vdr.{DID_PREFIX, LedgerPrefix, Namespace}
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.Logger
 
 import scala.io.Source.fromFile
 import scala.util.Try
@@ -115,6 +117,9 @@ object VDRToolsConfig {
       confReadHelper
         .getMap(VDR_LEDGER_PREFIX_MAPPINGS)
     val ledgersConfig = confReadHelper.getObjectListReq("verity.vdr.ledgers").map(_.toConfig)
+    logger.info(s"vdr tools config => unqualifiedLedgerPrefix: $unqualifiedLedgerPrefix, ledgerPrefixMappings: $ledgerPrefixMappings")
     VDRToolsConfig(unqualifiedLedgerPrefix, ledgerPrefixMappings, ledgersConfig.map(loadLedger).toList)
   }
+
+  val logger: Logger = getLoggerByClass(getClass)
 }

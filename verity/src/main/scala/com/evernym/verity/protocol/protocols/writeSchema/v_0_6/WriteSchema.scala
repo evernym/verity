@@ -61,6 +61,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
         case Success(schemaCreated: SchemaCreatedResult) =>
           val fqSchemaId = schemaCreated.schemaId
           logger.info(s"write-schema => fqSchemaId: $fqSchemaId")
+          logger.info(s"write-schema => schemaCreated: $schemaCreated")
           writeSchemaToLedger(fqSubmitterDID, fqSchemaId, schemaCreated.schemaJson) {
             case Success(SubmittedTxn(resp)) =>
               ctx.apply(SchemaWritten(fqSchemaId))
@@ -98,6 +99,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
                   }
               }
             case Failure(e) =>
+              logger.info(s"write-schema => error while writing schema: ${e.getMessage}")
               problemReport(e)
           }
         case Failure(e) =>

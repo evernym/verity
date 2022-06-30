@@ -1,9 +1,8 @@
 package com.evernym.verity.vdr.service
 
 import com.evernym.vdrtools.vdr.VdrParams.TaaConfig
-import com.evernym.verity.config.AppConfig
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 trait VdrToolsBuilder {
   def registerIndyLedger(namespaceList: List[String],

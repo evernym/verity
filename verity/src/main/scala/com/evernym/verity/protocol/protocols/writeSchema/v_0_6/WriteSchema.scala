@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.protocols.writeSchema.v_0_6
 
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.endorser.ENDORSEMENT_RESULT_SUCCESS_CODE
@@ -17,11 +18,13 @@ import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.State.{Done, Erro
 import com.evernym.verity.util.JsonUtil.seqToJson
 import com.evernym.verity.vdr.VDRUtil.extractUnqualifiedDidStr
 import com.evernym.verity.vdr.{FqDID, FqSchemaId, PreparedTxn, SubmittedTxn}
+import com.typesafe.scalalogging.Logger
 
 import scala.util.{Failure, Success, Try}
 
 class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, WriteSchemaState, String])
   extends Protocol[WriteSchema, Role, Msg, Any, WriteSchemaState, String](WriteSchemaDefinition) {
+  val logger: Logger = getLoggerByClass(getClass)
 
   override def handleProtoMsg: (WriteSchemaState, Option[Role], Msg) ?=> Any = noHandleProtoMsg()
 
@@ -53,9 +56,11 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
     try {
       ctx.apply(RequestReceived(m.name, m.version, m.attrNames))
       val fqSubmitterDID = ctx.ledger.fqDID(_submitterDID(init))
+      logger.info(s"write-schema => fqSubmitterDID: $fqSubmitterDID")
       ctx.wallet.createSchema(fqSubmitterDID, m.name, m.version, seqToJson(m.attrNames)) {
         case Success(schemaCreated: SchemaCreatedResult) =>
           val fqSchemaId = schemaCreated.schemaId
+          logger.info(s"write-schema => fqSchemaId: $fqSchemaId")
           writeSchemaToLedger(fqSubmitterDID, fqSchemaId, schemaCreated.schemaJson) {
             case Success(SubmittedTxn(resp)) =>
               ctx.apply(SchemaWritten(fqSchemaId))
@@ -63,9 +68,11 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
             case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(fqSubmitterDID, e) =>
               ctx.logger.info(e.toString)
               val fqEndorserDID = ctx.ledger.fqDID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
+              logger.info(s"write-schema => fqEndorserDID: $fqEndorserDID")
               //NOTE: below code is assuming verity is only supporting indy ledgers,
               // it should be changed when verity starts supporting different types of ledgers
               val ledgerPrefix = ctx.ledger.extractLedgerPrefix(fqSubmitterDID, fqEndorserDID)
+              logger.info(s"write-schema => ledgerPrefix: $ledgerPrefix")
               ctx.endorser.withCurrentEndorser(ledgerPrefix) {
                 case Success(Some(endorser)) if fqEndorserDID.isEmpty || fqEndorserDID.contains(endorser.did) =>
                   ctx.logger.info(s"registered endorser to be used for schema endorsement (ledger prefix: $ledgerPrefix): " + endorser)

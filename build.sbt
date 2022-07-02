@@ -398,7 +398,7 @@ lazy val commonLibraryDependencies = {
 
     "org.pegdown" % "pegdown" % "1.6.0",
     "com.goterl" % "lazysodium-java" % "5.1.1",
-    "net.java.dev.jna" % "jna" % "5.11.0",
+    "net.java.dev.jna" % "jna" % "5.12.1",
 
     "net.glxn" % "qrgen" % "1.4", // QR code generator
     "com.google.guava" % "guava" % "31.1-jre",

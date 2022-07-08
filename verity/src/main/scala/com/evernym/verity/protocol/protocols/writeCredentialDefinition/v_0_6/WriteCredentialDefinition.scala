@@ -151,7 +151,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
               case Success(smr: SignedMsgResult) =>
                 //NOTE: what about other endorsementSpecType (cheqd etc)
                 if (pt.isEndorsementSpecTypeIndy) {
-                  val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(extractUnqualifiedDidStr(fqSubmitterDID) -> smr.signatureResult.toBase64))
+                  val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(extractUnqualifiedDidStr(fqSubmitterDID) -> smr.signatureResult.toBase58))
                   handleResult(Success(txn))
                 } else {
                   handleResult(Failure(new RuntimeException("endorsement spec type not supported: " + pt.endorsementSpec)))

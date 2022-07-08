@@ -1,8 +1,8 @@
 package com.evernym.verity.protocol.engine.asyncapi.wallet
 
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine.ParticipantId
-import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util.{Base58Util, Base64Util}
 
 import scala.util.Try
 
@@ -71,6 +71,8 @@ case class NoWalletFound(message: String)   extends Exception(message)
 case class SignatureResult(signature: Array[Byte], verKey: VerKeyStr) {
   def toBase64: String = Base64Util.getBase64Encoded(signature)
   def toBase64UrlEncoded: String = Base64Util.getBase64UrlEncoded(signature)
+
+  def toBase58: String = Base58Util.encode(signature)
 }
 
 case class DeprecatedWalletSetupResult(ownerDidPair: DidPair, agentKey: NewKeyResult)

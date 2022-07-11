@@ -42,7 +42,7 @@ message DIDWritten {
     string ledgerPrefix = 2;
 }
 
-message WriteFailed {
+message IssuerSetupFailed {
     option (scalapb.message).extends = "Event";
     string error = 1;
 }

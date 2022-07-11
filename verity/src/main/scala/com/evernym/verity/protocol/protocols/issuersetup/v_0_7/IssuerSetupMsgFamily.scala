@@ -54,6 +54,3 @@ case class ProblemReport(message: String) extends Sig
 sealed trait EndorsementStatus
 case class NeedsEndorsement(needsEndorsement: ledgerRequestStr) extends Sig with EndorsementStatus
 case class WrittenToLedger(writtenToLedger: ledgerPrefixStr) extends Sig with EndorsementStatus
-
-
-

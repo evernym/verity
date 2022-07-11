@@ -71,7 +71,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
             handleNeedsEndorsement(keyCreated.did, keyCreated.did, keyCreated.verKey, endorserDID.getOrElse(""), ledgerPrefix)
           }
         }
-      case Failure(e) => problemReport(e)
+      case Failure(e) => problemReport(new Exception(s"$didCreateErrorMsg, reason: ${e.toString}"))
     }
   }
 
@@ -104,15 +104,12 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
 
   private def problemReport(e: Throwable): Unit = {
     ctx.logger.error(e.toString)
-    ctx.apply(WriteFailed(Option(e.getMessage).getOrElse("unknown error")))
+    ctx.apply(IssuerSetupFailed(Option(e.getMessage).getOrElse("unknown error")))
     ctx.signal(ProblemReport(e.toString))
   }
 }
 
 object IssuerSetup {
-  val selfIdErrorMsg = "SELF ID was not provided with init parameters"
   val didCreateErrorMsg = "Unable to create Issuer Public Identity"
-  val corruptedStateErrorMsg = "Issuer Identifier is in a corrupted state"
-  val alreadyCreatingProblem  = "Issuer Identifier is already created or in the process of creation"
   val identifierNotCreatedProblem = "Issuer Identifier has not been created yet"
 }

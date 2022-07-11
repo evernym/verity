@@ -160,12 +160,12 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
 
   override def issuerSetup_0_7: IssuerSetupV0_7 = {
     val createJson = new JSONObject
-    createJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "issuer-setup", "0.7", "create")) // "did:sov:123456789abcdefghi1234;spec/issuer-setup/0.6/create")
+    createJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "issuer-setup", "0.7", "create")) // "did:sov:123456789abcdefghi1234;spec/issuer-setup/0.7/create")
     createJson.put("@id", UUID.randomUUID.toString)
 
     val currentPublicIdentifierJson = new JSONObject
     currentPublicIdentifierJson.put("@type",
-      MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "issuer-setup", "0.7", "current-public-identifier")) // "did:sov:123456789abcdefghi1234;spec/issuer-setup/0.6/current-public-identifier")
+      MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "issuer-setup", "0.7", "current-public-identifier")) // "did:sov:123456789abcdefghi1234;spec/issuer-setup/0.7/current-public-identifier")
     currentPublicIdentifierJson.put("@id", UUID.randomUUID.toString)
 
     new UndefinedIssuerSetup_0_7 {

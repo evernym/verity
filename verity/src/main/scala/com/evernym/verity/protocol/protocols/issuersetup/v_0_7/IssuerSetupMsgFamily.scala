@@ -55,8 +55,5 @@ sealed trait EndorsementStatus
 case class NeedsEndorsement(needsEndorsement: ledgerRequestStr) extends Sig with EndorsementStatus
 case class WrittenToLedger(writtenToLedger: ledgerPrefixStr) extends Sig with EndorsementStatus
 
-object Sig {
-}
-
 
 

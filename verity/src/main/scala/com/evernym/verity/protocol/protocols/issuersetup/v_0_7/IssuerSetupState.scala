@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_7
 
 import com.evernym.verity.did.{DidStr, VerKeyStr}
-import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.IssuerSetup.Nonce
 import com.evernym.verity.protocol.protocols.ledgerPrefixStr
 
 trait Event
@@ -12,17 +11,12 @@ object State {
 
   case class Initialized() extends State
 
-  case class Created(data: StateData) extends State
+  case class Created(identity: Identity) extends State
   case class Identity(did: DidStr, verKey: VerKeyStr)
-  case class StateData(createNonce: Option[Nonce], identity: Option[Identity])
 
-  case class WaitingOnEndorser(ledgerPrefix: ledgerPrefixStr, data: StateData) extends State
+  case class WaitingOnEndorser(ledgerPrefix: ledgerPrefixStr, identity: Identity) extends State
 
-  case class Done(data: StateData) extends State
+  case class Done(identity: Identity) extends State
 
   case class Error(error: String) extends State
-
-  // This state is not possible from the code NOW but must be left for already
-  // recorded events
-  case class Creating(data: StateData) extends State
 }

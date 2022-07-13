@@ -23,7 +23,12 @@ class LedgerTxnExecutorV1(val actorSystem: ActorSystem,
 
   override def futureExecutionContext: ExecutionContext = executionContext
 
-  override def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp = {
+  override def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp = V1TxnRespBuilder.buildTxnRespForReadOp(resp)
+  override def buildTxnRespForWriteOp(resp: Map[String, Any]): TxnResp = V1TxnRespBuilder.buildTxnRespForReadOp(resp)
+}
+
+object V1TxnRespBuilder {
+  def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp = {
     // When something is not found on the ledger, data, txnTime, and seqNo will be null. When any of these three
     // fields are null in the response from the ledger, extractOptValue/extractReqValue and thus buildTxnRespForReadOp
     // will result in an InvalidValueException being thrown.
@@ -41,7 +46,6 @@ class LedgerTxnExecutorV1(val actorSystem: ActorSystem,
     TxnResp(from, dest, data, txnType, Some(txnTime), reqId, Some(seqNo))
   }
 
-  override def buildTxnRespForWriteOp(resp: Map[String, Any]): TxnResp = buildTxnRespForReadOp(resp)
+  def buildTxnRespForWriteOp(resp: Map[String, Any]): TxnResp = buildTxnRespForReadOp(resp)
 
 }
-

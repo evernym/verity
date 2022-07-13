@@ -47,7 +47,7 @@ class ReuseConnectionSpec
     val issuerVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
     val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
-    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
 
     issuerSDK = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
     holderSDK = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)

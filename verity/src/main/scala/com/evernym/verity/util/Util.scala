@@ -337,7 +337,7 @@ object Util {
 
   def saltedHashedName(name: String, appConfig: AppConfig): String = {
     //NOTE: This logic should not be changed unless we know its impact
-    // TODO we should not concate string before hashing, should use safeMultiHash
+    // TODO we should not concat string before hashing, should use safeMultiHash
     HashUtil.hash(SHA256)(name + appConfig.getStringReq(SALT_WALLET_NAME)).hex
   }
 }

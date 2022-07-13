@@ -101,6 +101,11 @@ object ConfigConstants {
   val TWILIO_DEFAULT_NUMBER = s"$TWILIO.default-number"
   val TWILIO_APP_NAME = s"$TWILIO.app-name"
 
+  private val VDR = s"$VERITY.vdr"
+  val VDR_UNQUALIFIED_LEDGER_PREFIX = s"$VDR.unqualified-ledger-prefix"
+  val VDR_LEDGER_PREFIX_MAPPINGS = s"$VDR.ledger-prefix-mappings"
+  val VDR_LEDGERS = s"$VDR.ledgers"
+
   private val LIB_VDRTOOLS = s"$VERITY.lib-vdrtools"
   val LIB_VDRTOOLS_LIBRARY_DIR_LOCATION = s"$LIB_VDRTOOLS.library-dir-location"
   val LIB_VDRTOOLS_FLAVOR = s"$LIB_VDRTOOLS.flavor"
@@ -114,7 +119,6 @@ object ConfigConstants {
   val LIB_INDY_LEDGER_POOL_NAME = s"$LIB_INDY_LEDGER.pool-name"
   val LIB_INDY_LEDGER_TXN_PROTOCOL_VERSION = s"$LIB_INDY_LEDGER.txn-protocol-version"
   val LIB_INDY_LEDGER_TAA = s"$LIB_INDY_LEDGER.transaction_author_agreement"
-  val LIB_INDY_LEDGER_DEFAULT_PREFIX = s"$LIB_INDY_LEDGER.legacy-default-prefix"
 
   private val INFO_BIP = s"$SMS_EXTERNAL_SVC.info-bip"
   val INFO_BIP_ENDPOINT = s"$INFO_BIP.endpoint"

@@ -62,13 +62,13 @@ object LaunchPreCheck {
     val akkaStorageFuture = checkApiStatus(checkId, "akka-persistence", {healthChecker.checkAkkaStorageStatus})
     val walletStorageFuture = checkApiStatus(checkId, "wallet-storage", {healthChecker.checkWalletStorageStatus})
     val blobStorageFuture = checkApiStatus(checkId, "blob-storage", {healthChecker.checkBlobStorageStatus})
-    //val vdrFuture = checkApiStatus(system, checkId, "vdrtools", {healthChecker.checkVDRToolsStatus})
+    val vdrFuture = checkApiStatus(checkId, "vdrtools", {healthChecker.checkVDRToolsStatus})
     for {
       akkaStorage   <- akkaStorageFuture
       walletStorage <- walletStorageFuture
       blobStorage   <- blobStorageFuture
       ledger        <- ledgerFuture
-      vdrTools      <- Future.successful(ApiStatus(status = true, ""))
+      vdrTools      <- vdrFuture
     } yield StartupProbeStatus(
       akkaStorage.status && walletStorage.status && blobStorage.status && ledger.status && vdrTools.status,
       akkaStorage.msg,

@@ -166,7 +166,7 @@ data:
       }
       {{- end }}
     }
-    #THIS IS ADDED FOR BACKWARDS COMPATIBILTY, REMOVE AFTER VDR DEPLOY IS DONE
+    #THIS IS ADDED FOR BACKWARDS COMPATIBILITY, REMOVE AFTER VDR DEPLOY IS DONE
     #BEGIN VDR BACKWARD COMPAT
     verity.lib-indy.ledger.transaction_author_agreement.agreements = {
       {{- range .Values.taa }}
@@ -177,7 +177,16 @@ data:
       }
       {{- end }}
     }
-    #END VDR BACKWARD COMPT
+    #END VDR BACKWARD COMPATIBILITY
+    {{- end }}
+  vdr.conf: |
+    {{- if .Values.vdr }}
+    {
+    "verity": {
+      "vdr":
+{{ toPrettyJson .Values.vdr | indent 8 }}
+      }
+    }
     {{- end }}
   custom.conf: |
 {{ .Values.customConfig | default "" | indent 4 }}

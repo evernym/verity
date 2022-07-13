@@ -1,8 +1,6 @@
 package com.evernym.verity.protocol.protocols.issueCredential.v_1_0
 
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentStoreStrategy.OneToOne
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Offer, Request, Status}

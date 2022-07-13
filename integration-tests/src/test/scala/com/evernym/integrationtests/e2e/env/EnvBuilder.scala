@@ -10,6 +10,7 @@ import com.evernym.verity.config.ConfigConstants.LIB_INDY_LEDGER_POOL_TXN_FILE_L
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.util.CollectionUtil.containsDuplicates
+import com.evernym.verity.util.TAAUtil
 import com.evernym.verity.util2.UrlParam
 import com.typesafe.config.{Config, ConfigFactory, ConfigObject, ConfigValueFactory}
 import com.typesafe.scalalogging.Logger
@@ -19,6 +20,7 @@ import org.apache.http.util.EntityUtils
 
 import java.io.File
 import java.nio.file.{Files, Path}
+import java.time.LocalDate
 import scala.jdk.CollectionConverters._
 import scala.concurrent.duration.Duration
 
@@ -454,6 +456,7 @@ case class VerityInstance(name: String,
     val verityAkkaRemotePort = PortProvider.getFreePort
     val verityAkkaManagementPort = PortProvider.getFreePort
     List(
+      EnvVar("TAA_ACCEPT_DATE", LocalDate.now().toString),
       EnvVar("APP_ACTOR_SYSTEM_NAME", appType.systemName),
       EnvVar("POOL_NAME", s"${name}_pool"),
       EnvVar("JDWP_PORT", jdwpPort.getOrElse("5005"), uniqueValueAcrossEnv = true),

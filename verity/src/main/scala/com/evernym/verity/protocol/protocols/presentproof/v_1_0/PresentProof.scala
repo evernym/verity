@@ -25,6 +25,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResu
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.legacy.PresentProofLegacy
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
+import com.evernym.verity.vdr.VDRUtil
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -202,7 +203,7 @@ class PresentProof(implicit val ctx: PresentProofContext)
     val proofRequestJson = DefaultMsgCodec.toJson(_checkRevocationInterval(proofRequest))
 
     extractPresentation(msg) match {
-      case Success((presentation: ProofPresentation, presentationJson: String)) =>
+      case Success((presentation: ProofPresentation, presentationJson)) =>
         ctx.storeSegment(segment=PresentationGiven(presentationJson)) {
           case Success(s) =>
             ctx.apply(PresentationGivenRef(s.segmentKey))
@@ -375,17 +376,18 @@ class PresentProof(implicit val ctx: PresentProofContext)
                   ctx.apply(PresentationUsedRef(s.segmentKey))
                 case Failure(e) => reportSegStoreFailed("error during processing accept request")
               }
-            case Failure(e) => signal(
-              Sig.buildProblemReport(
-                s"Unable to crate proof presentation -- ${e.getMessage}",
-                "presentation-creation-failure"
-              )
+            case Failure(e) =>
+              signal(
+                Sig.buildProblemReport(
+                  s"Unable to crate proof presentation -- ${e.getMessage}",
+                  "presentation-creation-failure"
+                )
             )
           }
-        case Failure(e) => signal(
-          Sig.buildProblemReport(s"Ledger assets unavailable -- ${e.getMessage}", ledgerAssetsUnavailable)
-        )
-
+        case Failure(e) =>
+          signal(
+            Sig.buildProblemReport(s"Ledger assets unavailable -- ${e.getMessage}", ledgerAssetsUnavailable)
+          )
       }
     }
   }
@@ -447,13 +449,11 @@ class PresentProof(implicit val ctx: PresentProofContext)
   }
 
   def retrieveLedgerElements(identifiers: Seq[Identifier], allowsAllSelfAttested: Boolean=false)
-                                  (handler: Try[(String, String)] => Unit): Unit = {
+                            (handler: Try[(String, String)] => Unit): Unit = {
     val ids: mutable.Buffer[(String, String)] = mutable.Buffer()
-
     identifiers.foreach { identifier =>
       ids.append((identifier.schema_id, identifier.cred_def_id))
     }
-
     doSchemaAndCredDefRetrieval(ids.toSet, allowsAllSelfAttested)(handler)
   }
 
@@ -469,11 +469,10 @@ class PresentProof(implicit val ctx: PresentProofContext)
     }
 
     def doSchemaRetrieval(ids: Set[String])(handler: Try[String] => Unit): Unit = {
-      ctx.ledger.getSchemas(ids) {
+      ctx.ledger.resolveSchemas(ids.map(ctx.ledger.fqSchemaId(_, None))) {
         case Success(schemas) if schemas.size == ids.size =>
-          val retrievedSchemasJson = schemas.map { case (id, getSchemaResp) =>
-            val schemaJson = DefaultMsgCodec.toJson(getSchemaResp.schema)
-            s""""$id": $schemaJson"""
+          val retrievedSchemasJson = schemas.map { schema =>
+            s""""${VDRUtil.toLegacyNonFqSchemaId(schema.fqId)}": ${schema.json}"""
           }.mkString("{", ",", "}")
           handler(Success(retrievedSchemasJson))
         case Success(_) => handler(Failure(new Exception("Unable to retrieve schema from ledger")))
@@ -481,14 +480,12 @@ class PresentProof(implicit val ctx: PresentProofContext)
       }
     }
 
-
     def doCredDefRetrieval(schemas: String, credDefIds: Set[String])
                           (handler: Try[(String, String)] => Unit): Unit = {
-      ctx.ledger.getCredDefs(credDefIds) {
+      ctx.ledger.resolveCredDefs(credDefIds.map(ctx.ledger.fqCredDefId(_, None))) {
         case Success(credDefs) if credDefs.size == ids.size =>
-          val retrievedCredDefJson = credDefs.map { case (id, getCredDefResp) =>
-            val credDefJson = DefaultMsgCodec.toJson(getCredDefResp.credDef)
-            s""""$id": $credDefJson"""
+          val retrievedCredDefJson = credDefs.map { credDef =>
+            s""""${VDRUtil.toLegacyNonFqCredDefId(credDef.fqId)}": ${credDef.json}"""
           }.mkString("{", ",", "}")
           handler(Success((schemas, retrievedCredDefJson)))
         case Success(_) => throw new Exception("Unable to retrieve cred def from ledger")
@@ -524,7 +521,7 @@ object PresentProof {
                     (implicit ctx: PresentProofContext): Unit = {
     InviteUtil.withServiced(stateData.agencyVerkey, ctx) {
       case Success(service) =>
-        val attachement: AttachmentDescriptor = buildProtocolMsgAttachment(
+        val attachment: AttachmentDescriptor = buildProtocolMsgAttachment(
           MsgIdProvider.getNewMsgId,
           ctx.threadId_!,
           PresentProofDef.msgFamily,
@@ -538,7 +535,7 @@ object PresentProof {
           stateData.logoUrl,
           stateData.publicDid,
           service,
-          attachement,
+          attachment,
           goalCode = Some("request-proof"),
           goal = Some("To request a proof"),
           ctx.serviceKeyDidFormat

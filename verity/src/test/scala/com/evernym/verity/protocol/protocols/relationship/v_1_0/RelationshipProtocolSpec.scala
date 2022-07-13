@@ -14,9 +14,9 @@ import com.evernym.verity.protocol.testkit.DSL.{signal, state}
 import com.evernym.verity.protocol.testkit.{InteractionController, MockableUrlShorteningAccess, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
-import com.evernym.verity.did.methods.DIDKey
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.did.methods.key.DIDKey
 import com.evernym.verity.protocol.engine.journal.DebugProtocols
 import com.evernym.verity.protocol.engine.util.ServiceFormatted
 import org.json.JSONObject

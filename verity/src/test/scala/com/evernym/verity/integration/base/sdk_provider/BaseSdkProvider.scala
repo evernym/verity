@@ -10,7 +10,6 @@ import com.evernym.verity.actor.AgencyPublicDid
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgParseUtil}
-import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{AgentCreated, ProvisionToken}
 import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg.ConnResponse
@@ -35,7 +34,6 @@ import com.evernym.verity.integration.base.sdk_provider.JsonMsgUtil.createJsonSt
 import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
 import com.evernym.verity.observability.logs.LoggingUtil.{getLoggerByClass, getLoggerByName}
-import com.evernym.verity.observability.metrics.NoOpMetricsWriter
 import com.evernym.verity.protocol.engine.Constants.{MSG_TYPE_CONNECT, MSG_TYPE_CREATE_AGENT, MSG_TYPE_SIGN_UP, MTV_1_0}
 import com.evernym.verity.protocol.engine.util.DIDDoc
 import com.evernym.verity.protocol.protocols
@@ -46,10 +44,10 @@ import com.evernym.verity.testkit.util.{AcceptConnReq_MFV_0_6, AgentCreated_MFV_
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
 import com.evernym.verity.testkit.util.HttpUtil._
-import com.evernym.verity.vault.service.{ActorWalletService, WalletService}
-import com.evernym.verity.vault.wallet_api.{StandardWalletAPI, WalletAPI}
+import com.evernym.verity.vault.service.ActorWalletService
+import com.evernym.verity.vault.wallet_api.StandardWalletAPI
+import com.evernym.verity.vdr.service.VdrTools
 import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
-import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.Logger
 import org.json.JSONObject
 import org.scalatest.matchers.should.Matchers
@@ -82,24 +80,27 @@ trait SdkProvider { this: BasicSpec =>
 
   def setupHolderSdk(verityEnv: VerityEnv,
                      ledgerTxnExecutor: LedgerTxnExecutor,
+                     vdrTools: VdrTools,
                      executionContext: ExecutionContext): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), Option(ledgerTxnExecutor), executionContext, None)
+    HolderSdk(buildSdkParam(verityEnv), Option(ledgerTxnExecutor), Option(vdrTools), executionContext, None)
 
   def setupHolderSdk(verityEnv: VerityEnv,
                      executionContext: ExecutionContext,
-                     ledgerTxnExecutor: Option[LedgerTxnExecutor]): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, executionContext, None)
+                     ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                     vdrTools: Option[VdrTools]): HolderSdk =
+    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, vdrTools, executionContext, None)
 
   def setupHolderSdk(verityEnv: VerityEnv,
                      oauthParam: OAuthParam,
                      executionContext: ExecutionContext): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), None, executionContext, Option(oauthParam))
+    HolderSdk(buildSdkParam(verityEnv), None, None, executionContext, Option(oauthParam))
 
   def setupHolderSdk(verityEnv: VerityEnv,
                      executionContext: ExecutionContext,
                      ledgerTxnExecutor: Option[LedgerTxnExecutor] = None,
+                     vdrTools: Option[VdrTools] = None,
                      oauthParam: Option[OAuthParam] = None): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, executionContext, oauthParam)
+    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, vdrTools, executionContext, oauthParam)
 
   def setupIssuerSdkAsync(verityEnv: Future[VerityEnv],
                           executionContext: ExecutionContext,
@@ -125,18 +126,20 @@ trait SdkProvider { this: BasicSpec =>
 
   def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
                           ledgerTxnExecutor: LedgerTxnExecutor,
+                          vdrTools: VdrTools,
                           executionContext: ExecutionContext): Future[HolderSdk] = {
     verityEnv.map {
-      env => setupHolderSdk(env, ledgerTxnExecutor, executionContext)
+      env => setupHolderSdk(env, ledgerTxnExecutor, vdrTools, executionContext)
     }(executionContext)
   }
 
 
   def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
                           ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                          vdrTools: Option[VdrTools],
                           executionContext: ExecutionContext): Future[HolderSdk] =
     verityEnv.map(env => {
-      setupHolderSdk(env, executionContext, ledgerTxnExecutor)
+      setupHolderSdk(env, executionContext, ledgerTxnExecutor, vdrTools)
     })(executionContext)
 
 
@@ -149,10 +152,11 @@ trait SdkProvider { this: BasicSpec =>
 
   def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
                           ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                          vdrTools: Option[VdrTools],
                           oauthParam: Option[OAuthParam],
                           executionContext: ExecutionContext): Future[HolderSdk] =
     verityEnv.map(env => {
-      setupHolderSdk(env, executionContext, ledgerTxnExecutor, oauthParam)
+      setupHolderSdk(env, executionContext, ledgerTxnExecutor, vdrTools, oauthParam)
     })(executionContext)
 
   private def buildSdkParam(verityEnv: VerityEnv): SdkParam = {
@@ -193,9 +197,10 @@ trait SdkProvider { this: BasicSpec =>
     inviterSDK.expectConnectionComplete(connId)
   }
 
-  def setupIssuer(issuerSDK: VeritySdkBase): Unit = {
+  def setupIssuer(issuerSDK: VeritySdkBase): PublicIdentifierCreated = {
     issuerSDK.sendMsg(Create())
-    issuerSDK.expectMsgOnWebhook[PublicIdentifierCreated]()
+    val receivedMsg = issuerSDK.expectMsgOnWebhook[PublicIdentifierCreated]()
+    receivedMsg.msg
   }
 
   def writeSchema(issuerSDK: VeritySdkBase, write: writeSchema0_6.Write): SchemaId = {

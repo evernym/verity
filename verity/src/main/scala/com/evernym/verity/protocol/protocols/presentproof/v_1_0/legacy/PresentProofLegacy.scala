@@ -13,6 +13,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Role.{Prover, Ve
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults._
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0._
 import com.evernym.verity.util.OptionUtil
+import com.evernym.verity.vdr.VDRUtil
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -228,11 +229,10 @@ trait PresentProofLegacy
     }
 
     def doSchemaRetrievalLegacy(ids: Set[String])(handler: Try[String] => Unit): Unit = {
-      ctx.ledger.getSchemas(ids) {
+      ctx.ledger.resolveSchemas(ids.map(ctx.ledger.fqSchemaId(_, None))) {
         case Success(schemas) if schemas.size == ids.size =>
-          val retrievedSchemasJson = schemas.map { case (id, getSchemaResp) =>
-            val schemaJson = DefaultMsgCodec.toJson(getSchemaResp.schema)
-            s""""$id": $schemaJson"""
+          val retrievedSchemasJson = schemas.map { schema =>
+            s""""${VDRUtil.toLegacyNonFqSchemaId(schema.fqId)}": ${schema.json}"""
           }.mkString("{", ",", "}")
           handler(Success(retrievedSchemasJson))
         case Success(_) => handler(Failure(new Exception("Unable to retrieve schema from ledger")))
@@ -243,11 +243,10 @@ trait PresentProofLegacy
 
     def doCredDefRetrievalLegacy(schemas: String, credDefIds: Set[String])
                           (handler: Try[(String, String)] => Unit): Unit = {
-      ctx.ledger.getCredDefs(credDefIds) {
+      ctx.ledger.resolveCredDefs(credDefIds.map(ctx.ledger.fqCredDefId(_, None))) {
         case Success(credDefs) if credDefs.size == ids.size =>
-          val retrievedCredDefJson = credDefs.map { case (id, getCredDefResp) =>
-            val credDefJson = DefaultMsgCodec.toJson(getCredDefResp.credDef)
-            s""""$id": $credDefJson"""
+           val retrievedCredDefJson = credDefs.map { credDef =>
+            s""""${VDRUtil.toLegacyNonFqCredDefId(credDef.fqId)}": ${credDef.json}"""
           }.mkString("{", ",", "}")
           handler(Success((schemas, retrievedCredDefJson)))
         case Success(_) => throw new Exception("Unable to retrieve cred def from ledger")

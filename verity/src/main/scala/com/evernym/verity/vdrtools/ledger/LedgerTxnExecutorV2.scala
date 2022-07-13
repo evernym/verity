@@ -23,6 +23,13 @@ class LedgerTxnExecutorV2(val actorSystem: ActorSystem,
 
   override def futureExecutionContext: ExecutionContext = executionContext
 
+  override def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp = V2TxnRespBuilder.buildTxnRespForReadOp(resp)
+
+  override def buildTxnRespForWriteOp(resp: Map[String, Any]): TxnResp = V2TxnRespBuilder.buildTxnRespForWriteOp(resp)
+}
+
+object V2TxnRespBuilder {
+
   def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp = {
     // When something is not found on the ledger, data, txnTime, and seqNo will be null. When any of these three
     // fields are null ipn the response from the ledger, extractOptValue/extractReqValue and thus buildTxnRespForReadOp
@@ -55,13 +62,13 @@ class LedgerTxnExecutorV2(val actorSystem: ActorSystem,
 
       val txnType = extractReqValue(txn, TYPE).toString
 
-      val txnMetadata = extractReqValue(result, TXN_METADATA).asInstanceOf[Map[String, Any]]
+      extractReqValue(result, TXN_METADATA).asInstanceOf[Map[String, Any]]
       val seqNo = extractOptValue(result, SEQ_NO).map(_.toString.toLong)
       val txnTime = extractOptValue(result, TXN_TIME).map(_.toString.toLong)
       TxnResp(from, dest, Option(data), txnType, txnTime, reqId, seqNo)
     } catch {
-      case _: MissingReqFieldException => throw LedgerRejectException(resp(REASON).asInstanceOf[String])
+      case _: MissingReqFieldException =>
+        throw LedgerRejectException(resp(REASON).asInstanceOf[String])
     }
   }
-
 }

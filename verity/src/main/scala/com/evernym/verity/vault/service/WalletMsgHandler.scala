@@ -1,16 +1,21 @@
 package com.evernym.verity.vault.service
 
-import java.util.concurrent.ExecutionException
-import scala.concurrent.ExecutionContext
+import com.evernym.vdrtools.InvalidStructureException
+import com.evernym.vdrtools.wallet.WalletItemNotFoundException
 
+import scala.concurrent.ExecutionContext
 import com.evernym.verity.util.HashUtil.byteArray2RichBytes
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerRequest}
 import com.evernym.verity.vault.operation_executor.{AnoncredsWalletOpExecutor, CryptoOpExecutor, DidOpExecutor, LedgerWalletOpExecutor}
 import com.evernym.verity.util.HashAlgorithm.SHA256
 import com.evernym.verity.util.HashUtil
+import com.evernym.verity.util2.Exceptions
+import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Status.INVALID_VALUE
 import com.evernym.verity.vault.{KeyParam, WalletConfig, WalletExt, WalletProvider}
 
+import java.util.concurrent.ExecutionException
 import scala.concurrent.Future
 
 object WalletMsgHandler {
@@ -156,7 +161,15 @@ object WalletMsgHandler {
     handleGetVerKey(GetVerKey(gvko.did, gvko.getKeyFromPool))
       .map(gvk => GetVerKeyOptResp(Option(gvk.verKey)))
       .recover {
-        case _: ExecutionException => GetVerKeyOptResp(None)
+        case _: WalletItemNotFoundException =>
+          GetVerKeyOptResp(None)
+        case e: ExecutionException if Option(e.getCause).exists(_.isInstanceOf[WalletItemNotFoundException]) =>
+          GetVerKeyOptResp(None)
+        case e: ExecutionException if Option(e.getCause).exists(_.isInstanceOf[InvalidStructureException]) =>
+          throw new BadRequestErrorException(
+            INVALID_VALUE.statusCode,
+            Option(e.getMessage),
+            errorDetail = Option(Exceptions.getStackTraceAsSingleLineString(e)))
       }
   }
 

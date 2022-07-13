@@ -474,7 +474,7 @@ trait LibVcxProvider
 
     val indyPoolNetwork = new JSONObject()
     val namespaceList = new JSONArray()
-    namespaceList.put("sov")
+    namespaceList.put("indy:sovrin")
     indyPoolNetwork.put("genesis_path", genesisTxnFilePath)
     indyPoolNetwork.put("namespace_list", namespaceList)
 

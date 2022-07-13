@@ -11,7 +11,8 @@ import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.actor.ActorContext
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.cache.base.{Cache, FetcherParam}
-import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValueFetcher, EndpointCacheFetcher, KeyValueMapperFetcher, LedgerGetCredDefCacheFetcher, LedgerGetSchemaCacheFetcher, LedgerVerKeyCacheFetcher}
+import com.evernym.verity.cache.fetchers.{AgencyIdentityCacheFetcher, CacheValueFetcher, EndpointCacheFetcher, KeyValueMapperFetcher, LedgerVerKeyCacheFetcher}
+import com.evernym.verity.cache.providers.{CacheProvider, CaffeineCacheParam, CaffeineCacheProvider}
 import com.evernym.verity.config.ConfigConstants.{EVENT_SINK, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
@@ -49,10 +50,10 @@ trait AgentActorContext
     new KeyValueMapperFetcher(system, appConfig, futureExecutionContext),
     new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig, futureExecutionContext),
     new EndpointCacheFetcher(ledgerSvc, appConfig, futureExecutionContext),
-    new LedgerVerKeyCacheFetcher(ledgerSvc, appConfig, futureExecutionContext),
-    new LedgerGetSchemaCacheFetcher(ledgerSvc, appConfig, futureExecutionContext),
-    new LedgerGetCredDefCacheFetcher(ledgerSvc, appConfig, futureExecutionContext)
+    new LedgerVerKeyCacheFetcher(ledgerSvc, appConfig, futureExecutionContext)
   ).map(f => f.fetcherParam -> f).toMap
+
+  lazy val vdrCache: CacheProvider = new CaffeineCacheProvider(CaffeineCacheParam(None, None, None, None))
 
   lazy val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()
   lazy val generalCache: Cache = new Cache("GC", generalCacheFetchers, metricsWriter, futureExecutionContext)
@@ -66,7 +67,7 @@ trait AgentActorContext
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, futureExecutionContext)
   lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val storageAPI: StorageAPI = StorageAPI.loadFromConfig(appConfig, futureExecutionContext)
-  lazy val vdrBuilderFactory: VDRToolsFactory = () => new VdrToolsBuilderImpl
+  lazy val vdrBuilderFactory: VDRToolsFactory = () => new VdrToolsBuilderImpl(appConfig)(executionContext)
   lazy val vdrAdapter: VDRAdapter = createVDRAdapter(vdrBuilderFactory, appConfig)
 
   lazy val eventProducerAdapter: ProducerPort = {

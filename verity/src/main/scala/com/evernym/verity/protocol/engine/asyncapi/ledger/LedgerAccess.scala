@@ -2,50 +2,29 @@ package com.evernym.verity.protocol.engine.asyncapi.ledger
 
 import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerRequest, TxnResp}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.vdr.{CredDef, FQCredDefId, FQSchemaId, PreparedTxn, Schema, SubmittedTxn}
+import com.evernym.verity.vdr.{CredDef, CredDefId, FqCredDefId, FqDID, FqSchemaId, LedgerPrefix, PreparedTxn, Schema, SchemaId, SubmittedTxn}
 
 import scala.util.Try
+
 
 trait LedgerAccess {
 
   def walletAccess: WalletAccess
 
-  def getSchema(schemaId: String)(handler: Try[GetSchemaResp] => Unit): Unit
-
-  def getCredDef(credDefId: String)(handler: Try[GetCredDefResp] => Unit): Unit
-
-  def getSchemas(schemaIds: Set[String])
-               (handler: Try[Map[String, GetSchemaResp]] => Unit): Unit
-
-  def getCredDefs(credDefIds: Set[String])
-                (handler: Try[Map[String, GetCredDefResp]] => Unit): Unit
-
-  def writeSchema(submitterDID: DidStr, schemaJson: String)(handler: Try[TxnResp] => Unit): Unit
-
-  def prepareSchemaForEndorsement(submitterDID: DidStr, schemaJson: String, endorserDID: DidStr)
-                                 (handler: Try[LedgerRequest] => Unit): Unit
-
-  def writeCredDef(submitterDID: DidStr, credDefJson: String)(handler: Try[TxnResp] => Unit): Unit
-
-  def prepareCredDefForEndorsement(submitterDID: DidStr, credDefJson: String, endorserDID: DidStr)
-                                  (handler: Try[LedgerRequest] => Unit): Unit
-
-  def prepareDIDTxnForEndorsement(submitterDID: DidStr, targetDID: String, verkey: String, endorserDID: DidStr)
-                                 (handler: Try[LedgerRequest] => Unit): Unit
-
-  def getIndyDefaultLegacyPrefix(): String
+  def vdrUnqualifiedLedgerPrefix(): String
 
   //new vdr apis
   def prepareSchemaTxn(schemaJson: String,
-                       fqSchemaId: FQSchemaId,
-                       submitterDID: DidStr,
+                       schemaId: SchemaId,
+                       submitterDID: FqDID,
                        endorser: Option[String])
                       (handler: Try[PreparedTxn] => Unit): Unit
 
   def prepareCredDefTxn(credDefJson: String,
-                        fqCredDefId: FQCredDefId,
-                        submitterDID: DidStr,
+                        credDefId: CredDefId,
+                        submitterDID: FqDID,
                         endorser: Option[String])
                        (handler: Try[PreparedTxn] => Unit): Unit
 
@@ -54,11 +33,27 @@ trait LedgerAccess {
                 endorsement: Array[Byte])
                (handler: Try[SubmittedTxn] => Unit): Unit
 
-  def resolveSchema(fqSchemaId: FQSchemaId)
+  def resolveSchema(fqSchemaId: FqSchemaId)
                    (handler: Try[Schema] => Unit): Unit
 
-  def resolveCredDef(fqCredDefId: FQCredDefId)
+  def resolveSchemas(fqSchemaIds: Set[FqSchemaId])
+                    (handler: Try[Seq[Schema]] => Unit): Unit
+
+  def resolveCredDef(fqCredDefId: FqCredDefId)
                     (handler: Try[CredDef] => Unit): Unit
+
+  def resolveCredDefs(fqCredDefIds: Set[FqCredDefId])
+                     (handler: Try[Seq[CredDef]] => Unit): Unit
+
+  def fqDID(did: DidStr): FqDID
+
+  def fqSchemaId(schemaId: SchemaId,
+                 issuerFqDID: Option[FqDID]): FqSchemaId
+
+  def fqCredDefId(credDefId: CredDefId,
+                  issuerFqDID: Option[FqDID]): FqCredDefId
+
+  def extractLedgerPrefix(submitterFqDID: FqDID, endorserFqDID: FqDID): LedgerPrefix
 }
 
 case class LedgerRejectException(msg: String) extends Exception(msg)

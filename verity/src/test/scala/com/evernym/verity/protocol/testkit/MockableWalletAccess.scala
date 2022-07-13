@@ -76,7 +76,7 @@ class MockableWalletAccess(mockNewDid: () => Try[NewKeyResult] = randomDid  _,
 
   override def verKeyOpt(forDID: DidStr)(handler: Try[VerKeyOptResult] => Unit): Unit = handler(mockVerKeyOpt(forDID))
 
-  override def sign(msg: Array[Byte], signType: SignType)(handler: Try[SignedMsgResult] => Unit): Unit = handler(mockSign())
+  override def sign(msg: Array[Byte], signType: SignType, signerDid: Option[DidStr]=None)(handler: Try[SignedMsgResult] => Unit): Unit = handler(mockSign())
 
   override def signRequest(submitterDID: DidStr, request: String)(handler: Try[LedgerRequestResult] => Unit): Unit = handler(Try(LedgerRequestResult(request)))
 

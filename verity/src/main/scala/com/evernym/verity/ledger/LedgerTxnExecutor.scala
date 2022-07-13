@@ -20,33 +20,27 @@ trait LedgerTxnExecutor {
 
   def getNym(submitter: Submitter, id: String): Future[GetNymResp]
 
-  def getSchema(submitter: Submitter, schemaId: String): Future[GetSchemaResp]
+//  def getSchema(submitter: Submitter, schemaId: String): Future[GetSchemaResp]
 
-  def writeSchema(submitterDID: DidStr,
-                  schemaJson: String,
-                  walletAccess: WalletAccess): Future[TxnResp]
+//  def writeSchema(submitterDID: DidStr,
+//                  schemaJson: String,
+//                  walletAccess: WalletAccess): Future[TxnResp]
+//
+//  def prepareSchemaForEndorsement(submitterDID: DidStr,
+//                                  schemaJson: String,
+//                                  endorserDID: DidStr,
+//                                  walletAccess: WalletAccess): Future[LedgerRequest]
 
-  def prepareSchemaForEndorsement(submitterDID: DidStr,
-                                  schemaJson: String,
-                                  endorserDID: DidStr,
-                                  walletAccess: WalletAccess): Future[LedgerRequest]
+//  def writeCredDef(submitterDID: DidStr,
+//                   credDefJson: String,
+//                   walletAccess: WalletAccess): Future[TxnResp]
 
-  def writeCredDef(submitterDID: DidStr,
-                   credDefJson: String,
-                   walletAccess: WalletAccess): Future[TxnResp]
+//  def prepareCredDefForEndorsement(submitterDID: DidStr,
+//                                   credDefJson: String,
+//                                   endorserDID: DidStr,
+//                                   walletAccess: WalletAccess): Future[LedgerRequest]
 
-  def prepareCredDefForEndorsement(submitterDID: DidStr,
-                                   credDefJson: String,
-                                   endorserDID: DidStr,
-                                   walletAccess: WalletAccess): Future[LedgerRequest]
-
-  def prepareDIDForEndorsement(submitterDID: DidStr,
-                               targetDID: String,
-                               verkey: String,
-                               endorserDID: DidStr,
-                               walletAccess: WalletAccess): Future[LedgerRequest]
-
-  def getCredDef(submitter: Submitter, credDefId: String): Future[GetCredDefResp]
+//  def getCredDef(submitter: Submitter, credDefId: String): Future[GetCredDefResp]
 
   def getAttrib(submitter: Submitter, did: DidStr, attrName: String): Future[GetAttribResp]
 

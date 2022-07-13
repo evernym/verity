@@ -18,6 +18,7 @@ import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 import com.evernym.vdrtools.ledger.Ledger._
 import com.evernym.vdrtools.pool.Pool
+import com.evernym.verity.vdr.VDRUtil
 
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
@@ -183,8 +184,27 @@ class LedgerUtil (val appConfig: AppConfig,
     assert(txnTime.asInstanceOf[Int] > 0, "txnTime must be greater than zero")
   }
 
+  def checkDidOnLedger(did: DidStr, verkey: VerKeyStr, role: String = null): Unit = {
+    //NOTE: once we replace below ledger call (get nym) with vdrtools api,
+    // will have to change other logic in below lines accordingly
+    val req = buildGetNymRequest(privateGetDID, did).get
+    val response = executeLedgerRequest(req)
+    checkTxn(response)
+    val data = findData(response)
+    assert(data.contains(did) || data.contains(VDRUtil.extractUnqualifiedDidStr(did)))
+    assert(data.contains(verkey))
+
+    role match {
+      case "ENDORSER" => assert(data.contains("\"role\":\"101\""))
+      case _ =>
+    }
+  }
+
   def checkSchemaOnLedger(did: DidStr, name: String, version:String): Unit = {
-    val schema_id = s"$did:2:$name:$version"
+    //NOTE: once we replace below ledger call (get schema) with vdrtools api,
+    // will have to change other logic in below lines accordingly
+    val identifier = VDRUtil.extractUnqualifiedDidStr(did)
+    val schema_id = s"$identifier:2:$name:$version"
     val req = buildGetSchemaRequest(privateGetDID, schema_id).get
     val response = executeLedgerRequest(req)
 
@@ -204,22 +224,6 @@ class LedgerUtil (val appConfig: AppConfig,
     checkTxn(response)
   }
 
-  def checkDidOnLedger(did: DidStr, verkey: VerKeyStr, role: String = null): Unit = {
-    val req = buildGetNymRequest(privateGetDID, did).get
-    val response = executeLedgerRequest(req)
-
-    checkTxn(response)
-
-    val data = findData(response)
-
-    assert(data.contains(did))
-    assert(data.contains(verkey))
-
-    role match {
-      case "ENDORSER" => assert(data.contains("\"role\":\"101\""))
-      case _ =>
-    }
-  }
 
   /**
    * custom thread pool executor

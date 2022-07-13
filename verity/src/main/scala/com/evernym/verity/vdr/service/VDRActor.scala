@@ -6,9 +6,12 @@ import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import com.evernym.vdrtools.vdr.VdrResults.{PingResult, PreparedTxnResult}
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.did.{DidStr, VerKeyStr}
+import com.evernym.verity.did.DidStr
+import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.vdr.service.VDRActor.Commands._
 import com.evernym.verity.vdr.service.VDRActor.Replies._
 import com.evernym.verity.vdr._
+import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -16,13 +19,20 @@ import scala.util.{Failure, Success, Try}
 //interacts with provided VDR object
 object VDRActor {
 
+  val logger: Logger = getLoggerByClass(getClass)
+
   sealed trait Cmd extends ActorMessage
 
   object Commands {
-    case object LedgersRegistered extends Cmd
+    case class LedgersRegistered(namespaces: List[String]) extends Cmd
 
     case class Ping(namespaces: List[Namespace],
                     replyTo: ActorRef[Replies.PingResp]) extends Cmd
+
+    case class PrepareDidTxn(txnSpecificParams: TxnSpecificParams,
+                             submitterDid: DidStr,
+                             endorser: Option[String],
+                             replyTo: ActorRef[Replies.PrepareTxnResp]) extends Cmd
 
     case class PrepareSchemaTxn(txnSpecificParams: TxnSpecificParams,
                                 submitterDid: DidStr,
@@ -41,13 +51,16 @@ object VDRActor {
                          endorsement: String,
                          replyTo: ActorRef[Replies.SubmitTxnResp]) extends Cmd
 
-    case class ResolveSchema(schemaId: FQSchemaId,
+    case class ResolveSchema(schemaId: FqSchemaId,
+                             cacheOption: Option[CacheOption]=None,
                              replyTo: ActorRef[Replies.ResolveSchemaResp]) extends Cmd
 
-    case class ResolveCredDef(credDefId: FQCredDefId,
+    case class ResolveCredDef(credDefId: FqCredDefId,
+                              cacheOption: Option[CacheOption]=None,
                               replyTo: ActorRef[Replies.ResolveCredDefResp]) extends Cmd
 
-    case class ResolveDID(fqDid: FQDid,
+    case class ResolveDID(fqDid: FqDID,
+                          cacheOption: Option[CacheOption]=None,
                           replyTo: ActorRef[Replies.ResolveDIDResp]) extends Cmd
 
   }
@@ -86,8 +99,11 @@ object VDRActor {
                   (implicit buffer: StashBuffer[Cmd],
                    actorContext: ActorContext[Cmd],
                    executionContext: ExecutionContext): Behavior[Cmd] = {
+    logger.info("vdr tools initialization started")
     val vdrToolsBuilder = vdrToolsFactory()
-    buildVdrTools(vdrToolsBuilder, vdrToolsConfig)
+    logger.info("vdr tools registration started")
+    registerVdrTools(vdrToolsBuilder, vdrToolsConfig)
+    logger.info("vdr tools registration waiting for response")
     waitingForLedgerRegistration(vdrToolsBuilder)
   }
 
@@ -96,8 +112,9 @@ object VDRActor {
                                    actorContext: ActorContext[Cmd],
                                    executionContext: ExecutionContext): Behavior[Cmd] =
     Behaviors.receiveMessage {
-      case LedgersRegistered =>
-        val vdrTools = vdrToolsBuilder.build();
+      case LedgersRegistered(namespaces) =>
+        logger.info("vdr ledger registered: " + namespaces)
+        val vdrTools = vdrToolsBuilder.build()
         buffer.unstashAll(ready(vdrTools))
       case other =>
         buffer.stash(other)
@@ -107,6 +124,8 @@ object VDRActor {
   def ready(vdrTools: VdrTools)(implicit executionContext: ExecutionContext): Behavior[Cmd] =
     Behaviors.receiveMessagePartial {
       case p: Ping => handlePing(vdrTools, p)
+
+      case pdt: PrepareDidTxn => handlePrepareDidTxn(vdrTools, pdt)
       case pst: PrepareSchemaTxn => handlePrepareSchemaTxn(vdrTools, pst)
       case pcdt: PrepareCredDefTxn => handlePrepareCredDefTxn(vdrTools, pcdt)
       case st: SubmitTxn => handleSubmitTxn(vdrTools, st)
@@ -122,6 +141,15 @@ object VDRActor {
     vdrTools
       .ping(p.namespaces)
       .onComplete(resp => p.replyTo ! PingResp(resp))
+    Behaviors.same
+  }
+
+  private def handlePrepareDidTxn(vdrTools: VdrTools,
+                                  pst: PrepareDidTxn)
+                                 (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
+    vdrTools
+      .prepareDid(pst.txnSpecificParams, pst.submitterDid, pst.endorser)
+      .onComplete(resp => pst.replyTo ! PrepareTxnResp(resp))
     Behaviors.same
   }
 
@@ -156,7 +184,7 @@ object VDRActor {
                                   rs: ResolveSchema)
                                  (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
     vdrTools
-      .resolveSchema(rs.schemaId)
+      .resolveSchema(rs.schemaId, VDRAdapterUtil.buildVDRCache(rs.cacheOption.getOrElse(CacheOption.default)))
       .onComplete(resp => rs.replyTo ! ResolveSchemaResp(resp))
     Behaviors.same
   }
@@ -165,7 +193,7 @@ object VDRActor {
                                    rcd: ResolveCredDef)
                                   (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
     vdrTools
-      .resolveCredDef(rcd.credDefId)
+      .resolveCredDef(rcd.credDefId, VDRAdapterUtil.buildVDRCache(rcd.cacheOption.getOrElse(CacheOption.default)))
       .onComplete(resp => rcd.replyTo ! ResolveCredDefResp(resp))
     Behaviors.same
   }
@@ -174,28 +202,32 @@ object VDRActor {
                                rd: ResolveDID)
                               (implicit executionContext: ExecutionContext): Behavior[Cmd] = {
     vdrTools
-      .resolveDid(rd.fqDid)
+      .resolveDid(rd.fqDid, VDRAdapterUtil.buildVDRCache(rd.cacheOption.getOrElse(CacheOption.default)))
       .onComplete(resp => rd.replyTo ! ResolveDIDResp(resp))
     Behaviors.same
   }
 
-  private def buildVdrTools(vdrToolsBuilder: VdrToolsBuilder,
-                            vdrToolsConfig: VDRToolsConfig)
-                           (implicit actorContext: ActorContext[Cmd],
-                            executionContext: ExecutionContext): Unit = {
+  private def registerVdrTools(vdrToolsBuilder: VdrToolsBuilder,
+                               vdrToolsConfig: VDRToolsConfig)
+                              (implicit actorContext: ActorContext[Cmd],
+                               executionContext: ExecutionContext): Unit = {
     val futures = Future.sequence(
       vdrToolsConfig.ledgers.map {
         case il: IndyLedger =>
-          vdrToolsBuilder.registerIndyLedger(
-            il.namespaces,
-            il.genesisTxnData,
-            il.taaConfig
-          )
+          logger.info("ledger registration started for namespaces: " + il.namespaces)
+          vdrToolsBuilder
+            .registerIndyLedger(
+              il.namespaces,
+              il.genesisTxnData,
+              il.taaConfig
+            ).map(_ => il.namespaces.mkString(", "))
       }
     )
     actorContext.pipeToSelf(futures) {
-      case Success(_) => LedgersRegistered
-      case Failure(ex) => throw ex
+      case Success(namespaces) => LedgersRegistered(namespaces)
+      case Failure(ex) =>
+        logger.error("error during ledger registration: " + ex.getMessage)
+        throw ex
     }
   }
 }

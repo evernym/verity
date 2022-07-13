@@ -9,9 +9,11 @@ import scala.util.Try
 object TAAUtil {
   val taaAcceptanceDatePattern = "yyyy-MM-dd"
   val taaAcceptanceFormat = DateTimeFormat.forPattern(taaAcceptanceDatePattern)
+  
   def taaAcceptanceDateParse(str: String): Option[LocalDateTime] = {
     Try(LocalDateTime.parse(str, taaAcceptanceFormat)).toOption
   }
+
   def taaAcceptanceEpochDateTime(str: String): Long = {
     val acceptanceDate: Option[LocalDateTime] = taaAcceptanceDateParse(str)
     acceptanceDate match {

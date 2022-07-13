@@ -1,6 +1,7 @@
 package com.evernym.verity.vdrtools.ledger
 
 import akka.actor.ActorSystem
+import com.evernym.vdrtools.IndyException
 import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.actor.appStateManager.AppStateConstants._
 import com.evernym.verity.actor.appStateManager.{AppStateUpdateAPI, ErrorEvent, RecoverIfNeeded, SeriousSystemError}
@@ -24,7 +25,7 @@ import java.util.concurrent.TimeUnit
 import scala.collection.mutable
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, ExecutionException, Future}
 
 
 class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
@@ -132,8 +133,13 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
       Pool.deletePoolLedgerConfig(configName).get()
     } catch {
       //TODO: Shall we catch some specific exception?
+      case e: ExecutionException if Option(e.getCause).exists(e => e.isInstanceOf[IndyException]) =>
+        val cause = e.getCause.asInstanceOf[IndyException]
+        logger.debug(s"error while trying to delete pool ledger config ($configName): ${cause.getSdkErrorCode}:${cause.getSdkMessage}")
+      case e: IndyException =>
+        logger.debug(s"error while trying to delete pool ledger config ($configName): ${e.getSdkErrorCode}:${e.getSdkMessage}")
       case e: Exception =>
-        logger.debug("error while trying to delete pool ledger config")
+        logger.debug(s"error while trying to delete pool ledger config ($configName): " + e.getMessage)
     }
   }
 
@@ -154,9 +160,7 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
         case StatusDetailException(s) => throw OpenConnException(s"Unable to retrieve TAA from ledger -- ${s.statusCode} - ${s.statusMsg}")
       }.map { ledgerTaa: LedgerTAA =>
         val expectedDigest = HashUtil.hash(SHA256)(ledgerTaa.version + ledgerTaa.text).hex
-
         val configuredTaa: Option[TransactionAuthorAgreement] = findTAAConfig(appConfig, ledgerTaa.version)
-
         configuredTaa match {
           case Some(taa) =>
             if (expectedDigest.toLowerCase() != taa.digest.toLowerCase()) {

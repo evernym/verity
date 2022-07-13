@@ -118,6 +118,17 @@ object VerityLocalConfig {
     )
   }
 
+
+  private def configureVDRs(): Config = {
+    ConfigFactory.parseString(
+      s"""
+         |verity.vdr {
+         |  unqualified-ledger-prefix = "did:indy:sovrin"
+         |  ledgers: []
+         |}""".stripMargin
+    )
+  }
+
   private def configureLibIndy(taaEnabled: Boolean): Config = {
     ConfigFactory.parseString(
       s"""
@@ -196,6 +207,7 @@ object VerityLocalConfig {
       useCustomPort(port, otherNodeArteryPorts),
       basicEventStoreConfig(port),
       configureLibIndy(taaEnabled),
+      configureVDRs(),
       identityUrlShortener(),
       prometheusServer(port.prometheusPort),
 

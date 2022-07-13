@@ -44,17 +44,17 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libVdrToolsVer = "0.8.4"
+val libVdrToolsVer = "0.8.6~1711"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libvdrtools.so"),
-  NonMatchingLib("libvcx", "0.14.0-bionic", "libvcx.so")  // For integration testing ONLY
+  NonMatchingLib("libvcx", "0.14.1-bionic~844", "libvcx.so")  // For integration testing ONLY
 )
 
 //deb package dependencies versions
 val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 
 //dependency versions
-val vdrtoolsWrapperVer  = "0.8.4"
+val vdrtoolsWrapperVer  = "0.8.6-1711"
 val akkaVer             = "2.6.18"
 val akkaHttpVer         = "10.2.9"
 val akkaMgtVer          = "1.1.3"
@@ -72,8 +72,7 @@ val cloudEventsVersion  = "2.3.0"
 val scalatestVer        = "3.2.12"
 val mockitoVer          = "1.17.7"
 val veritySdkVer        = "0.6.1-6e9c4d03"
-val vcxWrapperVer       = "0.14.0"
-
+val vcxWrapperVer       = "0.14.1.844"
 
 val flexmarkVer         = "0.64.0"
 

@@ -44,7 +44,7 @@ abstract class VeritySdkBase(param: SdkParam,
 
   def registerWebhook(id: Option[String] = None, authentication: Option[ComMethodAuthentication]=None): ComMethodUpdated
   def sendCreateRelationship(connId: String, label: Option[String]=None): ReceivedMsgParam[Created]
-  def sendCreateConnectionInvitation(connId: String, thread: Option[MsgThread]): Invitation
+  def sendCreateConnectionInvitation(connId: String, thread: Option[MsgThread], shortInvite: Option[Boolean]=None): Invitation
 
   def expectConnectionComplete(connId: ConnId): Complete = {
     val msgReceived = expectMsgOnWebhook[ConnRequestReceived]()
@@ -182,8 +182,8 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
     receivedMsg
   }
 
-  def sendCreateConnectionInvitation(connId: String, thread: Option[MsgThread]): Invitation = {
-    sendMsgForConn(connId, ConnectionInvitation(), thread)
+  def sendCreateConnectionInvitation(connId: String, thread: Option[MsgThread], shortInvite: Option[Boolean]=None): Invitation = {
+    sendMsgForConn(connId, ConnectionInvitation(shortInvite), thread)
     val receivedMsg = expectMsgOnWebhook[Invitation]()
     receivedMsg.msg
   }
@@ -228,13 +228,15 @@ abstract class IssuerVerifierSdk(param: SdkParam, executionContext: ExecutionCon
     implicit val msgPackFormat: MsgPackFormat = mpf
     val msg = msgListener.expectMsg(timeout)
     try {
-      unpackMsg(msg)
+      val msgReceived: ReceivedMsgParam[T] = unpackMsg(msg)
+      msgListener.moveTmpQueuedItemsToMainQueue()
+      msgReceived
     } catch {
       case e: UnexpectedMsgException =>
         //TODO: This is temporary workaround to fix the intermittent failure around message ordering
         // should analyze it and see if there is any better way to fix it.
-        logger.info("other message found, to be re-queued: " + e.getMessage)
-        msgListener.addToQueue(msg)
+        logger.info(s"found unexpected message (detail: ${e.getMessage})")
+        msgListener.addToTmpQueue(msg)
         expectMsgOnWebhook(timeout)
     }
   }
@@ -311,7 +313,7 @@ case class IssuerRestSDK(param: SdkParam,
     rmp
   }
 
-  def sendCreateConnectionInvitation(connId: String, thread: Option[MsgThread]): Invitation = {
+  def sendCreateConnectionInvitation(connId: String, thread: Option[MsgThread], shortInvite: Option[Boolean]=None): Invitation = {
     sendMsgForConn(connId, ConnectionInvitation(), thread)
     val receivedMsg = expectMsgOnWebhook[Invitation]()
     receivedMsg.msg
@@ -437,13 +439,15 @@ case class IssuerRestSDK(param: SdkParam,
                                       mpf: MsgPackFormat = MPF_PLAIN): ReceivedMsgParam[T] = {
     val msg = msgListener.expectMsg(timeout)
     try {
-      ReceivedMsgParam(msg)
+      val msgReceived: ReceivedMsgParam[T] = ReceivedMsgParam(msg)
+      msgListener.moveTmpQueuedItemsToMainQueue()
+      msgReceived
     } catch {
-      case _: UnexpectedMsgException =>
+      case ex: UnexpectedMsgException =>
         //TODO: This is temporary workaround to fix the intermittent failure around message ordering.
         // should analyze it and see if there is any better way to fix it
-        logger.info("other message found, to be re-queued: " + msg)
-        msgListener.addToQueue(msg)
+        logger.info(s"found unexpected message (detail: ${ex.getMessage})")
+        msgListener.addToTmpQueue(msg)
         expectMsgOnWebhook(timeout)
     }
   }

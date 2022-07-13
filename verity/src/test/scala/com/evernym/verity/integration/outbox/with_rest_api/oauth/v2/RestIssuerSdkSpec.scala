@@ -41,7 +41,7 @@ class RestIssuerSdkSpec
     val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
 
     val issuerRestSDKFut = setupIssuerRestSdkAsync(issuerVerityEnv, executionContext, Option(V2OAuthParam("fixed-token")))
-    val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
 
 
     issuerRestSDK = Await.result(issuerRestSDKFut, SDK_BUILD_TIMEOUT)

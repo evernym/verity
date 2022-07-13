@@ -8,7 +8,6 @@ import com.evernym.verity.did.didcomm.v1.conventions.CredValueEncoderV1_0
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor._
 import com.evernym.verity.did.didcomm.v1.decorators.{AttachmentDescriptor, Base64, PleaseAck}
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
-import com.evernym.verity.ledger.GetCredDefResp
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.StoredSegment
@@ -28,6 +27,7 @@ import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
+import com.evernym.verity.vdr.CredDef
 import org.json.JSONObject
 
 import scala.util.{Failure, Success, Try}
@@ -368,14 +368,8 @@ trait IssueCredentialHelpers
   }
 
   def handleRequest(m: Ctl.Request, myPwDid: DidStr, credOffer: OfferCred): Unit = {
-    ctx.ledger.getCredDef(m.cred_def_id) {
-      case Success(GetCredDefResp(_, Some(cdj))) => sendCredRequest(m, myPwDid, credOffer, DefaultMsgCodec.toJson(cdj))
-
-      case Success(GetCredDefResp(_, None)) =>
-        ctx.signal(Sig.buildProblemReport(
-          "cred def not found on ledger",
-          ledgerAssetsUnavailable
-        ))
+    ctx.ledger.resolveCredDef(ctx.ledger.fqCredDefId(m.cred_def_id, None)) {
+      case Success(CredDef(_, _, cdj)) => sendCredRequest(m, myPwDid, credOffer, DefaultMsgCodec.toJson(cdj))
 
       case Failure(_)   =>
         ctx.signal(

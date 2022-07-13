@@ -131,6 +131,7 @@ object K8sConfigTemplateGen {
     collection.mkString("", "\n", "\n\n") + """
                                   |include "config-map/sponsors.conf"
                                   |include "config-map/ledgers.conf"
+                                  |include "config-map/vdr.conf"
                                   |include "config-map/usage-rules.conf"
                                   |include "config-map/metrics.conf"
                                   |include "config-map/customers.conf"

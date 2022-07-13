@@ -141,6 +141,7 @@ trait ActorSystemConfig {
     val tdir = tmpdir(systemName)
     overrideConfigValuesIfAny(singleNodeClusterSharded(systemName, port, tdir, overrideConfig))
       .withFallback(ConfigFactory.load("application.conf"))
+      .withValue("verity.metrics.backend", ConfigValueFactory.fromAnyRef("com.evernym.verity.observability.metrics.TestMetricsBackend"))
   }
 
   def getConfigByJournalPath(tdir: String): Config = {

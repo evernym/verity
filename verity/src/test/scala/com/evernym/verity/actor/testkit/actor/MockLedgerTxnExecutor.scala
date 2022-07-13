@@ -96,106 +96,95 @@ class MockLedgerTxnExecutor(ec: ExecutionContext)
     )
   }
 
-  def writeSchema(submitterDID: DID,
-                  schemaJson: String,
-                  walletAccess: WalletAccess): Future[TxnResp] = {
-    val jSONObject = new JSONObject(schemaJson)
-    val id = jSONObject.getString("id")
-    val name = jSONObject.getString("name")
-    val version = jSONObject.getString("version")
-    val ver = jSONObject.getString("ver")
-    val attrNames = jSONObject.getJSONArray("attrNames").asScala.map(_.toString).toSeq
-    val seqNo = Random.nextInt(1000)
-    val txnResp = MockLedgerTxnExecutor.buildTxnResp(submitterDID, None, None, "107", seqNo = Option(seqNo))
-    val schemaResp = GetSchemaResp(
-      txnResp,
-      Some(SchemaV1(
-        id,
-        name,
-        version,
-        attrNames,
-        Some(seqNo),
-        ver
-      ))
-    )
-    schemas += id -> schemaResp
-    Future.successful(txnResp)
-  }
-
-  def prepareSchemaForEndorsement(submitterDID: DID,
-                                  schemaJson: String,
-                                  endorserDID: DID,
-                                  walletAccess: WalletAccess): Future[LedgerRequest] = {
-    toFuture(buildSchemaRequest(submitterDID, schemaJson)).map { req =>
-      LedgerRequest(req, needsSigning=false, taa=None)
-    }
-  }
-
-  def getSchema(submitter: Submitter, schemaId: String): Future[GetSchemaResp] = {
-    Future {
-      schemas.get(schemaId) match {
-        case Some(schema) => schema
-        case None => throw StatusDetailException(DATA_NOT_FOUND) //TODO: Replace with correct error
-      }
-    }
-  }
-
-  def writeCredDef(submitterDID: DID,
-                   credDefJson: String,
-                   walletAccess: WalletAccess): Future[TxnResp] = {
-    val jSONObject = new JSONObject(credDefJson)
-    val id = jSONObject.getString("id")
-    val schemaId = jSONObject.getString("schemaId")
-    val ver = jSONObject.getString("ver")
-    val typ = jSONObject.getString("type")
-    val tag = jSONObject.getString("tag")
-    val value = jSONObject.getJSONObject("value").toMap.asScala.toMap
-
-    val seqNo = Random.nextInt(1000)
-    val txnResp = MockLedgerTxnExecutor.buildTxnResp(submitterDID, None, None, "108", seqNo = Option(seqNo))
-    val getCredDefResp = GetCredDefResp(
-        txnResp,
-        Some(CredDefV1(
-          id,
-          typ,
-          schemaId,
-          tag,
-          ver,
-          value
-        ))
-      )
-    credDefs += id -> getCredDefResp
-    Future.successful(txnResp)
-  }
-
-  def prepareCredDefForEndorsement(submitterDID: DID,
-                                   credDefJson: String,
-                                   endorserDID: DID,
-                                   walletAccess: WalletAccess): Future[LedgerRequest] = {
-    toFuture(buildCredDefRequest(submitterDID, credDefJson)).map { req =>
-      LedgerRequest(req, needsSigning=false, taa=None)
-    }
-  }
-
-  def prepareDIDForEndorsement(submitterDID: DidStr,
-                               targetDID: String,
-                               verkey: String,
-                               endorserDID: DidStr,
-                               walletAccess: WalletAccess): Future[LedgerRequest] = {
-    toFuture(buildNymRequest(submitterDID, targetDID, verkey, null, null)).map { req =>
-      LedgerRequest(req, needsSigning=false, taa=None)
-    }
-  }
-
-
-  def getCredDef(submitter: Submitter, credDefId: String): Future[GetCredDefResp] = {
-    Future(
-      credDefs.get(credDefId) match {
-        case Some(value) => value
-        case None => throw StatusDetailException(DATA_NOT_FOUND) //TODO: Replace with correct error
-      }
-    )
-  }
+//  def writeSchema(submitterDID: DID,
+//                  schemaJson: String,
+//                  walletAccess: WalletAccess): Future[TxnResp] = {
+//    val jSONObject = new JSONObject(schemaJson)
+//    val id = jSONObject.getString("id")
+//    val name = jSONObject.getString("name")
+//    val version = jSONObject.getString("version")
+//    val ver = jSONObject.getString("ver")
+//    val attrNames = jSONObject.getJSONArray("attrNames").asScala.map(_.toString).toSeq
+//    val seqNo = Random.nextInt(1000)
+//    val txnResp = MockLedgerTxnExecutor.buildTxnResp(submitterDID, None, None, "107", seqNo = Option(seqNo))
+//    val schemaResp = GetSchemaResp(
+//      txnResp,
+//      Some(SchemaV1(
+//        id,
+//        name,
+//        version,
+//        attrNames,
+//        Some(seqNo),
+//        ver
+//      ))
+//    )
+//    schemas += id -> schemaResp
+//    Future.successful(txnResp)
+//  }
+//
+//  def prepareSchemaForEndorsement(submitterDID: DID,
+//                                  schemaJson: String,
+//                                  endorserDID: DID,
+//                                  walletAccess: WalletAccess): Future[LedgerRequest] = {
+//    toFuture(buildSchemaRequest(submitterDID, schemaJson)).map { req =>
+//      LedgerRequest(req, needsSigning=false, taa=None)
+//    }
+//  }
+//
+//  def getSchema(submitter: Submitter, schemaId: String): Future[GetSchemaResp] = {
+//    Future {
+//      schemas.get(schemaId) match {
+//        case Some(schema) => schema
+//        case None => throw StatusDetailException(DATA_NOT_FOUND) //TODO: Replace with correct error
+//      }
+//    }
+//  }
+//
+//  def writeCredDef(submitterDID: DID,
+//                   credDefJson: String,
+//                   walletAccess: WalletAccess): Future[TxnResp] = {
+//    val jSONObject = new JSONObject(credDefJson)
+//    val id = jSONObject.getString("id")
+//    val schemaId = jSONObject.getString("schemaId")
+//    val ver = jSONObject.getString("ver")
+//    val typ = jSONObject.getString("type")
+//    val tag = jSONObject.getString("tag")
+//    val value = jSONObject.getJSONObject("value").toMap.asScala.toMap
+//
+//    val seqNo = Random.nextInt(1000)
+//    val txnResp = MockLedgerTxnExecutor.buildTxnResp(submitterDID, None, None, "108", seqNo = Option(seqNo))
+//    val getCredDefResp = GetCredDefResp(
+//        txnResp,
+//        Some(CredDefV1(
+//          id,
+//          typ,
+//          schemaId,
+//          tag,
+//          ver,
+//          value
+//        ))
+//      )
+//    credDefs += id -> getCredDefResp
+//    Future.successful(txnResp)
+//  }
+//
+//  def prepareCredDefForEndorsement(submitterDID: DID,
+//                                   credDefJson: String,
+//                                   endorserDID: DID,
+//                                   walletAccess: WalletAccess): Future[LedgerRequest] = {
+//    toFuture(buildCredDefRequest(submitterDID, credDefJson)).map { req =>
+//      LedgerRequest(req, needsSigning=false, taa=None)
+//    }
+//  }
+//
+//  def getCredDef(submitter: Submitter, credDefId: String): Future[GetCredDefResp] = {
+//    Future(
+//      credDefs.get(credDefId) match {
+//        case Some(value) => value
+//        case None => throw StatusDetailException(DATA_NOT_FOUND) //TODO: Replace with correct error
+//      }
+//    )
+//  }
 
   def addNym(submitter: Submitter, targetDid: DidPair): Future[TxnResp] = {
     nyms += targetDid.did -> NymDetail(targetDid.verKey)

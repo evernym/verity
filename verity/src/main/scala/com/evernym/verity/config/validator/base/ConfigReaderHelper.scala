@@ -7,6 +7,7 @@ import com.typesafe.config.{Config, ConfigException, ConfigObject}
 
 import scala.jdk.CollectionConverters._
 import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.util.Try
 
 object ConfigReadHelper extends ConfigReadHelperBase {
 
@@ -149,6 +150,17 @@ trait ConfigReaderHelper
   def getDurationOption(key: String): Option[FiniteDuration] = {
     val javaDuration = readOptionalConfig(config.getDuration, key)
     javaDuration.map {d =>Duration.fromNanos(d.toNanos) }
+  }
+
+  def getMap(key: String): Map[String, String] = {
+    Try(
+    config
+      .getConfig(key)
+      .entrySet()
+      .asScala
+      .map(e => e.getKey -> e.getValue.unwrapped().toString)
+      .toMap
+    ).getOrElse(Map.empty)
   }
 }
 

@@ -24,7 +24,7 @@ abstract class IssueCredSpecBase
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
-  def createTest1CredDef: String = "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1"
+  def createTest1CredDef: String = "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1"
 
   val orgName = "Acme Corp"
   val logoUrl = "https://robohash.org/234"

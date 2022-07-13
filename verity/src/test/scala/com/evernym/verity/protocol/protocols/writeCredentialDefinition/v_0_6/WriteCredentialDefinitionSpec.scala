@@ -91,7 +91,7 @@ class WriteCredentialDefinitionSpec
 
                 val needsEndorsement = f.writer expect signal[NeedsEndorsement]
                 val json = new JSONObject(needsEndorsement.credDefJson)
-                json.getString("endorser") shouldBe fqID(defaultEndorser)
+                json.getString("endorser") shouldBe defaultEndorser
                 f.writer.state shouldBe a[State.WaitingOnEndorser]
               })
             })
@@ -111,7 +111,7 @@ class WriteCredentialDefinitionSpec
 
                 val needsEndorsement = f.writer expect signal[NeedsEndorsement]
                 val json = new JSONObject(needsEndorsement.credDefJson)
-                json.getString("endorser") shouldBe fqID(userEndorser)
+                json.getString("endorser") shouldBe userEndorser
                 f.writer.state shouldBe a[State.WaitingOnEndorser]
               })
             })
@@ -133,7 +133,7 @@ class WriteCredentialDefinitionSpec
 
                 val needsEndorsement = f.writer expect signal[NeedsEndorsement]
                 val json = new JSONObject(needsEndorsement.credDefJson)
-                json.getString("endorser") shouldBe fqID(defaultEndorser)
+                json.getString("endorser") shouldBe defaultEndorser
                 f.writer.state shouldBe a[State.WaitingOnEndorser]
               })
             })
@@ -153,7 +153,7 @@ class WriteCredentialDefinitionSpec
 
                 val needsEndorsement = f.writer expect signal[NeedsEndorsement]
                 val json = new JSONObject(needsEndorsement.credDefJson)
-                json.getString("endorser") shouldBe fqID(userEndorser)
+                json.getString("endorser") shouldBe userEndorser
                 f.writer.state shouldBe a[State.WaitingOnEndorser]
               })
             })
@@ -174,7 +174,7 @@ class WriteCredentialDefinitionSpec
 
               val needsEndorsement = f.writer expect signal[NeedsEndorsement]
               val json = new JSONObject(needsEndorsement.credDefJson)
-              json.getString("endorser") shouldBe fqID(defaultEndorser)
+              json.getString("endorser") shouldBe defaultEndorser
               f.writer.state shouldBe a[State.WaitingOnEndorser]
             })
           })

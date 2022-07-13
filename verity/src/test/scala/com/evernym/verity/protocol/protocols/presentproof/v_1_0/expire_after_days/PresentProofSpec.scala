@@ -48,8 +48,6 @@ class PresentProofSpec
         f.checkTotalSegments(0)
         val (verifier, prover) = indyAccessMocks(f)
 
-        var nonce: Option[Nonce] = None
-
         // Verifier starts protocol
         (verifier engage prover) ~ Ctl.Request(
           "",

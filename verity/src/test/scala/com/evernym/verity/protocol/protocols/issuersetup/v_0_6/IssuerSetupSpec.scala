@@ -55,14 +55,14 @@ class IssuerSetupSpec
       s.owner.state shouldBe an [State.Created]
 
       val d = s.owner.state.asInstanceOf[State.Created].data
-      d.identity.value.did shouldBe "did:indy:sovrin:HSCj6zbP9BKYHSkF3hdPib"
+      d.identity.value.did shouldBe "HSCj6zbP9BKYHSkF3hdPib"
       d.identity.value.verKey shouldBe "9xXbnac6atQRyESyLWtnxFRwnTRCrLWEAA9rvJKp5Kt1"
 
       s.owner ~ CurrentPublicIdentifier()
 
       val i: PublicIdentifier = s.owner expect signal [PublicIdentifier]
 
-      i.did shouldBe "did:indy:sovrin:HSCj6zbP9BKYHSkF3hdPib"
+      i.did shouldBe "HSCj6zbP9BKYHSkF3hdPib"
       i.verKey shouldBe "9xXbnac6atQRyESyLWtnxFRwnTRCrLWEAA9rvJKp5Kt1"
     }
 

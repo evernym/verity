@@ -7,6 +7,10 @@ package object vdr {
 
   type LedgerPrefix = String
   type Namespace = String       // for example: "indy:sovrin", "indy:sovrin:stage" etc
+
+  type SchemaId = String
+  type CredDefId = String
+
   type FqDID = String
   type FqSchemaId = String
   type FqCredDefId = String

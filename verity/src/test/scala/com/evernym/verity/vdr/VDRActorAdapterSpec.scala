@@ -3,7 +3,7 @@ package com.evernym.verity.vdr
 import akka.actor.typed.scaladsl.adapter._
 import akka.testkit.TestKitBase
 import com.evernym.verity.actor.testkit.HasBasicActorSystem
-import com.evernym.verity.protocol.testkit.MockLedger.{TEST_INDY_LEDGER_PREFIX, TEST_INDY_SOVRIN_NAMESPACE, ledgerPrefixMappings}
+import com.evernym.verity.protocol.testkit.MockLedger.{TEST_INDY_LEDGER_PREFIX, ledgerPrefixMappings}
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vdr.base.TestVDRDidDoc
@@ -95,23 +95,23 @@ class VDRActorAdapterSpec
       }
     }
 
-    "when asked to prepare schema txn with non fqSchemaId" - {
-      "should result in failure" in {
-        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
-        val ex = intercept[RuntimeException] {
-          Await.result(
-            vdrAdapter.prepareSchemaTxn(
-              "{}",
-              "F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/schema-name/1.2.3",
-              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
-              None
-            ),
-            apiTimeout
-          )
-        }
-        ex.getMessage shouldBe "non fully qualified schema id: F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/schema-name/1.2.3"
-      }
-    }
+//    "when asked to prepare schema txn with non fqSchemaId" - {
+//      "should result in failure" in {
+//        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+//        val ex = intercept[RuntimeException] {
+//          Await.result(
+//            vdrAdapter.prepareSchemaTxn(
+//              "{}",
+//              "F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/schema-name/1.2.3",
+//              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
+//              None
+//            ),
+//            apiTimeout
+//          )
+//        }
+//        ex.getMessage shouldBe "non fully qualified schema id: F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/schema-name/1.2.3"
+//      }
+//    }
 
     "when asked to prepare schema txn with valid data" - {
       "should be successful" in {
@@ -164,29 +164,29 @@ class VDRActorAdapterSpec
       }
     }
 
-    "when asked to resolve schema for invalid schema id" - {
-      "it should fail" in {
-        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
-        val ex = intercept[RuntimeException] {
-          Await.result(
-            vdrAdapter.resolveSchema("did1"),
-            apiTimeout
-          )
-        }
-        ex.getMessage shouldBe "could not extract namespace for given identifier: Some(did1) (vdrUnqualifiedLedgerPrefix: None)"
-      }
-    }
+//    "when asked to resolve schema for invalid schema id" - {
+//      "it should fail" in {
+//        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
+//        val ex = intercept[RuntimeException] {
+//          Await.result(
+//            vdrAdapter.resolveSchema("did1"),
+//            apiTimeout
+//          )
+//        }
+//        ex.getMessage shouldBe "could not extract namespace for given identifier: Some(did1) (vdrUnqualifiedLedgerPrefix: None)"
+//      }
+//    }
 
     "when asked to resolve schema for non existent one" - {
       "it should fail" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val ex = intercept[RuntimeException] {
           Await.result(
-            vdrAdapter.resolveSchema("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1"),
+            vdrAdapter.resolveSchema("F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"),
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "schema not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM/anoncreds/v0/SCHEMA/degree/1.1.1"
+        ex.getMessage shouldBe "schema not found for given id: F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
       }
     }
 
@@ -230,24 +230,6 @@ class VDRActorAdapterSpec
       }
     }
 
-    "when asked to prepare cred def txn with non fqSchemaId" - {
-      "should result in failure" in {
-        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
-        val ex = intercept[RuntimeException] {
-          Await.result(
-            vdrAdapter.prepareCredDefTxn(
-              """{"schemaId":"schema-id"}""",
-              "F72i3Y3Q4i466efjYJYCHM:/anoncreds/v0/CLAIM_DEF/466/cred-def-name",
-              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
-              None
-            ),
-            apiTimeout
-          )
-        }
-        ex.getMessage shouldBe "non fully qualified cred def id: F72i3Y3Q4i466efjYJYCHM:/anoncreds/v0/CLAIM_DEF/466/cred-def-name"
-      }
-    }
-
     "when asked to prepare cred def txn with valid data" - {
       "should be successful" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
@@ -278,19 +260,6 @@ class VDRActorAdapterSpec
           //nothing to validate
         }
         Await.result(result, apiTimeout)
-      }
-    }
-
-    "when asked to resolve cred def for invalid cred def id" - {
-      "it should fail" in {
-        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
-        val ex = intercept[RuntimeException] {
-          Await.result(
-            vdrAdapter.resolveCredDef("did1"),
-            apiTimeout
-          )
-        }
-        ex.getMessage shouldBe "could not extract namespace for given identifier: Some(did1) (vdrUnqualifiedLedgerPrefix: None)"
       }
     }
 

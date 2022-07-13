@@ -17,7 +17,7 @@ import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Role.Writer
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.State.{Done, Error, Initialized, Processing}
 import com.evernym.verity.util.JsonUtil.seqToJson
 import com.evernym.verity.vdr.VDRUtil.extractUnqualifiedDidStr
-import com.evernym.verity.vdr.{FqDID, FqSchemaId, PreparedTxn, SubmittedTxn}
+import com.evernym.verity.vdr.{FqDID, PreparedTxn, SchemaId, SubmittedTxn}
 import com.typesafe.scalalogging.Logger
 
 import scala.util.{Failure, Success, Try}
@@ -55,30 +55,26 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
   def writeSchema(m: Write, init: State.Initialized): Unit = {
     try {
       ctx.apply(RequestReceived(m.name, m.version, m.attrNames))
-      val fqSubmitterDID = ctx.ledger.fqDID(_submitterDID(init))
-      logger.info(s"write-schema => fqSubmitterDID: $fqSubmitterDID")
-      ctx.wallet.createSchema(fqSubmitterDID, m.name, m.version, seqToJson(m.attrNames)) {
+      val nonFqSubmitterDID = _submitterDID(init)
+      val fqSubmitterDID = ctx.ledger.fqDID(nonFqSubmitterDID)
+      ctx.wallet.createSchema(nonFqSubmitterDID, m.name, m.version, seqToJson(m.attrNames)) {
         case Success(schemaCreated: SchemaCreatedResult) =>
-          val fqSchemaId = schemaCreated.schemaId
-          logger.info(s"write-schema => fqSchemaId: $fqSchemaId")
-          logger.info(s"write-schema => schemaCreated: $schemaCreated")
-          writeSchemaToLedger(fqSubmitterDID, fqSchemaId, schemaCreated.schemaJson) {
+          val schemaId = schemaCreated.schemaId
+          writeSchemaToLedger(fqSubmitterDID, schemaId, schemaCreated.schemaJson) {
             case Success(SubmittedTxn(resp)) =>
-              ctx.apply(SchemaWritten(fqSchemaId))
-              ctx.signal(StatusReport(fqSchemaId))
+              ctx.apply(SchemaWritten(schemaId))
+              ctx.signal(StatusReport(schemaId))
             case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(fqSubmitterDID, e) =>
               ctx.logger.info(e.toString)
-              val fqEndorserDID = ctx.ledger.fqDID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
-              logger.info(s"write-schema => fqEndorserDID: $fqEndorserDID")
+              val endorserDID = m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse(""))
               //NOTE: below code is assuming verity is only supporting indy ledgers,
               // it should be changed when verity starts supporting different types of ledgers
-              val ledgerPrefix = ctx.ledger.extractLedgerPrefix(fqSubmitterDID, fqEndorserDID)
-              logger.info(s"write-schema => ledgerPrefix: $ledgerPrefix")
+              val ledgerPrefix = ctx.ledger.vdrUnqualifiedLedgerPrefix()
               ctx.endorser.withCurrentEndorser(ledgerPrefix) {
-                case Success(Some(endorser)) if fqEndorserDID.isEmpty || fqEndorserDID.contains(endorser.did) =>
+                case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID.contains(endorser.did) =>
                   ctx.logger.info(s"registered endorser to be used for schema endorsement (ledger prefix: $ledgerPrefix): " + endorser)
                   //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
-                  prepareTxnForEndorsement(fqSubmitterDID, fqSchemaId, schemaCreated.schemaJson, endorser.did) {
+                  prepareTxnForEndorsement(fqSubmitterDID, schemaId, schemaCreated.schemaJson, endorser.did) {
                     case Success(ledgerRequest) =>
                       ctx.endorser.endorseTxn(ledgerRequest, ledgerPrefix) {
                         case Failure(exception) => problemReport(exception)
@@ -90,20 +86,16 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
                 case other =>
                   ctx.logger.info(s"no active/matched endorser found to be used for schema endorsement (ledger prefix: $ledgerPrefix): " + other)
                   //any failure while getting active endorser, or no active endorser or active endorser is NOT the same as given/configured endorserDID
-                  prepareTxnForEndorsement(fqSubmitterDID, fqSchemaId, schemaCreated.schemaJson, fqEndorserDID) {
+                  prepareTxnForEndorsement(fqSubmitterDID, schemaId, schemaCreated.schemaJson, endorserDID) {
                     case Success(data: TxnForEndorsement) =>
-                      ctx.signal(NeedsEndorsement(fqSchemaId, data))
-                      ctx.apply(AskedForEndorsement(fqSchemaId, data))
-                    case Failure(e) =>
-                      problemReport(e)
+                      ctx.signal(NeedsEndorsement(schemaId, data))
+                      ctx.apply(AskedForEndorsement(schemaId, data))
+                    case Failure(e) => problemReport(e)
                   }
               }
-            case Failure(e) =>
-              logger.info(s"write-schema => error while writing schema: ${e.getMessage}")
-              problemReport(e)
+            case Failure(e) => problemReport(e)
           }
-        case Failure(e) =>
-          problemReport(e)
+        case Failure(e) => problemReport(e)
       }
     } catch {
       case e: Exception => problemReport(e)
@@ -111,43 +103,37 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
   }
 
   private def writeSchemaToLedger(fqSubmitterDID: FqDID,
-                                  fqSchemaId: FqSchemaId,
+                                  schemaId: SchemaId,
                                   schemaJson: String)
                                  (handleResult: Try[SubmittedTxn] => Unit): Unit = {
     ctx.ledger
       .prepareSchemaTxn(
         schemaJson,
-        fqSchemaId,
+        schemaId,
         fqSubmitterDID,
         None) {
         case Success(pt: PreparedTxn) =>
-          logger.info(s"write-schema => prepare successful: " + pt)
           signPreparedTxn(pt, fqSubmitterDID) {
             case Success(smr: SignedMsgResult) =>
-              logger.info(s"write-schema => sign successful: " + pt)
               ctx.ledger.submitTxn(pt, smr.signatureResult.signature, Array.empty)(handleResult)
-            case Failure(ex) =>
-              logger.info(s"write-schema => sign failed: " + pt)
-              handleResult(Failure(ex))
+            case Failure(ex) => handleResult(Failure(ex))
           }
-        case Failure(ex) =>
-          logger.info(s"write-schema => prepare failed: " + ex.getMessage)
-          handleResult(Failure(ex))
+        case Failure(ex) => handleResult(Failure(ex))
       }
   }
 
   private def prepareTxnForEndorsement(fqSubmitterDID: FqDID,
-                                       fqSchemaId: FqSchemaId,
+                                       schemaId: SchemaId,
                                        schemaJson: String,
-                                       fqEndorserDid: FqDID)
+                                       endorserDid: DidStr)
                                       (handleResult: Try[TxnForEndorsement] => Unit): Unit = {
-    if (fqEndorserDid.nonEmpty) {
+    if (endorserDid.nonEmpty) {
       ctx.ledger
         .prepareSchemaTxn(
           schemaJson,
-          fqSchemaId,
+          schemaId,
           fqSubmitterDID,
-          Option(fqEndorserDid)) {
+          Option(endorserDid)) {
           case Success(pt: PreparedTxn) =>
             signPreparedTxn(pt, fqSubmitterDID) {
               case Success(smr: SignedMsgResult) =>

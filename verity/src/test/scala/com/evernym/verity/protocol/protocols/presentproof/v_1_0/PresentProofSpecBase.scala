@@ -32,9 +32,9 @@ abstract class PresentProofSpecBase
    */
   override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 
-  def createTest1CredDef: String = "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1"
+  def createTest1CredDef: String = "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1"
 
-  val restriction1: RestrictionsV1 = RestrictionsV1(Some("did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0"),
+  val restriction1: RestrictionsV1 = RestrictionsV1(Some("NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0"),
     None,
     None,
     None,
@@ -256,8 +256,8 @@ object PresentProofSpec {
           |   },
           |   "identifiers":[
           |      {
-          |         "schema_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
-          |         "cred_def_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1",
+          |         "schema_id":"NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
+          |         "cred_def_id":"NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
           |         "rev_reg_id":null,
           |         "timestamp":null
           |      }

@@ -42,7 +42,7 @@ etc
 ## How to "setup" Agency agent for various agent services
 ```
 cd <project-folder>
-GENESIS_TXN_FILE_LOCATION="target/genesis.txt" sbt "project integrationTests" test:console
+TAA_ACCEPT_DATE="<yyyy-MM-dd>" GENESIS_TXN_FILE_LOCATION="target/genesis.txt" sbt "project integrationTests" test:console
 ```
 
 once you see sbt prompt, copy paste below code and press Enter

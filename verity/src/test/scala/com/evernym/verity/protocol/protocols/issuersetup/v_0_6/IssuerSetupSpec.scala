@@ -4,7 +4,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.engine.asyncapi.wallet.NewKeyResult
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.InteractionType.OneParty
-import com.evernym.verity.protocol.testkit.{MockableWalletAccess, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -40,6 +40,8 @@ class IssuerSetupSpec
       s.owner walletAccess new MockableWalletAccess(
         mockNewDid = () => Success(NewKeyResult("HSCj6zbP9BKYHSkF3hdPib", "9xXbnac6atQRyESyLWtnxFRwnTRCrLWEAA9rvJKp5Kt1"))
       )
+
+      s.owner ledgerAccess MockableLedgerAccess()
 
       s.owner ~ Create()
 

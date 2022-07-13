@@ -1,27 +1,28 @@
 package com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6
 
+import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
+import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
 import com.evernym.verity.did.exception.DIDException
 import com.evernym.verity.integration.base.EndorserUtil
-import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
 import com.evernym.verity.protocol.engine.asyncapi.endorser.Endorser
 import com.evernym.verity.protocol.testkit.DSL.signal
+import com.evernym.verity.protocol.testkit.MockLedger.fqID
 import com.evernym.verity.protocol.testkit.{MockableEndorserAccess, MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
 import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
 import scala.language.{implicitConversions, reflectiveCalls}
 
-class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition)
-  with BasicFixtureSpec {
 
-  private implicit def EnhancedScenario(s: Scenario): Object {
-    val writer: TestEnvir
-  } = new {
+class WriteCredentialDefinitionSpec
+  extends TestsProtocolsImpl(CredDefDefinition)
+    with BasicFixtureSpec {
+
+  private implicit def EnhancedScenario(s: Scenario) = new {
     val writer: TestEnvir = s("writer")
   }
 
@@ -29,7 +30,7 @@ class WriteCredentialDefinitionSpec extends TestsProtocolsImpl(CredDefDefinition
   val userEndorser = "Vr9eqqnUJpJkBwcRV4cHnV"
   val sovrinEndorser = "did:sov:2wJPyULfLLnYTEFYzByfUR"
 
-  override val defaultInitParams: Map[ContainerName, ContainerName] = Map(
+  override val defaultInitParams = Map(
     DEFAULT_ENDORSER_DID -> defaultEndorser
   )
 

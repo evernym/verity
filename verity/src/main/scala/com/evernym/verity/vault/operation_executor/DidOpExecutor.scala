@@ -11,7 +11,8 @@ import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.WalletExt
 import com.evernym.vdrtools.InvalidStructureException
 import com.evernym.vdrtools.did.{Did, DidJSONParameters}
-import com.evernym.vdrtools.wallet.WalletItemAlreadyExistsException
+import com.evernym.vdrtools.wallet.{WalletItemAlreadyExistsException, WalletItemNotFoundException}
+import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -29,14 +30,15 @@ object DidOpExecutor extends OpExecutorBase {
     result
       .map(vk => GetVerKeyResp(vk))
       .recover {
-        case e: Exception => throw new ExecutionException(e)
+         case e: Exception => throw new ExecutionException(e)
       }
   }
 
   def handleCreateDID(d: CreateDID)(implicit we: WalletExt, ec: ExecutionContext): Future[NewKeyCreated] = {
-    val didJson = s"""{"crypto_type": "${d.keyType}"}"""
+    val didJson = new JSONObject()
+    didJson.put("crypto_type", d.keyType)
     Did
-      .createAndStoreMyDid(we.wallet, didJson)
+      .createAndStoreMyDid(we.wallet, didJson.toString)
       .map(r => NewKeyCreated(r.getDid, r.getVerkey))
       .recover {
         case e: Throwable =>
@@ -61,6 +63,11 @@ object DidOpExecutor extends OpExecutorBase {
       case e: ExecutionException =>
         e.getCause match {
           case e: InvalidStructureException =>
+            throw new BadRequestErrorException(
+              INVALID_VALUE.statusCode,
+              Option(e.getMessage),
+              errorDetail = Option(Exceptions.getStackTraceAsSingleLineString(e)))
+          case e: WalletItemNotFoundException =>
             throw new BadRequestErrorException(
               INVALID_VALUE.statusCode,
               Option(e.getMessage),

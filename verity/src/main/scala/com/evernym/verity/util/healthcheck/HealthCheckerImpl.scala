@@ -8,6 +8,7 @@ import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffec
 import akka.util.Timeout
 import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.AgentActorContext
+import com.evernym.verity.config.ConfigConstants.VDR_LEDGERS
 import com.evernym.verity.util.healthcheck.AkkaPersistenceStorageChecker.Commands.GetState
 import com.evernym.verity.util.healthcheck.AkkaPersistenceStorageChecker.Replies.CurrentState
 import com.evernym.verity.util.healthcheck.AkkaPersistenceStorageChecker.States.Ready
@@ -15,6 +16,7 @@ import com.evernym.verity.vault.WalletDoesNotExist
 import com.evernym.verity.vault.WalletUtil.generateWalletParamAsync
 import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
 
+import scala.jdk.CollectionConverters._
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
@@ -88,7 +90,7 @@ class HealthCheckerImpl(val agentActorContext: AgentActorContext,
   }
 
   override def checkVDRToolsStatus: Future[ApiStatus] = {
-    agentActorContext.vdrAdapter.ping(List.empty).map{
+    agentActorContext.vdrAdapter.ping(allNamespaces).map{
       result =>
         val unreachable = result.status.filter(namespaceStatus => !namespaceStatus._2.reachable).keys
         if (unreachable.nonEmpty){
@@ -100,6 +102,17 @@ class HealthCheckerImpl(val agentActorContext: AgentActorContext,
       case e: Exception => ApiStatus(status = false, msg = e.getMessage)
     }
   }
+
+  lazy val allNamespaces =
+    actorSystem
+      .settings
+      .config
+      .getConfigList(VDR_LEDGERS)
+      .asScala
+      .toList
+      .flatMap { config =>
+        config.getStringList("namespaces").asScala.toList
+      }
 }
 
 

@@ -24,7 +24,7 @@ object EndorserUtil {
 
   val activeEndorser: did.DidPair = CommonSpecUtil.generateNewDid()
   val activeEndorserDid: DidStr = activeEndorser.did
-  val indyLedgerLegacyDefaultPrefix: String = "did:sov"
+  val indyLedgerLegacyDefaultPrefix: String = "did:indy:sovrin"
 
   def registerActiveEndorser(endorserDid: DidStr,
                              ledgerPrefix: String,

@@ -1,9 +1,8 @@
 package com.evernym.verity.integration.base
 
 import akka.Done
-import com.evernym.verity.config.ConfigConstants.LIB_INDY_LEDGER_DEFAULT_PREFIX
+import com.evernym.verity.config.ConfigConstants.VDR_UNQUALIFIED_LEDGER_PREFIX
 import com.evernym.verity.eventing.event_handlers.EndorsementMessageHandler._
-import com.evernym.verity.eventing.event_handlers.EndorserMessageHandler._
 import com.evernym.verity.eventing.event_handlers.{CLOUD_EVENT_TYPE, DATA_FIELD_LEDGER_PREFIX, DATA_FIELD_REQUEST_SOURCE, EVENT_ENDORSEMENT_COMPLETE_V1, EVENT_ENDORSEMENT_REQ_V1, TOPIC_REQUEST_ENDORSEMENT, TOPIC_SSI_ENDORSEMENT}
 import com.evernym.verity.eventing.ports.consumer.{Message, MessageHandler}
 import com.evernym.verity.eventing.ports.producer.ProducerPort
@@ -22,7 +21,7 @@ import scala.concurrent.Future
 
 class EndorsementReqMsgHandler(config: Config, eventProducer: ProducerPort) extends MessageHandler {
 
-  lazy val indyLedgerPrefix: String = config.getString(LIB_INDY_LEDGER_DEFAULT_PREFIX)
+  lazy val indyLedgerPrefix: String = config.getString(VDR_UNQUALIFIED_LEDGER_PREFIX)
 
   override def handleMessage(message: Message): Future[Done] = {
     message.metadata.topic match {

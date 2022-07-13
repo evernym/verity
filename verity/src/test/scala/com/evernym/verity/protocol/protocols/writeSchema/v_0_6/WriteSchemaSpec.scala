@@ -45,7 +45,7 @@ class WriteSchemaSpec
 
   val defaultEndorser = "8XFh8yBzrpJQmNyZzgoTqB"
   val userEndorser = "Vr9eqqnUJpJkBwcRV4cHnV"
-  val sovrinEndorser = "did:sov:2wJPyULfLLnYTEFYzByfUR"
+  val sovrinEndorser = "did:indy:sovrin:2wJPyULfLLnYTEFYzByfUR"
 
   override val defaultInitParams = Map(
     DEFAULT_ENDORSER_DID -> defaultEndorser
@@ -112,17 +112,60 @@ class WriteSchemaSpec
       }
     }
 
-    "should transition to Done state after WriteSchema msg" in { f =>
+    "should signal it needs endorsement when issuer did doesn't have ledger permissions" - {
+      "and use default endorser if not set in control msg" in {f =>
+        f.writer.initParams(Map(
+          MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
+        ))
+        interaction(f.writer) {
+          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+            withDefaultWalletAccess(f, {
+              withDefaultLedgerAccess(f, {
+                f.writer ~ Write(schemaName, schemaVersion, schemaAttrsJson)
+
+                val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+                val json = new JSONObject(needsEndorsement.schemaJson)
+                json.getString("endorser") shouldBe defaultEndorser
+                f.writer.state shouldBe a[State.WaitingOnEndorser]
+              })
+            })
+          })
+        }
+      }
+
+      "and use endorser from control msg if defined" in {f =>
+        f.writer.initParams(Map(
+          MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
+        ))
+        interaction(f.writer) {
+          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+            withDefaultWalletAccess(f, {
+              withDefaultLedgerAccess(f, {
+                f.writer ~ Write(schemaName, schemaVersion, schemaAttrsJson, Some(userEndorser))
+
+                val needsEndorsement = f.writer expect signal[NeedsEndorsement]
+                val json = new JSONObject(needsEndorsement.schemaJson)
+                json.getString("endorser") shouldBe userEndorser
+                f.writer.state shouldBe a[State.WaitingOnEndorser]
+              })
+            })
+          })
+        }
+      }
+    }
+
+    "should fail when issuer did doesn't have ledger permissions and endorser did is not defined" in {f =>
       f.writer.initParams(Map(
-        MY_ISSUER_DID -> "V4SGRU86Z58d6TV7PBUe6f"
+        MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID,
+        DEFAULT_ENDORSER_DID -> ""
       ))
       interaction(f.writer) {
         withDefaultWalletAccess(f, {
           withDefaultLedgerAccess(f, {
             f.writer ~ Write(schemaName, schemaVersion, schemaAttrsJson)
 
-            val statusReport = f.writer expect signal[StatusReport]
-            f.writer.state shouldBe a[State.Done]
+            f.writer expect signal[ProblemReport]
+            f.writer.state shouldBe a[State.Error]
           })
         })
       }

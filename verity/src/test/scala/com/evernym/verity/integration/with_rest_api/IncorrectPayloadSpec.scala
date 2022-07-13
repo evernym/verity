@@ -8,6 +8,7 @@ import com.evernym.verity.protocol.engine.ThreadId
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Offer
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
+import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.testkit.util.HttpUtil
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -40,7 +41,7 @@ class IncorrectPayloadSpec
     val issuerVerityEnvFut = VerityEnvBuilder.default().withConfig(VAS_OVERRIDE_CONFIG).buildAsync(VAS)
     val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
     val issuerRestSDKFut = setupIssuerRestSdkAsync(issuerVerityEnvFut, executionContext)
-    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
 
     issuerRestSDK = Await.result(issuerRestSDKFut, SDK_BUILD_TIMEOUT)
     holderSDK = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)

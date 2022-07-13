@@ -37,6 +37,8 @@ ingress:
 sponsors:
 # List configuration for TAA.
 taa:
+# VDR configuration
+vdr:
 # Custom and Adhoc Configuration for Verity in HOCON Notation
 # Intended to allow quick injection of config that is
 # not managed by this helm chart

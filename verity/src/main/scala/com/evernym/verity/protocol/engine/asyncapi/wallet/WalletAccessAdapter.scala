@@ -34,10 +34,6 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
 
   import WalletAccess._
 
-  def handleAsyncOpResult[T](handler: Try[T] => Unit): Try[T] => Unit = {
-    {t: Try[_] => handleResult(t, handler)}
-  }
-
   def DEPRECATED_setupNewWallet(walletId: String,
                                 ownerDidPair: DidPair)
                                (handler: Try[DeprecatedWalletSetupResult] => Unit): Unit =
@@ -65,16 +61,15 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
       handleAsyncOpResult(handler)
     )
 
-  override def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE)
+  override def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE, signerDid: Option[DidStr] = None)
                    (handler: Try[SignedMsgResult] => Unit): Unit = {
-    // currently only one sign type is supported
-    if (signType != SIGN_ED25519_SHA512_SINGLE) {
-      handleAsyncOpResult(handler)(Failure(InvalidSignType(signType)))
-    } else {
+    if (supportedSigningSpecs.contains(signType)) {
       asyncOpRunner.withAsyncOpRunner(
-        {runSign(msg)},
+        {runSign(msg, signerDid)},
         handleAsyncOpResult(handler)
       )
+    } else {
+      handleAsyncOpResult(handler)(Failure(InvalidSignType(signType)))
     }
   }
 
@@ -85,13 +80,13 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                       signType: SignType = SIGN_ED25519_SHA512_SINGLE)
                      (handler: Try[VerifiedSigResult] => Unit): Unit = {
     // currently only one sign type is supported
-    if (signType != SIGN_ED25519_SHA512_SINGLE) {
-      handleAsyncOpResult(handler)(Failure(InvalidSignType(signType)))
-    } else {
+    if (supportedSigningSpecs.contains(signType)) {
       asyncOpRunner.withAsyncOpRunner(
         {walletApi.tell(VerifySignature(KeyParam.fromDID(signer), msg, sig, verKeyUsed))},
         handleAsyncOpResult(handler)
       )
+    } else {
+      handleAsyncOpResult(handler)(Failure(InvalidSignType(signType)))
     }
   }
 
@@ -123,8 +118,10 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                             data:  String)
                            (handler: Try[SchemaCreatedResult] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
-      issuerCreateSchema(issuerDID, name, version, data).map { result =>
-        SchemaCreated(result.getSchemaId, result.getSchemaJson)
+      {
+        issuerCreateSchema(issuerDID, name, version, data).map { result =>
+          SchemaCreated(result.getSchemaId, result.getSchemaJson)
+        }
       },
       handleAsyncOpResult(handler)
     )
@@ -200,7 +197,7 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
                            revocRegs: String)
                           (handler: Try[ProofVerificationResult] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
-      AnoncredsWalletOpExecutor.verifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs),
+      {AnoncredsWalletOpExecutor.verifyProof(proofRequest, proof, schemas, credentialDefs, revocRegDefs, revocRegs)},
       handleAsyncOpResult(handler)
     )
   }
@@ -226,8 +223,8 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
   }
 
   //Allowed only for signType: SignType = SIGN_ED25519_SHA512_SINGLE
-  private def runSign(msg: Array[Byte]): Unit = {
-    val did = getDIDFromParticipantId(selfParticipantId)
+  private def runSign(msg: Array[Byte], signerDidOpt: Option[DidStr]=None): Unit = {
+    val did = signerDidOpt.getOrElse(getDIDFromParticipantId(selfParticipantId))
     walletApi.tell(SignMsg(KeyParam.fromDID(did), msg))
   }
 
@@ -274,7 +271,7 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
         case c: CredOfferCreated => CredOfferCreatedResult(c.offer)
         case c: CredReqCreated => CredReqCreatedResult(c.credReqJson, c.credReqMetadataJson)
         case c: CredCreated => CredCreatedResult(c.cred)
-        case c: CredStored => CredStoredResult(c.cred)
+        case c: CredStored => CredStoredResult(c.credId)
         case c: CredForProofReqCreated => CredForProofResult(c.cred)
 
         case c: ProofCreated => ProofCreatedResult(c.proof)

@@ -1,8 +1,8 @@
 package com.evernym.verity.protocol.engine.asyncapi.wallet
 
-import com.evernym.verity.did.{DidStr, DidPair, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine.ParticipantId
-import com.evernym.verity.util.Base64Util
+import com.evernym.verity.util.{Base58Util, Base64Util}
 
 import scala.util.Try
 
@@ -19,7 +19,7 @@ trait WalletAccess
 
   def verKeyOpt(forDID: DidStr)(handler: Try[VerKeyOptResult] => Unit): Unit
 
-  def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE)
+  def sign(msg: Array[Byte], signType: SignType = SIGN_ED25519_SHA512_SINGLE, signerDid: Option[DidStr]=None)
           (handler: Try[SignedMsgResult] => Unit): Unit
 
   /**
@@ -59,6 +59,8 @@ object WalletAccess {
   type SignType = String
   val KEY_ED25519: KeyType = "ed25519"
   val SIGN_ED25519_SHA512_SINGLE: SignType = "spec/signature/1.0/ed25519Sha512_single"
+  val SIGN_ED25519: SignType = "ed25519"
+  val supportedSigningSpecs = List(SIGN_ED25519_SHA512_SINGLE, SIGN_ED25519)
   // TODO: Decide if following belong here or at a broader level
   type PackedMsg = Array[Byte]
 }
@@ -69,6 +71,8 @@ case class NoWalletFound(message: String)   extends Exception(message)
 case class SignatureResult(signature: Array[Byte], verKey: VerKeyStr) {
   def toBase64: String = Base64Util.getBase64Encoded(signature)
   def toBase64UrlEncoded: String = Base64Util.getBase64UrlEncoded(signature)
+
+  def toBase58: String = Base58Util.encode(signature)
 }
 
 case class DeprecatedWalletSetupResult(ownerDidPair: DidPair, agentKey: NewKeyResult)

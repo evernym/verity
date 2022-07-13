@@ -2,7 +2,7 @@ package com.evernym.verity.integration.with_rest_api
 
 import akka.http.scaladsl.model.StatusCodes.Accepted
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
-import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerRestSDK, IssuerSdk, SdkProvider}
+import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerRestSDK, SdkProvider}
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
@@ -41,7 +41,7 @@ class RestIssuerSdkSpec
     val issuerVerityEnvFut = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).buildAsync(VAS)
     val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
     val issuerRestSDKFut = setupIssuerRestSdkAsync(issuerVerityEnvFut, executionContext)
-    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, executionContext)
+    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
 
     issuerRestSDK = Await.result(issuerRestSDKFut, SDK_BUILD_TIMEOUT)
     holderSDK = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)

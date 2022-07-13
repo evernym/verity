@@ -15,12 +15,13 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.http.route_handlers.HttpRouteHandler
 import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
+import com.evernym.verity.protocol.engine.MockVDRAdapter
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
+import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
-
-import com.evernym.verity.vdr.{TestLedgerRegistry, TestVdrToolsBuilder}
-import com.evernym.verity.vdr.service.VDRToolsFactory
+import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockVdrToolsBuilder, VDRAdapter}
+import com.evernym.verity.vdr.service.{VDRToolsFactory, VdrTools}
 
 import java.nio.file.Path
 import scala.concurrent.duration._
@@ -109,8 +110,13 @@ object LocalVerity {
           .getOrElse(StorageAPI.loadFromConfig(appConfig, executionContextProvider.futureExecutionContext))
       }
 
-      val testVdrLedgerRegistry = TestLedgerRegistry()
-      override lazy val vdrBuilderFactory: VDRToolsFactory = () => new TestVdrToolsBuilder(testVdrLedgerRegistry)
+      val testVdrLedgerRegistry = MockLedgerRegistry(
+        List(
+          MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None)
+        )
+      )  //TODO: finalize this
+      override lazy val vdrBuilderFactory: VDRToolsFactory = () => new MockVdrToolsBuilder(testVdrLedgerRegistry, serviceParam.flatMap(_.vdrTools))
+      override lazy val vdrAdapter: VDRAdapter = new MockVDRAdapter(vdrBuilderFactory)(futureExecutionContext)
     }
 
     val platform: Platform = PlatformBuilder.build(
@@ -176,15 +182,23 @@ case class ServiceParam(ledgerSvcParam: Option[LedgerSvcParam]=None,
     copy(ledgerSvcParam = Option(lsp.copy(ledgerTxnExecutor = Option(txnExecutor))))
   }
 
+  def withVdrTools(vdrTools: VdrTools): ServiceParam = {
+    val lsp = ledgerSvcParam.getOrElse(LedgerSvcParam())
+    copy(ledgerSvcParam = Option(lsp.copy(vdrTools = Option(vdrTools))))
+  }
+
   def withStorageApi(storageAPI: StorageAPI): ServiceParam = {
     copy(storageAPI = Option(storageAPI))
   }
 
   def ledgerTxnExecutor: Option[LedgerTxnExecutor] = ledgerSvcParam.flatMap(_.ledgerTxnExecutor)
+  def vdrTools: Option[VdrTools] = ledgerSvcParam.flatMap(_.vdrTools)
 }
 
 case class LedgerSvcParam(taaEnabled: Boolean = true,
-                          ledgerTxnExecutor: Option[LedgerTxnExecutor]=None)
+                          taaAutoAccept: Boolean = true,
+                          ledgerTxnExecutor: Option[LedgerTxnExecutor]=None,
+                          vdrTools: Option[VdrTools]=None)
 
 case class VerityNodeParam(tmpDirPath: Path,
                            appSeed: String,

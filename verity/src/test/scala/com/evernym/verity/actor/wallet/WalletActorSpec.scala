@@ -441,7 +441,7 @@ class WalletActorSpec
     issuerWalletActor ! CreateCred(crd.credOffer, crd.credReq, credValuesJson, null, -1)
     val cred = expectMsgType[CredCreated].cred
     holderWalletActor ! StoreCred(UUID.randomUUID().toString, crd.credDef.credDefJson, crd.credReqMetaData, cred, null)
-    val credId = expectMsgType[CredStored].cred
+    val credId = expectMsgType[CredStored].credId
     val cd = CredData(credId, cred, crd)
     f(cd)
   }

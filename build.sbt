@@ -71,7 +71,7 @@ val cloudEventsVersion  = "2.3.0"
 //test dependency versions
 val scalatestVer        = "3.2.12"
 val mockitoVer          = "1.17.7"
-val veritySdkVer        = "0.0.0-SNAPSHOT"
+val veritySdkVer        = "0.6.1-6e9c4d03"
 val vcxWrapperVer       = "0.14.0"
 
 

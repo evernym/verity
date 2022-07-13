@@ -13,7 +13,7 @@ object MockableAnonCredRequests {
                               version: String,
                               data: String)
                              (handler: Try[SchemaCreatedResult] => Unit): Unit = {
-      val schemaId = "did:indy:sovrin:2hoqvcwupRTUNkXn6ArYzs/anoncreds/v0/SCHEMA/test-licence/4.4.4"
+      val schemaId = "2hoqvcwupRTUNkXn6ArYzs:2:test-licence:4.4.4"
       val schemaJson =
         s"""
            {
@@ -34,7 +34,7 @@ object MockableAnonCredRequests {
                                sigType: Option[String],
                                revocationDetails: Option[String])
                               (handler: Try[CredDefCreatedResult] => Unit): Unit = {
-      val cred_def_id = "did:indy:sovrin:2hoqvcwupRTUNkXn6ArYzs/anoncreds/v0/CLAIM_DEF/10/latest"
+      val cred_def_id = "2hoqvcwupRTUNkXn6ArYzs:3:CL:2471"
       val cred_def_json =
         s"""
           {
@@ -126,8 +126,8 @@ object MockableAnonCredRequests {
          |                  "height":"175",
          |                  "sex":"male"
          |               },
-         |               "schema_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
-         |               "cred_def_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1",
+         |               "schema_id":"NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
+         |               "cred_def_id":"NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
          |               "rev_reg_id":null,
          |               "cred_rev_id":null
          |            },
@@ -147,8 +147,8 @@ object MockableAnonCredRequests {
          |                  "age":"28",
          |                  "name":"Alex"
          |               },
-         |               "schema_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
-         |               "cred_def_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1",
+         |               "schema_id":"NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
+         |               "cred_def_id":"NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
          |               "rev_reg_id":null,
          |               "cred_rev_id":null
          |            },
@@ -167,8 +167,8 @@ object MockableAnonCredRequests {
          |                  "height":"175",
          |                  "name":"Alex"
          |               },
-         |               "schema_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
-         |               "cred_def_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1",
+         |               "schema_id":"NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
+         |               "cred_def_id":"NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
          |               "rev_reg_id":null,
          |               "cred_rev_id":null
          |            },
@@ -181,7 +181,7 @@ object MockableAnonCredRequests {
 
     override def createProof(proofRequest: String, usedCredentials: String, schemas: String, credentialDefs: String, revStates: String)
                             (handler: Try[ProofCreatedResult] => Unit): Unit = handler(Try(
-      ProofCreatedResult("""{"proof":{},"requested_proof":{"revealed_attrs":{"attr1_referent":{"sub_proof_index":0,"raw":"Alex","encoded":"99262857098057710338306967609588410025648622308394250666849665532448612202874"}},"self_attested_attrs":{"attr3_referent":"8-800-300"},"unrevealed_attrs":{"attr2_referent":{"sub_proof_index":0}},"predicates":{"predicate1_referent":{"sub_proof_index":0}}},"identifiers":[{"schema_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0","cred_def_id":"did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1","rev_reg_id":null,"timestamp":null}]}""")
+      ProofCreatedResult("""{"proof":{},"requested_proof":{"revealed_attrs":{"attr1_referent":{"sub_proof_index":0,"raw":"Alex","encoded":"99262857098057710338306967609588410025648622308394250666849665532448612202874"}},"self_attested_attrs":{"attr3_referent":"8-800-300"},"unrevealed_attrs":{"attr2_referent":{"sub_proof_index":0}},"predicates":{"predicate1_referent":{"sub_proof_index":0}}},"identifiers":[{"schema_id":"NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0","cred_def_id":"NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1","rev_reg_id":null,"timestamp":null}]}""")
     ))
 
     override def verifyProof(proofRequest: String, proof: String, schemas: String, credentialDefs: String, revocRegDefs: String, revocRegs: String)

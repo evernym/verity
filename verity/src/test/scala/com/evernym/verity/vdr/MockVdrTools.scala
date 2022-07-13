@@ -14,6 +14,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionContext)
   extends VdrTools {
 
+  var idToLedgers: Map[String, InMemLedger]= Map.empty
+
   //TODO: as we add/integrate actual VDR apis and their tests,
   // this class should evolve to reflect the same for its test implementation
 
@@ -28,6 +30,7 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
     ledgerRegistry.forLedger(submitterDid) { ledger: InMemLedger =>
       val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams)
       val id = json.get("id").asText
+      addLedgerMapping(id, ledger)
       ledger.prepareSchemaTxn(txnSpecificParams, id, submitterDid, endorser)
     }
   }
@@ -38,6 +41,7 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
     ledgerRegistry.forLedger(submitterDid) { ledger: InMemLedger =>
       val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams)
       val id = json.get("id").asText
+      addLedgerMapping(id, ledger)
       ledger.prepareSchemaTxn(txnSpecificParams, id, submitterDid, endorser)
     }
   }
@@ -48,6 +52,7 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
     ledgerRegistry.forLedger(submitterDid) { ledger: InMemLedger =>
       val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams);
       val id = json.get("id").asText()
+      addLedgerMapping(id, ledger)
       ledger.prepareCredDefTxn(txnSpecificParams, id, submitterDid, endorser)
     }
   }
@@ -69,29 +74,27 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
                   query: String): Future[TxnResult] = ???
 
   override def resolveSchema(schemaId: FqSchemaId): Future[VdrSchema] = {
-    ledgerRegistry.forLedger(schemaId) { ledger: InMemLedger =>
-      ledger.resolveSchema(schemaId)
+    idToLedgers.get(schemaId) match {
+      case Some(ledger) => Future(ledger.resolveSchema(schemaId))
+      case None         => Future(ledgerRegistry.allLedgers.head.resolveSchema(schemaId))
     }
   }
 
   override def resolveSchema(schemaId: FqSchemaId,
                              cacheOptions: CacheOptions): Future[VdrSchema] = {
-    ledgerRegistry.forLedger(schemaId) { ledger: InMemLedger =>
-      ledger.resolveSchema(schemaId)
-    }
+    resolveSchema(schemaId)
   }
 
   override def resolveCredDef(credDefId: FqCredDefId): Future[VdrCredDef] = {
-    ledgerRegistry.forLedger(credDefId) { ledger: InMemLedger =>
-      ledger.resolveCredDef(credDefId)
+    idToLedgers.get(credDefId) match {
+      case Some(ledger) => Future(ledger.resolveCredDef(credDefId))
+      case None         => Future(ledgerRegistry.allLedgers.head.resolveCredDef(credDefId))
     }
   }
 
   override def resolveCredDef(credDefId: FqCredDefId,
                               cacheOptions: CacheOptions): Future[VdrCredDef] = {
-    ledgerRegistry.forLedger(credDefId) { ledger: InMemLedger =>
-      ledger.resolveCredDef(credDefId)
-    }
+    resolveCredDef(credDefId)
   }
 
   override def resolveDid(fqDid: FqDID): Future[VdrDid] = {
@@ -102,9 +105,11 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
 
   override def resolveDid(fqDid: FqDID,
                           cacheOptions: CacheOptions): Future[VdrDid] = {
-    ledgerRegistry.forLedger(fqDid) { ledger: InMemLedger =>
-      ledger.resolveDid(fqDid)
-    }
+    resolveDid(fqDid)
+  }
+
+  private def addLedgerMapping(id: String, ledger: InMemLedger): Unit = {
+    idToLedgers = idToLedgers + (id -> ledger)
   }
 }
 

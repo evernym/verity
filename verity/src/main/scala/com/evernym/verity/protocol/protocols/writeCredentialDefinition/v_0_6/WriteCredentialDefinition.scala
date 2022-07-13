@@ -14,7 +14,7 @@ import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers.noHandleProtoMsg
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.Role.Writer
 import com.evernym.verity.vdr.VDRUtil.extractUnqualifiedDidStr
-import com.evernym.verity.vdr.{FqCredDefId, FqDID, PreparedTxn, SubmittedTxn}
+import com.evernym.verity.vdr.{CredDefId, FqCredDefId, FqDID, PreparedTxn, SubmittedTxn, VDRUtil}
 
 import scala.util.{Failure, Success, Try}
 
@@ -54,33 +54,34 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
     try {
       val tag = m.tag.getOrElse("latest")
       val revocationDetails = m.revocationDetails.map(_.toString).getOrElse("{}")
-      val fqSubmitterId = ctx.ledger.fqDID(_submitterDID(init))
-      ctx.ledger.resolveSchema(ctx.ledger.fqSchemaId(m.schemaId, Option(fqSubmitterId))) {
+      val nonFqSubmitterId = _submitterDID(init)
+      val fqSubmitterId = ctx.ledger.fqDID(nonFqSubmitterId)
+      ctx.ledger.resolveSchema(ctx.ledger.fqSchemaId(m.schemaId, None)) {
         case Success (schema) =>
           ctx.wallet.createCredDef(
-            fqSubmitterId,
+            nonFqSubmitterId,
             schema.json,
             tag,
             sigType=None,
             revocationDetails=Some(revocationDetails)
           ) {
             case Success(credDefCreated: CredDefCreatedResult) =>
-              val fqCredDefId = credDefCreated.credDefId
-              writeCredDefToLedger(fqSubmitterId, fqCredDefId, credDefCreated.credDefJson) {
+              val credDefId = credDefCreated.credDefId
+              writeCredDefToLedger(fqSubmitterId, credDefId, credDefCreated.credDefJson) {
                 case Success(SubmittedTxn(_)) =>
-                  ctx.apply(CredDefWritten(fqCredDefId))
-                  ctx.signal(StatusReport(fqCredDefId))
+                  ctx.apply(CredDefWritten(credDefId))
+                  ctx.signal(StatusReport(credDefId))
                 case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(fqSubmitterId, e) =>
                   ctx.logger.info(e.toString)
-                  val fqEndorserDID = ctx.ledger.fqDID(m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")))
+                  val endorserDID = m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse(""))
                   //NOTE: below code is assuming verity is only supporting indy ledgers,
                   // it should be changed when verity starts supporting different types of ledgers
-                  val ledgerPrefix = ctx.ledger.extractLedgerPrefix(fqSubmitterId, fqEndorserDID)
+                  val ledgerPrefix = ctx.ledger.vdrUnqualifiedLedgerPrefix()
                   ctx.endorser.withCurrentEndorser(ledgerPrefix) {
-                    case Success(Some(endorser)) if fqEndorserDID.isEmpty || fqEndorserDID.contains(endorser.did) =>
+                    case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID.contains(endorser.did) =>
                       ctx.logger.info(s"registered endorser to be used for creddef endorsement (ledger prefix: $ledgerPrefix): " + endorser)
                       //no explicit endorser given/configured or the given/configured endorser is matching with the active endorser
-                      prepareTxnForEndorsement(fqSubmitterId, fqCredDefId, credDefCreated.credDefJson, endorser.did) {
+                      prepareTxnForEndorsement(fqSubmitterId, credDefId, credDefCreated.credDefJson, endorser.did) {
                         case Success(ledgerRequest) =>
                           ctx.endorser.endorseTxn(ledgerRequest, ledgerPrefix) {
                             case Success(_) =>
@@ -93,10 +94,10 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
                     case other =>
                       ctx.logger.info(s"no active/matched endorser found to be used for creddef endorsement (ledger prefix: $ledgerPrefix): " + other)
                       //no active endorser or active endorser is NOT the same as given/configured endorserDID
-                      prepareTxnForEndorsement(fqSubmitterId, fqCredDefId, credDefCreated.credDefJson, fqEndorserDID) {
+                      prepareTxnForEndorsement(fqSubmitterId, credDefId, credDefCreated.credDefJson, endorserDID) {
                         case Success(data: TxnForEndorsement) =>
-                          ctx.signal(NeedsEndorsement(fqCredDefId, data))
-                          ctx.apply(AskedForEndorsement(fqCredDefId, data))
+                          ctx.signal(NeedsEndorsement(credDefId, data))
+                          ctx.apply(AskedForEndorsement(credDefId, data))
                         case Failure(e) => problemReport(e)
                       }
                   }
@@ -135,17 +136,17 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
   }
 
   private def prepareTxnForEndorsement(fqSubmitterDID: FqDID,
-                                       fqCredDefId: FqCredDefId,
+                                       credDefId: CredDefId,
                                        credDefJson: String,
-                                       fqEndorserDid: FqDID)
+                                       endorserDid: FqDID)
                                       (handleResult: Try[TxnForEndorsement] => Unit): Unit = {
-    if (fqEndorserDid.nonEmpty) {
+    if (endorserDid.nonEmpty) {
       ctx.ledger
         .prepareCredDefTxn(
           credDefJson,
-          fqCredDefId,
+          credDefId,
           fqSubmitterDID,
-          Option(fqEndorserDid)) {
+          Option(endorserDid)) {
           case Success(pt: PreparedTxn) =>
             signPreparedTxn(pt, fqSubmitterDID) {
               case Success(smr: SignedMsgResult) =>

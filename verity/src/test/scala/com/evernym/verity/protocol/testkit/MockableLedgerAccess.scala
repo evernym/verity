@@ -114,7 +114,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         Try{
-          val schemaResp = schemas.getOrElse(fqSchemaId, throw new Exception("Unknown schema"))
+          val schemaResp = schemas.getOrElse(VDRUtil.toLegacyNonFqSchemaId(fqSchemaId), throw new Exception("Unknown schema"))
           Schema(fqSchemaId, schemaResp.json)
         }
       }
@@ -126,7 +126,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         Try{
-          schemas.filter{ case (id, schema) => fqSchemaIds.contains(id)}.values.toSeq
+          schemas.filter{ case (id, schema) => fqSchemaIds.map(VDRUtil.toLegacyNonFqSchemaId).contains(id)}.values.toSeq
         }
       }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
@@ -137,7 +137,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         Try{
-          val credDefResp = credDefs.getOrElse(fqCredDefId, throw new Exception("Unknown cred def"))
+          val credDefResp = credDefs.getOrElse(VDRUtil.toLegacyNonFqCredDefId(fqCredDefId), throw new Exception("Unknown cred def"))
           CredDef(fqCredDefId, credDefResp.fqSchemaId, credDefResp.json)
         }
       }
@@ -149,7 +149,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         Try{
-          credDefs.filter{ case (id, _) => fqCredDefIds.contains(id)}.values.toSeq
+          credDefs.filter{ case (id, _) => fqCredDefIds.map(VDRUtil.toLegacyNonFqCredDefId).contains(id)}.values.toSeq
         }
       }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
@@ -194,12 +194,12 @@ object MockLedgerData {
   val txnResp = MockLedgerTxnExecutor.buildTxnResp("5XwZzMweuePeFZzArqvepR", None, None, "107")
 
   val schemas01 = Map(
-    "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0" ->
+    "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0" ->
       Schema(
-        "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
+        "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
         DefaultMsgCodec.toJson(
           SchemaV1(
-            "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
+            "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
             "schema-name",
             "0.1",
             Seq("attr-1", "attr2"),
@@ -212,15 +212,15 @@ object MockLedgerData {
   )
 
   val credDefs01 = Map(
-    "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1" ->
+    "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1" ->
       CredDef(
-        "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1",
-        "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
+        "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
+        "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
         DefaultMsgCodec.toJson(
           CredDefV1(
-            "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/CLAIM_DEF/10/Tag1",
+            "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
             "CL",
-            "did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0",
+            "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
             "tag",
             "1.0",
             Map.empty

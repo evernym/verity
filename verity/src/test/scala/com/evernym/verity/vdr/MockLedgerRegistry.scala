@@ -6,6 +6,9 @@ import com.evernym.verity.vdr.base.{InMemLedger, TestVDRDidDoc}
 import scala.concurrent.Future
 
 case class MockLedgerRegistry(var ledgers: List[InMemLedger] = List.empty) {
+
+  def allLedgers: List[InMemLedger] = ledgers
+
   def addLedger(ledger: InMemLedger): Unit = synchronized {
     ledgers :+= ledger
   }

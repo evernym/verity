@@ -46,13 +46,60 @@ object VDRUtil {
       credDefId
     } else {
       val splitted = credDefId.split(":")
-      val issuerDid = splitted(0)
-      val schemaSeqNo = splitted(3)
-      val credDefName = splitted(4)
-      val namespace = extractNamespace(issuerFqDid, vdrUnqualifiedLedgerPrefix)
-      s"$DID_PREFIX:$namespace:$issuerDid/anoncreds/v0/CLAIM_DEF/$schemaSeqNo/$credDefName"
+      if (splitted.length == 5) {
+        //NcYxiDXkpYi6ov5FcYDi1e:3:CL:1234:tag
+        val namespace = extractNamespace(issuerFqDid, vdrUnqualifiedLedgerPrefix)
+        val issuerDid = splitted(0)
+        val schemaId = splitted(3)    //the schema txn sequence number
+        val credDefName = splitted(4)
+        s"$DID_PREFIX:$namespace:$issuerDid/anoncreds/v0/CLAIM_DEF/$schemaId/$credDefName"
+      } else {
+        //NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:tag
+        val namespace = extractNamespace(issuerFqDid, vdrUnqualifiedLedgerPrefix)
+        val issuerDid = splitted(0)
+        val schemaName = splitted(5)
+        val schemaVer = splitted(6)
+        val schemaId = s"$DID_PREFIX:$namespace:$issuerDid/anoncreds/v0/SCHEMA/$schemaName/$schemaVer"
+        val credDefName = splitted(7)
+        s"$DID_PREFIX:$namespace:$issuerDid/anoncreds/v0/CLAIM_DEF/$schemaId/$credDefName"
+      }
     }
   }
+
+  def toLegacyNonFqSchemaId(schemaId: FqSchemaId): String = {
+    Try {
+      val splitted = schemaId.split("/", 2)
+      val issuer = splitted(0)
+      val claim = splitted(1)
+
+      val issuerParts = issuer.split(":")
+      val schemaParts = claim.split("/")
+
+      s"${issuerParts.last}:2:${schemaParts(3)}:${schemaParts.last}"
+    }.getOrElse(schemaId)
+  }
+
+  def toLegacyNonFqCredDefId(credDefId: FqCredDefId): String = {
+    Try {
+      val splitted = credDefId.split("/", 2)
+      val issuer = splitted(0)
+      val claim = splitted(1)
+
+      val issuerParts = issuer.split(":")
+      val claimParts = claim.split("/")
+      if (claimParts.length == 5) {
+        //claim: anoncreds/v0/CLAIM_DEF/1234/Tag1
+        s"${issuerParts.last}:3:CL:${claimParts(3)}:${claimParts.last}"
+      } else {
+        //claim: anoncreds/v0/CLAIM_DEF/did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0/Tag1
+        val schemaName = claimParts(7)
+        val schemaVer = claimParts(8)
+        val schemaId = s"${issuerParts.last}:2:$schemaName:$schemaVer"
+        s"${issuerParts.last}:3:CL:$schemaId:${claimParts.last}"
+      }
+    }.getOrElse(credDefId)
+  }
+
 
   /**
    *

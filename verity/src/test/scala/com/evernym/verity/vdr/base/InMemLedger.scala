@@ -28,18 +28,16 @@ trait InMemLedger {
                        fqSchemaId: FqSchemaId,
                        submitterDid: VdrDid,
                        endorser: Option[String]): PreparedTxnResult = {
-    checkSchemaId(fqSchemaId)
-    val submitterNamespace = extractNamespace(Option(submitterDid), None)
+    val namespace = extractNamespace(Option(submitterDid), None)
     val schema = TestVDRSchema(submitterDid, fqSchemaId, txnSpecificParams)
     val jsonPayload = JacksonMsgCodec.toJson(schema)
-    new PreparedTxnResult(submitterNamespace, jsonPayload.getBytes, SIGN_ED25519_SHA512_SINGLE, jsonPayload.getBytes, INDY_ENDORSEMENT)
+    new PreparedTxnResult(namespace, jsonPayload.getBytes, SIGN_ED25519_SHA512_SINGLE, jsonPayload.getBytes, INDY_ENDORSEMENT)
   }
 
   def prepareCredDefTxn(txnSpecificParams: TxnSpecificParams,
                         fQCredDefId: FqCredDefId,
                         submitterDid: VdrDid,
                         endorser: Option[String]): PreparedTxnResult = {
-    checkCredDefId(fQCredDefId)
     val namespace = extractNamespace(Option(submitterDid), None)
     val credDef = TestVDRCredDef(submitterDid, fQCredDefId, extractSchemaId(txnSpecificParams), txnSpecificParams)
     val jsonPayload = JacksonMsgCodec.toJson(credDef)
@@ -66,14 +64,12 @@ trait InMemLedger {
   }
 
   def resolveSchema(fqSchemaId: FqSchemaId): VdrSchema = {
-    checkSchemaId(fqSchemaId)
-    val data = schemas.getOrElse(fqSchemaId, throw new RuntimeException("schema not found for given id: " + fqSchemaId))
+    val data = schemas.getOrElse(VDRUtil.toLegacyNonFqSchemaId(fqSchemaId), throw new RuntimeException("schema not found for given id: " + fqSchemaId))
     new String(data)
   }
 
   def resolveCredDef(fqCredDefId: FqCredDefId): VdrCredDef = {
-    checkCredDefId(fqCredDefId)
-    val data = credDefs.getOrElse(fqCredDefId, throw new RuntimeException("cred def not found for given id: " + fqCredDefId))
+    val data = credDefs.getOrElse(VDRUtil.toLegacyNonFqCredDefId(fqCredDefId), throw new RuntimeException("cred def not found for given id: " + fqCredDefId))
     new String(data)
   }
 
@@ -93,15 +89,15 @@ trait InMemLedger {
     node.get("schemaId").asText()
   }
 
-  def checkSchemaId(schemaId: String): Unit = {
-    if (! schemaId.startsWith("did:indy:"))
-      throw new RuntimeException(s"non fully qualified schema id: $schemaId")
-  }
-
-  def checkCredDefId(credDefId: String): Unit = {
-    if (! credDefId.startsWith("did:"))
-      throw new RuntimeException(s"non fully qualified cred def id: $credDefId")
-  }
+//  def checkSchemaId(schemaId: String): Unit = {
+//    if (! schemaId.startsWith("did:indy:"))
+//      throw new RuntimeException(s"non fully qualified schema id: $schemaId")
+//  }
+//
+//  def checkCredDefId(credDefId: String): Unit = {
+//    if (! credDefId.startsWith("did:"))
+//      throw new RuntimeException(s"non fully qualified cred def id: $credDefId")
+//  }
 
   //  def isFqSchemaId(schemaId: String, issuerDid: FqDID): Unit = {
   //    if (VDRUtil.toFqSchemaId_v0(schemaId, Option(issuerDid), None) != schemaId)

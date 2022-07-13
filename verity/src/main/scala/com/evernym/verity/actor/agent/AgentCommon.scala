@@ -343,8 +343,6 @@ trait AgentCommon
       DidDocBuilder(futureExecutionContext, dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
     }
 
-  def fqDid(did: DidStr): DidStr = VDRUtil.toFqDID(did, vdrUnqualifiedLedgerPrefix, vdrLedgerPrefixMappings)
-
   lazy val vdrUnqualifiedLedgerPrefix: String = appConfig.getStringReq(VDR_UNQUALIFIED_LEDGER_PREFIX)
   lazy val vdrLedgerPrefixMappings: Map[String, String] = appConfig.getMap(VDR_LEDGER_PREFIX_MAPPINGS)
 

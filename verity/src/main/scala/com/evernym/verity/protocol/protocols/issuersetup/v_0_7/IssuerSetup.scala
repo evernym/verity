@@ -99,7 +99,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
 
   private def prepareDidJson(targetDid: String, verkey: String): String = {
     // This assumes an indy ledger, as the txnSpecificParams for VDRTools prepare DID Cheqd API have not been finalized
-    s"{dest: $targetDid, verkey: $verkey}"
+    s"{\"dest\": \"$targetDid\", \"verkey\": \"$verkey\"}"
   }
 
   private def prepareTxnForEndorsement(fqSubmitterDID: FqDID,

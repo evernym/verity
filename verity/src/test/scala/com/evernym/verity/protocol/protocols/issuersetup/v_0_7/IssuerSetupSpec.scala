@@ -47,9 +47,9 @@ class IssuerSetupSpec
 
   val defaultEndorser = "8XFh8yBzrpJQmNyZzgoTqB"
   val userEndorser = "Vr9eqqnUJpJkBwcRV4cHnV"
-  val sovrinEndorser = "did:sov:2wJPyULfLLnYTEFYzByfUR"
+  val sovrinEndorser = "did:indy:sovrin:2wJPyULfLLnYTEFYzByfUR"
 
-  val ledgerPrefix = "did:sov"
+  val ledgerPrefix = "did:indy:sovrin"
 
   override val defaultInitParams = Map(
     DEFAULT_ENDORSER_DID -> defaultEndorser

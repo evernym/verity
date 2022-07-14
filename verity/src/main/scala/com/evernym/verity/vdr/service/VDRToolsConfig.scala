@@ -61,10 +61,10 @@ object VDRToolsConfig {
     // either `time-of-acceptance` can be defined as `string` in date format (for ex: 2022-04-08) or
     // epoch seconds or it can be defined as `long` equivalent to epoch seconds
     val timeOfAcceptance =
-      Try(TAAUtil.taaAcceptanceEpochDateTime(config.getStringReq("time-of-acceptance")))
-        .getOrElse(
-          Try(config.getStringReq("time-of-acceptance").toLong)
-            .getOrElse(config.getLongReq("time-of-acceptance")))
+    Try(TAAUtil.taaAcceptanceEpochDateTime(config.getStringReq("time-of-acceptance")))
+      .getOrElse(
+        Try(config.getStringReq("time-of-acceptance").toLong)
+          .getOrElse(config.getLongReq("time-of-acceptance")))
 
     // TODO: Move validation to TaaConfig?
     if (text.isDefined && version.isDefined) {
@@ -123,3 +123,4 @@ object VDRToolsConfig {
 
   val logger: Logger = getLoggerByClass(getClass)
 }
+

@@ -28,6 +28,11 @@ trait LedgerAccess {
                         endorser: Option[String])
                        (handler: Try[PreparedTxn] => Unit): Unit
 
+  def prepareDidTxn(didJson: String,
+                    submitterDID: FqDID,
+                    endorser: Option[String])
+                   (handler: Try[PreparedTxn] => Unit): Unit
+
   def submitTxn(preparedTxn: PreparedTxn,
                 signature: Array[Byte],
                 endorsement: Array[Byte])

@@ -49,6 +49,15 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
       handleAsyncOpResult(handler)
     )
 
+  override def prepareDidTxn(didJson: String,
+                             submitterDID: FqDID,
+                             endorser: Option[String])
+                            (handler: Try[PreparedTxn] => Unit): Unit =
+    asyncOpRunner.withFutureOpRunner(
+      {vdrTools.prepareDidTxn(didJson, submitterDID, endorser)},
+      handleAsyncOpResult(handler)
+    )
+
   override def submitTxn(preparedTxn: PreparedTxn,
                          signature: Array[Byte],
                          endorsement: Array[Byte])

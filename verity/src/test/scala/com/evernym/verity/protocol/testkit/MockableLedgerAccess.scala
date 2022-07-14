@@ -98,6 +98,22 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
+  override def prepareDidTxn(didJson: String,
+                             submitterDID: FqDID,
+                             endorser: Option[String])
+                            (handler: Try[PreparedTxn] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) {
+        val jsonObject = new JSONObject(didJson)
+        endorser.foreach(eid => jsonObject.put("endorer", eid))
+        val json = jsonObject.toString()
+        submitterDids += json.hashCode -> submitterDID
+        Try(PreparedTxn(TEST_INDY_SOVRIN_NAMESPACE, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, INDY_ENDORSEMENT))
+      }
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
   override def submitTxn(preparedTxn: PreparedTxn,
                          signature: Array[Byte],
                          endorsement: Array[Byte])
@@ -189,6 +205,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
   def executionContextProvider: ExecutionContextProvider = ecp
 
   type TxnHash = Int
+
 }
 
 

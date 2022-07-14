@@ -4,12 +4,16 @@ import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.endorser.ENDORSEMENT_RESULT_SUCCESS_CODE
+import com.evernym.verity.protocol.engine.asyncapi.ledger.{IndyLedgerUtil, TxnForEndorsement}
+import com.evernym.verity.protocol.engine.asyncapi.wallet.SignedMsgResult
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.ProtocolHelpers.{defineSelf, noHandleProtoMsg}
+import com.evernym.verity.vdr.{FqDID, PreparedTxn}
+import com.evernym.verity.vdr.VDRUtil.extractUnqualifiedDidStr
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, Event, State, String])
   extends Protocol[IssuerSetup, Role, Msg, Event, State, String](IssuerSetupDefinition)
@@ -28,7 +32,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     case (s: State.Created, _, e: NeedsManualEndorsement) => State.Done(s.identity)
     case (s: State.Created, _, e: AskedForEndorsement)    => State.WaitingOnEndorser(e.ledgerPrefix, s.identity)
     case (s: State.WaitingOnEndorser, _, e: DIDWritten)  => State.Done(s.identity)
-    case (s @ (_: State.Created | _:State.WaitingOnEndorser), _, e: WriteFailed)    => State.Error(e.error)
+    case (s @ (_: State.Created | _:State.WaitingOnEndorser), _, e: IssuerSetupFailed)    => State.Error(e.error)
   }
 
   override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = noHandleProtoMsg()
@@ -52,23 +56,23 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     ctx.wallet.newDid() {
       case Success(keyCreated) =>
         ctx.apply(CreatePublicIdentifierCompleted(keyCreated.did, keyCreated.verKey))
-        val ledgerDefaultLegacyPrefix = ctx.ledger.getIndyDefaultLegacyPrefix()
+        val fqSubmitterDID = ctx.ledger.fqDID(keyCreated.did)
         ctx.endorser.withCurrentEndorser(ledgerPrefix) {
           case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID.getOrElse("") == endorser.did =>
-            ctx.logger.info(s"registered endorser to be used for schema endorsement (prefix: $ledgerDefaultLegacyPrefix): " + endorser)
+            ctx.logger.info(s"registered endorser to be used for schema endorsement (prefix: $ledgerPrefix): " + endorser)
             //no explicit endorser given/configured or the given/configured endorser matches an active endorser for the ledger prefix
-            ctx.ledger.prepareDIDTxnForEndorsement(keyCreated.did, keyCreated.did, keyCreated.verKey, endorser.did) {
+            prepareTxnForEndorsement(fqSubmitterDID, prepareDidJson(keyCreated.did, keyCreated.verKey), endorser.did) {
               case Success(txn) =>
-                ctx.endorser.endorseTxn(txn.req, ledgerPrefix) {
-                  case Success(value) => ctx.apply(AskedForEndorsement(keyCreated.did, ledgerPrefix, ledgerPrefix))
+                ctx.endorser.endorseTxn(txn, ledgerPrefix) {
+                  case Success(_) => ctx.apply(AskedForEndorsement(keyCreated.did, ledgerPrefix, ledgerPrefix))
                   case Failure(e) => problemReport(e)
                 }
               case Failure(e) => problemReport(e)
             }
           case other => {
-            ctx.logger.info(s"no active/matched endorser found to be used for issuer endorsement (prefix: $ledgerDefaultLegacyPrefix): " + other)
+            ctx.logger.info(s"no active/matched endorser found to be used for issuer endorsement (prefix: $ledgerPrefix): " + other)
             //any failure while getting active endorser, or no active endorser or active endorser is NOT the same as given/configured endorserDID
-            handleNeedsEndorsement(keyCreated.did, keyCreated.did, keyCreated.verKey, endorserDID.getOrElse(""), ledgerPrefix)
+            handleNeedsEndorsement(keyCreated.did, fqSubmitterDID, keyCreated.verKey, endorserDID.getOrElse(""), ledgerPrefix)
           }
         }
       case Failure(e) => problemReport(new Exception(s"$didCreateErrorMsg, reason: ${e.toString}"))
@@ -81,15 +85,63 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
                                      endorserDID: String,
                                      ledgerPrefix: String): Unit = {
     if (endorserDID.nonEmpty) {
-      ctx.ledger.prepareDIDTxnForEndorsement(submitterDID, targetDID, verkey, endorserDID) {
+      prepareTxnForEndorsement(submitterDID, prepareDidJson(targetDID, verkey), endorserDID) {
         case Success(ledgerRequest) =>
-          ctx.signal(PublicIdentifierCreated(PublicIdentifier(targetDID, verkey), NeedsEndorsement(ledgerRequest.req)))
+          ctx.signal(PublicIdentifierCreated(PublicIdentifier(targetDID, verkey), NeedsEndorsement(ledgerRequest)))
           ctx.apply(NeedsManualEndorsement(targetDID, verkey, ledgerPrefix))
         case Failure(e) =>
           problemReport(e)
       }
     } else {
       problemReport(new Exception("No default endorser defined"))
+    }
+  }
+
+  private def prepareDidJson(targetDid: String, verkey: String): String = {
+    // This assumes an indy ledger, as the txnSpecificParams for VDRTools prepare DID Cheqd API have not been finalized
+    s"{dest: $targetDid, verkey: $verkey}"
+  }
+
+  private def prepareTxnForEndorsement(fqSubmitterDID: FqDID,
+                                       didJson: String,
+                                       endorserDid: DidStr)
+                                      (handleResult: Try[TxnForEndorsement] => Unit): Unit = {
+    if (endorserDid.nonEmpty) {
+      ctx.ledger
+        .prepareDidTxn(
+          didJson,
+          fqSubmitterDID,
+          Option(endorserDid)) {
+          case Success(pt: PreparedTxn) =>
+            signPreparedTxn(pt, fqSubmitterDID) {
+              case Success(smr: SignedMsgResult) =>
+                //NOTE: what about other endorsementSpecType (cheqd etc)
+                if (pt.isEndorsementSpecTypeIndy) {
+                  val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(extractUnqualifiedDidStr(fqSubmitterDID) -> smr.signatureResult.toBase58))
+                  handleResult(Success(txn))
+                } else {
+                  handleResult(Failure(new RuntimeException("endorsement spec type not supported: " + pt.endorsementSpec)))
+                }
+              case Failure(ex) =>
+                handleResult(Failure(ex))
+            }
+          case Failure(ex) =>
+            handleResult(Failure(ex))
+        }
+    }  else {
+      handleResult(Failure(new Exception("No default endorser defined")))
+    }
+  }
+
+  //NOTE: handling legacy and new fqSubmitterDID (as legacy one would NOT have been created in wallet with namespace prefix)
+  private def signPreparedTxn(pt: PreparedTxn,
+                              fqSubmitterDID: FqDID)
+                             (handleResult: Try[SignedMsgResult] => Unit): Unit = {
+    ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(fqSubmitterDID)) {
+      case Success(resp) =>
+        handleResult(Try(resp))
+      case Failure(_) =>
+        ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID)))(handleResult)
     }
   }
 

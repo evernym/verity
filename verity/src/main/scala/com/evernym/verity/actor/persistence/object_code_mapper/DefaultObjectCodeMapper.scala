@@ -333,7 +333,7 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     272 -> issuerSetup_v07.CreatePublicIdentifierCompleted,
     273 -> issuerSetup_v07.DIDWritten,
     274 -> issuerSetup_v07.AskedForEndorsement,
-    275 -> issuerSetup_v07.WriteFailed
+    275 -> issuerSetup_v07.IssuerSetupFailed
   )
 
 }

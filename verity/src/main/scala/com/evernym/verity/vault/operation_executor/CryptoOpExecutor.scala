@@ -54,7 +54,7 @@ object CryptoOpExecutor extends OpExecutorBase {
         case e: InvalidStructureException =>
           throw new BadRequestErrorException(
             INVALID_VALUE.statusCode,
-            Option("invalid sealed/encrypted box: " + e.getMessage),
+            Option("invalid sealed/encrypted box: " + e.getSdkMessage),
             errorDetail = buildOptionErrorDetail(e))
         case e: Exception =>
           throw new BadRequestErrorException(
@@ -91,12 +91,12 @@ object CryptoOpExecutor extends OpExecutorBase {
         case e: WalletItemNotFoundException =>
           throw new BadRequestErrorException(
             INVALID_VALUE.statusCode,
-            Option(e.getMessage),
+            Option(e.getSdkMessage),
             errorDetail = Option(Exceptions.getStackTraceAsSingleLineString(e)))
         case e: InvalidStructureException =>
           throw new BadRequestErrorException(
             INVALID_VALUE.statusCode,
-            Option("invalid packed message: " + e.getMessage),
+            Option("invalid packed message: " + e.getSdkMessage),
             errorDetail = buildOptionErrorDetail(e))
         case e: Exception =>
           throw new BadRequestErrorException(

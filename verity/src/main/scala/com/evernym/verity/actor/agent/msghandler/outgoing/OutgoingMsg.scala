@@ -100,7 +100,7 @@ trait SendOutgoingMsg {
  */
 case class SendStoredMsgToMyDomain(msgId: MsgId) extends ActorMessage
 
-case class JsonMsg(msg: String)
+case class JsonMsg(msg: String) extends ActorMessage
 
 /**
  * final outgoing message (packed or plain) to be stored and/or sent

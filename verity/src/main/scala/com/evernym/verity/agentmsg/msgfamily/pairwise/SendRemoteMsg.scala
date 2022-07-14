@@ -9,7 +9,6 @@ import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkOptionalNotEmpty, checkRequired}
-import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, SenderAgencyDetail, SenderDetail}
 import org.json.JSONObject
 
@@ -22,7 +21,7 @@ case class SendRemoteMsgReq_MFV_0_6(`@type`: String,
                                     `~thread`: Option[Thread] = None,
                                     title: Option[String] = None,
                                     detail: Option[String] = None,
-                                    replyToMsgId: Option[String]=None) extends MsgBase {
+                                    replyToMsgId: Option[String]=None) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@id", `@id`)
@@ -42,7 +41,7 @@ case class CreateMsgReqMsg_MFV_0_5(`@type`: TypeDetail,
                                    uid: Option[String] = None,
                                    replyToMsgId: Option[String] = None,
                                    thread: Option[Thread]=None,
-                                   sendMsg: Boolean = false) extends MsgBase {
+                                   sendMsg: Boolean = false) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("mtype", mtype)
@@ -56,7 +55,7 @@ case class AnswerMsgReqMsg_MFV_0_5(`@type`: TypeDetail,
                                    uid: Option[String] = None,
                                    replyToMsgId: Option[String] = None,
                                    thread: Option[Thread]=None,
-                                   sendMsg: Boolean = false) extends MsgBase {
+                                   sendMsg: Boolean = false) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("mtype", mtype)
@@ -70,7 +69,7 @@ case class RedirectMsgReqMsg_MFV_0_5(`@type`: TypeDetail,
                                      uid: Option[String] = None,
                                      replyToMsgId: Option[String] = None,
                                      thread: Option[Thread]=None,
-                                     sendMsg: Boolean = false) extends MsgBase {
+                                     sendMsg: Boolean = false) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("mtype", mtype)
@@ -84,7 +83,7 @@ case class RedirectedMsgReqMsg_MFV_0_5(`@type`: TypeDetail,
                                        uid: Option[String] = None,
                                        replyToMsgId: Option[String] = None,
                                        thread: Option[Thread]=None,
-                                       sendMsg: Boolean = false) extends MsgBase {
+                                       sendMsg: Boolean = false) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("mtype", mtype)
@@ -100,7 +99,7 @@ case class GeneralCreateMsgDetail_MFV_0_5(`@type`: TypeDetail,
                                           title: Option[String] = None,
                                           detail: Option[String] = None,
                                           senderName: Option[String] = None,
-                                          senderLogoUrl: Option[String] = None) extends MsgBase {
+                                          senderLogoUrl: Option[String] = None) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@msg", `@msg`)
@@ -116,7 +115,7 @@ case class InviteCreateMsgDetail_MFV_0_5(`@type`: TypeDetail,
                                          keyDlgProof: AgentKeyDlgProof,
                                          phoneNo: Option[String] = None,
                                          targetName: Option[String] = None,
-                                         includePublicDID: Option[Boolean] = Option(false)) extends MsgBase {
+                                         includePublicDID: Option[Boolean] = Option(false)) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("keyDlgProof", keyDlgProof)
@@ -129,7 +128,7 @@ case class AnswerInviteMsgDetail_MFV_0_5(`@type`: TypeDetail,
                                          senderDetail: SenderDetail,
                                          senderAgencyDetail: SenderAgencyDetail,
                                          answerStatusCode: String,
-                                         keyDlgProof: Option[AgentKeyDlgProof]) extends MsgBase {
+                                         keyDlgProof: Option[AgentKeyDlgProof]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("senderDetail", senderDetail)
@@ -143,7 +142,7 @@ case class RedirectConnReqMsgDetail_MFV_0_5(`@type`: TypeDetail,
                                             senderDetail: SenderDetail,
                                             senderAgencyDetail: SenderAgencyDetail,
                                             redirectDetail: JSONObject,
-                                            keyDlgProof: Option[AgentKeyDlgProof]) extends MsgBase {
+                                            keyDlgProof: Option[AgentKeyDlgProof]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("senderDetail", senderDetail)
@@ -166,9 +165,9 @@ case class SendRemoteMsg(msgFamilyDetail: MsgFamilyDetail,
                          senderLogoUrl: Option[String]=None)
 
 
-case class RemoteMsgSent_MFV_0_6(`@type`: String, `@id`: MsgId, sent: Boolean) extends MsgBase
+case class RemoteMsgSent_MFV_0_6(`@type`: String, `@id`: MsgId, sent: Boolean) extends LegacyMsgBase
 
-case class MsgCreatedRespMsg_MFV_0_5(`@type`: TypeDetail, uid: MsgId) extends MsgBase
+case class MsgCreatedRespMsg_MFV_0_5(`@type`: TypeDetail, uid: MsgId) extends LegacyMsgBase
 
 
 object SendRemoteMsgHelper {
@@ -179,7 +178,7 @@ object SendRemoteMsgHelper {
 
   private def buildReqMsgFrom_MFV_0_6(implicit amw: AgentMsgWrapper): SendRemoteMsg = {
     val msg = amw.headAgentMsg.convertTo[SendRemoteMsgReq_MFV_0_6]
-    SendRemoteMsg(amw.headAgentMsgDetail, msg.`@id`, msg.mtype, msg.`@msg`.toString().getBytes,
+    SendRemoteMsg(amw.headAgentMsgDetail, msg.`@id`, msg.mtype, msg.`@msg`.toString.getBytes,
       msg.sendMsg, msg.threadOpt, msg.replyToMsgId, msg.title, msg.detail)
   }
 

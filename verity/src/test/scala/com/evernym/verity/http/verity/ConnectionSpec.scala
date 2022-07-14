@@ -87,7 +87,7 @@ trait ConnectionSpec { this: VerityEndpointHandlerSpec =>
     }
 
     "when sent get invite detail with sms url for expired invite" - {
-      "should respond with expired invite" taggedAs (UNSAFE_IgnoreLog) in {
+      "should respond with expired invite" taggedAs UNSAFE_IgnoreLog in {
         eventually {
           val inviteToken = getLastInviteUrlToken
           val inviteUrl = testMsgSendingSvc
@@ -112,7 +112,7 @@ trait ConnectionSpec { this: VerityEndpointHandlerSpec =>
     "Consumer cloud agent" - {
       //TODO: need better wording here about what it is doing
       "when mimicing receiving connection request answer" - {
-        "should be able to successfully setup required data" taggedAs (UNSAFE_IgnoreLog) in {
+        "should be able to successfully setup required data" taggedAs UNSAFE_IgnoreLog in {
           addAgencyEndpointToLedger(mockEnv.cloudAgent.agencyAgentDetailReq.DID,
             mockEnv.cloudAgent.agencyEndpoint.toString)
           val le = mockEnv.edgeAgent.addNewLocalPairwiseKey(connIda1)

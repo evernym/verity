@@ -33,7 +33,7 @@ object ConfigUtil {
     * For example: "akka.sharding-region-name.user-agent" would
     * return "user-agent"
     *
-    * @param keyPath
+    * @param keyPath key path
     * @return last segment of a HOCON path
     */
   def lastKeySegment(keyPath: String): String = {

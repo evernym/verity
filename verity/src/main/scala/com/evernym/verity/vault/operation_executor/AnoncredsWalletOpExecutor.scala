@@ -46,7 +46,7 @@ object AnoncredsWalletOpExecutor extends OpExecutorBase {
   def handleStoreCred(sc: StoreCred)(implicit we: WalletExt, ec: ExecutionContext): Future[CredStored] = {
     Anoncreds.proverStoreCredential(we.wallet,
       sc.credId, sc.credReqMetadataJson, sc.credJson, sc.credDefJson, sc.revRegDefJson)
-      .map (c => CredStored(c))
+      .map (credId => CredStored(credId))
   }
 
   def handleCredForProofReq(cfpr: CredForProofReq)(implicit we: WalletExt, ec: ExecutionContext): Future[CredForProofReqCreated] = {

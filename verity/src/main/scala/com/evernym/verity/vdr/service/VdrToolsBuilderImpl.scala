@@ -2,13 +2,14 @@ package com.evernym.verity.vdr.service
 
 import com.evernym.vdrtools.vdr.VdrBuilder
 import com.evernym.vdrtools.vdr.VdrParams.TaaConfig
+import com.evernym.verity.config.AppConfig
 
 import java.util.concurrent.CompletableFuture
 import scala.jdk.CollectionConverters._
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class VdrToolsBuilderImpl extends VdrToolsBuilder {
+class VdrToolsBuilderImpl(appConfig: AppConfig)(implicit ec: ExecutionContext) extends VdrToolsBuilder {
 
   private val builder = VdrBuilder.create()
 

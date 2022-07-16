@@ -2,7 +2,7 @@ package com.evernym.verity.eventing.adapters.kafka.consumer
 
 import akka.Done
 import akka.actor.typed.{ActorSystem => TypedActorSystem}
-import akka.kafka.ConsumerMessage.{CommittableMessage, CommittableOffset}
+import akka.kafka.ConsumerMessage.CommittableOffset
 import akka.kafka.Subscriptions
 import akka.kafka.scaladsl.Consumer.DrainingControl
 import akka.kafka.scaladsl.{Committer, Consumer}
@@ -48,29 +48,30 @@ class KafkaConsumerAdapter(override val messageHandler: MessageHandler,
         //because we want to commit the offset, it makes sense to use `mapAsync` instead of `mapAsyncUnordered`
         // otherwise the last offset which gets committed may not be the desired one (because futures can complete in any order)
         .mapAsync(settingsProvider.msgHandlingParallelism) { committableMsg =>   //how many futures in parallel to process each received message
+          val logMsgPrefix = s"[${committableMsg.record.topic()}/${committableMsg.record.partition()}/${committableMsg.record.offset()}]"
           Try {
-            logger.info(prepareLogMsgStr(committableMsg, s"committable message received: $committableMsg"))
+            logger.info(s"$logMsgPrefix: committable message received: $committableMsg")
             val createTime = Instant.ofEpochMilli(committableMsg.record.timestamp())
             val metadata = Metadata(committableMsg.record.topic(), committableMsg.record.partition(), committableMsg.record.offset(), createTime)
             val cloudEvent = new JSONObject(new String(committableMsg.record.value()))
             val message = Message(metadata, cloudEvent)
-            logger.info(prepareLogMsgStr(committableMsg, s"committable message parsed successfully"))
+            logger.info(s"$logMsgPrefix: committable message parsed successfully")
             messageHandler
               .handleMessage(message)
               .map { _ =>
-                logger.info(prepareLogMsgStr(committableMsg, s"event processed successfully"))
+                logger.info(s"$logMsgPrefix: event processed successfully")
                 committableMsg.committableOffset
               }.recover {
                 case e: Throwable =>
-                  logger.error(prepareLogMsgStr(committableMsg, s"error while handling consumed event: ${e.getMessage}"))
+                  logger.error(s"$logMsgPrefix: error while handling consumed event: ${e.getMessage}")
                   committableMsg.committableOffset
               }
           } match {
             case Success(result: Future[CommittableOffset]) =>
-              logger.info(prepareLogMsgStr(committableMsg,s"event handled successfully"))
+              logger.info(s"$logMsgPrefix: event handled successfully")
               result
             case Failure(ex)     =>
-              logger.error(prepareLogMsgStr(committableMsg,s"error while parsing/processing consumed event: ${ex.getMessage}"))
+              logger.error(s"$logMsgPrefix: error while parsing/processing consumed event: ${ex.getMessage}")
               Future.successful(committableMsg.committableOffset)
           }
         }
@@ -86,9 +87,5 @@ class KafkaConsumerAdapter(override val messageHandler: MessageHandler,
     logger.info("kafka consumer is about to be stopped.")
     controller.map(_.drainAndShutdown())
     controller.map(_.isShutdown).getOrElse(Future.successful(Done))
-  }
-
-  private def prepareLogMsgStr(msg: CommittableMessage[String, Array[Byte]], str: String): String = {
-    s"[${msg.record.topic()}-${msg.record.partition()}:${msg.record.offset()}(committableOffset: ${msg.committableOffset})] $str"
   }
 }

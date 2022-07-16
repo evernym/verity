@@ -5,6 +5,7 @@ import akka.actor.ActorSystem
 import akka.stream.alpakka.s3.BucketAccess.{AccessGranted, NotExists}
 import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
+import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.storage_services.aws_s3.S3AlpakkaApi
@@ -70,7 +71,7 @@ class AlpakkaS3APISpec
   val appConfig = new TestAppConfig(Some{
     ConfigFactory.parseString(testConfig).resolve()
   })
-  lazy implicit val system: ActorSystem = ActorSystem("alp-akka-s3", appConfig.config)
+  lazy implicit val system: ActorSystem = ActorSystemVanilla("alp-akka-s3", appConfig.config)
 
   val DEV_S3_BUCKET: String = appConfig.config.getConfig("verity.blob-store").getString("bucket-name")
 

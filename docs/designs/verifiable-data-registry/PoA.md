@@ -8,24 +8,19 @@ Once we are live with it, we'll remove the old/unused configuration/code
 verity {
     ...
 
-    # vdr-tools implementation specific config
-    vdr-tools {
-        library-dir-location = "/usr/lib"
-        wallet {
-            type = "mysql"
-        }
+    # vdr (ledgers) specific configs (irrespective of which vdr-tools implementation gets used)
+    vdr: {
+        unqualified-ledger-prefix = "did:indy:sovrin"
+        ledgers: [
+            # there can be more than one ledger of same 'type'
+            # it is just that the namespaces should be unique among all ledger entries in this section 
+            {
+                type = "indy"
+                namespaces = ["indy:sovrin"]
+                ...
+            }
+        ]
     }
-
-    # vdrs (ledgers) specific configs (irrespective of which vdr-tools implementation gets used)
-    vdrs: [
-        # there can be more than one ledger of same 'type'
-        # it is just that the namespaces should be unique among all VDR entries in this section 
-        {
-            type = "indy-ledger"
-            namespaces = ["indy:sovrin", "sov"]
-            ...
-        }
-    ]
     ...
 }
 ```
@@ -127,7 +122,9 @@ verity {
       def submitTxn(...)
    }
 
-   case class VDRToolsConfig(libDirLocation: String, ledgers: List[Ledger])   
+   case class VDRToolsConfig(unqualifiedLedgerPrefix: LedgerPrefix,
+                             ledgerPrefixMapping: Map[LedgerPrefix, LedgerPrefix], 
+                             ledgers: List[Ledger])   
    sealed trait Ledger
    case class IndyLedger(namespaces: List[Namespace], genesisTxnFilePath: String, taaConfig: Option[TAAConfig]) 
      extends Ledger

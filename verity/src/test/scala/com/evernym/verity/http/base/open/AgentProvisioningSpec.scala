@@ -30,7 +30,7 @@ trait AgentProvisioningSpec { this : EdgeEndpointBaseSpec =>
       "should respond with proper error msg" in {
         buildAgentPostReq("garbage".getBytes) ~> epRoutes ~> check {
           status shouldBe BadRequest
-          responseTo[StatusDetailResp] shouldBe StatusDetailResp(INVALID_VALUE.statusCode, "invalid sealed/encrypted box: A value being processed is not valid.", None)
+          responseTo[StatusDetailResp] shouldBe StatusDetailResp(INVALID_VALUE.statusCode, "invalid sealed/encrypted box: Error: Invalid structure\n  Caused by: Unable to open sodium sealedbox\n", None)
         }
       }
     }

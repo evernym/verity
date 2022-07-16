@@ -9,7 +9,7 @@ import com.evernym.verity.actor.testkit.actor.{ActorSystemConfig, MockAppConfig,
 import com.evernym.verity.actor.testkit.checks.ChecksAkkaEvents
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.testkit.{BasicSpecBase, CleansUpIndyClientFirst}
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigValueFactory}
 import org.iq80.leveldb.util.FileUtils
 import org.scalatest.{BeforeAndAfterAll, Suite, TestSuite}
 
@@ -18,6 +18,7 @@ import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.util2.ActorErrorResp
 import com.evernym.verity.observability.metrics.{MetricsWriterExtension, TestMetricsBackend}
 
+import java.time.LocalDate
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
 
@@ -59,7 +60,11 @@ class TestAppConfig(newConfig: Option[Config] = None,
     this
   }
 
-  lazy val baseConfig: Config = getLoadedConfig
+  lazy val baseConfig: Config =
+    getLoadedConfig
+      .withValue("verity.lib-vdrtools.ledger.indy.transaction_author_agreement.agreements.\"1.0.0\".time-of-acceptance",
+        ConfigValueFactory.fromAnyRef(LocalDate.now().toString))
+
   override var config: Config = _
 }
 object TestAppConfig {

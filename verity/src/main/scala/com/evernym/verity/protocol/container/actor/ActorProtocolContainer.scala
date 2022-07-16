@@ -312,18 +312,22 @@ class ActorProtocolContainer[
   implicit def asyncOpRunner: AsyncOpRunner = this
 
 
+  lazy val vdrUnqualifiedLedgerPrefix: String = appConfig.getStringReq(VDR_UNQUALIFIED_LEDGER_PREFIX)
+  lazy val vdrLedgerPrefixMappings: Map[String, String] = appConfig.getMap(VDR_LEDGER_PREFIX_MAPPINGS)
+
   override lazy val wallet =
     new WalletAccessAdapter(
-        agentActorContext.walletAPI,
-        getRoster.selfId_!
+      agentActorContext.walletAPI,
+      getRoster.selfId_!
     )
 
   override lazy val ledger =
     new LedgerAccessAdapter(
-      null, //TODO: replace this with actual VDR Adapter implementation
-        agentActorContext.generalCache,
-        agentActorContext.ledgerSvc,
-        wallet
+      agentActorContext.vdrAdapter,
+      agentActorContext.vdrCache,
+      wallet,
+      vdrUnqualifiedLedgerPrefix,
+      vdrLedgerPrefixMappings
     )
 
   override lazy val endorser =
@@ -342,8 +346,8 @@ class ActorProtocolContainer[
 
   override lazy val segmentStore =
     new SegmentStoreAccessAdapter(
-        agentActorContext.storageAPI,
-        getProtoRef
+      agentActorContext.storageAPI,
+      getProtoRef
     )
 
   lazy val singletonParentProxyActor: ActorRef = getActorRefFromSelection(SINGLETON_PARENT_PROXY, context.system)(appConfig)

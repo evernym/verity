@@ -128,7 +128,7 @@ object ProofRequestUtil {
             attrs,
             preds,
             request.revocation_interval,
-            Some("1.0")
+            Some(CL_PROOF_REQ_VERSION)
           )
         )
       case Failure(exception) => Failure(exception)
@@ -155,7 +155,7 @@ object ProofRequestUtil {
             attrs,
             preds,
             revocationInterval,
-            Some("1.0")
+            Some(CL_PROOF_REQ_VERSION)
           )
         )
       case Failure(exception) => Failure(exception)
@@ -267,4 +267,10 @@ object ProofRequestUtil {
       }.toMap
   }
 
+  /**
+   * if this is set to:
+   *  "1.0": Then holder will use unqualified identifiers into the proof
+   *  "2.0": Then holder will use fully-qualified identifiers into the proof
+   */
+  val CL_PROOF_REQ_VERSION = "1.0"
 }

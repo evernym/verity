@@ -3,8 +3,10 @@ package com.evernym.verity.vdr
 import akka.actor.typed.scaladsl.adapter._
 import akka.testkit.TestKitBase
 import com.evernym.verity.actor.testkit.HasBasicActorSystem
+import com.evernym.verity.protocol.testkit.MockLedger.{TEST_INDY_LEDGER_PREFIX, ledgerPrefixMappings}
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.vdr.base.TestVDRDidDoc
 import com.evernym.verity.vdr.service.{IndyLedger, Ledger, VDRToolsConfig}
 import org.json.JSONObject
 import org.scalatest.BeforeAndAfterEach
@@ -22,7 +24,7 @@ class VDRActorAdapterSpec
     with Eventually
     with BeforeAndAfterEach {
 
-  var testLedgerRegistry: TestLedgerRegistry = TestLedgerRegistry()
+  var testLedgerRegistry: MockLedgerRegistry = MockLedgerRegistry()
 
   override protected def afterEach(): Unit = {
     testLedgerRegistry.cleanup()
@@ -76,38 +78,20 @@ class VDRActorAdapterSpec
     }
 
     "when asked to prepare schema txn with non fqdid" - {
-      "should result in failure" in {
-        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
-        val ex = intercept[RuntimeException] {
-          Await.result(
-            vdrAdapter.prepareSchemaTxn(
-              "{}",
-              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
-              "did1",
-              None
-            ),
-            apiTimeout
-          )
-        }
-        ex.getMessage shouldBe "invalid identifier: did1"
-      }
-    }
-
-    "when asked to prepare schema txn with non fqSchemaId" - {
-      "should result in failure" in {
+      "should be still successful" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val ex = intercept[RuntimeException] {
           Await.result(
             vdrAdapter.prepareSchemaTxn(
               "{}",
               "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
-              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
+              "did1",
               None
             ),
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid identifier: F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+        ex.getMessage shouldBe "could not extract namespace for given identifier: Some(did1) (vdrUnqualifiedLedgerPrefix: None)"
       }
     }
 
@@ -117,7 +101,7 @@ class VDRActorAdapterSpec
         Await.result(
           vdrAdapter.prepareSchemaTxn(
             "{}",
-            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           ),
@@ -132,7 +116,7 @@ class VDRActorAdapterSpec
         val result = for {
           preparedTxn <- vdrAdapter.prepareSchemaTxn(
             """{"field1":"value1"}""",
-            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           )
@@ -144,16 +128,21 @@ class VDRActorAdapterSpec
       }
     }
 
-    "when asked to resolve schema for invalid schema id" - {
-      "it should fail" in {
+    "when asked to submit schema txn without submitter DID on ledger" - {
+      "should respond with appropriate error" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
-        val ex = intercept[RuntimeException] {
-          Await.result(
-            vdrAdapter.resolveSchema("did1"),
-            apiTimeout
+        val result = for {
+          preparedTxn <- vdrAdapter.prepareSchemaTxn(
+            """{"field1":"value1"}""",
+            "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
+            None
           )
+          _ <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
+        } yield {
+          //nothing to validate
         }
-        ex.getMessage shouldBe "invalid identifier: did1"
+        Await.result(result, apiTimeout)
       }
     }
 
@@ -162,11 +151,11 @@ class VDRActorAdapterSpec
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val ex = intercept[RuntimeException] {
           Await.result(
-            vdrAdapter.resolveSchema("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"),
+            vdrAdapter.resolveSchema("F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"),
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "schema not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+        ex.getMessage shouldBe "schema not found for given id: F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
       }
     }
 
@@ -176,17 +165,17 @@ class VDRActorAdapterSpec
         val result = for {
           preparedTxn <- vdrAdapter.prepareSchemaTxn(
             """{"field1":"value1"}""",
-            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           )
           _ <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
-          schema <- vdrAdapter.resolveSchema("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1")
+          schema <- vdrAdapter.resolveSchema("F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1")
         } yield {
-          schema.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+          schema.fqId shouldBe "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
           val json = new JSONObject(schema.json)
           json.getString("field1") shouldBe "value1"
-          json.getString("id") shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+          json.getString("id") shouldBe "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
         }
         Await.result(result, apiTimeout)
       }
@@ -199,32 +188,14 @@ class VDRActorAdapterSpec
           Await.result(
             vdrAdapter.prepareCredDefTxn(
               """{"schemaId":"schema-id"}""",
-              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+              "F72i3Y3Q4i466efjYJYCHM:3:CL:466:tag",
               "did1",
               None
             ),
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid identifier: did1"
-      }
-    }
-
-    "when asked to prepare cred def txn with non fqSchemaId" - {
-      "should result in failure" in {
-        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
-        val ex = intercept[RuntimeException] {
-          Await.result(
-            vdrAdapter.prepareCredDefTxn(
-              """{"schemaId":"schema-id"}""",
-              "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
-              "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
-              None
-            ),
-            apiTimeout
-          )
-        }
-        ex.getMessage shouldBe "invalid identifier: F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+        ex.getMessage shouldBe "could not extract namespace for given identifier: Some(did1) (vdrUnqualifiedLedgerPrefix: None)"
       }
     }
 
@@ -234,7 +205,7 @@ class VDRActorAdapterSpec
         Await.result(
           vdrAdapter.prepareCredDefTxn(
             """{"schemaId":"schema-id"}""",
-            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "F72i3Y3Q4i466efjYJYCHM:3:CL:345:tag0",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           ),
@@ -249,7 +220,7 @@ class VDRActorAdapterSpec
         val result = for {
           preparedTxn <- vdrAdapter.prepareCredDefTxn(
             """{"schemaId":"schema-id"}""",
-            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            "F72i3Y3Q4i466efjYJYCHM:3:CL:345:tag0",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           )
@@ -261,29 +232,16 @@ class VDRActorAdapterSpec
       }
     }
 
-    "when asked to resolve cred def for invalid cred def id" - {
-      "it should fail" in {
-        val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
-        val ex = intercept[RuntimeException] {
-          Await.result(
-            vdrAdapter.resolveCredDef("did1"),
-            apiTimeout
-          )
-        }
-        ex.getMessage shouldBe "invalid identifier: did1"
-      }
-    }
-
     "when asked to resolve cred def for non existent one" - {
       "it should fail" in {
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val ex = intercept[RuntimeException] {
           Await.result(
-            vdrAdapter.resolveCredDef("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"),
+            vdrAdapter.resolveCredDef("F72i3Y3Q4i466efjYJYCHM:3:CL:466:tag0"),
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "cred def not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+        ex.getMessage shouldBe "cred def not found for given id: F72i3Y3Q4i466efjYJYCHM:3:CL:466:tag0"
       }
     }
 
@@ -292,19 +250,19 @@ class VDRActorAdapterSpec
         val vdrAdapter = createVDRActorAdapter(List(defaultIndyLedger))
         val result = for {
           preparedTxn <- vdrAdapter.prepareCredDefTxn(
-            """{"schemaId":"schema-id"}""",
-            "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1",
+            """{"schemaId":"F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"}""",
+            "F72i3Y3Q4i466efjYJYCHM:3:CL:466:tag",
             "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM",
             None
           )
           _ <- vdrAdapter.submitTxn(preparedTxn, "signature".getBytes, Array.empty)
-          credDef <- vdrAdapter.resolveCredDef("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1")
+          credDef <- vdrAdapter.resolveCredDef("F72i3Y3Q4i466efjYJYCHM:3:CL:466:tag")
         } yield {
-          credDef.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
-          credDef.schemaId shouldBe "schema-id"
+          credDef.fqId shouldBe "F72i3Y3Q4i466efjYJYCHM:3:CL:466:tag"
+          credDef.fqSchemaId shouldBe "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
           val json = new JSONObject(credDef.json)
-          json.getString("schemaId") shouldBe "schema-id"
-          json.getString("id") shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+          json.getString("schemaId") shouldBe "F72i3Y3Q4i466efjYJYCHM:2:degree:1.1.1"
+          json.getString("id") shouldBe "F72i3Y3Q4i466efjYJYCHM:3:CL:466:tag"
         }
         Await.result(result, apiTimeout)
       }
@@ -319,7 +277,7 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "invalid identifier: did1"
+        ex.getMessage shouldBe "could not extract namespace for given identifier: Some(did1) (vdrUnqualifiedLedgerPrefix: None)"
       }
     }
 
@@ -332,7 +290,7 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "did doc not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM"
+        ex.getMessage shouldBe "did doc not found for given id: did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM (available did docs: )"
       }
     }
 
@@ -366,16 +324,16 @@ class VDRActorAdapterSpec
 
   def createVDRActorAdapter(ledgers: List[Ledger]): VDRActorAdapter = {
 
-    val testVdrToolsBuilder = new TestVdrToolsBuilder(testLedgerRegistry)
+    val testVdrToolsBuilder = new MockVdrToolsBuilder(testLedgerRegistry)
     val testVDRToolsFactory = { () => testVdrToolsBuilder }
-    val vdrToolsConfig = VDRToolsConfig(ledgers)
+    val vdrToolsConfig = VDRToolsConfig(TEST_INDY_LEDGER_PREFIX, ledgerPrefixMappings, ledgers)
     new VDRActorAdapter(testVDRToolsFactory, vdrToolsConfig, None)(ec, system.toTyped)
   }
 
   lazy val apiTimeout: FiniteDuration = 5.seconds
 
   lazy val defaultIndyLedger: IndyLedger = IndyLedger(List("indy:sovrin", "sov"), "genesis1-path", None)
-  lazy val anotherIndyLedger: IndyLedger = IndyLedger(List("indy:sovrin", "sov"), "genesis2-path", None)
+  lazy val anotherIndyLedger: IndyLedger = IndyLedger(List("indy:sovrin", "sov", "cheqd"), "genesis2-path", None)
 
   implicit lazy val ecp: ExecutionContextProvider = new ExecutionContextProvider(appConfig)
   implicit val ec: ExecutionContext = ecp.futureExecutionContext

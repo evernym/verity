@@ -7,13 +7,12 @@ import com.evernym.sdk.vcx.VcxException
 import com.evernym.sdk.vcx.utils.UtilsApi
 import com.evernym.sdk.vcx.vcx.VcxApi
 import com.evernym.sdk.vcx.wallet.WalletApi
-import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
 import com.evernym.verity.sdk.utils.Context
 import com.evernym.verity.sdk.wallet.DefaultWalletConfig
 import com.evernym.verity.util.ExceptionUtil
 import com.typesafe.scalalogging.Logger
-import org.json.JSONObject
+import org.json.{JSONArray, JSONObject}
 
 import java.util.UUID
 
@@ -31,6 +30,15 @@ protected trait VcxProvision {
       case _ => throw new UnsupportedOperationException("Only DefaultWalletConfig is support for VCX provider")
     }
 
+    val indyPoolNetwork = new JSONObject()
+    val namespaceList = new JSONArray()
+    namespaceList.put("indy:sovrin")
+    indyPoolNetwork.put("genesis_path", sdkConfig.verityInstance.ledgerConfig.genesisFilePath)
+    indyPoolNetwork.put("namespace_list", namespaceList)
+
+    val poolNetworks = new JSONArray()
+    poolNetworks.put(indyPoolNetwork)
+
     val provisionConfig: JSONObject = new JSONObject()
       .put("agency_url", context.verityUrl())
       .put("agency_did", context.verityPublicDID())
@@ -38,6 +46,7 @@ protected trait VcxProvision {
       .put("wallet_name", walletVal._1)
       .put("wallet_key", walletVal._2)
       .put("pool_name", UUID.randomUUID().toString)
+      .put("pool_networks", poolNetworks)
 
     logger.debug("provisionConfig: " + provisionConfig.toString())
     val config = new JSONObject(
@@ -46,7 +55,6 @@ protected trait VcxProvision {
 
     config.put("institution_logo_url", s"https://robohash.org/${UUID.randomUUID()}.png")
     config.put("institution_name", s"Bob")
-    config.put("genesis_path", sdkConfig.verityInstance.ledgerConfig.genesisFilePath)
     config.put("protocol_type", "3.0")
 
     VcxApi.vcxInitWithConfig(config.toString).get

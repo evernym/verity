@@ -37,7 +37,6 @@ class EndorserMessageHandler(config: Config,
     }
   }
 
-  //TODO: a high level implementation, it needs to be finalized/corrected as per final changes
   private def createCmd(message: Message, ref: ActorRef): Cmd = {
     val cloudEvent = message.cloudEvent
 

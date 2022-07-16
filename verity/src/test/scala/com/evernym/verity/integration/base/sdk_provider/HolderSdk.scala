@@ -13,11 +13,10 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateComMethodReqMsg
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{CreateKeyReqMsg_MFV_0_6, GetMsgsReqMsg_MFV_0_6, GetMsgsRespMsg_MFV_0_6, KeyCreatedRespMsg_MFV_0_6, MsgStatusUpdatedRespMsg_MFV_0_6, UpdateMsgStatusReqMsg_MFV_0_6}
 import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.{GetUpgradeInfo, UpgradeInfoRespMsg_MFV_1_0}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgTransformer}
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.NO
 import com.evernym.verity.did.DidPair
 import com.evernym.verity.integration.base.sdk_provider.MsgFamilyHelper.buildMsgTypeStr
-import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerTxnExecutor, Submitter}
+import com.evernym.verity.ledger.LedgerTxnExecutor
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
@@ -39,6 +38,8 @@ import com.evernym.verity.testkit.util.HttpUtil._
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.KeyParam
+import com.evernym.verity.vdr.{CredDef, Schema, VDRUtil}
+import com.evernym.verity.vdr.service.VdrTools
 import org.json.JSONObject
 
 import java.util.UUID
@@ -55,6 +56,7 @@ import scala.util.{Failure, Success, Try}
  */
 case class HolderSdk(param: SdkParam,
                      ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                     vdrTools: Option[VdrTools],
                      override val ec: ExecutionContext,
                      oauthParam: Option[OAuthParam]=None
                     ) extends SdkBase(param, ec) {
@@ -244,37 +246,39 @@ case class HolderSdk(param: SdkParam,
   }
 
   private def getCredDefJson(credDefId: String): String = {
-    val credDefResp = awaitLedgerReq(getCredDefFromLedger(Submitter(), credDefId))
-    DefaultMsgCodec.toJson(credDefResp.credDef.get)
+    val credDef = awaitLedgerReq(getCredDefFromLedger(credDefId))
+    credDef.json
   }
 
   private def doSchemaRetrieval(ids: Set[String]): String = {
-    val schemas = ids.map(id => (id, awaitLedgerReq(getSchemaFromLedger(Submitter(), id))))
-    schemas.map { case (id, getSchemaResp) =>
-      val schemaJson = DefaultMsgCodec.toJson(getSchemaResp.schema)
-      s""""$id": $schemaJson"""
+    val schemas = ids.map(id => (id, awaitLedgerReq(getSchemaFromLedger(id))))
+    schemas.map { case (id, schema) =>
+      s""""$id": ${schema.json}"""
     }.mkString("{", ",", "}")
   }
 
 
   private def doCredDefRetrieval(credDefIds: Set[String]): String = {
-    val credDefs = credDefIds.map(id => (id, awaitLedgerReq(getCredDefFromLedger(Submitter(), id))))
-    credDefs.map { case (id, getCredDefResp) =>
-      val credDefJson = DefaultMsgCodec.toJson(getCredDefResp.credDef)
-      s""""$id": $credDefJson"""
+    val credDefs = credDefIds.map(id => (id, awaitLedgerReq(getCredDefFromLedger(id))))
+    credDefs.map { case (id, credDef) =>
+      s""""$id": ${credDef.json}"""
     }.mkString("{", ",", "}")
   }
 
-  private def getCredDefFromLedger(submitter: Submitter, id: String): Future[GetCredDefResp] = {
-    ledgerTxnExecutor match {
-      case Some(lte)  => lte.getCredDef(submitter, id)
+  private def getCredDefFromLedger(id: String): Future[CredDef] = {
+    vdrTools match {
+      case Some(vt)  =>
+        val fqCredDefId = VDRUtil.toFqCredDefId_v0(id, None, Option("did:indy:sovrin"))
+        vt.resolveCredDef(fqCredDefId).map(CredDef(fqCredDefId, "", _))
       case None       => ???
     }
   }
 
-  private def getSchemaFromLedger(submitter: Submitter, id: String): Future[GetSchemaResp] = {
-    ledgerTxnExecutor match {
-      case Some(lte)  => lte.getSchema(submitter, id)
+  private def getSchemaFromLedger(id: String): Future[Schema] = {
+    vdrTools match {
+      case Some(vt)  =>
+        val fqSchemaId = VDRUtil.toFqSchemaId_v0(id, None, Option("did:indy:sovrin"))
+        vt.resolveSchema(fqSchemaId).map(Schema(fqSchemaId, _))
       case None       => ???
     }
   }

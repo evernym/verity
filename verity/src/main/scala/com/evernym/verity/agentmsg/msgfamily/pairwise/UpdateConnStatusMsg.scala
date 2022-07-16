@@ -4,18 +4,17 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
 
-case class UpdateConnStatusReqMsg_MFV_0_5(`@type`: TypeDetail, statusCode: String) extends MsgBase {
+case class UpdateConnStatusReqMsg_MFV_0_5(`@type`: TypeDetail, statusCode: String) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("statusCodes", statusCode)
   }
 }
 
-case class UpdateConnStatusReqMsg_MFV_0_6(`@type`: String, statusCode: String) extends MsgBase {
+case class UpdateConnStatusReqMsg_MFV_0_6(`@type`: String, statusCode: String) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("statusCodes", statusCode)
@@ -24,9 +23,9 @@ case class UpdateConnStatusReqMsg_MFV_0_6(`@type`: String, statusCode: String) e
 
 case class UpdateConnStatusReqMsg(msgFamilyDetail: MsgFamilyDetail, statusCode: String)
 
-case class ConnStatusUpdatedRespMsg_MFV_0_5(`@type`: TypeDetail, statusCode: String) extends MsgBase
+case class ConnStatusUpdatedRespMsg_MFV_0_5(`@type`: TypeDetail, statusCode: String) extends LegacyMsgBase
 
-case class ConnStatusUpdatedRespMsg_MFV_0_6(`@type`: String, statusCode: String) extends MsgBase
+case class ConnStatusUpdatedRespMsg_MFV_0_6(`@type`: String, statusCode: String) extends LegacyMsgBase
 
 
 object UpdateConnStatusMsgHelper {

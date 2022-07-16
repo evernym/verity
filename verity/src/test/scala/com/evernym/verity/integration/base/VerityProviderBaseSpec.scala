@@ -9,6 +9,9 @@ import com.evernym.verity.ledger.LedgerTxnExecutor
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider}
+import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
+import com.evernym.verity.vdr.service.VdrTools
+import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockVdrTools}
 import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
 import com.typesafe.scalalogging.Logger
 import org.scalatest.{BeforeAndAfterAll, Suite}
@@ -57,6 +60,10 @@ trait VerityProviderBaseSpec
     def withConfig(config: Config): VerityEnvBuilder = copy(overriddenConfig = Option(config))
     def withLedgerTxnExecutor(ledgerTxnExecutor: LedgerTxnExecutor): VerityEnvBuilder = {
       val newServiceParam = serviceParam.getOrElse(defaultSvcParam).withLedgerTxnExecutor(ledgerTxnExecutor)
+      copy(serviceParam = Option(newServiceParam))
+    }
+    def withVdrTools(vdrTools: VdrTools): VerityEnvBuilder = {
+      val newServiceParam = serviceParam.getOrElse(defaultSvcParam).withVdrTools(vdrTools)
       copy(serviceParam = Option(newServiceParam))
     }
 
@@ -172,7 +179,12 @@ trait VerityProviderBaseSpec
   // implementing class can override it or send specific one for specific verity instance as well
   // but for external storage type of services (like ledger) we should make sure
   // it is the same instance across the all verity environments
-  lazy val defaultSvcParam: ServiceParam = ServiceParam.empty.withLedgerTxnExecutor(new MockLedgerTxnExecutor(futureExecutionContext))
+  lazy val defaultSvcParam: ServiceParam =
+  ServiceParam
+    .empty
+    .withLedgerTxnExecutor(new MockLedgerTxnExecutor(futureExecutionContext))
+    .withVdrTools(new MockVdrTools(MockLedgerRegistry(
+      List(MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext))
 
   private def randomTmpDirPath(): Path = {
     val tmpDir = TempDir.findSuiteTempDir(this.suiteName)

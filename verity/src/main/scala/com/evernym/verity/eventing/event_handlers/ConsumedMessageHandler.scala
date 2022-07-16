@@ -38,7 +38,7 @@ class ConsumedMessageHandler(config: Config,
     } catch {
       case e: RuntimeException =>
         logger.info(s"could not process incoming '${message.metadata.topic}' topic message: " + message)
-        throw e
+        Future.failed(e)
     }
   }
 }

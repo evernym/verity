@@ -9,9 +9,10 @@ import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.WalletExt
-import com.evernym.vdrtools.InvalidStructureException
+import com.evernym.vdrtools.{IndyException, InvalidStructureException}
 import com.evernym.vdrtools.did.{Did, DidJSONParameters}
-import com.evernym.vdrtools.wallet.WalletItemAlreadyExistsException
+import com.evernym.vdrtools.wallet.{WalletItemAlreadyExistsException, WalletItemNotFoundException}
+import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -29,18 +30,22 @@ object DidOpExecutor extends OpExecutorBase {
     result
       .map(vk => GetVerKeyResp(vk))
       .recover {
-        case e: Exception => throw new ExecutionException(e)
+         case e: Exception => throw new ExecutionException(e)
       }
   }
 
   def handleCreateDID(d: CreateDID)(implicit we: WalletExt, ec: ExecutionContext): Future[NewKeyCreated] = {
-    val didJson = s"""{"crypto_type": "${d.keyType}"}"""
+    val didJson = new JSONObject()
+    didJson.put("crypto_type", d.keyType)
     Did
-      .createAndStoreMyDid(we.wallet, didJson)
+      .createAndStoreMyDid(we.wallet, didJson.toString)
       .map(r => NewKeyCreated(r.getDid, r.getVerkey))
       .recover {
+        case e: IndyException =>
+          logger.error("error while creating new DID: " + e.getSdkMessage)
+          throw e
         case e: Throwable =>
-          logger.error("error while creating new DID: " + Exceptions.getStackTraceAsSingleLineString(e))
+          logger.error("error while creating new DID: " + e.getMessage)
           throw e
       }
   }
@@ -53,14 +58,22 @@ object DidOpExecutor extends OpExecutorBase {
         .createAndStoreMyDid(we.wallet, DIDJson.toJson)
         .map( r => NewKeyCreated(r.getDid, r.getVerkey))
         .recover {
+          case e: IndyException =>
+            logger.error("error while creating new key: " + e.getSdkMessage)
+            throw e
           case e: Throwable =>
-            logger.error("error while creating new key: " + Exceptions.getStackTraceAsSingleLineString(e))
+            logger.error("error while creating new key: " + e.getMessage)
             throw e
         }
     } catch {
       case e: ExecutionException =>
         e.getCause match {
           case e: InvalidStructureException =>
+            throw new BadRequestErrorException(
+              INVALID_VALUE.statusCode,
+              Option(e.getSdkMessage),
+              errorDetail = Option(Exceptions.getStackTraceAsSingleLineString(e)))
+          case e: WalletItemNotFoundException =>
             throw new BadRequestErrorException(
               INVALID_VALUE.statusCode,
               Option(e.getMessage),
@@ -85,14 +98,17 @@ object DidOpExecutor extends OpExecutorBase {
       Did.storeTheirDid(we.wallet, DIDJson)
       .map(_ =>TheirKeyStored(stk.theirDID, stk.theirDIDVerKey))
         .recover {
+          case e: IndyException =>
+            logger.error("error while storing their key: " + e.getSdkMessage)
+            throw e
           case e: Throwable =>
-            logger.error("error while storing their key: " + Exceptions.getStackTraceAsSingleLineString(e))
+            logger.error("error while storing their key: " + e.getMessage)
             throw e
         }
     } catch {
-      case e: Exception if stk.ignoreIfAlreadyExists && e.getCause.isInstanceOf[WalletItemAlreadyExistsException] =>
+      case e: IndyException if stk.ignoreIfAlreadyExists && e.getCause.isInstanceOf[WalletItemAlreadyExistsException] =>
         Future(TheirKeyStored(stk.theirDID, stk.theirDIDVerKey))
-      case e: Exception if e.getCause.isInstanceOf[WalletItemAlreadyExistsException] =>
+      case e: IndyException if e.getCause.isInstanceOf[WalletItemAlreadyExistsException] =>
         throw new BadRequestErrorException(
           ALREADY_EXISTS.statusCode,
           Option("'their' pw keys are already in the wallet"),

@@ -44,26 +44,26 @@ val evernymDevRepo = DebianRepo(
 )
 
 //shared libraries versions
-val libVdrToolsVer = "0.8.4"
+val libVdrToolsVer = "0.8.6~1711"
 val sharedLibDeps = Seq(
   NonMatchingDistLib("libvdrtools", libVdrToolsVer, "libvdrtools.so"),
-  NonMatchingLib("libvcx", "0.14.0-bionic", "libvcx.so")  // For integration testing ONLY
+  NonMatchingLib("libvcx", "0.14.1-bionic~844", "libvcx.so")  // For integration testing ONLY
 )
 
 //deb package dependencies versions
 val debPkgDepLibVdrToolsMinVersion = libVdrToolsVer
 
 //dependency versions
-val vdrtoolsWrapperVer  = "0.8.4"
+val vdrtoolsWrapperVer  = "0.8.6-1711"
 val akkaVer             = "2.6.18"
 val akkaHttpVer         = "10.2.9"
 val akkaMgtVer          = "1.1.3"
 val alpAkkaS3Ver        = "3.0.3"
 val alpAkkaKafkaVer     = "3.0.0"
 val dynamoDbPersistence = "1.2.0-RC2"
-val kamonVer            = "2.5.4"
+val kamonVer            = "2.5.5"
 val kanelaAgentVer      = "1.0.14"
-val cinnamonVer         = "2.16.5"
+val cinnamonVer         = "2.17.0"
 val jacksonVer          = "2.13.3"
 val sdnotifyVer         = "1.3"
 val cloudEventsVersion  = "2.3.0"
@@ -72,7 +72,7 @@ val cloudEventsVersion  = "2.3.0"
 val scalatestVer        = "3.2.12"
 val mockitoVer          = "1.17.7"
 val veritySdkVer        = "0.6.1"
-val vcxWrapperVer       = "0.14.0"
+val vcxWrapperVer       = "0.14.1.844"
 
 
 val flexmarkVer         = "0.64.0"
@@ -398,7 +398,7 @@ lazy val commonLibraryDependencies = {
 
     "org.pegdown" % "pegdown" % "1.6.0",
     "com.goterl" % "lazysodium-java" % "5.1.1",
-    "net.java.dev.jna" % "jna" % "5.11.0",
+    "net.java.dev.jna" % "jna" % "5.12.1",
 
     "net.glxn" % "qrgen" % "1.4", // QR code generator
     "com.google.guava" % "guava" % "31.1-jre",

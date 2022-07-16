@@ -1,6 +1,6 @@
 package com.evernym.verity.vault.operation_executor
 
-import com.evernym.verity.util2.Exceptions.BadRequestErrorException
+import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, InternalServerErrorException}
 import com.evernym.verity.ledger.LedgerPoolConnManager
 import com.evernym.verity.util.Util.jsonArray
 
@@ -16,6 +16,7 @@ import com.evernym.vdrtools.{InvalidParameterException, InvalidStructureExceptio
 import com.evernym.vdrtools.crypto.Crypto
 import com.evernym.vdrtools.wallet.WalletItemNotFoundException
 
+import java.util.concurrent.ExecutionException
 import scala.concurrent.Future
 
 
@@ -53,7 +54,7 @@ object CryptoOpExecutor extends OpExecutorBase {
         case e: InvalidStructureException =>
           throw new BadRequestErrorException(
             INVALID_VALUE.statusCode,
-            Option("invalid sealed/encrypted box: " + e.getMessage),
+            Option("invalid sealed/encrypted box: " + e.getSdkMessage),
             errorDetail = buildOptionErrorDetail(e))
         case e: Exception =>
           throw new BadRequestErrorException(
@@ -75,27 +76,27 @@ object CryptoOpExecutor extends OpExecutorBase {
       senderVerKeyResp  <- verKeyFuture(pm.senderVerKeyParam.toSet, ledgerPoolManager).map(_.headOption)
     ) yield {
       val recipKeysJson = jsonArray(recipKeys.map(_.verKey))
-      Crypto.packMessage(we.wallet, recipKeysJson, senderVerKeyResp.map(_.verKey).orNull, pm.msg)
-      .map(PackedMsg(_))
+      Crypto
+        .packMessage(we.wallet, recipKeysJson, senderVerKeyResp.map(_.verKey).orNull, pm.msg)
+        .map(PackedMsg(_))
     }
     result.flatten
   }
 
   def handleUnpackMsg(um: UnpackMsg)(implicit we: WalletExt, ec: ExecutionContext): Future[UnpackedMsg] = {
-    Crypto.unpackMessage(we.wallet, um.msg)
+    Crypto
+      .unpackMessage(we.wallet, um.msg)
       .map(r => UnpackedMsg(r, None, None))
       .recover {
-        case e: BadRequestErrorException =>
-          throw e
         case e: WalletItemNotFoundException =>
           throw new BadRequestErrorException(
             INVALID_VALUE.statusCode,
-            Option(e.getMessage),
+            Option(e.getSdkMessage),
             errorDetail = Option(Exceptions.getStackTraceAsSingleLineString(e)))
         case e: InvalidStructureException =>
           throw new BadRequestErrorException(
             INVALID_VALUE.statusCode,
-            Option("invalid packed message: " + e.getMessage),
+            Option("invalid packed message: " + e.getSdkMessage),
             errorDetail = buildOptionErrorDetail(e))
         case e: Exception =>
           throw new BadRequestErrorException(
@@ -107,16 +108,38 @@ object CryptoOpExecutor extends OpExecutorBase {
 
   def handleSignMsg(smp: SignMsg)(implicit wmp: WalletMsgParam, we: WalletExt, ec: ExecutionContext): Future[SignedMsg] = {
     val verKeyFuture = handleGetVerKey(smp.keyParam)
-    verKeyFuture.flatMap { gvkr =>
-      Crypto.cryptoSign(we.wallet, gvkr.verKey, smp.msg)
-        .map(SignedMsg(_, gvkr.verKey))
-    }
+    verKeyFuture
+      .flatMap { gvkr =>
+        Crypto
+          .cryptoSign(we.wallet, gvkr.verKey, smp.msg)
+          .map(SignedMsg(_, gvkr.verKey))
+      }.recover {
+        case e: ExecutionException =>
+          e.getCause match {
+            case e: WalletItemNotFoundException =>
+              throw new BadRequestErrorException(
+                INVALID_VALUE.statusCode,
+                Option(e.getMessage),
+                errorDetail = Option(Exceptions.getStackTraceAsSingleLineString(e)))
+            case e: Exception =>
+              throw new InternalServerErrorException(
+                UNHANDLED.statusCode,
+                Option("unhandled error while creating new key"),
+                errorDetail = buildOptionErrorDetail(e))
+          }
+        case e: Exception =>
+          throw new BadRequestErrorException(
+            UNHANDLED.statusCode,
+            Option("unhandled error while creating new key"),
+            errorDetail = buildOptionErrorDetail(e))
+      }
   }
 
   def verifySig(verKey: VerKeyStr, challenge: Array[Byte], signature: Array[Byte])
                (implicit ec: ExecutionContext): Future[VerifySigResult] = {
     val detail = s"challenge: '$challenge', signature: '$signature'"
-    Crypto.cryptoVerify(verKey, challenge, signature)
+    Crypto
+      .cryptoVerify(verKey, challenge, signature)
       .map(VerifySigResult(_))
       .recover {
           case e @ (_:InvalidStructureException |_: InvalidParameterException) =>

@@ -18,7 +18,7 @@ object MockableAnonCredRequests {
         s"""
            {
              "ver":"1.0",
-             "id":"2hoqvcwupRTUNkXn6ArYzs:2:test-licence:4.4.4",
+             "id":"$schemaId",
              "name":"test-licence",
              "version":"4.4.4",
              "attrNames":["height","name","sex","age"],
@@ -35,26 +35,27 @@ object MockableAnonCredRequests {
                                revocationDetails: Option[String])
                               (handler: Try[CredDefCreatedResult] => Unit): Unit = {
       val cred_def_id = "2hoqvcwupRTUNkXn6ArYzs:3:CL:2471"
-      val cred_def_json = """
-        {
-          "reqId":1523973501515533537,
-          "identifier":"2hoqvcwupRTUNkXn6ArYzs",
-          "operation":{
-            "ref":1697,
-            "data":{
-              "primary":{"n":"1",
-              "s":"2",
-              "rms":"3",
-              "r":{"age":"4","height":"5","name":"6","sex":"7"},
-              "rctxt":"8",
-               "z":"9"
-              }
+      val cred_def_json =
+        s"""
+          {
+            "reqId":1523973501515533537,
+            "identifier": "2hoqvcwupRTUNkXn6ArYzs",
+            "operation":{
+              "ref":1697,
+              "data":{
+                "primary":{"n":"1",
+                "s":"2",
+                "rms":"3",
+                "r":{"age":"4","height":"5","name":"6","sex":"7"},
+                "rctxt":"8",
+                 "z":"9"
+                }
+              },
+              "type":"102",
+              "signature_type":"CL"
             },
-            "type":"102",
-            "signature_type":"CL"
-          },
-          "protocolVersion":1
-        }
+            "protocolVersion":1
+          }
         """.stripMargin
 
       handler(Try(CredDefCreatedResult(cred_def_id, cred_def_json)))

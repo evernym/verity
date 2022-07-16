@@ -3,18 +3,17 @@ package com.evernym.verity.agentmsg.msgfamily.pairwise
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
 
-case class SendMsgsReqMsg_MFV_0_5(`@type`: TypeDetail, uids: List[String]) extends MsgBase {
+case class SendMsgsReqMsg_MFV_0_5(`@type`: TypeDetail, uids: List[String]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("uids", uids)
   }
 }
 
-case class SendMsgsReqMsg_MFV_0_6(`@type`: String, uids: List[String]) extends MsgBase {
+case class SendMsgsReqMsg_MFV_0_6(`@type`: String, uids: List[String]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("uids", uids)
@@ -23,7 +22,7 @@ case class SendMsgsReqMsg_MFV_0_6(`@type`: String, uids: List[String]) extends M
 
 case class SendMsgsReqMsg(msgFamilyDetail: MsgFamilyDetail, uids: List[String])
 
-case class MsgsSentRespMsg_MFV_0_5(`@type`: TypeDetail, uids: List[String]) extends MsgBase
+case class MsgsSentRespMsg_MFV_0_5(`@type`: TypeDetail, uids: List[String]) extends LegacyMsgBase
 
 object SendMsgsMsgHelper {
 

@@ -1,13 +1,12 @@
 package com.evernym.verity.agentmsg.msgfamily.configs
 
-import com.evernym.verity.agentmsg.msgfamily.{AgentMsgContext, TypeDetail}
+import com.evernym.verity.agentmsg.msgfamily.{AgentMsgContext, LegacyMsgBase, TypeDetail}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_CONFIGS_REMOVED
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
-import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
-case class RemoveConfigReqMsg_MFV_0_5(configs: Set[String]) extends MsgBase {
+case class RemoveConfigReqMsg_MFV_0_5(configs: Set[String]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("configs", configs)
   }
@@ -15,7 +14,7 @@ case class RemoveConfigReqMsg_MFV_0_5(configs: Set[String]) extends MsgBase {
 
 case class RemoveConfigReqMsg(msgFamilyDetail: MsgFamilyDetail, configs: Set[String])
 
-case class ConfigsRemovedRespMsg_MFV_0_5(`@type`: TypeDetail)
+case class ConfigsRemovedRespMsg_MFV_0_5(`@type`: TypeDetail) extends LegacyMsgBase
 
 
 object RemoveConfigMsgHelper {

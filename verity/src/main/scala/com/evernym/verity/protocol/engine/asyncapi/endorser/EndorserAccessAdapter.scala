@@ -42,7 +42,13 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
       singletonParentProxy
         .ask{ ref: ActorRef => ForEndorserRegistry(GetEndorsers(ledger, ref))}
         .mapTo[LedgerEndorsers]
-        //NOTE: until ledger starts supporting fully qualified DID, it needs to be truncated and then used (see next line)
+        //NOTE:
+        // With FQ endorser identifier, indy ledger was throwing this error on endorser side
+        //    Unable to publish transaction -- for 'did:indy:sovrin:builder' -- client request invalid:
+        //      InvalidClientRequest("validation error [SafeRequest]: should not contain the following chars [':', 'l']
+        //      (endorser=sovrin:builder:8anW9B9wfzmAsMjEWJihWQ)",)
+        // So, until ledger (indy etc) starts supporting fully qualified DIDs,
+        // it needs to be truncated and then used (see next line)
         .map(r => r.latestEndorser.map(e => Endorser(e.did.substring(e.did.lastIndexOf(":")+1))))
       ,
       handler

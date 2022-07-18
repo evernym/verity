@@ -49,8 +49,8 @@ trait AgentActorContext
   lazy val generalCacheFetchers: Map[FetcherParam, CacheValueFetcher] = List (
     new KeyValueMapperFetcher(system, appConfig, futureExecutionContext),
     new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig, futureExecutionContext),
-    new EndpointCacheFetcher(ledgerSvc, appConfig, futureExecutionContext),
-    new LedgerVerKeyCacheFetcher(ledgerSvc, appConfig, futureExecutionContext)
+    new EndpointCacheFetcher(vdrAdapter, appConfig, futureExecutionContext),
+    new LedgerVerKeyCacheFetcher(vdrAdapter, appConfig, futureExecutionContext)
   ).map(f => f.fetcherParam -> f).toMap
 
   lazy val vdrCache: CacheProvider = new CaffeineCacheProvider(CaffeineCacheParam(None, None, None, None))

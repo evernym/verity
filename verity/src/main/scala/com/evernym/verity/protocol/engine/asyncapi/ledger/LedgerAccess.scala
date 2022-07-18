@@ -1,5 +1,6 @@
 package com.evernym.verity.protocol.engine.asyncapi.ledger
 
+import com.evernym.verity.actor.agent.relationship.DidDoc
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.vdr.{CredDef, CredDefId, FqCredDefId, FqDID, FqSchemaId, LedgerPrefix, PreparedTxn, Schema, SchemaId, SubmittedTxn}
@@ -42,6 +43,12 @@ trait LedgerAccess {
 
   def resolveCredDefs(fqCredDefIds: Set[FqCredDefId])
                      (handler: Try[Seq[CredDef]] => Unit): Unit
+
+  def resolveDidDoc(fqDid: FqDID)
+                (handler: Try[DidDoc] => Unit): Unit
+
+  def resolveDidDocs(fqDid: Set[FqDID])
+                (handler: Try[Seq[DidDoc]] => Unit): Unit
 
   def fqDID(did: DidStr): FqDID
 

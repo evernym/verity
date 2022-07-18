@@ -7,10 +7,11 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.ledger.{LedgerSvc, Submitter}
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.vdr.VDRAdapter
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class LedgerVerKeyCacheFetcher(val ledgerSvc: LedgerSvc, val appConfig: AppConfig, executionContext: ExecutionContext)
+class LedgerVerKeyCacheFetcher(val vdr: VDRAdapter, val appConfig: AppConfig, executionContext: ExecutionContext)
   extends AsyncCacheValueFetcher {
   override implicit def futureExecutionContext: ExecutionContext = executionContext
 
@@ -29,9 +30,9 @@ class LedgerVerKeyCacheFetcher(val ledgerSvc: LedgerSvc, val appConfig: AppConfi
 
   override def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]] = {
     val gvkp = kd.keyAs[GetVerKeyParam]
-    val gvkpFut = ledgerSvc.getNymDataFut(gvkp.submitterDetail, gvkp.did, ledgerSvc.VER_KEY)
-    gvkpFut.map { vk =>
-      Map(gvkp.did -> vk)
+    val didDocFut = vdr.resolveDID(gvkp.did)
+    didDocFut.map { dd =>
+      Map(gvkp.did -> dd.verKey)
     }.recover {
       case StatusDetailException(sd) => throw buildUnexpectedResponse(sd)
     }

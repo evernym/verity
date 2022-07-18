@@ -8,10 +8,12 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.ledger.{AttribResult, LedgerSvc, Submitter}
 import com.evernym.verity.did.DidStr
+import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
+import com.evernym.verity.vdr.{DidDoc, VDRAdapter}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class EndpointCacheFetcher (val ledgerSvc: LedgerSvc, val appConfig: AppConfig, executionContext: ExecutionContext)
+class EndpointCacheFetcher (val vdr: VDRAdapter, val appConfig: AppConfig, executionContext: ExecutionContext)
   extends AsyncCacheValueFetcher {
   override def futureExecutionContext: ExecutionContext = executionContext
   private implicit val executionContextImpl: ExecutionContext = executionContext
@@ -31,15 +33,12 @@ class EndpointCacheFetcher (val ledgerSvc: LedgerSvc, val appConfig: AppConfig, 
 
   override def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]] = {
     val gep = kd.keyAs[GetEndpointParam]
-    val gepFut = ledgerSvc.getAttribFut(gep.submitterDetail, gep.did, ledgerSvc.URL)
-    gepFut.map {
-      case ar: AttribResult if ar.value.isDefined => Map(gep.did -> ar.value.map(_.toString).orNull)
-      case ar: AttribResult if ar.value.isEmpty =>
-        throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("endpoint not found for DID: " + gep.did))
+    val didDocFut = vdr.resolveDID(gep.did)
+    didDocFut.map {
+      case dd: DidDoc => Map(gep.did -> dd.endpoint.map(_.toString).orNull)
       case x => throw buildUnexpectedResponse(x)
     }
   }
-
 }
 
 case class GetEndpointParam(did: DidStr, submitterDetail: Submitter) {

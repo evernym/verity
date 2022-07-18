@@ -1,9 +1,8 @@
 package com.evernym.verity.protocol.engine.asyncapi.ledger
 
-import com.evernym.verity.actor.agent.relationship.DidDoc
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.vdr.{CredDef, CredDefId, FqCredDefId, FqDID, FqSchemaId, LedgerPrefix, PreparedTxn, Schema, SchemaId, SubmittedTxn}
+import com.evernym.verity.vdr.{CredDef, CredDefId, DidDoc, FqCredDefId, FqDID, FqSchemaId, LedgerPrefix, PreparedTxn, Schema, SchemaId, SubmittedTxn}
 
 import scala.util.Try
 

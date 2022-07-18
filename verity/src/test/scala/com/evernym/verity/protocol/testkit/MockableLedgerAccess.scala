@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.testkit
 
 import akka.actor.ActorRef
+import com.evernym.verity.actor.agent.relationship
 import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -40,6 +41,7 @@ object MockableLedgerAccess {
 class MockableLedgerAccess(executionContext: ExecutionContext,
                            val schemas: Map[String, Schema] = MockLedgerData.schemas01,
                            val credDefs: Map[String, CredDef] = MockLedgerData.credDefs01,
+                           val didDocs: Map[String, DidDoc] = MockLedgerData.didDocs01,
                            val ledgerAvailable: Boolean = true)
   extends LedgerAccess with MockAsyncOpRunner with ActorSpec with BasicSpecBase{
 
@@ -156,6 +158,29 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     }
   }
 
+  override def resolveDidDoc(fqDid: FqDID)(handler: Try[DidDoc] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) {
+        Try{
+          val didResp = didDocs.getOrElse(fqDid, throw new Exception("Unknown did doc"))
+          DidDoc(fqDid, didResp.verKey, didResp.endpoint)
+        }
+      }
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def resolveDidDocs(fqDids: Set[FqDID])(handler: Try[Seq[DidDoc]] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) {
+        Try{
+          didDocs.filter{ case (id, _) => fqDids.contains(id)}.values.toSeq
+        }
+      }
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
   override def fqDID(did: DidStr): FqDID = MockLedger.fqID(did)
 
   override def fqSchemaId(schemaId: SchemaId, issuerDid: Option[FqDID]): FqSchemaId = MockLedger.fqSchemaID(schemaId, issuerDid)
@@ -186,7 +211,6 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
   def executionContextProvider: ExecutionContextProvider = ecp
 
   type TxnHash = Int
-
 }
 
 
@@ -226,6 +250,15 @@ object MockLedgerData {
             Map.empty
           )
         )
+      )
+  )
+
+  val didDocs01 = Map(
+    "did:indy:sovrin:1234567890987654321" ->
+      DidDoc(
+        "did:indy:sovrin:1234567890987654321",
+        "abxk358oradksfb893wad",
+        Some("test.example.com")
       )
   )
 

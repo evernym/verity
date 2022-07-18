@@ -100,6 +100,14 @@ object VDRUtil {
     }.getOrElse(credDefId)
   }
 
+  def toLegacyNonFqDid(did: FqDID): String = {
+    Try {
+      val splitted = did.split(":")
+
+      s"${splitted.last}"
+    }.getOrElse(did)
+  }
+
 
   /**
    *

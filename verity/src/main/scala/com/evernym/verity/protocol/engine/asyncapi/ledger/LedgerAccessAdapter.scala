@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.engine.asyncapi.ledger
 
 import com.evernym.vdrtools.IndyException
+import com.evernym.verity.actor.agent.relationship
 import com.evernym.verity.cache.providers.CacheProvider
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
@@ -76,6 +77,30 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
       handleAsyncOpResult(handler)
     )
 
+  override def resolveDidDoc(fqDid: FqDID)(handler: Try[relationship.DidDoc] => Unit): Unit =
+    asyncOpRunner.withFutureOpRunner(
+      {
+        getCachedItem[FqDID](fqDid)
+          .map(s => Future.successful(s))
+          .getOrElse(fetchAndCacheDidDoc(fqDid))
+      },
+      handleAsyncOpResult(handler)
+    )
+
+  override def resolveDidDocs(fqDids: Set[FqDID])(handler: Try[Seq[relationship.DidDoc]] => Unit): Unit = {
+    asyncOpRunner.withFutureOpRunner(
+      {
+        Future
+          .sequence(fqDids.map { id =>
+            getCachedItem[FqDID](id).map(s => Future.successful(s)).getOrElse(
+              fetchAndCacheSchema(id))
+          })
+          .map(_.toSeq)
+      },
+      handleAsyncOpResult(handler)
+    )
+  }
+
   override def resolveSchemas(fqSchemaIds: Set[FqSchemaId])(handler: Try[Seq[Schema]] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
       {
@@ -141,6 +166,13 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     vdrTools.resolveCredDef(id, None).map { cd =>
       vdrCache.put(id, cd)
       cd
+    }
+  }
+
+  private def fetchAndCacheDidDoc(id: String): Future[DidDoc] = {
+    vdrTools.resolveDID(id, None).map { dd =>
+      vdrCache.put(id, dd)
+      dd
     }
   }
 

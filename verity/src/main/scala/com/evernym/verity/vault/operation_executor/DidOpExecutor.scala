@@ -37,6 +37,7 @@ object DidOpExecutor extends OpExecutorBase {
   def handleCreateDID(d: CreateDID)(implicit we: WalletExt, ec: ExecutionContext): Future[NewKeyCreated] = {
     val didJson = new JSONObject()
     didJson.put("crypto_type", d.keyType)
+    didJson.put("ledger_type", d.ledgerPrefix)
     Did
       .createAndStoreMyDid(we.wallet, didJson.toString)
       .map(r => NewKeyCreated(r.getDid, r.getVerkey))

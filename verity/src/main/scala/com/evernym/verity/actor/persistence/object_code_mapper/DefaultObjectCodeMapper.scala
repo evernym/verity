@@ -330,10 +330,10 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     269 -> TheirRoutingUpdated,
 
     270 -> issuerSetup_v07.RosterInitialized,
-    272 -> issuerSetup_v07.CreatePublicIdentifierCompleted,
-    273 -> issuerSetup_v07.DIDWritten,
-    274 -> issuerSetup_v07.AskedForEndorsement,
-    275 -> issuerSetup_v07.IssuerSetupFailed
+    271 -> issuerSetup_v07.CreatePublicIdentifierCompleted,
+    272 -> issuerSetup_v07.DIDWritten,
+    273 -> issuerSetup_v07.AskedForEndorsement,
+    274 -> issuerSetup_v07.IssuerSetupFailed
   )
 
 }

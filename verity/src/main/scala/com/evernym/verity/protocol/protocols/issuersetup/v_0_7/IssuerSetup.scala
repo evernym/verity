@@ -53,7 +53,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
 
   private def writeDIDToLedger(ledgerPrefix: String, endorserDID: Option[String]): Unit = {
     ctx.logger.debug(s"Creating DID/Key pair for Issuer Identifier/Keys for ledger prefix: $ledgerPrefix with endorser: ${endorserDID.getOrElse("default")}")
-    ctx.wallet.newDid() {
+    ctx.wallet.newDid(Some(ledgerPrefix)) {
       case Success(keyCreated) =>
         ctx.apply(CreatePublicIdentifierCompleted(keyCreated.did, keyCreated.verKey))
         val fqSubmitterDID = ctx.ledger.fqDID(keyCreated.did)
@@ -113,7 +113,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
           fqSubmitterDID,
           Option(endorserDid)) {
           case Success(pt: PreparedTxn) =>
-            signPreparedTxn(pt, fqSubmitterDID) {
+            ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(fqSubmitterDID)) {
               case Success(smr: SignedMsgResult) =>
                 //NOTE: what about other endorsementSpecType (cheqd etc)
                 if (pt.isEndorsementSpecTypeIndy) {
@@ -130,18 +130,6 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
         }
     }  else {
       handleResult(Failure(new Exception("No default endorser defined")))
-    }
-  }
-
-  //NOTE: handling legacy and new fqSubmitterDID (as legacy one would NOT have been created in wallet with namespace prefix)
-  private def signPreparedTxn(pt: PreparedTxn,
-                              fqSubmitterDID: FqDID)
-                             (handleResult: Try[SignedMsgResult] => Unit): Unit = {
-    ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(fqSubmitterDID)) {
-      case Success(resp) =>
-        handleResult(Try(resp))
-      case Failure(_) =>
-        ctx.wallet.sign(pt.bytesToSign, pt.signatureType, signerDid = Option(extractUnqualifiedDidStr(fqSubmitterDID)))(handleResult)
     }
   }
 

@@ -3,6 +3,7 @@ package com.evernym.verity.protocol.engine.asyncapi.wallet
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine.ParticipantId
 import com.evernym.verity.util.{Base58Util, Base64Util}
+import com.evernym.verity.vdr.LedgerPrefix
 
 import scala.util.Try
 
@@ -13,7 +14,7 @@ trait WalletAccess
 
   def DEPRECATED_setupNewWallet(walletId: String, ownerDidPair: DidPair)(handler: Try[DeprecatedWalletSetupResult] => Unit): Unit
 
-  def newDid(keyType: KeyType = KEY_ED25519)(handler: Try[NewKeyResult] => Unit): Unit
+  def newDid(ledgerPrefix: Option[LedgerPrefix] = None, keyType: KeyType = KEY_ED25519)(handler: Try[NewKeyResult] => Unit): Unit
 
   def verKey(forDID: DidStr)(handler: Try[VerKeyResult] => Unit): Unit
 

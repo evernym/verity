@@ -16,6 +16,7 @@ import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.vdrtools.anoncreds.Anoncreds.issuerCreateSchema
 import com.evernym.vdrtools.anoncreds.DuplicateMasterSecretNameException
+import com.evernym.verity.vdr.LedgerPrefix
 
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
@@ -42,9 +43,9 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
       handleAsyncOpResult(handler)
     )
 
-  override def newDid(keyType: KeyType = KEY_ED25519)(handler: Try[NewKeyResult] => Unit): Unit =
+  override def newDid(ledgerPrefix: Option[LedgerPrefix] = None, keyType: KeyType = KEY_ED25519)(handler: Try[NewKeyResult] => Unit): Unit =
     asyncOpRunner.withAsyncOpRunner(
-      {walletApi.tell(CreateDID(keyType))},
+      {walletApi.tell(CreateDID(keyType, ledgerPrefix))},
       handleAsyncOpResult(handler)
     )
 

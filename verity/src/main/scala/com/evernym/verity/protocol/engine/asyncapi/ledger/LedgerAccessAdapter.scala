@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.engine.asyncapi.ledger
 
 import com.evernym.vdrtools.IndyException
-import com.evernym.verity.actor.agent.relationship
 import com.evernym.verity.cache.providers.CacheProvider
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
@@ -77,7 +76,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
       handleAsyncOpResult(handler)
     )
 
-  override def resolveDidDoc(fqDid: FqDID)(handler: Try[relationship.DidDoc] => Unit): Unit =
+  override def resolveDidDoc(fqDid: FqDID)(handler: Try[DidDoc] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
       {
         getCachedItem[FqDID](fqDid)
@@ -87,7 +86,7 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
       handleAsyncOpResult(handler)
     )
 
-  override def resolveDidDocs(fqDids: Set[FqDID])(handler: Try[Seq[relationship.DidDoc]] => Unit): Unit = {
+  override def resolveDidDocs(fqDids: Set[FqDID])(handler: Try[Seq[DidDoc]] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
       {
         Future

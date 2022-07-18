@@ -1,25 +1,47 @@
 package com.evernym.verity.vdr
 
 import com.evernym.verity.vdr.VDRUtil.extractNamespace
-import com.evernym.verity.vdr.base.{InMemLedger, TestVDRDidDoc}
+import com.evernym.verity.vdr.base.{InMemLedger, MockVdrDIDDoc}
 
 import scala.concurrent.Future
 
-case class MockLedgerRegistry(var ledgers: List[InMemLedger] = List.empty) {
 
-  def allLedgers: List[InMemLedger] = ledgers
+case class MockLedgerRegistryBuilder(ledgers: Map[Namespace, InMemLedger] = Map.empty) {
 
-  def addLedger(ledger: InMemLedger): Unit = synchronized {
-    ledgers :+= ledger
+  def withLedger(namespace: Namespace, ledger: InMemLedger): MockLedgerRegistryBuilder= {
+    copy(ledgers ++ Map(namespace -> ledger))
+  }
+
+  def withLedger(namespaces: List[Namespace], ledger: InMemLedger): MockLedgerRegistryBuilder= {
+    copy(ledgers ++ namespaces.map { ns => ns -> ledger})
+  }
+
+  def build(): MockLedgerRegistry = {
+    val mlr = new MockLedgerRegistry()
+    ledgers.foreach { case (ns, ledger) =>
+      mlr.addLedger(ns, ledger)
+    }
+    mlr
+  }
+}
+
+class MockLedgerRegistry {
+
+  var ledgers: Map[Namespace, InMemLedger] = Map.empty
+
+  def allLedgers: List[InMemLedger] = ledgers.values.toList
+
+  def addLedger(namespace: Namespace, ledger: InMemLedger): Unit = synchronized {
+    ledgers += namespace -> ledger
   }
 
   def cleanup(): Unit = {
-    ledgers = List.empty
+    ledgers = Map.empty
   }
 
   //--helper functions
 
-  def addDidDoc(dd: TestVDRDidDoc): Future[Unit] = {
+  def addDidDoc(dd: MockVdrDIDDoc): Future[Unit] = {
     forLedger(dd.id) { ledger: InMemLedger =>
       ledger.addDidDoc(dd)
     }
@@ -27,20 +49,23 @@ case class MockLedgerRegistry(var ledgers: List[InMemLedger] = List.empty) {
 
   def forLedger[T](fqId: String)(f: InMemLedger => T): Future[T] = {
     try {
-      val namespace = extractNamespace(Option(fqId), None)
-      val ledger = ledgers.find(_.allSupportedNamespaces.contains(namespace)).getOrElse(
-        throw new RuntimeException("ledger not found for the namespace: " + namespace)
-      )
+      val ledger = if (ledgers.size == 1) {
+        ledgers.head._2
+      } else {
+        val namespace = extractNamespace(Option(fqId), None)
+        ledgers.getOrElse(namespace, throw new RuntimeException("ledger not found for the namespace: " + namespace))
+      }
       Future.successful(f(ledger))
     } catch {
       case ex: RuntimeException => Future.failed(ex)
     }
   }
 
-  def withLedger[T](ns: Namespace)(f: InMemLedger => T): Future[T] = {
-    ledgers.find(_.allSupportedNamespaces.contains(ns)) match {
+  def withLedger[T](namespace: Namespace)(f: InMemLedger => T): Future[T] = {
+    ledgers.get(namespace) match {
       case Some(ledger) => Future.successful(f(ledger))
-      case None => Future.failed(new RuntimeException("ledger not found for namespace: " + ns))
+      case None => Future.failed(new RuntimeException("ledger not found for namespace: " + namespace))
     }
   }
+
 }

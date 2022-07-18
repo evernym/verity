@@ -11,6 +11,7 @@ import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
 import com.evernym.verity.sdk.utils.Context
 import com.evernym.verity.sdk.wallet.DefaultWalletConfig
 import com.evernym.verity.util.ExceptionUtil
+import com.evernym.verity.vdr.Namespace
 import com.typesafe.scalalogging.Logger
 import org.json.{JSONArray, JSONObject}
 
@@ -30,14 +31,14 @@ protected trait VcxProvision {
       case _ => throw new UnsupportedOperationException("Only DefaultWalletConfig is support for VCX provider")
     }
 
-    val indyPoolNetwork = new JSONObject()
-    val namespaceList = new JSONArray()
-    namespaceList.put("indy:sovrin")
-    indyPoolNetwork.put("genesis_path", sdkConfig.verityInstance.ledgerConfig.genesisFilePath)
-    indyPoolNetwork.put("namespace_list", namespaceList)
-
-    val poolNetworks = new JSONArray()
-    poolNetworks.put(indyPoolNetwork)
+    //NOTE: currently `builder` and `staging` (in below code) is pointing to the same genesis transactions,
+    // but can be adjusted to point to different ones
+    val poolNetworks =
+      IndyPoolNetworkBuilder()
+        .withNetwork("indy:sovrin", sdkConfig.verityInstance.ledgerConfig.genesisFilePath)
+        .withNetwork("indy:sovrin:builder", sdkConfig.verityInstance.ledgerConfig.genesisFilePath)
+        .withNetwork("indy:sovrin:staging", sdkConfig.verityInstance.ledgerConfig.genesisFilePath)
+        .poolNetworks
 
     val provisionConfig: JSONObject = new JSONObject()
       .put("agency_url", context.verityUrl())
@@ -78,5 +79,19 @@ protected trait VcxProvision {
   }
 }
 
-object VcxProvision {
+case class IndyPoolNetworkBuilder(poolNetworks: JSONArray = new JSONArray()) {
+
+  def withNetwork(namespace: Namespace, genesisPath: String): IndyPoolNetworkBuilder = {
+    withNetwork(List(namespace), genesisPath)
+  }
+
+  def withNetwork(namespaces: List[Namespace], genesisPath: String): IndyPoolNetworkBuilder = {
+    val jsonObject = new JSONObject()
+    val namespaceList = new JSONArray()
+    namespaces.foreach(n => namespaceList.put(n))
+    jsonObject.put("genesis_path", genesisPath)
+    jsonObject.put("namespace_list", namespaceList)
+    poolNetworks.put(jsonObject)
+    this
+  }
 }

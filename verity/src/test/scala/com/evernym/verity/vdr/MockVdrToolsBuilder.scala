@@ -5,11 +5,16 @@ import com.evernym.verity.vdr.service.{VdrTools, VdrToolsBuilder}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class MockVdrToolsBuilder(ledgerRegistry: MockLedgerRegistry, givenVdrTools: Option[VdrTools]=None)(implicit ec: ExecutionContext)
+
+class MockVdrToolsBuilder(ledgerRegistry: MockLedgerRegistry,
+                          givenVdrTools: Option[VdrTools]=None)(implicit ec: ExecutionContext)
   extends VdrToolsBuilder {
 
-  override def registerIndyLedger(namespaceList: List[String], genesisTxnData: String, taaConfig: Option[VdrParams.TaaConfig]): Future[Unit] = {
-    ledgerRegistry.addLedger(MockIndyLedger(namespaceList, genesisTxnData, taaConfig))
+  override def registerIndyLedger(namespaceList: List[String],
+                                  genesisTxnData: String,
+                                  taaConfig: Option[VdrParams.TaaConfig]): Future[Unit] = {
+    val ledger = MockIndyLedger(genesisTxnData, taaConfig)
+    namespaceList.foreach(ns => ledgerRegistry.addLedger(ns, ledger))
     Future.successful(())
   }
 

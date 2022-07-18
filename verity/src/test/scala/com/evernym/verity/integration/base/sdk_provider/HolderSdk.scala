@@ -38,7 +38,7 @@ import com.evernym.verity.testkit.util.HttpUtil._
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.KeyParam
-import com.evernym.verity.vdr.{CredDef, Schema, VDRUtil}
+import com.evernym.verity.vdr.{CredDef, CredDefId, Schema, SchemaId, VDRUtil}
 import com.evernym.verity.vdr.service.VdrTools
 import org.json.JSONObject
 
@@ -224,7 +224,7 @@ case class HolderSdk(param: SdkParam,
   }
 
   private def createCredRequest(connId: String,
-                                credDefId: String,
+                                credDefId: CredDefId,
                                 credDefJson: String,
                                 credOfferJson: String): CredReqCreated = {
     val pairwiseRel = myPairwiseRelationships(connId)
@@ -233,7 +233,7 @@ case class HolderSdk(param: SdkParam,
     )
   }
 
-  private def doSchemaAndCredDefRetrieval(ids: Set[(String,String)],
+  private def doSchemaAndCredDefRetrieval(ids: Set[(SchemaId,CredDefId)],
                                           allowsAllSelfAttested: Boolean): (String, String) = {
     ids.size match {
       case 0 if !allowsAllSelfAttested =>
@@ -245,39 +245,39 @@ case class HolderSdk(param: SdkParam,
     }
   }
 
-  private def getCredDefJson(credDefId: String): String = {
+  private def getCredDefJson(credDefId: CredDefId): String = {
     val credDef = awaitLedgerReq(getCredDefFromLedger(credDefId))
     credDef.json
   }
 
-  private def doSchemaRetrieval(ids: Set[String]): String = {
-    val schemas = ids.map(id => (id, awaitLedgerReq(getSchemaFromLedger(id))))
+  private def doSchemaRetrieval(schemaIds: Set[SchemaId]): String = {
+    val schemas = schemaIds.map(id => (id, awaitLedgerReq(getSchemaFromLedger(id))))
     schemas.map { case (id, schema) =>
       s""""$id": ${schema.json}"""
     }.mkString("{", ",", "}")
   }
 
 
-  private def doCredDefRetrieval(credDefIds: Set[String]): String = {
+  private def doCredDefRetrieval(credDefIds: Set[CredDefId]): String = {
     val credDefs = credDefIds.map(id => (id, awaitLedgerReq(getCredDefFromLedger(id))))
     credDefs.map { case (id, credDef) =>
       s""""$id": ${credDef.json}"""
     }.mkString("{", ",", "}")
   }
 
-  private def getCredDefFromLedger(id: String): Future[CredDef] = {
+  private def getCredDefFromLedger(credDefId: CredDefId): Future[CredDef] = {
     vdrTools match {
       case Some(vt)  =>
-        val fqCredDefId = VDRUtil.toFqCredDefId_v0(id, None, Option("did:indy:sovrin"))
+        val fqCredDefId = VDRUtil.toFqCredDefId_v0(credDefId, None, Option(vdrUnqualifiedLedgerPrefix), vdrMultiLedgerSupportEnabled)
         vt.resolveCredDef(fqCredDefId).map(CredDef(fqCredDefId, "", _))
       case None       => ???
     }
   }
 
-  private def getSchemaFromLedger(id: String): Future[Schema] = {
+  private def getSchemaFromLedger(schemaId: SchemaId): Future[Schema] = {
     vdrTools match {
       case Some(vt)  =>
-        val fqSchemaId = VDRUtil.toFqSchemaId_v0(id, None, Option("did:indy:sovrin"))
+        val fqSchemaId = VDRUtil.toFqSchemaId_v0(schemaId, None, Option(vdrUnqualifiedLedgerPrefix), vdrMultiLedgerSupportEnabled)
         vt.resolveSchema(fqSchemaId).map(Schema(fqSchemaId, _))
       case None       => ???
     }
@@ -402,6 +402,8 @@ case class HolderSdk(param: SdkParam,
 
   val masterSecretId: String = UUID.randomUUID().toString
   var credExchangeStatus = Map.empty[ThreadId, CredExchangeStatus]
+  val vdrMultiLedgerSupportEnabled = true
+  val vdrUnqualifiedLedgerPrefix = "did:indy:sovrin"
 
   setupMasterSecret()
 }

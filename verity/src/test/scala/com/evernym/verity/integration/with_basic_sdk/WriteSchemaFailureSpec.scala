@@ -7,7 +7,6 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
-import com.evernym.verity.did.DidStr
 import com.evernym.verity.integration.base.{VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.base.verity_provider.node.local.ServiceParam
@@ -17,7 +16,7 @@ import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Write
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.vdr.base.{INDY_SOVRIN_NAMESPACE, InMemLedger}
 import com.evernym.verity.vdr.service.VdrTools
-import com.evernym.verity.vdr.{FqCredDefId, FqDID, FqSchemaId, MockIndyLedger, MockLedgerRegistry, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
+import com.evernym.verity.vdr.{FqCredDefId, FqDID, FqSchemaId, MockIndyLedger, MockLedgerRegistry, MockLedgerRegistryBuilder, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -32,7 +31,7 @@ class WriteSchemaFailureSpec
   override lazy val defaultSvcParam: ServiceParam =
     ServiceParam
       .empty
-      .withVdrTools(new DummyVdrTools(MockLedgerRegistry(List(MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext))
+      .withVdrTools(new DummyVdrTools(MockLedgerRegistryBuilder(Map(INDY_SOVRIN_NAMESPACE -> MockIndyLedger("genesis.txn file path", None))).build())(futureExecutionContext))
 
   lazy val issuerVerityApp = VerityEnvBuilder.default().build(VAS)
   lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext)
@@ -69,7 +68,7 @@ class WriteSchemaFailureSpec
     // this class should evolve to reflect the same for its test implementation
 
     override def ping(namespaces: List[Namespace]): Future[Map[String, VdrResults.PingResult]] = {
-      val allNamespaces = if (namespaces.isEmpty) ledgerRegistry.ledgers.flatMap(_.allSupportedNamespaces) else namespaces
+      val allNamespaces = if (namespaces.isEmpty) ledgerRegistry.ledgers.keys else namespaces
       Future.successful(allNamespaces.map(n => n -> new VdrResults.PingResult("0", "SUCCESS")).toMap)
     }
 

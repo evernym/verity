@@ -312,6 +312,7 @@ class ActorProtocolContainer[
   implicit def asyncOpRunner: AsyncOpRunner = this
 
 
+  lazy val vdrMultiLedgerSupportEnabled: Boolean = appConfig.getBooleanReq(VDR_MULTI_LEDGER_SUPPORT_ENABLED)
   lazy val vdrUnqualifiedLedgerPrefix: String = appConfig.getStringReq(VDR_UNQUALIFIED_LEDGER_PREFIX)
   lazy val vdrLedgerPrefixMappings: Map[String, String] = appConfig.getMap(VDR_LEDGER_PREFIX_MAPPINGS)
 
@@ -326,6 +327,7 @@ class ActorProtocolContainer[
       agentActorContext.vdrAdapter,
       agentActorContext.vdrCache,
       wallet,
+      vdrMultiLedgerSupportEnabled,
       vdrUnqualifiedLedgerPrefix,
       vdrLedgerPrefixMappings
     )

@@ -6,6 +6,7 @@ import com.evernym.verity.protocol.engine.asyncapi.wallet._
 import com.evernym.verity.protocol.engine.{ParticipantId, ParticipantIndex}
 import com.evernym.verity.protocol.testkit.MockableWalletAccess._
 import com.evernym.verity.util.Base58Util
+import com.evernym.verity.vdr.LedgerPrefix
 
 import scala.util.{Random, Try}
 
@@ -70,7 +71,7 @@ class MockableWalletAccess(mockNewDid: () => Try[NewKeyResult] = randomDid  _,
   override def DEPRECATED_setupNewWallet(walletId: String, ownerDidPair: DidPair)(handler: Try[DeprecatedWalletSetupResult] => Unit): Unit =
     handler(Try(DeprecatedWalletSetupResult(ownerDidPair, newKey())))
 
-  override def newDid(keyType: KeyType)(handler: Try[NewKeyResult] => Unit): Unit = handler(mockNewDid())
+  override def newDid(ledgerPrefix: Option[LedgerPrefix], keyType: KeyType)(handler: Try[NewKeyResult] => Unit): Unit = handler(mockNewDid())
 
   override def verKey(forDID: DidStr)(handler: Try[VerKeyResult] => Unit): Unit = handler(mockVerKey(forDID))
 

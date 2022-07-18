@@ -159,7 +159,7 @@ lazy val settings = Seq(
   resolvers += Resolver.mavenLocal,
 //  resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public", // this shouldn't be necessay since we're publishing vdr-tools to maven central
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
-//  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",
+  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",
   resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/27807222/packages/maven", // used to fetch java wrapper from main builds
 
   Test / parallelExecution := false,

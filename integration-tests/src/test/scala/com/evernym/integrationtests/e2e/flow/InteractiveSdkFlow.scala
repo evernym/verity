@@ -181,11 +181,9 @@ trait InteractiveSdkFlow extends MetricsFlow {
               assert(resp.getJSONObject("identifier").has("verKey"))
               assert(resp.getJSONObject("identifier").has("did"))
             }
-          }
-          else if (resp.getString(`@TYPE`).contains("public-identifier")) {
+          } else if (resp.getString(`@TYPE`).contains("public-identifier")) {
             logger.info("Issuer is already setup")
-          }
-          else {
+          } else {
             throw new Exception("Unexpected message type")
           }
         }

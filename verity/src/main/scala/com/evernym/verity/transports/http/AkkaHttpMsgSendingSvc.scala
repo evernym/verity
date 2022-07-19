@@ -22,6 +22,8 @@ import com.evernym.verity.util2.{Exceptions, UrlParam}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.Logger
 
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
@@ -110,12 +112,17 @@ class AkkaHttpMsgSendingSvc(config: Config, metricsWriter: MetricsWriter, execut
       else
         "without any headers"
     logger.info(s"[$id] [outgoing request] [${req.method.value}] to uri ${up.host}:${up.port}/${up.path} ($headersDetail)")
+    val startTime = LocalDateTime.now
     sendRequest(req).flatMap { response =>
-      logger.info(s"[$id] [incoming response] [${response.status}]")
+      val curTime = LocalDateTime.now
+      val millis = ChronoUnit.MILLIS.between(startTime, curTime)
+      logger.info(s"[$id] [incoming response] [${response.status}] (from uri: ${req.uri.toString()}) (time taken in millis: $millis)")
       respHandler(response)
     }.recover {
       case e: Exception =>
-        logger.info(s"[$id] [incoming response] [Error: ${e.getMessage}]")
+        val curTime = LocalDateTime.now
+        val millis = ChronoUnit.MILLIS.between(startTime, curTime)
+        logger.info(s"[$id] [incoming response] [Error: ${e.getMessage}] (from uri: ${req.uri.toString()}) (time taken in millis: $millis)")
         throw e
     }
   }

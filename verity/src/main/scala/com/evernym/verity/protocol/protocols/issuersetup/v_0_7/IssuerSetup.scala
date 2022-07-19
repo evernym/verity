@@ -59,7 +59,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
         val fqSubmitterDID = ctx.ledger.fqDID(keyCreated.did)
         ctx.endorser.withCurrentEndorser(ledgerPrefix) {
           case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID.getOrElse("") == endorser.did =>
-            ctx.logger.info(s"registered endorser to be used for schema endorsement (prefix: $ledgerPrefix): " + endorser)
+            ctx.logger.info(s"registered endorser to be used for issuer endorsement (prefix: $ledgerPrefix): " + endorser)
             //no explicit endorser given/configured or the given/configured endorser matches an active endorser for the ledger prefix
             prepareTxnForEndorsement(fqSubmitterDID, prepareDidJson(keyCreated.did, keyCreated.verKey), endorser.did) {
               case Success(txn) =>

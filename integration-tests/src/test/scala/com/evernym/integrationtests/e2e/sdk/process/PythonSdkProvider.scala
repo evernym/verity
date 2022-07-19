@@ -22,8 +22,6 @@ import com.evernym.verity.sdk.utils.{AsJsonObject, Context}
 
 import java.lang
 import java.nio.file.Path
-import java.util.UUID
-import scala.annotation.tailrec
 import scala.language.postfixOps
 import scala.sys.process.Process
 
@@ -355,6 +353,7 @@ import json
 from verity_sdk.utils.Context import Context
 from verity_sdk.protocols.v1_0.Relationship import GoalsList
 from sys import stderr, exit
+import faulthandler
 
 # ==== IMPORTS ====
 $imports
@@ -368,6 +367,7 @@ context_str = \"\"\"$context\"\"\"
 
 
 async def main():
+    faulthandler.enable()
     context = await Context.create_with_config(context_str)
     try:
         # ==== COMMAND ====

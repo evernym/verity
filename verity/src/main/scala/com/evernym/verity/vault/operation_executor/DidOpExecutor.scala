@@ -38,7 +38,7 @@ object DidOpExecutor extends OpExecutorBase {
     val didJson = new JSONObject()
     didJson.put("crypto_type", d.keyType)
     if (d.ledgerPrefix.isDefined){
-      didJson.put("ledger_type", d.ledgerPrefix)
+      didJson.put("method_name", d.ledgerPrefix)
     }
     Did
       .createAndStoreMyDid(we.wallet, didJson.toString)

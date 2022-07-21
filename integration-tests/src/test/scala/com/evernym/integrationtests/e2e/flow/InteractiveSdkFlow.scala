@@ -170,8 +170,9 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
         receiverSdk.checkMsg(){ resp =>
           if(resp.getString(`@TYPE`).contains("problem-report")) {
+
             issuerSdk.issuerSetup_0_7
-              .create(issuerSdk.context, "did:sov", "someDID")
+              .create(issuerSdk.context, "did:indy:sovrin", "WAJQSd73TpK2HmoYRQJX7p")
 
             receiverSdk.expectMsg("public-identifier-created") { resp =>
               resp shouldBe an[JSONObject]

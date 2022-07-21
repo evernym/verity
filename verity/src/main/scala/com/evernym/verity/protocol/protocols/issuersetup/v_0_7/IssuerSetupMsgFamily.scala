@@ -29,16 +29,15 @@ object IssuerSetupMsgFamily extends MsgFamily {
   override protected val protocolMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map.empty
 }
 
-
 sealed trait Msg extends MsgBase
 
 trait IssuerSetupControl extends Control with MsgBase
 case class InitMsg(selfId: ParameterValue) extends IssuerSetupControl
-case class Create(ledgerPrefix: String, endorserDID: Option[String]) extends Msg with IssuerSetupControl {
+case class Create(ledgerPrefix: String, endorser: Option[String]) extends Msg with IssuerSetupControl {
   override def validate(): Unit = {
     checkRequired("ledgerPrefix", ledgerPrefix)
-    checkOptionalNotEmpty("endorserDID", endorserDID)
-    endorserDID.foreach{ endorser =>
+    checkOptionalNotEmpty("endorserDID", endorser)
+    endorser.foreach{ endorser =>
       checkValidDID("endorserDID", endorser)
     }
   }

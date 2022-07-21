@@ -54,12 +54,12 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
     try {
       val tag = m.tag.getOrElse("latest")
       val revocationDetails = m.revocationDetails.map(_.toString).getOrElse("{}")
-      val nonFqSubmitterId = _submitterDID(init)
-      val fqSubmitterId = ctx.ledger.fqDID(nonFqSubmitterId)
-      ctx.ledger.resolveSchema(ctx.ledger.fqSchemaId(m.schemaId, None)) {
+      val submitterDID = _submitterDID(init)
+      val fqSubmitterId = ctx.ledger.fqDID(submitterDID, force = true)
+      ctx.ledger.resolveSchema(ctx.ledger.fqSchemaId(m.schemaId, None, force = true)) {
         case Success (schema) =>
           ctx.wallet.createCredDef(
-            nonFqSubmitterId,
+            ctx.ledger.fqDID(submitterDID, force = false),
             schema.json,
             tag,
             sigType=None,
@@ -138,7 +138,7 @@ class WriteCredDef(val ctx: ProtocolContextApi[WriteCredDef, Role, Msg, Any, Cre
   private def prepareTxnForEndorsement(fqSubmitterDID: FqDID,
                                        credDefId: CredDefId,
                                        credDefJson: String,
-                                       endorserDid: FqDID)
+                                       endorserDid: DidStr)
                                       (handleResult: Try[TxnForEndorsement] => Unit): Unit = {
     if (endorserDid.nonEmpty) {
       ctx.ledger

@@ -1,5 +1,6 @@
 package com.evernym.verity.agentmsg
 
+import com.evernym.verity.actor.ActorMessage
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK, MPF_PLAIN}
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_MSGS_SENT, MSG_TYPE_MSG_CREATED, MSG_TYPE_MSG_DETAIL}
@@ -12,26 +13,28 @@ import com.evernym.verity.protocol.engine.MsgBase
 
 package object msgfamily {
 
-  case class TypeDetail(name: String, ver: String, fmt: Option[String]=None) extends MsgBase {
+  trait LegacyMsgBase extends MsgBase with ActorMessage
+
+  case class TypeDetail(name: String, ver: String, fmt: Option[String]=None) extends LegacyMsgBase {
     override def validate(): Unit = {
       checkOptionalNotEmpty("fmt", fmt)
     }
   }
 
-  case class LegacyTypedMsg(`@type`: TypeDetail) extends MsgBase {
+  case class LegacyTypedMsg(`@type`: TypeDetail) extends LegacyMsgBase {
     override def validate(): Unit = {
       checkRequired("@type", `@type`)
     }
   }
 
-  case class ConfigDetail(name: String, value: String) extends MsgBase {
+  case class ConfigDetail(name: String, value: String) extends LegacyMsgBase {
     override def validate(): Unit = {
       checkRequired("name", name)
       checkRequired("value", value)
     }
   }
 
-  case class BundledMsg_MFV_0_5(bundled: List[Array[Byte]]) extends MsgBase {
+  case class BundledMsg_MFV_0_5(bundled: List[Array[Byte]]) extends LegacyMsgBase {
     override def validate(): Unit = {
       checkRequired("bundled", bundled)
     }

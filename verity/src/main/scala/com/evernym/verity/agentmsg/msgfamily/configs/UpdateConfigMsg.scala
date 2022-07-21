@@ -4,11 +4,10 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
 
-case class UpdateConfigReqMsg_MFV_0_5(configs: Set[ConfigDetail]) extends MsgBase {
+case class UpdateConfigReqMsg_MFV_0_5(configs: Set[ConfigDetail]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("configs", configs)
     configs.foreach(_.validate())
@@ -21,7 +20,7 @@ abstract class UpdateConfigCommand {
 case class UpdateConfigReqMsg(configs: Set[ConfigDetail]) extends UpdateConfigCommand
 case class UpdateConfigs(configs: Set[ConfigDetail]) extends UpdateConfigCommand
 
-case class ConfigsUpdatedRespMsg_MFV_0_5(`@type`: TypeDetail)
+case class ConfigsUpdatedRespMsg_MFV_0_5(`@type`: TypeDetail) extends LegacyMsgBase
 
 object UpdateConfigMsgHelper {
 

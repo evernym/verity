@@ -6,13 +6,12 @@ import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 import com.evernym.verity.util2.Status
 
 
 case class UpdateMsgStatusByConnsReqMsg_MFV_0_5(statusCode: String,
-                                                uidsByConns: List[PairwiseMsgUids]) extends MsgBase {
+                                                uidsByConns: List[PairwiseMsgUids]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("statusCode", statusCode)
     checkRequired("uidsByConns", uidsByConns)
@@ -20,7 +19,7 @@ case class UpdateMsgStatusByConnsReqMsg_MFV_0_5(statusCode: String,
 }
 
 case class UpdateMsgStatusByConnsReqMsg_MFV_0_6(statusCode: String,
-                                                uidsByConns: List[PairwiseMsgUids]) extends MsgBase {
+                                                uidsByConns: List[PairwiseMsgUids]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("statusCode", statusCode)
     checkRequired("uidsByConns", uidsByConns)
@@ -33,10 +32,10 @@ case class UpdateMsgStatusByConnsReqMsg(msgFamilyDetail: MsgFamilyDetail, status
 
 
 case class MsgStatusUpdatedByConnsRespMsg_MFV_0_5(`@type`: TypeDetail, updatedUidsByConns: List[PairwiseMsgUids],
-                                                  failed: Option[List[PairwiseError]]=None) extends MsgBase
+                                                  failed: Option[List[PairwiseError]]=None) extends LegacyMsgBase
 
 case class MsgStatusUpdatedByConnsRespMsg_MFV_0_6(`@type`: String, updatedUidsByConns: List[PairwiseMsgUids],
-                                                  failed: Option[List[PairwiseError]]=None) extends MsgBase
+                                                  failed: Option[List[PairwiseError]]=None) extends LegacyMsgBase
 
 
 object UpdateMsgStatusByConnsMsgHelper {
@@ -107,14 +106,14 @@ object UpdateMsgStatusByConnsMsgHelper {
   }
 }
 
-case class PairwiseMsgUids(pairwiseDID: DidStr, uids: List[String]) extends MsgBase {
+case class PairwiseMsgUids(pairwiseDID: DidStr, uids: List[String]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("pairwiseDID", pairwiseDID)
     checkRequired("uids", uids)
   }
 }
 
-case class PairwiseError(pairwiseDID: DidStr, statusCode: String, statusMsg: String) extends MsgBase {
+case class PairwiseError(pairwiseDID: DidStr, statusCode: String, statusMsg: String) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("pairwiseDID", pairwiseDID)
     checkRequired("statusCode", statusCode)

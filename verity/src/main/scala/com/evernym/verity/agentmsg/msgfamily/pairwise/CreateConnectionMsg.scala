@@ -1,15 +1,15 @@
 package com.evernym.verity.agentmsg.msgfamily.pairwise
 
+import com.evernym.verity.agentmsg.msgfamily.LegacyMsgBase
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkOptionalNotEmpty, checkRequired}
 
 
 case class CreateConnectionReqMsg_MFV_0_6(`@type`: String, sourceId: String,
                                           phoneNo: Option[String]=None,
                                           includePublicDID: Option[Boolean]=None)
-  extends MsgBase with Control  {
+  extends LegacyMsgBase with Control  {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("sourceId", sourceId)

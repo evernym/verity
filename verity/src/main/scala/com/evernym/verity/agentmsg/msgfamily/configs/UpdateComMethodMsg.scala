@@ -8,11 +8,10 @@ import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthUtil
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkOptionalNotEmpty, checkRequired, throwMissingReqFieldException}
 
 
-case class ComMethodPackaging(pkgType: String, recipientKeys: Option[Set[String]]) extends MsgBase {
+case class ComMethodPackaging(pkgType: String, recipientKeys: Option[Set[String]]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("pkgType", pkgType)
     MsgPackFormat.fromString(pkgType) match {
@@ -34,7 +33,7 @@ case class ComMethod(id: String,
                      `type`: Int,
                      value: String,
                      packaging: Option[ComMethodPackaging],
-                     authentication: Option[ComMethodAuthentication]=None) extends MsgBase {
+                     authentication: Option[ComMethodAuthentication]=None) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("id", id)
     checkRequired("type", `type`)
@@ -43,13 +42,13 @@ case class ComMethod(id: String,
   }
 }
 
-case class UpdateComMethodReqMsg_MFV_0_5(comMethod: ComMethod) extends MsgBase {
+case class UpdateComMethodReqMsg_MFV_0_5(comMethod: ComMethod) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("comMethod", comMethod)
   }
 }
 
-case class UpdateComMethodReqMsg_MFV_0_6(comMethod: ComMethod) extends MsgBase {
+case class UpdateComMethodReqMsg_MFV_0_6(comMethod: ComMethod) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("comMethod", comMethod)
   }
@@ -57,9 +56,9 @@ case class UpdateComMethodReqMsg_MFV_0_6(comMethod: ComMethod) extends MsgBase {
 
 case class UpdateComMethodReqMsg(comMethod: ComMethod)
 
-case class ComMethodUpdatedRespMsg_MFV_0_5(`@type`: TypeDetail, id: String) extends MsgBase
+case class ComMethodUpdatedRespMsg_MFV_0_5(`@type`: TypeDetail, id: String) extends LegacyMsgBase
 
-case class ComMethodUpdatedRespMsg_MFV_0_6(`@type`: String, id: String) extends MsgBase
+case class ComMethodUpdatedRespMsg_MFV_0_6(`@type`: String, id: String) extends LegacyMsgBase
 
 
 object UpdateComMethodMsgHelper {

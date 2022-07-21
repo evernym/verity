@@ -10,7 +10,6 @@ import com.evernym.verity.config.ConfigConstants.LIB_INDY_LEDGER_POOL_TXN_FILE_L
 import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.util.CollectionUtil.containsDuplicates
-import com.evernym.verity.util.TAAUtil
 import com.evernym.verity.util2.UrlParam
 import com.typesafe.config.{Config, ConfigFactory, ConfigObject, ConfigValueFactory}
 import com.typesafe.scalalogging.Logger

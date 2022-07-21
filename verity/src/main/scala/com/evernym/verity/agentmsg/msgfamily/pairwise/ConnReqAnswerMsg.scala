@@ -21,7 +21,7 @@ case class ConnReqAcceptedMsg_MFV_0_6(`@type`: String,
                                       senderAgencyDetail: SenderAgencyDetail,
                                       replyToMsgId: String,
                                       keyDlgProof: Option[AgentKeyDlgProof]=None,
-                                      sourceId: Option[String]=None) extends MsgBase {
+                                      sourceId: Option[String]=None) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@id", `@id`)
@@ -40,7 +40,7 @@ case class ConnReqDeclinedMsg_MFV_0_6(`@type`: String,
                                       senderAgencyDetail: SenderAgencyDetail,
                                       replyToMsgId: String,
                                       keyDlgProof: Option[AgentKeyDlgProof]=None,
-                                      sourceId: Option[String]=None) extends MsgBase {
+                                      sourceId: Option[String]=None) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@id", `@id`)
@@ -58,7 +58,7 @@ case class AcceptConnReqMsg_MFV_0_6(`@type`: String,
                                     senderAgencyDetail: SenderAgencyDetail,
                                     replyToMsgId: String,
                                     keyDlgProof: Option[AgentKeyDlgProof]=None,
-                                    `~thread`: Option[Thread] = None) extends MsgBase {
+                                    `~thread`: Option[Thread] = None) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@id", `@id`)
@@ -76,7 +76,7 @@ case class DeclineConnReqMsg_MFV_0_6(`@type`: String,
                                      senderAgencyDetail: SenderAgencyDetail,
                                      replyToMsgId: String,
                                      keyDlgProof: AgentKeyDlgProof,
-                                     `~thread`: Option[Thread] = None) extends MsgBase {
+                                     `~thread`: Option[Thread] = None) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@id", `@id`)
@@ -107,7 +107,7 @@ case class RedirectConnReqMsg_MFV_0_6(
                                        senderDetail: SenderDetail,
                                        senderAgencyDetail: SenderAgencyDetail,
                                        keyDlgProof: AgentKeyDlgProof,
-                                       `~thread`: Option[Thread] = None) extends MsgBase {
+                                       `~thread`: Option[Thread] = None) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@id", `@id`)
@@ -141,7 +141,7 @@ case class ConnReqRedirectedMsg_MFV_0_5(
                                          redirectDetail: JSONObject,
                                          replyToMsgId: String,
                                          senderDetail: SenderDetail,
-                                         senderAgencyDetail: SenderAgencyDetail) extends MsgBase {
+                                         senderAgencyDetail: SenderAgencyDetail) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("redirectDetail", redirectDetail)
@@ -160,7 +160,7 @@ case class ConnReqRedirectedMsg_MFV_0_6(
                                          replyToMsgId: String,
                                          senderDetail: SenderDetail,
                                          senderAgencyDetail: SenderAgencyDetail,
-                                         sourceId: Option[String]=None) extends MsgBase {
+                                         sourceId: Option[String]=None) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("@type", `@type`)
     checkRequired("@id", `@id`)
@@ -171,15 +171,15 @@ case class ConnReqRedirectedMsg_MFV_0_6(
   }
 }
 
-case class AcceptConnReqRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread, sourceId: Option[String]=None) extends MsgBase
+case class AcceptConnReqRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread, sourceId: Option[String]=None) extends LegacyMsgBase
 
-case class DeclineConnReqRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread, sourceId: Option[String]=None) extends MsgBase
+case class DeclineConnReqRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread, sourceId: Option[String]=None) extends LegacyMsgBase
 
-case class ConnReqAcceptedRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread) extends MsgBase
+case class ConnReqAcceptedRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread) extends LegacyMsgBase
 
-case class ConnReqDeclinedRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread) extends MsgBase
+case class ConnReqDeclinedRespMsg_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread) extends LegacyMsgBase
 
-case class ConnReqRedirectResp_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread, sourceId: Option[String]=None) extends MsgBase
+case class ConnReqRedirectResp_MFV_0_6(`@type`: String, `@id`: String, `~thread`: Thread, sourceId: Option[String]=None) extends LegacyMsgBase
 
 object AcceptConnReqMsgHelper {
 

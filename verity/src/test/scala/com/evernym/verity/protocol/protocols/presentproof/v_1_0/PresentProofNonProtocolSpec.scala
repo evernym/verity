@@ -76,7 +76,7 @@ class PresentProofNonProtocolSpec extends BasicSpec with OptionValues {
   }
 
   "requestToProofRequest tests" in {
-    val pr = ProofRequestUtil.requestToProofRequest(Ctl.Request("test", None, None, None))
+    val pr = ProofRequestUtil.requestToProofRequest(Ctl.Request("test", None, None, None), vdrMultiLedgerSupportEnabled = true)
 
   }
 

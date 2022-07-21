@@ -123,6 +123,7 @@ object VerityLocalConfig {
     ConfigFactory.parseString(
       s"""
          |verity.vdr {
+         |  multi-ledger-support-enabled = true
          |  unqualified-ledger-prefix = "did:indy:sovrin"
          |  ledgers: []
          |}""".stripMargin

@@ -8,13 +8,12 @@ import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgBase
 
 
 case class GetUpgradeInfo(pairwiseDIDs: List[String])
 
 
-case class UpgradeInfoRespMsg_MFV_1_0(`@type`: String, data: Map[String, PairwiseUpgradeInfo]) extends MsgBase
+case class UpgradeInfoRespMsg_MFV_1_0(`@type`: String, data: Map[String, PairwiseUpgradeInfo]) extends LegacyMsgBase
 
 object UpgradeInfoMsgHelper {
 
@@ -48,7 +47,7 @@ case class PairwiseUpgradeInfoRespMsg_MFV_1_0(`@type`: String,
                                               direction: String,
                                               theirAgencyDID: DidStr,
                                               theirAgencyVerKey: VerKeyStr,
-                                              theirAgencyEndpoint: String) extends MsgBase
+                                              theirAgencyEndpoint: String) extends LegacyMsgBase
 
 object UpgradePairwiseInfoMsgHelper {
   def buildRespMsg(data: PairwiseUpgradeInfo)

@@ -19,6 +19,7 @@ import scala.util.{Failure, Try}
 class LedgerAccessAdapter(vdrTools: VDRAdapter,
                           vdrCache: CacheProvider,
                           _walletAccess: WalletAccess,
+                          _vdrMultiLedgerSupportEnabled: Boolean,
                           _vdrUnqualifiedLedgerPrefix: LedgerPrefix,
                           _vdrLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix])
                          (implicit val asyncOpRunner: AsyncOpRunner,
@@ -117,18 +118,29 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     )
   }
 
-  override def fqDID(did: DidStr): FqDID = {
-    VDRUtil.toFqDID(did, _vdrUnqualifiedLedgerPrefix, _vdrLedgerPrefixMappings)
+  override def fqDID(did: DidStr, force: Boolean): FqDID = {
+    VDRUtil.toFqDID(did, force || _vdrMultiLedgerSupportEnabled, _vdrUnqualifiedLedgerPrefix, _vdrLedgerPrefixMappings)
   }
 
   override def fqSchemaId(schemaId: SchemaId,
-                          issuerFqDID: Option[FqDID]): FqSchemaId  = {
-    VDRUtil.toFqSchemaId_v0(schemaId, issuerFqDID, Option(_vdrUnqualifiedLedgerPrefix))
+                          issuerFqDID: Option[FqDID],
+                          force: Boolean): FqSchemaId  = {
+    VDRUtil.toFqSchemaId_v0(schemaId, issuerFqDID, Option(_vdrUnqualifiedLedgerPrefix), force || _vdrMultiLedgerSupportEnabled)
   }
 
   override def fqCredDefId(credDefId: CredDefId,
-                           issuerFqDID: Option[FqDID]): FqCredDefId = {
-    VDRUtil.toFqCredDefId_v0(credDefId, issuerFqDID, Option(_vdrUnqualifiedLedgerPrefix))
+                           issuerFqDID: Option[FqDID],
+                           force: Boolean): FqCredDefId = {
+    VDRUtil.toFqCredDefId_v0(credDefId, issuerFqDID, Option(_vdrUnqualifiedLedgerPrefix), force || _vdrMultiLedgerSupportEnabled)
+  }
+
+
+  def toLegacyNonFqSchemaId(schemaId: FqSchemaId): SchemaId = {
+    VDRUtil.toLegacyNonFqSchemaId(schemaId, _vdrMultiLedgerSupportEnabled)
+  }
+
+  def toLegacyNonFqCredDefId(credDefId: FqCredDefId): CredDefId = {
+    VDRUtil.toLegacyNonFqCredDefId(credDefId, _vdrMultiLedgerSupportEnabled)
   }
 
   override def extractLedgerPrefix(submitterFqDID: FqDID,
@@ -171,5 +183,6 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     )
   }
 
+  override lazy val vdrMultiLedgerSupportEnabled: Boolean = _vdrMultiLedgerSupportEnabled
   override lazy val vdrUnqualifiedLedgerPrefix: String = _vdrUnqualifiedLedgerPrefix
 }

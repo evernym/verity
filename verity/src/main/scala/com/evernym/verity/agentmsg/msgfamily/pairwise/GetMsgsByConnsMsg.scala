@@ -13,7 +13,7 @@ import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkOptionalN
 case class GetMsgsByConnsReqMsg_MFV_0_5(pairwiseDIDs: Option[List[DidStr]] = None,
                                         uids: Option[List[String]] = None,
                                         excludePayload: Option[String] = None,
-                                        statusCodes: Option[List[String]] = None) extends MsgBase {
+                                        statusCodes: Option[List[String]] = None) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkOptionalNotEmpty("excludePayload", excludePayload)
   }
@@ -22,7 +22,7 @@ case class GetMsgsByConnsReqMsg_MFV_0_5(pairwiseDIDs: Option[List[DidStr]] = Non
 case class GetMsgsByConnsReqMsg_MFV_0_6(pairwiseDIDs: Option[List[DidStr]] = None,
                                         uids: Option[List[String]] = None,
                                         excludePayload: Option[String] = None,
-                                        statusCodes: Option[List[String]] = None) extends MsgBase {
+                                        statusCodes: Option[List[String]] = None) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkOptionalNotEmpty("excludePayload", excludePayload)
   }
@@ -34,11 +34,11 @@ case class GetMsgsByConnsReqMsg(msgFamilyDetail: MsgFamilyDetail,
                                 uids: Option[List[String]] = None,
                                 statusCodes: Option[List[String]] = None)
 
-case class MsgsByPairwiseConn(pairwiseDID: DidStr, msgs: List[MsgDetail]) extends MsgBase
+case class MsgsByPairwiseConn(pairwiseDID: DidStr, msgs: List[MsgDetail]) extends LegacyMsgBase
 
-case class GetMsgsByConnsRespMsg_MFV_0_5(`@type`: TypeDetail, msgsByConns: List[MsgsByPairwiseConn]) extends MsgBase
+case class GetMsgsByConnsRespMsg_MFV_0_5(`@type`: TypeDetail, msgsByConns: List[MsgsByPairwiseConn]) extends LegacyMsgBase
 
-case class GetMsgsByConnsRespMsg_MFV_0_6(`@type`: String, msgsByConns: List[MsgsByPairwiseConn]) extends MsgBase
+case class GetMsgsByConnsRespMsg_MFV_0_6(`@type`: String, msgsByConns: List[MsgsByPairwiseConn]) extends LegacyMsgBase
 
 
 object GetMsgsByConnsMsgHelper extends MsgHelper[GetMsgsByConnsReqMsg] {

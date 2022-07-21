@@ -5,17 +5,16 @@ import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
-case class CreateKeyReqMsg_MFV_0_5(forDID: DidStr, forDIDVerKey: VerKeyStr) extends MsgBase {
+case class CreateKeyReqMsg_MFV_0_5(forDID: DidStr, forDIDVerKey: VerKeyStr) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("forDID", forDID)
     checkRequired("forDIDVerKey", forDIDVerKey)
   }
 }
 
-case class CreateKeyReqMsg_MFV_0_6(forDID: DidStr, forDIDVerKey: VerKeyStr) extends MsgBase {
+case class CreateKeyReqMsg_MFV_0_6(forDID: DidStr, forDIDVerKey: VerKeyStr) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("forDID", forDID)
     checkRequired("forDIDVerKey", forDIDVerKey)
@@ -26,9 +25,9 @@ case class CreateKeyReqMsg(forDID: DidStr, forDIDVerKey: VerKeyStr) {
   def didPair: DidPair = DidPair(forDID, forDIDVerKey)
 }
 
-case class KeyCreatedRespMsg_MFV_0_5(`@type`: TypeDetail, withPairwiseDID: DidStr, withPairwiseDIDVerKey: VerKeyStr) extends MsgBase
+case class KeyCreatedRespMsg_MFV_0_5(`@type`: TypeDetail, withPairwiseDID: DidStr, withPairwiseDIDVerKey: VerKeyStr) extends LegacyMsgBase
 
-case class KeyCreatedRespMsg_MFV_0_6(`@type`: String, withPairwiseDID: DidStr, withPairwiseDIDVerKey: VerKeyStr) extends MsgBase
+case class KeyCreatedRespMsg_MFV_0_6(`@type`: String, withPairwiseDID: DidStr, withPairwiseDIDVerKey: VerKeyStr) extends LegacyMsgBase
 
 
 object CreateKeyMsgHelper extends MsgHelper[CreateKeyReqMsg] {

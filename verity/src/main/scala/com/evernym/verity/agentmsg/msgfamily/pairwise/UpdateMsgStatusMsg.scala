@@ -5,17 +5,16 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.protocol.engine.Constants._
-import com.evernym.verity.protocol.engine.MsgBase
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
-case class UpdateMsgStatusReqMsg_MFV_0_5(statusCode: String, uids: List[String]) extends MsgBase {
+case class UpdateMsgStatusReqMsg_MFV_0_5(statusCode: String, uids: List[String]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("statusCode", statusCode)
     checkRequired("uids", uids)
   }
 }
 
-case class UpdateMsgStatusReqMsg_MFV_0_6(statusCode: String, uids: List[String]) extends MsgBase {
+case class UpdateMsgStatusReqMsg_MFV_0_6(statusCode: String, uids: List[String]) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("statusCode", statusCode)
     checkRequired("uids", uids)
@@ -24,9 +23,9 @@ case class UpdateMsgStatusReqMsg_MFV_0_6(statusCode: String, uids: List[String])
 
 case class UpdateMsgStatusReqMsg(statusCode: String, uids: List[String]) extends ActorMessage
 
-case class MsgStatusUpdatedRespMsg_MFV_0_5(`@type`: TypeDetail, uids: List[String], statusCode: String) extends MsgBase
+case class MsgStatusUpdatedRespMsg_MFV_0_5(`@type`: TypeDetail, uids: List[String], statusCode: String) extends LegacyMsgBase
 
-case class MsgStatusUpdatedRespMsg_MFV_0_6(`@type`: String, uids: List[String], statusCode: String) extends MsgBase
+case class MsgStatusUpdatedRespMsg_MFV_0_6(`@type`: String, uids: List[String], statusCode: String) extends LegacyMsgBase
 
 
 object UpdateMsgStatusMsgHelper {

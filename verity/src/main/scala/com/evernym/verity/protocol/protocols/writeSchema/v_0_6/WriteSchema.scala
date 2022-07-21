@@ -55,9 +55,9 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
   def writeSchema(m: Write, init: State.Initialized): Unit = {
     try {
       ctx.apply(RequestReceived(m.name, m.version, m.attrNames))
-      val nonFqSubmitterDID = _submitterDID(init)
-      val fqSubmitterDID = ctx.ledger.fqDID(nonFqSubmitterDID)
-      ctx.wallet.createSchema(nonFqSubmitterDID, m.name, m.version, seqToJson(m.attrNames)) {
+      val submitterDID = _submitterDID(init)
+      val fqSubmitterDID = ctx.ledger.fqDID(submitterDID, force = true)
+      ctx.wallet.createSchema(ctx.ledger.fqDID(submitterDID, force = false), m.name, m.version, seqToJson(m.attrNames)) {
         case Success(schemaCreated: SchemaCreatedResult) =>
           val schemaId = schemaCreated.schemaId
           writeSchemaToLedger(fqSubmitterDID, schemaId, schemaCreated.schemaJson) {

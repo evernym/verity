@@ -15,6 +15,8 @@ trait LedgerAccess {
 
   def vdrUnqualifiedLedgerPrefix(): String
 
+  def vdrMultiLedgerSupportEnabled(): Boolean
+
   //new vdr apis
   def prepareSchemaTxn(schemaJson: String,
                        schemaId: SchemaId,
@@ -50,13 +52,19 @@ trait LedgerAccess {
   def resolveCredDefs(fqCredDefIds: Set[FqCredDefId])
                      (handler: Try[Seq[CredDef]] => Unit): Unit
 
-  def fqDID(did: DidStr): FqDID
+  def fqDID(did: DidStr, force: Boolean): FqDID
 
   def fqSchemaId(schemaId: SchemaId,
-                 issuerFqDID: Option[FqDID]): FqSchemaId
+                 issuerFqDID: Option[FqDID],
+                 force: Boolean): FqSchemaId
 
   def fqCredDefId(credDefId: CredDefId,
-                  issuerFqDID: Option[FqDID]): FqCredDefId
+                  issuerFqDID: Option[FqDID],
+                  force: Boolean): FqCredDefId
+
+  def toLegacyNonFqSchemaId(schemaId: FqSchemaId): SchemaId
+
+  def toLegacyNonFqCredDefId(credDefId: FqCredDefId): CredDefId
 
   def extractLedgerPrefix(submitterFqDID: FqDID, endorserFqDID: FqDID): LedgerPrefix
 }

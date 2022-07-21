@@ -180,11 +180,9 @@ trait InteractiveSdkFlow extends MetricsFlow {
               assert(resp.getJSONObject("identifier").has("did"))
               assert(resp.getJSONObject("status").has("needsEndorsement"))
             }
-          }
-          else if (resp.getString(`@TYPE`).contains("public-identifier")) {
+          } else if (resp.getString(`@TYPE`).contains("public-identifier")) {
             logger.info("Issuer is already setup")
-          }
-          else {
+          } else {
             throw new Exception("Unexpected message type")
           }
         }
@@ -396,7 +394,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
       val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
-      s"[$issuerName] use write-schema with unknown endoerser DID to recieve needs-endorsement" in {
+      s"[$issuerName] use write-schema with unknown endorser DID to receive needs-endorsement" in {
         val receiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
         val (issuerDID, issuerVerkey): (DidStr, VerKeyStr) = currentIssuerId(issuerSdk, receiverSdk)
 

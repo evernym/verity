@@ -6,4 +6,4 @@ addSbtPlugin("net.virtual-void"       % "sbt-dependency-graph" % "0.9.2")
 addSbtPlugin("com.github.sbt"       % "sbt-git" % "2.0.0")
 addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.1.1")
 
-addSbtPlugin("org.scoverage"          %  "sbt-scoverage" % "1.9.3")
+addSbtPlugin("org.scoverage"          %  "sbt-scoverage" % "2.0.0")

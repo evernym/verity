@@ -395,7 +395,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
       val msgReceiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
 
-      s"[$issuerName] use write-schema with unknown endoerser DID to recieve needs-endorsement" in {
+      s"[$issuerName] use write-schema with unknown endorser DID to receive needs-endorsement" in {
         val receiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
         val (issuerDID, issuerVerkey): (DidStr, VerKeyStr) = currentIssuerId(issuerSdk, receiverSdk)
 

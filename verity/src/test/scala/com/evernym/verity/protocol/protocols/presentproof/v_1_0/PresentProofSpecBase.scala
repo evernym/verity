@@ -185,7 +185,7 @@ abstract class PresentProofSpecBase
     ProofAttribute(name, names, restrictions, nonRevoked, selfAttestedAllowed)
 
   def allowsAllSelfAttested(req: Ctl.Request): Boolean =
-    ProofRequestUtil.requestToProofRequest(req).get.allowsAllSelfAttested
+    ProofRequestUtil.requestToProofRequest(req, vdrMultiLedgerSupportEnabled = true).get.allowsAllSelfAttested
 
   def genReq(name: String,
              proof_attrs: Option[List[ProofAttribute]],

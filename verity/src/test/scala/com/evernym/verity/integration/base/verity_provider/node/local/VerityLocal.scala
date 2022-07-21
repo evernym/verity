@@ -20,7 +20,7 @@ import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
-import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockVdrToolsBuilder, VDRAdapter}
+import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistryBuilder, MockVdrToolsBuilder, VDRAdapter}
 import com.evernym.verity.vdr.service.{VDRToolsFactory, VdrTools}
 
 import java.nio.file.Path
@@ -31,11 +31,6 @@ import scala.language.postfixOps
 
 object LocalVerity {
   lazy val waitAtMost: FiniteDuration = 25 seconds
-
-//  lazy val defaultSvcParam: ServiceParam =
-//    ServiceParam
-//      .empty
-//      .withLedgerTxnExecutor(new MockLedgerTxnExecutor())
 
   def apply(tempDir: Path,
             appSeed: String,
@@ -110,11 +105,7 @@ object LocalVerity {
           .getOrElse(StorageAPI.loadFromConfig(appConfig, executionContextProvider.futureExecutionContext))
       }
 
-      val testVdrLedgerRegistry = MockLedgerRegistry(
-        List(
-          MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None)
-        )
-      )  //TODO: finalize this
+      val testVdrLedgerRegistry = MockLedgerRegistryBuilder(Map(INDY_SOVRIN_NAMESPACE -> MockIndyLedger("genesis.txn file path", None))).build()
       override lazy val vdrBuilderFactory: VDRToolsFactory = () => new MockVdrToolsBuilder(testVdrLedgerRegistry, serviceParam.flatMap(_.vdrTools))
       override lazy val vdrAdapter: VDRAdapter = new MockVDRAdapter(vdrBuilderFactory)(futureExecutionContext)
     }

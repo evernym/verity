@@ -10,17 +10,17 @@ import com.evernym.verity.vdr.service._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-//in-memory version of VDRTools to be used in tests unit/integration tests
+//Mocked vdrtools (dependent on in-memory ledgers) to be used in unit/integration tests
 class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionContext)
   extends VdrTools {
-
-  var idToLedgers: Map[String, InMemLedger]= Map.empty
 
   //TODO: as we add/integrate actual VDR apis and their tests,
   // this class should evolve to reflect the same for its test implementation
 
-  override def ping(namespaces: List[Namespace]): Future[Map[String, VdrResults.PingResult]] = {
-    val allNamespaces = if (namespaces.isEmpty) ledgerRegistry.ledgers.flatMap(_.allSupportedNamespaces) else namespaces
+  var idToLedgers: Map[Namespace, InMemLedger]= Map.empty
+
+  override def ping(namespaces: List[Namespace]): Future[Map[Namespace, VdrResults.PingResult]] = {
+    val allNamespaces = if (namespaces.isEmpty) ledgerRegistry.ledgers.keys else namespaces
     Future.successful(allNamespaces.map(n => n -> new VdrResults.PingResult("SUCCESS", "successful")).toMap)
   }
 

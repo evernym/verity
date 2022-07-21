@@ -354,6 +354,7 @@ from verity_sdk.utils.Context import Context
 from verity_sdk.protocols.v1_0.Relationship import GoalsList
 from sys import stderr, exit
 import faulthandler
+import time
 
 # ==== IMPORTS ====
 $imports
@@ -383,6 +384,7 @@ async def main():
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
+    time.sleep(1)   # FIXME waiting for libindy thread to complete
 """
   }
 }

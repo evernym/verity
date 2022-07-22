@@ -77,12 +77,6 @@ object UndefinedInterfaces {
     override def currentPublicIdentifierMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
 
     override def getThreadId: String = throw new NotImplementedError
-
-    override def create(context: Context, ledgerPrefix: String, endorser: String): Unit = throw new NotImplementedError()
-
-    override def createMsg(context: Context, ledgerPrefix: String, endorser: String): JSONObject = throw new NotImplementedError()
-
-    override def createMsgPacked(context: Context, ledgerPrefix: String, endorser: String): Array[Byte] = throw new NotImplementedError()
   }
 
   class UndefinedWriteSchema_0_6 extends WriteSchemaV0_6 {

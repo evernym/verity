@@ -126,7 +126,9 @@ trait AgentActorContext
 class DefaultLedgerSvc(val system: ActorSystem,
                        val appConfig: AppConfig,
                        val walletAPI: WalletAPI,
-                       val ledgerPoolConnManager: LedgerPoolConnManager) extends LedgerSvc {
+                       val ledgerPoolConnManager: LedgerPoolConnManager)
+                      (implicit val executionContext: ExecutionContext)
+  extends LedgerSvc {
 
   override def ledgerTxnExecutor: LedgerTxnExecutor = {
     ledgerPoolConnManager.txnExecutor(Some(walletAPI))

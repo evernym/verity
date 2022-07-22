@@ -4,7 +4,8 @@ import com.evernym.vdrtools.vdr.VdrParams.CacheOptions
 import com.evernym.vdrtools.vdr.VdrResults
 import com.evernym.vdrtools.vdr.VdrResults.PreparedTxnResult
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
-import com.evernym.verity.did.DidStr
+import com.evernym.verity.did.{DidPair, DidStr}
+import com.evernym.verity.ledger.Submitter
 import com.evernym.verity.vdr.base.InMemLedger
 import com.evernym.verity.vdr.service._
 
@@ -29,7 +30,7 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
                           endorser: Option[String]): Future[PreparedTxnResult] = {
     ledgerRegistry.forLedger(submitterDid) { ledger: InMemLedger =>
       val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams)
-      val id = json.get("id").asText
+      val id = json.get(VDRAdapterUtil.ID).asText
       addLedgerMapping(id, ledger)
       ledger.prepareSchemaTxn(txnSpecificParams, id, submitterDid, endorser)
     }
@@ -40,7 +41,7 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
                              endorser: Option[String]): Future[PreparedTxnResult] = {
     ledgerRegistry.forLedger(submitterDid) { ledger: InMemLedger =>
       val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams)
-      val id = json.get("id").asText
+      val id = json.get(VDRAdapterUtil.ID).asText
       addLedgerMapping(id, ledger)
       ledger.prepareSchemaTxn(txnSpecificParams, id, submitterDid, endorser)
     }
@@ -51,7 +52,7 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
                               endorser: Option[String]): Future[PreparedTxnResult] = {
     ledgerRegistry.forLedger(submitterDid) { ledger: InMemLedger =>
       val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams);
-      val id = json.get("id").asText()
+      val id = json.get(VDRAdapterUtil.ID).asText()
       addLedgerMapping(id, ledger)
       ledger.prepareCredDefTxn(txnSpecificParams, id, submitterDid, endorser)
     }
@@ -67,16 +68,10 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
     }
   }
 
-  def submitRawTxn(namespace: Namespace,
-                   txnBytes: Array[Byte]): Future[TxnResult] = ???
-
-  def submitQuery(namespace: Namespace,
-                  query: String): Future[TxnResult] = ???
-
   override def resolveSchema(schemaId: FqSchemaId): Future[VdrSchema] = {
     idToLedgers.get(schemaId) match {
       case Some(ledger) => Future(ledger.resolveSchema(schemaId))
-      case None         => Future(ledgerRegistry.allLedgers.head.resolveSchema(schemaId))
+      case None         => Future(ledgerRegistry.getLedger(schemaId).resolveSchema(schemaId))
     }
   }
 
@@ -88,7 +83,7 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
   override def resolveCredDef(credDefId: FqCredDefId): Future[VdrCredDef] = {
     idToLedgers.get(credDefId) match {
       case Some(ledger) => Future(ledger.resolveCredDef(credDefId))
-      case None         => Future(ledgerRegistry.allLedgers.head.resolveCredDef(credDefId))
+      case None         => Future(ledgerRegistry.getLedger(credDefId).resolveCredDef(credDefId))
     }
   }
 
@@ -111,6 +106,28 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
   private def addLedgerMapping(id: String, ledger: InMemLedger): Unit = {
     idToLedgers = idToLedgers + (id -> ledger)
   }
-}
 
-class InvalidIdentifierException(msg: String) extends RuntimeException(msg)
+  def submitRawTxn(namespace: Namespace,
+                   txnBytes: Array[Byte]): Future[TxnResult] = ???
+
+  def submitQuery(namespace: Namespace,
+                  query: String): Future[TxnResult] = ???
+
+
+  //============================================= WORKAROUND =======================================================
+  //NOTE: this is workaround until vdr tools apis starts supporting updating did docs
+
+  def addNym(submitter: Submitter, didPair: DidPair): Future[Unit] = {
+    idToLedgers.get(didPair.did) match {
+      case Some(ledger) => Future(ledger.addNym(submitter, didPair))
+      case None         => Future(ledgerRegistry.getLedger(didPair.did).addNym(submitter, didPair))
+    }
+  }
+
+  def addAttrib(submitter: Submitter, did: DidStr, attrName: String, attrValue: String): Future[Unit] = {
+    idToLedgers.get(did) match {
+      case Some(ledger) => Future(ledger.addAttrib(submitter, did, attrName, attrValue))
+      case None         => Future(ledgerRegistry.getLedger(did).addAttrib(submitter, did, attrName, attrValue))
+    }
+  }
+}

@@ -1,13 +1,19 @@
 package com.evernym.verity.vdr.base
 
 import com.evernym.vdrtools.vdr.VdrResults.PreparedTxnResult
+import com.evernym.verity.actor.agent.{AttrName, AttrValue}
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
-import com.evernym.verity.did.VerKeyStr
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
+import com.evernym.verity.ledger.Submitter
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.testkit.MockLedger.INDY_ENDORSEMENT
 import com.evernym.verity.vdr.VDRUtil.extractNamespace
 import com.evernym.verity.vdr._
+import com.evernym.verity.vdr.service.VDRAdapterUtil
+import com.evernym.verity.vdr.service.VDRAdapterUtil.SCHEMA_ID
 import org.json.JSONObject
+
+import scala.util.Try
 
 
 //base implementation for any VDR based mock ledgers (Indy, Cheqd etc)
@@ -64,17 +70,19 @@ trait InMemLedger {
   }
 
   def resolveSchema(fqSchemaId: FqSchemaId): VdrSchema = {
-    val data = schemas.getOrElse(VDRUtil.toLegacyNonFqSchemaId(fqSchemaId), throw new RuntimeException("schema not found for given id: " + fqSchemaId))
+    val data = schemas.getOrElse(VDRUtil.toLegacyNonFqSchemaId(fqSchemaId),
+      throw new RuntimeException("schema not found for given id: " + fqSchemaId))
     new String(data)
   }
 
   def resolveCredDef(fqCredDefId: FqCredDefId): VdrCredDef = {
-    val data = credDefs.getOrElse(VDRUtil.toLegacyNonFqCredDefId(fqCredDefId), throw new RuntimeException("cred def not found for given id: " + fqCredDefId))
+    val data = credDefs.getOrElse(VDRUtil.toLegacyNonFqCredDefId(fqCredDefId),
+      throw new RuntimeException("cred def not found for given id: " + fqCredDefId))
     new String(data)
   }
 
   def resolveDid(fqDid: FqDID): VdrDid = {
-    val data = didDocs.getOrElse(fqDid, throw new RuntimeException("did doc not found for given id: " +
+    val data = didDocs.getOrElse(VDRUtil.toLegacyNonFqDid(fqDid), throw new RuntimeException("did doc not found for given id: " +
       fqDid + s" (available did docs: ${didDocs.keys.mkString(", ")})"))
     new String(data)
   }
@@ -86,35 +94,31 @@ trait InMemLedger {
 
   private def extractSchemaId(json: String): String = {
     val node = JacksonMsgCodec.docFromStrUnchecked(json)
-    node.get("schemaId").asText()
+    node.get(SCHEMA_ID).asText()
   }
-
-//  def checkSchemaId(schemaId: String): Unit = {
-//    if (! schemaId.startsWith("did:indy:"))
-//      throw new RuntimeException(s"non fully qualified schema id: $schemaId")
-//  }
-//
-//  def checkCredDefId(credDefId: String): Unit = {
-//    if (! credDefId.startsWith("did:"))
-//      throw new RuntimeException(s"non fully qualified cred def id: $credDefId")
-//  }
-
-  //  def isFqSchemaId(schemaId: String, issuerDid: FqDID): Unit = {
-  //    if (VDRUtil.toFqSchemaId_v0(schemaId, Option(issuerDid), None) != schemaId)
-  //      throw new RuntimeException(s"non fully qualified schema id: $schemaId")
-  //  }
-  //
-  //  def isFqCredDefId(credDefId: String, issuerDid: FqDID): Unit = {
-  //    if (VDRUtil.toFqCredDefId_v0(credDefId, Option(issuerDid), None) != credDefId)
-  //      throw new RuntimeException(s"non fully qualified cred def id: $credDefId")
-  //  }
-
 
   private var schemas: Map[FqSchemaId, Payload] = Map.empty
   private var credDefs: Map[FqCredDefId, Payload] = Map.empty
   private var didDocs: Map[FqDID, Payload] = Map.empty
-
   type Payload = Array[Byte]
+
+
+  //============================================= WORKAROUND =======================================================
+  //NOTE: this is workaround until vdr apis starts supporting updating did docs
+
+  var attribs: Map[DidStr, Map[AttrName, AttrValue]] = Map.empty
+
+  def addNym(submitter: Submitter, didPair: DidPair): Unit = {
+    didDocs += didPair.did -> s"""{"${VDRAdapterUtil.ID}":"${didPair.did}", "${VDRAdapterUtil.VER_KEY}":"${didPair.verKey}"}""".getBytes
+  }
+
+  def addAttrib(submitter: Submitter, did: DidStr, attrName: String, attrValue: String): Unit = {
+    val payload = Try(new String(didDocs(did))).getOrElse("{}")
+    val didDocJsonObject = new JSONObject(payload)
+    didDocJsonObject.put(attrName, attrValue)
+    didDocs += did -> didDocJsonObject.toString.getBytes()
+  }
+
 }
 
 trait TestPayloadBase {

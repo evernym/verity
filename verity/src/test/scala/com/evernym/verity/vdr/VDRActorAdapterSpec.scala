@@ -277,7 +277,7 @@ class VDRActorAdapterSpec
             apiTimeout
           )
         }
-        ex.getMessage shouldBe "could not extract namespace for given identifier: Some(did1) (vdrUnqualifiedLedgerPrefix: None)"
+        ex.getMessage shouldBe "did doc not found for given id: did1 (available did docs: )"
       }
     }
 

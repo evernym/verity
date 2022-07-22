@@ -66,6 +66,10 @@ object VDRUtil {
     }
   }
 
+  def toLegacyNonFqDid(did: FqDID): String = {
+    Try(did.split(":").last).getOrElse(did)
+  }
+
   def toLegacyNonFqSchemaId(schemaId: FqSchemaId): String = {
     Try {
       val splitted = schemaId.split("/", 2)
@@ -98,14 +102,6 @@ object VDRUtil {
         s"${issuerParts.last}:3:CL:$schemaId:${claimParts.last}"
       }
     }.getOrElse(credDefId)
-  }
-
-  def toLegacyNonFqDid(did: FqDID): String = {
-    Try {
-      val splitted = did.split(":")
-
-      s"${splitted.last}"
-    }.getOrElse(did)
   }
 
 

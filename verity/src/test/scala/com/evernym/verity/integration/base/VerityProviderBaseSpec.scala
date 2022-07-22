@@ -1,5 +1,6 @@
 package com.evernym.verity.integration.base
 
+import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
@@ -7,6 +8,7 @@ import com.evernym.verity.integration.base.verity_provider.node.local.{ServicePa
 import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore, VerityEnv}
 import com.evernym.verity.ledger.LedgerTxnExecutor
 import com.evernym.verity.observability.logs.LoggingUtil
+import com.evernym.verity.protocol.engine.MockVDRAdapter
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider}
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
@@ -54,7 +56,6 @@ trait VerityProviderBaseSpec
                               serviceParam: Option[ServiceParam] = None,
                               overriddenConfig: Option[Config] = None) {
 
-    import VerityEnvBuilder.localVerityBaseConfig
 
     def withServiceParam(param: ServiceParam): VerityEnvBuilder = copy(serviceParam = Option(param))
     def withConfig(config: Config): VerityEnvBuilder = copy(overriddenConfig = Option(config))
@@ -119,7 +120,7 @@ trait VerityProviderBaseSpec
           multiNodeServiceParam,
           multiNodeClusterConfig,
           executionContextProvider,
-          localVerityBaseConfig
+          VerityEnvBuilder.localVerityBaseConfig
         )
       }
       verityNodes
@@ -179,12 +180,18 @@ trait VerityProviderBaseSpec
   // implementing class can override it or send specific one for specific verity instance as well
   // but for external storage type of services (like ledger) we should make sure
   // it is the same instance across the all verity environments
-  lazy val defaultSvcParam: ServiceParam =
-  ServiceParam
-    .empty
-    .withLedgerTxnExecutor(new MockLedgerTxnExecutor(futureExecutionContext))
-    .withVdrTools(new MockVdrTools(MockLedgerRegistry(
-      List(MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext))
+  lazy val defaultSvcParam: ServiceParam = {
+    val testAppConfig = new TestAppConfig()
+    val vdrTools = new MockVdrTools(MockLedgerRegistry(
+      List(MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext)
+    val vdrToolsAdapter = new MockVDRAdapter(vdrTools)(futureExecutionContext)
+    val ledgerTxnExecutor = new MockLedgerTxnExecutor(futureExecutionContext, testAppConfig, vdrToolsAdapter)
+    ServiceParam
+      .empty
+      .withLedgerTxnExecutor(ledgerTxnExecutor)
+      .withVdrTools(vdrTools)
+  }
+
 
   private def randomTmpDirPath(): Path = {
     val tmpDir = TempDir.findSuiteTempDir(this.suiteName)

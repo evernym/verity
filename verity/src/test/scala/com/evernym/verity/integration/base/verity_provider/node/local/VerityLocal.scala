@@ -32,11 +32,6 @@ import scala.language.postfixOps
 object LocalVerity {
   lazy val waitAtMost: FiniteDuration = 25 seconds
 
-//  lazy val defaultSvcParam: ServiceParam =
-//    ServiceParam
-//      .empty
-//      .withLedgerTxnExecutor(new MockLedgerTxnExecutor())
-
   def apply(tempDir: Path,
             appSeed: String,
             portProfile: PortProfile,
@@ -98,9 +93,15 @@ object LocalVerity {
       extends DefaultAgentActorContext(executionContextProvider, appConfig) {
 
       implicit val executor: ExecutionContextExecutor = system.dispatcher
+      override lazy val vdrBuilderFactory: VDRToolsFactory = () => new MockVdrToolsBuilder(testVdrLedgerRegistry, serviceParam.flatMap(_.vdrTools))
+      lazy val vdrTools: VdrTools = vdrBuilderFactory().build()
+      override lazy val vdrAdapter: VDRAdapter = new MockVDRAdapter(vdrTools)(futureExecutionContext)
+
       override lazy val poolConnManager: LedgerPoolConnManager = {
         new InMemLedgerPoolConnManager(
           executionContextProvider.futureExecutionContext,
+          appConfig,
+          vdrAdapter,
           serviceParam.flatMap(_.ledgerTxnExecutor)
         )(executor)
       }
@@ -110,13 +111,7 @@ object LocalVerity {
           .getOrElse(StorageAPI.loadFromConfig(appConfig, executionContextProvider.futureExecutionContext))
       }
 
-      val testVdrLedgerRegistry = MockLedgerRegistry(
-        List(
-          MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None)
-        )
-      )  //TODO: finalize this
-      override lazy val vdrBuilderFactory: VDRToolsFactory = () => new MockVdrToolsBuilder(testVdrLedgerRegistry, serviceParam.flatMap(_.vdrTools))
-      override lazy val vdrAdapter: VDRAdapter = new MockVDRAdapter(vdrBuilderFactory)(futureExecutionContext)
+      val testVdrLedgerRegistry: MockLedgerRegistry = MockLedgerRegistry(List(MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None)))
     }
 
     val platform: Platform = PlatformBuilder.build(

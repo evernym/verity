@@ -117,9 +117,7 @@ class WriteCredDefEndorsementSpec
 
   val dummyVdrTools = new DummyVdrTools(
     MockLedgerRegistry(
-      List(
-        MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None)
-      )
+      List(MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None))
     ))(futureExecutionContext)
 
   override lazy val executionContextProvider: ExecutionContextProvider = TestExecutionContextProvider.ecp

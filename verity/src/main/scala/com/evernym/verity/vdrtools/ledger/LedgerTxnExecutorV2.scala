@@ -25,7 +25,7 @@ class LedgerTxnExecutorV2(val actorSystem: ActorSystem,
 
   override def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp = V2TxnRespBuilder.buildTxnRespForReadOp(resp)
 
-  override def buildTxnRespForWriteOp(resp: Map[String, Any]): TxnResp = V2TxnRespBuilder.buildTxnRespForWriteOp(resp)
+  override def buildTxnRespForWriteOp(resp: Map[String, Any]): Unit = V2TxnRespBuilder.buildTxnRespForWriteOp(resp)
 }
 
 object V2TxnRespBuilder {

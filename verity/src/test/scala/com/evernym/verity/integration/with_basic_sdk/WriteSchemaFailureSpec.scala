@@ -7,7 +7,6 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
-import com.evernym.verity.did.DidStr
 import com.evernym.verity.integration.base.{VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.base.verity_provider.node.local.ServiceParam
@@ -16,8 +15,7 @@ import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, CurrentP
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Write
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.vdr.base.{INDY_SOVRIN_NAMESPACE, InMemLedger}
-import com.evernym.verity.vdr.service.VdrTools
-import com.evernym.verity.vdr.{FqCredDefId, FqDID, FqSchemaId, MockIndyLedger, MockLedgerRegistry, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
+import com.evernym.verity.vdr.{FqCredDefId, FqDID, FqSchemaId, MockIndyLedger, MockLedgerRegistry, MockVdrTools, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -32,7 +30,9 @@ class WriteSchemaFailureSpec
   override lazy val defaultSvcParam: ServiceParam =
     ServiceParam
       .empty
-      .withVdrTools(new DummyVdrTools(MockLedgerRegistry(List(MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext))
+      .withVdrTools(new DummyVdrTools(
+        MockLedgerRegistry(List(MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None)))
+      )(futureExecutionContext))
 
   lazy val issuerVerityApp = VerityEnvBuilder.default().build(VAS)
   lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext)
@@ -63,7 +63,7 @@ class WriteSchemaFailureSpec
 
   //in-memory version of VDRTools to be used in tests unit/integration tests
   class DummyVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionContext)
-    extends VdrTools {
+    extends MockVdrTools(ledgerRegistry) {
 
     //TODO: as we add/integrate actual VDR apis and their tests,
     // this class should evolve to reflect the same for its test implementation

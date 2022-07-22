@@ -53,23 +53,18 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
   }
 
   def writeSchema(m: Write, init: State.Initialized): Unit = {
-    ctx.logger.debug(s"MATTHEW SPENCE >>> Writing schema: ${m}, ${init.parameters.initParams}")
     try {
       ctx.apply(RequestReceived(m.name, m.version, m.attrNames))
       val submitterDID = _submitterDID(init)
       val fqSubmitterDID = ctx.ledger.fqDID(submitterDID, force = true)
-      ctx.logger.debug(s"MATTHEW SPENCE >>> creating chema with issuer did: ${submitterDID}")
       ctx.wallet.createSchema(ctx.ledger.fqDID(submitterDID, force = false), m.name, m.version, seqToJson(m.attrNames)) {
         case Success(schemaCreated: SchemaCreatedResult) =>
-          ctx.logger.debug(s"MATTHEW SPENCE >>> creating chema for submitter: ${fqSubmitterDID}")
           val schemaId = schemaCreated.schemaId
           writeSchemaToLedger(fqSubmitterDID, schemaId, schemaCreated.schemaJson) {
             case Success(SubmittedTxn(resp)) =>
-              ctx.logger.debug(s"MATTHEW SPENCE >>> creating chema")
               ctx.apply(SchemaWritten(schemaId))
               ctx.signal(StatusReport(schemaId))
             case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(fqSubmitterDID, e) =>
-              ctx.logger.debug(s"MATTHEW SPENCE >>> failed creating chema")
               ctx.logger.info(e.toString)
               val endorserDID = m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse(""))
               //NOTE: below code is assuming verity is only supporting indy ledgers,

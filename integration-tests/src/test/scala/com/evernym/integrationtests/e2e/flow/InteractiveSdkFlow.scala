@@ -172,7 +172,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
           if(resp.getString(`@TYPE`).contains("problem-report")) {
 
             issuerSdk.issuerSetup_0_7
-              .create(issuerSdk.context, "did:indy:sovrin", "WAJQSd73TpK2HmoYRQJX7p")
+              .create(issuerSdk.context, "did:indy:sovrin", endorser.getOrElse("WAJQSd73TpK2HmoYRQJX7p"))
 
             receiverSdk.expectMsg("public-identifier-created") { resp =>
               resp shouldBe an[JSONObject]
@@ -398,7 +398,6 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$issuerName] use write-schema with unknown endorser DID to receive needs-endorsement" in {
         val receiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
         val (issuerDID, issuerVerkey): (DidStr, VerKeyStr) = currentIssuerId(issuerSdk, receiverSdk)
-
 
         val endorserDID = "8hx9VZn2oCTHbGX7UYMYBy"   //Unknown DID
         val writeSchema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toIndexedSeq: _*)

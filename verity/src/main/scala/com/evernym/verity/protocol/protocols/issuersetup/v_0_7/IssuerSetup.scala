@@ -56,12 +56,10 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     ctx.logger.debug(s"Creating DID/Key pair for Issuer Identifier/Keys for ledger prefix: $ledgerPrefix with endorser: ${endorserDID.getOrElse("default")}")
     ctx.wallet.newDid(Some(ledgerPrefix)) {
       case Success(keyCreated) =>
-        ctx.logger.debug(s"MATTHEW SPENCE >>>> Created DID/Key pair for Issuer. Did: ${keyCreated.did} with key: ${keyCreated.verKey}")
         ctx.apply(CreatePublicIdentifierCompleted(keyCreated.did, keyCreated.verKey))
-        val fqSubmitterDID = ctx.ledger.fqDID(keyCreated.did, true)
-        ctx.logger.debug(s"MATTHEW SPENCE >>>> fqSubmitterDID: ${fqSubmitterDID}")
+        val fqSubmitterDID = ctx.ledger.fqDID(keyCreated.did, false)
         ctx.endorser.withCurrentEndorser(ledgerPrefix) {
-          case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID.getOrElse("") == endorser.did =>
+          case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID.contains(endorser.did) =>
             ctx.logger.info(s"registered endorser to be used for issuer endorsement (prefix: $ledgerPrefix): " + endorser)
             //no explicit endorser given/configured or the given/configured endorser matches an active endorser for the ledger prefix
             prepareTxnForEndorsement(fqSubmitterDID, prepareDidJson(keyCreated.did, keyCreated.verKey), endorser.did) {
@@ -116,15 +114,18 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
           fqSubmitterDID,
           Option(endorserDid)) {
           case Success(pt: PreparedTxn) =>
-            ctx.logger.debug(s"MATTHEW SPENCE >>> signing transaction")
-              //NOTE: what about other endorsementSpecType (cheqd etc)
-              if (pt.isEndorsementSpecTypeIndy) {
-                ctx.logger.debug(s"MATTHEW SPENCE >>> building indy request")
-                val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(extractUnqualifiedDidStr(fqSubmitterDID) -> Base58Util.encode(pt.txnBytes)))
-                handleResult(Success(txn))
-              } else {
-                handleResult(Failure(new RuntimeException("endorsement spec type not supported: " + pt.endorsementSpec)))
-              }
+            ctx.wallet.sign(pt.bytesToSign, pt.signatureType, Option(fqSubmitterDID)) {
+              case Success(smr: SignedMsgResult) =>
+                //NOTE: what about other endorsementSpecType (cheqd etc)
+                if (pt.isEndorsementSpecTypeIndy) {
+                  val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(extractUnqualifiedDidStr(fqSubmitterDID) -> Base58Util.encode(pt.txnBytes)))
+                  handleResult(Success(txn))
+                } else {
+                  handleResult(Failure(new RuntimeException("endorsement spec type not supported: " + pt.endorsementSpec)))
+                }
+              case Failure(ex) =>
+                handleResult(Failure(ex))
+            }
           case Failure(ex) =>
             handleResult(Failure(ex))
         }

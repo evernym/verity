@@ -68,6 +68,10 @@ object UndefinedInterfaces {
     override def createMsg(context: Context, ledgerPrefix: String): JSONObject = throw new NotImplementedError
     override def createMsgPacked(context: Context, ledgerPrefix: String): Array[Byte] = throw new NotImplementedError
 
+    override def create(context: Context, ledgerPrefix: String, endorser: String): Unit = throw new NotImplementedError
+    override def createMsg(context: Context, ledgerPrefix: String, endorser: String): JSONObject = throw new NotImplementedError
+    override def createMsgPacked(context: Context, ledgerPrefix: String, endorser: String): Array[Byte] = throw new NotImplementedError
+
     override def currentPublicIdentifier(context: Context): Unit = throw new NotImplementedError
     override def currentPublicIdentifierMsg(context: Context): JSONObject = throw new NotImplementedError
     override def currentPublicIdentifierMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError

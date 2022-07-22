@@ -143,7 +143,11 @@ class NodeSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
   override def issuerSetup_0_7: IssuerSetupV0_7 = {
     new UndefinedIssuerSetup_0_7 {
       override def create(ctx: Context, ledgerPrefix: String): Unit = {
-        executeCmd(ctx, "IssuerSetup", this.version, "create")
+        executeCmd(ctx, "IssuerSetup", this.version, "create", Seq.empty, Seq(ledgerPrefix))
+      }
+
+      override def create(ctx: Context, ledgerPrefix: String, endorser: String): Unit = {
+        executeCmd(ctx, "IssuerSetup", this.version, "create", Seq.empty, Seq(ledgerPrefix, endorser))
       }
 
       override def currentPublicIdentifier(ctx: Context): Unit =

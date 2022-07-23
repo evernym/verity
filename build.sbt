@@ -63,7 +63,7 @@ val alpAkkaKafkaVer     = "3.0.0"
 val dynamoDbPersistence = "1.2.0-RC2"
 val kamonVer            = "2.5.5"
 val kanelaAgentVer      = "1.0.14"
-val cinnamonVer         = "2.17.0"
+val cinnamonVer         = "2.16.5"
 val jacksonVer          = "2.13.3"
 val sdnotifyVer         = "1.3"
 val cloudEventsVersion  = "2.3.0"
@@ -71,7 +71,7 @@ val cloudEventsVersion  = "2.3.0"
 //test dependency versions
 val scalatestVer        = "3.2.12"
 val mockitoVer          = "1.17.7"
-val veritySdkVer        = "0.6.1"
+val veritySdkVer        = "0.6.1-b2158887"
 val vcxWrapperVer       = "0.14.1.844"
 
 
@@ -158,10 +158,10 @@ lazy val settings = Seq(
     "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
   ),
   resolvers += Resolver.mavenLocal,
-//  resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public", // this shouldn't be necessay since we're publishing vdr-tools to maven central
+//  resolvers += "Lib-indy" at "https://repo.sovrin.org/repository/maven-public", // this shouldn't be necessary since we're publishing vdr-tools to maven central
   resolvers += "libvcx" at "https://evernym.mycloudrepo.io/public/repositories/libvcx-java",
-//  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",
-  resolvers += "evernym-dev" at "https://gitlab.com/api/v4/projects/27807222/packages/maven", // used to fetch java wrapper from main builds
+  resolvers += "evernym-dev-verity-sdk" at "https://gitlab.com/api/v4/projects/26760306/packages/maven",  // used to fetch java-sdk wrapper from main builds
+  resolvers += "evernym-dev-vdr-tools" at "https://gitlab.com/api/v4/projects/27807222/packages/maven", // used to fetch java wrapper from main builds
 
   Test / parallelExecution := false,
   Test / logBuffered := false,
@@ -394,7 +394,7 @@ lazy val commonLibraryDependencies = {
     "com.evernym.verity" % "verity-sdk" % veritySdkVer
       exclude ("com.evernym.vdrtools", "vdr-tools"),
 
-    "com.dimafeng" %% "testcontainers-scala-kafka" % "0.40.5",
+    "com.dimafeng" %% "testcontainers-scala-kafka" % "0.40.9",
 
     "org.pegdown" % "pegdown" % "1.6.0",
     "com.goterl" % "lazysodium-java" % "5.1.1",

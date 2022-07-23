@@ -102,6 +102,7 @@ object ConfigConstants {
   val TWILIO_APP_NAME = s"$TWILIO.app-name"
 
   private val VDR = s"$VERITY.vdr"
+  val VDR_MULTI_LEDGER_SUPPORT_ENABLED = s"$VDR.multi-ledger-support-enabled"
   val VDR_UNQUALIFIED_LEDGER_PREFIX = s"$VDR.unqualified-ledger-prefix"
   val VDR_LEDGER_PREFIX_MAPPINGS = s"$VDR.ledger-prefix-mappings"
   val VDR_LEDGERS = s"$VDR.ledgers"

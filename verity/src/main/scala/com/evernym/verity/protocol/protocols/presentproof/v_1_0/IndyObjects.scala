@@ -100,7 +100,8 @@ case class UnrevealedAttr(sub_proof_index: Int)
 case class Predicate(sub_proof_index: Int)
 
 object ProofRequestUtil {
-  def requestToProofRequest(request: Ctl.Request): Try[ProofRequest] = {
+  def requestToProofRequest(request: Ctl.Request,
+                            vdrMultiLedgerSupportEnabled: Boolean): Try[ProofRequest] = {
     val nonce = Anoncreds.generateNonce().get()
     val requestedAttrs = Try(
       request.proof_attrs
@@ -128,14 +129,17 @@ object ProofRequestUtil {
             attrs,
             preds,
             request.revocation_interval,
-            Some(CL_PROOF_REQ_VERSION)
+            Some(calcCLProofReqVersion(vdrMultiLedgerSupportEnabled))
           )
         )
       case Failure(exception) => Failure(exception)
     }
   }
 
-  def proposalToProofRequest(proposal: PresentationPreview, name: String, revocationInterval: Option[RevocationInterval]): Try[ProofRequest] = {
+  def proposalToProofRequest(proposal: PresentationPreview,
+                             name: String,
+                             revocationInterval: Option[RevocationInterval],
+                             vdrMultiLedgerSupportEnabled: Boolean): Try[ProofRequest] = {
     val nonce = Anoncreds.generateNonce().get()
     val requestedAttrs = Try(attrReferentsForPreview(proposal.attributes))
     val requestedPred = Try(predReferentsForPreview(proposal.predicates))
@@ -155,7 +159,7 @@ object ProofRequestUtil {
             attrs,
             preds,
             revocationInterval,
-            Some(CL_PROOF_REQ_VERSION)
+            Some(calcCLProofReqVersion(vdrMultiLedgerSupportEnabled))
           )
         )
       case Failure(exception) => Failure(exception)
@@ -192,7 +196,7 @@ object ProofRequestUtil {
       .toMap
   }
 
-  def attrReferentsForPreview(list: Seq[PresentationPreviewAttribute]): Map[String, ProofAttribute] = {
+  private def attrReferentsForPreview(list: Seq[PresentationPreviewAttribute]): Map[String, ProofAttribute] = {
     val names = list.map(_.name)
 
     val proofAttrList = list.map(attr => {
@@ -237,14 +241,14 @@ object ProofRequestUtil {
       .toMap
   }
 
-  def predReferents(list: Seq[ProofPredicate]): Map[String, ProofPredicate] = {
+  private def predReferents(list: Seq[ProofPredicate]): Map[String, ProofPredicate] = {
     list
       .map (_.name)
       .zip(list)
       .toMap
   }
 
-  def predReferentsForPreview(list: Seq[PresentationPreviewPredicate]): Map[String, ProofPredicate] = {
+  private def predReferentsForPreview(list: Seq[PresentationPreviewPredicate]): Map[String, ProofPredicate] = {
     list
       .map (_.name)
       .zip{
@@ -267,10 +271,14 @@ object ProofRequestUtil {
       }.toMap
   }
 
+  private def calcCLProofReqVersion(vdrMultiLedgerSupportEnabled: Boolean): String =
+    if (vdrMultiLedgerSupportEnabled) CL_PROOF_REQ_VERSION_2 else CL_PROOF_REQ_VERSION_1
+
   /**
    * if this is set to:
    *  "1.0": Then holder will use unqualified identifiers into the proof
    *  "2.0": Then holder will use fully-qualified identifiers into the proof
    */
-  val CL_PROOF_REQ_VERSION = "1.0"
+  val CL_PROOF_REQ_VERSION_1 = "1.0"
+  val CL_PROOF_REQ_VERSION_2 = "2.0"
 }

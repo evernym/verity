@@ -43,8 +43,9 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
       ctx.logger.debug("Creating DID/Key pair for Issuer Identifier/Keys")
       ctx.wallet.newDid() {
         case Success(keyCreated) =>
-          ctx.apply(CreatePublicIdentifierCompleted(keyCreated.did, keyCreated.verKey))
-          ctx.signal(PublicIdentifierCreated(PublicIdentifier(keyCreated.did, keyCreated.verKey)))
+          val fqId = ctx.ledger.fqDID(keyCreated.did, force = false)
+          ctx.apply(CreatePublicIdentifierCompleted(fqId, keyCreated.verKey))
+          ctx.signal(PublicIdentifierCreated(PublicIdentifier(fqId, keyCreated.verKey)))
         case Failure(e) =>
           ctx.logger.warn("Wallet access failed to create DID/Verkey pair - " + e.getMessage)
           ctx.logger.warn(Exceptions.getStackTraceAsSingleLineString(e))
@@ -55,7 +56,9 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     //******** Query *************
     case (State.Created(d), _, CurrentPublicIdentifier()) =>
       d.identity match {
-        case Some(didDetails) => ctx.signal(PublicIdentifier(didDetails.did, didDetails.verKey))
+        case Some(didDetails) =>
+          val fqId = ctx.ledger.fqDID(didDetails.did, force = false)
+          ctx.signal(PublicIdentifier(fqId, didDetails.verKey))
         case None => ctx.logger.warn(corruptedStateErrorMsg + " - Created state don't have did and/or verkey")
       }
     case (_, _, CurrentPublicIdentifier()) => ctx.signal(ProblemReport(identifierNotCreatedProblem))

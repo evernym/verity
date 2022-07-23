@@ -61,19 +61,19 @@ class IndyVdrSpec
 
   var trusteeWallet: Wallet = createOrOpenWallet("trusteeWallet")
   var trusteeKey: NewKeyCreated = createNewKey(trusteeWallet, CreateNewKey(seed = Option("000000000000000000000000Trustee1")))
-  var trusteeFqDid: FqDID = VDRUtil.toFqDID(trusteeKey.did, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
+  var trusteeFqDid: FqDID = VDRUtil.toFqDID(trusteeKey.did, vdrMultiLedgerSupportEnabled, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
 
   var issuerWallet: Wallet = createOrOpenWallet("issuerWallet")
   var issuerKey: NewKeyCreated = createNewKey(issuerWallet, CreateNewKey())
-  var issuerFqDid: FqDID = VDRUtil.toFqDID(issuerKey.did, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
+  var issuerFqDid: FqDID = VDRUtil.toFqDID(issuerKey.did, vdrMultiLedgerSupportEnabled, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
 
   var verifierWallet: Wallet = createOrOpenWallet("verifierWallet")
   var verifierKey: NewKeyCreated = createNewKey(verifierWallet, CreateNewKey())
-  var verifierFqDid: FqDID = VDRUtil.toFqDID(verifierKey.did, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
+  var verifierFqDid: FqDID = VDRUtil.toFqDID(verifierKey.did, vdrMultiLedgerSupportEnabled, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
 
   val holderWallet: Wallet = createOrOpenWallet("holderWallet")
   var holderKey: NewKeyCreated = createNewKey(holderWallet, CreateNewKey())
-  var holderFqDid: FqDID = VDRUtil.toFqDID(holderKey.did, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
+  var holderFqDid: FqDID = VDRUtil.toFqDID(holderKey.did, vdrMultiLedgerSupportEnabled, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
 
   val holderMasterSecretId: String = UUID.randomUUID().toString
   runAsSync(Anoncreds.proverCreateMasterSecret(holderWallet, holderMasterSecretId).map(ms => MasterSecretCreated(ms)))
@@ -107,7 +107,7 @@ class IndyVdrSpec
 
           vdrAdapter.prepareSchemaTxn(
             schemaCreated.getSchemaJson,
-            VDRUtil.toFqSchemaId_v0(schemaCreated.getSchemaId, Option(issuerFqDid), Option(UNQUALIFIED_LEDGER_PREFIX)),
+            VDRUtil.toFqSchemaId_v0(schemaCreated.getSchemaId, Option(issuerFqDid), Option(UNQUALIFIED_LEDGER_PREFIX), vdrMultiLedgerSupportEnabled),
             issuerFqDid,
             None
           )
@@ -143,7 +143,7 @@ class IndyVdrSpec
           schemaCreated.fqId shouldBe s"$UNQUALIFIED_LEDGER_PREFIX:${issuerKey.did}/anoncreds/v0/SCHEMA/employment/1.0"
           vdrAdapter.prepareSchemaTxn(
             schemaCreated.json,
-            VDRUtil.toFqSchemaId_v0(schemaCreated.fqId, Option(issuerFqDid), Option(UNQUALIFIED_LEDGER_PREFIX)),
+            VDRUtil.toFqSchemaId_v0(schemaCreated.fqId, Option(issuerFqDid), Option(UNQUALIFIED_LEDGER_PREFIX), vdrMultiLedgerSupportEnabled),
             issuerFqDid,
             None
           )
@@ -193,7 +193,7 @@ class IndyVdrSpec
           credDefCreated.fqId shouldBe s"$UNQUALIFIED_LEDGER_PREFIX:${issuerKey.did}/anoncreds/v0/CLAIM_DEF/$seqNo/latest"
           vdrAdapter.prepareCredDefTxn(
             credDefCreated.json,
-            VDRUtil.toFqSchemaId_v0(credDefCreated.fqId, Option(issuerFqDid), Option(UNQUALIFIED_LEDGER_PREFIX)),
+            VDRUtil.toFqSchemaId_v0(credDefCreated.fqId, Option(issuerFqDid), Option(UNQUALIFIED_LEDGER_PREFIX), vdrMultiLedgerSupportEnabled),
             issuerFqDid,
             None
           )
@@ -340,7 +340,7 @@ class IndyVdrSpec
   }
 
   private def buildPresentationReq(req: Request): RequestPresentation = {
-    val proofRequest = ProofRequestUtil.requestToProofRequest(req)
+    val proofRequest = ProofRequestUtil.requestToProofRequest(req, vdrMultiLedgerSupportEnabled)
     val proofRequestStr = proofRequest.map(DefaultMsgCodec.toJson)
     proofRequestStr match {
       case Success(str) => Msg.RequestPresentation("", Vector(buildAttachment(Some(AttIds.request0), str)))
@@ -417,6 +417,7 @@ class IndyVdrSpec
 
   lazy val INDY_NAMESPACE = "indy:sovrin"
   lazy val UNQUALIFIED_LEDGER_PREFIX = s"did:$INDY_NAMESPACE"
+  lazy val vdrMultiLedgerSupportEnabled = true
   lazy val ledgerPrefixMapping = Map("did:sov" -> UNQUALIFIED_LEDGER_PREFIX)
 
   lazy val vdrConfig: Config = ConfigFactory.parseString(

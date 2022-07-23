@@ -18,6 +18,7 @@ import com.evernym.verity.vault._
 import com.typesafe.scalalogging.Logger
 import com.evernym.vdrtools.ledger.Ledger._
 import com.evernym.vdrtools.pool.Pool
+import com.evernym.verity.actor.agent.AttrName
 import com.evernym.verity.vdr.VDRUtil
 
 import java.time.LocalDateTime
@@ -132,7 +133,7 @@ class LedgerUtil (val appConfig: AppConfig,
     sendAddAttrib(raw)
   }
 
-  def sendGetAttrib(did: DidStr, attrName: String): LedgerResponse = {
+  def sendGetAttrib(did: DidStr, attrName: AttrName): LedgerResponse = {
     val req = buildGetAttribRequest(submitterDID, did, attrName, null, null).get
     executeLedgerRequest(req)
   }

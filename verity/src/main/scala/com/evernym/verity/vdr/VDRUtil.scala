@@ -12,96 +12,116 @@ object VDRUtil {
   val LEGACY_LEDGER_PREFIX = s"$DID_PREFIX:sov"
 
   def toFqDID(did: String,
+              vdrMultiLedgerSupportEnabled: Boolean,
               vdrUnqualifiedLedgerPrefix: LedgerPrefix,
               vdrLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix]): FqDID = {
-    if (did.startsWith(LEGACY_LEDGER_PREFIX)) {
-      val aliasLedgerPrefix = vdrLedgerPrefixMappings(LEGACY_LEDGER_PREFIX)
-      did.replace(LEGACY_LEDGER_PREFIX, aliasLedgerPrefix)
-    } else if (did.nonEmpty && ! did.startsWith(s"$DID_PREFIX:")) {
-      s"$vdrUnqualifiedLedgerPrefix:$did"
-    } else {
-      did   // it must be fully qualified already
-    }
+    if (vdrMultiLedgerSupportEnabled) {
+      if (did.startsWith(LEGACY_LEDGER_PREFIX)) {
+        val aliasLedgerPrefix = vdrLedgerPrefixMappings(LEGACY_LEDGER_PREFIX)
+        did.replace(LEGACY_LEDGER_PREFIX, aliasLedgerPrefix)
+      } else if (did.nonEmpty && !did.startsWith(s"$DID_PREFIX:")) {
+        s"$vdrUnqualifiedLedgerPrefix:$did"
+      } else {
+        did // it must be fully qualified already
+      }
+    } else did
   }
 
   def toFqSchemaId_v0(schemaId: String,
                       issuerFqDid: Option[FqDID],
-                      vdrUnqualifiedLedgerPrefix: Option[LedgerPrefix]): FqSchemaId = {
-    if (schemaId.startsWith(DID_PREFIX)) {
-      schemaId
-    } else {
-      val splitted = schemaId.split(":")
-      val issuerDid = splitted(0)
-      val schemaName = splitted(2)
-      val schemaVersion = splitted(3)
-      val namespace = extractNamespace(issuerFqDid, vdrUnqualifiedLedgerPrefix)
-      s"$DID_PREFIX:$namespace:$issuerDid/anoncreds/v0/SCHEMA/$schemaName/$schemaVersion"
-    }
+                      vdrUnqualifiedLedgerPrefix: Option[LedgerPrefix],
+                      vdrMultiLedgerSupportEnabled: Boolean): FqSchemaId = {
+    if (vdrMultiLedgerSupportEnabled) {
+      if (schemaId.startsWith(DID_PREFIX)) {
+        schemaId
+      } else {
+        val splitted = schemaId.split(":")
+        val issuerDid = splitted(0)
+        val schemaName = splitted(2)
+        val schemaVersion = splitted(3)
+        val namespace = extractNamespace(issuerFqDid, vdrUnqualifiedLedgerPrefix)
+        s"$DID_PREFIX:$namespace:$issuerDid/anoncreds/v0/SCHEMA/$schemaName/$schemaVersion"
+      }
+    } else schemaId
   }
 
   def toFqCredDefId_v0(credDefId: String,
                        issuerFqDid: Option[FqDID],
-                       vdrUnqualifiedLedgerPrefix: Option[LedgerPrefix]): FqCredDefId = {
-    if (credDefId.startsWith(DID_PREFIX)) {
-      credDefId
-    } else {
-      val splitted = credDefId.split(":")
-      if (splitted.length == 5) {
-        //NcYxiDXkpYi6ov5FcYDi1e:3:CL:1234:tag
-        val namespace = extractNamespace(issuerFqDid, vdrUnqualifiedLedgerPrefix)
-        val issuerDid = splitted(0)
-        val schemaId = splitted(3)    //the schema txn sequence number
-        val credDefName = splitted(4)
-        s"$DID_PREFIX:$namespace:$issuerDid/anoncreds/v0/CLAIM_DEF/$schemaId/$credDefName"
+                       vdrUnqualifiedLedgerPrefix: Option[LedgerPrefix],
+                       vdrMultiLedgerSupportEnabled: Boolean): FqCredDefId = {
+    if (vdrMultiLedgerSupportEnabled) {
+      if (credDefId.startsWith(DID_PREFIX)) {
+        credDefId
       } else {
-        //NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:tag
-        val namespace = extractNamespace(issuerFqDid, vdrUnqualifiedLedgerPrefix)
-        val issuerDid = splitted(0)
-        val schemaName = splitted(5)
-        val schemaVer = splitted(6)
-        val schemaId = s"$DID_PREFIX:$namespace:$issuerDid/anoncreds/v0/SCHEMA/$schemaName/$schemaVer"
-        val credDefName = splitted(7)
-        s"$DID_PREFIX:$namespace:$issuerDid/anoncreds/v0/CLAIM_DEF/$schemaId/$credDefName"
+        val splitted = credDefId.split(":")
+        if (splitted.length == 5) {
+          //NcYxiDXkpYi6ov5FcYDi1e:3:CL:1234:tag
+          val namespace = extractNamespace(issuerFqDid, vdrUnqualifiedLedgerPrefix)
+          val issuerDid = splitted(0)
+          val schemaId = splitted(3) //the schema txn sequence number
+          val credDefName = splitted(4)
+          s"$DID_PREFIX:$namespace:$issuerDid/anoncreds/v0/CLAIM_DEF/$schemaId/$credDefName"
+        } else {
+          //NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:tag
+          val namespace = extractNamespace(issuerFqDid, vdrUnqualifiedLedgerPrefix)
+          val issuerDid = splitted(0)
+          val schemaName = splitted(5)
+          val schemaVer = splitted(6)
+          val schemaId = s"$DID_PREFIX:$namespace:$issuerDid/anoncreds/v0/SCHEMA/$schemaName/$schemaVer"
+          val credDefName = splitted(7)
+          s"$DID_PREFIX:$namespace:$issuerDid/anoncreds/v0/CLAIM_DEF/$schemaId/$credDefName"
+        }
       }
+    } else credDefId
+  }
+
+  def toLegacyNonFqDid(did: DidStr,
+                       vdrMultiLedgerSupportEnabled: Boolean): String = {
+    if (!vdrMultiLedgerSupportEnabled) {
+      Try(did.split(":").last).getOrElse(did)
+    } else{
+      did
     }
   }
 
-  def toLegacyNonFqDid(did: FqDID): String = {
-    Try(did.split(":").last).getOrElse(did)
+  def toLegacyNonFqSchemaId(schemaId: SchemaId,
+                            vdrMultiLedgerSupportEnabled: Boolean): String = {
+    if (!vdrMultiLedgerSupportEnabled) {
+      Try {
+        val splitted = schemaId.split("/", 2)
+        val issuer = splitted(0)
+        val claim = splitted(1)
+
+        val issuerParts = issuer.split(":")
+        val schemaParts = claim.split("/")
+
+        s"${issuerParts.last}:2:${schemaParts(3)}:${schemaParts.last}"
+      }.getOrElse(schemaId)
+    } else schemaId
   }
 
-  def toLegacyNonFqSchemaId(schemaId: FqSchemaId): String = {
-    Try {
-      val splitted = schemaId.split("/", 2)
-      val issuer = splitted(0)
-      val claim = splitted(1)
+  def toLegacyNonFqCredDefId(credDefId: CredDefId,
+                             vdrMultiLedgerSupportEnabled: Boolean): String = {
+    if (!vdrMultiLedgerSupportEnabled) {
+      Try {
+        val splitted = credDefId.split("/", 2)
+        val issuer = splitted(0)
+        val claim = splitted(1)
 
-      val issuerParts = issuer.split(":")
-      val schemaParts = claim.split("/")
-
-      s"${issuerParts.last}:2:${schemaParts(3)}:${schemaParts.last}"
-    }.getOrElse(schemaId)
-  }
-
-  def toLegacyNonFqCredDefId(credDefId: FqCredDefId): String = {
-    Try {
-      val splitted = credDefId.split("/", 2)
-      val issuer = splitted(0)
-      val claim = splitted(1)
-
-      val issuerParts = issuer.split(":")
-      val claimParts = claim.split("/")
-      if (claimParts.length == 5) {
-        //claim: anoncreds/v0/CLAIM_DEF/1234/Tag1
-        s"${issuerParts.last}:3:CL:${claimParts(3)}:${claimParts.last}"
-      } else {
-        //claim: anoncreds/v0/CLAIM_DEF/did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0/Tag1
-        val schemaName = claimParts(7)
-        val schemaVer = claimParts(8)
-        val schemaId = s"${issuerParts.last}:2:$schemaName:$schemaVer"
-        s"${issuerParts.last}:3:CL:$schemaId:${claimParts.last}"
-      }
-    }.getOrElse(credDefId)
+        val issuerParts = issuer.split(":")
+        val claimParts = claim.split("/")
+        if (claimParts.length == 5) {
+          //claim: anoncreds/v0/CLAIM_DEF/1234/Tag1
+          s"${issuerParts.last}:3:CL:${claimParts(3)}:${claimParts.last}"
+        } else {
+          //claim: anoncreds/v0/CLAIM_DEF/did:indy:sovrin:NcYxiDXkpYi6ov5FcYDi1e/anoncreds/v0/SCHEMA/gvt/1.0/Tag1
+          val schemaName = claimParts(7)
+          val schemaVer = claimParts(8)
+          val schemaId = s"${issuerParts.last}:2:$schemaName:$schemaVer"
+          s"${issuerParts.last}:3:CL:$schemaId:${claimParts.last}"
+        }
+      }.getOrElse(credDefId)
+    } else credDefId
   }
 
 

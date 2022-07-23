@@ -20,7 +20,7 @@ import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.testkit.mock.ledger.InMemLedgerPoolConnManager
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
-import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockVdrToolsBuilder, VDRAdapter}
+import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistryBuilder, MockVdrToolsBuilder, VDRAdapter}
 import com.evernym.verity.vdr.service.{VDRToolsFactory, VdrTools}
 
 import java.nio.file.Path
@@ -111,7 +111,8 @@ object LocalVerity {
           .getOrElse(StorageAPI.loadFromConfig(appConfig, executionContextProvider.futureExecutionContext))
       }
 
-      val testVdrLedgerRegistry: MockLedgerRegistry = MockLedgerRegistry(List(MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None)))
+      val testVdrLedgerRegistry = MockLedgerRegistryBuilder(Map(INDY_SOVRIN_NAMESPACE -> MockIndyLedger("genesis.txn file path", None))).build()
+
     }
 
     val platform: Platform = PlatformBuilder.build(

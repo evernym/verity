@@ -64,7 +64,7 @@ case class Schema(fqId: FqSchemaId, json: String)
 
 case class CredDef(fqId: FqCredDefId, fqSchemaId: FqSchemaId, json: String)
 
-case class DidDoc(fqId: FqDID, verKey: VerKeyStr, endpoint: Option[String])
+case class DidDoc(fqId: FqDID, verKey: VerKeyStr)
 
 /**
  * see details here: https://gitlab.com/evernym/verity/vdr-tools/-/blob/main/libvdrtools/include/indy_cache.h#L22-25

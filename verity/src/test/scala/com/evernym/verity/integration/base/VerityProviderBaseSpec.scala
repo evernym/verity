@@ -13,7 +13,7 @@ import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
 import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider}
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import com.evernym.verity.vdr.service.VdrTools
-import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockVdrTools}
+import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistryBuilder, MockVdrTools}
 import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
 import com.typesafe.scalalogging.Logger
 import org.scalatest.{BeforeAndAfterAll, Suite}
@@ -182,8 +182,10 @@ trait VerityProviderBaseSpec
   // it is the same instance across the all verity environments
   lazy val defaultSvcParam: ServiceParam = {
     val testAppConfig = new TestAppConfig()
-    val vdrTools = new MockVdrTools(MockLedgerRegistry(
-      List(MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None))))(futureExecutionContext)
+    val vdrTools = new MockVdrTools(
+      MockLedgerRegistryBuilder()
+        .withLedger(INDY_SOVRIN_NAMESPACE, MockIndyLedger("genesis.txn file path", None))
+        .build())(futureExecutionContext)
     val vdrToolsAdapter = new MockVDRAdapter(vdrTools)(futureExecutionContext)
     val ledgerTxnExecutor = new MockLedgerTxnExecutor(futureExecutionContext, testAppConfig, vdrToolsAdapter)
     ServiceParam

@@ -1,7 +1,8 @@
 package com.evernym.verity.protocol.engine
 
+import com.evernym.verity.actor.agent.{AttrName, AttrValue}
 import com.evernym.verity.did.{DidPair, DidStr}
-import com.evernym.verity.ledger.Submitter
+import com.evernym.verity.ledger.{GetAttribResp, Submitter}
 import com.evernym.verity.vdr.service.VDRAdapterUtil.{buildVDRCredDefParams, buildVDRPreparedTxn, buildVDRSchemaParams}
 import com.evernym.verity.vdr.service.{VDRAdapterUtil, VdrTools}
 import com.evernym.verity.vdr._
@@ -82,8 +83,12 @@ class MockVDRAdapter(vdrTools: VdrTools)(implicit executionContext: ExecutionCon
     mockVdrTools.addNym(submitter, didPair)
   }
 
-  def addAttrib(submitter: Submitter, did: DidStr, attrName: String, attrValue: String): Future[Unit] = {
+  def addAttrib(submitter: Submitter, did: DidStr, attrName: AttrName, attrValue: AttrValue): Future[Unit] = {
     mockVdrTools.addAttrib(submitter, did, attrName, attrValue)
+  }
+
+  def getAttrib(submitter: Submitter, did: DidStr, attrName: AttrName): Future[GetAttribResp] = {
+    mockVdrTools.getAttrib(submitter, did, attrName)
   }
 
   private lazy val mockVdrTools = vdrTools.asInstanceOf[MockVdrTools]

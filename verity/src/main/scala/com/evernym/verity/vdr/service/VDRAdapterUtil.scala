@@ -5,8 +5,6 @@ import com.evernym.vdrtools.vdr.VdrResults
 import com.evernym.verity.vdr._
 import org.json.JSONObject
 
-import scala.util.Try
-
 // implementation specific objects to interface objects converters
 object VDRAdapterUtil {
 
@@ -40,9 +38,8 @@ object VDRAdapterUtil {
     //TODO: cheqd did doc will probably have another format
     val json = new JSONObject(vdrDidDoc)
     DidDoc(
-      json.getString(ID),
-      json.getString(VER_KEY),
-      Try(Option(json.getString(URL))).getOrElse(None)
+      json.getString(DID),
+      json.getString(VER_KEY)
     )
   }
 
@@ -82,6 +79,7 @@ object VDRAdapterUtil {
   }
 
   final val ID = "id"
+  final val DID = "did"
   final val VER_KEY = "verkey"
   final val SCHEMA_ID = "schemaId"
   final val URL = "url"

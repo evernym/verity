@@ -25,7 +25,6 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResu
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.legacy.PresentProofLegacy
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
-import com.evernym.verity.vdr.VDRUtil
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -309,7 +308,7 @@ class PresentProof(implicit val ctx: PresentProofContext)
   def handleCtlRequest(ctr: Ctl.Request, stateData: StateData): Unit = {
     apply(Role.Verifier.toEvent)
 
-    val proofRequest = ProofRequestUtil.requestToProofRequest(ctr)
+    val proofRequest = ProofRequestUtil.requestToProofRequest(ctr, ctx.ledger.vdrMultiLedgerSupportEnabled())
     val proofRequestStr = proofRequest.map(DefaultMsgCodec.toJson)
 
     proofRequestStr match {
@@ -396,7 +395,8 @@ class PresentProof(implicit val ctx: PresentProofContext)
       val proofRequest = ProofRequestUtil.proposalToProofRequest(
         PresentationPreview.fromEvt(proposal),
         msg.name.getOrElse(""),
-        msg.non_revoked
+        msg.non_revoked,
+        ctx.ledger.vdrMultiLedgerSupportEnabled()
       )
       val proofRequestStr = proofRequest.map(DefaultMsgCodec.toJson)
 
@@ -452,7 +452,9 @@ class PresentProof(implicit val ctx: PresentProofContext)
                             (handler: Try[(String, String)] => Unit): Unit = {
     val ids: mutable.Buffer[(String, String)] = mutable.Buffer()
     identifiers.foreach { identifier =>
-      ids.append((identifier.schema_id, identifier.cred_def_id))
+      val fqSchemaId = ctx.ledger.fqSchemaId(identifier.schema_id, None, force = false)
+      val fqCredDefId = ctx.ledger.fqCredDefId(identifier.cred_def_id, None, force = false)
+      ids.append((fqSchemaId, fqCredDefId))
     }
     doSchemaAndCredDefRetrieval(ids.toSet, allowsAllSelfAttested)(handler)
   }
@@ -469,10 +471,10 @@ class PresentProof(implicit val ctx: PresentProofContext)
     }
 
     def doSchemaRetrieval(ids: Set[String])(handler: Try[String] => Unit): Unit = {
-      ctx.ledger.resolveSchemas(ids.map(ctx.ledger.fqSchemaId(_, None))) {
+      ctx.ledger.resolveSchemas(ids.map(ctx.ledger.fqSchemaId(_, None, force = true))) {
         case Success(schemas) if schemas.size == ids.size =>
           val retrievedSchemasJson = schemas.map { schema =>
-            s""""${VDRUtil.toLegacyNonFqSchemaId(schema.fqId)}": ${schema.json}"""
+            s""""${ctx.ledger.toLegacyNonFqSchemaId(schema.fqId)}": ${schema.json}"""
           }.mkString("{", ",", "}")
           handler(Success(retrievedSchemasJson))
         case Success(_) => handler(Failure(new Exception("Unable to retrieve schema from ledger")))
@@ -482,10 +484,10 @@ class PresentProof(implicit val ctx: PresentProofContext)
 
     def doCredDefRetrieval(schemas: String, credDefIds: Set[String])
                           (handler: Try[(String, String)] => Unit): Unit = {
-      ctx.ledger.resolveCredDefs(credDefIds.map(ctx.ledger.fqCredDefId(_, None))) {
+      ctx.ledger.resolveCredDefs(credDefIds.map(ctx.ledger.fqCredDefId(_, None, force = true))) {
         case Success(credDefs) if credDefs.size == ids.size =>
           val retrievedCredDefJson = credDefs.map { credDef =>
-            s""""${VDRUtil.toLegacyNonFqCredDefId(credDef.fqId)}": ${credDef.json}"""
+            s""""${ctx.ledger.toLegacyNonFqCredDefId(credDef.fqId)}": ${credDef.json}"""
           }.mkString("{", ",", "}")
           handler(Success((schemas, retrievedCredDefJson)))
         case Success(_) => throw new Exception("Unable to retrieve cred def from ledger")

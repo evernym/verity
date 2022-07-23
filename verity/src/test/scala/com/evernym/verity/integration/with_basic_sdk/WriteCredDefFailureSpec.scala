@@ -15,7 +15,9 @@ import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{StatusReport => 
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.{Write => WriteCredDef}
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.util.TestExecutionContextProvider
+import com.evernym.verity.vdr.base.PayloadConstants.{CRED_DEF, TYPE}
 import com.evernym.verity.vdr.base.{INDY_SOVRIN_NAMESPACE, InMemLedger}
+import com.evernym.verity.vdr.service.VDRAdapterUtil
 import com.evernym.verity.vdr.{FqCredDefId, FqDID, FqSchemaId, MockIndyLedger, MockLedgerRegistry, MockVdrTools, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -31,10 +33,7 @@ class WriteCredDefFailureSpec
   override lazy val defaultSvcParam: ServiceParam =
     ServiceParam
       .empty
-      .withVdrTools(
-        new DummyVdrTools(
-          MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None)
-        )(futureExecutionContext))
+      .withVdrTools(new DummyVdrTools(MockIndyLedger("genesis.txn file path", None))(futureExecutionContext))
 
   lazy val issuerVerityApp = VerityEnvBuilder.default().build(VAS)
   lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext)
@@ -69,7 +68,7 @@ class WriteCredDefFailureSpec
 
   //in-memory version of VDRTools to be used in tests unit/integration tests
   class DummyVdrTools(ledger: InMemLedger)(implicit ec: ExecutionContext)
-    extends MockVdrTools(MockLedgerRegistry(List(ledger))) {
+    extends MockVdrTools(new MockLedgerRegistry(Map(INDY_SOVRIN_NAMESPACE -> ledger))) {
 
     //TODO: as we add/integrate actual VDR apis and their tests,
     // this class should evolve to reflect the same for its test implementation
@@ -86,7 +85,7 @@ class WriteCredDefFailureSpec
                                submitterDid: FqDID,
                                endorser: Option[String]): Future[PreparedTxnResult] = {
       val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams)
-      val id = json.get("id").asText
+      val id = json.get(VDRAdapterUtil.ID).asText
       Future.successful(ledger.prepareSchemaTxn(txnSpecificParams, id, submitterDid, endorser))
     }
 
@@ -96,8 +95,8 @@ class WriteCredDefFailureSpec
                            signature: Array[Byte],
                            endorsement: String): Future[TxnResult] = {
       val node = JacksonMsgCodec.docFromStrUnchecked(new String(txnBytes))
-      node.get("payloadType").asText() match {
-        case "creddef"  => Future.failed(LedgerSvcException("invalid TAA"))
+      node.get(TYPE).asText() match {
+        case CRED_DEF  => Future.failed(LedgerSvcException("invalid TAA"))
         case _          => Future.successful(ledger.submitTxn(txnBytes))
       }
     }
@@ -129,7 +128,7 @@ class WriteCredDefFailureSpec
                                 submitterDid: FqDID,
                                 endorser: Option[String]): Future[PreparedTxnResult] = {
       val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams);
-      val id = json.get("id").asText()
+      val id = json.get(VDRAdapterUtil.ID).asText()
       Future.successful(ledger.prepareCredDefTxn(txnSpecificParams, id, submitterDid, endorser))
     }
 

@@ -1,6 +1,7 @@
 package com.evernym.verity.ledger
 
-import com.evernym.verity.did.{DidStr, DidPair}
+import com.evernym.verity.actor.agent.{AttrName, AttrValue}
+import com.evernym.verity.did.{DidPair, DidStr}
 
 import scala.concurrent.Future
 
@@ -9,9 +10,12 @@ case class LedgerExecutorException(message: String,
 
 trait LedgerTxnExecutor {
 
+  //NOTE: this `addNym` is only used by tests, may be we should replace it with vdr api calls
   def addNym(submitter: Submitter, targetDid: DidPair): Future[Unit]
 
-  def addAttrib(submitter: Submitter, did: DidStr, attrName: String, attrValue: String): Future[Unit]
+  def addAttrib(submitter: Submitter, did: DidStr, attrName: AttrName, attrValue: AttrValue): Future[Unit]
+
+  def getAttrib(submitter: Submitter, did: DidStr, attrName: AttrName): Future[GetAttribResp]
 
   def getTAA(submitter: Submitter): Future[GetTAAResp]
 

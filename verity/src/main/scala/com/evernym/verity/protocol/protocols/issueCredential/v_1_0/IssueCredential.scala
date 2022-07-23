@@ -368,7 +368,7 @@ trait IssueCredentialHelpers
   }
 
   def handleRequest(m: Ctl.Request, myPwDid: DidStr, credOffer: OfferCred): Unit = {
-    ctx.ledger.resolveCredDef(ctx.ledger.fqCredDefId(m.cred_def_id, None)) {
+    ctx.ledger.resolveCredDef(ctx.ledger.fqCredDefId(m.cred_def_id, None, force = true)) {
       case Success(CredDef(_, _, cdj)) => sendCredRequest(m, myPwDid, credOffer, DefaultMsgCodec.toJson(cdj))
 
       case Failure(_)   =>

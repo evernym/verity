@@ -24,6 +24,7 @@ import org.json.JSONObject
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Try}
 
+
 object MockableLedgerAccess {
   val MOCK_NO_DID = "7Pt7EfStLXeYNSmpJJSktm"
   val MOCK_NOT_ENDORSER = "GnJ79a5XAuTaxHXWSLRyqP"
@@ -40,7 +41,6 @@ object MockableLedgerAccess {
 class MockableLedgerAccess(executionContext: ExecutionContext,
                            val schemas: Map[String, Schema] = MockLedgerData.schemas01,
                            val credDefs: Map[String, CredDef] = MockLedgerData.credDefs01,
-                           val didDocs: Map[String, DidDoc] = MockLedgerData.didDocs01,
                            val ledgerAvailable: Boolean = true)
   extends LedgerAccess with MockAsyncOpRunner with ActorSpec with BasicSpecBase{
 
@@ -103,8 +103,8 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         val submitterDID = extractSubmitterDID(preparedTxn)
-        if (submitterDID.equals(fqDID(MOCK_NO_DID))) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
-        else if (submitterDID.equals(fqDID(MOCK_NOT_ENDORSER))) Failure(LedgerRejectException(invalidEndorserError))
+        if (submitterDID.equals(fqDID(MOCK_NO_DID, force = false))) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
+        else if (submitterDID.equals(fqDID(MOCK_NOT_ENDORSER, force = false))) Failure(LedgerRejectException(invalidEndorserError))
         else Try(SubmittedTxn("{}"))
       }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
@@ -115,7 +115,8 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         Try{
-          val schemaResp = schemas.getOrElse(VDRUtil.toLegacyNonFqSchemaId(fqSchemaId), throw new Exception("Unknown schema"))
+          val schemaResp = schemas.getOrElse(VDRUtil.toLegacyNonFqSchemaId(fqSchemaId,
+            vdrMultiLedgerSupportEnabled), throw new Exception("Unknown schema"))
           Schema(fqSchemaId, schemaResp.json)
         }
       }
@@ -127,7 +128,8 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         Try{
-          schemas.filter{ case (id, schema) => fqSchemaIds.map(VDRUtil.toLegacyNonFqSchemaId).contains(id)}.values.toSeq
+          schemas.filter{ case (id, schema) => fqSchemaIds.map(VDRUtil.toLegacyNonFqSchemaId(_,
+            vdrMultiLedgerSupportEnabled)).contains(id)}.values.toSeq
         }
       }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
@@ -138,7 +140,8 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         Try{
-          val credDefResp = credDefs.getOrElse(VDRUtil.toLegacyNonFqCredDefId(fqCredDefId), throw new Exception("Unknown cred def"))
+          val credDefResp = credDefs.getOrElse(VDRUtil.toLegacyNonFqCredDefId(fqCredDefId,
+            vdrMultiLedgerSupportEnabled), throw new Exception("Unknown cred def"))
           CredDef(fqCredDefId, credDefResp.fqSchemaId, credDefResp.json)
         }
       }
@@ -150,51 +153,30 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         Try{
-          credDefs.filter{ case (id, _) => fqCredDefIds.map(VDRUtil.toLegacyNonFqCredDefId).contains(id)}.values.toSeq
+          credDefs.filter{ case (id, _) => fqCredDefIds.map(VDRUtil.toLegacyNonFqCredDefId(_,
+            vdrMultiLedgerSupportEnabled)).contains(id)}.values.toSeq
         }
       }
       else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 
-  override def resolveDidDoc(fqDid: FqDID)(handler: Try[DidDoc] => Unit): Unit = {
-    handler {
-      if (ledgerAvailable) {
-        Try{
-          val didResp = didDocs.getOrElse(fqDid, throw new Exception("Unknown did doc"))
-          DidDoc(fqDid, didResp.verKey, didResp.endpoint)
-        }
-      }
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
-    }
-  }
+  override def fqDID(did: DidStr, force: Boolean): FqDID =
+    MockLedger.fqID(did, vdrMultiLedgerSupportEnabled)
 
-  override def resolveDidDocs(fqDids: Set[FqDID])(handler: Try[Seq[DidDoc]] => Unit): Unit = {
-    handler {
-      if (ledgerAvailable) {
-        Try{
-          didDocs.filter{ case (id, _) => fqDids.contains(id)}.values.toSeq
-        }
-      }
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
-    }
-  }
+  override def fqSchemaId(schemaId: SchemaId, issuerDid: Option[FqDID], force: Boolean): FqSchemaId =
+    MockLedger.fqSchemaID(schemaId, issuerDid, force || vdrMultiLedgerSupportEnabled)
 
-  override def fqDID(did: DidStr): FqDID = MockLedger.fqID(did)
+  override def fqCredDefId(credDefId: CredDefId, issuerDid: Option[FqDID], force: Boolean): FqCredDefId =
+    MockLedger.fqCredDefId(credDefId, issuerDid, force || vdrMultiLedgerSupportEnabled)
 
-  override def fqSchemaId(schemaId: SchemaId, issuerDid: Option[FqDID]): FqSchemaId = MockLedger.fqSchemaID(schemaId, issuerDid)
+  override def toLegacyNonFqSchemaId(schemaId: FqSchemaId): SchemaId =
+    MockLedger.toLegacyNonFqSchemaId(schemaId, vdrMultiLedgerSupportEnabled)
 
-  override def fqCredDefId(credDefId: CredDefId, issuerDid: Option[FqDID]): FqCredDefId = MockLedger.fqCredDefId(credDefId, issuerDid)
+  override def toLegacyNonFqCredDefId(credDefId: FqCredDefId): CredDefId =
+    MockLedger.toLegacyNonFqCredDefId(credDefId, vdrMultiLedgerSupportEnabled)
 
   override def vdrUnqualifiedLedgerPrefix(): VdrDid = "did:indy:sovrin"
-
-  override def extractLedgerPrefix(submitterFqDID: FqDID,
-                                   endorserFqDID: FqDID): LedgerPrefix = {
-    val submitterLedgerPrefix = VDRUtil.extractLedgerPrefix(submitterFqDID)
-    val endorserLedgerPrefix = Try(VDRUtil.extractLedgerPrefix(endorserFqDID)).getOrElse("")
-    if (endorserLedgerPrefix.isEmpty || submitterLedgerPrefix == endorserLedgerPrefix) submitterLedgerPrefix
-    else throw new RuntimeException(s"submitter ledger prefix '$submitterLedgerPrefix' not matched with endorser ledger prefix '$endorserLedgerPrefix'")
-  }
 
   private def extractSubmitterDID(preparedTxn: PreparedTxn): String = {
     val json = new String(preparedTxn.txnBytes)
@@ -205,11 +187,14 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
 
   val INDY_ENDORSEMENT = s"""{"endorserDid":"$MOCK_NOT_ENDORSER", "type": "Indy"}"""
 
+  val vdrMultiLedgerSupportEnabled: Boolean = false
+
   override val mockExecutionContext: ExecutionContext = executionContext
 
   def executionContextProvider: ExecutionContextProvider = ecp
 
   type TxnHash = Int
+
 }
 
 
@@ -252,15 +237,6 @@ object MockLedgerData {
       )
   )
 
-  val didDocs01 = Map(
-    "did:indy:sovrin:1234567890987654321" ->
-      DidDoc(
-        "did:indy:sovrin:1234567890987654321",
-        "abxk358oradksfb893wad",
-        Some("test.example.com")
-      )
-  )
-
 
 }
 
@@ -272,16 +248,23 @@ object MockLedger {
 
   val INDY_ENDORSEMENT = s"""{"endorserDid":"$MOCK_NOT_ENDORSER", "type": "Indy"}"""
 
-  def fqID(id: String): String = {
-    VDRUtil.toFqDID(id, TEST_INDY_LEDGER_PREFIX, ledgerPrefixMappings)
+  def fqID(id: String, vdrMultiLedgerSupportEnabled: Boolean): String = {
+    VDRUtil.toFqDID(id, vdrMultiLedgerSupportEnabled, TEST_INDY_LEDGER_PREFIX, ledgerPrefixMappings)
   }
 
-  def fqSchemaID(id: String, issuerDid: Option[DidStr]): String = {
-    VDRUtil.toFqSchemaId_v0(id, issuerDid, Option(TEST_INDY_LEDGER_PREFIX))
+  def fqSchemaID(id: String, issuerDid: Option[DidStr], vdrMultiLedgerSupportEnabled: Boolean): String = {
+    VDRUtil.toFqSchemaId_v0(id, issuerDid, Option(TEST_INDY_LEDGER_PREFIX), vdrMultiLedgerSupportEnabled)
   }
 
-  def fqCredDefId(id: String, issuerDid: Option[DidStr]): String = {
-    VDRUtil.toFqCredDefId_v0(id, issuerDid, Option(TEST_INDY_LEDGER_PREFIX))
+  def fqCredDefId(id: String, issuerDid: Option[DidStr], vdrMultiLedgerSupportEnabled: Boolean): String = {
+    VDRUtil.toFqCredDefId_v0(id, issuerDid, Option(TEST_INDY_LEDGER_PREFIX), vdrMultiLedgerSupportEnabled)
   }
 
+  def toLegacyNonFqSchemaId(schemaId: FqSchemaId, vdrMultiLedgerSupportEnabled: Boolean): SchemaId = {
+    VDRUtil.toLegacyNonFqSchemaId(schemaId, vdrMultiLedgerSupportEnabled)
+  }
+
+  def toLegacyNonFqCredDefId(credDefId: FqCredDefId, vdrMultiLedgerSupportEnabled: Boolean): CredDefId = {
+    VDRUtil.toLegacyNonFqCredDefId(credDefId, vdrMultiLedgerSupportEnabled)
+  }
 }

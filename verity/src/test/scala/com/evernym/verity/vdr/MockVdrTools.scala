@@ -3,25 +3,26 @@ package com.evernym.verity.vdr
 import com.evernym.vdrtools.vdr.VdrParams.CacheOptions
 import com.evernym.vdrtools.vdr.VdrResults
 import com.evernym.vdrtools.vdr.VdrResults.PreparedTxnResult
+import com.evernym.verity.actor.agent.{AttrName, AttrValue}
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.did.{DidPair, DidStr}
-import com.evernym.verity.ledger.Submitter
+import com.evernym.verity.ledger.{GetAttribResp, Submitter}
 import com.evernym.verity.vdr.base.InMemLedger
 import com.evernym.verity.vdr.service._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-//in-memory version of VDRTools to be used in tests unit/integration tests
+//Mocked vdrtools (dependent on in-memory ledgers) to be used in unit/integration tests
 class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionContext)
   extends VdrTools {
-
-  var idToLedgers: Map[String, InMemLedger]= Map.empty
 
   //TODO: as we add/integrate actual VDR apis and their tests,
   // this class should evolve to reflect the same for its test implementation
 
-  override def ping(namespaces: List[Namespace]): Future[Map[String, VdrResults.PingResult]] = {
-    val allNamespaces = if (namespaces.isEmpty) ledgerRegistry.ledgers.flatMap(_.allSupportedNamespaces) else namespaces
+  var idToLedgers: Map[Namespace, InMemLedger]= Map.empty
+
+  override def ping(namespaces: List[Namespace]): Future[Map[Namespace, VdrResults.PingResult]] = {
+    val allNamespaces = if (namespaces.isEmpty) ledgerRegistry.ledgers.keys else namespaces
     Future.successful(allNamespaces.map(n => n -> new VdrResults.PingResult("SUCCESS", "successful")).toMap)
   }
 
@@ -69,10 +70,7 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
   }
 
   override def resolveSchema(schemaId: FqSchemaId): Future[VdrSchema] = {
-    idToLedgers.get(schemaId) match {
-      case Some(ledger) => Future(ledger.resolveSchema(schemaId))
-      case None         => Future(ledgerRegistry.getLedger(schemaId).resolveSchema(schemaId))
-    }
+    Future(withLedger(schemaId).resolveSchema(schemaId))
   }
 
   override def resolveSchema(schemaId: FqSchemaId,
@@ -81,10 +79,7 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
   }
 
   override def resolveCredDef(credDefId: FqCredDefId): Future[VdrCredDef] = {
-    idToLedgers.get(credDefId) match {
-      case Some(ledger) => Future(ledger.resolveCredDef(credDefId))
-      case None         => Future(ledgerRegistry.getLedger(credDefId).resolveCredDef(credDefId))
-    }
+    Future(withLedger(credDefId).resolveCredDef(credDefId))
   }
 
   override def resolveCredDef(credDefId: FqCredDefId,
@@ -93,9 +88,7 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
   }
 
   override def resolveDid(fqDid: FqDID): Future[VdrDid] = {
-    ledgerRegistry.forLedger(fqDid) { ledger: InMemLedger =>
-      ledger.resolveDid(fqDid)
-    }
+    Future(withLedger(fqDid).resolveDid(fqDid))
   }
 
   override def resolveDid(fqDid: FqDID,
@@ -105,6 +98,10 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
 
   private def addLedgerMapping(id: String, ledger: InMemLedger): Unit = {
     idToLedgers = idToLedgers + (id -> ledger)
+  }
+
+  private def withLedger(id: String): InMemLedger = {
+    idToLedgers.getOrElse(id, ledgerRegistry.getLedger(id))
   }
 
   def submitRawTxn(namespace: Namespace,
@@ -118,16 +115,14 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
   //NOTE: this is workaround until vdr tools apis starts supporting updating did docs
 
   def addNym(submitter: Submitter, didPair: DidPair): Future[Unit] = {
-    idToLedgers.get(didPair.did) match {
-      case Some(ledger) => Future(ledger.addNym(submitter, didPair))
-      case None         => Future(ledgerRegistry.getLedger(didPair.did).addNym(submitter, didPair))
-    }
+    Future(withLedger(didPair.did).addNym(submitter, didPair))
   }
 
-  def addAttrib(submitter: Submitter, did: DidStr, attrName: String, attrValue: String): Future[Unit] = {
-    idToLedgers.get(did) match {
-      case Some(ledger) => Future(ledger.addAttrib(submitter, did, attrName, attrValue))
-      case None         => Future(ledgerRegistry.getLedger(did).addAttrib(submitter, did, attrName, attrValue))
-    }
+  def addAttrib(submitter: Submitter, did: DidStr, attrName: AttrName, attrValue: AttrValue): Future[Unit] = {
+    Future(withLedger(did).addAttrib(submitter, did, attrName, attrValue))
+  }
+
+  def getAttrib(submitter: Submitter, did: DidStr, attrName: AttrName): Future[GetAttribResp] = {
+    Future(withLedger(did).getAttrib(submitter, did, attrName))
   }
 }

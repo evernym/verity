@@ -25,6 +25,7 @@ import com.evernym.vdrtools.IndyException
 import com.evernym.vdrtools.ledger.Ledger
 import com.evernym.vdrtools.ledger.Ledger._
 import com.evernym.vdrtools.pool.Pool
+import com.evernym.verity.actor.agent.{AttrName, AttrValue}
 import com.evernym.verity.vdrtools.ledger.LedgerTxnUtil.appendTAAToRequest
 
 import scala.compat.java8.FutureConverters.{toScala => toFuture}
@@ -306,8 +307,8 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
 
   override def addAttrib(submitterDetail: Submitter,
                          did: DidStr,
-                         attrName: String,
-                         attrValue: String): Future[Unit] = {
+                         attrName: AttrName,
+                         attrValue: AttrValue): Future[Unit] = {
     val raw = getJsonStringFromMap (Map(attrName -> attrValue))
     toFuture(buildAttribRequest(
       submitterDetail.did,
@@ -319,6 +320,24 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
       submitWriteRequest(submitterDetail, LedgerRequest(req, taa = currentTAA))
     }
   }
+
+  override def getAttrib(submitter: Submitter,
+                         did: DidStr,
+                         attrName: AttrName): Future[GetAttribResp] = {
+    toFuture(buildGetAttribRequest(submitter.did, did, attrName, null, null)) flatMap { req =>
+      submitGetRequest(submitter, req, needsSigning=true).map{ r =>
+        val txnResp = buildTxnRespForReadOp(r)
+        getOptFieldFromResult(r, DATA).map(_.toString)
+        GetAttribResp(txnResp)
+      }
+    }
+  }
+
+  private def getOptFieldFromResult(resp: LedgerResult, fieldToExtract: String): Option[Any] = {
+    val result = extractReqValue(resp, RESULT).asInstanceOf[LedgerResult]
+    extractOptValue(result, fieldToExtract)
+  }
+
 }
 
 object LedgerTxnUtil {

@@ -15,8 +15,9 @@ import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.{Ne
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{StatusReport => SchemaStatusReport, Write => SchemaWrite}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.vdr.{FqCredDefId, MockIndyLedger, MockLedgerRegistry, MockVdrTools, Namespace, TxnResult}
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
+import com.evernym.verity.vdr.base.PayloadConstants.{CRED_DEF, TYPE}
+import com.evernym.verity.vdr.{FqCredDefId, MockIndyLedger, MockLedgerRegistry, MockLedgerRegistryBuilder, MockVdrTools, Namespace, TxnResult}
 import com.typesafe.config.{Config, ConfigValueFactory}
 
 import scala.concurrent.duration._
@@ -115,10 +116,7 @@ class WriteCredDefEndorsementSpec
       .withValue("verity.eventing.basic-source.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
       .withValue("verity.eventing.basic-source.topics", ConfigValueFactory.fromIterable(List(TOPIC_REQUEST_ENDORSEMENT).asJava))
 
-  val dummyVdrTools = new DummyVdrTools(
-    MockLedgerRegistry(
-      List(MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None))
-    ))(futureExecutionContext)
+  val dummyVdrTools = new DummyVdrTools(MockLedgerRegistryBuilder(Map(INDY_SOVRIN_NAMESPACE -> MockIndyLedger("genesis.txn file path", None))).build())(futureExecutionContext)
 
   override lazy val executionContextProvider: ExecutionContextProvider = TestExecutionContextProvider.ecp
   override lazy val futureExecutionContext: ExecutionContext = executionContextProvider.futureExecutionContext
@@ -132,9 +130,9 @@ class WriteCredDefEndorsementSpec
                            signature: Array[Byte],
                            endorsement: FqCredDefId): Future[TxnResult] = {
       val node = JacksonMsgCodec.docFromStrUnchecked(new String(txnBytes))
-      node.get("payloadType").asText() match {
-        case "creddef"  => Future.failed(LedgerRejectException("Not enough ENDORSER signatures"))
-        case _          => super.submitTxn(namespace, txnBytes, signatureSpec, signature, endorsement)
+      node.get(TYPE).asText() match {
+        case CRED_DEF  => Future.failed(LedgerRejectException("Not enough ENDORSER signatures"))
+        case _         => super.submitTxn(namespace, txnBytes, signatureSpec, signature, endorsement)
       }
     }
   }

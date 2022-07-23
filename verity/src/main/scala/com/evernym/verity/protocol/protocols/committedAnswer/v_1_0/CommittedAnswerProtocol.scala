@@ -169,7 +169,7 @@ class CommittedAnswerProtocol(val ctx: ProtocolContextApi[CommittedAnswerProtoco
     case (st: State,                 m: Ctl.GetStatus)       => getStatus(st, m)
     case (st: State,                 m: Ctl)                 =>
       ctx.signal(Signal.buildProblemReport(
-        s"Unexpected '${CommittedAnswerMsgFamily.msgType(m.getClass).msgName}' message in current state '${st.getClass.getSimpleName}",
+        s"Unexpected '${CommittedAnswerMsgFamily.msgType(m.getClass).msgName}' message in current state '${st.getClass.getSimpleName}'",
         unexpectedMessage
       ))
   }

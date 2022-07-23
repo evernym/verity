@@ -15,6 +15,7 @@ import scala.util.{Failure, Try}
 class LedgerAccessAdapter(vdrTools: VDRAdapter,
                           vdrCache: CacheProvider,
                           _walletAccess: WalletAccess,
+                          _vdrMultiLedgerSupportEnabled: Boolean,
                           _vdrUnqualifiedLedgerPrefix: LedgerPrefix,
                           _vdrLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix])
                          (implicit val asyncOpRunner: AsyncOpRunner,
@@ -76,30 +77,6 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
       handleAsyncOpResult(handler)
     )
 
-  override def resolveDidDoc(fqDid: FqDID)(handler: Try[DidDoc] => Unit): Unit =
-    asyncOpRunner.withFutureOpRunner(
-      {
-        getCachedItem[FqDID](fqDid)
-          .map(s => Future.successful(s))
-          .getOrElse(fetchAndCacheDidDoc(fqDid))
-      },
-      handleAsyncOpResult(handler)
-    )
-
-  override def resolveDidDocs(fqDids: Set[FqDID])(handler: Try[Seq[DidDoc]] => Unit): Unit = {
-    asyncOpRunner.withFutureOpRunner(
-      {
-        Future
-          .sequence(fqDids.map { id =>
-            getCachedItem[FqDID](id).map(s => Future.successful(s)).getOrElse(
-              fetchAndCacheSchema(id))
-          })
-          .map(_.toSeq)
-      },
-      handleAsyncOpResult(handler)
-    )
-  }
-
   override def resolveSchemas(fqSchemaIds: Set[FqSchemaId])(handler: Try[Seq[Schema]] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
       {
@@ -128,26 +105,30 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     )
   }
 
-  override def fqDID(did: DidStr): FqDID = {
-    VDRUtil.toFqDID(did, _vdrUnqualifiedLedgerPrefix, _vdrLedgerPrefixMappings)
+  override def fqDID(did: DidStr,
+                     force: Boolean): FqDID = {
+    VDRUtil.toFqDID(did, force || _vdrMultiLedgerSupportEnabled, _vdrUnqualifiedLedgerPrefix, _vdrLedgerPrefixMappings)
   }
 
   override def fqSchemaId(schemaId: SchemaId,
-                          issuerFqDID: Option[FqDID]): FqSchemaId  = {
-    VDRUtil.toFqSchemaId_v0(schemaId, issuerFqDID, Option(_vdrUnqualifiedLedgerPrefix))
+                          issuerFqDID: Option[FqDID],
+                          force: Boolean): FqSchemaId  = {
+    VDRUtil.toFqSchemaId_v0(schemaId, issuerFqDID, Option(_vdrUnqualifiedLedgerPrefix), force || _vdrMultiLedgerSupportEnabled)
   }
 
   override def fqCredDefId(credDefId: CredDefId,
-                           issuerFqDID: Option[FqDID]): FqCredDefId = {
-    VDRUtil.toFqCredDefId_v0(credDefId, issuerFqDID, Option(_vdrUnqualifiedLedgerPrefix))
+                           issuerFqDID: Option[FqDID],
+                           force: Boolean): FqCredDefId = {
+    VDRUtil.toFqCredDefId_v0(credDefId, issuerFqDID, Option(_vdrUnqualifiedLedgerPrefix), force || _vdrMultiLedgerSupportEnabled)
   }
 
-  override def extractLedgerPrefix(submitterFqDID: FqDID,
-                                   endorserFqDID: FqDID): LedgerPrefix = {
-    val submitterLedgerPrefix = VDRUtil.extractLedgerPrefix(submitterFqDID)
-    val endorserLedgerPrefix = Try(VDRUtil.extractLedgerPrefix(endorserFqDID)).getOrElse("")
-    if (endorserLedgerPrefix.isEmpty || submitterLedgerPrefix == endorserLedgerPrefix) submitterLedgerPrefix
-    else throw new RuntimeException(s"submitter ledger prefix '$submitterLedgerPrefix' not matched with endorser ledger prefix '$endorserLedgerPrefix'")
+
+  def toLegacyNonFqSchemaId(schemaId: FqSchemaId): SchemaId = {
+    VDRUtil.toLegacyNonFqSchemaId(schemaId, _vdrMultiLedgerSupportEnabled)
+  }
+
+  def toLegacyNonFqCredDefId(credDefId: FqCredDefId): CredDefId = {
+    VDRUtil.toLegacyNonFqCredDefId(credDefId, _vdrMultiLedgerSupportEnabled)
   }
 
   private def getCachedItem[T](id: String): Option[T] = {
@@ -168,13 +149,6 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     }
   }
 
-  private def fetchAndCacheDidDoc(id: String): Future[DidDoc] = {
-    vdrTools.resolveDID(id, None).map { dd =>
-      vdrCache.put(id, dd)
-      dd
-    }
-  }
-
   override def walletAccess: WalletAccess = _walletAccess
 
   override def handleResult[T](result: Try[Any], handler: Try[T] => Unit): Unit = {
@@ -189,5 +163,6 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     )
   }
 
+  override lazy val vdrMultiLedgerSupportEnabled: Boolean = _vdrMultiLedgerSupportEnabled
   override lazy val vdrUnqualifiedLedgerPrefix: String = _vdrUnqualifiedLedgerPrefix
 }

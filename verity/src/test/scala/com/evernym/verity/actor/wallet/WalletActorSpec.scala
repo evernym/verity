@@ -418,7 +418,7 @@ class WalletActorSpec
       val verifierProofRequest = {
         val proofAttributes = List(ProofAttribute(Option("age"), None, None, None, self_attest_allowed = true))
         val req = Request("", Option(proofAttributes), None, None, None)
-        val proofRequest = ProofRequestUtil.requestToProofRequest(req)
+        val proofRequest = ProofRequestUtil.requestToProofRequest(req, vdrMultiLedgerSupportEnabled = true)
         val proofReqStr = proofRequest.map(DefaultMsgCodec.toJson).get
         Msg.RequestPresentation("", Vector(buildAttachment(Some(AttIds.request0), proofReqStr)))
       }

@@ -2,7 +2,7 @@ package com.evernym.verity.protocol.engine.asyncapi.ledger
 
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.vdr.{CredDef, CredDefId, DidDoc, FqCredDefId, FqDID, FqSchemaId, LedgerPrefix, PreparedTxn, Schema, SchemaId, SubmittedTxn}
+import com.evernym.verity.vdr.{CredDef, CredDefId, FqCredDefId, FqDID, FqSchemaId, PreparedTxn, Schema, SchemaId, SubmittedTxn}
 
 import scala.util.Try
 
@@ -12,6 +12,8 @@ trait LedgerAccess {
   def walletAccess: WalletAccess
 
   def vdrUnqualifiedLedgerPrefix(): String
+
+  def vdrMultiLedgerSupportEnabled(): Boolean
 
   //new vdr apis
   def prepareSchemaTxn(schemaJson: String,
@@ -43,21 +45,20 @@ trait LedgerAccess {
   def resolveCredDefs(fqCredDefIds: Set[FqCredDefId])
                      (handler: Try[Seq[CredDef]] => Unit): Unit
 
-  def resolveDidDoc(fqDid: FqDID)
-                (handler: Try[DidDoc] => Unit): Unit
-
-  def resolveDidDocs(fqDid: Set[FqDID])
-                (handler: Try[Seq[DidDoc]] => Unit): Unit
-
-  def fqDID(did: DidStr): FqDID
+  def fqDID(did: DidStr,
+            force: Boolean): FqDID
 
   def fqSchemaId(schemaId: SchemaId,
-                 issuerFqDID: Option[FqDID]): FqSchemaId
+                 issuerFqDID: Option[FqDID],
+                 force: Boolean): FqSchemaId
 
   def fqCredDefId(credDefId: CredDefId,
-                  issuerFqDID: Option[FqDID]): FqCredDefId
+                  issuerFqDID: Option[FqDID],
+                  force: Boolean): FqCredDefId
 
-  def extractLedgerPrefix(submitterFqDID: FqDID, endorserFqDID: FqDID): LedgerPrefix
+  def toLegacyNonFqSchemaId(schemaId: FqSchemaId): SchemaId
+
+  def toLegacyNonFqCredDefId(credDefId: FqCredDefId): CredDefId
 }
 
 case class LedgerRejectException(msg: String) extends Exception(msg)

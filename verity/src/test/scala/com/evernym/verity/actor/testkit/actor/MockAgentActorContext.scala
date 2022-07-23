@@ -22,7 +22,7 @@ import com.evernym.verity.texter.SMSSender
 import scala.concurrent.{ExecutionContext, Future}
 import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
-import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockVdrToolsBuilder, VDRAdapter}
+import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockLedgerRegistryBuilder, MockVdrToolsBuilder, VDRAdapter}
 import com.evernym.verity.vdr.service.{VDRToolsFactory, VdrTools}
 
 /**
@@ -51,13 +51,19 @@ class MockAgentActorContext(val system: ActorSystem,
 
   override lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, executionContext)
 
-  lazy val ledgerRegistry: MockLedgerRegistry = MockLedgerRegistry(List(MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None)))
+  lazy val ledgerRegistry: MockLedgerRegistry =
+    MockLedgerRegistryBuilder()
+      .withLedger(INDY_SOVRIN_NAMESPACE, MockIndyLedger("genesis.txn file path", None))
+      .build()
 
 
   override lazy val storageAPI: StorageAPI = new StorageAPI(appConfig, ecp.futureExecutionContext) {
     var storageMock: Map[String, Array[Byte]] = Map()
 
-    override def put(bucketName: String, id: String, data: Array[Byte], contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo] = {
+    override def put(bucketName: String,
+                     id: String,
+                     data: Array[Byte],
+                     contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo] = {
       storageMock += (id -> data)
       Future { StorageInfo("https://s3-us-west-2.amazonaws.com") }
     }

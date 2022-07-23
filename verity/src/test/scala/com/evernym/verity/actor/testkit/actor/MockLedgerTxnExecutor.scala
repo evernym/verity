@@ -1,5 +1,6 @@
 package com.evernym.verity.actor.testkit.actor
 
+import com.evernym.verity.actor.agent.{AttrName, AttrValue}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.{VDR_LEDGER_PREFIX_MAPPINGS, VDR_UNQUALIFIED_LEDGER_PREFIX}
 import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, StatusDetailException}
@@ -64,8 +65,12 @@ class MockLedgerTxnExecutor(ec: ExecutionContext,
     mockVdrAdapter.addNym(submitter, didPair)
   }
 
-  def addAttrib(submitter: Submitter, did: DidStr, attrName: String, attrValue: String): Future[Unit] = {
+  def addAttrib(submitter: Submitter, did: DidStr, attrName: AttrName, attrValue: AttrValue): Future[Unit] = {
     mockVdrAdapter.addAttrib(submitter, did, attrName, attrValue)
+  }
+
+  override def getAttrib(submitter: Submitter, did: DidStr, attrName: AttrName): Future[GetAttribResp] = {
+    mockVdrAdapter.getAttrib(submitter, did, attrName)
   }
 
   private lazy val mockVdrAdapter = vdrAdapter.asInstanceOf[MockVDRAdapter]

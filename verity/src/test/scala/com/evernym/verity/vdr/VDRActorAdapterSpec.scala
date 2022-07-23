@@ -6,7 +6,7 @@ import com.evernym.verity.actor.testkit.HasBasicActorSystem
 import com.evernym.verity.protocol.testkit.MockLedger.{TEST_INDY_LEDGER_PREFIX, ledgerPrefixMappings}
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.vdr.base.TestVDRDidDoc
+import com.evernym.verity.vdr.base.MockVdrDIDDoc
 import com.evernym.verity.vdr.service.{IndyLedger, Ledger, VDRToolsConfig}
 import org.json.JSONObject
 import org.scalatest.BeforeAndAfterEach
@@ -24,7 +24,7 @@ class VDRActorAdapterSpec
     with Eventually
     with BeforeAndAfterEach {
 
-  var testLedgerRegistry: MockLedgerRegistry = MockLedgerRegistry()
+  var testLedgerRegistry: MockLedgerRegistry = MockLedgerRegistryBuilder().build()
 
   override protected def afterEach(): Unit = {
     testLedgerRegistry.cleanup()
@@ -311,12 +311,11 @@ class VDRActorAdapterSpec
 
         for {
           //add did doc to  the VDR (as of now, we don't have prepareDIDTxn support, so directly adding it)
-          _ <- testLedgerRegistry.addDidDoc(TestVDRDidDoc("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM", "verKey", None));
+          _ <- testLedgerRegistry.addDidDoc(MockVdrDIDDoc("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM", "verKey", None));
           dd <- vdrAdapter.resolveDID("did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM")
         } yield {
           dd.fqId shouldBe "did:indy:sovrin:F72i3Y3Q4i466efjYJYCHM"
           dd.verKey shouldBe "verKey"
-          dd.endpoint shouldBe None
         }
       }
     }

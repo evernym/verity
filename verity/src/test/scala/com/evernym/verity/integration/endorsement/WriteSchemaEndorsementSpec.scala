@@ -15,7 +15,8 @@ import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{NeedsEndorsement
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
-import com.evernym.verity.vdr.{FqCredDefId, MockIndyLedger, MockLedgerRegistry, MockVdrTools, Namespace, TxnResult}
+import com.evernym.verity.vdr.base.PayloadConstants.{SCHEMA, TYPE}
+import com.evernym.verity.vdr.{FqCredDefId, MockIndyLedger, MockLedgerRegistry, MockLedgerRegistryBuilder, MockVdrTools, Namespace, TxnResult}
 import com.typesafe.config.{Config, ConfigValueFactory}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -113,12 +114,7 @@ class WriteSchemaEndorsementSpec
       .withValue("verity.eventing.basic-source.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
       .withValue("verity.eventing.basic-source.topics", ConfigValueFactory.fromIterable(List(TOPIC_REQUEST_ENDORSEMENT).asJava))
 
-  val dummyVdrTools = new DummyVdrTools(
-    MockLedgerRegistry(
-      List(
-        MockIndyLedger(List(INDY_SOVRIN_NAMESPACE), "genesis.txn file path", None)
-      )
-    ))(futureExecutionContext)
+  val dummyVdrTools = new DummyVdrTools(MockLedgerRegistryBuilder(Map(INDY_SOVRIN_NAMESPACE -> MockIndyLedger("genesis.txn file path", None))).build())(futureExecutionContext)
 
   override lazy val executionContextProvider: ExecutionContextProvider = TestExecutionContextProvider.ecp
   override lazy val futureExecutionContext: ExecutionContext = executionContextProvider.futureExecutionContext
@@ -132,9 +128,9 @@ class WriteSchemaEndorsementSpec
                            signature: Array[Byte],
                            endorsement: FqCredDefId): Future[TxnResult] = {
       val node = JacksonMsgCodec.docFromStrUnchecked(new String(txnBytes))
-      node.get("payloadType").asText() match {
-        case "schema"  => Future.failed(LedgerRejectException("Not enough ENDORSER signatures"))
-        case _          => super.submitTxn(namespace, txnBytes, signatureSpec, signature, endorsement)
+      node.get(TYPE).asText() match {
+        case SCHEMA  => Future.failed(LedgerRejectException("Not enough ENDORSER signatures"))
+        case _       => super.submitTxn(namespace, txnBytes, signatureSpec, signature, endorsement)
       }
     }
   }

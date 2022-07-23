@@ -6,13 +6,14 @@ import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.ledger._
 import com.evernym.verity.vdrtools.ledger.{IndyLedgerPoolConnManager, LedgerTxnExecutorV2, SubmitToLedger}
-import com.evernym.verity.did.{DidStr, DidPair}
+import com.evernym.verity.did.{DidPair, DidStr}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.vdrtools.pool.Pool
+import com.evernym.verity.util2.Exceptions.InvalidValueException
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.scalatest.MockitoSugar
 
@@ -122,6 +123,39 @@ class LedgerTxnExecutorV2Spec
           response match {
             case Success(resp) => resp shouldBe a[Unit]
             case x => x should not be x
+          }
+        }
+      }
+    }
+
+    "when executed get attrib operation" - {
+      "and if ledger respond valid json" - {
+        "should return success response" in {
+          //TODO: add any other valid success responses in below list in which case get nym operation should still result as success
+          val validResponses = List(
+            """{"result":{"raw":"url","txnTime":1530159597,"type":"104","state_proof":{"root_hash":"71V5ctaQKz9CHH9zhti2eWSGLMBKcwviY1gKE3enxMmc","multi_signature":{"value":{"ledger_id":1,"state_root_hash":"71V5ctaQKz9CHH9zhti2eWSGLMBKcwviY1gKE3enxMmc","txn_root_hash":"7DCA8vGLifZogvvEuUgdv3TsPGo2a5d6Xr2GubpuwS2p","pool_state_root_hash":"n6VPkuHJYFPk6Lnzk6wFKE8HQkwiXvPXfWPb1Xw5zp4","timestamp":1530159597},"participants":["Node1","Node4","Node2"],"signature":"R9PwZn5pwcVC7ZfrddL3wT4XddmRztnqPb7WgHQRKVQf78tiwxp6JriH5gRoEZE9WKmz4gAkCooPiyoVVqnFFqfDh57JiLdxDu2HKiRnKeEF3EDb42pcEJ1ADgoyfgZyHobRnGizg2gUCDvVfSoyi9Sv4P9ALETAChma1CPTv36rxX"},"proof_nodes":"+QJO+FGg\/qxG7GonMK2fDCCRa0Ea+TzYE8UyzhdADO0+RbGxBSGAgICAgICAgKCVea2xZlEF1WQlMBskbxjhlJXGtb58Pwug0ZUSTwjqpICAgICAgID4xbhZIEp3YkZjZFZkamJLVkoycTdOOWRKbjoxOjI4ZTVlYmFiZDlkOGY2ZTIzN2RmNjNkYTJiNTAzNzg1MDkzZjAyMjkyNDFiYzcwMjExOThmNjNjNDNiOTMyNjm4aPhmuGR7ImxzbiI6MTIsImx1dCI6MTUzMDE1OTU5NywidmFsIjoiNGEzMmQ2MzE1ZDk3MDE5ZjQyZWY5Zjc1ODU4ZjQ2OTdiZTNmNDNhNWNkOTQxZDE3YzUxZTVjN2Y0MjljMWU5MiJ9+QExoNPSP24JsVps7QufK62cHm4MLrVBpYu1VMlThcJrixajgICgmpq6PvRB\/76zSDjdvXO+dATJAmHaV82rEVG2ZoAO+TCgbGz+V\/m\/jtA4gBROEd4I2FfuvecuUT4DAy6hoLCmtoygSUhBoXAjOnzEhJU2n0\/wnIVra9syrqYk8zEwb+6vZAmgRACCCbNLp\/Y1alRAAWwlk5HNK8m01axYGilOiw+nIhmAgICAoCRyJt6FDmJQ60JcPeVA5EXTnNrRiLBPYNq9dgI6SYlCgKB9JVxOO1bVJRb8Jwgua4GPO\/Juk6XhGUySCneElMV7aqAb0qE5bnVw9F5IUz5uGMXwnAHQmog75MzPMOjuL+f3taA7Ohl8US\/Ipw9m90WNb\/7n5LAxzanxSmitjBCIzSGcGoA="},"data":"{\"url\":\"testvalue\"}","dest":"PJwbFcdVdjbKVJ2q7N9dJn","seqNo":12,"reqId":1530159597309824163,"identifier":"PJwbFcdVdjbKVJ2q7N9dJn"},"op":"REPLY"}"""
+          )
+          validResponses.foreach { vr =>
+            doReturn(Future(vr))
+              .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
+            val response = Await.ready(ledgerTxnExecutor.getAttrib(submitter, "4ZhauNeFr1Sv8qtGBvjjxH", "url"), maxWaitTime).value.get
+            response match {
+              case Success(resp) => resp shouldBe a[GetAttribResp]
+              case x => x should not be x
+            }
+          }
+        }
+      }
+
+      "and if ledger responds with null data" - {
+        "should throw an exception" in {
+          val responsesWithNullData = List(
+            """{"result":{"seqNo":null,"dest":"PJwbFcdVdjbKVJ2q7N9dJn","data":null,"type":"104","raw":"url","txnTime":null,"identifier":"PJwbFcdVdjbKVJ2q7N9dJn","state_proof":{"root_hash":"74LVQseYn6C3BMn8npD173jQnJbycgtqkEq7JgW7nyzM","multi_signature":{"signature":"QojjJnFUPdYrLWGcTxZ3DXx69dUYkEd5cRAL61i6DpnZeJyJNnw5KC6d6fuT1mo4xN9FYpwWVTGg2bFTBwrGEYuJL1RZxSrDh6nr7WF1gaSQWVyTd6qQjijWZXSAyTATikFobQ4c5cxhK41PJG9k8cAueCVPuFP4JHPpMATnSv6JRu","value":{"timestamp":1530159596,"state_root_hash":"74LVQseYn6C3BMn8npD173jQnJbycgtqkEq7JgW7nyzM","txn_root_hash":"FEJj5PaUzUuNhZP4DkYAthDGJn2LrZZ31hzEmn91njp2","ledger_id":1,"pool_state_root_hash":"n6VPkuHJYFPk6Lnzk6wFKE8HQkwiXvPXfWPb1Xw5zp4"},"participants":["Node4","Node3","Node1"]},"proof_nodes":"+QG3+IGgOb3tL9rLCaNhaLueITfpAXOXuPKY3xpts7IFO2f\/3IK4XvhcuFp7ImlkZW50aWZpZXIiOm51bGwsInJvbGUiOiIwIiwic2VxTm8iOjEsInR4blRpbWUiOm51bGwsInZlcmtleSI6In5Db1JFUjYzRFZZbldadEs4dUF6TmJ4In35ATGg09I\/bgmxWmztC58rrZwebgwutUGli7VUyVOFwmuLFqOAgKCamro+9EH\/vrNION29c750BMkCYdpXzasRUbZmgA75MKBsbP5X+b+O0DiAFE4R3gjYV+695y5RPgMDLqGgsKa2jKACG8f0w2NsuDibWYibc1TYySAgUKSeIevHF6wVZdMBL6BEAIIJs0un9jVqVEABbCWTkc0rybTVrFgaKU6LD6ciGYCAgICgJHIm3oUOYlDrQlw95UDkRdOc2tGIsE9g2r12AjpJiUKAoH0lXE47VtUlFvwnCC5rgY878m6TpeEZTJIKd4SUxXtqoBvSoTludXD0XkhTPm4YxfCcAdCaiDvkzM8w6O4v5\/e1oDs6GXxRL8inD2b3RY1v\/ufksDHNqfFKaK2MEIjNIZwagA=="},"reqId":1530159597137652617},"op":"REPLY"}"""
+          )
+          responsesWithNullData.foreach { vr =>
+            doReturn(Future(vr))
+              .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
+            an [InvalidValueException]  should be thrownBy  Await.result(ledgerTxnExecutor.getAttrib(submitter, "4ZhauNeFr1Sv8qtGBvjjxH", "url"), maxWaitTime)
           }
         }
       }

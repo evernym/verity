@@ -16,6 +16,7 @@ class LedgerVerKeyCacheFetcher(val vdr: VDRAdapter,
   extends AsyncCacheValueFetcher {
   override implicit def futureExecutionContext: ExecutionContext = executionContext
 
+  lazy val vdrMultiLedgerSupportEnabled: Boolean = appConfig.getBooleanReq(VDR_MULTI_LEDGER_SUPPORT_ENABLED)
   lazy val vdrUnqualifiedLedgerPrefix: String = appConfig.getStringReq(VDR_UNQUALIFIED_LEDGER_PREFIX)
   lazy val vdrLedgerPrefixMappings: Map[String, String] = appConfig.getMap(VDR_LEDGER_PREFIX_MAPPINGS)
 
@@ -34,14 +35,13 @@ class LedgerVerKeyCacheFetcher(val vdr: VDRAdapter,
 
   override def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]] = {
     val gvkp = kd.keyAs[GetVerKeyParam]
-    val didDocFut = vdr.resolveDID(VDRUtil.toFqDID(gvkp.did, vdrUnqualifiedLedgerPrefix, vdrLedgerPrefixMappings))
+    val didDocFut = vdr.resolveDID(VDRUtil.toFqDID(gvkp.did, vdrMultiLedgerSupportEnabled, vdrUnqualifiedLedgerPrefix, vdrLedgerPrefixMappings))
     didDocFut
       .map { dd =>Map(gvkp.did -> dd.verKey)}
       .recover {
         case StatusDetailException(sd) => throw buildUnexpectedResponse(sd)
       }
   }
-
 }
 
 case class GetVerKeyParam(did: DidStr, submitterDetail: Submitter) {

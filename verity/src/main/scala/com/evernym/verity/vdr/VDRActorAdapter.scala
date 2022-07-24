@@ -22,7 +22,7 @@ class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory,
   //post typed actor system migration, it may/will have to change.
   val vdrActorRef: ActorRef[VDRActor.Cmd] = system.toClassic.spawnAnonymous(VDRActor(vdrToolsFactory, vdrToolsConfig, ec))
 
-  private implicit val defaultTimeout: Timeout = apiTimeout.getOrElse(Timeout(5, TimeUnit.SECONDS))
+  private implicit val defaultTimeout: Timeout = apiTimeout.getOrElse(Timeout(30, TimeUnit.SECONDS))
 
   override def ping(namespaces: List[Namespace]): Future[PingResult] = {
     vdrActorRef

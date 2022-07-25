@@ -518,7 +518,9 @@ object PresentProof {
     ctx.signal(Sig.buildProblemReport(errorMsg, segmentedStoreFailed))
   }
 
-  def buildOobInvite(protoRef: ProtoRef, request: Msg.RequestPresentation, stateData: StateData)
+  def buildOobInvite(protoRef: ProtoRef,
+                     request: Msg.RequestPresentation,
+                     stateData: StateData)
                     (handler: Try[ShortenInvite] => Unit)
                     (implicit ctx: PresentProofContext): Unit = {
     InviteUtil.withServiced(stateData.agencyVerkey, ctx) {
@@ -535,7 +537,7 @@ object PresentProof {
           ctx.`threadId_!`,
           stateData.agentName,
           stateData.logoUrl,
-          stateData.publicDid,
+          ProtocolHelpers.buildQualifiedIdentifier(stateData.publicDid, ctx),
           service,
           attachment,
           goalCode = Some("request-proof"),

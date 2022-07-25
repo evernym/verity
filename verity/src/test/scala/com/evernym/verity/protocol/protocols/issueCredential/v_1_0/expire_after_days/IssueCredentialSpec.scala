@@ -414,6 +414,7 @@ class IssueCredentialSpec
       val (issuer, holder) = (f.alice, f.bob)
 
       issuer walletAccess MockableWalletAccess()
+      issuer ledgerAccess MockableLedgerAccess()
       holder walletAccess MockableWalletAccess()
       holder ledgerAccess MockableLedgerAccess()
 
@@ -592,6 +593,7 @@ class IssueCredentialSpec
       val (issuer, holder) = (f.alice, f.bob)
 
       issuer walletAccess MockableWalletAccess()
+      issuer ledgerAccess MockableLedgerAccess()
       holder walletAccess MockableWalletAccess()
       holder ledgerAccess MockableLedgerAccess()
       issuer urlShortening MockableUrlShorteningAccess.shorteningFailed

@@ -40,7 +40,7 @@ object InviteUtil {
   def buildInviteWithThreadedId(protoRef: ProtoRef,
                                 relationshipId: DidStr,
                                 threadId: ThreadId,
-                                agentName: Option[String],
+                                label: Option[String],
                                 logoUrl: Option[String],
                                 publicDid: Option[DidStr],
                                 service: Vector[ServiceFormatted],
@@ -51,17 +51,16 @@ object InviteUtil {
                                ): OutOfBandInvitation = {
     val id = buildThreadedInviteId(protoRef, relationshipId, threadId)
     OutOfBandInvitation(
-      agentName.getOrElse(""),
+      label.getOrElse(""),
       goalCode,
       goal,
       Vector(attachment),
       if (serviceKeyDidFormat) for (s <- service) yield ServiceFormatter(s).toDidKeyFormat() else service,
       logoUrl,
-      publicDid.map("did:sov:"+_),
+      publicDid,
       id
     )
   }
-
 
   case class ThreadedInviteIdDecoded(ver: String, protoRefStr: String, relationshipId: DidStr, threadId: ThreadId)
   val delimiter = '$'

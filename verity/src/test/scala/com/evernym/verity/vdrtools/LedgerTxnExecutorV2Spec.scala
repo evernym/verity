@@ -1,19 +1,19 @@
 package com.evernym.verity.vdrtools
 
-import com.evernym.verity.util2.Exceptions.{InvalidValueException, MissingReqFieldException}
 import com.evernym.verity.util2.Status.{StatusDetail, StatusDetailException, TAA_NOT_SET_ON_THE_LEDGER}
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.ledger._
 import com.evernym.verity.vdrtools.ledger.{IndyLedgerPoolConnManager, LedgerTxnExecutorV2, SubmitToLedger}
-import com.evernym.verity.did.{DidStr, DidPair}
+import com.evernym.verity.did.{DidPair, DidStr}
 import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.vdrtools.pool.Pool
+import com.evernym.verity.util2.Exceptions.InvalidValueException
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.scalatest.MockitoSugar
 
@@ -65,7 +65,7 @@ class LedgerTxnExecutorV2Spec
             maxWaitTime
           ).value.get
           response match {
-            case Success(resp) => resp shouldBe a[TxnResp]
+            case Success(resp) => resp shouldBe a[Unit]
             case x => x should not be x
           }
         }
@@ -121,108 +121,11 @@ class LedgerTxnExecutorV2Spec
             .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
           val response = Await.ready(ledgerTxnExecutor.addAttrib(submitter, "VFN92wTpay26L64XnEQsfR", "url", "http:test"), maxWaitTime).value.get
           response match {
-            case Success(resp) => resp shouldBe a[TxnResp]
+            case Success(resp) => resp shouldBe a[Unit]
             case x => x should not be x
           }
         }
       }
-
-      "and if ledger responds with no result" - {
-        "should throw an exception " in {
-          val validResponsesWithNullData = List(
-            """{"reqId":1532348071420600000,"identifier":"Y4t7brNzourxkzHHpTSgJd","op":"REQNACK","reason":"client request invalid: CouldNotAuthenticate('Can not find verkey for Y4t7brNzourxkzHHpTSgJd',)"}"""
-          )
-          validResponsesWithNullData.foreach { vr =>
-            doReturn(Future(vr))
-              .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            an [MissingReqFieldException] should be thrownBy Await.result(ledgerTxnExecutor.getNym(submitter, submitterDID), maxWaitTime)
-          }
-        }
-      }
-    }
-
-    "when executed get nym operation" - {
-      "if ledger responds with valid response" - {
-        "should return success response" in {
-          //TODO: add any other valid success responses in below list in which case get nym operation should still result as success
-          val validResponses = List(
-            """{"op":"REPLY","result":{"identifier":"PJwbFcdVdjbKVJ2q7N9dJn","seqNo":11,"state_proof":{"proof_nodes":"+QHo+LKgOflBD8eYCsTokj8CNus7zjuOnlOv\/vFoecx78Er4Pne4j\/iNuIt7ImlkZW50aWZpZXIiOiJUaDdNcFRhUlpWUlluUGlhYmRzODFZIiwicm9sZSI6bnVsbCwic2VxTm8iOjExLCJ0eG5UaW1lIjoxNTMwMTU5NTk2LCJ2ZXJrZXkiOiJEQUYydTJzZUhMODFrU1o2d0RXUnZjQmhiNFI0emtxUjJqSkVueUdnZlRWRiJ9+QExoNPSP24JsVps7QufK62cHm4MLrVBpYu1VMlThcJrixajgICgmpq6PvRB\/76zSDjdvXO+dATJAmHaV82rEVG2ZoAO+TCgbGz+V\/m\/jtA4gBROEd4I2FfuvecuUT4DAy6hoLCmtoygAhvH9MNjbLg4m1mIm3NU2MkgIFCkniHrxxesFWXTAS+gRACCCbNLp\/Y1alRAAWwlk5HNK8m01axYGilOiw+nIhmAgICAoCRyJt6FDmJQ60JcPeVA5EXTnNrRiLBPYNq9dgI6SYlCgKB9JVxOO1bVJRb8Jwgua4GPO\/Juk6XhGUySCneElMV7aqAb0qE5bnVw9F5IUz5uGMXwnAHQmog75MzPMOjuL+f3taA7Ohl8US\/Ipw9m90WNb\/7n5LAxzanxSmitjBCIzSGcGoA=","root_hash":"74LVQseYn6C3BMn8npD173jQnJbycgtqkEq7JgW7nyzM","multi_signature":{"participants":["Node1","Node3","Node4"],"signature":"QojjJnFUPdYrLWGcTxZ3DXx69dUYkEd5cRAL61i6DpnZeJyJNnw5KC6d6fuT1mo4xN9FYpwWVTGg2bFTBwrGEYuJL1RZxSrDh6nr7WF1gaSQWVyTd6qQjijWZXSAyTATikFobQ4c5cxhK41PJG9k8cAueCVPuFP4JHPpMATnSv6JRu","value":{"timestamp":1530159596,"ledger_id":1,"state_root_hash":"74LVQseYn6C3BMn8npD173jQnJbycgtqkEq7JgW7nyzM","txn_root_hash":"FEJj5PaUzUuNhZP4DkYAthDGJn2LrZZ31hzEmn91njp2","pool_state_root_hash":"n6VPkuHJYFPk6Lnzk6wFKE8HQkwiXvPXfWPb1Xw5zp4"}}},"data":"{\"dest\":\"PJwbFcdVdjbKVJ2q7N9dJn\",\"identifier\":\"Th7MpTaRZVRYnPiabds81Y\",\"role\":null,\"seqNo\":11,\"txnTime\":1530159596,\"verkey\":\"DAF2u2seHL81kSZ6wDWRvcBhb4R4zkqR2jJEnyGgfTVF\"}","reqId":1530159597037160909,"dest":"PJwbFcdVdjbKVJ2q7N9dJn","type":"105","txnTime":1530159596}}"""
-          )
-          validResponses.foreach { vr =>
-            doReturn(Future(vr))
-              .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.ready(ledgerTxnExecutor.getNym(submitter, submitterDID), maxWaitTime).value.get
-            response match {
-              case Success(resp) => resp shouldBe a[GetNymResp]
-              case x => x should not be x
-            }
-          }
-        }
-      }
-
-      "and if ledger responds with null data" - {
-        "should throw an exception" in {
-          val validResponsesWithNullData = List(
-            """{"result":{"data":null,"seqNo":null,"dest":"7cGUMpETdhE45Sa2A36vGb","reqId":1530159593444617377,"identifier":"PJwbFcdVdjbKVJ2q7N9dJn","type":"105","txnTime":null},"op":"REPLY"}"""
-          )
-          validResponsesWithNullData.foreach { vr =>
-            doReturn(Future(vr))
-              .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.ready(ledgerTxnExecutor.getNym(submitter, submitterDID), maxWaitTime).value.get
-            response match {
-              case Success(resp) =>
-                resp shouldBe a[GetNymResp]
-                resp.txnResp should not be(None)
-                resp.nym should be(None)
-                resp.verkey should be(None)
-              case x => x should not be x
-            }
-          }
-        }
-      }
-
-      "and if ledger responds with no data field" - {
-        "should return success response" in {
-          val validResponsesWithNoData = List(
-            """{"result":{"seqNo":1,"dest":"7cGUMpETdhE45Sa2A36vGb","reqId":1530159593444617377,"identifier":"PJwbFcdVdjbKVJ2q7N9dJn","type":"105","txnTime":1},"op":"REPLY"}"""
-          )
-          validResponsesWithNoData.foreach { vr =>
-            doReturn(Future(vr))
-              .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.ready(ledgerTxnExecutor.getNym(submitter, submitterDID), maxWaitTime).value.get
-            response match {
-              case Success(resp) => resp shouldBe a[GetNymResp]
-              case x => x should not be x
-            }
-          }
-        }
-      }
-
-      "and if ledger responds with invalid json" - {
-        "should return error response" taggedAs (UNSAFE_IgnoreLog) in {
-          val invalidResponses = List("", """{"res":""""")
-          invalidResponses.foreach { ivr =>
-            doReturn(Future(ivr))
-              .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-            val response = Await.ready(ledgerTxnExecutor.getNym(submitter, targetDidPair.did), maxWaitTime).value.get
-            response match {
-              case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
-              case x => x should not be x
-            }
-          }
-        }
-      }
-
-      "and if underlying wallet api throw an exception" - {
-        "should return error response" taggedAs (UNSAFE_IgnoreLog) in {
-          val response = Await.ready(ledgerTxnExecutor.getNym(submitter, targetDidPair.did), maxWaitTime).value.get
-          response match {
-            case Failure(StatusDetailException(resp)) => resp shouldBe a[StatusDetail]
-            case x => x should not be x
-          }
-        }
-      }
-
     }
 
     "when executed get attrib operation" - {

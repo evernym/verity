@@ -23,7 +23,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import com.evernym.verity.transports.MsgSendingSvc
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistry, MockLedgerRegistryBuilder, MockVdrToolsBuilder, VDRAdapter}
-import com.evernym.verity.vdr.service.VDRToolsFactory
+import com.evernym.verity.vdr.service.{VDRToolsFactory, VdrTools}
 
 /**
  *
@@ -38,10 +38,13 @@ class MockAgentActorContext(val system: ActorSystem,
 
   implicit lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
   override lazy val smsSvc: SMSSender = new MockSMSSender(appConfig, executionContext)
-  override lazy val ledgerSvc: LedgerSvc = new MockLedgerSvc(system, ecp.futureExecutionContext)
 
   override lazy val msgSendingSvc: MsgSendingSvc = MockMsgSendingSvc
-  override lazy val poolConnManager: LedgerPoolConnManager = new InMemLedgerPoolConnManager(ecp.futureExecutionContext)(system.dispatcher)
+  override lazy val vdrBuilderFactory: VDRToolsFactory = () => new MockVdrToolsBuilder(ledgerRegistry)
+  lazy val vdrTools: VdrTools = vdrBuilderFactory().build()
+  override lazy val vdrAdapter: VDRAdapter = createVDRAdapter(vdrTools)
+  override lazy val ledgerSvc: LedgerSvc = new MockLedgerSvc(appConfig, vdrAdapter)
+  override lazy val poolConnManager: LedgerPoolConnManager = new InMemLedgerPoolConnManager(ecp.futureExecutionContext, appConfig, vdrAdapter)(system.dispatcher)
   override lazy val agentMsgRouter: AgentMsgRouter = mockAgentMsgRouter.getOrElse(
     new MockAgentMsgRouter(executionContext)(appConfig, system)
   )
@@ -53,9 +56,6 @@ class MockAgentActorContext(val system: ActorSystem,
       .withLedger(INDY_SOVRIN_NAMESPACE, MockIndyLedger("genesis.txn file path", None))
       .build()
 
-  override lazy val vdrBuilderFactory: VDRToolsFactory = () => new MockVdrToolsBuilder(ledgerRegistry)
-
-  override lazy val vdrAdapter: VDRAdapter = createVDRAdapter(vdrBuilderFactory)
 
   override lazy val storageAPI: StorageAPI = new StorageAPI(appConfig, ecp.futureExecutionContext) {
     var storageMock: Map[String, Array[Byte]] = Map()
@@ -79,8 +79,8 @@ class MockAgentActorContext(val system: ActorSystem,
     override def ping: Future[Unit] = Future.successful((): Unit)
   }
 
-  def createVDRAdapter(vdrToolsFactory: VDRToolsFactory)(implicit ec: ExecutionContext): VDRAdapter = {
-    new MockVDRAdapter(vdrToolsFactory)(ec)
+  def createVDRAdapter(vdrTools: VdrTools)(implicit ec: ExecutionContext): VDRAdapter = {
+    new MockVDRAdapter(vdrTools)(ec)
   }
 
   override lazy val protocolRegistry: ProtocolRegistry[ActorDriverGenParam] =

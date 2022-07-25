@@ -10,7 +10,7 @@ class MockVdrToolsBuilder(ledgerRegistry: MockLedgerRegistry,
                           givenVdrTools: Option[VdrTools]=None)(implicit ec: ExecutionContext)
   extends VdrToolsBuilder {
 
-  override def registerIndyLedger(namespaceList: List[String],
+  override def registerIndyLedger(namespaceList: List[Namespace],
                                   genesisTxnData: String,
                                   taaConfig: Option[VdrParams.TaaConfig]): Future[Unit] = {
     val ledger = MockIndyLedger(genesisTxnData, taaConfig)
@@ -18,7 +18,9 @@ class MockVdrToolsBuilder(ledgerRegistry: MockLedgerRegistry,
     Future.successful(())
   }
 
-  override def registerCheqdLedger(namespaceList: List[String], chainId: String, nodeAddrsList: String): Future[Unit] = {
+  override def registerCheqdLedger(namespaceList: List[Namespace],
+                                   chainId: String,
+                                   nodeAddrsList: String): Future[Unit] = {
     Future.failed(new Exception("Not implemented yet"))
   }
 

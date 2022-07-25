@@ -64,11 +64,20 @@ class VDRUtilSpec
       }
     }
 
-    "when tried to convert fqSchemaId to legacy non qualified schema id" - {
+    "when tried to convert id to legacy non qualified id" - {
+      "should be successful" in {
+        val legacyCredDefId1 = VDRUtil.toLegacyNonFqDid("did:indy:sovrin:builder:8aX4Hu3k7STufiKKxLtig7", vdrMultiLedgerSupportEnabled)
+        legacyCredDefId1 shouldBe "did:indy:sovrin:builder:8aX4Hu3k7STufiKKxLtig7"
+        val legacyCredDefId2 = VDRUtil.toLegacyNonFqDid("8aX4Hu3k7STufiKKxLtig7", false)
+        legacyCredDefId2 shouldBe "8aX4Hu3k7STufiKKxLtig7"
+      }
+    }
+
+    "when tried to convert schemaId to legacy non qualified schema id" - {
       "should be successful" in {
         val legacyCredDefId1 = VDRUtil.toLegacyNonFqSchemaId("did:indy:sovrin:builder:8aX4Hu3k7STufiKKxLtig7/anoncreds/v0/SCHEMA/name/1.0", vdrMultiLedgerSupportEnabled)
         legacyCredDefId1 shouldBe "did:indy:sovrin:builder:8aX4Hu3k7STufiKKxLtig7/anoncreds/v0/SCHEMA/name/1.0"
-        val legacyCredDefId2 = VDRUtil.toLegacyNonFqSchemaId("did:indy:sovrin:builder:8aX4Hu3k7STufiKKxLtig7/anoncreds/v0/SCHEMA/name/1.0", false)
+        val legacyCredDefId2 = VDRUtil.toLegacyNonFqSchemaId("8aX4Hu3k7STufiKKxLtig7:2:name:1.0", false)
         legacyCredDefId2 shouldBe "8aX4Hu3k7STufiKKxLtig7:2:name:1.0"
       }
     }
@@ -79,19 +88,19 @@ class VDRUtilSpec
         val legacyCredDefId1 = VDRUtil.toLegacyNonFqCredDefId("did:indy:sovrin:builder:8aX4Hu3k7STufiKKxLtig7/anoncreds/v0/CLAIM_DEF/47951/latest", vdrMultiLedgerSupportEnabled)
         legacyCredDefId1 shouldBe "did:indy:sovrin:builder:8aX4Hu3k7STufiKKxLtig7/anoncreds/v0/CLAIM_DEF/47951/latest"
 
-        //schema id as a fully qualified identifier itself
+        //schema id as a full reference
         val schemaId = "did:indy:sovrin:builder:8aX4Hu3k7STufiKKxLtig7/anoncreds/v0/SCHEMA/name/1.0"
         val legacyCredDefId2 = VDRUtil.toLegacyNonFqCredDefId(s"did:indy:sovrin:builder:8aX4Hu3k7STufiKKxLtig7/anoncreds/v0/CLAIM_DEF/$schemaId/latest", vdrMultiLedgerSupportEnabled)
         legacyCredDefId2 shouldBe s"did:indy:sovrin:builder:8aX4Hu3k7STufiKKxLtig7/anoncreds/v0/CLAIM_DEF/$schemaId/latest"
 
         //=======================================
         //schema id as a sequence number
-        val legacyCredDefId3 = VDRUtil.toLegacyNonFqCredDefId("did:indy:sovrin:builder:8aX4Hu3k7STufiKKxLtig7/anoncreds/v0/CLAIM_DEF/47951/latest", false)
+        val legacyCredDefId3 = VDRUtil.toLegacyNonFqCredDefId("8aX4Hu3k7STufiKKxLtig7:3:CL:47951:latest", false)
         legacyCredDefId3 shouldBe "8aX4Hu3k7STufiKKxLtig7:3:CL:47951:latest"
 
         //schema id as a fully qualified identifier itself
-        val schemaId1 = "did:indy:sovrin:builder:8aX4Hu3k7STufiKKxLtig7/anoncreds/v0/SCHEMA/name/1.0"
-        val legacyCredDefId4 = VDRUtil.toLegacyNonFqCredDefId(s"did:indy:sovrin:builder:8aX4Hu3k7STufiKKxLtig7/anoncreds/v0/CLAIM_DEF/$schemaId/latest", false)
+        val schemaId1 = "8aX4Hu3k7STufiKKxLtig7:2:name:1.0"
+        val legacyCredDefId4 = VDRUtil.toLegacyNonFqCredDefId(s"8aX4Hu3k7STufiKKxLtig7:3:CL:$schemaId1:latest", false)
         legacyCredDefId4 shouldBe "8aX4Hu3k7STufiKKxLtig7:3:CL:8aX4Hu3k7STufiKKxLtig7:2:name:1.0:latest"
       }
     }

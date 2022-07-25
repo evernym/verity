@@ -914,7 +914,8 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
       scke.forDIDPair.verKey, scke.newAgentKeyDIDPair.verKey
     )
     val nameConfigEvt = scke.ownerName.map(n => ConfigUpdated(NAME, n, getMillisForCurrentUTCZonedDateTime))
-    val eventsToPersist: List[Any] = (pidEvent ++ pubIdEvent ++ List(odsEvt, cdsEvt) ++ nameConfigEvt).toList
+    val logoUrlConfigEvt = scke.logoUrl.map(lu => ConfigUpdated(LOGO_URL, lu, getMillisForCurrentUTCZonedDateTime))
+    val eventsToPersist: List[Any] = (pidEvent ++ pubIdEvent ++ List(odsEvt, cdsEvt) ++ nameConfigEvt ++ logoUrlConfigEvt).toList
     writeAndApplyAll(eventsToPersist)
     val sndr = sender()
 

@@ -15,8 +15,7 @@ import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, CurrentP
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Write
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.vdr.base.{INDY_SOVRIN_NAMESPACE, InMemLedger}
-import com.evernym.verity.vdr.service.VdrTools
-import com.evernym.verity.vdr.{FqCredDefId, FqDID, FqSchemaId, MockIndyLedger, MockLedgerRegistry, MockLedgerRegistryBuilder, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
+import com.evernym.verity.vdr.{FqCredDefId, FqDID, FqSchemaId, MockIndyLedger, MockLedgerRegistry, MockLedgerRegistryBuilder, MockVdrTools, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -62,7 +61,7 @@ class WriteSchemaFailureSpec
 
   //in-memory version of VDRTools to be used in tests unit/integration tests
   class DummyVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionContext)
-    extends VdrTools {
+    extends MockVdrTools(ledgerRegistry) {
 
     //TODO: as we add/integrate actual VDR apis and their tests,
     // this class should evolve to reflect the same for its test implementation

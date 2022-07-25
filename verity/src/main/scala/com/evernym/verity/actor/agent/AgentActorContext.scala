@@ -50,7 +50,7 @@ trait AgentActorContext
     new KeyValueMapperFetcher(system, appConfig, futureExecutionContext),
     new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig, futureExecutionContext),
     new EndpointCacheFetcher(ledgerSvc, appConfig, futureExecutionContext),
-    new LedgerVerKeyCacheFetcher(ledgerSvc, appConfig, futureExecutionContext)
+    new LedgerVerKeyCacheFetcher(vdrAdapter, appConfig, futureExecutionContext)
   ).map(f => f.fetcherParam -> f).toMap
 
   lazy val vdrCache: CacheProvider = new CaffeineCacheProvider(CaffeineCacheParam(None, None, None, None))
@@ -112,11 +112,14 @@ trait AgentActorContext
     }
   }
 
-  private def createVDRAdapter(vdrToolsFactory: VDRToolsFactory, appConfig: AppConfig)(implicit ec: ExecutionContext, as: ActorSystem): VDRActorAdapter = {
+  private def createVDRAdapter(vdrToolsFactory: VDRToolsFactory,
+                               appConfig: AppConfig)
+                              (implicit ec: ExecutionContext, as: ActorSystem): VDRActorAdapter = {
+    val timeout: Timeout = Util.buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
     new VDRActorAdapter(
       vdrToolsFactory,
       VDRToolsConfig.load(appConfig.config),
-      None
+      Option(timeout)
     )(ec, as.toTyped)
   }
 
@@ -126,7 +129,9 @@ trait AgentActorContext
 class DefaultLedgerSvc(val system: ActorSystem,
                        val appConfig: AppConfig,
                        val walletAPI: WalletAPI,
-                       val ledgerPoolConnManager: LedgerPoolConnManager) extends LedgerSvc {
+                       val ledgerPoolConnManager: LedgerPoolConnManager)
+                      (implicit val executionContext: ExecutionContext)
+  extends LedgerSvc {
 
   override def ledgerTxnExecutor: LedgerTxnExecutor = {
     ledgerPoolConnManager.txnExecutor(Some(walletAPI))

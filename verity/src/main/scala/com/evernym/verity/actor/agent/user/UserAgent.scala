@@ -159,7 +159,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
     case SignalMsgParam(_: ConnReqReceived, _)                 => Future.successful(None)
     case SignalMsgParam(sm: SendMsgToRegisteredEndpoint, _)    => sendAgentMsgToRegisteredEndpoint(sm)
     case SignalMsgParam(prd: ProvideRecoveryDetails, _)        => registerRecoveryKey(prd.params.recoveryVk)
-    case SignalMsgParam(cpk: CreatePairwiseKey, _)             => createNewPairwiseEndpoint(cpk.label)
+    case SignalMsgParam(cpk: CreatePairwiseKey, _)             => createNewPairwiseEndpoint(cpk.label, cpk.logoUrl)
     case SignalMsgParam(pic: PublicIdentifierCreated, _)       => storePublicIdentity(pic.identifier.did, pic.identifier.verKey)
     case SignalMsgParam(pic: V_07PublicIdentifierCreated, _)   => storePublicIdentity(pic.identifier.did, pic.identifier.verKey)
   }
@@ -437,19 +437,21 @@ class UserAgent(val agentActorContext: AgentActorContext,
       thisAgentKey,
       DidPair(createKeyReqMsg.forDID, createKeyReqMsg.forDIDVerKey),
       Option(createKeyReqMsg.forDIDVerKey),
+      None,
       None
     )
     val sndr = sender()
     handleInitPairwiseConnResp(thisAgentKey.did, thisAgentKey.verKey, futResp, sndr)
   }
 
-  def createNewPairwiseEndpoint(ownerName: Option[String]): Future[Option[ControlMsg]] = {
+  def createNewPairwiseEndpoint(ownerName: Option[String], logoUrl: Option[String]): Future[Option[ControlMsg]] = {
     walletAPI.executeAsync[NewKeyCreated](CreateNewKey()).flatMap { requesterKey =>
       val respFut = createNewPairwiseEndpointBase(
         requesterKey,
         requesterKey.didPair.toAgentDidPair,
         Option(requesterKey.verKey),
-        ownerName
+        ownerName,
+        logoUrl
       )
       respFut.map { _ =>
         Option(
@@ -464,7 +466,8 @@ class UserAgent(val agentActorContext: AgentActorContext,
   def createNewPairwiseEndpointBase(thisAgentKey: NewKeyCreated,
                                     requesterDIDPair: DidPair,
                                     requesterVerKeyOpt: Option[VerKeyStr]=None,
-                                    ownerName: Option[String])
+                                    ownerName: Option[String],
+                                    logoUrl: Option[String])
   : Future[Any] = {
     val requesterVerKeyFut = requesterVerKeyOpt match {
       case Some(vk) => Future.successful(vk)
@@ -480,14 +483,15 @@ class UserAgent(val agentActorContext: AgentActorContext,
     }
 
     endpointDIDPairFut.flatMap { endpointDIDPair =>
-      val cke = buildSetupCreateKeyEndpoint(requesterDIDPair, endpointDIDPair, ownerName)
+      val cke = buildSetupCreateKeyEndpoint(requesterDIDPair, endpointDIDPair, ownerName, logoUrl)
       userAgentPairwiseRegion ? ForIdentifier(getNewActorId, cke)
     }
   }
 
   def buildSetupCreateKeyEndpoint(forDIDPair: DidPair,
                                   newAgentPairwiseVerKeyDIDPair: DidPair,
-                                  ownerName: Option[String]): SetupCreateKeyEndpoint = {
+                                  ownerName: Option[String],
+                                  logoUrl: Option[String]): SetupCreateKeyEndpoint = {
     SetupCreateKeyEndpoint(
       newAgentPairwiseVerKeyDIDPair,
       forDIDPair,
@@ -496,7 +500,8 @@ class UserAgent(val agentActorContext: AgentActorContext,
       agentWalletId,
       None,
       state.publicIdentity.orElse(state.configs.get(PUBLIC_DID).map(c => DidPair(c.value))),
-      ownerName
+      ownerName,
+      logoUrl
     )
   }
 

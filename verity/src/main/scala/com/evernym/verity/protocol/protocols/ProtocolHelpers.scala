@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols
 
 import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
+import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
@@ -66,6 +67,9 @@ trait ProtocolHelpers[P,R,M,E,S,I] {
     ctx.logger
   }
 
+  def buildQualifiedIdentifier(identifier: Option[DidStr])(implicit ctx: Context): Option[DidStr] = {
+    ProtocolHelpers.buildQualifiedIdentifier(identifier, ctx)
+  }
 }
 
 object ProtocolHelpers {
@@ -79,5 +83,13 @@ object ProtocolHelpers {
     roster
       .withParticipant(id, isSelf = true)
       .withSelfAssignment(role)
+  }
+
+  def buildQualifiedIdentifier(identifier: Option[DidStr],
+                               ctx: ProtocolContextApi[_,_,_,_,_,_]): Option[DidStr] = {
+    identifier.map { id =>
+      if (ctx.ledger.vdrMultiLedgerSupportEnabled()) ctx.ledger.fqDID(id, force = true)
+      else "did:sov:" + id
+    }
   }
 }

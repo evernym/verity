@@ -4,7 +4,7 @@ import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerRequest, 
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
-import com.evernym.verity.vdr.{CredDef, CredDefId, FqCredDefId, FqDID, FqSchemaId, LedgerPrefix, PreparedTxn, Schema, SchemaId, SubmittedTxn}
+import com.evernym.verity.vdr.{CredDef, CredDefId, FqCredDefId, FqDID, FqSchemaId, PreparedTxn, Schema, SchemaId, SubmittedTxn}
 
 import scala.util.Try
 
@@ -52,7 +52,8 @@ trait LedgerAccess {
   def resolveCredDefs(fqCredDefIds: Set[FqCredDefId])
                      (handler: Try[Seq[CredDef]] => Unit): Unit
 
-  def fqDID(did: DidStr, force: Boolean): FqDID
+  def fqDID(did: DidStr,
+            force: Boolean): FqDID
 
   def fqSchemaId(schemaId: SchemaId,
                  issuerFqDID: Option[FqDID],
@@ -65,8 +66,6 @@ trait LedgerAccess {
   def toLegacyNonFqSchemaId(schemaId: FqSchemaId): SchemaId
 
   def toLegacyNonFqCredDefId(credDefId: FqCredDefId): CredDefId
-
-  def extractLedgerPrefix(submitterFqDID: FqDID, endorserFqDID: FqDID): LedgerPrefix
 }
 
 case class LedgerRejectException(msg: String) extends Exception(msg)

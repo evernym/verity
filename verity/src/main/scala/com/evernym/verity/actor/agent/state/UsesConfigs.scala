@@ -28,7 +28,7 @@ trait UsesConfigs extends HasAppConfig with HasExecutionContextProvider {
 
   def getConfigs(names: Set[String]): Future[AgentConfigs] = {
     val gcs = names.map(n => GetConfigDetail(n, req=false))
-    getConfigsFromUserAgent(gcs).mapTo[AgentConfigs]
+    getAgentConfigs(gcs).mapTo[AgentConfigs]
   }
 
   def getAgentConfigDetails: Set[ConfigDetail] = {

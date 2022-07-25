@@ -9,6 +9,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.{?=>, DIDDoc, ServiceFormatter}
+import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl.Create
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Msg.{Invitation, OutOfBandInvitation}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.ProblemReportCodes._
@@ -21,10 +22,13 @@ import org.json.JSONObject
 import scala.util.{Success, Try}
 
 
-class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, RelationshipEvent, State, String])
-  extends Protocol[Relationship, Role, Msg, RelationshipEvent, State, String](RelationshipDef){
+class Relationship(implicit val ctx: ProtocolContextApi[Relationship, Role, Msg, RelationshipEvent, State, String])
+  extends Protocol[Relationship, Role, Msg, RelationshipEvent, State, String](RelationshipDef)
+    with ProtocolHelpers[Relationship, Role, Msg, RelationshipEvent, State, String] {
 
   val defaultShortInviteOption = false
+
+  override type Context = ProtocolContextApi[Relationship, Role, Msg, RelationshipEvent, State, String]
 
   def handleControl: Control ?=> Any = {
     case c: Control => mainHandleControl(ctx.getState, c)
@@ -57,7 +61,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
 
   def handleCreateKey(st: State.Initialized, m: Ctl.Create): Unit = {
     ctx.apply(CreatingPairwiseKey(m.label.getOrElse(st.label), m.logoUrl.getOrElse(st.logoUrl)))
-    ctx.signal(Signal.CreatePairwiseKey(m.label))
+    ctx.signal(Signal.CreatePairwiseKey(m.label, m.logoUrl))
   }
 
   def checkPhoneNumberValidOrNotProvided(phoneNumber: Option[String]): Boolean = {
@@ -111,7 +115,6 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
       blankOption(st.publicDid),
       serviceDidKeyFormat
     )
-
     val inviteURL = prepareInviteUrl(invitationMsg, "oob")
     if (m.shortInvite.getOrElse(defaultShortInviteOption))
       ctx.urlShortening.shorten(inviteURL)(shortenerHandler(invitationMsg.`@id`, inviteURL))
@@ -153,7 +156,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
       for (service <- DIDDoc(did, verKey, ctx.serviceEndpoint, routingKeys).toDIDDocFormatted.service) yield ServiceFormatter(service).toDidKeyFormat()
     } else {
       DIDDoc(did, verKey, ctx.serviceEndpoint, routingKeys).toDIDDocFormatted.service
-    };
+    }
 
     //TODO: use InviteUtil from out-of-band protocol for this
     OutOfBandInvitation(
@@ -164,7 +167,7 @@ class Relationship(val ctx: ProtocolContextApi[Relationship, Role, Msg, Relation
       requestAttach,
       service,
       profileUrl,
-      publicDid.map(d => "did:sov:" + d)
+      buildQualifiedIdentifier(publicDid)
     )
   }
 

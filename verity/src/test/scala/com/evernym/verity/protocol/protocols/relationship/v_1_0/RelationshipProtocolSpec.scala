@@ -11,7 +11,7 @@ import com.evernym.verity.protocol.engine.{InvalidFieldValueProtocolEngineExcept
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Role.{Provisioner, Requester}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
-import com.evernym.verity.protocol.testkit.{InteractionController, MockableUrlShorteningAccess, SimpleControllerProviderInputType, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{InteractionController, MockableLedgerAccess, MockableUrlShorteningAccess, SimpleControllerProviderInputType, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -523,6 +523,7 @@ class RelationshipProtocolSpec
     implicit val system: TestSystem = new TestSystem()
 
     val requester = setup("requester", odg = controllerProvider)
+    requester ledgerAccess MockableLedgerAccess()
     val provisioner = setup("provisioner")
 
     "protocol sending the correct invitation in a signal msg" in { _ =>
@@ -548,6 +549,7 @@ class RelationshipProtocolSpec
     implicit val system: TestSystem = new TestSystem()
 
     val requester = setup("requester", odg = controllerProvider)
+    requester ledgerAccess MockableLedgerAccess()
     val provisioner = setup("provisioner")
 
     "protocol sending the correct invitation in a signal msg" in { _ =>
@@ -573,6 +575,7 @@ class RelationshipProtocolSpec
     implicit val system: TestSystem = new TestSystem()
 
     val requester = setup("requester", odg = controllerProvider)
+    requester ledgerAccess MockableLedgerAccess()
     val provisioner = setup("provisioner")
     val emptyProfileUrl = Option("")
 
@@ -598,6 +601,7 @@ class RelationshipProtocolSpec
     implicit val system: TestSystem = new TestSystem()
 
     val requester = setup("requester", odg = controllerProvider)
+    requester ledgerAccess MockableLedgerAccess()
     val provisioner = setup("provisioner")
     val specificProfileUrl = Option("some profile url")
 
@@ -624,6 +628,7 @@ class RelationshipProtocolSpec
     implicit val system: TestSystem = new TestSystem()
 
     val requester = setup("requester", odg = controllerProvider)
+    requester ledgerAccess MockableLedgerAccess()
     val provisioner = setup("provisioner")
     val specificProfileUrl = Option("some profile url")
 
@@ -680,6 +685,7 @@ class RelationshipProtocolSpec
       "invitation is being sent" in { _ =>
         implicit val system: TestSystem = new TestSystem()
         val requester = setup("requester", odg = controllerProvider)
+        requester ledgerAccess MockableLedgerAccess()
         val provisioner = setup("provisioner")
         requester urlShortening MockableUrlShorteningAccess.shortened
 
@@ -706,6 +712,7 @@ class RelationshipProtocolSpec
       "problem report is being sent" in { _ =>
         implicit val system: TestSystem = new TestSystem()
         val requester = setup("requester", odg = controllerProvider)
+        requester ledgerAccess MockableLedgerAccess()
         val provisioner = setup("provisioner")
         requester urlShortening MockableUrlShorteningAccess.shorteningFailed
 
@@ -728,6 +735,7 @@ class RelationshipProtocolSpec
         "invitation is being sent" in { _ =>
           implicit val system: TestSystem = new TestSystem()
           val requester = setup("requester", odg = controllerProvider)
+          requester ledgerAccess MockableLedgerAccess()
           val provisioner = setup("provisioner")
           requester urlShortening MockableUrlShorteningAccess.shorteningFailed
 
@@ -753,6 +761,7 @@ class RelationshipProtocolSpec
         "invitation is being sent" in { _ =>
           implicit val system: TestSystem = new TestSystem()
           val requester = setup("requester", odg = controllerProvider)
+          requester ledgerAccess MockableLedgerAccess()
           val provisioner = setup("provisioner")
           requester urlShortening MockableUrlShorteningAccess.shorteningFailed
 
@@ -779,6 +788,7 @@ class RelationshipProtocolSpec
     implicit val system: TestSystem = new TestSystem()
 
     val requester = setup("requester", odg = controllerProvider)
+    requester ledgerAccess MockableLedgerAccess()
     val provisioner = setup("provisioner")
     val specificProfileUrl = Option("some profile url")
 
@@ -904,6 +914,7 @@ class RelationshipProtocolSpec
       "invitation is being sent" in { _ =>
         implicit val system: TestSystem = new TestSystem()
         val requester = setup("requester", odg = controllerProvider)
+        requester ledgerAccess MockableLedgerAccess()
         val provisioner = setup("provisioner")
 
         (requester engage provisioner) ~ Create(label, None)
@@ -937,6 +948,7 @@ class RelationshipProtocolSpec
       "problem report is being sent" in { _ =>
         implicit val system: TestSystem = new TestSystem()
         val requester = setup("requester", odg = controllerProvider)
+        requester ledgerAccess MockableLedgerAccess()
         val provisioner = setup("provisioner")
 
         (requester engage provisioner) ~ Create(label, None)
@@ -963,6 +975,7 @@ class RelationshipProtocolSpec
         "invitation is being sent" in { _ =>
           implicit val system: TestSystem = new TestSystem()
           val requester = setup("requester", odg = controllerProvider)
+          requester ledgerAccess MockableLedgerAccess()
           val provisioner = setup("provisioner")
 
           (requester engage provisioner) ~ Create(label, None)

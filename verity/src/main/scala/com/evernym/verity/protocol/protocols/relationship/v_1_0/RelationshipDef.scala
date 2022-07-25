@@ -11,7 +11,7 @@ object RelationshipDef extends ProtocolDefinition[Relationship, Role, Msg, Relat
   override val msgFamily: MsgFamily = RelationshipMsgFamily
 
   override def create(context: ProtocolContextApi[Relationship, Role, Msg, RelationshipEvent, State, String]): Protocol[Relationship, Role, Msg, RelationshipEvent, State, String] = {
-    new Relationship(context)
+    new Relationship()(context)
   }
 
   override def initialState: State = State.Uninitialized()

@@ -392,7 +392,8 @@ case class SetupCreateKeyEndpoint(newAgentKeyDIDPair: DidPair,
                                   ownerAgentActorEntityId: Option[EntityId]=None,
                                   pid: Option[ProtocolIdDetail]=None,
                                   publicIdentity: Option[DidPair]=None,
-                                  ownerName: Option[String]=None) extends ActorMessage {
+                                  ownerName: Option[String]=None,
+                                  logoUrl: Option[String]=None) extends ActorMessage {
 
   def ownerAgentKeyDIDPairReq: DidPair = ownerAgentKeyDIDPair.getOrElse(
     throw new RuntimeException("ownerAgentKeyDIDPair not supplied")

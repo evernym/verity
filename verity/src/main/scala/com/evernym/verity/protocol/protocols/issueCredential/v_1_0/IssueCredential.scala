@@ -694,7 +694,7 @@ trait IssueCredentialHelpers
           ctx.`threadId_!`,
           s.agentName,
           s.logoUrl,
-          s.publicDid,
+          buildQualifiedIdentifier(s.publicDid),
           service,
           offerAttachment,
           goalCode = Some("issue-vc"),

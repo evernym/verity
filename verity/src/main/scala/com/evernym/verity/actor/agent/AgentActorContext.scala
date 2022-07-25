@@ -112,11 +112,14 @@ trait AgentActorContext
     }
   }
 
-  private def createVDRAdapter(vdrToolsFactory: VDRToolsFactory, appConfig: AppConfig)(implicit ec: ExecutionContext, as: ActorSystem): VDRActorAdapter = {
+  private def createVDRAdapter(vdrToolsFactory: VDRToolsFactory,
+                               appConfig: AppConfig)
+                              (implicit ec: ExecutionContext, as: ActorSystem): VDRActorAdapter = {
+    val timeout: Timeout = Util.buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
     new VDRActorAdapter(
       vdrToolsFactory,
       VDRToolsConfig.load(appConfig.config),
-      None
+      Option(timeout)
     )(ec, as.toTyped)
   }
 

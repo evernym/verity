@@ -1,7 +1,7 @@
 package com.evernym.verity.ledger
 
-import com.evernym.verity.did.{DidStr, DidPair}
-import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
+import com.evernym.verity.actor.agent.{AttrName, AttrValue}
+import com.evernym.verity.did.{DidPair, DidStr}
 
 import scala.concurrent.Future
 
@@ -10,41 +10,18 @@ case class LedgerExecutorException(message: String,
 
 trait LedgerTxnExecutor {
 
-  def completeRequest(submitter: Submitter, req: LedgerRequest): Future[Map[String, Any]]
+  //NOTE: this `addNym` is only used by tests, may be we should replace it with vdr api calls
+  def addNym(submitter: Submitter, targetDid: DidPair): Future[Unit]
 
-  def addNym(submitter: Submitter, targetDid: DidPair): Future[TxnResp]
+  def addAttrib(submitter: Submitter, did: DidStr, attrName: AttrName, attrValue: AttrValue): Future[Unit]
 
-  def addAttrib(submitter: Submitter, did: DidStr, attrName: String, attrValue: String): Future[TxnResp]
+  def getAttrib(submitter: Submitter, did: DidStr, attrName: AttrName): Future[GetAttribResp]
 
   def getTAA(submitter: Submitter): Future[GetTAAResp]
 
-  def getNym(submitter: Submitter, id: String): Future[GetNymResp]
+  def completeRequest(submitter: Submitter, req: LedgerRequest): Future[Map[String, Any]]
 
-//  def getSchema(submitter: Submitter, schemaId: String): Future[GetSchemaResp]
+  protected def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp
 
-//  def writeSchema(submitterDID: DidStr,
-//                  schemaJson: String,
-//                  walletAccess: WalletAccess): Future[TxnResp]
-//
-//  def prepareSchemaForEndorsement(submitterDID: DidStr,
-//                                  schemaJson: String,
-//                                  endorserDID: DidStr,
-//                                  walletAccess: WalletAccess): Future[LedgerRequest]
-
-//  def writeCredDef(submitterDID: DidStr,
-//                   credDefJson: String,
-//                   walletAccess: WalletAccess): Future[TxnResp]
-
-//  def prepareCredDefForEndorsement(submitterDID: DidStr,
-//                                   credDefJson: String,
-//                                   endorserDID: DidStr,
-//                                   walletAccess: WalletAccess): Future[LedgerRequest]
-
-//  def getCredDef(submitter: Submitter, credDefId: String): Future[GetCredDefResp]
-
-  def getAttrib(submitter: Submitter, did: DidStr, attrName: String): Future[GetAttribResp]
-
-  def buildTxnRespForReadOp(resp: Map[String, Any]): TxnResp
-
-  def buildTxnRespForWriteOp(resp: Map[String, Any]): TxnResp
+  protected def buildTxnRespForWriteOp(resp: Map[String, Any]): Unit
 }

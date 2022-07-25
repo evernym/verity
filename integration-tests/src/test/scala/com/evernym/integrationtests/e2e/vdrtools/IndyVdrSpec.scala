@@ -30,7 +30,7 @@ import com.evernym.verity.vault.WalletUtil.generateWalletParamSync
 import com.evernym.verity.vault.WalletDoesNotExist
 import com.evernym.verity.vault.operation_executor.FutureConverter
 import com.evernym.verity.vdr.service.{VDRToolsConfig, VDRToolsFactory, VdrToolsBuilderImpl}
-import com.evernym.verity.vdr.{CredDef, FqDID, LedgerStatus, PreparedTxn, Schema, SubmittedTxn, VDRActorAdapter, VDRAdapter, VDRUtil}
+import com.evernym.verity.vdr.{CredDef, DidDoc, FqDID, LedgerStatus, PreparedTxn, Schema, SubmittedTxn, VDRActorAdapter, VDRAdapter, VDRUtil}
 import com.evernym.verity.vdrtools.Libraries
 import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
 import com.typesafe.config.{Config, ConfigFactory}
@@ -124,6 +124,9 @@ class IndyVdrSpec
       "should be successful" in {
         bootstrapIssuerDIDViaVDRTools(issuerKey.did, issuerKey.verKey, "ENDORSER")
         //bootstrapIssuerDIDLegacy(issuerKey.did, issuerKey.verKey, "ENDORSER")
+
+        resolveDid(issuerFqDid)
+
         eventually(Timeout(10.seconds), Interval(Duration("20 seconds"))) {
           legacyLedgerUtil.checkDidOnLedger(issuerKey.did, issuerKey.verKey, "ENDORSER")
         }
@@ -309,6 +312,10 @@ class IndyVdrSpec
     txn.getInt("type") shouldBe 1
     txn.getInt("protocolVersion") shouldBe 2
     val txnInnerMetadata = txn.getJSONObject("metadata")
+  }
+
+  private def resolveDid(did: DidStr): DidDoc = {
+    runAsSync {vdrAdapter.resolveDID(did)}
   }
 
   private def bootstrapIssuerDIDLegacy(did: DidStr, verKey: VerKeyStr, role: String): Unit = {

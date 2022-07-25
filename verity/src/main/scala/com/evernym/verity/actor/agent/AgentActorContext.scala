@@ -50,7 +50,7 @@ trait AgentActorContext
     new KeyValueMapperFetcher(system, appConfig, futureExecutionContext),
     new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig, futureExecutionContext),
     new EndpointCacheFetcher(ledgerSvc, appConfig, futureExecutionContext),
-    new LedgerVerKeyCacheFetcher(ledgerSvc, appConfig, futureExecutionContext)
+    new LedgerVerKeyCacheFetcher(vdrAdapter, appConfig, futureExecutionContext)
   ).map(f => f.fetcherParam -> f).toMap
 
   lazy val vdrCache: CacheProvider = new CaffeineCacheProvider(CaffeineCacheParam(None, None, None, None))
@@ -126,7 +126,9 @@ trait AgentActorContext
 class DefaultLedgerSvc(val system: ActorSystem,
                        val appConfig: AppConfig,
                        val walletAPI: WalletAPI,
-                       val ledgerPoolConnManager: LedgerPoolConnManager) extends LedgerSvc {
+                       val ledgerPoolConnManager: LedgerPoolConnManager)
+                      (implicit val executionContext: ExecutionContext)
+  extends LedgerSvc {
 
   override def ledgerTxnExecutor: LedgerTxnExecutor = {
     ledgerPoolConnManager.txnExecutor(Some(walletAPI))

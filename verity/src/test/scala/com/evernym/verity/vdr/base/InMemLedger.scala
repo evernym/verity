@@ -1,11 +1,18 @@
 package com.evernym.verity.vdr.base
 
 import com.evernym.vdrtools.vdr.VdrResults.PreparedTxnResult
+import com.evernym.verity.actor.agent.{AttrName, AttrValue}
+import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
-import com.evernym.verity.did.{DidStr, VerKeyStr}
+import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
+import com.evernym.verity.ledger.{GetAttribResp, Submitter}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.testkit.MockLedger.INDY_ENDORSEMENT
+import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, StatusDetailException}
 import com.evernym.verity.vdr._
+import com.evernym.verity.vdr.base.PayloadConstants._
+import com.evernym.verity.vdr.service.VDRAdapterUtil
+import com.evernym.verity.vdr.service.VDRAdapterUtil.SCHEMA_ID
 import org.json.JSONObject
 
 import scala.util.Try
@@ -45,14 +52,15 @@ trait InMemLedger {
 
   def submitTxn(txnBytes: Array[Byte]): TxnResult = {
     val node = JacksonMsgCodec.docFromStrUnchecked(new String(txnBytes))
-    node.get("payloadType").asText() match {
-      case "schema" =>
+    node.get(TYPE).asText() match {
+
+      case SCHEMA =>
         val s = JacksonMsgCodec.fromJson[MockVdrSchema](new String(txnBytes))
         val schemaJson = new JSONObject(s.json)
         schemaJson.put("seqNo", 10)
         schemas = schemas + (s.schemaId -> schemaJson.toString.getBytes)
 
-      case "creddef" =>
+      case CRED_DEF =>
         val cd = JacksonMsgCodec.fromJson[MockVdrCredDef](new String(txnBytes))
         credDefs = credDefs + (cd.credDefId -> cd.json.getBytes)
 
@@ -75,7 +83,8 @@ trait InMemLedger {
   }
 
   def resolveDid(fqDid: FqDID): VdrDid = {
-    val data = didDocs.getOrElse(fqDid, throw new RuntimeException("did doc not found for given id: " +
+    val data = didDocs.getOrElse(VDRUtil.toLegacyNonFqDid(fqDid, vdrMultiLedgerSupportEnabled = false),
+      throw new RuntimeException("did doc not found for given id: " +
       fqDid + s" (available did docs: ${didDocs.keys.mkString(", ")})"))
     new String(data)
   }
@@ -87,7 +96,7 @@ trait InMemLedger {
 
   private def extractSchemaId(json: String): String = {
     val node = JacksonMsgCodec.docFromStrUnchecked(json)
-    node.get("schemaId").asText()
+    node.get(SCHEMA_ID).asText()
   }
 
   private def extractNamespace(id: String): Namespace =
@@ -98,6 +107,46 @@ trait InMemLedger {
   private var didDocs: Map[DidStr, Payload] = Map.empty
 
   type Payload = Array[Byte]
+
+  //============================================= WORKAROUND =======================================================
+  //NOTE: this is workaround until vdr apis starts supporting updating did docs
+
+  var attribs: Map[DidStr, Map[AttrName, AttrValue]] = Map.empty
+
+  def addNym(submitter: Submitter, didPair: DidPair): Unit = {
+    didDocs += didPair.did -> s"""{"${VDRAdapterUtil.DID}":"${didPair.did}", "${VDRAdapterUtil.VER_KEY}":"${didPair.verKey}"}""".getBytes
+  }
+
+  def addAttrib(submitter: Submitter, did: DidStr, attrName: AttrName, attrValue: AttrValue): Unit = {
+    val oldDidAttribs = attribs.getOrElse(did, Map.empty)
+    val newDidAttribs = oldDidAttribs ++ Map(attrName -> attrValue)
+    attribs += did -> newDidAttribs
+  }
+
+  def getAttrib(submitter: Submitter, did: DidStr, attrName: AttrName): GetAttribResp = {
+    attribs.getOrElse(did, Map.empty).get(attrName) match {
+      case Some(attrValue) =>
+        GetAttribResp(
+          MockLedgerTxnExecutor.buildTxnResp(
+            did,
+            Some(did),
+            Some(Map(attrName -> attrValue)),
+            "104"
+          )
+        )
+      case None => throw StatusDetailException(DATA_NOT_FOUND)
+    }
+  }
+
+}
+
+
+object PayloadConstants {
+  val TYPE = "payloadType"
+  val DID = "did"
+  val SCHEMA = "schema"
+  val CRED_DEF = "creddef"
+  val DID_DOC = "diddoc"
 }
 
 trait MockPayloadBase {
@@ -106,20 +155,20 @@ trait MockPayloadBase {
 
 case class MockVdrDID(submitterDid: FqDID, json: String)
   extends MockPayloadBase {
-  override val payloadType: String = "did"
+  override val payloadType: String = DID
 }
 
 case class MockVdrSchema(submitterDid: FqDID, schemaId: FqSchemaId, json: String)
   extends MockPayloadBase {
-  override val payloadType: String = "schema"
+  override val payloadType: String = SCHEMA
 }
 
 case class MockVdrCredDef(submitterDid: FqDID, credDefId: FqCredDefId, schemaId: FqSchemaId, json: String)
   extends MockPayloadBase {
-  override val payloadType: String = "creddef"
+  override val payloadType: String = CRED_DEF
 }
 
 case class MockVdrDIDDoc(id: FqDID, verKey: VerKeyStr, endpoint: Option[String])
   extends MockPayloadBase {
-  override val payloadType: String = "diddoc"
+  override val payloadType: String = DID_DOC
 }

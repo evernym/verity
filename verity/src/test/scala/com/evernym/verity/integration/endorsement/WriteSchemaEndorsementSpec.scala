@@ -15,6 +15,7 @@ import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{NeedsEndorsement
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
+import com.evernym.verity.vdr.base.PayloadConstants.{SCHEMA, TYPE}
 import com.evernym.verity.vdr.{FqCredDefId, MockIndyLedger, MockLedgerRegistry, MockLedgerRegistryBuilder, MockVdrTools, Namespace, TxnResult}
 import com.typesafe.config.{Config, ConfigValueFactory}
 
@@ -127,9 +128,9 @@ class WriteSchemaEndorsementSpec
                            signature: Array[Byte],
                            endorsement: FqCredDefId): Future[TxnResult] = {
       val node = JacksonMsgCodec.docFromStrUnchecked(new String(txnBytes))
-      node.get("payloadType").asText() match {
-        case "schema"  => Future.failed(LedgerRejectException("Not enough ENDORSER signatures"))
-        case _          => super.submitTxn(namespace, txnBytes, signatureSpec, signature, endorsement)
+      node.get(TYPE).asText() match {
+        case SCHEMA  => Future.failed(LedgerRejectException("Not enough ENDORSER signatures"))
+        case _       => super.submitTxn(namespace, txnBytes, signatureSpec, signature, endorsement)
       }
     }
   }

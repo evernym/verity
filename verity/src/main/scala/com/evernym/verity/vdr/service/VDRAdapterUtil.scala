@@ -29,18 +29,17 @@ object VDRAdapterUtil {
     val json = new JSONObject(vdrCredDef)
     CredDef(
       fqCredDefId,
-      json.getString("schemaId"),
+      json.getString(SCHEMA_ID),
       vdrCredDef
     )
   }
 
   def buildDidDoc(vdrDidDoc: VdrDid): DidDoc = {
-    //TODO: cheqd did will probably have another format
+    //TODO: cheqd did doc will probably have another format
     val json = new JSONObject(vdrDidDoc)
     DidDoc(
-      json.getString("id"),
-      json.getString("verkey"),
-      None
+      json.getString(DID),
+      json.getString(VER_KEY)
     )
   }
 
@@ -51,14 +50,14 @@ object VDRAdapterUtil {
   def buildVDRSchemaParams(schemaJson: String,
                            fqSchemaId: FqSchemaId): TxnSpecificParams = {
     val json = new JSONObject(schemaJson)
-    json.put("id", fqSchemaId)
+    json.put(ID, fqSchemaId)
     json.toString
   }
 
   def buildVDRCredDefParams(credDefJson: String,
                             fqCredDefId: FqCredDefId): TxnSpecificParams = {
     val json = new JSONObject(credDefJson)
-    json.put("id", fqCredDefId)
+    json.put(ID, fqCredDefId)
     json.toString
   }
 
@@ -78,6 +77,12 @@ object VDRAdapterUtil {
       cache.minFresh
     )
   }
+
+  final val ID = "id"
+  final val DID = "did"
+  final val VER_KEY = "verkey"
+  final val SCHEMA_ID = "schemaId"
+  final val URL = "url"
 }
 
 case class TxnDataHolder(namespace: Namespace,

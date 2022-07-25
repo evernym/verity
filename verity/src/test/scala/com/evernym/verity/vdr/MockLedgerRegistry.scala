@@ -4,6 +4,7 @@ import com.evernym.verity.vdr.VDRUtil.extractNamespace
 import com.evernym.verity.vdr.base.{InMemLedger, MockVdrDIDDoc}
 
 import scala.concurrent.Future
+import scala.util.Try
 
 
 case class MockLedgerRegistryBuilder(ledgers: Map[Namespace, InMemLedger] = Map.empty) {
@@ -25,9 +26,10 @@ case class MockLedgerRegistryBuilder(ledgers: Map[Namespace, InMemLedger] = Map.
   }
 }
 
-class MockLedgerRegistry {
 
-  var ledgers: Map[Namespace, InMemLedger] = Map.empty
+class MockLedgerRegistry(_ledgers: Map[Namespace, InMemLedger] = Map.empty) {
+
+  var ledgers: Map[Namespace, InMemLedger] = _ledgers
 
   def allLedgers: List[InMemLedger] = ledgers.values.toList
 
@@ -59,6 +61,13 @@ class MockLedgerRegistry {
     } catch {
       case ex: RuntimeException => Future.failed(ex)
     }
+  }
+
+  def getLedger(id: String): InMemLedger = {
+    Try {
+      val namespace = extractNamespace(Option(id), None)
+      ledgers.getOrElse(namespace, throw new RuntimeException("ledger not found for the namespace: " + namespace))
+    }.getOrElse(ledgers.head._2)
   }
 
   def withLedger[T](namespace: Namespace)(f: InMemLedger => T): Future[T] = {

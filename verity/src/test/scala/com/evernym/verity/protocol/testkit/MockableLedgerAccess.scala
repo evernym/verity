@@ -178,14 +178,6 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
 
   override def vdrUnqualifiedLedgerPrefix(): VdrDid = "did:indy:sovrin"
 
-  override def extractLedgerPrefix(submitterFqDID: FqDID,
-                                   endorserFqDID: FqDID): LedgerPrefix = {
-    val submitterLedgerPrefix = VDRUtil.extractLedgerPrefix(submitterFqDID)
-    val endorserLedgerPrefix = Try(VDRUtil.extractLedgerPrefix(endorserFqDID)).getOrElse("")
-    if (endorserLedgerPrefix.isEmpty || submitterLedgerPrefix == endorserLedgerPrefix) submitterLedgerPrefix
-    else throw new RuntimeException(s"submitter ledger prefix '$submitterLedgerPrefix' not matched with endorser ledger prefix '$endorserLedgerPrefix'")
-  }
-
   private def extractSubmitterDID(preparedTxn: PreparedTxn): String = {
     val json = new String(preparedTxn.txnBytes)
     submitterDids(json.hashCode)

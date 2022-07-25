@@ -105,7 +105,8 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     )
   }
 
-  override def fqDID(did: DidStr, force: Boolean): FqDID = {
+  override def fqDID(did: DidStr,
+                     force: Boolean): FqDID = {
     VDRUtil.toFqDID(did, force || _vdrMultiLedgerSupportEnabled, _vdrUnqualifiedLedgerPrefix, _vdrLedgerPrefixMappings)
   }
 
@@ -128,14 +129,6 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
 
   def toLegacyNonFqCredDefId(credDefId: FqCredDefId): CredDefId = {
     VDRUtil.toLegacyNonFqCredDefId(credDefId, _vdrMultiLedgerSupportEnabled)
-  }
-
-  override def extractLedgerPrefix(submitterFqDID: FqDID,
-                                   endorserFqDID: FqDID): LedgerPrefix = {
-    val submitterLedgerPrefix = VDRUtil.extractLedgerPrefix(submitterFqDID)
-    val endorserLedgerPrefix = Try(VDRUtil.extractLedgerPrefix(endorserFqDID)).getOrElse("")
-    if (endorserLedgerPrefix.isEmpty || submitterLedgerPrefix == endorserLedgerPrefix) submitterLedgerPrefix
-    else throw new RuntimeException(s"submitter ledger prefix '$submitterLedgerPrefix' not matched with endorser ledger prefix '$endorserLedgerPrefix'")
   }
 
   private def getCachedItem[T](id: String): Option[T] = {

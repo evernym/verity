@@ -75,7 +75,16 @@ object VDRUtil {
     } else credDefId
   }
 
-  def toLegacyNonFqSchemaId(schemaId: FqSchemaId,
+  def toLegacyNonFqDid(did: DidStr,
+                       vdrMultiLedgerSupportEnabled: Boolean): String = {
+    if (!vdrMultiLedgerSupportEnabled) {
+      Try(did.split(":").last).getOrElse(did)
+    } else{
+      did
+    }
+  }
+
+  def toLegacyNonFqSchemaId(schemaId: SchemaId,
                             vdrMultiLedgerSupportEnabled: Boolean): String = {
     if (!vdrMultiLedgerSupportEnabled) {
       Try {
@@ -91,7 +100,7 @@ object VDRUtil {
     } else schemaId
   }
 
-  def toLegacyNonFqCredDefId(credDefId: FqCredDefId,
+  def toLegacyNonFqCredDefId(credDefId: CredDefId,
                              vdrMultiLedgerSupportEnabled: Boolean): String = {
     if (!vdrMultiLedgerSupportEnabled) {
       Try {

@@ -93,9 +93,15 @@ object LocalVerity {
       extends DefaultAgentActorContext(executionContextProvider, appConfig) {
 
       implicit val executor: ExecutionContextExecutor = system.dispatcher
+      override lazy val vdrBuilderFactory: VDRToolsFactory = () => new MockVdrToolsBuilder(testVdrLedgerRegistry, serviceParam.flatMap(_.vdrTools))
+      lazy val vdrTools: VdrTools = vdrBuilderFactory().build()
+      override lazy val vdrAdapter: VDRAdapter = new MockVDRAdapter(vdrTools)(futureExecutionContext)
+
       override lazy val poolConnManager: LedgerPoolConnManager = {
         new InMemLedgerPoolConnManager(
           executionContextProvider.futureExecutionContext,
+          appConfig,
+          vdrAdapter,
           serviceParam.flatMap(_.ledgerTxnExecutor)
         )(executor)
       }
@@ -106,8 +112,7 @@ object LocalVerity {
       }
 
       val testVdrLedgerRegistry = MockLedgerRegistryBuilder(Map(INDY_SOVRIN_NAMESPACE -> MockIndyLedger("genesis.txn file path", None))).build()
-      override lazy val vdrBuilderFactory: VDRToolsFactory = () => new MockVdrToolsBuilder(testVdrLedgerRegistry, serviceParam.flatMap(_.vdrTools))
-      override lazy val vdrAdapter: VDRAdapter = new MockVDRAdapter(vdrBuilderFactory)(futureExecutionContext)
+
     }
 
     val platform: Platform = PlatformBuilder.build(

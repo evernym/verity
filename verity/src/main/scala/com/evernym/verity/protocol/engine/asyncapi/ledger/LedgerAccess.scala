@@ -1,6 +1,5 @@
 package com.evernym.verity.protocol.engine.asyncapi.ledger
 
-import com.evernym.verity.ledger.{GetCredDefResp, GetSchemaResp, LedgerRequest, TxnResp}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess

@@ -70,7 +70,7 @@ trait SegmentedStateContext[P,R,M,E,S,I]
             case Failure(e) =>
               logger.error(s"error while retrieving segment: " +
                 s"protoRef: $getProtoRef, " +
-                s"error: " + {Exceptions.getErrorMsg(e)})
+                s"error: " + {Exceptions.getStackTraceAsString(e)})
           }
           handler(result)
         }

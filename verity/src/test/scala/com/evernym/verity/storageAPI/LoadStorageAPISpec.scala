@@ -7,8 +7,6 @@ import com.evernym.verity.storage_services.leveldb.LeveldbAPI
 import com.evernym.verity.testkit.BasicSpec
 import com.typesafe.config.{Config, ConfigValueFactory}
 
-import scala.concurrent.ExecutionContext
-
 
 class LoadStorageAPISpec extends ActorSpec with BasicSpec {
 

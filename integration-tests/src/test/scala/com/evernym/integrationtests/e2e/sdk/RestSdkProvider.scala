@@ -170,7 +170,14 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
 
     new UndefinedIssuerSetup_0_7 {
       override def create(context: Context, ledgerPrefix: String): Unit = {
+        createJson.put("ledgerPrefix", ledgerPrefix)
         logger.debug(s"issuer setup json: ${createJson.toString}")
+        sendHttpPostReq(context, createJson.toString, ProtoRef("issuer-setup", "0.7"), Option(UUID.randomUUID.toString))
+      }
+      override def create(context: Context, ledgerPrefix: String, endorser: String): Unit = {
+        logger.debug(s"issuer setup json: ${createJson.toString}")
+        createJson.put("ledgerPrefix", ledgerPrefix)
+        createJson.put("endorser", endorser)
         sendHttpPostReq(context, createJson.toString, ProtoRef("issuer-setup", "0.7"), Option(UUID.randomUUID.toString))
       }
       override def currentPublicIdentifier(context: Context): Unit = {

@@ -14,7 +14,6 @@ object IssuerSetupMsgFamily extends MsgFamily {
   override val version: MsgFamilyVersion = "0.7"
 
   override protected val controlMsgs: Map[MsgName, Class[_]] = Map (
-    "InitMsg"                   -> classOf[InitMsg],
     "create"                    -> classOf[Create],
     "current-public-identifier" -> classOf[CurrentPublicIdentifier],
     "endorsement-result"        -> classOf[EndorsementResult],
@@ -32,7 +31,6 @@ object IssuerSetupMsgFamily extends MsgFamily {
 sealed trait Msg extends MsgBase
 
 trait IssuerSetupControl extends Control with MsgBase
-case class InitMsg(selfId: ParameterValue) extends IssuerSetupControl
 case class Create(ledgerPrefix: String, endorser: Option[String]) extends Msg with IssuerSetupControl {
   override def validate(): Unit = {
     checkRequired("ledgerPrefix", ledgerPrefix)

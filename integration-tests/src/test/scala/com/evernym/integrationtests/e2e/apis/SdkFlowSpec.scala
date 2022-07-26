@@ -128,6 +128,8 @@ class SdkFlowSpec
 
     writeIssuerToLedger(sdk, ledgerUtil)
 
+    setupIssuerAlternateVersions(sdk)
+
     updateConfigs(
       sdk,
       ledgerUtil,

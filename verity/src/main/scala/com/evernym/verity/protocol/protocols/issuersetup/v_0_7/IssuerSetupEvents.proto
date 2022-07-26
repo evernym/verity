@@ -5,9 +5,9 @@ import "scalapb/scalapb.proto";
 
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_7;
 
-message RosterInitialized {
-    option (scalapb.message).extends = "Event";
-    string selfIdValue = 1;
+message ParameterStored {
+    string name = 1;
+    string value = 2;
 }
 
 message CreatePublicIdentifierCompleted {

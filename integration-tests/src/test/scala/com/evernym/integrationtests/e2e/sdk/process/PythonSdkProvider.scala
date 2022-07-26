@@ -177,7 +177,7 @@ class PythonSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
         executeCmd(ctx, "IssuerSetup", this.version, "create",Seq.empty, Seq(ledgerPrefix, endorser))
 
       override def currentPublicIdentifier(ctx: Context): Unit =
-        executeCmd(ctx, "IssuerSetup", this.version, "currentPublicIdentifier")
+        executeCmd(ctx, "IssuerSetup", this.version, "current_public_identifier")
     }
   }
 

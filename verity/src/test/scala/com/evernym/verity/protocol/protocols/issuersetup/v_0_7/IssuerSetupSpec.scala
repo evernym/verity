@@ -93,7 +93,7 @@ class IssuerSetupSpec
 
       "when provided endorser DID is not active" in { f =>
         f.owner.initParams(Map(
-          MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
+          MY_ISSUER_DID -> ""
         ))
         interaction(f.owner) {
           withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
@@ -117,7 +117,7 @@ class IssuerSetupSpec
 
     "should transition to WaitingOnEndorsemer state after Create msg" in { f =>
       f.owner.initParams(Map(
-        MY_ISSUER_DID -> "V4SGRU86Z58d6TV7PBUe6f"
+        MY_ISSUER_DID -> ""
       ))
       interaction(f.owner) {
         withDefaultWalletAccess(f, {
@@ -134,7 +134,7 @@ class IssuerSetupSpec
 
     "should transition to Done state after Create msg and signal needs endorsement if inactive endorserDID is specified" in { f =>
       f.owner.initParams(Map(
-        MY_ISSUER_DID -> "V4SGRU86Z58d6TV7PBUe6f"
+        MY_ISSUER_DID -> ""
       ))
       interaction(f.owner) {
         withDefaultWalletAccess(f, {
@@ -156,7 +156,7 @@ class IssuerSetupSpec
   "should signal WrittenToLedger" - {
     "when endorsement service has an active endorser for the ledger" in { f =>
       f.owner.initParams(Map(
-        MY_ISSUER_DID -> MOCK_NOT_ENDORSER
+        MY_ISSUER_DID -> ""
       ))
       interaction(f.owner) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
@@ -181,7 +181,7 @@ class IssuerSetupSpec
   "should signal NeedsEndorsement" - {
     "when endorsement service has no active endorser for the ledger" in { f =>
       f.owner.initParams(Map(
-        MY_ISSUER_DID -> MOCK_NOT_ENDORSER
+        MY_ISSUER_DID -> ""
       ))
       interaction(f.owner) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
@@ -205,7 +205,7 @@ class IssuerSetupSpec
   "should signal Problem Report" - {
     "when a CurrentPublicIdentifier message is sent with no current public identifier" in { f =>
       f.owner.initParams(Map(
-        MY_ISSUER_DID -> MOCK_NOT_ENDORSER
+        MY_ISSUER_DID -> ""
       ))
       interaction(f.owner) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
@@ -223,7 +223,7 @@ class IssuerSetupSpec
   "should signal Public Identifier" - {
     "when a CurrentPublicIdentifier message is sent with a current public identifier" in { f =>
       f.owner.initParams(Map(
-        MY_ISSUER_DID -> MOCK_NOT_ENDORSER
+        MY_ISSUER_DID -> ""
       ))
       interaction(f.owner) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {

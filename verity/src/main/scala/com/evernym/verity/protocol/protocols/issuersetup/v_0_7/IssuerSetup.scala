@@ -177,5 +177,5 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
 object IssuerSetup {
   val didCreateErrorMsg = "Unable to create Issuer Public Identity"
   val identifierNotCreatedProblem = "Issuer Identifier has not been created yet"
-  val identifierAlreadyCreatedErrorMsg = "Public identifier has already been created"
+  val identifierAlreadyCreatedErrorMsg = "Public identifier has already been created. This can happen if IssuerSetup V0.6 has already ben called for this Verity Tenant."
 }

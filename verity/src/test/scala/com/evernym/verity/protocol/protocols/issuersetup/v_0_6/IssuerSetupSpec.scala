@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_6
 
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.NewKeyResult
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.InteractionType.OneParty
@@ -36,6 +37,10 @@ class IssuerSetupSpec
   "IssuerSetup" - {
 
     "happy path create of Issuer public identifier" in withOwner { s =>
+      s.owner.initParams(Map(
+        MY_ISSUER_DID -> "",
+        DEFAULT_ENDORSER_DID -> ""
+      ))
 
       s.owner walletAccess new MockableWalletAccess(
         mockNewDid = () => Success(NewKeyResult("HSCj6zbP9BKYHSkF3hdPib", "9xXbnac6atQRyESyLWtnxFRwnTRCrLWEAA9rvJKp5Kt1"))

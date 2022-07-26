@@ -7,6 +7,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 import java.net.InetAddress
 import java.nio.file.Path
+import scala.util.Random
 
 object VerityLocalConfig {
 
@@ -160,6 +161,14 @@ object VerityLocalConfig {
     )
   }
 
+  private def blobStore(port: Int): Config = {
+    ConfigFactory.parseString(
+      s"""
+         |verity.blob-store.local-store-path = "/tmp/verity/leveldb/$port-${Random.nextInt(100)}"
+         |""".stripMargin
+    )
+  }
+
   private def turnOffWarnings(): Config = {
     ConfigFactory.parseString(
       s"""
@@ -212,6 +221,7 @@ object VerityLocalConfig {
       identityUrlShortener(),
       prometheusServer(port.prometheusPort),
 
+      blobStore(port.artery),
       akkaConfig(),
       coordinatedShutdownConfig(),
       changePoolName(),

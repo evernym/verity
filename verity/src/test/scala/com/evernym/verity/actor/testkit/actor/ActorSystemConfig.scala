@@ -5,6 +5,8 @@ import akka.actor.ActorSystem
 import com.evernym.verity.integration.base.PortProvider
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 
+import scala.util.Random
+
 trait ActorSystemConfig {
 
   def customJournal(journalClass: String): Config = ConfigFactory parseString {
@@ -142,6 +144,7 @@ trait ActorSystemConfig {
     overrideConfigValuesIfAny(singleNodeClusterSharded(systemName, port, tdir, overrideConfig))
       .withFallback(ConfigFactory.load("application.conf"))
       .withValue("verity.metrics.backend", ConfigValueFactory.fromAnyRef("com.evernym.verity.observability.metrics.TestMetricsBackend"))
+      .withValue("verity.blob-store.local-store-path", ConfigValueFactory.fromAnyRef(s"/tmp/verity/leveldb/$port-${Random.nextInt(100)}"))
   }
 
   def getConfigByJournalPath(tdir: String): Config = {

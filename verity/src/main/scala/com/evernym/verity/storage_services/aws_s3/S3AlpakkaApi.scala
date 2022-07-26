@@ -20,16 +20,16 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 //NOTE: if at all this file gets moved to different package, then it will require configuration change
-// so until it is important, should avoid moving this to different package.
-
-class S3AlpakkaApi(config: AppConfig,
+// so until it is important, should avoid moving this to a different package.
+class S3AlpakkaApi(appConfig: AppConfig,
                    executionContext: ExecutionContext,
-                   overrideConfig: Config = ConfigFactory.empty())(implicit val as: ActorSystem)
-  extends StorageAPI(config, executionContext, overrideConfig) {
+                   overrideConfig: Config = ConfigFactory.empty())
+                  (implicit val as: ActorSystem)
+  extends StorageAPI(appConfig, executionContext, overrideConfig) {
 
   private implicit lazy val futureExecutionContext: ExecutionContext = executionContext
 
-  def s3Settings: S3Settings = S3Settings(overrideConfig.withFallback(config.config.getConfig("alpakka.s3")))
+  def s3Settings: S3Settings = S3Settings(overrideConfig.withFallback(appConfig.config.getConfig("alpakka.s3")))
   lazy val s3Attrs: Attributes = S3Attributes.settings(s3Settings)
 
   def createBucket(bucketName: String): Future[Done] =  S3.makeBucket(bucketName)
@@ -39,7 +39,10 @@ class S3AlpakkaApi(config: AppConfig,
   /**
    * @param id needs to be unique or data can be overwritten
    */
-  def put(bucketName: String, id: String, data: Array[Byte], contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo] = {
+  def put(bucketName: String,
+          id: String,
+          data: Array[Byte],
+          contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo] = {
     val file: Source[ByteString, NotUsed] = Source.single(ByteString(data))
 
     val s3Sink: Sink[ByteString, Future[MultipartUploadResult]] =

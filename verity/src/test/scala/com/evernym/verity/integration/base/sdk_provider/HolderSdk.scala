@@ -375,6 +375,7 @@ case class HolderSdk(param: SdkParam,
                                excludePayload: Option[String],
                                statusCodes: Option[List[String]],
                                connId: Option[String]): ReceivedMsgParam[T] = {
+    var unexpectedMsgs = Map.empty[MsgId, String]
     for (tryCount <- 1 to 20) {
       val getMsgs = GetMsgsReqMsg_MFV_0_6(excludePayload = excludePayload, statusCodes = statusCodes)
       val getMsgsJson = JsonMsgUtil.createJsonString(MSG_TYPE_DETAIL_GET_MSGS, getMsgs)
@@ -393,11 +394,12 @@ case class HolderSdk(param: SdkParam,
           return unpackedMsg
         case Some(m) if excludePayload.contains(NO) =>
           throw new RuntimeException("expected message found without payload: " + m)
-        case _ =>
+        case msg =>
+          msg.foreach{ m => unexpectedMsgs = unexpectedMsgs + (m.uid -> m.toString)}
           Thread.sleep(tryCount * 50)
       }
     }
-    throw new RuntimeException("expected message not found: " + msgTypeStr)
+    throw new RuntimeException("expected message not found: " + msgTypeStr + s"(unexpectedMsgsFound = ${unexpectedMsgs.mkString(", ")})")
   }
 
   val masterSecretId: String = UUID.randomUUID().toString

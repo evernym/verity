@@ -9,9 +9,14 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-abstract class StorageAPI(val config: AppConfig, executionContext: ExecutionContext, overrideConfig: Config = ConfigFactory.empty()) {
+abstract class StorageAPI(val appConfig: AppConfig,
+                          executionContext: ExecutionContext,
+                          overrideConfig: Config = ConfigFactory.empty()) {
+  def put(bucketName: String,
+          id: String,
+          data: Array[Byte],
+          contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo]
   def get(bucketName: String, id: String): Future[Option[Array[Byte]]]
-  def put(bucketName: String, id: String, data: Array[Byte], contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo]
   def delete(bucketName: String, id: String): Future[Done]
   def ping: Future[Unit]
 }
@@ -19,7 +24,8 @@ abstract class StorageAPI(val config: AppConfig, executionContext: ExecutionCont
 object StorageAPI {
   def loadFromConfig(appConfig: AppConfig,
                      executionContext: ExecutionContext,
-                     overrideConfig: Config = ConfigFactory.empty())(implicit as: ActorSystem): StorageAPI = {
+                     overrideConfig: Config = ConfigFactory.empty())
+                    (implicit as: ActorSystem): StorageAPI = {
     Class
       .forName(appConfig.config.getConfig("verity.blob-store").getString("storage-service"))
       .getConstructor(classOf[AppConfig], classOf[ExecutionContext], classOf[Config], classOf[ActorSystem])
@@ -27,8 +33,3 @@ object StorageAPI {
       .asInstanceOf[StorageAPI]
   }
 }
-
-trait StorageException extends Exception
-case class ServiceNotFound(msg: String) extends StorageException
-case class ObjectExpired(msg: String) extends StorageException
-case class ObjectNotFound(msg: String) extends StorageException

@@ -111,7 +111,7 @@ class QuestionAnswerSpec
   "IssuerSDK" - {
     "when tried to send 'ask-question' (questionanswer 1.0) message with new thread" - {
       "should be successful" in {
-        val msg = AskQuestion("How are you after restart?", Option("detail"),
+        val msg = AskQuestion("How are you again?", Option("detail"),
           Vector("I am fine", "I am not fine"), signature_required = false, None)
         issuerSDK.sendMsgForConn(firstConn, msg)
         issuerVerityEnv.checkBlobObjectCount("2d", 3)
@@ -120,16 +120,16 @@ class QuestionAnswerSpec
   }
 
   "HolderSDK" - {
-    "when tried to get newly un viewed messages after restart" - {
+    "when tried to get newly un viewed messages again" - {
       "should get 'question' (questionanswer 1.0) message" in {
         val receivedMsg = holderSDK.downloadMsg[Question](firstConn)
         lastReceivedMsgThread = receivedMsg.threadOpt
         val question = receivedMsg.msg
-        question.question_text shouldBe "How are you after restart?"
+        question.question_text shouldBe "How are you again?"
       }
     }
 
-    "when tried to respond with 'answer' (questionanswer 1.0) message after restart" - {
+    "when tried to respond with 'answer' (questionanswer 1.0) again" - {
       "should be successful" in {
         val answer = Answer("I am fine after restart too", None, None)
         holderSDK.sendProtoMsgToTheirAgent(firstConn, answer, lastReceivedMsgThread)
@@ -138,7 +138,7 @@ class QuestionAnswerSpec
   }
 
   "IssuerSDK" - {
-    "should receive 'answer' (questionanswer 1.0) message after restart" in {
+    "should receive 'answer' (questionanswer 1.0) message again" in {
       val receivedMsg = issuerSDK.expectMsgOnWebhook[AnswerGiven]()
       receivedMsg.msg.answer shouldBe "I am fine after restart too"
       issuerVerityEnv.checkBlobObjectCount("2d", 4)

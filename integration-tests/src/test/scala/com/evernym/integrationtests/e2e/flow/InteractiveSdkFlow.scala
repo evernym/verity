@@ -207,45 +207,15 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
         issuerSdk.issuerSetup_0_6.currentPublicIdentifier(issuerSdk.context)
 
-        receiverSdk.checkMsg(){ resp =>
-          if(resp.getString(`@TYPE`).contains("problem-report")) {
-
-            issuerSdk.issuerSetup_0_6
-              .create(issuerSdk.context)
-
-            receiverSdk.expectMsg("problem-report") { resp =>
-              resp shouldBe an[JSONObject]
-
-              assert(resp.getString("message").equals("Public identifier has already been created. This can happen if IssuerSetup V0.7 has already ben called for this Verity Tenant."))
-            }
-          } else if (resp.getString(`@TYPE`).contains("public-identifier")) {
-            logger.info("Issuer is already setup")
-          } else {
-            throw new Exception("Unexpected message type")
-          }
+        receiverSdk.expectMsg("problem-report"){ resp =>
+          resp shouldBe an[JSONObject]
         }
-      }
+        issuerSdk.issuerSetup_0_6
+          .create(issuerSdk.context)
 
-      s"[$issuerName] use issuer-setup 0.7 protocol" in {
-
-        issuerSdk.issuerSetup_0_7.currentPublicIdentifier(issuerSdk.context)
-
-        receiverSdk.checkMsg(){ resp =>
-          if(resp.getString(`@TYPE`).contains("problem-report")) {
-
-            issuerSdk.issuerSetup_0_7
-              .create(issuerSdk.context, "did:indy:sovrin", "WAJQSd73TpK2HmoYRQJX7p")
-
-            receiverSdk.expectMsg("problem-report") { resp =>
-              resp shouldBe an[JSONObject]
-
-              assert(resp.getString("message").equals("Public identifier has already been created. This can happen if IssuerSetup V0.6 has already ben called for this Verity Tenant."))
-            }
-          } else if (resp.getString(`@TYPE`).contains("public-identifier")) {
-            logger.info("Issuer is already setup")
-          } else {
-            throw new Exception("Unexpected message type")
-          }
+        receiverSdk.expectMsg("problem-report") { resp =>
+          resp shouldBe an[JSONObject]
+          assert(resp.getString("message").equals("Public identifier has already been created. This can happen if IssuerSetup V0.7 has already ben called for this Verity Tenant."))
         }
       }
     }

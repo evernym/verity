@@ -106,7 +106,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         val jsonObject = new JSONObject(didJson)
-        endorser.foreach(eid => jsonObject.put("endorer", eid))
+        endorser.foreach(eid => jsonObject.put("endorser", eid))
         val json = jsonObject.toString()
         submitterDids += json.hashCode -> submitterDID
         Try(PreparedTxn(TEST_INDY_SOVRIN_NAMESPACE, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, INDY_ENDORSEMENT))

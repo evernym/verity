@@ -5,7 +5,7 @@ import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgF
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkOptionalNotEmpty, checkRequired, checkValidDID}
+import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkDIDMethodMatchesLedgerPrefix, checkOptionalNotEmpty, checkRequired, checkValidDID}
 import com.evernym.verity.protocol.protocols.{ledgerPrefixStr, ledgerRequestStr}
 
 object IssuerSetupMsgFamily extends MsgFamily {
@@ -14,6 +14,7 @@ object IssuerSetupMsgFamily extends MsgFamily {
   override val version: MsgFamilyVersion = "0.7"
 
   override protected val controlMsgs: Map[MsgName, Class[_]] = Map (
+    "initialize"                -> classOf[Initialize],
     "create"                    -> classOf[Create],
     "current-public-identifier" -> classOf[CurrentPublicIdentifier],
     "endorsement-result"        -> classOf[EndorsementResult],
@@ -30,13 +31,20 @@ object IssuerSetupMsgFamily extends MsgFamily {
 
 sealed trait Msg extends MsgBase
 
+
 trait IssuerSetupControl extends Control with MsgBase
+
+case class Initialize(params: Parameters) extends Msg with IssuerSetupControl {
+  def parametersStored: Seq[InitParam] = params.initParams.map(p => InitParam(p.name, p.value)).toSeq
+}
+
 case class Create(ledgerPrefix: String, endorser: Option[String]) extends Msg with IssuerSetupControl {
   override def validate(): Unit = {
     checkRequired("ledgerPrefix", ledgerPrefix)
     checkOptionalNotEmpty("endorserDID", endorser)
     endorser.foreach{ endorser =>
       checkValidDID("endorserDID", endorser)
+      checkDIDMethodMatchesLedgerPrefix("endorserDID", endorser, ledgerPrefix)
     }
   }
 }

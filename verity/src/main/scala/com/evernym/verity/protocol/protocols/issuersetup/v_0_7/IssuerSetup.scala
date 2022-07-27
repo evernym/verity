@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_7
 
-import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID, SELF_ID}
+import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
+import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID, OTHER_ID, SELF_ID}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
@@ -20,14 +21,14 @@ import com.fasterxml.jackson.databind.exc.PropertyBindingException
 
 import scala.util.{Failure, Success, Try}
 
-class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, Any, State, String])
-  extends Protocol[IssuerSetup, Role, Msg, Any, State, String](IssuerSetupDefinition)
-  with ProtocolHelpers[IssuerSetup, Role, Msg, Any, State, String] {
+class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, Event, State, String])
+  extends Protocol[IssuerSetup, Role, Msg, Event, State, String](IssuerSetupDefinition)
+  with ProtocolHelpers[IssuerSetup, Role, Msg, Event, State, String] {
 
   import IssuerSetup._
 
   override def applyEvent: ApplyEvent = {
-    case (State.Uninitialized(), r: Roster[Role], e: ProtocolInitialized) =>
+    case (State.Uninitialized(), r: Roster[Role], e: Initialized) =>
       val initParams = getInitParams(e)
       State.Initialized(initParams) -> defineSelf(r, initParams.paramValueRequired(SELF_ID), Role.Owner)
 
@@ -38,13 +39,13 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
     case (s: State.Created, _, e: NeedsManualEndorsement) => State.Done(s.identity)
     case (s: State.Created, _, e: AskedForEndorsement)    => State.WaitingOnEndorser(e.ledgerPrefix, s.identity)
     case (s: State.WaitingOnEndorser, _, e: DIDWritten)  => State.Done(s.identity)
-    case (s @ (_: State.Created | _:State.WaitingOnEndorser), _, e: IssuerSetupFailed)    => State.Error(e.error)
+    case (_, _, e: IssuerSetupFailed)    => State.Error(e.error)
   }
 
   override def handleProtoMsg: (State, Option[Role], Msg) ?=> Any = noHandleProtoMsg()
 
   override def handleControl: Control ?=> Any = statefulHandleControl {
-    case (State.Uninitialized(), _, c: Init) => ctx.apply(ProtocolInitialized(c.parametersStored.toSeq))
+    case (State.Uninitialized(), _, c: Initialize) => ctx.apply(Initialized(c.parametersStored))
     case (init: State.Initialized, _, Create(ledgerPrefix, endorser)) => writeDIDToLedger(init, ledgerPrefix, endorser)
     case (s: State.WaitingOnEndorser, _, m: EndorsementResult) => handleEndorsementResult(m, s)
 
@@ -55,21 +56,23 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
     case (State.Done(d), _, CurrentPublicIdentifier()) => ctx.signal(PublicIdentifier(d.did, d.verKey))
     case (_, _, CurrentPublicIdentifier()) => ctx.signal(ProblemReport(identifierNotCreatedProblem))
     case (s: State, _, msg: Control) =>
-      throw new Exception(s"Unrecognized state, message combination: ${s}, $msg")
+      ctx.signal(ProblemReport(s"Unexpected '$msg' message in current state '$s")
+    )
   }
 
   private def checkPublicIdentifier(init: State.Initialized): Unit = {
     init.parameters.paramValue(MY_ISSUER_DID) match {
-      case Some(issuerDid) if issuerDid.nonEmpty => ctx.signal(ProblemReport(s"$identifierAlreadyCreatedErrorMsg: $issuerDid"))
+      case Some(issuerDid) if issuerDid.nonEmpty => ctx.signal(ProblemReport(s"$identifierAlreadyCreatedErrorMsg Found IssuerDid: $issuerDid"))
       case _ => ctx.signal(ProblemReport(identifierNotCreatedProblem))
     }
   }
 
   private def writeDIDToLedger(init: State.Initialized, ledgerPrefix: String, endorserDID: Option[String]): Unit = {
-    ctx.logger.debug(s"Creating DID/Key pair for Issuer Identifier/Keys for ledger prefix: $ledgerPrefix with endorser: ${endorserDID.getOrElse("default")}")
     init.parameters.paramValue(MY_ISSUER_DID) match {
       case Some(issuerDid) if issuerDid.nonEmpty => problemReport(new Exception(s"${identifierAlreadyCreatedErrorMsg}: ${issuerDid}"))
-      case _ => ctx.wallet.newDid(Some(ledgerPrefix)) {
+      case _ =>
+        ctx.logger.debug(s"Creating DID/Key pair for Issuer Identifier/Keys for ledger prefix: $ledgerPrefix with endorser: ${endorserDID.getOrElse("default")}")
+        ctx.wallet.newDid(Some(ledgerPrefix)) {
         case Success(keyCreated) =>
           ctx.apply(CreatePublicIdentifierCompleted(keyCreated.did, keyCreated.verKey))
           val fqSubmitterDID = ctx.ledger.fqDID(keyCreated.did, false)
@@ -80,7 +83,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
               prepareTxnForEndorsement(fqSubmitterDID, prepareDidJson(keyCreated.did, keyCreated.verKey), endorser.did) {
                 case Success(txn) =>
                   ctx.endorser.endorseTxn(txn, ledgerPrefix) {
-                    case Success(_) => ctx.apply(AskedForEndorsement(keyCreated.did, ledgerPrefix, ledgerPrefix))
+                    case Success(_) => ctx.apply(AskedForEndorsement(ledgerPrefix))
                     case Failure(e) => problemReport(e)
                   }
                 case Failure(e) => problemReport(e)
@@ -88,7 +91,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
             case other => {
               ctx.logger.info(s"no active/matched endorser found to be used for issuer endorsement (prefix: $ledgerPrefix): " + other)
               //any failure while getting active endorser, or no active endorser or active endorser is NOT the same as given/configured endorserDID
-              handleNeedsEndorsement(fqSubmitterDID, fqSubmitterDID, keyCreated.verKey, endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse("")), ledgerPrefix)
+              handleNeedsEndorsement(fqSubmitterDID, fqSubmitterDID, keyCreated.verKey, endorserDID.getOrElse(""), ledgerPrefix)
             }
           }
         case Failure(e) => problemReport(new Exception(s"$didCreateErrorMsg, reason: ${e.toString}"))
@@ -105,12 +108,12 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
       prepareTxnForEndorsement(submitterDID, prepareDidJson(targetDID, verkey), endorserDID) {
         case Success(ledgerRequest) =>
           ctx.signal(PublicIdentifierCreated(PublicIdentifier(targetDID, verkey), NeedsEndorsement(ledgerRequest)))
-          ctx.apply(NeedsManualEndorsement(targetDID, verkey, ledgerPrefix))
+          ctx.apply(NeedsManualEndorsement())
         case Failure(e) =>
           problemReport(e)
       }
     } else {
-      problemReport(new Exception("No default endorser defined"))
+      problemReport(new Exception("No endorser available for the given ledger prefix"))
     }
   }
 
@@ -134,7 +137,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
               case Success(smr: SignedMsgResult) =>
                 //NOTE: what about other endorsementSpecType (cheqd etc)
                 if (pt.isEndorsementSpecTypeIndy) {
-                  val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(extractUnqualifiedDidStr(fqSubmitterDID) -> Base58Util.encode(pt.txnBytes)))
+                  val txn = IndyLedgerUtil.buildIndyRequest(pt.txnBytes, Map(extractUnqualifiedDidStr(fqSubmitterDID) -> smr.signatureResult.toBase58))
                   handleResult(Success(txn))
                 } else {
                   handleResult(Failure(new RuntimeException("endorsement spec type not supported: " + pt.endorsementSpec)))
@@ -152,16 +155,25 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
 
   private def handleEndorsementResult(m: EndorsementResult, woe: State.WaitingOnEndorser): Unit = {
     if (m.code == ENDORSEMENT_RESULT_SUCCESS_CODE) {
-      ctx.apply(DIDWritten(woe.ledgerPrefix))
+      ctx.apply(DIDWritten())
       ctx.signal(PublicIdentifierCreated(PublicIdentifier(woe.identity.did, woe.identity.verKey), WrittenToLedger(woe.ledgerPrefix)))
     } else {
       problemReport(new RuntimeException(s"error during endorsement => code: ${m.code}, description: ${m.description}"))
     }
   }
 
-  private def getInitParams(params: ProtocolInitialized): Parameters = {
+  def buildInitialized(params: Parameters): Initialized = {
+    Initialized(
+      params
+        .initParams
+        .map(p => InitParam(p.name, p.value))
+        .toSeq
+    )
+  }
+
+  private def getInitParams(params: Initialized): Parameters = {
     Parameters(params
-      .parameters
+      .params
       .map(p => Parameter(p.name, p.value))
       .toSet
     )

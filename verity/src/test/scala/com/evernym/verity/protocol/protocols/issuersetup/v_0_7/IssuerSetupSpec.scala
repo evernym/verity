@@ -90,7 +90,6 @@ class IssuerSetupSpec
 
   "IssuerSetupProtocol" - {
     "should signal it needs endorsement" - {
-
       "when provided endorser DID is not active" in { f =>
         f.owner.initParams(Map(
           MY_ISSUER_DID -> ""
@@ -203,9 +202,25 @@ class IssuerSetupSpec
   }
 
   "should signal Problem Report" - {
+    "when initialized with an issuer did" in { f =>
+      f.owner.initParams(Map(
+        MY_ISSUER_DID -> "WAJQSd73TpK2HmoYRQJX7p"
+      ))
+      interaction(f.owner) {
+        withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+          withDefaultWalletAccess(f, {
+            withDefaultLedgerAccess(f, {
+              f.owner ~ Create(ledgerPrefix, Option("otherEndorser"))
+
+              f.owner expect signal[ProblemReport]
+            })
+          })
+        })
+      }
+    }
     "when a CurrentPublicIdentifier message is sent with no current public identifier" in { f =>
       f.owner.initParams(Map(
-        MY_ISSUER_DID -> ""
+        MY_ISSUER_DID -> "8hx9VZn2oCTHbGX7UYMYBy"
       ))
       interaction(f.owner) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {

@@ -50,7 +50,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
     case (State.Uninitialized(), _, c: Init) => ctx.apply(ProtocolInitialized(c.parametersStored.toSeq))
     case (init: State.InitializedWithParams, _, Create()) =>
       init.parameters.paramValue(MY_ISSUER_DID) match {
-        case Some(issuerDid) if issuerDid.nonEmpty => ProblemReport(s"${identifierAlreadyCreatedErrorMsg}")
+        case Some(issuerDid) if issuerDid.nonEmpty => ctx.signal(ProblemReport(s"${identifierAlreadyCreatedErrorMsg}"))
         case _ =>
           ctx.logger.debug("Creating DID/Key pair for Issuer Identifier/Keys")
           ctx.wallet.newDid() {
@@ -95,8 +95,8 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
       }
     case (State.Creating(_) | State.Created(_), _,  Create()) =>
       ctx.signal(ProblemReport(alreadyCreatingProblem))
-    case _ =>
-      throw new Exception("TEST")
+    case (s: State, _, msg: Control) =>
+      ctx.signal(ProblemReport(s"Unexpected '$msg' message in current state '$s"))
   }
 
   private var hasInitialized: Boolean = false

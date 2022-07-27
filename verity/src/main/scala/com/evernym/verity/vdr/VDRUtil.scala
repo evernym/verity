@@ -200,7 +200,7 @@ object VDRUtil {
    * @param ledgerPrefix for example ("did:indy:sovrin", "did:indy:sovrin:staging" etc)
    * @return namespace (for example: "indy:sovrin", "indy:sovrin:staging")
    */
-  private def extractNamespaceFromLedgerPrefix(ledgerPrefix: LedgerPrefix): Namespace = {
+  def extractNamespaceFromLedgerPrefix(ledgerPrefix: LedgerPrefix): Namespace = {
     ledgerPrefix.split(":").tail.mkString(":")   //removes the scheme (for example: `did:`)
   }
 

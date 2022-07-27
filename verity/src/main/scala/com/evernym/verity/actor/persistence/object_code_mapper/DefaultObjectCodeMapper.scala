@@ -329,11 +329,12 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     268 -> ActivityState,
     269 -> TheirRoutingUpdated,
 
-    270 -> issuerSetup_v07.CreatePublicIdentifierCompleted,
-    271 -> issuerSetup_v07.DIDWritten,
-    272 -> issuerSetup_v07.AskedForEndorsement,
-    273 -> issuerSetup_v07.IssuerSetupFailed,
-    274 -> issuerSetup_v07.NeedsManualEndorsement
+    270 -> issuerSetup_v07.Initialized,
+    271 -> issuerSetup_v07.CreatePublicIdentifierCompleted,
+    272 -> issuerSetup_v07.DIDWritten,
+    273 -> issuerSetup_v07.AskedForEndorsement,
+    274 -> issuerSetup_v07.IssuerSetupFailed,
+    275 -> issuerSetup_v07.NeedsManualEndorsement
   )
 
 }

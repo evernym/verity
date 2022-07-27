@@ -24,6 +24,7 @@ package object util2 {
 
   type Signature = Array[Byte]
   type Base64Encoded = String
+  type Base58Encoded = String
 
   type RouteId = String
 

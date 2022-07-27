@@ -255,21 +255,23 @@ class PresentProof(implicit val ctx: PresentProofContext)
 
   def handleMsgProblemReport(state: State, role: Option[Role], msg: Msg.ProblemReport): Unit = {
     val isRejection = true // Currently I don't see how we can tell between an problem and an rejection
-    if(isRejection) {
+    if (isRejection) {
+      val reason = msg.resolveDescription
       if (rejectableState(state)) {
-        val reason = msg.resolveDescription
-
         val roleNum = role.map(_.roleNum).getOrElse(0) //not sure what we should if the role is not defined here
         apply(Rejection(roleNum, reason))
         signal(Sig.buildProblemReport(s"Rejected -- $reason", rejection))
-      }
-      else {
-        send(
-          Msg.buildProblemReport(
-            "Protocol not is a state where rejection is allowed",
-            rejectionNotAllowed
+      } else {
+        if (ctx.getRoster.hasOther) {
+          send(
+            Msg.buildProblemReport(
+              "Protocol not in a state where rejection is allowed",
+              rejectionNotAllowed
+            )
           )
-        )
+        } else {
+          signal(Sig.buildProblemReport(s"Rejected in un allowed state -- $reason", rejection))
+        }
       }
     }
   }

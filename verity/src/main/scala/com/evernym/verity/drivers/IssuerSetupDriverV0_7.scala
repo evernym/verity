@@ -4,7 +4,6 @@ import com.evernym.verity.protocol.container.actor.{ActorDriver, ActorDriverGenP
 import com.evernym.verity.protocol.engine.Driver.SignalHandler
 import com.evernym.verity.protocol.engine.SignalEnvelope
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.PublicIdentifierCreated
-import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.{NeedsEndorsement, ProblemReport, PublicIdentifier, PublicIdentifierCreated, WrittenToLedger}
 
 import scala.concurrent.ExecutionContext
 

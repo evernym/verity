@@ -106,7 +106,6 @@ case class VerityLocalNode(tmpDirPath: Path,
       }
   }
 
-  //start()
 }
 
 case object UserInitiatedShutdown extends CoordinatedShutdown.Reason

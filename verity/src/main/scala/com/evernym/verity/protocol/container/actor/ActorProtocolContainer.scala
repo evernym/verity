@@ -34,8 +34,7 @@ import com.evernym.verity.protocol.{Control, CtlEnvelope}
 import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
 import com.evernym.verity.util.Util.getActorRefFromSelection
-import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.{ActorResponse, Exceptions, ServiceEndpoint}
+import com.evernym.verity.util2.{ActorResponse, ServiceEndpoint}
 import com.typesafe.scalalogging.Logger
 
 import java.util.UUID
@@ -459,12 +458,7 @@ class ActorProtocolContainer[
         }
 
       case Failure(e) =>
-        e match {
-          case bre: BadRequestErrorException =>
-            logger.info("bad request response from protocol actor: " + bre.getMessage)
-          case other =>
-            logger.error("error response from protocol actor: " + Exceptions.getStackTraceAsSingleLineString(other))
-        }
+        logger.info("error response from protocol actor: " + e.getMessage)
         val error = convertProtoEngineException(e)
         sendRespToCaller(error, msgIdOpt, sndr)
     }

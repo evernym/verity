@@ -68,15 +68,6 @@ trait BasePersistentStore
     testWalletAPI.executeSync[TheirKeyStored](StoreTheirKey(theirDID, theirDIDVerKey))(WalletAPIParam(walletId))
   }
 
-
-  private def deleteWallet(walletId: String): Unit = {
-    val walletConfig = buildWalletConfig(testAppConfig)
-    val walletParam = generateWalletParamSync(walletId, testAppConfig, LibIndyWalletProvider)
-    val config = walletConfig.buildConfig(walletParam.walletName)
-    val cred = walletConfig.buildCredentials(walletParam.encryptionKey)
-    Wallet.deleteWallet(config, cred).get()
-  }
-
   def storeAgentRoute(agentDID: DidStr, actorTypeId: Int, address: EntityId)
                      (implicit pp: PersistParam = PersistParam()): Unit = {
     val persistenceId = PersistenceIdParam(ROUTE_REGION_ACTOR_NAME, agentDID)
@@ -126,12 +117,6 @@ trait BasePersistentStore
     transformer.undo(rawEvent).asInstanceOf[T]
   }
 
-  def getTransformerFor(pp: PersistenceIdParam, encryptionKey: Option[String]=None): Any <=> PersistentMsg = {
-    val encKey = encryptionKey.getOrElse(
-      DefaultPersistenceEncryption.getEventEncryptionKey(pp.entityId, appConfig))
-    getTransformer(encKey)
-  }
-
   /**
    * adds given events to persistent storage (in memory storage) for given persistence id
    * @param persistenceId persistence id
@@ -156,7 +141,7 @@ trait BasePersistentStore
    * @param persistenceId persistence id
    * @param snapshots snapshots to be stored in persistent storage
    */
-  def addSnapshotsToPersistentStorage(persistenceId: PersistenceIdParam,
+  private def addSnapshotsToPersistentStorage(persistenceId: PersistenceIdParam,
                                       snapshots: Seq[Any])
                                      (implicit pp: PersistParam = PersistParam()): Unit = {
     val objectCodeMapper = pp.objectCodeMapper.getOrElse(DefaultObjectCodeMapper)
@@ -167,6 +152,20 @@ trait BasePersistentStore
       (SnapshotMeta(index, index), transformedState)
     }
     snapTestKit.persistForRecovery(persistenceId.toString, transformedSnapshots.toList)
+  }
+
+  private def getTransformerFor(pp: PersistenceIdParam, encryptionKey: Option[String]=None): Any <=> PersistentMsg = {
+    val encKey = encryptionKey.getOrElse(
+      DefaultPersistenceEncryption.getEventEncryptionKey(pp.entityId, appConfig))
+    getTransformer(encKey)
+  }
+
+  private def deleteWallet(walletId: String): Unit = {
+    val walletConfig = buildWalletConfig(testAppConfig)
+    val walletParam = generateWalletParamSync(walletId, testAppConfig, LibIndyWalletProvider)
+    val config = walletConfig.buildConfig(walletParam.walletName)
+    val cred = walletConfig.buildCredentials(walletParam.encryptionKey)
+    Wallet.deleteWallet(config, cred).get()
   }
 
   private def validateObjectCodeMapping(objectCodeMapper: ObjectCodeMapperBase,

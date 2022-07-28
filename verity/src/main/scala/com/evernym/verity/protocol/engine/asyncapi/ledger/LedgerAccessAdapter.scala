@@ -1,8 +1,8 @@
 package com.evernym.verity.protocol.engine.asyncapi.ledger
 
+import com.evernym.verity.did.DidStr
 import com.evernym.vdrtools.IndyException
 import com.evernym.verity.cache.providers.CacheProvider
-import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine.asyncapi._
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
@@ -43,6 +43,15 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
                                 (handler: Try[PreparedTxn] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
       {vdrTools.prepareCredDefTxn(credDefJson, credDefId, submitterDID, endorser)},
+      handleAsyncOpResult(handler)
+    )
+
+  override def prepareDidTxn(didJson: String,
+                             submitterDID: FqDID,
+                             endorser: Option[String])
+                            (handler: Try[PreparedTxn] => Unit): Unit =
+    asyncOpRunner.withFutureOpRunner(
+      {vdrTools.prepareDidTxn(didJson, submitterDID, endorser)},
       handleAsyncOpResult(handler)
     )
 

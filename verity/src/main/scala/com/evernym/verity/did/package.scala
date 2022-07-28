@@ -41,7 +41,6 @@ package object did {
     }
   }
 
-
   def validateDID(did: Any): Unit = {
     did match {
       case u: UnqualifiedDID =>

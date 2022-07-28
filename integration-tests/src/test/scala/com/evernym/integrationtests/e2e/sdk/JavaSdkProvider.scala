@@ -9,6 +9,7 @@ import com.evernym.verity.sdk.protocols.issuecredential.IssueCredential
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.IssuerSetup
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
+import com.evernym.verity.sdk.protocols.issuersetup.v0_7.IssuerSetupV0_7
 import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
 import com.evernym.verity.sdk.protocols.presentproof.PresentProof
 import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate, ProposedAttribute, ProposedPredicate}
@@ -51,6 +52,8 @@ class JavaSdkProvider(val sdkConfig: SdkConfig, val testDir: Option[Path] = None
   override def updateConfigs_0_6(): UpdateConfigsV0_6 = UpdateConfigs.v0_6()
 
   override def issuerSetup_0_6: IssuerSetupV0_6 = IssuerSetup.v0_6()
+
+  override def issuerSetup_0_7: IssuerSetupV0_7 = IssuerSetup.v0_7()
 
   override def writeSchema_0_6(name: String, version: String, attrs: String*): WriteSchemaV0_6 =
     WriteSchema.v0_6(name, version, attrs.toArray: _*)

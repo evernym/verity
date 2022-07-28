@@ -8,6 +8,7 @@ import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
 import com.evernym.verity.sdk.protocols.provision.v0_7.ProvisionV0_7
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
+import com.evernym.verity.sdk.protocols.issuersetup.v0_7.IssuerSetupV0_7
 import com.evernym.verity.sdk.protocols.questionanswer.v1_0.CommittedAnswerV1_0
 import com.evernym.verity.sdk.protocols.relationship.v1_0.{GoalCode, RelationshipV1_0}
 import com.evernym.verity.sdk.protocols.updateconfigs.v0_6.UpdateConfigsV0_6
@@ -54,6 +55,22 @@ object UndefinedInterfaces {
     override def create(context: Context): Unit = throw new NotImplementedError
     override def createMsg(context: Context): JSONObject = throw new NotImplementedError
     override def createMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+
+    override def currentPublicIdentifier(context: Context): Unit = throw new NotImplementedError
+    override def currentPublicIdentifierMsg(context: Context): JSONObject = throw new NotImplementedError
+    override def currentPublicIdentifierMsgPacked(context: Context): Array[Byte] = throw new NotImplementedError
+
+    override def getThreadId: String = throw new NotImplementedError
+  }
+
+  class UndefinedIssuerSetup_0_7 extends IssuerSetupV0_7 {
+    override def create(context: Context, ledgerPrefix: String): Unit = throw new NotImplementedError
+    override def createMsg(context: Context, ledgerPrefix: String): JSONObject = throw new NotImplementedError
+    override def createMsgPacked(context: Context, ledgerPrefix: String): Array[Byte] = throw new NotImplementedError
+
+    override def create(context: Context, ledgerPrefix: String, endorser: String): Unit = throw new NotImplementedError
+    override def createMsg(context: Context, ledgerPrefix: String, endorser: String): JSONObject = throw new NotImplementedError
+    override def createMsgPacked(context: Context, ledgerPrefix: String, endorser: String): Array[Byte] = throw new NotImplementedError
 
     override def currentPublicIdentifier(context: Context): Unit = throw new NotImplementedError
     override def currentPublicIdentifierMsg(context: Context): JSONObject = throw new NotImplementedError

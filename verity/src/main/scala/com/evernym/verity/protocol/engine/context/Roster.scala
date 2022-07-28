@@ -43,7 +43,7 @@ trait RosterLike[R] {
 case class Roster[R](participants: Vector[ParticipantId] = Vector[ParticipantId](),
                      assignments: Map[R, ParticipantIndex] = Map[R, ParticipantIndex](),
                      selfIndex: Option[ParticipantIndex] = None
-                           ) extends RosterLike[R] {
+                    ) extends RosterLike[R] {
 
   //TODO should we create a new bi-directional map type to make this more convenient? A bimap?
   def roleForIdx(idx: ParticipantIndex): Option[R] = assignments.find(_._2 == idx).map(_._1)

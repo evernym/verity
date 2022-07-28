@@ -4,6 +4,7 @@ import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.vdr.service.VDRAdapterUtil._
 import com.evernym.verity.vdr.service.{VDRActor, VDRToolsConfig, VDRToolsFactory}
 
@@ -93,4 +94,5 @@ class VDRActorAdapter(vdrToolsFactory: VDRToolsFactory,
       .flatMap(reply => Future.fromTry(reply.resp))
       .map(resp => buildDidDoc(resp))
   }
+
 }

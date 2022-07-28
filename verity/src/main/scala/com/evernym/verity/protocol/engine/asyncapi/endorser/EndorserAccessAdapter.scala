@@ -36,11 +36,11 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
   val blobStorageUtil = new BlobStorageUtil(bucketName, storageAPI)
   val eventPublisherUtil = new EventPublisherUtil(routingContext, producerPort)
 
-  override def withCurrentEndorser(ledger: String)(handler: Try[Option[Endorser]] => Unit): Unit = {
+  override def withCurrentEndorser(ledgerPrefix: String)(handler: Try[Option[Endorser]] => Unit): Unit = {
 
     asyncOpRunner.withFutureOpRunner(
       singletonParentProxy
-        .ask{ ref: ActorRef => ForEndorserRegistry(GetEndorsers(ledger, ref))}
+        .ask{ ref: ActorRef => ForEndorserRegistry(GetEndorsers(ledgerPrefix, ref))}
         .mapTo[LedgerEndorsers]
         //NOTE:
         // With FQ endorser identifier, indy ledger was throwing this error on endorser side

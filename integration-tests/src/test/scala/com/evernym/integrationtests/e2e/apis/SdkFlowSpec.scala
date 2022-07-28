@@ -112,7 +112,7 @@ class SdkFlowSpec
   def sdkIssuerSetupInteraction(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
     val sdk = apps(verity1).sdk.get
 
-    setupIssuer(sdk, ledgerUtil)
+    setupIssuer(sdk, sdk, ledgerUtil, None)
 
     val schemaName = "license"+UUID.randomUUID().toString.substring(0, 8)
 
@@ -127,6 +127,8 @@ class SdkFlowSpec
 
 
     writeIssuerToLedger(sdk, ledgerUtil)
+
+    setupIssuerAlternateVersions(sdk)
 
     updateConfigs(
       sdk,

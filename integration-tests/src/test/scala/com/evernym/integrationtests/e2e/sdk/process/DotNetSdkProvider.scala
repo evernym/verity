@@ -8,6 +8,7 @@ import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0
 import com.evernym.verity.sdk.protocols.connecting.v1_0.ConnectionsV1_0
 import com.evernym.verity.sdk.protocols.issuecredential.v1_0.IssueCredentialV1_0
 import com.evernym.verity.sdk.protocols.issuersetup.v0_6.IssuerSetupV0_6
+import com.evernym.verity.sdk.protocols.issuersetup.v0_7.IssuerSetupV0_7
 import com.evernym.verity.sdk.protocols.outofband.v1_0.OutOfBandV1_0
 import com.evernym.verity.sdk.protocols.presentproof.common.{Attribute, Predicate, ProposedAttribute, ProposedPredicate}
 import com.evernym.verity.sdk.protocols.presentproof.v1_0.PresentProofV1_0
@@ -224,6 +225,19 @@ class DotNetSdkProvider(val sdkConfig: SdkConfig, val testDir: Path)
     new UndefinedIssuerSetup_0_6 {
       override def create(ctx: Context): Unit =
         executeCmd(ctx, "IssuerSetup", this.version, "create")
+
+      override def currentPublicIdentifier(ctx: Context): Unit =
+        executeCmd(ctx, "IssuerSetup", this.version, "currentPublicIdentifier")
+    }
+  }
+
+  override def issuerSetup_0_7: IssuerSetupV0_7 = {
+    new UndefinedIssuerSetup_0_7 {
+      override def create(ctx: Context, ledgerPrefix: String): Unit =
+        executeCmd(ctx, "IssuerSetup", this.version, "create",Seq.empty, Seq(ledgerPrefix))
+
+      override def create(ctx: Context, ledgerPrefix: String, endorser: String): Unit =
+        executeCmd(ctx, "IssuerSetup", this.version, "create",Seq.empty, Seq(ledgerPrefix, endorser))
 
       override def currentPublicIdentifier(ctx: Context): Unit =
         executeCmd(ctx, "IssuerSetup", this.version, "currentPublicIdentifier")

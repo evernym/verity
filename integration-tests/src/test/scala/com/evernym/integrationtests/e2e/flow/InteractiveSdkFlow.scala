@@ -154,13 +154,11 @@ trait InteractiveSdkFlow extends MetricsFlow {
     }
   }
 
-  def setupIssuer(sdk: VeritySdkProvider, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
-    setupIssuer(sdk, sdk, ledgerUtil)
-  }
-
   def setupIssuer(issuerSdk: VeritySdkProvider,
                   msgReceiverSdkProvider: VeritySdkProvider,
-                  ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
+                  ledgerUtil: LedgerUtil,
+                  endorser: Option[String]
+                 )(implicit scenario: Scenario): Unit = {
     val issuerName = issuerSdk.sdkConfig.name
     s"create issuer public identifier on $issuerName" - {
 
@@ -168,18 +166,20 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
       s"[$issuerName] use issuer-setup protocol" in {
 
-        issuerSdk.issuerSetup_0_6.currentPublicIdentifier(issuerSdk.context)
+        issuerSdk.issuerSetup_0_7.currentPublicIdentifier(issuerSdk.context)
 
         receiverSdk.checkMsg(){ resp =>
           if(resp.getString(`@TYPE`).contains("problem-report")) {
-            issuerSdk.issuerSetup_0_6
-              .create(issuerSdk.context)
+
+            issuerSdk.issuerSetup_0_7
+              .create(issuerSdk.context, "did:indy:sovrin", endorser.getOrElse("WAJQSd73TpK2HmoYRQJX7p"))
 
             receiverSdk.expectMsg("public-identifier-created") { resp =>
               resp shouldBe an[JSONObject]
 
               assert(resp.getJSONObject("identifier").has("verKey"))
               assert(resp.getJSONObject("identifier").has("did"))
+              assert(resp.getJSONObject("status").has("needsEndorsement"))
             }
           } else if (resp.getString(`@TYPE`).contains("public-identifier")) {
             logger.info("Issuer is already setup")
@@ -190,6 +190,37 @@ trait InteractiveSdkFlow extends MetricsFlow {
       }
     }
   }
+
+  def setupIssuerAlternateVersions(sdk: VeritySdkProvider)(implicit scenario: Scenario): Unit = {
+    setupIssuerAlternateVersions(sdk, sdk)
+  }
+
+  def setupIssuerAlternateVersions(issuerSdk: VeritySdkProvider,
+                                   msgReceiverSdkProvider: VeritySdkProvider
+                                  )(implicit scenario: Scenario): Unit = {
+    val issuerName = issuerSdk.sdkConfig.name
+    s"attempt to create issuer public identifier on $issuerName when issuerDid already exists in context" - {
+
+      val receiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
+
+      s"[$issuerName] use issuer-setup 0.6 protocol" in {
+
+        issuerSdk.issuerSetup_0_6.currentPublicIdentifier(issuerSdk.context)
+
+        receiverSdk.expectMsg("problem-report"){ resp =>
+          resp shouldBe an[JSONObject]
+        }
+        issuerSdk.issuerSetup_0_6
+          .create(issuerSdk.context)
+
+        receiverSdk.expectMsg("problem-report") { resp =>
+          resp shouldBe an[JSONObject]
+          assert(resp.getString("message").equals("Public identifier has already been created. This can happen if IssuerSetup V0.7 has already ben called for this Verity Tenant."))
+        }
+      }
+    }
+  }
+
 
   def writeIssuerToLedger(sdk: VeritySdkProvider, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
     writeIssuerToLedger(sdk, sdk, ledgerUtil)
@@ -398,7 +429,6 @@ trait InteractiveSdkFlow extends MetricsFlow {
       s"[$issuerName] use write-schema with unknown endorser DID to receive needs-endorsement" in {
         val receiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
         val (issuerDID, issuerVerkey): (DidStr, VerKeyStr) = currentIssuerId(issuerSdk, receiverSdk)
-
 
         val endorserDID = "8hx9VZn2oCTHbGX7UYMYBy"   //Unknown DID
         val writeSchema = issuerSdk.writeSchema_0_6(schemaName, schemaVersion, schemaAttrs.toIndexedSeq: _*)
@@ -1855,7 +1885,7 @@ object InteractiveSdkFlow {
                       msgReceiverSdk: VeritySdkProvider with MsgReceiver)(implicit scenario: Scenario): (DidStr, VerKeyStr) = {
     var did = ""
     var verkey = ""
-    issuerSdk.issuerSetup_0_6.currentPublicIdentifier(issuerSdk.context)
+    issuerSdk.issuerSetup_0_7.currentPublicIdentifier(issuerSdk.context)
 
     msgReceiverSdk.expectMsg("public-identifier") { resp =>
       did = resp.getString("did")

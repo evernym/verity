@@ -3,7 +3,9 @@ package com.evernym.verity.protocol.engine.validate
 import com.evernym.verity.did.validateDID
 import com.evernym.verity.protocol.engine.{EmptyValueForOptionalFieldProtocolEngineException, InvalidFieldValueProtocolEngineException, MissingReqFieldProtocolEngineException, MsgBase}
 import com.evernym.verity.did.exception.DIDException
+import com.evernym.verity.did.methods.{DIDMethod, UnqualifiedDID}
 import com.evernym.verity.did.toDIDMethod
+import com.evernym.verity.vdr.VDRUtil
 
 import scala.util.Try
 
@@ -76,4 +78,13 @@ object ValidateHelper {
     }
   }
 
+  def checkDIDMethodMatchesLedgerPrefix(fieldName: String, did: String, ledgerPrefix: String): Unit = {
+    toDIDMethod(did) match {
+      case _: UnqualifiedDID => // did method is assumed to match given ledger prefix
+      case m: DIDMethod =>
+        val didPrefix = VDRUtil.extractLedgerPrefix(did)
+        if (didPrefix != ledgerPrefix)
+          throwInvalidFieldProtocolEngineException(fieldName, Some("Fully qualified endorser DID does not match provided ledger prefix."))
+    }
+  }
 }

@@ -1,9 +1,9 @@
 package com.evernym.verity.vdr
 
+import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519
 import org.json.JSONObject
-
 import scala.concurrent.Future
 import scala.util.{Success, Try}
 

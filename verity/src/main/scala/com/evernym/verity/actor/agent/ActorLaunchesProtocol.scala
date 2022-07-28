@@ -41,6 +41,7 @@ trait ActorLaunchesProtocol
       stateDetailsFor(ipr.protoRef).map { paramMapper =>
         logger.debug(s"[$actorId] init params received")
         val parameters = ipr.stateKeys.map(paramMapper)
+        logger.debug(s"[$actorId] init params mapped: ${parameters}")
         sndr ! ProtocolCmd(InitProtocol(domainId, parameters, sponsorRel), None)
         logger.debug(s"[$actorId] init params sent")
       }.recover {

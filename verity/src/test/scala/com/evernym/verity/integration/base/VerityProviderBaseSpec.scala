@@ -1,24 +1,47 @@
 package com.evernym.verity.integration.base
 
+import akka.cluster.sharding.ClusterSharding
+import akka.cluster.sharding.ShardRegion.EntityId
+import akka.util.Timeout
+import com.evernym.verity.actor.ForIdentifier
+import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}
+import com.evernym.verity.actor.base.Stop
+import com.evernym.verity.actor.maintenance.v1tov2migration.EventPersister
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
+import com.evernym.verity.actor.wallet.WalletCommand
+import com.evernym.verity.config.{AppConfig, ConfigUtil}
+import com.evernym.verity.config.ConfigConstants.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
+import com.evernym.verity.constants.ActorNameConstants
+import com.evernym.verity.constants.ActorNameConstants.ROUTE_REGION_ACTOR_NAME
+import com.evernym.verity.constants.Constants.DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.{ServiceParam, VerityLocalNode}
 import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore, VerityEnv}
-import com.evernym.verity.ledger.LedgerTxnExecutor
+import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
+import com.evernym.verity.msgoutbox.WalletId
 import com.evernym.verity.observability.logs.LoggingUtil
-import com.evernym.verity.protocol.engine.MockVDRAdapter
+import com.evernym.verity.protocol.container.actor.ActorProtocol
+import com.evernym.verity.protocol.engine.events.{DataRetentionPolicySet, DomainIdSet, StorageIdSet}
+import com.evernym.verity.protocol.engine.{DomainId, MockVDRAdapter, PinstId, ProtoDef, RelationshipId, ThreadId}
+import com.evernym.verity.protocol.protocols.protocolRegistry
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
-import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider}
+import com.evernym.verity.util.Util.buildTimeout
+import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider, RouteId}
+import com.evernym.verity.vault.WalletAPIParam
+import com.evernym.verity.vault.service.ActorWalletService
+import com.evernym.verity.vault.wallet_api.StandardWalletAPI
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import com.evernym.verity.vdr.service.VdrTools
 import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistryBuilder, MockVdrTools}
+import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
 import com.typesafe.config.{Config, ConfigFactory, ConfigMergeable}
 import com.typesafe.scalalogging.Logger
 import org.scalatest.{BeforeAndAfterAll, Suite}
 
 import java.nio.file.{Files, Path}
+import java.util.UUID
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
@@ -34,12 +57,10 @@ trait VerityProviderBaseSpec
     with HasExecutionContextProvider {
     this: Suite =>
 
-
   val ENV_BUILD_TIMEOUT = 1 minute
   val SDK_BUILD_TIMEOUT = 1 minute
 
   implicit def contextClassLoader: ClassLoader = Thread.currentThread().getContextClassLoader
-
 
   object VerityEnvBuilder {
     val localVerityBaseConfig: ConfigMergeable = ConfigFactory.load()
@@ -134,8 +155,7 @@ trait VerityProviderBaseSpec
         val verityEnv = VerityEnv(appSeed, verityNodes, futureExecutionContext)
         allVerityEnvs = allVerityEnvs :+ verityEnv
         verityEnv
-      }
-      catch {
+      } catch {
         case e: Exception =>
           logger.warn(s"Verity nodes ${verityNodes.map(_.portProfile.artery)} start failed. ", e)
           Await.result(Future.sequence(verityNodes.map(_.stop())), VerityEnv.STOP_MAX_TIMEOUT)
@@ -240,6 +260,135 @@ trait VerityProviderBaseSpec
       }
     )
   }
+
+  protected def performWalletOp[T](verityEnv: VerityEnv,
+                                   walletId: WalletId,
+                                   cmd: WalletCommand): T = {
+    val verityNode = verityEnv.nodes.head.asInstanceOf[VerityLocalNode]
+    val actorSystem = verityNode.platform.actorSystem
+    val appConfig = verityNode.platform.appConfig
+    val ledgerPoolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(actorSystem, appConfig, futureExecutionContext)
+    val walletAPI = new StandardWalletAPI(
+      new ActorWalletService(
+        actorSystem,
+        appConfig,
+        ledgerPoolConnManager,
+        futureExecutionContext
+      )
+    )
+    implicit val wap: WalletAPIParam = WalletAPIParam(walletId)
+    walletAPI.executeSync[T](cmd)
+  }
+
+  protected def getAgentRoute(verityEnv: VerityEnv,
+                              routeId: RouteId): ActorAddressDetail = {
+    import akka.pattern.ask
+    val verityNode = verityEnv.nodes.head.asInstanceOf[VerityLocalNode]
+    val actorSystem = verityNode.platform.actorSystem
+    val appConfig = verityNode.platform.appConfig
+    val routeRegion = ClusterSharding(actorSystem).shardRegion(ROUTE_REGION_ACTOR_NAME)
+    implicit lazy val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS,
+      DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS)
+    Await.result(routeRegion.ask(ForIdentifier(routeId, GetStoredRoute)).mapTo[Option[ActorAddressDetail]], 10.second).get
+  }
+
+  protected def persistProtocolEvents(verityEnv: VerityEnv,
+                                      protoDef: ProtoDef,
+                                      domainId: DomainId,
+                                      relationshipId: Option[RelationshipId],
+                                      threadId: Option[ThreadId],
+                                      events: Seq[Any],
+                                      stopActor: Boolean = true): Unit = {
+    val pinstIdResolver = protocolRegistry.find(protoDef.protoRef).get.pinstIdResol
+    val pinstId = pinstIdResolver.resolve(
+      protoDef,
+      domainId,
+      relationshipId,
+      threadId,
+      None,
+      None
+    )
+    val actorProtocol = new ActorProtocol(protoDef)
+    val verityNode = verityEnv.nodes.head.asInstanceOf[VerityLocalNode]
+    val internalEvents = buildDefaultProtoSysEvents(verityNode.platform.appConfig, protoDef, domainId, pinstId)
+    persistEvents(
+      verityNode,
+      actorProtocol.typeName,
+      pinstId,
+      internalEvents  ++ events,
+      None,
+      stopActor
+    )
+  }
+
+  protected def persistUserAgentEvents(verityEnv: VerityEnv,
+                                       entityId: EntityId,
+                                       events: Seq[Any],
+                                       stopActor: Boolean = true): Unit = {
+    persistActorEvents(
+      verityEnv,
+      ActorNameConstants.USER_AGENT_REGION_ACTOR_NAME,
+      entityId,
+      events,
+      stopActor
+    )
+  }
+
+  private def persistActorEvents(verityEnv: VerityEnv,
+                                 actorTypeName: String,
+                                 entityId: EntityId,
+                                 events: Seq[Any],
+                                 stopActor: Boolean = true): Unit = {
+    val verityNode = verityEnv.nodes.head.asInstanceOf[VerityLocalNode]
+    persistEvents(
+      verityNode,
+      actorTypeName,
+      entityId,
+      events,
+      None,
+      stopActor
+    )
+  }
+
+  private def persistEvents(verityNode: VerityLocalNode,
+                            actorTypeName: String,
+                            entityId: String,
+                            events: Seq[Any],
+                            persEncryptionKey: Option[String],
+                            stopActor: Boolean = true): Unit = {
+    val verityNodeActorSystem = verityNode.platform.actorSystem
+    val eventPersisterActorName = UUID.randomUUID().toString
+    verityNodeActorSystem.actorOf(
+      EventPersister.props(
+        verityNode.platform.appConfig,
+        futureExecutionContext,
+        actorTypeName,
+        entityId,
+        persEncryptionKey,
+        events
+      ),
+      eventPersisterActorName
+    )
+    val targetRegion = ClusterSharding(verityNodeActorSystem).shardRegion(actorTypeName)
+    if (stopActor) {
+      //stop the target actor to make sure this actor starts from scratch (if needed)
+      // which will force the actor to replay all the persisted events
+      targetRegion ! ForIdentifier(entityId, Stop())
+    }
+    Thread.sleep(5000) //TODO: how to know if the `eventPersister` is stopped?
+  }
+
+  private def buildDefaultProtoSysEvents(appConfig: AppConfig,
+                                         protoDef: ProtoDef,
+                                         domainId: DomainId,
+                                         pinstId: PinstId): Seq[Any] = {
+    Seq(
+      DomainIdSet(domainId),
+      StorageIdSet(pinstId),
+      DataRetentionPolicySet(ConfigUtil.getProtoStateRetentionPolicy(appConfig, domainId, protoDef.protoRef.msgFamilyName).configString)
+    )
+  }
+
 
   private val VAS_DEFAULT_CONFIG = ConfigFactory.parseString(
     """

@@ -9,6 +9,8 @@ package:
       - verity/target/scala-2.13/verity-assembly-*.jar
       - verity/target/*.deb
     when: always
+    reports:
+      dotenv: verity/target/docker/verity_vers.env
   cache:
     paths:
       - $CI_PROJECT_DIR/.sbt/
@@ -18,6 +20,12 @@ package:
     - sbt assembly
     - sbt verity/k8sDockerPackage
     - sbt debian:packageBin
+    - source verity/target/docker/args.env
+    - |+
+      cat <<EOF > verity/target/docker/verity_vers.env
+      VERITY_APPLICATION_VERSION=$VERITY_VERSION
+      VERITY_VERSION=$VERITY_VERSION
+      EOF
   tags:
     - docker-machine
     - large

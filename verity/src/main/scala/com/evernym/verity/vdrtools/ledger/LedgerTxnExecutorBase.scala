@@ -24,7 +24,8 @@ import com.typesafe.scalalogging.Logger
 import com.evernym.vdrtools.IndyException
 import com.evernym.vdrtools.ledger.Ledger
 import com.evernym.vdrtools.ledger.Ledger._
-import com.evernym.vdrtools.pool.Pool
+import com.evernym.vdrtools.vdr.VDR
+import com.evernym.vdrtools.pool.{LedgerNotFoundException, Pool}
 import com.evernym.verity.actor.agent.{AttrName, AttrValue}
 import com.evernym.verity.vdrtools.ledger.LedgerTxnUtil.appendTAAToRequest
 

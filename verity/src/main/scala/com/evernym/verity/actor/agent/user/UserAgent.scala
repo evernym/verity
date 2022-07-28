@@ -51,6 +51,7 @@ import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.CreateKeyEndpointDetail
 import com.evernym.verity.protocol.protocols.connecting.common.{ConnReqReceived, SendMsgToRegisteredEndpoint}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.PublicIdentifierCreated
+import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.{PublicIdentifierCreated => V_07PublicIdentifierCreated}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.{Ctl, RelationshipDef}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.CreatePairwiseKey
 import com.evernym.verity.protocol.protocols.walletBackup.WalletBackupMsgFamily.{ProvideRecoveryDetails, RecoveryKeyRegistered}
@@ -160,6 +161,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
     case SignalMsgParam(prd: ProvideRecoveryDetails, _)        => registerRecoveryKey(prd.params.recoveryVk)
     case SignalMsgParam(cpk: CreatePairwiseKey, _)             => createNewPairwiseEndpoint(cpk.label, cpk.logoUrl)
     case SignalMsgParam(pic: PublicIdentifierCreated, _)       => storePublicIdentity(pic.identifier.did, pic.identifier.verKey)
+    case SignalMsgParam(pic: V_07PublicIdentifierCreated, _)   => storePublicIdentity(pic.identifier.did, pic.identifier.verKey)
   }
 
   override final def receiveAgentEvent: Receive = commonEventReceiver orElse eventReceiver orElse msgEventReceiver

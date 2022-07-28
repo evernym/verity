@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+// Brought in from scalapb-runtime
+import "scalapb/scalapb.proto";
+
+package com.evernym.verity.protocol.protocols.issuersetup.v_0_7;
+
+message InitParam {
+    string name = 1;
+    string value = 2;
+}
+
+message Initialized {
+    option (scalapb.message).extends = "Event";
+    repeated InitParam params = 1;
+}
+
+message CreatePublicIdentifierCompleted {
+    option (scalapb.message).extends = "Event";
+    string did = 1;
+    string verKey = 2;
+}
+
+message AskedForEndorsement {
+    option (scalapb.message).extends = "Event";
+    string ledgerPrefix = 1;
+}
+
+message NeedsManualEndorsement {
+    option (scalapb.message).extends = "Event";
+}
+
+message DIDWritten {
+    option (scalapb.message).extends = "Event";
+}
+
+message IssuerSetupFailed {
+    option (scalapb.message).extends = "Event";
+    string error = 1;
+}

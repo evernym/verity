@@ -74,7 +74,6 @@ val mockitoVer          = "1.17.7"
 val veritySdkVer        = "0.6.1-b2158887"
 val vcxWrapperVer       = "0.14.1.844"
 
-
 val flexmarkVer         = "0.64.0"
 
 // compiler plugin versions

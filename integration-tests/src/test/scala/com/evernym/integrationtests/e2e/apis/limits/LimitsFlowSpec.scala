@@ -135,7 +135,7 @@ class LimitsFlowSpec
   def sdkIssuerSetupInteraction(apps: ScenarioAppEnvironment, ledgerUtil: LedgerUtil)(implicit scenario: Scenario): Unit = {
     val sdk = apps(verity1).sdk.get
 
-    setupIssuer(sdk, ledgerUtil)
+    setupIssuer(sdk, sdk, ledgerUtil, None)
 
 
     writeIssuerToLedger(sdk, ledgerUtil)

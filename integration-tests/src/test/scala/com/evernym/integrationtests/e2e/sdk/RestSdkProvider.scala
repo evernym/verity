@@ -35,6 +35,7 @@ import com.evernym.verity.testkit.listener.Listener
 import com.evernym.verity.util.Base58Util
 import com.typesafe.scalalogging.Logger
 import com.evernym.vdrtools.crypto.Crypto
+import com.evernym.verity.sdk.protocols.issuersetup.v0_7.IssuerSetupV0_7
 import org.json.{JSONArray, JSONObject}
 
 import java.lang
@@ -152,6 +153,36 @@ class RestSdkProvider(val sdkConfig: SdkConfig, actorSystem: ActorSystem)
       override def currentPublicIdentifier(context: Context): Unit = {
         logger.debug(s"issuer setup json: ${currentPublicIdentifierJson.toString}")
         sendHttpPostReq(context, currentPublicIdentifierJson.toString, ProtoRef("issuer-setup", "0.6"),
+          Option(UUID.randomUUID.toString))
+      }
+    }
+  }
+
+  override def issuerSetup_0_7: IssuerSetupV0_7 = {
+    val createJson = new JSONObject
+    createJson.put("@type", MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "issuer-setup", "0.7", "create")) // "did:sov:123456789abcdefghi1234;spec/issuer-setup/0.7/create")
+    createJson.put("@id", UUID.randomUUID.toString)
+
+    val currentPublicIdentifierJson = new JSONObject
+    currentPublicIdentifierJson.put("@type",
+      MsgFamily.typeStrFromMsgType(MsgFamily.EVERNYM_QUALIFIER, "issuer-setup", "0.7", "current-public-identifier")) // "did:sov:123456789abcdefghi1234;spec/issuer-setup/0.7/current-public-identifier")
+    currentPublicIdentifierJson.put("@id", UUID.randomUUID.toString)
+
+    new UndefinedIssuerSetup_0_7 {
+      override def create(context: Context, ledgerPrefix: String): Unit = {
+        createJson.put("ledgerPrefix", ledgerPrefix)
+        logger.debug(s"issuer setup json: ${createJson.toString}")
+        sendHttpPostReq(context, createJson.toString, ProtoRef("issuer-setup", "0.7"), Option(UUID.randomUUID.toString))
+      }
+      override def create(context: Context, ledgerPrefix: String, endorser: String): Unit = {
+        logger.debug(s"issuer setup json: ${createJson.toString}")
+        createJson.put("ledgerPrefix", ledgerPrefix)
+        createJson.put("endorser", endorser)
+        sendHttpPostReq(context, createJson.toString, ProtoRef("issuer-setup", "0.7"), Option(UUID.randomUUID.toString))
+      }
+      override def currentPublicIdentifier(context: Context): Unit = {
+        logger.debug(s"issuer setup json: ${currentPublicIdentifierJson.toString}")
+        sendHttpPostReq(context, currentPublicIdentifierJson.toString, ProtoRef("issuer-setup", "0.7"),
           Option(UUID.randomUUID.toString))
       }
     }

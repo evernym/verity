@@ -15,6 +15,7 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.ConnectionsDef
 import com.evernym.verity.protocol.protocols.deaddrop.DeadDropProtoDef
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.{IssueCredentialProtoDef => IssueCredentialProtocolDef_v_1_0}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.IssuerSetupDefinition
+import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.{IssuerSetupDefinition => IssuerSetupDefinitionV0_7}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandDef
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProofDef
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswerDefinition
@@ -55,6 +56,7 @@ package object protocols {
     (CredDefDefinition, V0_2, { new WriteCredDefDriver(_, _) }),
 
     (IssuerSetupDefinition, V0_2, { new IssuerSetupDriver(_, _) }),
+    (IssuerSetupDefinitionV0_7, V0_2, { new IssuerSetupDriverV0_7(_,_) }),
 
     (IssueCredentialProtocolDef_v_1_0, V0_2, { new IssueCredentialDriver(_, _) }),
 
@@ -78,4 +80,7 @@ package object protocols {
       .getOrElse { throw new NoSuchElementException("protocol def not found for proto ref: " + protoRef) }
       .protoDef
   }
+
+  type ledgerRequestStr = String
+  type ledgerPrefixStr = String
 }

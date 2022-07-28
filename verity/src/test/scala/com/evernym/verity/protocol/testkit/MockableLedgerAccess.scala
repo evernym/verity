@@ -1,6 +1,7 @@
 package com.evernym.verity.protocol.testkit
 
 import akka.actor.ActorRef
+import com.evernym.vdrtools.ledger.Ledger.buildNymRequest
 import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -18,6 +19,8 @@ import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vdr._
+import scala.compat.java8.FutureConverters.{toScala => toFuture}
+
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import org.json.JSONObject
 
@@ -87,6 +90,22 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         val jsonObject = new JSONObject(credDefJson)
+        endorser.foreach(eid => jsonObject.put("endorser", eid))
+        val json = jsonObject.toString()
+        submitterDids += json.hashCode -> submitterDID
+        Try(PreparedTxn(TEST_INDY_SOVRIN_NAMESPACE, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, INDY_ENDORSEMENT))
+      }
+      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+    }
+  }
+
+  override def prepareDidTxn(didJson: String,
+                             submitterDID: FqDID,
+                             endorser: Option[String])
+                            (handler: Try[PreparedTxn] => Unit): Unit = {
+    handler {
+      if (ledgerAvailable) {
+        val jsonObject = new JSONObject(didJson)
         endorser.foreach(eid => jsonObject.put("endorser", eid))
         val json = jsonObject.toString()
         submitterDids += json.hashCode -> submitterDID

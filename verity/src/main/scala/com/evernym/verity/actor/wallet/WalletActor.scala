@@ -19,6 +19,7 @@ import com.evernym.verity.vault.WalletUtil._
 import com.evernym.verity.vault.operation_executor.DidOpExecutor.buildErrorDetail
 import com.evernym.verity.vault.service.{WalletMsgHandler, WalletMsgParam, WalletParam}
 import com.evernym.verity.vault.{KeyParam, WalletDoesNotExist, WalletExt, WalletProvider}
+import com.evernym.verity.vdr.LedgerPrefix
 import com.typesafe.scalalogging.Logger
 
 import java.util.UUID
@@ -259,7 +260,7 @@ case class SetupNewAgentWallet(ownerDidPair: Option[DidPair]) extends WalletComm
 
 case class CreateNewKey(DID: Option[DidStr] = None, seed: Option[String] = None) extends WalletCommand
 
-case class CreateDID(keyType: String) extends WalletCommand
+case class CreateDID(keyType: String, ledgerPrefix: Option[String] = None) extends WalletCommand
 
 case class StoreTheirKey(theirDID: DidStr, theirDIDVerKey: VerKeyStr, ignoreIfAlreadyExists: Boolean = false)
   extends WalletCommand

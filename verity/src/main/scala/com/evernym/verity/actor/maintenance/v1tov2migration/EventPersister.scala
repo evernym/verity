@@ -30,8 +30,8 @@ class EventPersister(val appConfig: AppConfig,
 
   override def handleEvent: Receive = {
     case RecoveryCompleted              => handleRecoveryCompleted()
-    case pmem: PersistentMultiEventMsg  => recoveredEvents = recoveredEvents :+ MultiEvent(untransformedEvents(pmem.events))
     case pm: PersistentMsg              => recoveredEvents = recoveredEvents ++ untransformedEvents(Seq(pm))
+    case pmem: PersistentMultiEventMsg  => recoveredEvents = recoveredEvents :+ MultiEvent(untransformedEvents(pmem.events))
   }
 
   private def untransformedEvents(transformedEvents: Seq[Any]): Seq[Any] = {

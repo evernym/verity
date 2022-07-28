@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_7
 
-import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
-import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID, OTHER_ID, SELF_ID}
+import com.evernym.verity.constants.InitParamConstants.{MY_ISSUER_DID, SELF_ID}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
@@ -9,15 +8,11 @@ import com.evernym.verity.protocol.engine.asyncapi.endorser.ENDORSEMENT_RESULT_S
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{IndyLedgerUtil, TxnForEndorsement}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignedMsgResult
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
-import com.evernym.verity.protocol.engine.events.{ParameterStored, ProtocolInitialized}
-import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.ProtocolHelpers.{defineSelf, noHandleProtoMsg}
-import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vdr.{FqDID, PreparedTxn}
 import com.evernym.verity.vdr.VDRUtil.extractUnqualifiedDidStr
-import com.fasterxml.jackson.databind.exc.PropertyBindingException
 
 import scala.util.{Failure, Success, Try}
 
@@ -75,7 +70,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
         ctx.wallet.newDid(Some(ledgerPrefix)) {
         case Success(keyCreated) =>
           ctx.apply(CreatePublicIdentifierCompleted(keyCreated.did, keyCreated.verKey))
-          val fqSubmitterDID = ctx.ledger.fqDID(keyCreated.did, false)
+          val fqSubmitterDID = ctx.ledger.fqDID(keyCreated.did, force = false)
           ctx.endorser.withCurrentEndorser(ledgerPrefix) {
             case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID.contains(endorser.did) =>
               ctx.logger.info(s"registered endorser to be used for issuer endorsement (prefix: $ledgerPrefix): " + endorser)
@@ -91,7 +86,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
             case other => {
               ctx.logger.info(s"no active/matched endorser found to be used for issuer endorsement (prefix: $ledgerPrefix): " + other)
               //any failure while getting active endorser, or no active endorser or active endorser is NOT the same as given/configured endorserDID
-              handleNeedsEndorsement(fqSubmitterDID, fqSubmitterDID, keyCreated.verKey, endorserDID.getOrElse(""), ledgerPrefix)
+              handleNeedsEndorsement(fqSubmitterDID, fqSubmitterDID, keyCreated.verKey, endorserDID.getOrElse(""))
             }
           }
         case Failure(e) => problemReport(new Exception(s"$didCreateErrorMsg, reason: ${e.toString}"))
@@ -102,24 +97,19 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
   private def handleNeedsEndorsement(submitterDID: DidStr,
                                      targetDID: DidStr,
                                      verkey: VerKeyStr,
-                                     endorserDID: String,
-                                     ledgerPrefix: String): Unit = {
-    if (endorserDID.nonEmpty) {
-      prepareTxnForEndorsement(submitterDID, prepareDidJson(targetDID, verkey), endorserDID) {
-        case Success(ledgerRequest) =>
-          ctx.signal(PublicIdentifierCreated(PublicIdentifier(targetDID, verkey), NeedsEndorsement(ledgerRequest)))
-          ctx.apply(NeedsManualEndorsement())
-        case Failure(e) =>
-          problemReport(e)
-      }
-    } else {
-      problemReport(new Exception("No endorser available for the given ledger prefix"))
+                                     endorserDID: String): Unit = {
+    prepareTxnForEndorsement(submitterDID, prepareDidJson(targetDID, verkey), endorserDID) {
+      case Success(ledgerRequest) =>
+        ctx.signal(PublicIdentifierCreated(PublicIdentifier(targetDID, verkey), NeedsEndorsement(ledgerRequest)))
+        ctx.apply(NeedsManualEndorsement())
+      case Failure(e) =>
+        problemReport(e)
     }
   }
 
   private def prepareDidJson(targetDid: String, verkey: String): String = {
     // This assumes an indy ledger, as the txnSpecificParams for VDRTools prepare DID Cheqd API have not been finalized
-    s"{\"dest\": \"$targetDid\", \"verkey\": \"$verkey\"}"
+    s"""{"dest": "$targetDid", "verkey": "$verkey"}"""
   }
 
   private def prepareTxnForEndorsement(fqSubmitterDID: FqDID,

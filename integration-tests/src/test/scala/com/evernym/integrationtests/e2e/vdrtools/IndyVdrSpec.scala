@@ -6,15 +6,16 @@ import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
 import com.evernym.vdrtools.IndyException
 import com.evernym.vdrtools.anoncreds.Anoncreds
 import com.evernym.vdrtools.crypto.Crypto
-import com.evernym.vdrtools.did.{Did, DidJSONParameters}
+import com.evernym.vdrtools.did.Did
 import com.evernym.vdrtools.wallet.Wallet
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
-import com.evernym.verity.actor.wallet.{CreateNewKey, CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, MasterSecretCreated, NewKeyCreated, SignedMsg}
+import com.evernym.verity.actor.wallet.{CredCreated, CredDefCreated, CredForProofReqCreated, CredOfferCreated, CredReqCreated, CredStored, MasterSecretCreated, NewKeyCreated, SignedMsg}
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.did.didcomm.v1.decorators.AttachmentDescriptor.buildAttachment
+import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.{CredIssued, CredOffered, CredRequested, IssueCredential}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredential.{buildCredPreview, extractCredOfferJson, extractCredReqJson, toAttachmentObject}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, RequestCred}
@@ -30,7 +31,7 @@ import com.evernym.verity.vault.WalletUtil.generateWalletParamSync
 import com.evernym.verity.vault.WalletDoesNotExist
 import com.evernym.verity.vault.operation_executor.FutureConverter
 import com.evernym.verity.vdr.service.{VDRToolsConfig, VDRToolsFactory, VdrToolsBuilderImpl}
-import com.evernym.verity.vdr.{CredDef, DidDoc, FqDID, LedgerStatus, PreparedTxn, Schema, SubmittedTxn, VDRActorAdapter, VDRAdapter, VDRUtil}
+import com.evernym.verity.vdr.{CredDef, DidDoc, LedgerPrefix, LedgerStatus, Namespace, PreparedTxn, Schema, SubmittedTxn, VDRActorAdapter, VDRAdapter, VDRUtil}
 import com.evernym.verity.vdrtools.Libraries
 import com.evernym.verity.vdrtools.wallet.LibIndyWalletProvider
 import com.typesafe.config.{Config, ConfigFactory}
@@ -45,7 +46,9 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
+
 //purpose of this spec is to test VdrTools api for Indy based ledgers
+//assumes ledger is started (via devlab utility)
 class IndyVdrSpec
   extends BasicSpec
     with BeforeAndAfterAll
@@ -55,25 +58,27 @@ class IndyVdrSpec
     Libraries.initialize(appConfig)
   }
 
-
   implicit val actorSystem: ActorSystem = ActorSystemVanilla("test")
   implicit val ec: ExecutionContext = TestExecutionContextProvider.ecp.futureExecutionContext
 
+  var schemaCreated: Schema = null
+  var credDefCreated: CredDef = null
+  val credId: String = UUID.randomUUID().toString
+
+  val indyLedgerNamespace: Namespace = "indy:sovrin"
+  val unqualifiedLedgerPrefix: LedgerPrefix = s"did:$indyLedgerNamespace"
+
   var trusteeWallet: Wallet = createOrOpenWallet("trusteeWallet")
-  var trusteeKey: NewKeyCreated = createNewKey(trusteeWallet, CreateNewKey(seed = Option("000000000000000000000000Trustee1")))
-  var trusteeFqDid: FqDID = VDRUtil.toFqDID(trusteeKey.did, vdrMultiLedgerSupportEnabled, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
+  var trusteeDID: NewKeyCreated = createNewDID(trusteeWallet, seed=Option("000000000000000000000000Trustee1"), ledgerNamespace = Option(indyLedgerNamespace))
 
   var issuerWallet: Wallet = createOrOpenWallet("issuerWallet")
-  var issuerKey: NewKeyCreated = createNewKey(issuerWallet, CreateNewKey())
-  var issuerFqDid: FqDID = VDRUtil.toFqDID(issuerKey.did, vdrMultiLedgerSupportEnabled, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
+  var issuerDID: NewKeyCreated = createNewDID(issuerWallet, ledgerNamespace = Option(indyLedgerNamespace))
 
   var verifierWallet: Wallet = createOrOpenWallet("verifierWallet")
-  var verifierKey: NewKeyCreated = createNewKey(verifierWallet, CreateNewKey())
-  var verifierFqDid: FqDID = VDRUtil.toFqDID(verifierKey.did, vdrMultiLedgerSupportEnabled, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
+  var verifierDID: NewKeyCreated = createNewDID(verifierWallet, ledgerNamespace = Option(indyLedgerNamespace))
 
   val holderWallet: Wallet = createOrOpenWallet("holderWallet")
-  var holderKey: NewKeyCreated = createNewKey(holderWallet, CreateNewKey())
-  var holderFqDid: FqDID = VDRUtil.toFqDID(holderKey.did, vdrMultiLedgerSupportEnabled, UNQUALIFIED_LEDGER_PREFIX, ledgerPrefixMapping)
+  var holderDID: NewKeyCreated = createNewDID(holderWallet, ledgerNamespace = Option(indyLedgerNamespace))
 
   val holderMasterSecretId: String = UUID.randomUUID().toString
   runAsSync(Anoncreds.proverCreateMasterSecret(holderWallet, holderMasterSecretId).map(ms => MasterSecretCreated(ms)))
@@ -81,7 +86,7 @@ class IndyVdrSpec
   val legacyLedgerUtil: LegacyLedgerUtil = LedgerClient.buildLedgerUtil(
     config = new TestAppConfig(newConfig = Option(vdrConfig), clearValidators = true),
     ec = ec,
-    submitterDID = Option(trusteeKey.did),
+    submitterDID = Option(trusteeDID.did),
     submitterKeySeed = Option("000000000000000000000000Trustee1"),
     genesisTxnPath = Option("target/genesis.txt")
   )
@@ -90,8 +95,8 @@ class IndyVdrSpec
 
     "when called ping api" - {
       "should be successful" in {
-        val pingResult = runAsSync(vdrAdapter.ping(List(INDY_NAMESPACE)))
-        pingResult.status shouldBe Map(INDY_NAMESPACE -> LedgerStatus(reachable = true))
+        val pingResult = runAsSync(vdrAdapter.ping(List(indyLedgerNamespace)))
+        pingResult.status shouldBe Map(indyLedgerNamespace -> LedgerStatus(reachable = true))
       }
     }
 
@@ -99,7 +104,7 @@ class IndyVdrSpec
       "should fail" in {
         val preparedTxn = runAsSync {
           val schemaCreated = Anoncreds.issuerCreateSchema(
-            issuerFqDid,
+            issuerDID.did,
             "employment",
             "1.0",
             seqToJson(List("name", "company"))
@@ -107,28 +112,28 @@ class IndyVdrSpec
 
           vdrAdapter.prepareSchemaTxn(
             schemaCreated.getSchemaJson,
-            VDRUtil.toFqSchemaId_v0(schemaCreated.getSchemaId, Option(issuerFqDid), Option(UNQUALIFIED_LEDGER_PREFIX), vdrMultiLedgerSupportEnabled),
-            issuerFqDid,
+            VDRUtil.toFqSchemaId_v0(schemaCreated.getSchemaId, Option(issuerDID.did), Option(unqualifiedLedgerPrefix), vdrMultiLedgerSupportEnabled),
+            issuerDID.did,
             None
           )
         }
 
         val ex = intercept[IndyException] {
-          signAndSubmitTxn(issuerWallet, issuerKey.verKey, preparedTxn)
+          signAndSubmitTxn(issuerWallet, issuerDID.verKey, preparedTxn)
         }
-        ex.getSdkMessage.contains(s"client request invalid: could not authenticate, verkey for ${issuerKey.did} cannot be found")
+        ex.getSdkMessage.contains(s"client request invalid: could not authenticate, verkey for ${issuerDID.did} cannot be found")
       }
     }
 
     "when tried to bootstrap issuer DID" - {
       "should be successful" in {
-        bootstrapIssuerDIDViaVDRTools(issuerKey.did, issuerKey.verKey, "ENDORSER")
+        bootstrapIssuerDIDViaVDRTools(issuerDID.did, issuerDID.verKey, "ENDORSER")
         //bootstrapIssuerDIDLegacy(issuerKey.did, issuerKey.verKey, "ENDORSER")
 
-        resolveDid(issuerFqDid)
+        resolveDid(issuerDID.did)
 
         eventually(Timeout(10.seconds), Interval(Duration("20 seconds"))) {
-          legacyLedgerUtil.checkDidOnLedger(issuerKey.did, issuerKey.verKey, "ENDORSER")
+          legacyLedgerUtil.checkDidOnLedger(issuerDID.did, issuerDID.verKey, "ENDORSER")
         }
       }
     }
@@ -137,22 +142,22 @@ class IndyVdrSpec
       "should be successful" in {
         val preparedTxn = runAsSync {
           val result = Anoncreds.issuerCreateSchema(
-            issuerFqDid,
+            issuerDID.did,
             "employment",
             "1.0",
             seqToJson(List("name", "company"))
           ).get()
           schemaCreated = Schema(result.getSchemaId, result.getSchemaJson)
-          schemaCreated.fqId shouldBe s"$UNQUALIFIED_LEDGER_PREFIX:${issuerKey.did}/anoncreds/v0/SCHEMA/employment/1.0"
+          schemaCreated.fqId shouldBe s"${issuerDID.did}/anoncreds/v0/SCHEMA/employment/1.0"
           vdrAdapter.prepareSchemaTxn(
             schemaCreated.json,
-            VDRUtil.toFqSchemaId_v0(schemaCreated.fqId, Option(issuerFqDid), Option(UNQUALIFIED_LEDGER_PREFIX), vdrMultiLedgerSupportEnabled),
-            issuerFqDid,
+            VDRUtil.toFqSchemaId_v0(schemaCreated.fqId, Option(issuerDID.did), Option(unqualifiedLedgerPrefix), vdrMultiLedgerSupportEnabled),
+            issuerDID.did,
             None
           )
         }
 
-        val submittedTxn = signAndSubmitTxn(issuerWallet, issuerKey.verKey, preparedTxn)
+        val submittedTxn = signAndSubmitTxn(issuerWallet, issuerDID.verKey, preparedTxn)
 
         val response = new JSONObject(submittedTxn.response)
         response.getString("op") shouldBe "REPLY"
@@ -178,7 +183,7 @@ class IndyVdrSpec
     "when tried to write cred def" - {
       "should be successful" in {
         val schema = runAsSync(vdrAdapter.resolveSchema(schemaCreated.fqId))
-        schema.fqId shouldBe s"$UNQUALIFIED_LEDGER_PREFIX:${issuerKey.did}/anoncreds/v0/SCHEMA/employment/1.0"
+        schema.fqId shouldBe s"${issuerDID.did}/anoncreds/v0/SCHEMA/employment/1.0"
         val schemaJSONObj = new JSONObject(schema.json)
         val seqNo = schemaJSONObj.getNumber("seqNo")
         val preparedTxn = runAsSync {
@@ -186,23 +191,23 @@ class IndyVdrSpec
           val result = runAsSync(
             Anoncreds.issuerCreateAndStoreCredentialDef(
               issuerWallet,
-              issuerFqDid,
+              issuerDID.did,
               schema.json,
               "latest",
              "CL",
              configJson
             ).map(r => CredDefCreated(r.getCredDefId, r.getCredDefJson)))
           credDefCreated = CredDef(result.credDefId, schema.fqId, result.credDefJson)
-          credDefCreated.fqId shouldBe s"$UNQUALIFIED_LEDGER_PREFIX:${issuerKey.did}/anoncreds/v0/CLAIM_DEF/$seqNo/latest"
+          credDefCreated.fqId shouldBe s"${issuerDID.did}/anoncreds/v0/CLAIM_DEF/$seqNo/latest"
           vdrAdapter.prepareCredDefTxn(
             credDefCreated.json,
-            VDRUtil.toFqSchemaId_v0(credDefCreated.fqId, Option(issuerFqDid), Option(UNQUALIFIED_LEDGER_PREFIX), vdrMultiLedgerSupportEnabled),
-            issuerFqDid,
+            VDRUtil.toFqSchemaId_v0(credDefCreated.fqId, Option(issuerDID.did), Option(unqualifiedLedgerPrefix), vdrMultiLedgerSupportEnabled),
+            issuerDID.did,
             None
           )
         }
 
-        val submittedTxn = signAndSubmitTxn(issuerWallet, issuerKey.verKey, preparedTxn)
+        val submittedTxn = signAndSubmitTxn(issuerWallet, issuerDID.verKey, preparedTxn)
         val response = new JSONObject(submittedTxn.response)
         response.getString("op") shouldBe "REPLY"
         val result = response.getJSONObject("result")
@@ -236,7 +241,7 @@ class IndyVdrSpec
 
         //holder creates cred request
         val credReqCreated = runAsSync(Anoncreds.proverCreateCredentialReq(
-          holderWallet, holderKey.did, credOfferCreated.offer, credDefCreated.json, holderMasterSecretId)
+          holderWallet, holderDID.did, credOfferCreated.offer, credDefCreated.json, holderMasterSecretId)
           .map(r => CredReqCreated(r.getCredentialRequestJson, r.getCredentialRequestMetadataJson)))
         val requestCred = buildRequestCred(credReqCreated)
 
@@ -263,7 +268,7 @@ class IndyVdrSpec
       "should be successful" in {
         //verifier creates presentation request
         val schema = runAsSync(vdrAdapter.resolveSchema(schemaCreated.fqId))
-        schema.fqId shouldBe s"$UNQUALIFIED_LEDGER_PREFIX:${issuerKey.did}/anoncreds/v0/SCHEMA/employment/1.0"
+        schema.fqId shouldBe s"${issuerDID.did}/anoncreds/v0/SCHEMA/employment/1.0"
 
         val req = Request("employment",
           Option(List(
@@ -289,15 +294,16 @@ class IndyVdrSpec
         val reqAttributesJSONObject = credsToUseJSONObject.getJSONObject("requested_attributes")
         val attrsJSONObject = reqAttributesJSONObject.getJSONObject("name:company")
         attrsJSONObject.getBoolean("revealed") shouldBe true
+        //NOTE: this needs to be
       }
     }
   }
 
   private def bootstrapIssuerDIDViaVDRTools(did: DidStr, verKey: VerKeyStr, role: String): Unit = {
     val preparedTxn = runAsSync {
-      vdrAdapter.prepareDidTxn(s"""{"dest":"$did", "verkey": "$verKey", "role": "$role"}""", trusteeFqDid, None)
+      vdrAdapter.prepareDidTxn(s"""{"dest":"$did", "verkey": "$verKey", "role": "$role"}""", trusteeDID.did, None)
     }
-    val submittedTxn = signAndSubmitTxn(trusteeWallet, trusteeKey.verKey, preparedTxn)
+    val submittedTxn = signAndSubmitTxn(trusteeWallet, trusteeDID.verKey, preparedTxn)
 
     val response = new JSONObject(submittedTxn.response)
     response.getString("op") shouldBe "REPLY"
@@ -336,12 +342,16 @@ class IndyVdrSpec
     wallet
   }
 
-  private def createNewKey(wallet: Wallet, cnk: CreateNewKey): NewKeyCreated = {
-    val DIDJson = new DidJSONParameters.CreateAndStoreMyDidJSONParameter(
-      cnk.DID.orNull, cnk.seed.orNull, null, null)
+  private def createNewDID(wallet: Wallet,
+                           seed: Option[String]=None,
+                           ledgerNamespace: Option[String]=None): NewKeyCreated = {
+    val didJson = new JSONObject()
+    didJson.put("crypto_type", KEY_ED25519)
+    seed.foreach(s => didJson.put("seed", s))
+    ledgerNamespace.foreach(mn => didJson.put("method_name", mn))
     runAsSync(
       Did
-        .createAndStoreMyDid(wallet, DIDJson.toJson)
+        .createAndStoreMyDid(wallet, didJson.toString())
         .map( r => NewKeyCreated(r.getDid, r.getVerkey))
     )
   }
@@ -405,10 +415,6 @@ class IndyVdrSpec
     }
   }
 
-  var schemaCreated: Schema = null
-  var credDefCreated: CredDef = null
-  val credId: String = UUID.randomUUID().toString
-
   private def runAsSync[T](f: Future[T]): T = {
       Await.result(f, 25.seconds)
   }
@@ -422,10 +428,8 @@ class IndyVdrSpec
     )(ec, as.toTyped)
   }
 
-  lazy val INDY_NAMESPACE = "indy:sovrin"
-  lazy val UNQUALIFIED_LEDGER_PREFIX = s"did:$INDY_NAMESPACE"
   lazy val vdrMultiLedgerSupportEnabled = true
-  lazy val ledgerPrefixMapping = Map("did:sov" -> UNQUALIFIED_LEDGER_PREFIX)
+  lazy val ledgerPrefixMapping = Map("did:sov" -> indyLedgerNamespace)
 
   lazy val vdrConfig: Config = ConfigFactory.parseString(
     s"""
@@ -466,11 +470,11 @@ class IndyVdrSpec
       |
       |  }
       |  vdr {
-      |    unqualified-ledger-prefix = "$UNQUALIFIED_LEDGER_PREFIX"
+      |    unqualified-ledger-prefix = "$unqualifiedLedgerPrefix"
       |    ledgers: [
       |      {
       |        type = "indy"
-      |        namespaces = ["$INDY_NAMESPACE"]
+      |        namespaces = ["$indyLedgerNamespace"]
       |        genesis-txn-file-location = "target/genesis.txt"
       |
       |        transaction-author-agreement: {

@@ -12,7 +12,6 @@ import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.State.StateData
 import com.evernym.verity.protocol.protocols.ProtocolHelpers.{defineSelf, noHandleProtoMsg}
-import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Role, State}
 import com.evernym.verity.util2.Exceptions
 
 import scala.util.{Failure, Success}

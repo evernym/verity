@@ -95,13 +95,14 @@ case class VerityLocalNode(tmpDirPath: Path,
       "otherNodesStatus should not contain current node")
 
     val cluster = Cluster(platform.actorSystem)
-    cluster.selfMember.status == Up &&
+    isAvailable &&
+      cluster.selfMember.status == Up &&
       otherNodesStatus.forall { case (otherNode, expectedStatus) =>
         val otherMember = cluster.state.members.find(_.address.toString.contains(otherNode.portProfile.artery.toString))
         otherMember match {
+          case Some(om) => expectedStatus.contains(om.status)
           case None if expectedStatus.contains(Down) || expectedStatus.contains(Removed) => true
           case None => false
-          case Some(om) => expectedStatus.contains(om.status)
         }
       }
   }

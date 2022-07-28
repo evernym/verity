@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_7
 
-import com.evernym.verity.constants.Constants.UNKNOWN_OTHER_ID
-import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID, OTHER_ID, SELF_ID}
+import com.evernym.verity.constants.InitParamConstants.{MY_ISSUER_DID, SELF_ID}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
@@ -9,15 +8,11 @@ import com.evernym.verity.protocol.engine.asyncapi.endorser.ENDORSEMENT_RESULT_S
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{IndyLedgerUtil, TxnForEndorsement}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignedMsgResult
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
-import com.evernym.verity.protocol.engine.events.{ParameterStored, ProtocolInitialized}
-import com.evernym.verity.protocol.engine.msg.Init
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.protocols.ProtocolHelpers
 import com.evernym.verity.protocol.protocols.ProtocolHelpers.{defineSelf, noHandleProtoMsg}
-import com.evernym.verity.util.Base58Util
 import com.evernym.verity.vdr.{FqDID, PreparedTxn}
 import com.evernym.verity.vdr.VDRUtil.extractUnqualifiedDidStr
-import com.fasterxml.jackson.databind.exc.PropertyBindingException
 
 import scala.util.{Failure, Success, Try}
 

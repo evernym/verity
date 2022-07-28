@@ -376,7 +376,7 @@ case class HolderSdk(param: SdkParam,
                                statusCodes: Option[List[String]],
                                connId: Option[String]): ReceivedMsgParam[T] = {
     var unexpectedMsgs = Map.empty[MsgId, String]
-    for (tryCount <- 1 to 20) {
+    for (tryCount <- 1 to 30) {
       val getMsgs = GetMsgsReqMsg_MFV_0_6(excludePayload = excludePayload, statusCodes = statusCodes)
       val getMsgsJson = JsonMsgUtil.createJsonString(MSG_TYPE_DETAIL_GET_MSGS, getMsgs)
       val routedPackedMsg = {

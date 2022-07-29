@@ -25,6 +25,7 @@ package:
       cat <<EOF > verity/target/docker/verity_vers.env
       VERITY_APPLICATION_VERSION=$VERITY_VERSION
       VERITY_VERSION=$VERITY_VERSION
+      LIBVDRTOOLS_VERSION=$LIBVDRTOOLS_VERSION
       EOF
   tags:
     - docker-machine

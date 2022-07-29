@@ -6,23 +6,23 @@ Works with Verity SDK 0.6.1
 Includes VDR Tools 0.8.6
 
 ## Features
-* [VE-2839] multi-network support for Verity (currently it is **DISABLED** until mobile apps has the same capability)
+* [VE-2839] Multi-network support for Verity (currently it is **DISABLED** until mobile apps has the same capability)
   * [VE-3340] Implement infrastructure changes to support multi-network 
-  * [VE-3242] Implement new version of IssuerSetup 0.7 protocol to add support for choosing the ledger for issuer did in Verity
+  * [VE-3242] Implement new version of IssuerSetup 0.7 protocol to add support for choosing the ledger for issuer DID in Verity
 
 ## Bug
-* [VE-2915] error response from protocol actor: unable to determine other
-* [VE-3378] Name and LogoUrl changes from relationship protocol is not propagating to OOB invitations
+* [VE-2915] Error response from protocol actor: unable to determine other
+* [VE-3378] Name and LogoURL changes from relationship protocol is not propagating to OOB invitations
 
 ## Task
-* [VE-2839] multi-network support for Verity
-  * [VE-3552] refactor verity and vdr api integration to make fully qualified identifiers support configurable (by default it should be off) 
+* [VE-2839] Multi-network support for Verity
+  * [VE-3552] Refactor Verity and VDR api integration to make fully qualified identifiers support configurable (by default it should be off) 
   * [VE-3041] Refactor "WriteSchema" protocol to use new VDR apis
   * [VE-3042] Refactor "WriteCredDef" protocol to use new VDR apis
   * [VE-3043] Refactor "IssueCredential" protocol to use new VDR apis
   * [VE-3044] Refactor "PresentProof" protocol to use new VDR apis
   * [VE-3372] Refactor LedgerVerKeyCacheFetcher to use new VDR apis
-  * [VE-2978] Add "check/ping VDR" to LaunchPreCheck (additional to what it is there already)
+  * [VE-2978] Add "check/ping VDR" to LaunchPreCheck (additional to what is there already)
 * [VE-3151] Plan effort to load test K8s environment (Tickets are created)
 * Dependency updates:
   * libVdrTools  `0.8.4  -> 0.8.6` 

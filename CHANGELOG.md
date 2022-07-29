@@ -1,7 +1,37 @@
 Note: When interacting with Verity, it will also be helpful to review [the Verity SDK Release Notes](https://gitlab.com/evernym/verity/verity-sdk/-/blob/main/CHANGELOG.md) and [the VDR Tools Release Notes](https://gitlab.com/evernym/verity/vdr-tools/-/blob/main/CHANGELOG.md)
 
 
-# Release notes - Verity 2.18.0 release TBD
+# Release notes - Verity 2.19.0 release TBD
+Works with Verity SDK 0.6.1
+Includes VDR Tools 0.8.6
+
+## Features
+* [VE-2839] multi-network support for Verity (currently it is **DISABLED** until mobile apps has the same capability)
+  * [VE-3340] Implement infrastructure changes to support multi-network 
+  * [VE-3242] Implement new version of IssuerSetup 0.7 protocol to add support for choosing the ledger for issuer did in Verity
+
+## Bug
+* [VE-2915] error response from protocol actor: unable to determine other
+* [VE-3378] Name and LogoUrl changes from relationship protocol is not propagating to OOB invitations
+
+## Task
+* [VE-2839] multi-network support for Verity
+  * [VE-3552] refactor verity and vdr api integration to make fully qualified identifiers support configurable (by default it should be off) 
+  * [VE-3041] Refactor "WriteSchema" protocol to use new VDR apis
+  * [VE-3042] Refactor "WriteCredDef" protocol to use new VDR apis
+  * [VE-3043] Refactor "IssueCredential" protocol to use new VDR apis
+  * [VE-3044] Refactor "PresentProof" protocol to use new VDR apis
+  * [VE-3372] Refactor LedgerVerKeyCacheFetcher to use new VDR apis
+  * [VE-2978] Add "check/ping VDR" to LaunchPreCheck (additional to what it is there already)
+* [VE-3151] Plan effort to load test K8s environment (Tickets are created)
+* Dependency updates:
+  * libVdrTools  `0.8.4  -> 0.8.6` 
+  * kamon        `2.5.0  -> 2.5.5`
+  * cinnamon     `2.16.2 -> 2.16.5`
+  * jackson      `2.13.2 -> 2.13.3`
+
+  
+# Release notes - Verity 2.18.0 release 22 June 2022
 Works with Verity SDK 0.6.1
 Includes VDR Tools 0.8.4
 

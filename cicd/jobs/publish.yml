@@ -37,6 +37,9 @@ publish-docker:
   script:
     # Make Kaniko trust Evernym's internal CA
     - cat "$EVERNYM_CERTIFICATE" >> /kaniko/ssl/certs/ca-certificates.crt
+    # Move to pre-packaged docker directory
+    - cd $CI_PROJECT_DIR/verity/target/docker
+    - ls -lR
     # establish kaniko's config file from gitlab-runner environment variables
     - >
       printf

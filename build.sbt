@@ -84,7 +84,7 @@ val COMPILE_TIME_ONLY = "compileonly"
 val CompileOnly = config(COMPILE_TIME_ONLY)
 
 val majorNum = "2"
-val minorNum = "18"
+val minorNum = "19"
 val patchNum = "0"
 
 // I'm not sure why setting this keys don't resolve in all

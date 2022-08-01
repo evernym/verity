@@ -22,6 +22,7 @@ import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageMsgF
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.CommittedAnswerMsgFamily
 import com.evernym.verity.protocol.protocols.connections.v_1_0.ConnectionsMsgFamily
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredMsgFamily
+import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.{ IssuerSetup => IssuerSetup0_7}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandMsgFamily
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProofMsgFamily
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.RelationshipMsgFamily
@@ -169,8 +170,10 @@ trait InteractiveSdkFlow extends MetricsFlow {
         issuerSdk.issuerSetup_0_7.currentPublicIdentifier(issuerSdk.context)
 
         receiverSdk.checkMsg(){ resp =>
-          if(resp.getString(`@TYPE`).contains("problem-report")) {
-
+          if (resp.getString(`@TYPE`).contains("public-identifier") ||
+            resp.getString("message").startsWith(IssuerSetup0_7.identifierAlreadyCreatedErrorMsg)) {
+            logger.info("Issuer is already setup")
+          } else if(resp.getString(`@TYPE`).contains("problem-report")) {
             issuerSdk.issuerSetup_0_7
               .create(issuerSdk.context, "did:indy:sovrin", endorser.getOrElse("WAJQSd73TpK2HmoYRQJX7p"))
 
@@ -181,8 +184,6 @@ trait InteractiveSdkFlow extends MetricsFlow {
               assert(resp.getJSONObject("identifier").has("did"))
               assert(resp.getJSONObject("status").has("needsEndorsement"))
             }
-          } else if (resp.getString(`@TYPE`).contains("public-identifier")) {
-            logger.info("Issuer is already setup")
           } else {
             throw new Exception("Unexpected message type")
           }

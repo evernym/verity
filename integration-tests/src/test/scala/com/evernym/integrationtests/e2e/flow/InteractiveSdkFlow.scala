@@ -171,7 +171,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
         receiverSdk.checkMsg(){ resp =>
           if (resp.getString(`@TYPE`).contains("public-identifier") ||
-            resp.getString("message").startsWith(IssuerSetup0_7.identifierAlreadyCreatedErrorMsg)) {
+            resp.getString("message").contains(IssuerSetup0_7.identifierAlreadyCreatedErrorMsg)) {
             logger.info("Issuer is already setup")
           } else if(resp.getString(`@TYPE`).contains("problem-report")) {
             issuerSdk.issuerSetup_0_7

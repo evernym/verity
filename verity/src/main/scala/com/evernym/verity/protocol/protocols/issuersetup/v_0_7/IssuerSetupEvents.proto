@@ -30,10 +30,17 @@ message NeedsManualEndorsement {
     option (scalapb.message).extends = "Event";
 }
 
+message FoundExistingIssuer {
+    option (scalapb.message).extends = "Event";
+    string issuerDid = 1;
+    string issuerVerkey = 2;
+}
+
 message DIDWritten {
     option (scalapb.message).extends = "Event";
 }
 
+// event should no longer be possible but has already been recorded
 message IssuerSetupFailed {
     option (scalapb.message).extends = "Event";
     string error = 1;

@@ -164,16 +164,16 @@ trait InteractiveSdkFlow extends MetricsFlow {
     s"create issuer public identifier on $issuerName" - {
 
       val receiverSdk = receivingSdk(Option(msgReceiverSdkProvider))
+      issuerSdk.publicDID = Some("WAJQSd73TpK2HmoYRQJX7p")
 
       s"[$issuerName] use issuer-setup protocol" in {
 
         issuerSdk.issuerSetup_0_7.currentPublicIdentifier(issuerSdk.context)
 
         receiverSdk.checkMsg(){ resp =>
-          if (resp.getString(`@TYPE`).contains("public-identifier") ||
-            resp.getString("message").startsWith(IssuerSetup0_7.identifierAlreadyCreatedErrorMsg)) {
-            logger.info("Issuer is already setup")
-          } else if(resp.getString(`@TYPE`).contains("problem-report")) {
+          if (resp.getString(`@TYPE`).contains("problem-report") &&
+            resp.getString("message").startsWith(IssuerSetup0_7.identifierNotCreatedProblem)) {
+            logger.info("Issuer has not been set up")
             issuerSdk.issuerSetup_0_7
               .create(issuerSdk.context, "did:indy:sovrin", endorser.getOrElse("WAJQSd73TpK2HmoYRQJX7p"))
 
@@ -208,7 +208,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
         issuerSdk.issuerSetup_0_6.currentPublicIdentifier(issuerSdk.context)
 
-        receiverSdk.expectMsg("problem-report"){ resp =>
+        receiverSdk.expectMsg("public-identifier"){ resp =>
           resp shouldBe an[JSONObject]
         }
         issuerSdk.issuerSetup_0_6
@@ -216,7 +216,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
 
         receiverSdk.expectMsg("problem-report") { resp =>
           resp shouldBe an[JSONObject]
-          assert(resp.getString("message").equals("Public identifier has already been created. This can happen if IssuerSetup V0.7 has already ben called for this Verity Tenant."))
+          resp.getString("message") shouldBe "Issuer Identifier is already created or in the process of creation"
         }
       }
     }

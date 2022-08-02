@@ -334,7 +334,8 @@ object DefaultObjectCodeMapper extends ObjectCodeMapperBase {
     272 -> issuerSetup_v07.DIDWritten,
     273 -> issuerSetup_v07.AskedForEndorsement,
     274 -> issuerSetup_v07.IssuerSetupFailed,
-    275 -> issuerSetup_v07.NeedsManualEndorsement
+    275 -> issuerSetup_v07.NeedsManualEndorsement,
+    276 -> issuerSetup_v07.FoundExistingIssuer
   )
 
 }

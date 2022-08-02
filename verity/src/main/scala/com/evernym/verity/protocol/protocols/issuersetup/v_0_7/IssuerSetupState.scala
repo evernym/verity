@@ -16,8 +16,4 @@ object State {
   case class Identity(did: DidStr, verKey: VerKeyStr)
 
   case class WaitingOnEndorser(ledgerPrefix: ledgerPrefixStr, identity: Identity) extends State
-
-  case class Done(identity: Identity) extends State
-
-  case class Error(error: String) extends State
 }

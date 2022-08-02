@@ -71,6 +71,66 @@ class IssuerSetupSpec
       i.verKey shouldBe "9xXbnac6atQRyESyLWtnxFRwnTRCrLWEAA9rvJKp5Kt1"
     }
 
+    "path create with preexisting identifier of Issuer public identifier" in withOwner { s =>
+      s.owner.initParams(Map(
+        MY_ISSUER_DID -> "HSCj6zbP9BKYHSkF3hdPib",
+        DEFAULT_ENDORSER_DID -> ""
+      ))
+
+      s.owner walletAccess MockableWalletAccess()
+
+      s.owner ledgerAccess MockableLedgerAccess()
+
+      s.owner ~ Create()
+
+      s.owner.backState.roster.selfRole.value shouldBe Role.Owner
+
+      s.owner.state shouldBe an [State.Created]
+
+      s.owner expect signal [PublicIdentifier]
+
+      s.owner.state shouldBe an [State.Created]
+
+      val d = s.owner.state.asInstanceOf[State.Created].data
+      d.identity.value.did shouldBe "HSCj6zbP9BKYHSkF3hdPib"
+
+      s.owner ~ CurrentPublicIdentifier()
+
+      val i: PublicIdentifier = s.owner expect signal [PublicIdentifier]
+
+      i.did shouldBe "HSCj6zbP9BKYHSkF3hdPib"
+    }
+
+    "path currentPublicIdentifier with preexisting identifier of Issuer public identifier" in withOwner { s =>
+      s.owner.initParams(Map(
+        MY_ISSUER_DID -> "HSCj6zbP9BKYHSkF3hdPib",
+        DEFAULT_ENDORSER_DID -> ""
+      ))
+
+      s.owner walletAccess MockableWalletAccess()
+
+      s.owner ledgerAccess MockableLedgerAccess()
+
+      s.owner ~ CurrentPublicIdentifier()
+
+      s.owner.backState.roster.selfRole.value shouldBe Role.Owner
+
+      s.owner.state shouldBe an [State.Created]
+
+      s.owner expect signal [PublicIdentifier]
+
+      s.owner.state shouldBe an [State.Created]
+
+      val d = s.owner.state.asInstanceOf[State.Created].data
+      d.identity.value.did shouldBe "HSCj6zbP9BKYHSkF3hdPib"
+
+      s.owner ~ CurrentPublicIdentifier()
+
+      val i: PublicIdentifier = s.owner expect signal [PublicIdentifier]
+
+      i.did shouldBe "HSCj6zbP9BKYHSkF3hdPib"
+    }
+
     "Double create control message succeed with problem report" in { s =>
       pending
     }

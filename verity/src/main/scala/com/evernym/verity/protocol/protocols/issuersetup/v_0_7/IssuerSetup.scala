@@ -49,22 +49,21 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     case (State.Created(d), _, CurrentPublicIdentifier()) => ctx.signal(PublicIdentifier(d.did, d.verKey))
     case (State.WaitingOnEndorser(l,d), _, CurrentPublicIdentifier()) => ctx.signal(PublicIdentifier(d.did, d.verKey))
     case (State.Done(d), _, CurrentPublicIdentifier()) => ctx.signal(PublicIdentifier(d.did, d.verKey))
+    case (s: State.Error, _, CurrentPublicIdentifier()) => ctx.signal(ProblemReport(s.error))
     case (_, _, CurrentPublicIdentifier()) => ctx.signal(ProblemReport(identifierNotCreatedProblem))
-    case (s: State, _, msg: Control) =>
-      ctx.signal(ProblemReport(s"Unexpected '$msg' message in current state '$s")
-    )
+    case (s: State, _, msg: Control) => ctx.signal(ProblemReport(s"Unexpected '$msg' message in current state '$s"))
   }
 
   private def checkPublicIdentifier(init: State.Initialized): Unit = {
-    init.parameters.paramValue(MY_ISSUER_DID) match {
-      case Some(issuerDid) if issuerDid.nonEmpty => ctx.signal(ProblemReport(s"$identifierAlreadyCreatedErrorMsg Found IssuerDid: $issuerDid"))
+    extractExistingIssuerDID(init) match {
+      case Some(issuerDid) => ctx.signal(ProblemReport(s"$identifierAlreadyCreatedErrorMsg Found IssuerDid: $issuerDid"))
       case _ => ctx.signal(ProblemReport(identifierNotCreatedProblem))
     }
   }
 
   private def writeDIDToLedger(init: State.Initialized, ledgerPrefix: String, endorserDID: Option[String]): Unit = {
-    init.parameters.paramValue(MY_ISSUER_DID) match {
-      case Some(issuerDid) if issuerDid.nonEmpty => problemReport(new Exception(s"${identifierAlreadyCreatedErrorMsg}: ${issuerDid}"))
+    extractExistingIssuerDID(init) match {
+      case Some(issuerDid) => problemReport(new Exception(s"$identifierAlreadyCreatedErrorMsg: $issuerDid"))
       case _ =>
         ctx.logger.debug(s"Creating DID/Key pair for Issuer Identifier/Keys for ledger prefix: $ledgerPrefix with endorser: ${endorserDID.getOrElse("default")}")
         ctx.wallet.newDid(Some(ledgerPrefix)) {
@@ -106,6 +105,9 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
         problemReport(e)
     }
   }
+
+  private def extractExistingIssuerDID(init: State.Initialized): Option[DidStr] =
+    init.parameters.paramValue(MY_ISSUER_DID).filter(_.trim.nonEmpty)
 
   private def prepareDidJson(targetDid: String, verkey: String): String = {
     // This assumes an indy ledger, as the txnSpecificParams for VDRTools prepare DID Cheqd API have not been finalized

@@ -171,9 +171,10 @@ trait InteractiveSdkFlow extends MetricsFlow {
         issuerSdk.issuerSetup_0_7.currentPublicIdentifier(issuerSdk.context)
 
         receiverSdk.checkMsg(){ resp =>
-          if (resp.getString(`@TYPE`).contains("problem-report") &&
-            resp.getString("message").startsWith(IssuerSetup0_7.identifierNotCreatedProblem)) {
-            logger.info("Issuer has not been set up")
+          if (resp.getString(`@TYPE`).contains("public-identifier") ||
+            resp.getString("message").contains(IssuerSetup0_7.identifierAlreadyCreatedErrorMsg)) {
+            logger.info("Issuer is already setup")
+          } else if(resp.getString(`@TYPE`).contains("problem-report")) {
             issuerSdk.issuerSetup_0_7
               .create(issuerSdk.context, "did:indy:sovrin", endorser.getOrElse("WAJQSd73TpK2HmoYRQJX7p"))
 

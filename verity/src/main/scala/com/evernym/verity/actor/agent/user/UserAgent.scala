@@ -161,7 +161,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
     case SignalMsgParam(prd: ProvideRecoveryDetails, _)        => registerRecoveryKey(prd.params.recoveryVk)
     case SignalMsgParam(cpk: CreatePairwiseKey, _)             => createNewPairwiseEndpoint(cpk.label, cpk.logoUrl)
     case SignalMsgParam(pic: PublicIdentifierCreated, _)       => storePublicIdentity(pic.identifier.did, pic.identifier.verKey)
-    case SignalMsgParam(pic: V_07PublicIdentifierCreated, _)   => storePublicIdentity(pic.identifier.did, pic.identifier.verKey)
+    case SignalMsgParam(pic: V_07PublicIdentifierCreated, _)   => storePublicIdentity(pic.identifier.did, pic.identifier.verKey.getOrElse(""))
   }
 
   override final def receiveAgentEvent: Receive = commonEventReceiver orElse eventReceiver orElse msgEventReceiver

@@ -1,4 +1,4 @@
-package com.evernym.verity.integration
+package com.evernym.verity.integration.base
 
 import akka.actor.Props
 import akka.cluster.sharding.ShardRegion.EntityId
@@ -9,11 +9,13 @@ import com.evernym.verity.config.AppConfig
 
 import scala.concurrent.ExecutionContext
 
-class ActorStateDeleter(val futureExecutionContext: ExecutionContext,
-                        val appConfig: AppConfig,
-                        actorTypeName: String,
-                        actorEntityId: EntityId,
-                        persEncryptionKey: Option[String])
+//either modifies/delete events as per given `eventModifier` function or delete all events/snapshot
+class ActorStateModifier(val futureExecutionContext: ExecutionContext,
+                         val appConfig: AppConfig,
+                         actorTypeName: String,
+                         actorEntityId: EntityId,
+                         persEncryptionKey: Option[String],
+                         eventModifier: PartialFunction[Any, Option[Any]] = PartialFunction.empty)
   extends BasePersistentActor
     with SnapshotterExt[Any] {
 
@@ -25,7 +27,11 @@ class ActorStateDeleter(val futureExecutionContext: ExecutionContext,
   }
 
   override def receiveEvent: Receive = {
-    case event => //nothing to do
+    case event =>
+      recoveredEvents = recoveredEvents:+ event
+      if (modifiedEventsToBeRepersisted.nonEmpty && modifiedEventsToBeRepersisted.size == recoveredEvents.size) {
+        self ! Stop()
+      }
   }
 
   override def receiveCmd: Receive = {
@@ -34,10 +40,18 @@ class ActorStateDeleter(val futureExecutionContext: ExecutionContext,
 
   override def postRecoveryCompleted(): Unit = {
     super.postRecoveryCompleted()
-    deleteAndStop()
+    recoveredEvents.foreach { event =>
+      if (eventModifier.isDefinedAt(event)) {
+        eventModifier.apply(event).foreach { event =>
+          modifiedEventsToBeRepersisted = modifiedEventsToBeRepersisted :+ event
+        }
+      }
+    }
+    recoveredEvents = Seq.empty
+    modifyStateAndStop()
   }
 
-  def deleteAndStop(): Unit = {
+  def modifyStateAndStop(): Unit = {
     logger.info(s"[ActorStateDeleter: $persistenceId] about to delete events till lastSequenceNr: $lastSequenceNr, snapshotSequenceNr: $snapshotSequenceNr")
     deleteMessagesExtended(lastSequenceNr)
   }
@@ -51,7 +65,8 @@ class ActorStateDeleter(val futureExecutionContext: ExecutionContext,
   //this gets called when all the snapshot gets deleted
   override def postDeleteSnapshotSuccess(dss: DeleteSnapshotSuccess): Unit = {
     logger.info(s"[ActorStateDeleter: $persistenceId] snapshot deleted: " + dss)
-    self ! Stop()
+    if (modifiedEventsToBeRepersisted.isEmpty) self ! Stop()
+    else writeAndApplyAll(modifiedEventsToBeRepersisted.toList)
   }
 
   override def receiveSnapshot: PartialFunction[Any, Unit] = {
@@ -59,13 +74,17 @@ class ActorStateDeleter(val futureExecutionContext: ExecutionContext,
   }
 
   override def snapshotState: Option[Any] = None
+
+  var recoveredEvents: Seq[Any] = Seq.empty
+  var modifiedEventsToBeRepersisted: Seq[Any] = Seq.empty
 }
 
-object ActorStateDeleter {
+object ActorStateModifier {
   def props(futureExecutionContext: ExecutionContext,
             appConfig: AppConfig,
             actorTypeName: String,
             actorEntityId: EntityId,
-            persEncryptionKey: Option[String]): Props =
-    Props(new ActorStateDeleter(futureExecutionContext, appConfig, actorTypeName, actorEntityId, persEncryptionKey))
+            persEncryptionKey: Option[String],
+            eventModifier: PartialFunction[Any, Option[Any]] = PartialFunction.empty): Props =
+    Props(new ActorStateModifier(futureExecutionContext, appConfig, actorTypeName, actorEntityId, persEncryptionKey, eventModifier))
 }

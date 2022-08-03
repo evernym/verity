@@ -1,8 +1,9 @@
 package com.evernym.verity.integration.base
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
+import akka.testkit.TestKit
 import akka.util.Timeout
 import com.evernym.verity.actor.ForIdentifier
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetStoredRoute}
@@ -17,8 +18,8 @@ import com.evernym.verity.constants.ActorNameConstants
 import com.evernym.verity.constants.ActorNameConstants.ROUTE_REGION_ACTOR_NAME
 import com.evernym.verity.constants.Constants.DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.fixture.TempDir
-import com.evernym.verity.integration.ActorStateDeleter
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
+import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
 import com.evernym.verity.integration.base.verity_provider.node.local.{ServiceParam, VerityLocalNode}
 import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore, VerityEnv}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
@@ -340,7 +341,7 @@ trait VerityProviderBaseSpec
   private def persistEvents(actorDetail: ActorDetail,
                             events: Seq[Any]): Unit = {
     val eventPersisterActorName = UUID.randomUUID().toString
-    actorDetail.system.actorOf(
+    val actorRef = actorDetail.system.actorOf(
       EventPersister.props(
         futureExecutionContext,
         actorDetail.appConfig,
@@ -351,7 +352,29 @@ trait VerityProviderBaseSpec
       ),
       eventPersisterActorName
     )
-    Thread.sleep(5000) //TODO: need to find a better way to know when the EventPersister got stopped
+    TestKit.awaitCond(checkIfActorStopped(actorRef), waitAtMost, 300.millis)
+  }
+
+  protected def modifyUserAgentActorState(verityEnv: VerityEnv,
+                                          domainId: DomainId,
+                                          stopActor: Boolean = true,
+                                          persEncryptionKey: Option[String] = None,
+                                          eventModifier: PartialFunction[Any, Option[Any]] = PartialFunction.empty): Unit = {
+    val entityId = getAgentRoute(verityEnv, domainId).address
+    val actorDetail = buildActorDetail(verityEnv, ActorNameConstants.USER_AGENT_REGION_ACTOR_NAME, entityId, persEncryptionKey)
+    modifyShardedActorState(
+      actorDetail,
+      stopActor,
+      eventModifier
+    )
+  }
+
+  private def modifyShardedActorState(actorDetail: ActorDetail,
+                                      stopActor: Boolean = true,
+                                      eventModifier: PartialFunction[Any, Option[Any]] = PartialFunction.empty): Unit = {
+    postActorStop(stopActor, actorDetail) {
+      modifyActorState(actorDetail, eventModifier)
+    }
   }
 
   protected def deleteProtocolActorState(verityEnv: VerityEnv,
@@ -377,19 +400,42 @@ trait VerityProviderBaseSpec
     }
   }
 
+  private def modifyActorState(actorDetail: ActorDetail,
+                               eventModifier: PartialFunction[Any, Option[Any]] = PartialFunction.empty): Unit = {
+    val actorStateModifierName = UUID.randomUUID().toString
+    val actorRef = actorDetail.system.actorOf(
+      ActorStateModifier.props(
+        futureExecutionContext,
+        actorDetail.appConfig,
+        actorDetail.typeName,
+        actorDetail.entityId,
+        actorDetail.persEncryptionKey,
+        eventModifier
+      ),
+      actorStateModifierName
+    )
+    TestKit.awaitCond(checkIfActorStopped(actorRef), waitAtMost, 300.millis)
+  }
+
   private def deleteActorState(actorDetail: ActorDetail): Unit = {
-    val actorStateDeleterName = UUID.randomUUID().toString
-    actorDetail.system.actorOf(
-      ActorStateDeleter.props(
+    val actorStateModifierName = UUID.randomUUID().toString
+    val actorRef = actorDetail.system.actorOf(
+      ActorStateModifier.props(
         futureExecutionContext,
         actorDetail.appConfig,
         actorDetail.typeName,
         actorDetail.entityId,
         actorDetail.persEncryptionKey
       ),
-      actorStateDeleterName
+      actorStateModifierName
     )
-    Thread.sleep(5000) //TODO: need to find a better way to know when the ActorStateDeleter got stopped
+    TestKit.awaitCond(checkIfActorStopped(actorRef), waitAtMost, 300.millis)
+  }
+
+  private def checkIfActorStopped(actorRef: ActorRef): Boolean = {
+    val m = actorRef.getClass.getDeclaredMethod("isTerminated")
+    m.setAccessible(true)
+    m.invoke(actorRef).asInstanceOf[Boolean]
   }
 
   private def postActorStop(stopActor: Boolean = true,

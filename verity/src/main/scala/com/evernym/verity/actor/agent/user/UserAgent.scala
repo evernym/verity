@@ -161,7 +161,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
     case SignalMsgParam(prd: ProvideRecoveryDetails, _)        => registerRecoveryKey(prd.params.recoveryVk)
     case SignalMsgParam(cpk: CreatePairwiseKey, _)             => createNewPairwiseEndpoint(cpk.label, cpk.logoUrl)
     case SignalMsgParam(pic: PublicIdentifierCreated, _)       => storePublicIdentity(pic.identifier.did, pic.identifier.verKey)
-    case SignalMsgParam(pic: V_07PublicIdentifierCreated, _)   => storePublicIdentity(pic.identifier.did, pic.identifier.verKey.getOrElse(""))
+    case SignalMsgParam(pic: V_07PublicIdentifierCreated, _)   => storePublicIdentity(pic.identifier.did, pic.identifier.verKey)
   }
 
   override final def receiveAgentEvent: Receive = commonEventReceiver orElse eventReceiver orElse msgEventReceiver
@@ -936,6 +936,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
       case MY_SELF_REL_DID                          => Parameter(MY_SELF_REL_DID, state.myDid_!)
       case MY_PUBLIC_DID                            => Parameter(MY_PUBLIC_DID, state.publicIdentity.map(_.DID).orElse(state.configs.get(PUBLIC_DID).map(_.value)).getOrElse(""))
       case MY_ISSUER_DID                            => Parameter(MY_ISSUER_DID, state.publicIdentity.map(_.DID).getOrElse("")) // FIXME what to do if publicIdentity is not setup
+      case MY_ISSUER_VERKEY                         => Parameter(MY_ISSUER_VERKEY, state.publicIdentity.map(_.verKey).getOrElse("")) // Same issue as ^^ but if one is not available then neither should be
       case DEFAULT_ENDORSER_DID                     => Parameter(DEFAULT_ENDORSER_DID, defaultEndorserDid)
       case DATA_RETENTION_POLICY                    => Parameter(DATA_RETENTION_POLICY, ConfigUtil.getProtoStateRetentionPolicy(appConfig, domainId, p.msgFamilyName).configString)
     }

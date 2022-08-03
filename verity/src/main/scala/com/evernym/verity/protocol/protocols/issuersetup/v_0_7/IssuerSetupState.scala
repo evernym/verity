@@ -13,7 +13,7 @@ object State {
   case class Initialized(parameters: Parameters) extends State
 
   case class Created(identity: Identity) extends State
-  case class Identity(did: DidStr, verKey: Option[VerKeyStr])
+  case class Identity(did: DidStr, verKey: VerKeyStr)
 
   case class WaitingOnEndorser(ledgerPrefix: ledgerPrefixStr, identity: Identity) extends State
 }

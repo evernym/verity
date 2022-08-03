@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_7
 
-import com.evernym.verity.constants.InitParamConstants.{MY_ISSUER_DID, MY_PUBLIC_DID, SELF_ID}
+import com.evernym.verity.constants.InitParamConstants.{MY_ISSUER_DID, MY_ISSUER_VERKEY, MY_PUBLIC_DID, SELF_ID}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
@@ -26,21 +26,16 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     case (State.Uninitialized(), r: Roster[Role], e: Initialized) =>
       val initParams = getInitParams(e)
       val issuerDid = initParams.paramValueRequired(MY_ISSUER_DID)
-      if (issuerDid.nonEmpty) {
-        ctx.wallet.verKey(issuerDid){
-          case Success(verKeyRes) =>
-            ctx.logger.debug(s"Found existing did/key pair. DID: ${}, Key: ${}")
-            State.Created(State.Identity(issuerDid, Some(verKeyRes.verKey)))
-          case _ =>
-            problemReport(s"${unableToFindIssuerVerkey}: ${issuerDid}")
-            State.Created(State.Identity(issuerDid, None))
-        }
+      val issuerVerkey = initParams.paramValueRequired(MY_ISSUER_VERKEY)
+      if (issuerDid.nonEmpty && issuerVerkey.nonEmpty) {
+        State.Created(State.Identity(issuerDid, issuerVerkey)) -> defineSelf(r, initParams.paramValueRequired(SELF_ID), Role.Owner)
+      } else {
+        State.Initialized(initParams) -> defineSelf(r, initParams.paramValueRequired(SELF_ID), Role.Owner)
       }
-      State.Initialized(initParams) -> defineSelf(r, initParams.paramValueRequired(SELF_ID), Role.Owner)
 
     case (State.Initialized(params), _, CreatePublicIdentifierCompleted(did, verKey)) =>
       ctx.logger.debug(s"CreatePublicIdentifierCompleted: $did - $verKey")
-      State.Created(State.Identity(did, Some(verKey)))
+      State.Created(State.Identity(did, verKey))
     case (s: State.Created, _, e: NeedsManualEndorsement) => State.Created(s.identity)
     case (s: State.Created, _, e: AskedForEndorsement)    => State.WaitingOnEndorser(e.ledgerPrefix, s.identity)
     case (s: State.WaitingOnEndorser, _, e: DIDWritten)  => State.Created(s.identity)
@@ -101,11 +96,11 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
                                      endorserDID: String): Unit = {
     prepareTxnForEndorsement(submitterDID, prepareDidJson(targetDID, verkey), endorserDID) {
       case Success(ledgerRequest) =>
-        ctx.signal(PublicIdentifierCreated(PublicIdentifier(targetDID, Some(verkey)), NeedsEndorsement(ledgerRequest)))
+        ctx.signal(PublicIdentifierCreated(PublicIdentifier(targetDID, verkey), NeedsEndorsement(ledgerRequest)))
         ctx.apply(NeedsManualEndorsement())
       case Failure(e) =>
         problemReport(s"Unable to prepare transaction for manual endorsement, encountered error: ${e.getMessage}")
-        ctx.signal(PublicIdentifierCreated(PublicIdentifier(targetDID, Some(verkey)), NeedsEndorsement("")))
+        ctx.signal(PublicIdentifierCreated(PublicIdentifier(targetDID, verkey), NeedsEndorsement("")))
     }
   }
 
@@ -152,15 +147,6 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
     } else {
       ctx.apply(IssuerSetupFailed(s"error during endorsement => code: ${m.code}, description: ${m.description}"))
     }
-  }
-
-  private def buildInitialized(params: Parameters): Initialized = {
-    Initialized(
-      params
-        .initParams
-        .map(p => InitParam(p.name, p.value))
-        .toSeq
-    )
   }
 
   private def getInitParams(params: Initialized): Parameters = {

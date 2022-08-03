@@ -25,6 +25,7 @@ object InitParamConstants {
   val MY_PAIRWISE_DID_VER_KEY = "userPairwiseDIDVerKey"
   val MY_PUBLIC_DID = "userPublicDID"
   val MY_ISSUER_DID = "issuerDid"
+  val MY_ISSUER_VERKEY = "issuerVerKey"
   val MY_SELF_REL_DID = "ownerDid"
   val THEIR_PAIRWISE_DID = "remoteEdgePairwiseDid"
 

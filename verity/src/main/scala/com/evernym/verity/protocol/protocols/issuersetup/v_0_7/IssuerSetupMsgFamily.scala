@@ -52,7 +52,7 @@ case class CurrentPublicIdentifier() extends IssuerSetupControl
 case class EndorsementResult(code: String, description: String) extends IssuerSetupControl
 
 sealed trait Sig extends Msg
-case class PublicIdentifier(did: DidStr, verKey: Option[VerKeyStr]) extends Sig
+case class PublicIdentifier(did: DidStr, verKey: VerKeyStr) extends Sig
 case class PublicIdentifierCreated(identifier: PublicIdentifier, status: EndorsementStatus) extends Sig
 case class ProblemReport(message: String) extends Sig
 

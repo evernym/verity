@@ -384,6 +384,8 @@ abstract class SdkBase(param: SdkParam,
 
   var myPairwiseRelationships: Map[ConnId, PairwiseRel] = Map.empty
 
+  def domainDID: DidStr = verityAgentDidPairOpt.get.did
+
   def createNewKey(seed: Option[String] = Option(randomSeed())): DidPair = {
     testWalletAPI.executeSync[NewKeyCreated](CreateNewKey(seed = seed)).didPair
   }

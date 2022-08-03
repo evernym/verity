@@ -90,22 +90,34 @@ trait SnapshotterExt[S] extends Snapshotter { this: BasePersistentActor =>
       metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_SUCCEED_COUNT)
       logger.debug("old snapshots deleted successfully", (LOG_KEY_PERSISTENCE_ID, persistenceId),
         ("selection_criteria", dss.criteria))
+      postDeleteSnapshotsSuccess(dss)
 
     case dsf: DeleteSnapshotsFailure =>
       metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_FAILED_COUNT)
       logger.info("could not delete old snapshots", (LOG_KEY_PERSISTENCE_ID, persistenceId),
         ("selection_criteria", dsf.criteria), (LOG_KEY_ERR_MSG, dsf.cause))
+      postDeleteSnapshotsFailure(dsf)
 
     case dss: DeleteSnapshotSuccess =>
       metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_SUCCEED_COUNT)
       logger.debug("old snapshot deleted successfully", (LOG_KEY_PERSISTENCE_ID, persistenceId),
         ("sequenceNr", dss.metadata.sequenceNr))
+      postDeleteSnapshotSuccess(dss)
 
     case dsf: DeleteSnapshotFailure =>
       metricsWriter.gaugeIncrement(AS_SERVICE_DYNAMODB_SNAPSHOT_DELETE_FAILED_COUNT)
       logger.info("could not delete old snapshot", (LOG_KEY_PERSISTENCE_ID, persistenceId),
         ("sequenceNr", dsf.metadata.sequenceNr), (LOG_KEY_ERR_MSG, dsf.cause))
+      postDeleteSnapshotFailure(dsf)
   }
+
+  protected def postDeleteSnapshotsSuccess(dss: DeleteSnapshotsSuccess): Unit = {}
+
+  protected def postDeleteSnapshotsFailure(dsf: DeleteSnapshotsFailure): Unit = {}
+
+  protected def postDeleteSnapshotSuccess(dss: DeleteSnapshotSuccess): Unit = {}
+
+  protected def postDeleteSnapshotFailure(dsf: DeleteSnapshotFailure): Unit = {}
 
   /**
    * transforms given generic proto buf wrapper message (DeprecatedStateMsg, PersistentMsg)

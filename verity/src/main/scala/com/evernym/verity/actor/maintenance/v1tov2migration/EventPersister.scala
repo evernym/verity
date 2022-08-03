@@ -12,8 +12,8 @@ import com.evernym.verity.protocol.engine.MultiEvent
 import scala.concurrent.ExecutionContext
 
 
-class EventPersister(val appConfig: AppConfig,
-                     val futureExecutionContext: ExecutionContext,
+class EventPersister(val futureExecutionContext: ExecutionContext,
+                     val appConfig: AppConfig,
                      actorTypeName: String,
                      actorEntityId: EntityId,
                      persEncryptionKey: Option[String],
@@ -45,7 +45,7 @@ class EventPersister(val appConfig: AppConfig,
   }
 
   override def receiveCmd: Receive = {
-    case cmd => logger.info("[connection-migrator] event persister doesn't handle command: " + cmd)
+    case cmd => logger.info(s"[EventPersister: $persistenceId] doesn't handle command: " + cmd)
   }
 
   override def postRecoveryCompleted(): Unit = {
@@ -71,11 +71,11 @@ class EventPersister(val appConfig: AppConfig,
 }
 
 object EventPersister {
-  def props(appConfig: AppConfig,
-            futureExecutionContext: ExecutionContext,
+  def props(executionContext: ExecutionContext,
+            appConfig: AppConfig,
             actorTypeName: String,
             actorEntityId: EntityId,
             persEncryptionKey: Option[String],
             events: Seq[Any]): Props =
-    Props(new EventPersister(appConfig, futureExecutionContext, actorTypeName, actorEntityId, persEncryptionKey, events))
+    Props(new EventPersister(executionContext, appConfig, actorTypeName, actorEntityId, persEncryptionKey, events))
 }

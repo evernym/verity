@@ -57,7 +57,7 @@ import java.util.UUID
 import scala.jdk.CollectionConverters._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
-import scala.reflect.ClassTag
+import scala.reflect.{ClassTag, classTag}
 import scala.util.{Failure, Success, Try}
 
 
@@ -761,9 +761,18 @@ object ReceivedMsgParam {
       val threadOpt = Try {
         Option(DefaultMsgCodec.fromJson[MsgThread](message.getJSONObject("~thread").toString))
       }.getOrElse(None)
-      val expMsg = DefaultMsgCodec.fromJson[T](message.toString)
-      checkInvalidFieldValues(msg, expMsg)
-      ReceivedMsgParam(expMsg, msg, None, threadOpt)
+      val clazz = classTag.runtimeClass
+      if (classOf[JSONObject].isAssignableFrom(clazz)) {
+        ReceivedMsgParam(message.asInstanceOf[T], msg, None, threadOpt)
+      } else if (classOf[String].isAssignableFrom(clazz)) {
+        ReceivedMsgParam(msg.asInstanceOf[T], msg, None, threadOpt)
+      } else if (classOf[Map[_, _]].isAssignableFrom(clazz)) {
+        ReceivedMsgParam(message.toMap.asScala.toMap.asInstanceOf[T], msg, None, threadOpt)
+      } else {
+        val expMsg = DefaultMsgCodec.fromJson[T](message.toString)
+        checkInvalidFieldValues(msg, expMsg)
+        ReceivedMsgParam(expMsg, msg, None, threadOpt)
+      }
     } match {
       case Success(resp) => resp
       case Failure(ex)   => fromLegacy(msg).getOrElse(throw ex)

@@ -1,5 +1,6 @@
 package com.evernym.verity.integration.base
 
+import akka.actor.ActorSystem
 import akka.cluster.sharding.ClusterSharding
 import akka.cluster.sharding.ShardRegion.EntityId
 import akka.util.Timeout
@@ -16,6 +17,7 @@ import com.evernym.verity.constants.ActorNameConstants
 import com.evernym.verity.constants.ActorNameConstants.ROUTE_REGION_ACTOR_NAME
 import com.evernym.verity.constants.Constants.DEFAULT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
 import com.evernym.verity.fixture.TempDir
+import com.evernym.verity.integration.ActorStateDeleter
 import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.{ServiceParam, VerityLocalNode}
 import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore, VerityEnv}
@@ -264,7 +266,7 @@ trait VerityProviderBaseSpec
   protected def performWalletOp[T](verityEnv: VerityEnv,
                                    walletId: WalletId,
                                    cmd: WalletCommand): T = {
-    val verityNode = verityEnv.nodes.head.asInstanceOf[VerityLocalNode]
+    val verityNode = verityEnv.headVerityLocalNode
     val actorSystem = verityNode.platform.actorSystem
     val appConfig = verityNode.platform.appConfig
     val ledgerPoolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(actorSystem, appConfig, futureExecutionContext)
@@ -283,7 +285,7 @@ trait VerityProviderBaseSpec
   protected def getAgentRoute(verityEnv: VerityEnv,
                               routeId: RouteId): ActorAddressDetail = {
     import akka.pattern.ask
-    val verityNode = verityEnv.nodes.head.asInstanceOf[VerityLocalNode]
+    val verityNode = verityEnv.headVerityLocalNode
     val actorSystem = verityNode.platform.actorSystem
     val appConfig = verityNode.platform.appConfig
     val routeRegion = ClusterSharding(actorSystem).shardRegion(ROUTE_REGION_ACTOR_NAME)
@@ -298,9 +300,118 @@ trait VerityProviderBaseSpec
                                       relationshipId: Option[RelationshipId],
                                       threadId: Option[ThreadId],
                                       events: Seq[Any],
+                                      persEncryptionKey: Option[String] = None,
                                       stopActor: Boolean = true): Unit = {
+    val pinstId = buildPinstId(protoDef, domainId, relationshipId, threadId)
+    val actorTypeName = buildProtoActorTypeName(protoDef)
+    val actorDetail = buildActorDetail(verityEnv, actorTypeName, pinstId, persEncryptionKey)
+    val internalEvents = buildDefaultProtoSysEvents(actorDetail.appConfig, protoDef, domainId, pinstId)
+    persistShardedActorEvents(
+      actorDetail,
+      internalEvents  ++ events,
+      stopActor = stopActor
+    )
+  }
+
+  protected def persistUserAgentEvents(verityEnv: VerityEnv,
+                                       entityId: EntityId,
+                                       events: Seq[Any],
+                                       persEncryptionKey: Option[String] = None,
+                                       stopActor: Boolean = true): Unit = {
+    val actorDetail = buildActorDetail(verityEnv, ActorNameConstants.USER_AGENT_REGION_ACTOR_NAME, entityId, persEncryptionKey)
+    persistShardedActorEvents(
+      actorDetail,
+      events,
+      stopActor = stopActor
+    )
+  }
+
+  private def persistShardedActorEvents(actorDetail: ActorDetail,
+                                        events: Seq[Any],
+                                        stopActor: Boolean = true): Unit = {
+    postActorStop(stopActor, actorDetail) {
+      persistEvents(
+        actorDetail,
+        events
+      )
+    }
+  }
+
+  private def persistEvents(actorDetail: ActorDetail,
+                            events: Seq[Any]): Unit = {
+    val eventPersisterActorName = UUID.randomUUID().toString
+    actorDetail.system.actorOf(
+      EventPersister.props(
+        futureExecutionContext,
+        actorDetail.appConfig,
+        actorDetail.typeName,
+        actorDetail.entityId,
+        actorDetail.persEncryptionKey,
+        events
+      ),
+      eventPersisterActorName
+    )
+    Thread.sleep(5000) //TODO: need to find a better way to know when the EventPersister got stopped
+  }
+
+  protected def deleteProtocolActorState(verityEnv: VerityEnv,
+                                         protoDef: ProtoDef,
+                                         domainId: DomainId,
+                                         relationshipId: Option[RelationshipId],
+                                         threadId: Option[ThreadId],
+                                         stopActor: Boolean = true,
+                                         persEncryptionKey: Option[String] = None): Unit = {
+    val pinstId = buildPinstId(protoDef, domainId, relationshipId, threadId)
+    val actorTypeName = buildProtoActorTypeName(protoDef)
+    val actorDetail = buildActorDetail(verityEnv, actorTypeName, pinstId, persEncryptionKey)
+    deleteShardedActorState(
+      actorDetail,
+      stopActor
+    )
+  }
+
+  private def deleteShardedActorState(actorDetail: ActorDetail,
+                                      stopActor: Boolean = true): Unit = {
+    postActorStop(stopActor, actorDetail) {
+      deleteActorState(actorDetail)
+    }
+  }
+
+  private def deleteActorState(actorDetail: ActorDetail): Unit = {
+    val actorStateDeleterName = UUID.randomUUID().toString
+    actorDetail.system.actorOf(
+      ActorStateDeleter.props(
+        futureExecutionContext,
+        actorDetail.appConfig,
+        actorDetail.typeName,
+        actorDetail.entityId,
+        actorDetail.persEncryptionKey
+      ),
+      actorStateDeleterName
+    )
+    Thread.sleep(5000) //TODO: need to find a better way to know when the ActorStateDeleter got stopped
+  }
+
+  private def postActorStop(stopActor: Boolean = true,
+                            actorDetail: ActorDetail)(f: => Unit): Unit = {
+    if (stopActor) stopShardedActor(actorDetail)
+    f
+  }
+  private def stopShardedActor(actorDetail: ActorDetail): Unit = {
+    val targetRegion = ClusterSharding(actorDetail.system).shardRegion(actorDetail.typeName)
+    targetRegion ! ForIdentifier(actorDetail.entityId, Stop())
+  }
+
+  private def buildProtoActorTypeName(protoDef: ProtoDef): String = {
+    val actorProtocol = new ActorProtocol(protoDef)
+    actorProtocol.typeName
+  }
+  private def buildPinstId(protoDef: ProtoDef,
+                           domainId: DomainId,
+                           relationshipId: Option[RelationshipId],
+                           threadId: Option[ThreadId]): PinstId = {
     val pinstIdResolver = protocolRegistry.find(protoDef.protoRef).get.pinstIdResol
-    val pinstId = pinstIdResolver.resolve(
+    pinstIdResolver.resolve(
       protoDef,
       domainId,
       relationshipId,
@@ -308,74 +419,15 @@ trait VerityProviderBaseSpec
       None,
       None
     )
-    val actorProtocol = new ActorProtocol(protoDef)
-    val verityNode = verityEnv.nodes.head.asInstanceOf[VerityLocalNode]
-    val internalEvents = buildDefaultProtoSysEvents(verityNode.platform.appConfig, protoDef, domainId, pinstId)
-    persistEvents(
-      verityNode,
-      actorProtocol.typeName,
-      pinstId,
-      internalEvents  ++ events,
-      None,
-      stopActor
-    )
   }
 
-  protected def persistUserAgentEvents(verityEnv: VerityEnv,
-                                       entityId: EntityId,
-                                       events: Seq[Any],
-                                       stopActor: Boolean = true): Unit = {
-    persistActorEvents(
-      verityEnv,
-      ActorNameConstants.USER_AGENT_REGION_ACTOR_NAME,
-      entityId,
-      events,
-      stopActor
-    )
-  }
-
-  private def persistActorEvents(verityEnv: VerityEnv,
-                                 actorTypeName: String,
-                                 entityId: EntityId,
-                                 events: Seq[Any],
-                                 stopActor: Boolean = true): Unit = {
-    val verityNode = verityEnv.nodes.head.asInstanceOf[VerityLocalNode]
-    persistEvents(
-      verityNode,
-      actorTypeName,
-      entityId,
-      events,
-      None,
-      stopActor
-    )
-  }
-
-  private def persistEvents(verityNode: VerityLocalNode,
-                            actorTypeName: String,
-                            entityId: String,
-                            events: Seq[Any],
-                            persEncryptionKey: Option[String],
-                            stopActor: Boolean = true): Unit = {
-    val verityNodeActorSystem = verityNode.platform.actorSystem
-    val eventPersisterActorName = UUID.randomUUID().toString
-    verityNodeActorSystem.actorOf(
-      EventPersister.props(
-        verityNode.platform.appConfig,
-        futureExecutionContext,
-        actorTypeName,
-        entityId,
-        persEncryptionKey,
-        events
-      ),
-      eventPersisterActorName
-    )
-    val targetRegion = ClusterSharding(verityNodeActorSystem).shardRegion(actorTypeName)
-    if (stopActor) {
-      //stop the target actor to make sure this actor starts from scratch (if needed)
-      // which will force the actor to replay all the persisted events
-      targetRegion ! ForIdentifier(entityId, Stop())
-    }
-    Thread.sleep(5000) //TODO: how to know if the `eventPersister` is stopped?
+  def buildActorDetail(verityEnv: VerityEnv,
+                       typeName: String,
+                       entityId: String,
+                       persEncryptionKey: Option[String]=None): ActorDetail = {
+    val headNode = verityEnv.headVerityLocalNode
+    val system = headNode.platform.actorSystem
+    ActorDetail(headNode.platform.appConfig, system, typeName, entityId, persEncryptionKey)
   }
 
   private def buildDefaultProtoSysEvents(appConfig: AppConfig,
@@ -435,3 +487,9 @@ trait AppType
 case object CAS extends AppType
 case object VAS extends AppType
 case object EAS extends AppType
+
+case class ActorDetail(appConfig: AppConfig,
+                       system: ActorSystem,
+                       typeName: String,
+                       entityId: String,
+                       persEncryptionKey: Option[String])

@@ -67,7 +67,7 @@ class BackwardCompatibilitySpec
    * persists legacy events for issuer setup 0.6
    */
   private def performIssuerSetup0_6(): NewKeyCreated = {
-    val domainId = issuerSDK.verityAgentDidPairOpt.get.did
+    val domainId = issuerSDK.domainDID
     val agentActorEntityId = getAgentRoute(issuerVerityEnv, domainId).address
     val newDID = performWalletOp[NewKeyCreated](
       issuerVerityEnv,

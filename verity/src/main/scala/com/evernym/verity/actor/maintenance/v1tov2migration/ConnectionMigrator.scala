@@ -91,8 +91,8 @@ class ConnectionMigrator(appConfig: AppConfig,
       //set route for new pairwise DID
       context.system.actorOf(
         EventPersister.props(
-          appConfig,
           futureExecutionContext,
+          appConfig,
           ActorNameConstants.ROUTE_REGION_ACTOR_NAME,
           smc.connection.myDidDoc.pairwiseDID,
           Option(appConfig.getStringReq(ConfigConstants.SECRET_ROUTING_AGENT)),
@@ -103,8 +103,8 @@ class ConnectionMigrator(appConfig: AppConfig,
       //set new pairwise agent actor
       context.system.actorOf(
         EventPersister.props(
-          appConfig,
           futureExecutionContext,
+          appConfig,
           ActorNameConstants.USER_AGENT_PAIRWISE_REGION_ACTOR_NAME,
           pairwiseAgentActorEntityId,
           None,
@@ -195,8 +195,8 @@ class ConnectionMigrator(appConfig: AppConfig,
 
           context.system.actorOf(
             EventPersister.props(
-              appConfig,
               futureExecutionContext,
+              appConfig,
               "relationship-1.0-protocol",
               pinstId,
               None,

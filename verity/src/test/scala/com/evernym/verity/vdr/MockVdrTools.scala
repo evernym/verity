@@ -31,7 +31,7 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
                           endorser: Option[String]): Future[PreparedTxnResult] = {
     ledgerRegistry.forLedger(submitterDid) { ledger: InMemLedger =>
       val json = JacksonMsgCodec.docFromStrUnchecked(txnSpecificParams)
-      val id = json.get(VDRAdapterUtil.ID).asText
+      val id = json.get(VDRAdapterUtil.DEST).asText
       addLedgerMapping(id, ledger)
       ledger.prepareSchemaTxn(txnSpecificParams, id, submitterDid, endorser)
     }

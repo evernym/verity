@@ -27,7 +27,7 @@ class MockVDRAdapter(vdrTools: VdrTools)(implicit executionContext: ExecutionCon
                              submitterDID: FqDID,
                              endorser: Option[String]): Future[PreparedTxn] = {
     vdrTools
-      .prepareSchema(didJson, submitterDID, endorser)
+      .prepareDid(didJson, submitterDID, endorser)
       .map(r => VDRAdapterUtil.buildPreparedTxn(r))
   }
 

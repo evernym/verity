@@ -107,9 +107,9 @@ class WriteSchemaEndorsementSpec
 
   lazy val endorserServiceEventAdapters: Config =
     issuerVAS
-      .getVerityLocalNode
+      .headVerityLocalNode
       .platform.appConfig.config.getConfig("verity.eventing")
-      .withValue("verity.eventing.basic-store.http-listener.port", ConfigValueFactory.fromAnyRef(issuerVAS.getVerityLocalNode.portProfile.basicEventStorePort))
+      .withValue("verity.eventing.basic-store.http-listener.port", ConfigValueFactory.fromAnyRef(issuerVAS.headVerityLocalNode.portProfile.basicEventStorePort))
       .withValue("verity.eventing.basic-source.id", ConfigValueFactory.fromAnyRef("endorser"))
       .withValue("verity.eventing.basic-source.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
       .withValue("verity.eventing.basic-source.topics", ConfigValueFactory.fromIterable(List(TOPIC_REQUEST_ENDORSEMENT).asJava))

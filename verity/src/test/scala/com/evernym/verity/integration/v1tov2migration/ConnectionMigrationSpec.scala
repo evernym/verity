@@ -12,7 +12,6 @@ import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.constants.ActorNameConstants.{ACTOR_TYPE_USER_AGENT_ACTOR, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, ROUTE_REGION_ACTOR_NAME, USER_AGENT_PAIRWISE_REGION_ACTOR_NAME}
 import com.evernym.verity.integration.base.{CAS, EAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
-import com.evernym.verity.integration.base.verity_provider.node.local.VerityLocalNode
 import com.evernym.verity.protocol.engine.registry.PinstIdResolution.V0_2
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.RelationshipDef
 import com.evernym.verity.testkit.util.HttpUtil
@@ -112,7 +111,7 @@ class ConnectionMigrationSpec
       issuerVAS.persStoreTestKit.getEvents(PersistenceIdParam(USER_AGENT_PAIRWISE_REGION_ACTOR_NAME, pairwiseAgentActorEntityId)).size shouldBe 3
       issuerVAS.persStoreTestKit.getEvents(
         PersistenceIdParam(ROUTE_REGION_ACTOR_NAME, smc.connection.myDidDoc.pairwiseDID),
-        Option(issuerVAS.nodes.head.asInstanceOf[VerityLocalNode].platform.appConfig.getStringReq(ConfigConstants.SECRET_ROUTING_AGENT))
+        Option(issuerVAS.headVerityLocalNode.platform.appConfig.getStringReq(ConfigConstants.SECRET_ROUTING_AGENT))
       ).size shouldBe 1
       val pinstId = V0_2.resolve(
         RelationshipDef,

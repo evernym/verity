@@ -121,9 +121,9 @@ case class VerityEnv(seed: String,
 
   val system: ActorSystem = ActorSystemVanilla(UUID.randomUUID().toString)
 
-  lazy val persStoreTestKit = new PersistentStoreTestKit(ec, getVerityLocalNode.platform.actorSystem)
+  lazy val persStoreTestKit = new PersistentStoreTestKit(ec, headVerityLocalNode.platform.actorSystem)
 
-  lazy val getVerityLocalNode: VerityLocalNode = nodes.head.asInstanceOf[VerityLocalNode]
+  lazy val headVerityLocalNode: VerityLocalNode = nodes.head.asInstanceOf[VerityLocalNode]
 
 }
 

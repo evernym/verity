@@ -2,7 +2,6 @@ package com.evernym.verity.vdr.service
 
 import com.evernym.vdrtools.vdr.VdrParams.CacheOptions
 import com.evernym.vdrtools.vdr.VdrResults
-import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.vdr._
 import org.json.JSONObject
 
@@ -80,6 +79,7 @@ object VDRAdapterUtil {
   }
 
   final val ID = "id"
+  final val DEST = "dest"
   final val DID = "did"
   final val VER_KEY = "verkey"
   final val SCHEMA_ID = "schemaId"

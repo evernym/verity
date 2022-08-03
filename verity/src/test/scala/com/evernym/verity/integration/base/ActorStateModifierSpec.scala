@@ -9,10 +9,11 @@ import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.IssuerSetup.alrea
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, IssuerSetupDefinition, ProblemReport, PublicIdentifierCreated}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
+import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
 
-class ActorModifierSpec
+class ActorStateModifierSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 

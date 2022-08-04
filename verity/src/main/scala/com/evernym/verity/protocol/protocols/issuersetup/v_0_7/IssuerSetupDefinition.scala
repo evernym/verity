@@ -19,7 +19,7 @@ object IssuerSetupDefinition extends ProtocolDefinition[IssuerSetup, Role, Msg, 
   }
 
   override def createInitMsg(params: Parameters): Control = Initialize(params)
-  override val initParamNames: Set[ParameterName] = Set(SELF_ID, MY_ISSUER_DID)
+  override val initParamNames: Set[ParameterName] = Set(SELF_ID, MY_ISSUER_DID, MY_ISSUER_VERKEY)
 
   override def create(context: ProtocolContextApi[IssuerSetup, Role, Msg, Event, State, String]):
   Protocol[IssuerSetup, Role, Msg, Event, State, String] = new IssuerSetup()(context)

@@ -6,10 +6,11 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.exception.DIDException
-import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
+import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID, MY_ISSUER_VERKEY}
 import com.evernym.verity.integration.base.EndorserUtil
 import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
 import com.evernym.verity.protocol.engine.asyncapi.endorser.{ENDORSEMENT_RESULT_SUCCESS_CODE, Endorser}
+import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.IssuerSetup.identifierNotCreatedProblem
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.InteractionType.OneParty
 import com.evernym.verity.protocol.testkit.MockableLedgerAccess.MOCK_NOT_ENDORSER
@@ -89,10 +90,79 @@ class IssuerSetupSpec
   }
 
   "IssuerSetupProtocol" - {
+    "should signal publicIdentifier" - {
+      "when initialized with an issuer did and sent a create msg" in { f =>
+        f.owner.initParams(Map(
+          MY_ISSUER_DID -> "WAJQSd73TpK2HmoYRQJX7p",
+          MY_ISSUER_VERKEY -> "jhygfvawergrvfdag3475htbserdf"
+        ))
+        interaction(f.owner) {
+          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+            withDefaultWalletAccess(f, {
+              withDefaultLedgerAccess(f, {
+                f.owner ~ Create(ledgerPrefix, Option("otherEndorser"))
+
+                val sig = f.owner expect signal[ProblemReport]
+                sig.message shouldBe "Public identifier has already been created"
+
+                f.owner.state shouldBe a[State.Created]
+              })
+            })
+          })
+        }
+      }
+
+      "when initialized with an issuer did and sent a currentPublicIdentifier msg" in { f =>
+        f.owner.initParams(Map(
+          MY_ISSUER_DID -> "WAJQSd73TpK2HmoYRQJX7p",
+          MY_ISSUER_VERKEY -> "jhygfvawergrvfdag3475htbserdf"
+        ))
+        interaction(f.owner) {
+          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+            withDefaultWalletAccess(f, {
+              withDefaultLedgerAccess(f, {
+                f.owner ~ CurrentPublicIdentifier()
+
+                val sig = f.owner expect signal[PublicIdentifier]
+                sig.did shouldBe "WAJQSd73TpK2HmoYRQJX7p"
+
+                f.owner.state shouldBe a[State.Created]
+              })
+            })
+          })
+        }
+      }
+
+      "when sent currentPublicIdentifier after an issuer did is created" in { f =>
+        f.owner.initParams(Map(
+          MY_ISSUER_DID -> "",
+          MY_ISSUER_VERKEY -> ""
+        ))
+        interaction(f.owner) {
+          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+            withDefaultWalletAccess(f, {
+              withDefaultLedgerAccess(f, {
+                f.owner ~ Create("did:indy:sovrin", Some("someEndorser"))
+                val sig1 = f.owner expect signal[PublicIdentifierCreated]
+                f.owner ~ CurrentPublicIdentifier()
+                val sig2 = f.owner expect signal[PublicIdentifier]
+
+                sig1.identifier.did shouldBe sig2.did
+                sig1.identifier.verKey shouldBe sig2.verKey
+
+                f.owner.state shouldBe a[State.Created]
+              })
+            })
+          })
+        }
+      }
+    }
+
     "should signal it needs endorsement" - {
       "when provided endorser DID is not active" in { f =>
         f.owner.initParams(Map(
-          MY_ISSUER_DID -> ""
+          MY_ISSUER_DID -> "",
+          MY_ISSUER_VERKEY -> ""
         ))
         interaction(f.owner) {
           withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
@@ -106,7 +176,7 @@ class IssuerSetupSpec
                 pi.identifier.verKey shouldBe a[String]
 
                 pi.status shouldBe a[NeedsEndorsement]
-                f.owner.state shouldBe a[State.Done]
+                f.owner.state shouldBe a[State.Created]
               })
             })
           })
@@ -114,26 +184,30 @@ class IssuerSetupSpec
       }
     }
 
-    "should transition to WaitingOnEndorsemer state after Create msg" in { f =>
-      f.owner.initParams(Map(
-        MY_ISSUER_DID -> ""
-      ))
-      interaction(f.owner) {
-        withDefaultWalletAccess(f, {
-          withDefaultLedgerAccess(f, {
-            withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))) ,f, {
-              f.owner ~ Create(ledgerPrefix, None)
+    "should transition to WaitingOnEndorser state after Create msg" - {
+      "when sent create message with no endorser" in { f =>
+        f.owner.initParams(Map(
+          MY_ISSUER_DID -> "",
+          MY_ISSUER_VERKEY -> ""
+        ))
+        interaction(f.owner) {
+          withDefaultWalletAccess(f, {
+            withDefaultLedgerAccess(f, {
+              withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))) ,f, {
+                f.owner ~ Create(ledgerPrefix, None)
 
-              f.owner.state shouldBe a[State.WaitingOnEndorser]
+                f.owner.state shouldBe a[State.WaitingOnEndorser]
+              })
             })
           })
-        })
+        }
       }
     }
 
-    "should transition to Done state after Create msg and signal needs endorsement if inactive endorserDID is specified" in { f =>
+    "should transition to Created state after Create msg and signal needs endorsement if inactive endorserDID is specified" in { f =>
       f.owner.initParams(Map(
-        MY_ISSUER_DID -> ""
+        MY_ISSUER_DID -> "",
+        MY_ISSUER_VERKEY -> ""
       ))
       interaction(f.owner) {
         withDefaultWalletAccess(f, {
@@ -144,7 +218,7 @@ class IssuerSetupSpec
 
               val sig = f.owner expect signal[PublicIdentifierCreated]
               sig.status shouldBe a[NeedsEndorsement]
-              f.owner.state shouldBe a[State.Done]
+              f.owner.state shouldBe a[State.Created]
             })
           })
         })
@@ -155,7 +229,8 @@ class IssuerSetupSpec
   "should signal WrittenToLedger" - {
     "when endorsement service has an active endorser for the ledger" in { f =>
       f.owner.initParams(Map(
-        MY_ISSUER_DID -> ""
+        MY_ISSUER_DID -> "",
+        MY_ISSUER_VERKEY -> ""
       ))
       interaction(f.owner) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
@@ -180,7 +255,8 @@ class IssuerSetupSpec
   "should signal NeedsEndorsement" - {
     "when endorsement service has no active endorser for the ledger" in { f =>
       f.owner.initParams(Map(
-        MY_ISSUER_DID -> ""
+        MY_ISSUER_DID -> "",
+        MY_ISSUER_VERKEY -> ""
       ))
       interaction(f.owner) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
@@ -202,25 +278,10 @@ class IssuerSetupSpec
   }
 
   "should signal Problem Report" - {
-    "when initialized with an issuer did" in { f =>
-      f.owner.initParams(Map(
-        MY_ISSUER_DID -> "WAJQSd73TpK2HmoYRQJX7p"
-      ))
-      interaction(f.owner) {
-        withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
-          withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
-              f.owner ~ Create(ledgerPrefix, Option("otherEndorser"))
-
-              f.owner expect signal[ProblemReport]
-            })
-          })
-        })
-      }
-    }
     "when a CurrentPublicIdentifier message is sent with no current public identifier" in { f =>
       f.owner.initParams(Map(
-        MY_ISSUER_DID -> "8hx9VZn2oCTHbGX7UYMYBy"
+        MY_ISSUER_DID -> "",
+        MY_ISSUER_VERKEY -> ""
       ))
       interaction(f.owner) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
@@ -233,22 +294,42 @@ class IssuerSetupSpec
         })
       }
     }
-  }
-
-  "should signal Public Identifier" - {
     "when a CurrentPublicIdentifier message is sent with a current public identifier" in { f =>
       f.owner.initParams(Map(
-        MY_ISSUER_DID -> ""
+        MY_ISSUER_DID -> "",
+        MY_ISSUER_VERKEY -> ""
       ))
       interaction(f.owner) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
             withDefaultLedgerAccess(f, {
-              f.owner ~ Create(ledgerPrefix, Some("otherDid"))
-              val sig = f.owner expect signal[PublicIdentifierCreated]
-              sig.status shouldBe a[NeedsEndorsement]
+              f.owner ~ CurrentPublicIdentifier()
+              val sig = f.owner expect signal[ProblemReport]
+
+              sig.message shouldBe "Issuer Identifier has not been created yet"
+              f.owner ~ Create("did:indy:sovrin", None)
+              f.owner.state shouldBe an[State.WaitingOnEndorser]
+            })
+          })
+        })
+      }
+    }
+
+    "when a Create message is sent with a current public identifier" in { f =>
+      f.owner.initParams(Map(
+        MY_ISSUER_DID -> "WAJQSd73TpK2HmoYRQJX7p",
+        MY_ISSUER_VERKEY -> "jhygfvawergrvfdag3475htbserdf"
+      ))
+      interaction(f.owner) {
+        withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+          withDefaultWalletAccess(f, {
+            withDefaultLedgerAccess(f, {
               f.owner ~ CurrentPublicIdentifier()
               f.owner expect signal[PublicIdentifier]
+
+              f.owner ~ Create("did:indy:sovrin", None)
+              val sig = f.owner expect signal[ProblemReport]
+              sig.message shouldBe "Public identifier has already been created"
             })
           })
         })

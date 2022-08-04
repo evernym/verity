@@ -1,15 +1,12 @@
 package com.evernym.verity.protocol.engine.asyncapi.ledger
 
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.vdr.{CredDef, CredDefId, FqCredDefId, FqDID, FqSchemaId, PreparedTxn, Schema, SchemaId, SubmittedTxn}
 
 import scala.util.Try
 
 
 trait LedgerAccess {
-
-  def walletAccess: WalletAccess
 
   def vdrUnqualifiedLedgerPrefix(): String
 
@@ -60,6 +57,8 @@ trait LedgerAccess {
   def fqCredDefId(credDefId: CredDefId,
                   issuerFqDID: Option[FqDID],
                   force: Boolean): FqCredDefId
+
+  def toLegacyNonFqId(did: DidStr): DidStr
 
   def toLegacyNonFqSchemaId(schemaId: FqSchemaId): SchemaId
 

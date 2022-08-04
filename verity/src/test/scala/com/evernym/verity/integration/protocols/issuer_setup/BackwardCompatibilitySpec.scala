@@ -56,8 +56,9 @@ class BackwardCompatibilitySpec
     "when asked to get current public identifier 0.7" - {
       "should be successful" in {
         issuerSDK.sendMsg(issuerSetup_v0_7.CurrentPublicIdentifier())
-        val problemReport = issuerSDK.expectMsgOnWebhook[issuerSetup_v0_7.ProblemReport]().msg
-        problemReport.message.startsWith(IssuerSetup.identifierAlreadyCreatedErrorMsg) shouldBe true
+        val msg = issuerSDK.expectMsgOnWebhook[issuerSetup_v0_7.PublicIdentifier]().msg
+        msg.did.isEmpty shouldBe false
+        msg.verKey.isEmpty shouldBe false
       }
     }
   }

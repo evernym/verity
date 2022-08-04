@@ -10,6 +10,7 @@ import com.evernym.verity.eventing.ports.consumer.Message
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.MsgEnvelope
+import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.{IssuerSetupMsgFamily => IssuerSetupMsgFamily0_7, EndorsementResult => IssuerSetupEndorsementResult}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.{CredDefMsgFamily => WriteCredDefMsgFamily0_6, EndorsementResult => WriteCredDefEndorsementResult}
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{EndorsementResult => WriteSchemaEndorsementResult, WriteSchemaMsgFamily => WriteSchemaMsgFamily0_6}
 import com.typesafe.config.Config
@@ -39,6 +40,7 @@ class EndorsementMessageHandler(config: Config,
     requestSource.pinstIdPair.protoDef.msgFamily match {
       case WriteSchemaMsgFamily0_6 => createWriteSchema0_6ControlMsg(jsonObject)
       case WriteCredDefMsgFamily0_6 => createWriteCredDef0_6ControlMsg(jsonObject)
+      case IssuerSetupMsgFamily0_7 => createIssuerSetup0_7ControlMsg(jsonObject)
       case _ => None
     }
   }
@@ -63,6 +65,18 @@ class EndorsementMessageHandler(config: Config,
         val resultCode = result.getString(DATA_FIELD_RESULT_CODE)
         val resultDescr = result.getString(DATA_FIELD_RESULT_DESCR)
         Option(WriteCredDefEndorsementResult(resultCode, resultDescr))
+      case _ => None
+    }
+  }
+
+  private def createIssuerSetup0_7ControlMsg(jsonObject: JSONObject): Option[Control] = {
+    jsonObject.getString(CLOUD_EVENT_TYPE) match {
+      case EVENT_ENDORSEMENT_COMPLETE_V1 =>
+        val eventData = jsonObject.getJSONObject(CLOUD_EVENT_DATA)
+        val result = eventData.getJSONObject(DATA_FIELD_RESULT)
+        val resultCode = result.getString(DATA_FIELD_RESULT_CODE)
+        val resultDescr = result.getString(DATA_FIELD_RESULT_DESCR)
+        Option(IssuerSetupEndorsementResult(resultCode, resultDescr))
       case _ => None
     }
   }

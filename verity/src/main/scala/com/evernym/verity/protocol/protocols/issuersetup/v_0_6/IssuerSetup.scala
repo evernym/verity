@@ -48,8 +48,15 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
   override def handleControl: Control ?=> Any = statefulHandleControl {
     case (State.Uninitialized(), _, c: Init) => ctx.apply(ProtocolInitialized(c.parametersStored.toSeq))
     case (init: State.InitializedWithParams, _, Create()) =>
-      init.parameters.paramValue(MY_ISSUER_DID) match {
-        case Some(issuerDid) if issuerDid.nonEmpty => ctx.signal(ProblemReport(s"${identifierAlreadyCreatedErrorMsg}"))
+      val issuerDid = init.parameters.paramValue(MY_ISSUER_DID).map(ctx.ledger.toLegacyNonFqId)
+      issuerDid match {
+        case Some(issuerDid) if issuerDid.nonEmpty => ctx.wallet.verKey(issuerDid) {
+          case Success(verKeyRes) =>
+            ctx.logger.debug(s"Found existing did/key pair. DID: ${}, Key: ${}")
+            ctx.signal(PublicIdentifier(issuerDid, verKeyRes.verKey))
+            ctx.apply(CreatePublicIdentifierCompleted(issuerDid, verKeyRes.verKey))
+          case _ => ctx.signal(ProblemReport(s"${unableToFindIssuerVerkey}: ${issuerDid}"))
+        }
         case _ =>
           ctx.logger.debug("Creating DID/Key pair for Issuer Identifier/Keys")
           ctx.wallet.newDid() {
@@ -72,8 +79,15 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
         case None => ctx.logger.warn(corruptedStateErrorMsg + " - Created state don't have did and/or verkey")
       }
     case (init: State.InitializedWithParams, _, CurrentPublicIdentifier()) =>
-      init.parameters.paramValue(MY_ISSUER_DID) match {
-        case Some(issuerDid) if issuerDid.nonEmpty => ctx.signal(ProblemReport(identifierAlreadyCreatedErrorMsg))
+      val issuerDid = init.parameters.paramValue(MY_ISSUER_DID).map(ctx.ledger.toLegacyNonFqId)
+      issuerDid match {
+        case Some(issuerDid) if issuerDid.nonEmpty => ctx.wallet.verKey(issuerDid) {
+          case Success(verKeyRes) =>
+            ctx.logger.debug(s"Found existing did/key pair. DID: ${}, Key: ${}")
+            ctx.signal(PublicIdentifier(issuerDid, verKeyRes.verKey))
+            ctx.apply(CreatePublicIdentifierCompleted(issuerDid, verKeyRes.verKey))
+          case _ => ctx.signal(ProblemReport(s"${unableToFindIssuerVerkey}: ${issuerDid}"))
+        }
         case _ => ctx.signal(ProblemReport(identifierNotCreatedProblem))
       }
     case (_, _, CurrentPublicIdentifier()) => ctx.signal(ProblemReport(identifierNotCreatedProblem))
@@ -111,12 +125,11 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
 }
 
 object IssuerSetup {
-  val selfIdErrorMsg = "SELF ID was not provided with init parameters"
   val didCreateErrorMsg = "Unable to Issuer Public Identity"
   val corruptedStateErrorMsg = "Issuer Identifier is in a corrupted state"
   val alreadyCreatingProblem  = "Issuer Identifier is already created or in the process of creation"
   val identifierNotCreatedProblem = "Issuer Identifier has not been created yet"
-  val identifierAlreadyCreatedErrorMsg = "Public identifier has already been created. This can happen if IssuerSetup V0.7 has already ben called for this Verity Tenant."
+  val unableToFindIssuerVerkey = "Agent wallet has no verkey for public identifier"
 
   type Nonce = String
   def createNonce(): Nonce = {

@@ -33,15 +33,11 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
         State.Initialized(initParams) -> defineSelf(r, initParams.paramValueRequired(SELF_ID), Role.Owner)
       }
 
-    case (State.Initialized(params), _, CreatePublicIdentifierCompleted(did, verKey)) =>
-      ctx.logger.debug(s"CreatePublicIdentifierCompleted: $did - $verKey")
-      State.Created(State.Identity(did, verKey))
+    case (State.Initialized(params), _, CreatePublicIdentifierCompleted(did, verKey)) => State.Created(State.Identity(did, verKey))
     case (s: State.Created, _, e: NeedsManualEndorsement) => State.Created(s.identity)
     case (s: State.Created, _, e: AskedForEndorsement)    => State.WaitingOnEndorser(e.ledgerPrefix, s.identity)
     case (s: State.WaitingOnEndorser, _, e: DIDWritten)  => State.Created(s.identity)
-    case (s: State.WaitingOnEndorser, _, e: IssuerSetupFailed) =>
-      problemReport(e.error)
-      State.Created(s.identity)
+    case (s: State.WaitingOnEndorser, _, e: IssuerSetupFailed) => State.Created(s.identity)
     case (s: State, _, e: IssuerSetupFailed) => s
   }
 

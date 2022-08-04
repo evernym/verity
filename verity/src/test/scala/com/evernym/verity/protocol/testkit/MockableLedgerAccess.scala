@@ -1,7 +1,6 @@
 package com.evernym.verity.protocol.testkit
 
 import akka.actor.ActorRef
-import com.evernym.vdrtools.ledger.Ledger.buildNymRequest
 import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
 import com.evernym.verity.actor.testkit.actor.MockLedgerTxnExecutor
 import com.evernym.verity.agentmsg.DefaultMsgCodec
@@ -11,7 +10,6 @@ import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
-import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessAdapter
 import com.evernym.verity.protocol.testkit.MockLedger.TEST_INDY_SOVRIN_NAMESPACE
 import com.evernym.verity.protocol.testkit.MockableLedgerAccess.MOCK_NOT_ENDORSER
 import com.evernym.verity.testkit.{BasicSpecBase, TestWallet}
@@ -19,7 +17,6 @@ import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.evernym.verity.vault.WalletAPIParam
 import com.evernym.verity.vdr._
-import scala.compat.java8.FutureConverters.{toScala => toFuture}
 
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import org.json.JSONObject
@@ -53,10 +50,6 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
 
   val testWallet = new TestWallet(executionContext, false, system)
   implicit val wap: WalletAPIParam = testWallet.wap
-  override val walletAccess = new WalletAccessAdapter(
-    testWallet.testWalletAPI,
-    testWallet.walletId
-  )
 
   lazy val invalidEndorserError: String = "Rule for this action is: 1 TRUSTEE signature is required OR 1 STEWARD " +
     "signature is required OR 1 ENDORSER signature is required OR 1 signature of any role is required with additional" +
@@ -189,6 +182,10 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
   override def fqCredDefId(credDefId: CredDefId, issuerDid: Option[FqDID], force: Boolean): FqCredDefId =
     MockLedger.fqCredDefId(credDefId, issuerDid, force || vdrMultiLedgerSupportEnabled)
 
+  def toLegacyNonFqId(did: DidStr): DidStr = {
+    MockLedger.toLegacyNonFqId(did, vdrMultiLedgerSupportEnabled)
+  }
+
   override def toLegacyNonFqSchemaId(schemaId: FqSchemaId): SchemaId =
     MockLedger.toLegacyNonFqSchemaId(schemaId, vdrMultiLedgerSupportEnabled)
 
@@ -277,6 +274,10 @@ object MockLedger {
 
   def fqCredDefId(id: String, issuerDid: Option[DidStr], vdrMultiLedgerSupportEnabled: Boolean): String = {
     VDRUtil.toFqCredDefId_v0(id, issuerDid, Option(TEST_INDY_LEDGER_PREFIX), vdrMultiLedgerSupportEnabled)
+  }
+
+  def toLegacyNonFqId(did: DidStr, vdrMultiLedgerSupportEnabled: Boolean): SchemaId = {
+    VDRUtil.toLegacyNonFqDid(did, vdrMultiLedgerSupportEnabled)
   }
 
   def toLegacyNonFqSchemaId(schemaId: FqSchemaId, vdrMultiLedgerSupportEnabled: Boolean): SchemaId = {

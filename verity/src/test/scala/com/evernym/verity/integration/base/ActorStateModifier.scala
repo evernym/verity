@@ -9,13 +9,17 @@ import com.evernym.verity.config.AppConfig
 
 import scala.concurrent.ExecutionContext
 
-//either modifies/delete events as per given `eventModifier` function or delete all events/snapshot
+//modifies and/or deletes the state based on given `eventMapper`
+// if `eventMapper` is empty, it will delete the state completely
+// if `eventMapper` is not empty:
+//      * it will prepare new events to be persisted based on what `eventMapper` returns for already persisted events
+//      * then it will delete the state completely and re-persist the new events it prepared in previous step
 class ActorStateModifier(val futureExecutionContext: ExecutionContext,
                          val appConfig: AppConfig,
                          actorTypeName: String,
                          actorEntityId: EntityId,
                          persEncryptionKey: Option[String],
-                         eventModifier: PartialFunction[Any, Option[Any]] = PartialFunction.empty)
+                         eventMapper: PartialFunction[Any, Option[Any]] = PartialFunction.empty)
   extends BasePersistentActor
     with SnapshotterExt[Any] {
 
@@ -29,21 +33,21 @@ class ActorStateModifier(val futureExecutionContext: ExecutionContext,
   override def receiveEvent: Receive = {
     case event =>
       recoveredEvents = recoveredEvents:+ event
-      if (modifiedEventsToBeRepersisted.nonEmpty && modifiedEventsToBeRepersisted.size == recoveredEvents.size) {
+      if (mappedEvents.nonEmpty && mappedEvents.size == recoveredEvents.size) {
         self ! Stop()
       }
   }
 
   override def receiveCmd: Receive = {
-    case "string" => logger.info(s"[ActorStateDeleter: $persistenceId] doesn't handle command")
+    case "string" => logger.info(s"[ActorStateModifier: $persistenceId] doesn't handle command")
   }
 
   override def postRecoveryCompleted(): Unit = {
     super.postRecoveryCompleted()
     recoveredEvents.foreach { event =>
-      if (eventModifier.isDefinedAt(event)) {
-        eventModifier.apply(event).foreach { event =>
-          modifiedEventsToBeRepersisted = modifiedEventsToBeRepersisted :+ event
+      if (eventMapper.isDefinedAt(event)) {
+        eventMapper.apply(event).foreach { event =>
+          mappedEvents = mappedEvents :+ event
         }
       }
     }
@@ -52,21 +56,21 @@ class ActorStateModifier(val futureExecutionContext: ExecutionContext,
   }
 
   def modifyStateAndStop(): Unit = {
-    logger.info(s"[ActorStateDeleter: $persistenceId] about to delete events till lastSequenceNr: $lastSequenceNr, snapshotSequenceNr: $snapshotSequenceNr")
+    logger.info(s"[ActorStateModifier: $persistenceId] about to delete events till lastSequenceNr: $lastSequenceNr, snapshotSequenceNr: $snapshotSequenceNr")
     deleteMessagesExtended(lastSequenceNr)
   }
 
   //this gets called when all the events are deleted
   override def postAllMsgsDeleted(): Unit = {
-    logger.info(s"[ActorStateDeleter: $persistenceId] all events deleted")
+    logger.info(s"[ActorStateModifier: $persistenceId] all events deleted")
     deleteSnapshot(snapshotSequenceNr)
   }
 
-  //this gets called when all the snapshot gets deleted
+  //this gets called when the snapshot deletion is successful
   override def postDeleteSnapshotSuccess(dss: DeleteSnapshotSuccess): Unit = {
-    logger.info(s"[ActorStateDeleter: $persistenceId] snapshot deleted: " + dss)
-    if (modifiedEventsToBeRepersisted.isEmpty) self ! Stop()
-    else writeAndApplyAll(modifiedEventsToBeRepersisted.toList)
+    logger.info(s"[ActorStateModifier: $persistenceId] snapshot deleted: " + dss)
+    if (mappedEvents.isEmpty) self ! Stop()
+    else writeAndApplyAll(mappedEvents.toList)
   }
 
   override def receiveSnapshot: PartialFunction[Any, Unit] = {
@@ -76,7 +80,9 @@ class ActorStateModifier(val futureExecutionContext: ExecutionContext,
   override def snapshotState: Option[Any] = None
 
   var recoveredEvents: Seq[Any] = Seq.empty
-  var modifiedEventsToBeRepersisted: Seq[Any] = Seq.empty
+
+  //the new events to be persisted after existing event/snapshot cleanup
+  var mappedEvents: Seq[Any] = Seq.empty
 }
 
 object ActorStateModifier {
@@ -85,6 +91,6 @@ object ActorStateModifier {
             actorTypeName: String,
             actorEntityId: EntityId,
             persEncryptionKey: Option[String],
-            eventModifier: PartialFunction[Any, Option[Any]] = PartialFunction.empty): Props =
-    Props(new ActorStateModifier(futureExecutionContext, appConfig, actorTypeName, actorEntityId, persEncryptionKey, eventModifier))
+            eventMapper: PartialFunction[Any, Option[Any]] = PartialFunction.empty): Props =
+    Props(new ActorStateModifier(futureExecutionContext, appConfig, actorTypeName, actorEntityId, persEncryptionKey, eventMapper))
 }

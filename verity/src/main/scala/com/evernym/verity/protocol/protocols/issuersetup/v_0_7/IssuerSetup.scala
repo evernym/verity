@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.issuersetup.v_0_7
 
-import com.evernym.verity.constants.InitParamConstants.{MY_ISSUER_DID, MY_ISSUER_VERKEY, MY_PUBLIC_DID, SELF_ID}
+import com.evernym.verity.constants.InitParamConstants.{MY_ISSUER_DID, MY_ISSUER_VERKEY, SELF_ID}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
@@ -25,7 +25,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
   override def applyEvent: ApplyEvent = {
     case (State.Uninitialized(), r: Roster[Role], e: Initialized) =>
       val initParams = getInitParams(e)
-      val issuerDid = initParams.paramValueRequired(MY_ISSUER_DID)
+      val issuerDid = ctx.ledger.fqDID(initParams.paramValueRequired(MY_ISSUER_DID), force = false)
       val issuerVerkey = initParams.paramValueRequired(MY_ISSUER_VERKEY)
       if (issuerDid.nonEmpty && issuerVerkey.nonEmpty) {
         State.Created(State.Identity(issuerDid, issuerVerkey)) -> defineSelf(r, initParams.paramValueRequired(SELF_ID), Role.Owner)
@@ -167,5 +167,4 @@ object IssuerSetup {
   val didCreateErrorMsg = "Unable to create Issuer Public Identity"
   val identifierNotCreatedProblem = "Issuer Identifier has not been created yet"
   val identifierAlreadyCreatedErrorMsg = "Public identifier has already been created"
-  val unableToFindIssuerVerkey = "Agent wallet has no verkey for public identifier"
 }

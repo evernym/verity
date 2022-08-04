@@ -5,7 +5,6 @@ import com.evernym.vdrtools.IndyException
 import com.evernym.verity.cache.providers.CacheProvider
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine.asyncapi._
-import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.vdr._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -14,7 +13,6 @@ import scala.util.{Failure, Try}
 
 class LedgerAccessAdapter(vdrTools: VDRAdapter,
                           vdrCache: CacheProvider,
-                          _walletAccess: WalletAccess,
                           _vdrMultiLedgerSupportEnabled: Boolean,
                           _vdrUnqualifiedLedgerPrefix: LedgerPrefix,
                           _vdrLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix])
@@ -131,6 +129,9 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
     VDRUtil.toFqCredDefId_v0(credDefId, issuerFqDID, Option(_vdrUnqualifiedLedgerPrefix), force || _vdrMultiLedgerSupportEnabled)
   }
 
+  def toLegacyNonFqId(did: DidStr): DidStr = {
+    VDRUtil.toLegacyNonFqDid(did, _vdrMultiLedgerSupportEnabled)
+  }
 
   def toLegacyNonFqSchemaId(schemaId: FqSchemaId): SchemaId = {
     VDRUtil.toLegacyNonFqSchemaId(schemaId, _vdrMultiLedgerSupportEnabled)
@@ -157,8 +158,6 @@ class LedgerAccessAdapter(vdrTools: VDRAdapter,
       cd
     }
   }
-
-  override def walletAccess: WalletAccess = _walletAccess
 
   override def handleResult[T](result: Try[Any], handler: Try[T] => Unit): Unit = {
     handler(

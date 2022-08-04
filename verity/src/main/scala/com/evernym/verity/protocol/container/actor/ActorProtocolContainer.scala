@@ -325,7 +325,6 @@ class ActorProtocolContainer[
     new LedgerAccessAdapter(
       agentActorContext.vdrAdapter,
       agentActorContext.vdrCache,
-      wallet,
       vdrMultiLedgerSupportEnabled,
       vdrUnqualifiedLedgerPrefix,
       vdrLedgerPrefixMappings

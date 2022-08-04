@@ -22,7 +22,6 @@ import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageMsgF
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.CommittedAnswerMsgFamily
 import com.evernym.verity.protocol.protocols.connections.v_1_0.ConnectionsMsgFamily
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredMsgFamily
-import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.{ IssuerSetup => IssuerSetup0_7}
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.OutOfBandMsgFamily
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.PresentProofMsgFamily
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.RelationshipMsgFamily
@@ -58,11 +57,9 @@ import scala.util.Try
 
 trait InteractiveSdkFlow extends MetricsFlow {
   this: BasicSpec with TempDir with Eventually =>
-
-  val logger: Logger = getLoggerByName(getClass.getName)
-
   import InteractiveSdkFlow._
 
+  val logger: Logger = getLoggerByName(getClass.getName)
   var iterationCountMap: mutable.Map[String, Int] = mutable.Map()
 
   def availableSdk(app: ApplicationAdminExt)(implicit scenario: Scenario): Unit = {
@@ -171,10 +168,9 @@ trait InteractiveSdkFlow extends MetricsFlow {
         issuerSdk.issuerSetup_0_7.currentPublicIdentifier(issuerSdk.context)
 
         receiverSdk.checkMsg(){ resp =>
-          if (resp.getString(`@TYPE`).contains("public-identifier") ||
-            resp.getString("message").contains(IssuerSetup0_7.identifierAlreadyCreatedErrorMsg)) {
+          if (resp.getString(`@TYPE`).contains("public-identifier")) {
             logger.info("Issuer is already setup")
-          } else if(resp.getString(`@TYPE`).contains("problem-report")) {
+          } else if (resp.getString(`@TYPE`).contains("problem-report")) {
             issuerSdk.issuerSetup_0_7
               .create(issuerSdk.context, "did:indy:sovrin", endorser.getOrElse("WAJQSd73TpK2HmoYRQJX7p"))
 
@@ -383,13 +379,13 @@ trait InteractiveSdkFlow extends MetricsFlow {
   }
 
   def writeFailingSchema(issuerSdk: VeritySdkProvider,
-                  msgReceiverSdkProvider: VeritySdkProvider,
-                  ledgerUtil: LedgerUtil,
-                  schemaName: String,
-                  schemaVersion: String,
-                  expectedErrorMessage: String,
-                  schemaAttrs: String*)
-                 (implicit scenario: Scenario): Unit = {
+                         msgReceiverSdkProvider: VeritySdkProvider,
+                         ledgerUtil: LedgerUtil,
+                         schemaName: String,
+                         schemaVersion: String,
+                         expectedErrorMessage: String,
+                         schemaAttrs: String*)
+                        (implicit scenario: Scenario): Unit = {
     val issuerName = issuerSdk.sdkConfig.name
     s"write schema $schemaName on $issuerName" - {
 
@@ -1884,9 +1880,11 @@ object InteractiveSdkFlow {
   }
 
   def currentIssuerId(issuerSdk: VeritySdkProvider,
-                      msgReceiverSdk: VeritySdkProvider with MsgReceiver)(implicit scenario: Scenario): (DidStr, VerKeyStr) = {
+                      msgReceiverSdk: VeritySdkProvider with MsgReceiver)
+                     (implicit scenario: Scenario): (DidStr, VerKeyStr) = {
     var did = ""
     var verkey = ""
+
     issuerSdk.issuerSetup_0_7.currentPublicIdentifier(issuerSdk.context)
 
     msgReceiverSdk.expectMsg("public-identifier") { resp =>

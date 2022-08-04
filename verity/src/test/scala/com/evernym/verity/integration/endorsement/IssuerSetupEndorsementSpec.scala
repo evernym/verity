@@ -3,7 +3,6 @@ package com.evernym.verity.integration.endorsement
 import com.evernym.verity.actor.PublicIdentityStored
 import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
-import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.eventing.adapters.basic.consumer.BasicConsumerAdapter
@@ -12,19 +11,15 @@ import com.evernym.verity.eventing.event_handlers.TOPIC_REQUEST_ENDORSEMENT
 import com.evernym.verity.integration.base.{EndorsementReqMsgHandler, EndorserUtil, PortProvider, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.{IssuerSdk, SdkProvider}
 import com.evernym.verity.integration.base.verity_provider.VerityEnv
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.IssuerSetup.{identifierAlreadyCreatedErrorMsg, identifierNotCreatedProblem}
-import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.{Create, CurrentPublicIdentifier, IssuerSetupDefinition, ProblemReport, PublicIdentifier, PublicIdentifierCreated}
+import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.{Create, CurrentPublicIdentifier, IssuerSetupDefinition, ProblemReport, PublicIdentifier}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
-import com.evernym.verity.vdr.{FqCredDefId, MockIndyLedger, MockLedgerRegistry, MockLedgerRegistryBuilder, MockVdrTools, Namespace, TxnResult}
-import com.evernym.verity.vdr.base.PayloadConstants.{CRED_DEF, TYPE}
 import com.typesafe.config.{Config, ConfigValueFactory}
 import org.json.JSONObject
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext}
 import scala.jdk.CollectionConverters.IterableHasAsJava
 
 class IssuerSetupEndorsementSpec
@@ -88,12 +83,7 @@ class IssuerSetupEndorsementSpec
 
     "when sent 'currentPublicIdentifier' (issuer-setup 0.7) message after deleting existing state" - {
       "should respond with 'public-identifier-created'" in {
-        val userAgentEventModifier: PartialFunction[Any, Option[Any]] = {
-          case pis: PublicIdentityStored => None    //this event will be deleted
-          case other => Option(other)               //these events will be kept as it is
-        }
-        modifyUserAgentActorState(issuerVAS, issuerSDK.domainDID, eventModifier = userAgentEventModifier)
-        deleteProtocolActorState(issuerVAS, IssuerSetupDefinition, issuerSDK.domainDID, None, None)
+        resetIssuerSetupChanges()
         issuerSDK.sendMsg(CurrentPublicIdentifier())
         issuerSDK.expectMsgOnWebhook[ProblemReport]().msg.message shouldBe identifierNotCreatedProblem
       }
@@ -101,12 +91,7 @@ class IssuerSetupEndorsementSpec
 
     "when sent 'create' (issuer-setup 0.7) message with inactive endorser after deleting existing state" - {
       "should respond with 'public-identifier-created'" in {
-        val userAgentEventModifier: PartialFunction[Any, Option[Any]] = {
-          case pis: PublicIdentityStored => None    //this event will be deleted
-          case other => Option(other)               //these events will be kept as it is
-        }
-        modifyUserAgentActorState(issuerVAS, issuerSDK.domainDID, eventModifier = userAgentEventModifier)
-        deleteProtocolActorState(issuerVAS, IssuerSetupDefinition, issuerSDK.domainDID, None, None)
+        resetIssuerSetupChanges()
         issuerSDK.sendMsg(Create("did:indy:sovrin", Some(EndorserUtil.inactiveEndorserDid)))
         val msg = issuerSDK.expectMsgOnWebhook[JSONObject]().msg
         msg.getJSONObject("status").has("needsEndorsement") shouldBe true
@@ -115,12 +100,7 @@ class IssuerSetupEndorsementSpec
 
     "when sent 'create' (issuer-setup 0.7) message with inactive endorser and then sent 'currentPublicIdentifier' after deleting existing state" - {
       "should respond with 'public-identifier-created'" in {
-        val userAgentEventModifier: PartialFunction[Any, Option[Any]] = {
-          case pis: PublicIdentityStored => None    //this event will be deleted
-          case other => Option(other)               //these events will be kept as it is
-        }
-        modifyUserAgentActorState(issuerVAS, issuerSDK.domainDID, eventModifier = userAgentEventModifier)
-        deleteProtocolActorState(issuerVAS, IssuerSetupDefinition, issuerSDK.domainDID, None, None)
+        resetIssuerSetupChanges()
         issuerSDK.sendMsg(Create("did:indy:sovrin", Some(EndorserUtil.inactiveEndorserDid)))
         val msg = issuerSDK.expectMsgOnWebhook[JSONObject]().msg
         msg.getJSONObject("status").has("needsEndorsement") shouldBe true
@@ -134,13 +114,7 @@ class IssuerSetupEndorsementSpec
 
     "when sent 'create' (issuer-setup 0.7) message with active endorser" - {
       "should respond with 'public-identifier-created'" in {
-        val userAgentEventModifier: PartialFunction[Any, Option[Any]] = {
-          case pis: PublicIdentityStored => None    //this event will be deleted
-          case other => Option(other)               //these events will be kept as it is
-        }
-        modifyUserAgentActorState(issuerVAS, issuerSDK.domainDID, eventModifier = userAgentEventModifier)
-        deleteProtocolActorState(issuerVAS, IssuerSetupDefinition, issuerSDK.domainDID, None, None)
-
+        resetIssuerSetupChanges()
         issuerSDK.sendMsg(Create("did:indy:sovrin", Some(EndorserUtil.activeEndorserDid)))
         val receivedMsg = issuerSDK.expectMsgOnWebhook[JSONObject]()
         val pic = receivedMsg.msg
@@ -151,6 +125,14 @@ class IssuerSetupEndorsementSpec
     }
   }
 
+  private def resetIssuerSetupChanges(): Unit = {
+    val userAgentEventMapper: PartialFunction[Any, Option[Any]] = {
+      case _: PublicIdentityStored => None  //this event will be deleted
+      case other => Option(other)           //these events (whatever they maybe) will be kept as it is
+    }
+    modifyUserAgentActorState(issuerVAS, issuerSDK.domainDID, eventModifier = userAgentEventMapper)
+    deleteProtocolActorState(issuerVAS, IssuerSetupDefinition, issuerSDK.domainDID, None, None)
+  }
 
   lazy val endorserServiceEventAdapters: Config =
     issuerVAS.headVerityLocalNode

@@ -7,7 +7,7 @@ import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
-import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkOptionalNotEmpty, checkRequired}
 import com.evernym.verity.protocol.protocols.connecting.common.{AgentKeyDlgProof, SenderAgencyDetail, SenderDetail}
 import org.json.JSONObject

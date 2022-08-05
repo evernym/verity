@@ -1,6 +1,6 @@
 package com.evernym.verity.protocol.protocols.outofband.v_1_0
 
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.{IssueCredMsgFamily, IssueCredentialProtoDef}
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.IssueCredentialProtoDef
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 

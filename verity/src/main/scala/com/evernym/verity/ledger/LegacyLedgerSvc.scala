@@ -63,7 +63,7 @@ case class LedgerRequest(req: String,
 case class TransactionAuthorAgreement(version: String, digest: String, mechanism: String, timeOfAcceptance: String)
 
 
-trait LedgerSvc {
+trait LegacyLedgerSvc {
 
   def ledgerTxnExecutor: LedgerTxnExecutor
 

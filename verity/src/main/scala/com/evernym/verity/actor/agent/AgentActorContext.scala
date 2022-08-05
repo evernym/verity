@@ -18,7 +18,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.eventing.adapters.kafka.producer.{KafkaProducerAdapter, ProducerSettingsProvider}
 import com.evernym.verity.eventing.ports.producer.ProducerPort
-import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc, LedgerTxnExecutor}
+import com.evernym.verity.ledger.{LedgerPoolConnManager, LegacyLedgerSvc, LedgerTxnExecutor}
 import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.{AccessTokenRefreshers, OAuthAccessTokenRefresher}
 import com.evernym.verity.observability.metrics.{MetricsWriter, MetricsWriterExtension}
@@ -49,7 +49,7 @@ trait AgentActorContext
   lazy val generalCacheFetchers: Map[FetcherParam, CacheValueFetcher] = List (
     new KeyValueMapperFetcher(system, appConfig, futureExecutionContext),
     new AgencyIdentityCacheFetcher(agentMsgRouter, appConfig, futureExecutionContext),
-    new EndpointCacheFetcher(ledgerSvc, appConfig, futureExecutionContext),
+    new EndpointCacheFetcher(legacyLedgerSvc, appConfig, futureExecutionContext),
     new LedgerVerKeyCacheFetcher(vdrAdapter, appConfig, futureExecutionContext)
   ).map(f => f.fetcherParam -> f).toMap
 
@@ -65,7 +65,7 @@ trait AgentActorContext
   lazy val actorWalletService: ActorWalletService = new ActorWalletService(system, appConfig, poolConnManager, futureExecutionContext)
   lazy val walletAPI: WalletAPI = new StandardWalletAPI(actorWalletService)
   lazy val agentMsgTransformer: AgentMsgTransformer = new AgentMsgTransformer(walletAPI, appConfig, futureExecutionContext)
-  lazy val ledgerSvc: LedgerSvc = new DefaultLedgerSvc(system, appConfig, walletAPI, poolConnManager)
+  lazy val legacyLedgerSvc: LegacyLedgerSvc = new DefaultLegacyLedgerSvc(system, appConfig, walletAPI, poolConnManager)
   lazy val storageAPI: StorageAPI = StorageAPI.loadFromConfig(appConfig, futureExecutionContext)
   lazy val vdrBuilderFactory: VDRToolsFactory = () => new VdrToolsBuilderImpl(appConfig)(executionContext)
   lazy val vdrAdapter: VDRAdapter = createVDRAdapter(vdrBuilderFactory, appConfig)
@@ -126,12 +126,12 @@ trait AgentActorContext
 }
 
 
-class DefaultLedgerSvc(val system: ActorSystem,
-                       val appConfig: AppConfig,
-                       val walletAPI: WalletAPI,
-                       val ledgerPoolConnManager: LedgerPoolConnManager)
-                      (implicit val executionContext: ExecutionContext)
-  extends LedgerSvc {
+class DefaultLegacyLedgerSvc(val system: ActorSystem,
+                             val appConfig: AppConfig,
+                             val walletAPI: WalletAPI,
+                             val ledgerPoolConnManager: LedgerPoolConnManager)
+                            (implicit val executionContext: ExecutionContext)
+  extends LegacyLedgerSvc {
 
   override def ledgerTxnExecutor: LedgerTxnExecutor = {
     ledgerPoolConnManager.txnExecutor(Some(walletAPI))

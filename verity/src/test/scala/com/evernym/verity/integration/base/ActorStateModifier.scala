@@ -56,7 +56,8 @@ class ActorStateModifier(val futureExecutionContext: ExecutionContext,
   }
 
   def modifyStateAndStop(): Unit = {
-    logger.info(s"[ActorStateModifier: $persistenceId] about to delete events till lastSequenceNr: $lastSequenceNr, snapshotSequenceNr: $snapshotSequenceNr")
+    logger.info(s"[ActorStateModifier: $persistenceId] about to delete events till lastSequenceNr: $lastSequenceNr, " +
+      s"snapshotSequenceNr: $snapshotSequenceNr")
     deleteMessagesExtended(lastSequenceNr)
   }
 

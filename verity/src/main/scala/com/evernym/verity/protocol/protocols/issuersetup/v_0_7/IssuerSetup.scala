@@ -5,7 +5,7 @@ import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.endorser.ENDORSEMENT_RESULT_SUCCESS_CODE
-import com.evernym.verity.protocol.engine.asyncapi.ledger.{IndyLedgerUtil, TxnForEndorsement}
+import com.evernym.verity.protocol.engine.asyncapi.vdr.{IndyLedgerUtil, TxnForEndorsement}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.SignedMsgResult
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.?=>
@@ -25,7 +25,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
   override def applyEvent: ApplyEvent = {
     case (State.Uninitialized(), r: Roster[Role], e: Initialized) =>
       val initParams = getInitParams(e)
-      val issuerDid = ctx.ledger.fqDID(initParams.paramValueRequired(MY_ISSUER_DID), force = false)
+      val issuerDid = ctx.vdr.fqDID(initParams.paramValueRequired(MY_ISSUER_DID), force = false)
       val issuerVerkey = initParams.paramValueRequired(MY_ISSUER_VERKEY)
       if (issuerDid.nonEmpty && issuerVerkey.nonEmpty) {
         State.Created(State.Identity(issuerDid, issuerVerkey)) -> defineSelf(r, initParams.paramValueRequired(SELF_ID), Role.Owner)
@@ -63,7 +63,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
       ctx.wallet.newDid(Some(ledgerPrefix)) {
       case Success(keyCreated) =>
         ctx.apply(CreatePublicIdentifierCompleted(keyCreated.did, keyCreated.verKey))
-        val fqSubmitterDID = ctx.ledger.fqDID(keyCreated.did, force = false)
+        val fqSubmitterDID = ctx.vdr.fqDID(keyCreated.did, force = false)
         ctx.endorser.withCurrentEndorser(ledgerPrefix) {
           case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID.contains(endorser.did) =>
             ctx.logger.info(s"registered endorser to be used for issuer endorsement (prefix: $ledgerPrefix): " + endorser)
@@ -110,7 +110,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
                                        endorserDid: DidStr)
                                       (handleResult: Try[TxnForEndorsement] => Unit): Unit = {
     if (endorserDid.nonEmpty) {
-      ctx.ledger
+      ctx.vdr
         .prepareDidTxn(
           didJson,
           fqSubmitterDID,

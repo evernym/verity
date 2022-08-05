@@ -9,7 +9,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_CONFIGS, 
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{ConnReqAcceptedMsg_MFV_0_6, DeclineConnReqMsg_MFV_0_6, RedirectConnReqMsg_MFV_0_6}
 import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam}
 import com.evernym.verity.agentmsg.wallet_backup.{WalletBackupProvisionMsg, WalletBackupRestoreMsg}
-import com.evernym.verity.protocol.engine.Constants.{MFV_0_6, MFV_1_0, MTV_1_0}
+import com.evernym.verity.constants.Constants.{MFV_0_6, MFV_1_0, MTV_1_0}
 import com.evernym.verity.protocol.engine.ThreadId
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.protocols.walletBackup
@@ -28,7 +28,6 @@ import com.evernym.verity.vault.{EncryptParam, KeyParam}
 import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
-import scala.util.Left
 
 
 trait AgentMsgBuilder extends HasExecutionContextProvider { this: AgentMsgHelper with MockAgent with AgentMsgHelper =>

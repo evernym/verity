@@ -15,9 +15,9 @@ import scala.concurrent.{ExecutionContext, Future}
 //it doesn't have any privilege checking etc.
 //it is more like data store only
 
-class MockLedgerSvc(appConfig: AppConfig,
-                    vdrAdapter: VDRAdapter)(implicit val executionContext: ExecutionContext)
-  extends LedgerSvc {
+class MockLegacyLedgerSvc(appConfig: AppConfig,
+                          vdrAdapter: VDRAdapter)(implicit val executionContext: ExecutionContext)
+  extends LegacyLedgerSvc {
   override val ledgerTxnExecutor: LedgerTxnExecutor = new MockLedgerTxnExecutor( executionContext, appConfig, vdrAdapter)
 }
 

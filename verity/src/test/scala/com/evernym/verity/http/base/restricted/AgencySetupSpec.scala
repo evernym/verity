@@ -23,7 +23,7 @@ trait AgencySetupSpec { this : EdgeEndpointBaseSpec =>
             mockEntEdgeEnv.cloudAgent.agencyPublicDid = Option(apd)
             mockUserEdgeEnv.edgeAgent.agencyPublicDid = Option(apd)
             mockUserEdgeEnv.cloudAgent.agencyPublicDid = Option(apd)
-            Await.result(agentActorContext.ledgerSvc.ledgerTxnExecutor.addNym(WriteSubmitter("did", None), apd.didPair), 5.seconds)
+            Await.result(agentActorContext.legacyLedgerSvc.ledgerTxnExecutor.addNym(WriteSubmitter("did", None), apd.didPair), 5.seconds)
           }
         }
       }

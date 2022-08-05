@@ -14,6 +14,7 @@ import com.evernym.verity.protocol.engine.asyncapi.{AsyncOpRunner, BlobStorageUt
 import com.evernym.verity.storage_services.StorageAPI
 import com.evernym.verity.util2.RetentionPolicy
 import com.evernym.verity.vault.operation_executor.FutureConverter
+import com.evernym.verity.vdr.LedgerPrefix
 
 import scala.concurrent.ExecutionContext
 import scala.util.Try
@@ -36,7 +37,7 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
   val blobStorageUtil = new BlobStorageUtil(bucketName, storageAPI)
   val eventPublisherUtil = new EventPublisherUtil(routingContext, producerPort)
 
-  override def withCurrentEndorser(ledgerPrefix: String)(handler: Try[Option[Endorser]] => Unit): Unit = {
+  override def withCurrentEndorser(ledgerPrefix: LedgerPrefix)(handler: Try[Option[Endorser]] => Unit): Unit = {
 
     asyncOpRunner.withFutureOpRunner(
       singletonParentProxy
@@ -55,7 +56,7 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
     )
   }
 
-  override def endorseTxn(payload: String, ledgerPrefix: String)(handler: Try[Unit] => Unit): Unit = {
+  override def endorseTxn(payload: String, ledgerPrefix: LedgerPrefix)(handler: Try[Unit] => Unit): Unit = {
     asyncOpRunner.withFutureOpRunner(
       blobStorageUtil.saveInBlobStore(payload.getBytes(), dataRetentionPolicy)
         .flatMap { storageInfo =>
@@ -71,6 +72,5 @@ class EndorserAccessAdapter(routingContext: RoutingContext,
   }
 
   val CLOUD_EVENT_DATA_FIELD_TXN_REF = "txnref"
-  val CLOUD_EVENT_DATA_FIELD_ENDORSER = "endorserdid"
 }
 

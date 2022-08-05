@@ -25,8 +25,8 @@ import scala.util.Try
 class SegmentStoreAccessAdapter(storageAPI: StorageAPI,
                                 protoRef: ProtoRef)
                                (implicit val asyncAPIContext: AsyncAPIContext,
-                                   implicit val asyncOpRunner: AsyncOpRunner,
-                                   implicit val ec: ExecutionContext)
+                                val asyncOpRunner: AsyncOpRunner,
+                                val ec: ExecutionContext)
   extends SegmentStoreAccess
     with BaseAsyncAccessImpl {
   override def storeSegment(segmentAddress: SegmentAddress,

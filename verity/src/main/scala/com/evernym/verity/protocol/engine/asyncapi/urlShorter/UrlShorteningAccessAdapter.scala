@@ -10,7 +10,7 @@ import scala.util.Try
 
 class UrlShorteningAccessAdapter(executionContext: ExecutionContext)
                                 (implicit val asyncOpRunner: AsyncOpRunner,
-                                    implicit val asyncAPIContext: AsyncAPIContext)
+                                 val asyncAPIContext: AsyncAPIContext)
   extends UrlShorteningAccess
     with BaseAsyncAccessImpl {
 

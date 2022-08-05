@@ -14,7 +14,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.did.didcomm.v1.messages.MsgType
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
-import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.protocols.deaddrop.DeadDropSpecUtil
 import com.evernym.verity.protocol.protocols.walletBackup.BackupInitParams
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext

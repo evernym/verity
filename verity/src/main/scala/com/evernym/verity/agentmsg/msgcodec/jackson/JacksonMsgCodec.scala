@@ -8,7 +8,6 @@ import com.evernym.verity.agentmsg.msgcodec.{MsgCodec, MsgMetadata, MsgTypeExcep
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor.JsonStr
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgParseUtil
 import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId, MsgType}
-import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.OptionUtil
 import com.fasterxml.jackson.annotation.JsonInclude.Include

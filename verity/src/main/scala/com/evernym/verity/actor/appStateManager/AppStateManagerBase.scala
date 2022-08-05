@@ -15,13 +15,9 @@ import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.util2.{ExceptionConverter, Exceptions}
 import com.typesafe.scalalogging.Logger
 
-import scala.concurrent.ExecutionContext
-
 
 trait AppStateManagerBase
   extends HasExecutionContextProvider { this: CoreActorExtended =>
-
-  private implicit val ex: ExecutionContext = futureExecutionContext
 
   val appConfig: AppConfig
   val appVersion: AppVersion

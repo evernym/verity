@@ -29,7 +29,7 @@ do
 done
 
 cd $SCRIPT_DIR/../../../../
-sbt "set test in assembly := {}" assembly
+sbt "set assembly / test := {}" assembly
 startCmd="/usr/bin/java -javaagent:$SCRIPT_DIR/../../../../integration-tests/lib/kanela-agent.jar -cp $VERITY_JAR_LOCATION:$SCRIPT_DIR/../../../../verity/src/main/resources:$SCRIPT_DIR/../../../../integration-tests/src/test/resources/common:$SCRIPT_DIR/../../../../integration-tests/src/test/resources/consumer com.evernym.verity.Main"
 
 echo "===================================== CAS ====================================================="

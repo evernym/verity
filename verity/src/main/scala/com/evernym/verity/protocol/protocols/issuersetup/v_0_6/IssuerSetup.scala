@@ -48,7 +48,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
   override def handleControl: Control ?=> Any = statefulHandleControl {
     case (State.Uninitialized(), _, c: Init) => ctx.apply(ProtocolInitialized(c.parametersStored.toSeq))
     case (init: State.InitializedWithParams, _, Create()) =>
-      val issuerDid = init.parameters.paramValue(MY_ISSUER_DID).map(ctx.ledger.toLegacyNonFqId)
+      val issuerDid = init.parameters.paramValue(MY_ISSUER_DID).map(ctx.vdr.toLegacyNonFqId)
       issuerDid match {
         case Some(issuerDid) if issuerDid.nonEmpty => ctx.wallet.verKey(issuerDid) {
           case Success(verKeyRes) =>
@@ -61,7 +61,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
           ctx.logger.debug("Creating DID/Key pair for Issuer Identifier/Keys")
           ctx.wallet.newDid() {
             case Success(keyCreated) =>
-              val fqId = ctx.ledger.fqDID(keyCreated.did, force = false)
+              val fqId = ctx.vdr.fqDID(keyCreated.did, force = false)
               ctx.apply(CreatePublicIdentifierCompleted(fqId, keyCreated.verKey))
               ctx.signal(PublicIdentifierCreated(PublicIdentifier(fqId, keyCreated.verKey)))
             case Failure(e) =>
@@ -74,12 +74,12 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
     case (State.Created(d), _, CurrentPublicIdentifier()) =>
       d.identity match {
         case Some(didDetails) =>
-          val fqId = ctx.ledger.fqDID(didDetails.did, force = false)
+          val fqId = ctx.vdr.fqDID(didDetails.did, force = false)
           ctx.signal(PublicIdentifier(fqId, didDetails.verKey))
         case None => ctx.logger.warn(corruptedStateErrorMsg + " - Created state don't have did and/or verkey")
       }
     case (init: State.InitializedWithParams, _, CurrentPublicIdentifier()) =>
-      val issuerDid = init.parameters.paramValue(MY_ISSUER_DID).map(ctx.ledger.toLegacyNonFqId)
+      val issuerDid = init.parameters.paramValue(MY_ISSUER_DID).map(ctx.vdr.toLegacyNonFqId)
       issuerDid match {
         case Some(issuerDid) if issuerDid.nonEmpty => ctx.wallet.verKey(issuerDid) {
           case Success(verKeyRes) =>
@@ -98,7 +98,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
       ctx.logger.debug("Creating DID/Key pair for Issuer Identifier/Keys")
       ctx.wallet.newDid() {
         case Success(keyCreated) =>
-          val fqId = ctx.ledger.fqDID(keyCreated.did, force = false)
+          val fqId = ctx.vdr.fqDID(keyCreated.did, force = false)
           ctx.apply(CreatePublicIdentifierCompleted(fqId, keyCreated.verKey))
           ctx.signal(PublicIdentifierCreated(PublicIdentifier(fqId, keyCreated.verKey)))
         case Failure(e) =>

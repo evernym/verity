@@ -5,7 +5,7 @@ import com.evernym.verity.protocol.engine.{EmptyValueForOptionalFieldProtocolEng
 import com.evernym.verity.did.exception.DIDException
 import com.evernym.verity.did.methods.{DIDMethod, UnqualifiedDID}
 import com.evernym.verity.did.toDIDMethod
-import com.evernym.verity.vdr.VDRUtil
+import com.evernym.verity.vdr.{LedgerPrefix, VDRUtil}
 
 import scala.util.Try
 
@@ -78,7 +78,7 @@ object ValidateHelper {
     }
   }
 
-  def checkDIDMethodMatchesLedgerPrefix(fieldName: String, did: String, ledgerPrefix: String): Unit = {
+  def checkDIDMethodMatchesLedgerPrefix(fieldName: String, did: String, ledgerPrefix: LedgerPrefix): Unit = {
     toDIDMethod(did) match {
       case _: UnqualifiedDID => // did method is assumed to match given ledger prefix
       case m: DIDMethod =>

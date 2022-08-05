@@ -27,7 +27,7 @@ import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgPackagingUtil, AgentMsgWrapper, MsgFamilyDetail, ParseParam, UnpackParam}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.MSG_LIMITS
-import com.evernym.verity.constants.Constants.UNKNOWN_SENDER_PARTICIPANT_ID
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EvernymQualifier, MsgName}

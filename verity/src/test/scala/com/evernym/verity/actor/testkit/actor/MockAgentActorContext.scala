@@ -9,7 +9,7 @@ import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.msgrouter.AgentMsgRouter
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgTransformer
 import com.evernym.verity.config.AppConfig
-import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerSvc}
+import com.evernym.verity.ledger.{LedgerPoolConnManager, LegacyLedgerSvc}
 import com.evernym.verity.protocol
 import com.evernym.verity.protocol.container.actor.ActorDriverGenParam
 import com.evernym.verity.protocol.engine.MockVDRAdapter
@@ -43,7 +43,7 @@ class MockAgentActorContext(val system: ActorSystem,
   override lazy val vdrBuilderFactory: VDRToolsFactory = () => new MockVdrToolsBuilder(ledgerRegistry)
   lazy val vdrTools: VdrTools = vdrBuilderFactory().build()
   override lazy val vdrAdapter: VDRAdapter = createVDRAdapter(vdrTools)
-  override lazy val ledgerSvc: LedgerSvc = new MockLedgerSvc(appConfig, vdrAdapter)
+  override lazy val legacyLedgerSvc: LegacyLedgerSvc = new MockLegacyLedgerSvc(appConfig, vdrAdapter)
   override lazy val poolConnManager: LedgerPoolConnManager = new InMemLedgerPoolConnManager(ecp.futureExecutionContext, appConfig, vdrAdapter)(system.dispatcher)
   override lazy val agentMsgRouter: AgentMsgRouter = mockAgentMsgRouter.getOrElse(
     new MockAgentMsgRouter(executionContext)(appConfig, system)

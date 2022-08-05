@@ -1,6 +1,6 @@
 package com.evernym.verity.agentmsg.msgpacker
 
-import com.evernym.verity.constants.Constants.`@MSG`
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util2.Exceptions.MissingReqFieldException
 import com.evernym.verity.actor.agent.TypeFormat
 import com.evernym.verity.actor.wallet.UnpackedMsg

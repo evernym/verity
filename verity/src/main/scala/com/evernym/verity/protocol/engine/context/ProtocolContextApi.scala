@@ -3,7 +3,7 @@ package com.evernym.verity.protocol.engine.context
 import com.evernym.verity.observability.metrics.CustomMetrics._
 import com.evernym.verity.observability.metrics.{MetricsUnit, MetricsWriter}
 import com.evernym.verity.protocol.engine.asyncapi.endorser.EndorserAccess
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
+import com.evernym.verity.protocol.engine.asyncapi.vdr.VdrAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateContextApi
@@ -61,7 +61,7 @@ trait ProtocolContextApi[P,R,M,E,S,I]
 
   def wallet: WalletAccess
 
-  def ledger: LedgerAccess
+  def vdr: VdrAccess
 
   def endorser: EndorserAccess
 

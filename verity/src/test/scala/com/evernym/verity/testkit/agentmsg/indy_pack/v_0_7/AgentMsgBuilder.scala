@@ -4,19 +4,19 @@ import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.actor.agent.MsgPackFormat
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam}
-import com.evernym.verity.protocol.engine.Constants.{MFV_0_7, MFV_1_0, MSG_FAMILY_AGENT_PROVISIONING, MSG_TYPE_CREATE_AGENT}
+import com.evernym.verity.protocol.engine.Constants.{MSG_FAMILY_AGENT_PROVISIONING, MSG_TYPE_CREATE_AGENT}
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.{ProvisionToken, RequesterKeys}
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.util.AgentPackMsgUtil._
 import com.evernym.verity.testkit.util.{AgentPackMsgUtil, CreateAgent_MFV_0_7, CreateEdgeAgent_MFV_0_7}
 import com.evernym.verity.actor.wallet.PackedMsg
+import com.evernym.verity.constants.Constants.{MFV_0_7, MFV_1_0}
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.testkit.mock.agent.MockAgent
 
 import scala.concurrent.ExecutionContext
-import scala.util.Left
 
 trait AgentMsgBuilder extends HasExecutionContextProvider { this: AgentMsgHelper with MockAgent with AgentMsgHelper =>
 

@@ -9,7 +9,7 @@ import com.evernym.verity.actor.testkit.PersistentActorSpec
 import com.evernym.verity.actor.testkit.actor.OverrideConfig
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.constants.ActorNameConstants.USER_AGENT_PAIRWISE_REGION_ACTOR_NAME
-import com.evernym.verity.protocol.engine.Constants.MTV_1_0
+import com.evernym.verity.constants.Constants.MTV_1_0
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.testkit.BasicSpec
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext

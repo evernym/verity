@@ -6,7 +6,7 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.endorser.EndorserAccess
 import com.evernym.verity.util2.HasExecutionContextProvider
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
+import com.evernym.verity.protocol.engine.asyncapi.vdr.VdrAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.journal.{JournalContext, JournalLogging, JournalProtocolSupport, Tag}
@@ -203,10 +203,10 @@ class Domain(override val domainId: DomainId,
   def provideEndorserAccess(): EndorserAccess = usedEndorserAccess.getOrElse(throw new RuntimeException("no endorser access provided to container"))
   override def endorserAccessProvider: Option[() => EndorserAccess] = Some(provideEndorserAccess _)
 
-  var usedLedgerAccess: Option[LedgerAccess] = None
-  def ledgerAccess(w: LedgerAccess) : Unit = usedLedgerAccess = Some(w)
-  def provideLedgerAccess(): LedgerAccess = usedLedgerAccess.get
-  override def ledgerAccessProvider: Option[() => LedgerAccess] = Some(provideLedgerAccess _)
+  var usedVdrAccess: Option[VdrAccess] = None
+  def vdrAccess(w: VdrAccess) : Unit = usedVdrAccess = Some(w)
+  def provideVdrAccess(): VdrAccess = usedVdrAccess.get
+  override def vdrAccessProvider: Option[() => VdrAccess] = Some(provideVdrAccess _)
 
   var usedUrlShorteningAccess: Option[UrlShorteningAccess] = None
   def urlShorteningAccess(url: UrlShorteningAccess) : Unit = usedUrlShorteningAccess = Some(url)
@@ -331,7 +331,7 @@ trait SimpleLaunchesProtocol extends LaunchesProtocol with HasExecutionContextPr
 
   def walletAccessProvider: Option[() => WalletAccess] = None
 
-  def ledgerAccessProvider: Option[() => LedgerAccess] = None
+  def vdrAccessProvider: Option[() => VdrAccess] = None
 
   def endorserAccessProvider: Option[() => EndorserAccess] = None
 
@@ -370,7 +370,7 @@ trait SimpleLaunchesProtocol extends LaunchesProtocol with HasExecutionContextPr
       val driver = protocolRegistry.find_!(protoDef.protoRef).driverGen map { _.apply(driverParam, futureExecutionContext) }
 
       val pce = ProtocolContainerElements( system, rel.myDid_!, pinstId, Option(threadId), protoDef,
-        initProvider, None, driver, journalContext, walletAccessProvider, ledgerAccessProvider,
+        initProvider, None, driver, journalContext, walletAccessProvider, vdrAccessProvider,
         endorserAccessProvider, urlShorteningAccessProvider)
 
       val container = containerProvider(pce)

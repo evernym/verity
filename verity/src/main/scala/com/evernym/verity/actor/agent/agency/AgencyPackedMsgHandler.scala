@@ -8,7 +8,7 @@ import com.evernym.verity.actor.resourceusagethrottling.RESOURCE_TYPE_ENDPOINT
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_FAMILY_ROUTING, MSG_TYPE_FORWARD, MSG_TYPE_FWD}
 import com.evernym.verity.agentmsg.msgfamily.routing.{FwdMsgHelper, FwdReqMsg}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
-import com.evernym.verity.protocol.engine.Constants.{MFV_0_5, MFV_1_0, MSG_FAMILY_NAME_0_5, MTV_1_0}
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.util.{PackedMsgWrapper, ReqMsgContext, Util}
 
 import scala.concurrent.Future

@@ -25,7 +25,7 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.http.common.models.StatusDetailResp
-import com.evernym.verity.protocol.engine.Constants.MTV_1_0
+import com.evernym.verity.constants.Constants.MTV_1_0
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.testkit.agentmsg._
 import com.evernym.verity.testkit.util.AssertionUtil.expectMsgType

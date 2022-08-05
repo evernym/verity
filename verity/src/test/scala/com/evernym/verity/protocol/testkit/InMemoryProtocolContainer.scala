@@ -8,7 +8,7 @@ import com.evernym.verity.observability.metrics.{MetricsWriter, NoOpMetricsWrite
 import com.evernym.verity.protocol.container.actor.ServiceDecorator
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.endorser.EndorserAccess
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
+import com.evernym.verity.protocol.engine.asyncapi.vdr.VdrAccess
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.{SegmentStoreAccess, StoredSegment}
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
@@ -33,7 +33,7 @@ case class ProtocolContainerElements[P,R,M,E,S,I](system: SimpleProtocolSystem,
                                                   driver: Option[Driver]=None,
                                                   parentLogContext: JournalContext=JournalContext(),
                                                   walletAccessProvider: Option[()=>WalletAccess] = None,
-                                                  ledgerAccessProvider: Option[()=>LedgerAccess] = None,
+                                                  vdrAccessProvider: Option[()=>VdrAccess] = None,
                                                   endorserAccessProvider: Option[()=>EndorserAccess] = None,
                                                   urlShorteningAccessProvider: Option[()=>UrlShorteningAccess] = None)
 
@@ -95,8 +95,8 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
     .map(_())
     .getOrElse(throw new RuntimeException("no wallet access provided to container"))
 
-  override lazy val ledger: LedgerAccess = pce
-    .ledgerAccessProvider
+  override lazy val vdr: VdrAccess = pce
+    .vdrAccessProvider
     .map(_())
     .getOrElse(throw new RuntimeException("no ledger requests access provided to container"))
 
@@ -113,7 +113,7 @@ class InMemoryProtocolContainer[P,R,M,E,S,I](val pce: ProtocolContainerElements[
     pce.urlShorteningAccessProvider.map(_()).getOrElse(throw new RuntimeException("no url shortener access provided to container"))
 
   //this container is used by tests only.
-  // so far mockable apis (MockableLedgerAccess or MockableWalletAccess apis)
+  // so far mockable apis (MockableVdrAccess or MockableWalletAccess apis)
   // are synchronous and hence below implementation of 'runAsyncOp' is different than
   // what it might be in production code (like 'ActorProtocolContainer')
   override def runAsyncOp(op: => Any): Unit = {

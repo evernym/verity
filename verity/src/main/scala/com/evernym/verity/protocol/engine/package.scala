@@ -10,8 +10,6 @@ package object engine {
   type ParameterName = String
   type ParameterValue = String
 
-  type Ledgers = List[Map[String, Any]]
-
   type ContextId = String
   type RelationshipId = String
   type DomainId = String
@@ -94,7 +92,7 @@ trait HasMsgType {
   final def typedMsg = TypedMsg(this, msgType)
 }
 
-case class SponsorRel(sponsorId: String,sponseeId: String)
+case class SponsorRel(sponsorId: String, sponseeId: String)
 
 //marker trait to be used by protocol states to mark it as a terminal state (completed or error etc)
 // the moment protocol engine observes state change to 'TerminalState'

@@ -461,7 +461,7 @@ trait ProtocolContext[P,R,M,E,S,I]
   /**
    * Finalization cannot happen until all protocol services are complete.
    * This includes:
-   *  1. Protocol 'Internal Services' - url shortener, wallet, ledger and segmentedStore services
+   *  1. Protocol 'Internal Services' - url shortener, wallet, vdr and segmentedStore services
    *  2. 'Segmented State' storage
    *  3. 'Event Persistence'
    */

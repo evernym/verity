@@ -1,7 +1,7 @@
 package com.evernym.integrationtests.e2e.env
 
 import com.evernym.integrationtests.e2e.util.TestExecutionContextProvider
-import com.evernym.verity.protocol.engine.Constants.MTV_1_0
+import com.evernym.verity.constants.Constants.MTV_1_0
 import com.evernym.verity.testkit.agentmsg.{AgentMsgPackagingContext, AgentMsgSenderHttpWrapper, GeneralMsgCreatedResp_MFV_0_5}
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent}

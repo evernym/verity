@@ -7,6 +7,7 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.eventing.event_handlers.EndorserMessageHandler.DATA_FIELD_ENDORSER_DID
 import com.evernym.verity.eventing.event_handlers.{DATA_FIELD_LEDGER_PREFIX, EVENT_ENDORSER_ACTIVATED_V1, EVENT_ENDORSER_DEACTIVATED_V1, TOPIC_SSI_ENDORSER}
 import com.evernym.verity.eventing.ports.producer.ProducerPort
+import com.evernym.verity.vdr.LedgerPrefix
 import io.cloudevents.core.builder.CloudEventBuilder
 import io.cloudevents.core.provider.EventFormatProvider
 import io.cloudevents.jackson.JsonFormat
@@ -27,7 +28,7 @@ object EndorserUtil {
   val indyLedgerLegacyDefaultPrefix: String = "did:indy:sovrin"
 
   def registerActiveEndorser(endorserDid: DidStr,
-                             ledgerPrefix: String,
+                             ledgerPrefix: LedgerPrefix,
                              eventProducer: ProducerPort): Future[Done] = {
     val jsonObject = new JSONObject()
     jsonObject.put(DATA_FIELD_ENDORSER_DID, endorserDid)
@@ -50,7 +51,7 @@ object EndorserUtil {
   }
 
   def unregisterActiveEndorser(endorserDid: DidStr,
-                               ledgerPrefix: String,
+                               ledgerPrefix: LedgerPrefix,
                                eventProducer: ProducerPort): Future[Done] = {
     val jsonObject = new JSONObject()
     jsonObject.put(DATA_FIELD_ENDORSER_DID, endorserDid)

@@ -1,7 +1,7 @@
 package com.evernym.integrationtests.e2e.sdk
 
 import java.util.concurrent.LinkedBlockingDeque
-import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.testkit.listener.Listener
 import com.evernym.integrationtests.e2e.env.SdkConfig
 import com.evernym.integrationtests.e2e.scenario.Scenario

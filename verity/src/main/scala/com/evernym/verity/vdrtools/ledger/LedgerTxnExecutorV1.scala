@@ -17,8 +17,7 @@ class LedgerTxnExecutorV1(val actorSystem: ActorSystem,
                           val walletAPI: Option[WalletAPI],
                           val pool: Option[Pool],
                           val currentTAA: Option[TransactionAuthorAgreement],
-                          executionContext: ExecutionContext
-                         )
+                          executionContext: ExecutionContext)
   extends LedgerTxnExecutorBase {
 
   override def futureExecutionContext: ExecutionContext = executionContext

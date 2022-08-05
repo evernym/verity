@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.actor.agent.user.msgstore.MsgDetail
 import com.evernym.verity.actor.testkit.checks.UNSAFE_IgnoreLog
 import com.evernym.verity.http.base.{EndpointHandlerBaseSpec, HasMsgStore}
-import com.evernym.verity.protocol.engine.Constants.MFV_1_0
+import com.evernym.verity.constants.Constants.MFV_1_0
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.MsgsByConns_MFV_0_6
 import com.evernym.verity.actor.wallet.PackedMsg

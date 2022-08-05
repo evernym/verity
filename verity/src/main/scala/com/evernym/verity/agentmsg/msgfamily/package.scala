@@ -7,7 +7,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{MSG_TYPE_MSGS_SENT, 
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{MsgCreatedRespMsg_MFV_0_5, MsgsSentRespMsg_MFV_0_5}
 import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
-import com.evernym.verity.protocol.engine.Constants.MTV_1_0
+import com.evernym.verity.constants.Constants.MTV_1_0
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkOptionalNotEmpty, checkRequired}
 import com.evernym.verity.protocol.engine.MsgBase
 

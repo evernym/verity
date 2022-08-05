@@ -28,7 +28,6 @@ import com.evernym.verity.util2.Status.KEY_ALREADY_CREATED
 import com.evernym.verity.vault._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Left
 
 
 //noinspection ScalaDeprecation

@@ -84,8 +84,6 @@ trait AppConfig extends ConfigReaderHelper {
     }
   }
 
-  def isConfigLoaded: Boolean = if (Option(config).isDefined) true else false
-
   def getLoadedConfig: Config = config
 
   def setConfig(conf: Config): Unit = config = validatedConfig(Option(conf))

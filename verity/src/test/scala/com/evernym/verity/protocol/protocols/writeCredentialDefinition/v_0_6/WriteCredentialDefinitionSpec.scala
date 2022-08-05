@@ -8,8 +8,7 @@ import com.evernym.verity.did.exception.DIDException
 import com.evernym.verity.integration.base.EndorserUtil
 import com.evernym.verity.protocol.engine.asyncapi.endorser.Endorser
 import com.evernym.verity.protocol.testkit.DSL.signal
-import com.evernym.verity.protocol.testkit.MockLedger.fqID
-import com.evernym.verity.protocol.testkit.{MockableEndorserAccess, MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{MockableEndorserAccess, MockableVdrAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.TestExecutionContextProvider
 import org.json.JSONObject
@@ -81,12 +80,12 @@ class WriteCredentialDefinitionSpec
     "should signal it needs endorsement when issuer did is not written to ledger" - {
       "and use default endorser if not set in control msg" in { f =>
         f.writer.initParams(Map(
-          MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
+          MY_ISSUER_DID -> MockableVdrAccess.MOCK_NO_DID
         ))
         interaction(f.writer) {
           withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
-              withDefaultLedgerAccess(f, {
+              withDefaultVdrAccess(f, {
                 f.writer ~ Write(credDefName, schemaId, None, None)
 
                 val needsEndorsement = f.writer expect signal[NeedsEndorsement]
@@ -101,12 +100,12 @@ class WriteCredentialDefinitionSpec
 
       "and use endorser did from control msg if defined" in { f =>
         f.writer.initParams(Map(
-          MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID
+          MY_ISSUER_DID -> MockableVdrAccess.MOCK_NO_DID
         ))
         interaction(f.writer) {
           withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
-              withDefaultLedgerAccess(f, {
+              withDefaultVdrAccess(f, {
                 f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
 
                 val needsEndorsement = f.writer expect signal[NeedsEndorsement]
@@ -123,12 +122,12 @@ class WriteCredentialDefinitionSpec
     "should signal it needs endorsement when issuer did doesn't have ledger permissions" - {
       "and use default endorser if not set in control msg" in { f =>
         f.writer.initParams(Map(
-          MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
+          MY_ISSUER_DID -> MockableVdrAccess.MOCK_NOT_ENDORSER
         ))
         interaction(f.writer) {
           withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
-              withDefaultLedgerAccess(f, {
+              withDefaultVdrAccess(f, {
                 f.writer ~ Write(credDefName, schemaId, None, None)
 
                 val needsEndorsement = f.writer expect signal[NeedsEndorsement]
@@ -143,12 +142,12 @@ class WriteCredentialDefinitionSpec
 
       "and use endorser from control msg if defined" in { f =>
         f.writer.initParams(Map(
-          MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
+          MY_ISSUER_DID -> MockableVdrAccess.MOCK_NOT_ENDORSER
         ))
         interaction(f.writer) {
           withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
-              withDefaultLedgerAccess(f, {
+              withDefaultVdrAccess(f, {
                 f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
 
                 val needsEndorsement = f.writer expect signal[NeedsEndorsement]
@@ -164,12 +163,12 @@ class WriteCredentialDefinitionSpec
 
     "should signal it needs endorsement when issuer did doesn't have ledger permissions" in { f =>
       f.writer.initParams(Map(
-        MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NOT_ENDORSER
+        MY_ISSUER_DID -> MockableVdrAccess.MOCK_NOT_ENDORSER
       ))
       interaction(f.writer) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
+            withDefaultVdrAccess(f, {
               f.writer ~ Write(credDefName, schemaId, None, None)
 
               val needsEndorsement = f.writer expect signal[NeedsEndorsement]
@@ -184,12 +183,12 @@ class WriteCredentialDefinitionSpec
 
     "should fail when issuer did doesn't have ledger permissions and endorser did is not defined" in { f =>
       f.writer.initParams(Map(
-        MY_ISSUER_DID -> MockableLedgerAccess.MOCK_NO_DID,
+        MY_ISSUER_DID -> MockableVdrAccess.MOCK_NO_DID,
         DEFAULT_ENDORSER_DID -> ""
       ))
       interaction(f.writer) {
         withDefaultWalletAccess(f, {
-          withDefaultLedgerAccess(f, {
+          withDefaultVdrAccess(f, {
             f.writer ~ Write(credDefName, schemaId, None, None)
 
             f.writer expect signal[ProblemReport]
@@ -205,7 +204,7 @@ class WriteCredentialDefinitionSpec
       ))
       interaction(f.writer) {
         withDefaultWalletAccess(f, {
-          withDefaultLedgerAccess(f, {
+          withDefaultVdrAccess(f, {
             f.writer ~ Write(credDefName, schemaId, None, None)
 
             f.writer expect signal[StatusReport]
@@ -222,7 +221,7 @@ class WriteCredentialDefinitionSpec
       ))
       interaction(f.writer) {
         withDefaultWalletAccess(f, {
-          withDefaultLedgerAccess(f, {
+          withDefaultVdrAccess(f, {
             f.writer ~ Write(credDefName, schemaId, Some("a_tag"), Some(RevocationDetails(support_revocation = false, null, 1)))
 
             f.writer expect signal[StatusReport]
@@ -239,7 +238,7 @@ class WriteCredentialDefinitionSpec
       ))
       interaction(f.writer) {
         withDefaultWalletAccess(f, {
-          withDefaultLedgerAccess(f, {
+          withDefaultVdrAccess(f, {
             f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
 
             f.writer expect signal[StatusReport]
@@ -262,8 +261,8 @@ class WriteCredentialDefinitionSpec
     f
   }
 
-  def withDefaultLedgerAccess(s: Scenario, f: => Unit): Unit = {
-    s.writer ledgerAccess MockableLedgerAccess()
+  def withDefaultVdrAccess(s: Scenario, f: => Unit): Unit = {
+    s.writer vdrAccess MockableVdrAccess()
     f
   }
 

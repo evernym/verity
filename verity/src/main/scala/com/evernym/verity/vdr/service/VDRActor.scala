@@ -5,7 +5,6 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors, StashBuffer}
 import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
 import com.evernym.vdrtools.vdr.VdrResults.{PingResult, PreparedTxnResult}
 import com.evernym.verity.actor.ActorMessage
-import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.vdr.service.VDRActor.Commands._
@@ -109,7 +108,6 @@ object VDRActor {
 
   def waitingForLedgerRegistration(vdrToolsBuilder: VdrToolsBuilder)
                                   (implicit buffer: StashBuffer[Cmd],
-                                   actorContext: ActorContext[Cmd],
                                    executionContext: ExecutionContext): Behavior[Cmd] =
     Behaviors.receiveMessage {
       case LedgersRegistered(namespaces) =>

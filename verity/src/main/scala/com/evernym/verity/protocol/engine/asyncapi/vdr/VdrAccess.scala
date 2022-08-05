@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.engine.asyncapi.ledger
+package com.evernym.verity.protocol.engine.asyncapi.vdr
 
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.vdr.{CredDef, CredDefId, FqCredDefId, FqDID, FqSchemaId, PreparedTxn, Schema, SchemaId, SubmittedTxn}
@@ -6,11 +6,11 @@ import com.evernym.verity.vdr.{CredDef, CredDefId, FqCredDefId, FqDID, FqSchemaI
 import scala.util.Try
 
 
-trait LedgerAccess {
+trait VdrAccess {
 
-  def vdrUnqualifiedLedgerPrefix(): String
+  def isMultiLedgerSupportEnabled: Boolean
 
-  def vdrMultiLedgerSupportEnabled(): Boolean
+  def unqualifiedLedgerPrefix(): String
 
   //new vdr apis
   def prepareSchemaTxn(schemaJson: String,
@@ -65,6 +65,6 @@ trait LedgerAccess {
   def toLegacyNonFqCredDefId(credDefId: FqCredDefId): CredDefId
 }
 
-case class LedgerRejectException(msg: String) extends Exception(msg)
-case class LedgerAccessException(msg: String) extends Exception(msg)
+case class VdrRejectException(msg: String) extends Exception(msg)
+case class VdrAccessException(msg: String) extends Exception(msg)
 

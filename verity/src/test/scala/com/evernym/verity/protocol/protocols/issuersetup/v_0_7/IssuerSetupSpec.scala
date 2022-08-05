@@ -10,15 +10,10 @@ import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY
 import com.evernym.verity.integration.base.EndorserUtil
 import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
 import com.evernym.verity.protocol.engine.asyncapi.endorser.{ENDORSEMENT_RESULT_SUCCESS_CODE, Endorser}
-import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.IssuerSetup.identifierNotCreatedProblem
 import com.evernym.verity.protocol.testkit.DSL.signal
-import com.evernym.verity.protocol.testkit.InteractionType.OneParty
-import com.evernym.verity.protocol.testkit.MockableLedgerAccess.MOCK_NOT_ENDORSER
-import com.evernym.verity.protocol.testkit.{MockableEndorserAccess, MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{MockableEndorserAccess, MockableVdrAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.{BasicFixtureSpec, HasTestWalletAPI}
 import com.evernym.verity.util.TestExecutionContextProvider
-import org.json.JSONObject
-import org.mockito.IdiomaticMockito.WithExpect.expect
 import org.scalatest.BeforeAndAfterAll
 
 import java.util.UUID
@@ -99,7 +94,7 @@ class IssuerSetupSpec
         interaction(f.owner) {
           withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
-              withDefaultLedgerAccess(f, {
+              withDefaultVdrAccess(f, {
                 f.owner ~ Create(ledgerPrefix, Option("otherEndorser"))
 
                 val sig = f.owner expect signal[ProblemReport]
@@ -120,7 +115,7 @@ class IssuerSetupSpec
         interaction(f.owner) {
           withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
-              withDefaultLedgerAccess(f, {
+              withDefaultVdrAccess(f, {
                 f.owner ~ CurrentPublicIdentifier()
 
                 val sig = f.owner expect signal[PublicIdentifier]
@@ -141,7 +136,7 @@ class IssuerSetupSpec
         interaction(f.owner) {
           withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
-              withDefaultLedgerAccess(f, {
+              withDefaultVdrAccess(f, {
                 f.owner ~ Create("did:indy:sovrin", Some("someEndorser"))
                 val sig1 = f.owner expect signal[PublicIdentifierCreated]
                 f.owner ~ CurrentPublicIdentifier()
@@ -167,7 +162,7 @@ class IssuerSetupSpec
         interaction(f.owner) {
           withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
-              withDefaultLedgerAccess(f, {
+              withDefaultVdrAccess(f, {
                 f.owner ~ Create(ledgerPrefix, Option("otherEndorser"))
 
                 val pi = f.owner expect signal[PublicIdentifierCreated]
@@ -192,7 +187,7 @@ class IssuerSetupSpec
         ))
         interaction(f.owner) {
           withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
+            withDefaultVdrAccess(f, {
               withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))) ,f, {
                 f.owner ~ Create(ledgerPrefix, None)
 
@@ -211,7 +206,7 @@ class IssuerSetupSpec
       ))
       interaction(f.owner) {
         withDefaultWalletAccess(f, {
-          withDefaultLedgerAccess(f, {
+          withDefaultVdrAccess(f, {
             withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))) ,f, {
 
               f.owner ~ Create(ledgerPrefix, Some(userEndorser))
@@ -235,7 +230,7 @@ class IssuerSetupSpec
       interaction(f.owner) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
+            withDefaultVdrAccess(f, {
               f.owner ~ Create(ledgerPrefix, Some("endorserDid"))
               f.owner ~ EndorsementResult(ENDORSEMENT_RESULT_SUCCESS_CODE, "successful")
               val sig = f.owner expect signal[PublicIdentifierCreated]
@@ -261,7 +256,7 @@ class IssuerSetupSpec
       interaction(f.owner) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
+            withDefaultVdrAccess(f, {
               f.owner ~ Create(ledgerPrefix, Some("otherDID"))
               val sig = f.owner expect signal[PublicIdentifierCreated]
               sig.status shouldBe a[NeedsEndorsement]
@@ -286,7 +281,7 @@ class IssuerSetupSpec
       interaction(f.owner) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
+            withDefaultVdrAccess(f, {
               f.owner ~ CurrentPublicIdentifier()
               f.owner expect signal[ProblemReport]
             })
@@ -302,7 +297,7 @@ class IssuerSetupSpec
       interaction(f.owner) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
+            withDefaultVdrAccess(f, {
               f.owner ~ CurrentPublicIdentifier()
               val sig = f.owner expect signal[ProblemReport]
 
@@ -323,7 +318,7 @@ class IssuerSetupSpec
       interaction(f.owner) {
         withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
-            withDefaultLedgerAccess(f, {
+            withDefaultVdrAccess(f, {
               f.owner ~ CurrentPublicIdentifier()
               f.owner expect signal[PublicIdentifier]
 
@@ -347,8 +342,8 @@ class IssuerSetupSpec
     f
   }
 
-  def withDefaultLedgerAccess(s: Scenario, f: => Unit): Unit = {
-    s.owner ledgerAccess MockableLedgerAccess()
+  def withDefaultVdrAccess(s: Scenario, f: => Unit): Unit = {
+    s.owner vdrAccess MockableVdrAccess()
     f
   }
 

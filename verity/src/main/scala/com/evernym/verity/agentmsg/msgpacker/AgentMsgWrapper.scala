@@ -6,7 +6,7 @@ import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyVersion, MsgName}
 import com.evernym.verity.did.didcomm.v1.messages.MsgType
 import com.evernym.verity.protocol.engine.MsgBase
-import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.protocols.connecting.common.ProtoMsg
 
 case class AgentMsgWrapper(msgPackFormat: MsgPackFormat, agentBundledMsg: AgentBundledMsg)

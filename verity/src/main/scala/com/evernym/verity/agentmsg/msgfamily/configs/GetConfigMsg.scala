@@ -3,7 +3,7 @@ package com.evernym.verity.agentmsg.msgfamily.configs
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_CONFIGS
 import com.evernym.verity.agentmsg.msgfamily.{AgentMsgContext, ConfigDetail, LegacyMsgBase, TypeDetail}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
-import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
 case class GetConfigsReqMsg_MFV_0_5(configs: Set[String]) extends LegacyMsgBase {

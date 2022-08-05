@@ -25,9 +25,9 @@ public abstract class MySqlStorageLib {
     }
 
     /**
-     * Indicates whether or not the API has been initialized.
+     * Indicates whether the API has been initialized or not.
      *
-     * @return true if the API is initialize, otherwise false.
+     * @return true if the API is initialized, otherwise false.
      */
     public static boolean isInitialized() {
         return api != null;

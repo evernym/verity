@@ -5,13 +5,13 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_INDY_PACK
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.msgoutbox.outbox.msg_dispatcher.webhook.oauth.access_token_refresher.OAuthUtil
-import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkOptionalNotEmpty, checkRequired, throwMissingReqFieldException}
 
 
-case class ComMethodPackaging(pkgType: String, recipientKeys: Option[Set[String]]) extends LegacyMsgBase {
+case class ComMethodPackaging(pkgType: String, recipientKeys: Option[Set[String]]=None) extends LegacyMsgBase {
   override def validate(): Unit = {
     checkRequired("pkgType", pkgType)
     MsgPackFormat.fromString(pkgType) match {

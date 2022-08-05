@@ -21,10 +21,23 @@ object Constants {
   val YES = "Y"
   val NO = "N"
 
-  val NOT_AVAILABLE = "not available"
+  val MSG_NAME = "name"
+  val VER = "ver"
+  val `@TYPE` = "@type"
+  val `@id` = "@id"
+  val THREAD = "~thread"
 
-  val ASC = "asc"
-  val DESC = "desc"
+  val MSG_FAMILY_NAME_0_5 = "0.5"
+
+  val MFV_0_5 = "0.5"
+  val MFV_0_6 = "0.6"
+  val MFV_0_7 = "0.7"
+  val MFV_1_0 = "1.0"
+  val MFV_0_1_0 = "0.1.0"
+  val MFV_0_1 = "0.1"
+  //message type version (this is only used for existing/old agent messages)
+  //it is the 'ver' attribute in the legacy typed json: "{"@type":{"name":"connect","ver":"1.0"}}"
+  val MTV_1_0 = "1.0"
 
   val VALID_IDENTIFIER_LENGTH_RANGE: Range = 21 to 23
   val VALID_TOKEN_LENGTH_RANGE: Range = 7 to 7
@@ -44,7 +57,6 @@ object Constants {
   val MSG_TYPE = "msgType"
   val TYPE = "type"
   val UID = "uid"
-  val VALUE = "value"
   val TITLE = "title"
   val DETAIL = "detail"
   val BODY = "body"
@@ -99,8 +111,6 @@ object Constants {
 
   val API_KEY_HTTP_HEADER = "X-API-KEY"
   val CLIENT_REQUEST_ID_HTTP_HEADER = "API-REQUEST-ID"
-
-  val MSG_PACK_VERSION = "msg-pack-version"
 
   val CLIENT_IP_ADDRESS = "client_ip"
 

@@ -6,7 +6,7 @@ import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.endorser.ENDORSEMENT_RESULT_SUCCESS_CODE
-import com.evernym.verity.protocol.engine.asyncapi.ledger.{IndyLedgerUtil, LedgerRejectException, TxnForEndorsement}
+import com.evernym.verity.protocol.engine.asyncapi.vdr.{IndyLedgerUtil, VdrRejectException, TxnForEndorsement}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.{SchemaCreatedResult, SignedMsgResult}
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.events.{ParameterStored, ProtocolInitialized}
@@ -56,20 +56,20 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
     try {
       ctx.apply(RequestReceived(m.name, m.version, m.attrNames))
       val submitterDID = _submitterDID(init)
-      val fqSubmitterDID = ctx.ledger.fqDID(submitterDID, force = true)
-      ctx.wallet.createSchema(ctx.ledger.fqDID(submitterDID, force = false), m.name, m.version, seqToJson(m.attrNames)) {
+      val fqSubmitterDID = ctx.vdr.fqDID(submitterDID, force = true)
+      ctx.wallet.createSchema(ctx.vdr.fqDID(submitterDID, force = false), m.name, m.version, seqToJson(m.attrNames)) {
         case Success(schemaCreated: SchemaCreatedResult) =>
           val schemaId = schemaCreated.schemaId
           writeSchemaToLedger(fqSubmitterDID, schemaId, schemaCreated.schemaJson) {
             case Success(SubmittedTxn(resp)) =>
               ctx.apply(SchemaWritten(schemaId))
               ctx.signal(StatusReport(schemaId))
-            case Failure(e: LedgerRejectException) if missingVkOrEndorserErr(fqSubmitterDID, e) =>
+            case Failure(e: VdrRejectException) if missingVkOrEndorserErr(fqSubmitterDID, e) =>
               ctx.logger.info(e.toString)
               val endorserDID = m.endorserDID.getOrElse(init.parameters.paramValue(DEFAULT_ENDORSER_DID).getOrElse(""))
               //NOTE: below code is assuming verity is only supporting indy ledgers,
               // it should be changed when verity starts supporting different types of ledgers
-              val ledgerPrefix = ctx.ledger.vdrUnqualifiedLedgerPrefix()
+              val ledgerPrefix = ctx.vdr.unqualifiedLedgerPrefix()
               ctx.endorser.withCurrentEndorser(ledgerPrefix) {
                 case Success(Some(endorser)) if endorserDID.isEmpty || endorserDID.contains(endorser.did) =>
                   ctx.logger.info(s"registered endorser to be used for schema endorsement (ledger prefix: $ledgerPrefix): " + endorser)
@@ -106,7 +106,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
                                   schemaId: SchemaId,
                                   schemaJson: String)
                                  (handleResult: Try[SubmittedTxn] => Unit): Unit = {
-    ctx.ledger
+    ctx.vdr
       .prepareSchemaTxn(
         schemaJson,
         schemaId,
@@ -115,7 +115,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
         case Success(pt: PreparedTxn) =>
           signPreparedTxn(pt, fqSubmitterDID) {
             case Success(smr: SignedMsgResult) =>
-              ctx.ledger.submitTxn(pt, smr.signatureResult.signature, Array.empty)(handleResult)
+              ctx.vdr.submitTxn(pt, smr.signatureResult.signature, Array.empty)(handleResult)
             case Failure(ex) => handleResult(Failure(ex))
           }
         case Failure(ex) => handleResult(Failure(ex))
@@ -128,7 +128,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
                                        endorserDid: DidStr)
                                       (handleResult: Try[TxnForEndorsement] => Unit): Unit = {
     if (endorserDid.nonEmpty) {
-      ctx.ledger
+      ctx.vdr
         .prepareSchemaTxn(
           schemaJson,
           schemaId,
@@ -190,7 +190,7 @@ class WriteSchema(val ctx: ProtocolContextApi[WriteSchema, Role, Msg, Any, Write
       .map(_.value)
       .getOrElse(throw MissingIssuerDID)
 
-  private def missingVkOrEndorserErr(did: DidStr, e: LedgerRejectException): Boolean =
+  private def missingVkOrEndorserErr(did: DidStr, e: VdrRejectException): Boolean =
     e.msg.contains("Not enough ENDORSER signatures") ||
       e.msg.contains(s"verkey for $did cannot be found") ||
       e.msg.contains(s"verkey for ${extractUnqualifiedDidStr(did)} cannot be found")

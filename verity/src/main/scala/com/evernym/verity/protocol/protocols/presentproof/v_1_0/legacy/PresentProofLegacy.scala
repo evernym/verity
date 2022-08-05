@@ -116,7 +116,7 @@ trait PresentProofLegacy
   def handleCtlAcceptProposalLegacy(s: StatesLegacy.ProposalReceived, msg: Ctl.AcceptProposal): Unit = {
     val proposal = s.data.proposals.head
 
-    val proofRequest = ProofRequestUtil.proposalToProofRequest(proposal, msg.name.getOrElse(""), msg.non_revoked, ctx.ledger.vdrMultiLedgerSupportEnabled())
+    val proofRequest = ProofRequestUtil.proposalToProofRequest(proposal, msg.name.getOrElse(""), msg.non_revoked, ctx.vdr.isMultiLedgerSupportEnabled)
     val proofRequestStr = proofRequest.map(DefaultMsgCodec.toJson)
     proofRequestStr match {
       case Success(str) =>
@@ -228,10 +228,10 @@ trait PresentProofLegacy
     }
 
     def doSchemaRetrievalLegacy(ids: Set[String])(handler: Try[String] => Unit): Unit = {
-      ctx.ledger.resolveSchemas(ids.map(ctx.ledger.fqSchemaId(_, None, force = true))) {
+      ctx.vdr.resolveSchemas(ids.map(ctx.vdr.fqSchemaId(_, None, force = true))) {
         case Success(schemas) if schemas.size == ids.size =>
           val retrievedSchemasJson = schemas.map { schema =>
-            s""""${ctx.ledger.toLegacyNonFqSchemaId(schema.fqId)}": ${schema.json}"""
+            s""""${ctx.vdr.toLegacyNonFqSchemaId(schema.fqId)}": ${schema.json}"""
           }.mkString("{", ",", "}")
           handler(Success(retrievedSchemasJson))
         case Success(_) => handler(Failure(new Exception("Unable to retrieve schema from ledger")))
@@ -242,10 +242,10 @@ trait PresentProofLegacy
 
     def doCredDefRetrievalLegacy(schemas: String, credDefIds: Set[String])
                           (handler: Try[(String, String)] => Unit): Unit = {
-      ctx.ledger.resolveCredDefs(credDefIds.map(ctx.ledger.fqCredDefId(_, None, force = true))) {
+      ctx.vdr.resolveCredDefs(credDefIds.map(ctx.vdr.fqCredDefId(_, None, force = true))) {
         case Success(credDefs) if credDefs.size == ids.size =>
            val retrievedCredDefJson = credDefs.map { credDef =>
-            s""""${ctx.ledger.toLegacyNonFqCredDefId(credDef.fqId)}": ${credDef.json}"""
+            s""""${ctx.vdr.toLegacyNonFqCredDefId(credDef.fqId)}": ${credDef.json}"""
           }.mkString("{", ",", "}")
           handler(Success((schemas, retrievedCredDefJson)))
         case Success(_) => throw new Exception("Unable to retrieve cred def from ledger")

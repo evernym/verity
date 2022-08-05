@@ -43,7 +43,8 @@ object LibIndyWalletProvider
     } catch handleWalletEx(id) andThen { throw _ }
   }
 
-  def createAsync(id: String, encryptionKey: String, walletConfig: WalletConfig)(implicit ec: ExecutionContext): Future[WalletCreated.type] = {
+  def createAsync(id: String, encryptionKey: String, walletConfig: WalletConfig)
+                 (implicit ec: ExecutionContext): Future[WalletCreated.type] = {
     Wallet.createWallet(
       walletConfig.buildConfig(id),
       walletConfig.buildCredentials(encryptionKey))
@@ -53,7 +54,8 @@ object LibIndyWalletProvider
       }
   }
 
-  def openAsync(id: String, encryptionKey: String, walletConfig: WalletConfig)(implicit ec: ExecutionContext): Future[LibIndyWalletExt] = {
+  def openAsync(id: String, encryptionKey: String, walletConfig: WalletConfig)
+               (implicit ec: ExecutionContext): Future[LibIndyWalletExt] = {
     Wallet.openWallet(walletConfig.buildConfig(id),
         walletConfig.buildCredentials(encryptionKey))
     .map { wallet =>

@@ -1,9 +1,9 @@
 For each different type of 'async apis', there will be two interfaces:
 
-a) <ApiName>Access		(for example: LedgerAccess)
+a) <ApiName>Access		(for example: VdrAccess)
 * this provides contract/interface between 'protocol' and 'protocol engine'
 
-b) <ApiName>AsyncOps		(for example: LedgerAsyncOps)
+b) <ApiName>AsyncOps		(for example: VdrAsyncOps)
 * this provides contract/interface between 'protocol engine' and 'protocol container'
 *Async Op Runner*
 The 'AsyncOpRunner' contains code which orchestrates flow of async operations.

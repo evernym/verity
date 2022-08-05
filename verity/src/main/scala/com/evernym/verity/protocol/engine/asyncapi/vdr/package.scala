@@ -1,5 +1,5 @@
 package com.evernym.verity.protocol.engine.asyncapi
 
-package object ledger {
+package object vdr {
   type TxnForEndorsement = String
 }

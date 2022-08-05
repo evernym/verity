@@ -4,7 +4,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.{MPF_INDY_PACK, MPF_MSG_PACK
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.{AgentMsgContext, _}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMessageWrapper, AgentMsgWrapper, MsgFamilyDetail}
-import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.EVERNYM_QUALIFIER
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkOptionalNotEmpty, checkRequired}
@@ -98,7 +98,6 @@ object ConnReqMsgHelper {
     ConnReqRespMsg_MFV_0_6(MSG_TYPE_DETAIL_CONN_REQ_RESP, `@id`, msgThread, inviteDetail, truncatedInviteDetail,
       urlToInviteDetail, urlToInviteDetailEncoded, sourceId)
   }
-
 
   private def buildInviteDetailMsgResp_MFV_0_5(id: InviteDetail, urlToInviteDetail: String,
                                                urlToInviteDetailEncoded: String): InviteDetailMsg = {

@@ -7,7 +7,6 @@ object ConfigConstants {
 
   val VERITY_THREAD_POOLS = s"$VERITY.thread-pools"
   val VERITY_DEFAULT_FUTURE_THREAD_POOL_SIZE = s"$VERITY_THREAD_POOLS.default-future.size"
-  val VERITY_WALLET_FUTURE_THREAD_POOL_SIZE = s"$VERITY_THREAD_POOLS.wallet-future.size"
 
   val VERITY_ENDPOINT = s"$VERITY.endpoint"
   val VERITY_ENDPOINT_HOST = s"$VERITY_ENDPOINT.host"
@@ -78,7 +77,6 @@ object ConfigConstants {
   private val OPEN_MARKET = s"$SMS_EXTERNAL_SVC.open-market"
   val OPEN_MARKET_ENDPOINT = s"$OPEN_MARKET.endpoint"
   val OPEN_MARKET_ENDPOINT_HOST = s"$OPEN_MARKET_ENDPOINT.host"
-  val OPEN_MARKET_ENDPOINT_PORT = s"$OPEN_MARKET_ENDPOINT.port"
   val OPEN_MARKET_ENDPOINT_PATH_PREFIX = s"$OPEN_MARKET_ENDPOINT.path-prefix"
   val OPEN_MARKET_USER_NAME = s"$OPEN_MARKET.user-name"
   val OPEN_MARKET_PASSWORD = s"$OPEN_MARKET.password"
@@ -90,10 +88,8 @@ object ConfigConstants {
   val BANDWIDTH_USER_ID = s"$BANDWIDTH.user-id"
   val BANDWIDTH_ENDPOINT = s"$BANDWIDTH.endpoint"
   val BANDWIDTH_ENDPOINT_HOST = s"$BANDWIDTH_ENDPOINT.host"
-  val BANDWIDTH_ENDPOINT_PORT = s"$BANDWIDTH_ENDPOINT.port"
   val BANDWIDTH_ENDPOINT_PATH_PREFIX = s"$BANDWIDTH_ENDPOINT.path-prefix"
   val BANDWIDTH_DEFAULT_NUMBER = s"$BANDWIDTH.default-number"
-  val BANDWIDTH_APP_ID = s"$BANDWIDTH.app-id"
 
   private val TWILIO = s"$SMS_EXTERNAL_SVC.twilio"
   val TWILIO_TOKEN = s"$TWILIO.token"
@@ -124,7 +120,6 @@ object ConfigConstants {
   private val INFO_BIP = s"$SMS_EXTERNAL_SVC.info-bip"
   val INFO_BIP_ENDPOINT = s"$INFO_BIP.endpoint"
   val INFO_BIP_ENDPOINT_HOST = s"$INFO_BIP_ENDPOINT.host"
-  val INFO_BIP_ENDPOINT_PORT = s"$INFO_BIP_ENDPOINT.port"
   val INFO_BIP_ENDPOINT_PATH_PREFIX = s"$INFO_BIP_ENDPOINT.path-prefix"
   val INFO_BIP_ENDPOINT_ACCESS_TOKEN = s"$INFO_BIP.access-token"
   val INFO_BIP_ENDPOINT_SENDER_ID = s"$INFO_BIP.sender-id"
@@ -178,11 +173,7 @@ object ConfigConstants {
   val AGENT_CONFIG_CACHE = s"$CACHE.agent-config"
   val AGENCY_DETAIL_CACHE = s"$CACHE.agency-detail"
   val LEDGER_GET_ENDPOINT_CACHE = s"$CACHE.ledger-get-endpoint"
-  val LEDGER_GET_VER_KEY_CACHE = s"$CACHE.ledger-get-ver-key"
   val ROUTING_DETAIL_CACHE = s"$CACHE.routing-detail"
-  val WALLET_GET_VER_KEY_CACHE = s"$CACHE.wallet-get-ver-key"
-  val LEDGER_GET_SCHEMA_CACHE = s"$CACHE.ledger-get-schema"
-  val LEDGER_GET_CRED_DEF_CACHE = s"$CACHE.ledger-get-cred-def"
 
   val INTERNAL_API_URL_MAPPER_ENABLED = s"$VERITY.url-mapper-api.enabled"
 
@@ -204,7 +195,6 @@ object ConfigConstants {
   val METRICS_ENABLED = s"$METRICS.enabled"
   val METRICS_BACKEND = s"$METRICS.backend"
 
-  val LIBINDY_METRICS_COLLECTION_FREQUENCY = s"$METRICS.libindy-metrics-collection-frequency"
   private val ACTIVITY_TRACKING = s"$METRICS.activity-tracking"
   val ACTIVE_USER_METRIC = s"$ACTIVITY_TRACKING.active-user"
   val ACTIVE_RELATIONSHIP_METRIC = s"$ACTIVITY_TRACKING.active-relationships"
@@ -215,12 +205,6 @@ object ConfigConstants {
 
   private val METRICS_TARGET  = s"$METRICS.target"
   val METRICS_TARGET_AKKA_SYSTEM = s"$METRICS_TARGET.akka-system"
-  val METRICS_TARGET_AKKA_GROUP = s"$METRICS_TARGET.akka-group"
-  val METRICS_TARGET_AKKA_ACTOR = s"$METRICS_TARGET.akka-actor"
-  val METRICS_TARGET_EXECUTOR_TASKS = s"$METRICS_TARGET.executor-tasks"
-  val METRICS_TARGET_EXECUTOR_POOL = s"$METRICS_TARGET.executor-pool"
-  val METRICS_TARGET_EXECUTOR_THREADS = s"$METRICS_TARGET.executor-threads"
-  val METRICS_TARGET_EXECUTOR_QUEUE = s"$METRICS_TARGET.executor-queue"
   val METRICS_TARGET_CONNECTOR = s"$METRICS_TARGET.connector"
 
   val METRICS_LATENCY_RECORDING_HISTOGRAM = s"$METRICS.latency-recording.histogram.enabled"
@@ -238,13 +222,10 @@ object ConfigConstants {
 
   val AKKA_MNGMNT_HTTP = "akka.management.http"
   val AKKA_MNGMNT_HTTP_ENABLED = s"$AKKA_MNGMNT_HTTP.enabled"
-  val AKKA_MNGMNT_HTTP_HOSTNAME = s"$AKKA_MNGMNT_HTTP.hostname"
-  val AKKA_MNGMNT_HTTP_PORT = s"$AKKA_MNGMNT_HTTP.port"
 
   val AKKA_MNGMNT_CLUSTER_BOOTSTRAP = "akka.management.cluster.bootstrap"
   val AKKA_MNGMNT_CLUSTER_BOOTSTRAP_ENABLED = s"$AKKA_MNGMNT_CLUSTER_BOOTSTRAP.enabled"
 
-  val AKKA_SHARDING_REGION_NAME = "akka.sharding-region-name"
   val AKKA_SHARDING_REGION_NAME_USER_AGENT = "akka.sharding-region-name.user-agent"
   val AKKA_SHARDING_REGION_NAME_USER_AGENT_PAIRWISE = "akka.sharding-region-name.user-agent-pairwise"
 
@@ -258,7 +239,6 @@ object ConfigConstants {
   val USER_AGENT_ACTOR_DISPATCHER_NAME = s"$ACTOR_DISPATCHER_NAME.user-agent-dispatcher"
   val USER_AGENT_PAIRWISE_ACTOR_DISPATCHER_NAME = s"$ACTOR_DISPATCHER_NAME.user-agent-pairwise-dispatcher"
   val ACTIVITY_TRACKER_ACTOR_DISPATCHER_NAME = s"$ACTOR_DISPATCHER_NAME.activity-tracker-dispatcher"
-  val ASYNC_OP_EXECUTOR_ACTOR_DISPATCHER_NAME = s"$ACTOR_DISPATCHER_NAME.async-op-dispatcher"
 
   val APP_STATE_MANAGER = s"$VERITY.app-state-manager"
   val APP_STATE_MANAGER_STATE = s"$APP_STATE_MANAGER.state"
@@ -329,7 +309,6 @@ object ConfigConstants {
 
   val PERSISTENT_ACTOR_BASE_RECEIVE_TIMEOUT_SECONDS = s"$PERSISTENT_ACTOR_BASE.$RECEIVE_TIMEOUT_SECONDS"
   val PERSISTENT_SINGLETON_CHILDREN_RECEIVE_TIMEOUT_SECONDS = s"$PERSISTENT_SINGLETON_CHILDREN.$RECEIVE_TIMEOUT_SECONDS"
-  val PERSISTENT_PROTOCOL_CONTAINER_RECEIVE_TIMEOUT_SECONDS = s"$PERSISTENT_PROTOCOL_CONTAINER.$RECEIVE_TIMEOUT_SECONDS"
 
   val PERSISTENT_PROTOCOL_WARN_RECOVERY_TIME_MILLISECONDS = s"$PERSISTENT_ACTOR.warn-recovery-time-milliseconds"
 
@@ -415,17 +394,11 @@ object ConfigConstants {
   val OUTBOX_SCHEDULED_JOB_INTERVAL = s"$OUTBOX.scheduled-job-interval"
   val OUTBOX_RETENTION = s"$OUTBOX.retention-criteria"
   val OUTBOX_RETENTION_SNAPSHOT = s"$OUTBOX_RETENTION.snapshot"
-  val OUTBOX_RETENTION_SNAPSHOT_AFTER_EVERY_EVENTS = s"$OUTBOX_RETENTION_SNAPSHOT.after-every-events"
-  val OUTBOX_RETENTION_SNAPSHOT_KEEP_SNAPSHOTS = s"$OUTBOX_RETENTION_SNAPSHOT.keep-snapshots"
-  val OUTBOX_RETENTION_SNAPSHOT_DELETE_EVENTS_ON_SNAPSHOTS = s"$OUTBOX_RETENTION_SNAPSHOT.delete-events-on-snapshots"
   val OUTBOX_OAUTH_RECEIVE_TIMEOUT = s"$OUTBOX.oauth-token-holder.receive-timeout"
 
   val ENDORSER_REGISTRY = s"$VERITY.endorser-registry"
   val ENDORSER_REGISTRY_RETENTION = s"$ENDORSER_REGISTRY.retention-criteria"
   val ENDORSER_REGISTRY_RETENTION_SNAPSHOT = s"$ENDORSER_REGISTRY_RETENTION.snapshot"
-  val ENDORSER_REGISTRY_RETENTION_SNAPSHOT_AFTER_EVERY_EVENTS = s"$ENDORSER_REGISTRY_RETENTION_SNAPSHOT.after-every-events"
-  val ENDORSER_REGISTRY_RETENTION_SNAPSHOT_KEEP_SNAPSHOTS = s"$ENDORSER_REGISTRY_RETENTION_SNAPSHOT.keep-snapshots"
-  val ENDORSER_REGISTRY_RETENTION_SNAPSHOT_DELETE_EVENTS_ON_SNAPSHOTS = s"$ENDORSER_REGISTRY_RETENTION_SNAPSHOT.delete-events-on-snapshots"
 
   val EVENTING = s"$VERITY.eventing"
   val EVENT_SOURCE = s"$EVENTING.event-source"

@@ -73,7 +73,7 @@ trait EdgeEndpointBaseSpec
   }
 
   def addAgencyEndpointToLedger(agencyDID: DidStr, endpoint: String): Unit = {
-    platform.agentActorContext.ledgerSvc.addAttrib(null, agencyDID,
+    platform.agentActorContext.legacyLedgerSvc.addAttrib(null, agencyDID,
       URL, endpoint)
   }
 

@@ -31,6 +31,7 @@ import com.evernym.verity.protocol.container.actor.ProtocolIdDetail
 import com.evernym.verity.protocol.engine.registry.PinstIdResolver
 import com.evernym.verity.util2.Exceptions
 import com.evernym.verity.vault.wallet_api.WalletAPI
+import com.evernym.verity.vdr.LedgerPrefix
 import com.google.protobuf.ByteString
 import com.typesafe.scalalogging.Logger
 
@@ -342,8 +343,8 @@ trait AgentCommon
       DidDocBuilder(futureExecutionContext, dd).updatedDidDocWithMigratedAuthKeys(explicitlyAddedAuthKeys, agentWalletAPI)
     }
 
-  lazy val vdrUnqualifiedLedgerPrefix: String = appConfig.getStringReq(VDR_UNQUALIFIED_LEDGER_PREFIX)
-  lazy val vdrLedgerPrefixMappings: Map[String, String] = appConfig.getMap(VDR_LEDGER_PREFIX_MAPPINGS)
+  lazy val vdrUnqualifiedLedgerPrefix: LedgerPrefix = appConfig.getStringReq(VDR_UNQUALIFIED_LEDGER_PREFIX)
+  lazy val vdrLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix] = appConfig.getMap(VDR_LEDGER_PREFIX_MAPPINGS)
 
   lazy val isVAS: Boolean =
     appConfig

@@ -7,6 +7,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.{checkDIDMethodMatchesLedgerPrefix, checkOptionalNotEmpty, checkRequired, checkValidDID}
 import com.evernym.verity.protocol.protocols.{ledgerPrefixStr, ledgerRequestStr}
+import com.evernym.verity.vdr.LedgerPrefix
 
 object IssuerSetupMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.EVERNYM_QUALIFIER
@@ -38,7 +39,7 @@ case class Initialize(params: Parameters) extends Msg with IssuerSetupControl {
   def parametersStored: Seq[InitParam] = params.initParams.map(p => InitParam(p.name, p.value)).toSeq
 }
 
-case class Create(ledgerPrefix: String, endorser: Option[String]) extends Msg with IssuerSetupControl {
+case class Create(ledgerPrefix: LedgerPrefix, endorser: Option[String]) extends Msg with IssuerSetupControl {
   override def validate(): Unit = {
     checkRequired("ledgerPrefix", ledgerPrefix)
     checkOptionalNotEmpty("endorserDID", endorser)

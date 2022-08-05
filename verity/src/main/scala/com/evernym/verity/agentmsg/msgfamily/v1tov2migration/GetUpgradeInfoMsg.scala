@@ -5,9 +5,9 @@ import com.evernym.verity.actor.agent.user.PairwiseUpgradeInfo
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
+import com.evernym.verity.constants.Constants.MFV_1_0
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
-import com.evernym.verity.protocol.engine.Constants._
 
 
 case class GetUpgradeInfo(pairwiseDIDs: List[String])

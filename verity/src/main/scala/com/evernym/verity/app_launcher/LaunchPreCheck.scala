@@ -35,9 +35,10 @@ object LaunchPreCheck {
     val checkId = UUID.randomUUID().toString
     logger.info(s"[$checkId] Startup probe check started")
     val startupProbeFut = startupProbe(checkId, healthChecker)(executionContext, system)
+    val probeTimeout = 10.seconds
     do {
       try {
-        val result = Await.result(startupProbeFut, 10.seconds)
+        val result = Await.result(startupProbeFut, probeTimeout)
         if (result.status) {
           logger.info(s"[$checkId] Startup probe check successful")
           return
@@ -45,10 +46,12 @@ object LaunchPreCheck {
           logger.info(s"[$checkId] Startup probe check not successful: \n" + result.toString)
         }
       } catch {
-        case e @ (_: InterruptedException | _: TimeoutException) =>
-          logger.info(s"[$checkId] Startup probe check interrupted/timedout (will keep waiting for final result): " + e.getMessage)
+        case e: TimeoutException =>
+          logger.info(s"[$checkId] Startup probe check attempt timedout (will re-check after $probeTimeout)")
+        case e: InterruptedException =>
+          logger.info(s"[$checkId] Startup probe check attempt interrupted (will re-check after $probeTimeout): " + e.getMessage)
         case e: RuntimeException =>
-          logger.warn(s"[$checkId] Startup probe check unsuccessful (will keep waiting for final result): " + e.getMessage)
+          logger.warn(s"[$checkId] Startup probe check attempt unsuccessful (will re-check after $probeTimeout): " + e.getMessage)
       }
     } while (true)
   }
@@ -58,11 +61,11 @@ object LaunchPreCheck {
                           (implicit executionContext: ExecutionContext, system: ActorSystem): Future[StartupProbeStatus] = {
     val config = ConfigReadHelper(system.settings.config)
     val ledgerTimeoutSeconds = config.getIntOption(ConfigConstants.LIB_INDY_LEDGER_POOL_CONFIG_CONN_MANAGER_OPEN_TIMEOUT).getOrElse(60)
-    val ledgerFuture = checkApiStatus(checkId, "ledger", {healthChecker.checkLedgerPoolStatus}, timeoutInterval = ledgerTimeoutSeconds.seconds)
+    val ledgerFuture = checkApiStatus(checkId, "ledger", {healthChecker.checkLedgerPoolStatus}, ledgerTimeoutSeconds.seconds)
     val akkaStorageFuture = checkApiStatus(checkId, "akka-persistence", {healthChecker.checkAkkaStorageStatus})
     val walletStorageFuture = checkApiStatus(checkId, "wallet-storage", {healthChecker.checkWalletStorageStatus})
     val blobStorageFuture = checkApiStatus(checkId, "blob-storage", {healthChecker.checkBlobStorageStatus})
-    val vdrFuture = checkApiStatus(checkId, "vdrtools", {healthChecker.checkVDRToolsStatus})
+    val vdrFuture = checkApiStatus(checkId, "vdrtools", {healthChecker.checkVDRToolsStatus}, ledgerTimeoutSeconds.seconds)
     for {
       akkaStorage   <- akkaStorageFuture
       walletStorage <- walletStorageFuture
@@ -82,8 +85,7 @@ object LaunchPreCheck {
   private def checkApiStatus(checkId: String,
                              checkName: String,
                              checkDependency: => Future[ApiStatus],
-                             timeoutInterval: FiniteDuration = 10.seconds,
-                             checkRetryInterval: FiniteDuration = 300.millis,
+                             checkRetryInterval: FiniteDuration = 10.seconds,
                              promise: Promise[ApiStatus] = Promise[ApiStatus]())
                             (implicit executionContext: ExecutionContext, system: ActorSystem): Future[ApiStatus] = {
 
@@ -94,13 +96,13 @@ object LaunchPreCheck {
           if (retryInterval.toSeconds > 5) 5.seconds    //retry at least after every 5 seconds
           else retryInterval
         }
-        checkApiStatus(checkId, checkName, checkDependency, timeoutInterval, nextCheckRetryInterval, promise)
+        checkApiStatus(checkId, checkName, checkDependency, nextCheckRetryInterval, promise)
       }
     }
 
     //execute the dependency check and process result accordingly
     try {
-      val delayedFuture = after(timeoutInterval, system.scheduler)(Future.failed(new TimeoutException(s"timed out")))
+      val delayedFuture = after(checkRetryInterval, system.scheduler)(Future.failed(new TimeoutException(s"timed out")))
       Future.firstCompletedOf(Seq(checkDependency, delayedFuture)).onComplete {
         case Success(result: ApiStatus) =>
           if (result.status) {
@@ -110,18 +112,18 @@ object LaunchPreCheck {
             logger.warn(s"[$checkId] [$checkName] dependency check status attempt unsuccessful: " + result.msg)
             retryCheck(checkRetryInterval)
           }
-        case Failure(_: TimeoutException) =>
-          logger.warn(s"[$checkId] [$checkName] dependency check status attempt timed out")
+        case Failure(e: TimeoutException) =>
+          logger.warn(s"[$checkId] [$checkName] dependency check status attempt failed with ${e.getClass.getSimpleName}")
           //we are not passing 'checkInterval' in below `retryCheck` function call
           // because it is already timed out, it means it has already waited enough so we can try the next attempt immediately
           retryCheck()
         case Failure(e) =>
-          logger.warn(s"[$checkId] [$checkName] dependency check status attempt unsuccessful: " + e.getMessage)
+          logger.warn(s"[$checkId] [$checkName] dependency check status attempt failed with ${e.getClass.getSimpleName}: " + e.getMessage)
           retryCheck(checkRetryInterval)
       }
     } catch {
       case e: RuntimeException =>
-        logger.warn(s"[$checkId] [$checkName] dependency check status attempt failed: " + e.getMessage)
+        logger.warn(s"[$checkId] [$checkName] dependency check status attempt failed with ${e.getClass.getSimpleName}: " + e.getMessage)
         retryCheck(checkRetryInterval)
     }
 

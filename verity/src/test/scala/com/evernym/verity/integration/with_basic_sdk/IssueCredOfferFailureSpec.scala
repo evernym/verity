@@ -5,7 +5,7 @@ import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider}
 import com.evernym.verity.protocol.engine.ThreadId
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.Offer
-import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.OfferCred
+import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{OfferCred, ProblemReport}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.testkit.util.HttpUtil
@@ -63,6 +63,18 @@ class IssueCredOfferFailureSpec
 
   "IssuerSDK" - {
     "sends 'offer' (issue-credential 1.0) message" - {
+
+      "with non existent cre def id" - {
+        "should fail" in {
+          val offerMsg = Offer(
+            "did:indy:sovrin:NzUByWvXNEh7FAx8B8axJz/anoncreds/v0/CLAIM_DEF/0/latest",
+            Map("name" -> "Alice", "age" -> "20")
+          )
+          issuerSDK.sendMsgForConn(issuerHolderConn, offerMsg)
+          val receivedMsg = issuerSDK.expectMsgOnWebhook[ProblemReport]().msg
+          receivedMsg.resolveDescription shouldBe "unable to create credential offer - cred def 'did:indy:sovrin:NzUByWvXNEh7FAx8B8axJz/anoncreds/v0/CLAIM_DEF/0/latest' not found in wallet"
+        }
+      }
 
       "with invalid cred attribute name" - {
         "should fail" in {

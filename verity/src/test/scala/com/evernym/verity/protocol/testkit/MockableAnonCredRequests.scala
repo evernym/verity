@@ -2,6 +2,7 @@ package com.evernym.verity.protocol.testkit
 
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.protocol.engine.asyncapi.wallet._
+import com.evernym.verity.vault.operation_executor.AnoncredsWalletOpExecutor.SIG_TYPE_CL
 
 import scala.util.Try
 
@@ -52,7 +53,7 @@ object MockableAnonCredRequests {
                 }
               },
               "type":"102",
-              "signature_type":"CL"
+              "signature_type":"$SIG_TYPE_CL"
             },
             "protocolVersion":1
           }

@@ -5,7 +5,6 @@ import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.util2.Base64Encoded
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.Constants.MFV_0_1_0
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.msg.PersistenceFailure
 
@@ -14,7 +13,7 @@ object WalletBackupMsgFamily extends MsgFamily {
 
   val name: MsgFamilyName = "wallet-backup"
 
-  val version: MsgFamilyVersion = MFV_0_1_0
+  val version: MsgFamilyVersion = "0.1.0"
 
   val protocolMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map(
     "WALLET_INIT_BACKUP"                    -> classOf[BackupInit],

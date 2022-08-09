@@ -3,7 +3,7 @@ package com.evernym.verity.agentmsg.msgfamily.configs
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
-import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 
 

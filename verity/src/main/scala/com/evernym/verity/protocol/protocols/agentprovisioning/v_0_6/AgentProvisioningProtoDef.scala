@@ -6,6 +6,7 @@ import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.Control
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.msg.Init

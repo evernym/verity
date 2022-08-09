@@ -9,7 +9,7 @@ import com.evernym.verity.util2.Version
 import com.evernym.verity.actor.agent.agency.{CreateKey, SetEndpoint}
 import com.evernym.verity.actor.agent.msghandler.incoming.ProcessPackedMsg
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet, agentRegion}
-import com.evernym.verity.protocol.engine.Constants.MFV_0_6
+import com.evernym.verity.constants.Constants.MFV_0_6
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.testkit.BasicSpecBase
 import com.evernym.verity.testkit.mock.msgsendingsvc.MockMsgSendingSvcListener

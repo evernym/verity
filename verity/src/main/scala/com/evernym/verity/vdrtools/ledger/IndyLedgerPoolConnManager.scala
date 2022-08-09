@@ -65,7 +65,6 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
   }
 
   def isConnected: Boolean = poolConn.isDefined
-  def isNotConnected: Boolean = poolConn.isEmpty
 
   private def createPoolLedgerConfig(): Unit = {
     try {
@@ -135,17 +134,29 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
       //TODO: Shall we catch some specific exception?
       case e: ExecutionException if Option(e.getCause).exists(e => e.isInstanceOf[IndyException]) =>
         val cause = e.getCause.asInstanceOf[IndyException]
-        logger.debug(s"error while trying to delete pool ledger config ($configName): ${cause.getSdkErrorCode}:${cause.getSdkMessage}")
+        logger.info(s"error while trying to delete pool ledger config ($configName): ${cause.getSdkErrorCode}:${cause.getSdkMessage}")
       case e: IndyException =>
-        logger.debug(s"error while trying to delete pool ledger config ($configName): ${e.getSdkErrorCode}:${e.getSdkMessage}")
+        logger.info(s"error while trying to delete pool ledger config ($configName): ${e.getSdkErrorCode}:${e.getSdkMessage}")
       case e: Exception =>
-        logger.debug(s"error while trying to delete pool ledger config ($configName): " + e.getMessage)
+        logger.info(s"error while trying to delete pool ledger config ($configName): ${e.getMessage}")
     }
   }
 
   def close(): Unit = {
     if (isConnected) {
-      heldPoolConn.foreach(_.closePoolLedger.get())
+      heldPoolConn.foreach{ pc =>
+        try {
+          pc.closePoolLedger.get()
+        } catch {
+          case e: ExecutionException if Option(e.getCause).exists(e => e.isInstanceOf[IndyException]) =>
+            val cause = e.getCause.asInstanceOf[IndyException]
+            logger.info(s"error while trying to close pool ledger ($configName): ${cause.getSdkErrorCode}:${cause.getSdkMessage}")
+          case e: IndyException =>
+            logger.info(s"error while trying to close pool ledger ($configName): ${e.getSdkErrorCode}:${e.getSdkMessage}")
+          case e: Exception =>
+            logger.info(s"error while trying to close pool ledger ($configName): ${e.getMessage}")
+        }
+      }
       heldPoolConn = None
     }
   }
@@ -197,11 +208,3 @@ class IndyLedgerPoolConnManager(val actorSystem: ActorSystem,
     }
   }
 }
-
-class BasePoolConnectionException extends Exception {
-  val message: String = ""
-
-  override def getMessage: String = message
-}
-
-case class PoolConnectionNotOpened(override val message: String = "") extends BasePoolConnectionException

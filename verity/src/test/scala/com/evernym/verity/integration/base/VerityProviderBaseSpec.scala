@@ -22,7 +22,7 @@ import com.evernym.verity.integration.base.verity_provider.node.VerityNode
 import com.evernym.verity.integration.base.verity_provider.node.local.LocalVerity.waitAtMost
 import com.evernym.verity.integration.base.verity_provider.node.local.{ServiceParam, VerityLocalNode}
 import com.evernym.verity.integration.base.verity_provider.{PortProfile, SharedEventStore, VerityEnv}
-import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
+import com.evernym.verity.ledger.LedgerTxnExecutor
 import com.evernym.verity.msgoutbox.WalletId
 import com.evernym.verity.observability.logs.LoggingUtil
 import com.evernym.verity.protocol.container.actor.ActorProtocol
@@ -270,7 +270,7 @@ trait VerityProviderBaseSpec
     val verityNode = verityEnv.headVerityLocalNode
     val actorSystem = verityNode.platform.actorSystem
     val appConfig = verityNode.platform.appConfig
-    val ledgerPoolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(actorSystem, appConfig, futureExecutionContext)
+    val ledgerPoolConnManager = new IndyLedgerPoolConnManager(actorSystem, appConfig, futureExecutionContext)
     val walletAPI = new StandardWalletAPI(
       new ActorWalletService(
         actorSystem,
@@ -359,21 +359,21 @@ trait VerityProviderBaseSpec
                                           domainId: DomainId,
                                           stopActor: Boolean = true,
                                           persEncryptionKey: Option[String] = None,
-                                          eventModifier: PartialFunction[Any, Option[Any]] = PartialFunction.empty): Unit = {
+                                          eventMapper: PartialFunction[Any, Option[Any]] = PartialFunction.empty): Unit = {
     val entityId = getAgentRoute(verityEnv, domainId).address
     val actorDetail = buildActorDetail(verityEnv, ActorNameConstants.USER_AGENT_REGION_ACTOR_NAME, entityId, persEncryptionKey)
     modifyShardedActorState(
       actorDetail,
       stopActor,
-      eventModifier
+      eventMapper
     )
   }
 
   private def modifyShardedActorState(actorDetail: ActorDetail,
                                       stopActor: Boolean = true,
-                                      eventModifier: PartialFunction[Any, Option[Any]] = PartialFunction.empty): Unit = {
+                                      eventMapper: PartialFunction[Any, Option[Any]] = PartialFunction.empty): Unit = {
     postActorStop(stopActor, actorDetail) {
-      modifyActorState(actorDetail, eventModifier)
+      modifyActorState(actorDetail, eventMapper)
     }
   }
 
@@ -401,7 +401,7 @@ trait VerityProviderBaseSpec
   }
 
   private def modifyActorState(actorDetail: ActorDetail,
-                               eventModifier: PartialFunction[Any, Option[Any]] = PartialFunction.empty): Unit = {
+                               eventMapper: PartialFunction[Any, Option[Any]] = PartialFunction.empty): Unit = {
     val actorStateModifierName = UUID.randomUUID().toString
     val actorRef = actorDetail.system.actorOf(
       ActorStateModifier.props(
@@ -410,7 +410,7 @@ trait VerityProviderBaseSpec
         actorDetail.typeName,
         actorDetail.entityId,
         actorDetail.persEncryptionKey,
-        eventModifier
+        eventMapper
       ),
       actorStateModifierName
     )
@@ -452,18 +452,20 @@ trait VerityProviderBaseSpec
     val actorProtocol = new ActorProtocol(protoDef)
     actorProtocol.typeName
   }
+
   private def buildPinstId(protoDef: ProtoDef,
                            domainId: DomainId,
                            relationshipId: Option[RelationshipId],
                            threadId: Option[ThreadId]): PinstId = {
     val pinstIdResolver = protocolRegistry.find(protoDef.protoRef).get.pinstIdResol
+    //currently this does NOT support protocols with pinstId resolver as `DEPRECATED_V0_1` (mostly legacy/old protocols)
     pinstIdResolver.resolve(
       protoDef,
       domainId,
       relationshipId,
       threadId,
-      None,
-      None
+      protocolIdSuffix = None,  //Used only by DEPRECATED_V0_1
+      contextualId = None       //Used only by DEPRECATED_V0_1
     )
   }
 
@@ -480,6 +482,7 @@ trait VerityProviderBaseSpec
                                          protoDef: ProtoDef,
                                          domainId: DomainId,
                                          pinstId: PinstId): Seq[Any] = {
+    //there might be few more system events to be added as needed/required
     Seq(
       DomainIdSet(domainId),
       StorageIdSet(pinstId),

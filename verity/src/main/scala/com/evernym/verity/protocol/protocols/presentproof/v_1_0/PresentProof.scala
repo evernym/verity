@@ -310,7 +310,7 @@ class PresentProof(implicit val ctx: PresentProofContext)
   def handleCtlRequest(ctr: Ctl.Request, stateData: StateData): Unit = {
     apply(Role.Verifier.toEvent)
 
-    val proofRequest = ProofRequestUtil.requestToProofRequest(ctr, ctx.ledger.vdrMultiLedgerSupportEnabled())
+    val proofRequest = ProofRequestUtil.requestToProofRequest(ctr, ctx.vdr.isMultiLedgerSupportEnabled)
     val proofRequestStr = proofRequest.map(DefaultMsgCodec.toJson)
 
     proofRequestStr match {
@@ -398,7 +398,7 @@ class PresentProof(implicit val ctx: PresentProofContext)
         PresentationPreview.fromEvt(proposal),
         msg.name.getOrElse(""),
         msg.non_revoked,
-        ctx.ledger.vdrMultiLedgerSupportEnabled()
+        ctx.vdr.isMultiLedgerSupportEnabled
       )
       val proofRequestStr = proofRequest.map(DefaultMsgCodec.toJson)
 
@@ -454,8 +454,8 @@ class PresentProof(implicit val ctx: PresentProofContext)
                             (handler: Try[(String, String)] => Unit): Unit = {
     val ids: mutable.Buffer[(String, String)] = mutable.Buffer()
     identifiers.foreach { identifier =>
-      val fqSchemaId = ctx.ledger.fqSchemaId(identifier.schema_id, None, force = false)
-      val fqCredDefId = ctx.ledger.fqCredDefId(identifier.cred_def_id, None, force = false)
+      val fqSchemaId = ctx.vdr.fqSchemaId(identifier.schema_id, None, force = false)
+      val fqCredDefId = ctx.vdr.fqCredDefId(identifier.cred_def_id, None, force = false)
       ids.append((fqSchemaId, fqCredDefId))
     }
     doSchemaAndCredDefRetrieval(ids.toSet, allowsAllSelfAttested)(handler)
@@ -473,10 +473,10 @@ class PresentProof(implicit val ctx: PresentProofContext)
     }
 
     def doSchemaRetrieval(ids: Set[String])(handler: Try[String] => Unit): Unit = {
-      ctx.ledger.resolveSchemas(ids.map(ctx.ledger.fqSchemaId(_, None, force = true))) {
+      ctx.vdr.resolveSchemas(ids.map(ctx.vdr.fqSchemaId(_, None, force = true))) {
         case Success(schemas) if schemas.size == ids.size =>
           val retrievedSchemasJson = schemas.map { schema =>
-            s""""${ctx.ledger.toLegacyNonFqSchemaId(schema.fqId)}": ${schema.json}"""
+            s""""${ctx.vdr.toLegacyNonFqSchemaId(schema.fqId)}": ${schema.json}"""
           }.mkString("{", ",", "}")
           handler(Success(retrievedSchemasJson))
         case Success(_) => handler(Failure(new Exception("Unable to retrieve schema from ledger")))
@@ -486,10 +486,10 @@ class PresentProof(implicit val ctx: PresentProofContext)
 
     def doCredDefRetrieval(schemas: String, credDefIds: Set[String])
                           (handler: Try[(String, String)] => Unit): Unit = {
-      ctx.ledger.resolveCredDefs(credDefIds.map(ctx.ledger.fqCredDefId(_, None, force = true))) {
+      ctx.vdr.resolveCredDefs(credDefIds.map(ctx.vdr.fqCredDefId(_, None, force = true))) {
         case Success(credDefs) if credDefs.size == ids.size =>
           val retrievedCredDefJson = credDefs.map { credDef =>
-            s""""${ctx.ledger.toLegacyNonFqCredDefId(credDef.fqId)}": ${credDef.json}"""
+            s""""${ctx.vdr.toLegacyNonFqCredDefId(credDef.fqId)}": ${credDef.json}"""
           }.mkString("{", ",", "}")
           handler(Success((schemas, retrievedCredDefJson)))
         case Success(_) => throw new Exception("Unable to retrieve cred def from ledger")

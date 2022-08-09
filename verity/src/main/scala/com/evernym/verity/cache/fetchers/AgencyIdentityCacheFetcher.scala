@@ -11,7 +11,9 @@ import com.evernym.verity.did.DidStr
 import scala.concurrent.{ExecutionContext, Future}
 
 //this cache saves an actor round trip
-class AgencyIdentityCacheFetcher(val agentMsgRouter: AgentMsgRouter, val appConfig: AppConfig, executionContext: ExecutionContext)
+class AgencyIdentityCacheFetcher(val agentMsgRouter: AgentMsgRouter,
+                                 val appConfig: AppConfig,
+                                 executionContext: ExecutionContext)
   extends AsyncCacheValueFetcher{
 
   override def futureExecutionContext: ExecutionContext = executionContext

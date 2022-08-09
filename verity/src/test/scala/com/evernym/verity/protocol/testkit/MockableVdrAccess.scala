@@ -8,10 +8,10 @@ import com.evernym.verity.did.DidStr
 import com.evernym.verity.ledger._
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.engine._
-import com.evernym.verity.protocol.engine.asyncapi.ledger.{LedgerAccess, LedgerAccessException, LedgerRejectException}
+import com.evernym.verity.protocol.engine.asyncapi.vdr.{VdrAccess, VdrAccessException, VdrRejectException}
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.SIGN_ED25519_SHA512_SINGLE
 import com.evernym.verity.protocol.testkit.MockLedger.TEST_INDY_SOVRIN_NAMESPACE
-import com.evernym.verity.protocol.testkit.MockableLedgerAccess.MOCK_NOT_ENDORSER
+import com.evernym.verity.protocol.testkit.MockableVdrAccess.MOCK_NOT_ENDORSER
 import com.evernym.verity.testkit.{BasicSpecBase, TestWallet}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.{ExecutionContextProvider, Status}
@@ -25,26 +25,26 @@ import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Try}
 
 
-object MockableLedgerAccess {
+object MockableVdrAccess {
   val MOCK_NO_DID = "7Pt7EfStLXeYNSmpJJSktm"
   val MOCK_NOT_ENDORSER = "GnJ79a5XAuTaxHXWSLRyqP"
   lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
 
-  def apply(): MockableLedgerAccess = {
-    new MockableLedgerAccess(ecp.futureExecutionContext)
+  def apply(): MockableVdrAccess = {
+    new MockableVdrAccess(ecp.futureExecutionContext)
   }
 
-  def apply(ledgerAvailable: Boolean): MockableLedgerAccess =
-    new MockableLedgerAccess(ecp.futureExecutionContext, ledgerAvailable = ledgerAvailable)
+  def apply(ledgerAvailable: Boolean): MockableVdrAccess =
+    new MockableVdrAccess(ecp.futureExecutionContext, ledgerAvailable = ledgerAvailable)
 }
 
-class MockableLedgerAccess(executionContext: ExecutionContext,
-                           val schemas: Map[String, Schema] = MockLedgerData.schemas01,
-                           val credDefs: Map[String, CredDef] = MockLedgerData.credDefs01,
-                           val ledgerAvailable: Boolean = true)
-  extends LedgerAccess with MockAsyncOpRunner with ActorSpec with BasicSpecBase{
+class MockableVdrAccess(executionContext: ExecutionContext,
+                        val schemas: Map[String, Schema] = MockLedgerData.schemas01,
+                        val credDefs: Map[String, CredDef] = MockLedgerData.credDefs01,
+                        val ledgerAvailable: Boolean = true)
+  extends VdrAccess with MockAsyncOpRunner with ActorSpec with BasicSpecBase{
 
-  import MockableLedgerAccess._
+  import MockableVdrAccess._
 
   implicit def asyncAPIContext: AsyncAPIContext = AsyncAPIContext(new TestAppConfig, ActorRef.noSender, null)
 
@@ -71,7 +71,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
         submitterDids += json.hashCode -> submitterDID
         Try(PreparedTxn(TEST_INDY_SOVRIN_NAMESPACE, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, INDY_ENDORSEMENT))
       }
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+      else Failure(VdrAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 
@@ -88,7 +88,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
         submitterDids += json.hashCode -> submitterDID
         Try(PreparedTxn(TEST_INDY_SOVRIN_NAMESPACE, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, INDY_ENDORSEMENT))
       }
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+      else Failure(VdrAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 
@@ -104,7 +104,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
         submitterDids += json.hashCode -> submitterDID
         Try(PreparedTxn(TEST_INDY_SOVRIN_NAMESPACE, SIGN_ED25519_SHA512_SINGLE, json.getBytes, Array.empty, INDY_ENDORSEMENT))
       }
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+      else Failure(VdrAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 
@@ -115,11 +115,11 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
     handler {
       if (ledgerAvailable) {
         val submitterDID = extractSubmitterDID(preparedTxn)
-        if (submitterDID.equals(fqDID(MOCK_NO_DID, force = false))) Failure(LedgerRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
-        else if (submitterDID.equals(fqDID(MOCK_NOT_ENDORSER, force = false))) Failure(LedgerRejectException(invalidEndorserError))
+        if (submitterDID.equals(fqDID(MOCK_NO_DID, force = false))) Failure(VdrRejectException(s"verkey for $MOCK_NO_DID cannot be found"))
+        else if (submitterDID.equals(fqDID(MOCK_NOT_ENDORSER, force = false))) Failure(VdrRejectException(invalidEndorserError))
         else Try(SubmittedTxn("{}"))
       }
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+      else Failure(VdrAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 
@@ -128,11 +128,11 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
       if (ledgerAvailable) {
         Try{
           val schemaResp = schemas.getOrElse(VDRUtil.toLegacyNonFqSchemaId(fqSchemaId,
-            vdrMultiLedgerSupportEnabled), throw new Exception("Unknown schema"))
+            isMultiLedgerSupportEnabled), throw new Exception("Unknown schema"))
           Schema(fqSchemaId, schemaResp.json)
         }
       }
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+      else Failure(VdrAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 
@@ -141,10 +141,10 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
       if (ledgerAvailable) {
         Try{
           schemas.filter{ case (id, schema) => fqSchemaIds.map(VDRUtil.toLegacyNonFqSchemaId(_,
-            vdrMultiLedgerSupportEnabled)).contains(id)}.values.toSeq
+            isMultiLedgerSupportEnabled)).contains(id)}.values.toSeq
         }
       }
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+      else Failure(VdrAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 
@@ -153,11 +153,11 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
       if (ledgerAvailable) {
         Try{
           val credDefResp = credDefs.getOrElse(VDRUtil.toLegacyNonFqCredDefId(fqCredDefId,
-            vdrMultiLedgerSupportEnabled), throw new Exception("Unknown cred def"))
+            isMultiLedgerSupportEnabled), throw new Exception("Unknown cred def"))
           CredDef(fqCredDefId, credDefResp.fqSchemaId, credDefResp.json)
         }
       }
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+      else Failure(VdrAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 
@@ -166,33 +166,33 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
       if (ledgerAvailable) {
         Try{
           credDefs.filter{ case (id, _) => fqCredDefIds.map(VDRUtil.toLegacyNonFqCredDefId(_,
-            vdrMultiLedgerSupportEnabled)).contains(id)}.values.toSeq
+            isMultiLedgerSupportEnabled)).contains(id)}.values.toSeq
         }
       }
-      else Failure(LedgerAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
+      else Failure(VdrAccessException(Status.LEDGER_NOT_CONNECTED.statusMsg))
     }
   }
 
   override def fqDID(did: DidStr, force: Boolean): FqDID =
-    MockLedger.fqID(did, vdrMultiLedgerSupportEnabled)
+    MockLedger.fqID(did, isMultiLedgerSupportEnabled)
 
   override def fqSchemaId(schemaId: SchemaId, issuerDid: Option[FqDID], force: Boolean): FqSchemaId =
-    MockLedger.fqSchemaID(schemaId, issuerDid, force || vdrMultiLedgerSupportEnabled)
+    MockLedger.fqSchemaID(schemaId, issuerDid, force || isMultiLedgerSupportEnabled)
 
   override def fqCredDefId(credDefId: CredDefId, issuerDid: Option[FqDID], force: Boolean): FqCredDefId =
-    MockLedger.fqCredDefId(credDefId, issuerDid, force || vdrMultiLedgerSupportEnabled)
+    MockLedger.fqCredDefId(credDefId, issuerDid, force || isMultiLedgerSupportEnabled)
 
   def toLegacyNonFqId(did: DidStr): DidStr = {
-    MockLedger.toLegacyNonFqId(did, vdrMultiLedgerSupportEnabled)
+    MockLedger.toLegacyNonFqId(did, isMultiLedgerSupportEnabled)
   }
 
   override def toLegacyNonFqSchemaId(schemaId: FqSchemaId): SchemaId =
-    MockLedger.toLegacyNonFqSchemaId(schemaId, vdrMultiLedgerSupportEnabled)
+    MockLedger.toLegacyNonFqSchemaId(schemaId, isMultiLedgerSupportEnabled)
 
   override def toLegacyNonFqCredDefId(credDefId: FqCredDefId): CredDefId =
-    MockLedger.toLegacyNonFqCredDefId(credDefId, vdrMultiLedgerSupportEnabled)
+    MockLedger.toLegacyNonFqCredDefId(credDefId, isMultiLedgerSupportEnabled)
 
-  override def vdrUnqualifiedLedgerPrefix(): VdrDid = "did:indy:sovrin"
+  override def unqualifiedLedgerPrefix(): VdrDid = "did:indy:sovrin"
 
   private def extractSubmitterDID(preparedTxn: PreparedTxn): String = {
     val json = new String(preparedTxn.txnBytes)
@@ -203,7 +203,7 @@ class MockableLedgerAccess(executionContext: ExecutionContext,
 
   val INDY_ENDORSEMENT = s"""{"endorserDid":"$MOCK_NOT_ENDORSER", "type": "Indy"}"""
 
-  val vdrMultiLedgerSupportEnabled: Boolean = false
+  val isMultiLedgerSupportEnabled: Boolean = false
 
   override val mockExecutionContext: ExecutionContext = executionContext
 

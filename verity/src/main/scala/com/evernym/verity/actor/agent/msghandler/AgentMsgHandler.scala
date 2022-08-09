@@ -16,8 +16,6 @@ import com.evernym.verity.observability.logs.HasLogger
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.vault.KeyParam
 
-import scala.util.Left
-
 /**
  * handles incoming and outgoing messages
  */

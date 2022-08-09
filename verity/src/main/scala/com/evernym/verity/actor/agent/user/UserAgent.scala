@@ -45,7 +45,6 @@ import com.evernym.verity.did.didcomm.v1.messages.MsgId
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.ledger.TransactionAuthorAgreement
 import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
-import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.protocol.legacy.services.CreateKeyEndpointDetail
@@ -547,7 +546,7 @@ class UserAgent(val agentActorContext: AgentActorContext,
   def isOnlyOneComMethodAllowed(comType: Int): Boolean =
     Set(COM_METHOD_TYPE_PUSH, COM_METHOD_TYPE_FWD_PUSH).contains(comType)
 
-  def processValidatedUpdateComMethodMsg(comMethod: ComMethod)(implicit reqMsgContext: ReqMsgContext): Unit = {
+  def processValidatedUpdateComMethodMsg(comMethod: ComMethod): Unit = {
     val authKeyIds = state.myDidDoc_!.endpoints.map(_.authKeyIdsForEndpoint(comMethod.id)).getOrElse(Set.empty)
     val verKeys = state.myDidDoc_!.authorizedKeys_!.safeAuthorizedKeys
       .filterByKeyIds(authKeyIds)

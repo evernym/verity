@@ -5,7 +5,7 @@ import com.evernym.verity.actor.agent.AgentActorContext
 import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.testkit.actor.ProvidesMockPlatform
 import com.evernym.verity.http.base.EndpointHandlerBaseSpec
-import com.evernym.verity.protocol.engine.Constants.MTV_1_0
+import com.evernym.verity.constants.Constants.MTV_1_0
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.mock.agent.{MockCloudAgent, MockEdgeAgent, MockEnvUtil}

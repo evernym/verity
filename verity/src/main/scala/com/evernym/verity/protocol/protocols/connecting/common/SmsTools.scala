@@ -6,7 +6,6 @@ import com.evernym.verity.transports.MsgSendingSvc
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.Left
 
 
 object SmsTools {

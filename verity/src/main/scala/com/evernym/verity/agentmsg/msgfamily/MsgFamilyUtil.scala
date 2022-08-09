@@ -1,5 +1,6 @@
 package com.evernym.verity.agentmsg.msgfamily
 
+import com.evernym.verity.constants.Constants.{MFV_0_1_0, MFV_0_6, MFV_1_0}
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, MsgFamilyName, typeStrFromMsgType}
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.IssuerSetupDefinition

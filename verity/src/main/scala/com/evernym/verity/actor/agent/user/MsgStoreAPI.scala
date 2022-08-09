@@ -20,8 +20,6 @@ import com.evernym.verity.util.TimeZoneUtil.getMillisForCurrentUTCZonedDateTime
 import com.evernym.verity.util2.MsgPayloadStoredEventBuilder
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 
-import scala.util.Left
-
 /**
  * apis which creates/updates messages and/or it's delivery status
  */

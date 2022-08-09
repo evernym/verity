@@ -19,7 +19,8 @@ import com.evernym.verity.agentmsg.wallet_backup.WalletBackupMsg
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{EVERNYM_QUALIFIER, typeStrFromMsgType}
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.http.common.models.StatusDetailResp
-import com.evernym.verity.protocol.engine.Constants.{MFV_0_1_0, MFV_0_6, MSG_FAMILY_AGENT_PROVISIONING, MSG_TYPE_CONNECT}
+import com.evernym.verity.constants.Constants._
+import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.protocol.protocols.deaddrop.{DeadDropData, DeadDropRetrieveResult}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswerVars.testQuestion
@@ -39,7 +40,6 @@ import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
-import scala.util.Left
 
 
 object AgentMsgHelper {

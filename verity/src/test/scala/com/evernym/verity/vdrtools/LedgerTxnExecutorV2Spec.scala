@@ -7,7 +7,7 @@ import com.evernym.verity.actor.wallet.SignLedgerRequest
 import com.evernym.verity.ledger._
 import com.evernym.verity.vdrtools.ledger.{IndyLedgerPoolConnManager, LedgerTxnExecutorV2, SubmitToLedger}
 import com.evernym.verity.did.{DidPair, DidStr}
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
+import com.evernym.verity.protocol.engine.asyncapi.vdr.VdrRejectException
 import com.evernym.verity.testkit.BasicSpecWithIndyCleanup
 import com.evernym.verity.vault._
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -77,7 +77,7 @@ class LedgerTxnExecutorV2Spec
             """{"reqId":1532330333807668000,"identifier":"Th7MpTaRZVRYnPiabds81Y","op":"REJECT","reason":"client request invalid: UnauthorizedClientRequest('Th7MpTaRZVRYnPiabds81Y is neither Trustee nor owner of 3pB1JfL2BHNjmaUj7bbJTn',)"}"""
           doReturn(Future(validResponse))
             .when(mockLedgerSubmitAPI).submitRequest(any[Pool], any[String])
-          an [LedgerRejectException] should be thrownBy Await.result(
+          an [VdrRejectException] should be thrownBy Await.result(
             ledgerTxnExecutor.addNym(submitter, targetDidPair),
             maxWaitTime
           )

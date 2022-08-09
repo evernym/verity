@@ -44,7 +44,6 @@ import com.evernym.verity.constants.InitParamConstants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.msg_tracer.MsgTraceProvider._
 import com.evernym.verity.protocol.container.actor.{FromProtocol, UpdateMsgDeliveryStatus}
-import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.{Parameter, _}
 import com.evernym.verity.protocol.protocols._
 import com.evernym.verity.protocol.protocols.connecting.common._
@@ -1024,7 +1023,7 @@ class UserAgentPairwise(val agentActorContext: AgentActorContext,
           agentActorContext.msgSendingSvc,
           futureExecutionContext
         ) map { result =>
-          logger.info(s"Sent SMS for invite ${ssi.invitationId} with content '$content'. Result: $result")
+          logger.info(s"Sent SMS for invite ${ssi.invitationId}. Result: $result")
           Option(ControlMsg(SMSSent(ssi.invitationId, ssi.inviteURL, shortUrl)))
         } recover {
           case he: HandledErrorException => Option(ControlMsg(SMSSendingFailed(ssi.invitationId, s"Exception: $he")))

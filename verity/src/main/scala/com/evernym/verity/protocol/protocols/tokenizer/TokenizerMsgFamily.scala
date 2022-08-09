@@ -4,7 +4,6 @@ import com.evernym.verity.did.VerKeyStr
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.protocol.Control
-import com.evernym.verity.protocol.engine.Constants.MFV_0_1
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.util.DbcUtil.requireNotNull
 import com.evernym.verity.protocol.protocols.agentprovisioning.v_0_7.AgentProvisioningMsgFamily.ProvisioningToken
@@ -15,7 +14,7 @@ import com.evernym.verity.util2.Base64Encoded
 object TokenizerMsgFamily extends MsgFamily {
   override val qualifier: MsgFamilyQualifier = MsgFamily.EVERNYM_QUALIFIER
   override val name: MsgFamilyName = "token-provisioning"
-  override val version: MsgFamilyVersion = MFV_0_1
+  override val version: MsgFamilyVersion = "0.1"
 
   override protected val protocolMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map(
     "get-token"       -> classOf[GetToken],

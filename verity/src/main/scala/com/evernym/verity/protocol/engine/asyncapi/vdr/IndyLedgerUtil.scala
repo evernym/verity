@@ -1,4 +1,4 @@
-package com.evernym.verity.protocol.engine.asyncapi.ledger
+package com.evernym.verity.protocol.engine.asyncapi.vdr
 
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.util2.Base58Encoded

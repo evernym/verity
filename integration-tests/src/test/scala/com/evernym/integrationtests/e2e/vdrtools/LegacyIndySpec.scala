@@ -11,7 +11,7 @@ import com.evernym.verity.actor.wallet.{CreateNewKey, NewKeyCreated, SignLedgerR
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigUtil.findTAAConfig
 import com.evernym.verity.ledger.{GetTAAResp, LedgerRequest, LedgerTAA, OpenConnException, Submitter, TransactionAuthorAgreement, TxnResp}
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
+import com.evernym.verity.protocol.engine.asyncapi.vdr.VdrRejectException
 import com.evernym.verity.testkit.util.{LedgerUtil => LegacyLedgerUtil}
 import com.evernym.verity.testkit.{BasicSpec, LedgerClient, TestWallet}
 import com.evernym.verity.util.HashAlgorithm.SHA256
@@ -75,7 +75,7 @@ class LegacyIndySpec
 
     "when tried to write schema before issuer DID is on the ledger" - {
       "should fail" in {
-        val ex = intercept[LedgerRejectException] {
+        val ex = intercept[VdrRejectException] {
           val schemaCreated = Anoncreds.issuerCreateSchema(
             issuerKey.did,
             "employment",

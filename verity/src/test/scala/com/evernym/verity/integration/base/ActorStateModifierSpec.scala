@@ -9,7 +9,6 @@ import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.IssuerSetup.alrea
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, IssuerSetupDefinition, ProblemReport, PublicIdentifierCreated}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
-import org.json.JSONObject
 
 import scala.concurrent.ExecutionContext
 
@@ -53,11 +52,11 @@ class ActorStateModifierSpec
 
     "when sent 'create' (issuer-setup 0.6) message after deleting existing state" - {
       "should respond with 'public-identifier-created'" in {
-        val userAgentEventModifier: PartialFunction[Any, Option[Any]] = {
+        val userAgentEventMapper: PartialFunction[Any, Option[Any]] = {
           case pis: PublicIdentityStored => None    //this event will be deleted
           case other => Option(other)               //these events will be kept as it is
         }
-        modifyUserAgentActorState(issuerVerityEnv, issuerSDK.domainDID, eventModifier = userAgentEventModifier)
+        modifyUserAgentActorState(issuerVerityEnv, issuerSDK.domainDID, eventMapper = userAgentEventMapper)
         deleteProtocolActorState(issuerVerityEnv, IssuerSetupDefinition, issuerSDK.domainDID, None, None)
         issuerSDK.sendMsg(Create())
         issuerSDK.expectMsgOnWebhook[PublicIdentifierCreated]().msg

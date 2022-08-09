@@ -130,7 +130,7 @@ class IssuerSetupEndorsementSpec
       case _: PublicIdentityStored => None  //this event will be deleted
       case other => Option(other)           //these events (whatever they maybe) will be kept as it is
     }
-    modifyUserAgentActorState(issuerVAS, issuerSDK.domainDID, eventModifier = userAgentEventMapper)
+    modifyUserAgentActorState(issuerVAS, issuerSDK.domainDID, eventMapper = userAgentEventMapper)
     deleteProtocolActorState(issuerVAS, IssuerSetupDefinition, issuerSDK.domainDID, None, None)
   }
 

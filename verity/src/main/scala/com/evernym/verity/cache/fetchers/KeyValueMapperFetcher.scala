@@ -12,7 +12,9 @@ import com.evernym.verity.util.Util._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class KeyValueMapperFetcher(val as: ActorSystem, val appConfig: AppConfig, executionContext: ExecutionContext)
+class KeyValueMapperFetcher(val as: ActorSystem,
+                            val appConfig: AppConfig,
+                            executionContext: ExecutionContext)
   extends AsyncCacheValueFetcher {
 
   override def futureExecutionContext: ExecutionContext = executionContext
@@ -36,10 +38,8 @@ class KeyValueMapperFetcher(val as: ActorSystem, val appConfig: AppConfig, execu
     val gdFut = singletonParentProxyActor ? ForKeyValueMapper(GetValue(kd.key.toString))
     gdFut map {
       case Some(v: String) => Map(kd.key.toString -> v)
-      case None => Map.empty
+      case None => Map.empty[String, AnyRef]
       case e => throw buildUnexpectedResponse(e)
     }
   }
 }
-
-case class KeyValue(k: String, v: String)

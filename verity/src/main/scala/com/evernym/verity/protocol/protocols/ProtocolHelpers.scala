@@ -88,7 +88,7 @@ object ProtocolHelpers {
   def buildQualifiedIdentifier(identifier: Option[DidStr],
                                ctx: ProtocolContextApi[_,_,_,_,_,_]): Option[DidStr] = {
     identifier.map { id =>
-      if (ctx.ledger.vdrMultiLedgerSupportEnabled()) ctx.ledger.fqDID(id, force = true)
+      if (ctx.vdr.isMultiLedgerSupportEnabled) ctx.vdr.fqDID(id, force = true)
       else "did:sov:" + id
     }
   }

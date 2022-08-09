@@ -24,7 +24,6 @@ import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.vault.{EncryptParam, KeyParam}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Left
 
 
 trait ConnReqMsgHandler[S <: ConnectingStateBase[S]] {

@@ -6,6 +6,7 @@ import com.evernym.verity.actor.agent.MsgPackFormat.MPF_MSG_PACK
 import com.evernym.verity.actor.testkit.ActorSpec
 import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.constants.Constants.{MFV_0_5, MTV_1_0}
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgFamilyVersion
 import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.testkit.BasicSpecBase

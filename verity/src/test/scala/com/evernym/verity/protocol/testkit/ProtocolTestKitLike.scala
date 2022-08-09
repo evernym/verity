@@ -8,7 +8,7 @@ import com.evernym.verity.protocol.engine.registry.ProtocolRegistry.{DriverGen, 
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.endorser.EndorserAccess
 import com.evernym.verity.util2.HasExecutionContextProvider
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
+import com.evernym.verity.protocol.engine.asyncapi.vdr.VdrAccess
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess
 import com.evernym.verity.protocol.engine.registry.{PinstIdResolution, PinstIdResolver, ProtocolRegistry}
@@ -421,8 +421,8 @@ trait ProtocolTestKitLike[P,R,M,E,S,I] extends HasExecutionContextProvider {
       domain.walletAccess(w)
     }
 
-    def ledgerAccess(l: LedgerAccess): Unit = {
-      domain.ledgerAccess(l)
+    def vdrAccess(l: VdrAccess): Unit = {
+      domain.vdrAccess(l)
     }
 
     def urlShortening(url: UrlShorteningAccess): Unit = {

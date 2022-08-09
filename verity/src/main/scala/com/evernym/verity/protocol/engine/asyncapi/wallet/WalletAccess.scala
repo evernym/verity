@@ -49,10 +49,6 @@ trait WalletAccess
             )(handler: Try[VerifiedSigResult] => Unit): Unit
 
   def storeTheirDid(did: DidStr, verKey: VerKeyStr, ignoreIfAlreadyExists: Boolean = false)(handler: Try[TheirKeyStoredResult] => Unit): Unit
-
-  def signRequest(submitterDID: DidStr, request: String)(handler: Try[LedgerRequestResult] => Unit): Unit
-
-  def multiSignRequest(submitterDID: DidStr, request: String)(handler: Try[LedgerRequestResult] => Unit): Unit
 }
 
 object WalletAccess {
@@ -61,19 +57,16 @@ object WalletAccess {
   val KEY_ED25519: KeyType = "ed25519"
   val SIGN_ED25519_SHA512_SINGLE: SignType = "spec/signature/1.0/ed25519Sha512_single"
   val SIGN_ED25519: SignType = "ed25519"
-  val supportedSigningSpecs = List(SIGN_ED25519_SHA512_SINGLE, SIGN_ED25519)
-  // TODO: Decide if following belong here or at a broader level
-  type PackedMsg = Array[Byte]
+  val supportedSigningSpecs: List[SignType] = List(SIGN_ED25519_SHA512_SINGLE, SIGN_ED25519)
 }
 
 case class InvalidSignType(message: String) extends Exception(message)
-case class NoWalletFound(message: String)   extends Exception(message)
-
 case class SignatureResult(signature: Array[Byte], verKey: VerKeyStr) {
-  def toBase64: String = Base64Util.getBase64Encoded(signature)
-  def toBase64UrlEncoded: String = Base64Util.getBase64UrlEncoded(signature)
 
   def toBase58: String = Base58Util.encode(signature)
+
+  def toBase64: String = Base64Util.getBase64Encoded(signature)
+  def toBase64UrlEncoded: String = Base64Util.getBase64UrlEncoded(signature)
 }
 
 case class DeprecatedWalletSetupResult(ownerDidPair: DidPair, agentKey: NewKeyResult)
@@ -102,8 +95,3 @@ case class CredForProofResult(cred: String)
 
 case class ProofCreatedResult(proof: String)
 case class ProofVerificationResult(result: Boolean)
-
-case class TransactionAuthorAgreement(version: String, digest: String, mechanism: String, timeOfAcceptance: String)
-case class LedgerRequestResult(req: String, needsSigning: Boolean=true, taa: Option[TransactionAuthorAgreement]=None) {
-  def prepared(newRequest: String): LedgerRequestResult = this.copy(req=newRequest)
-}

@@ -3,7 +3,6 @@ package com.evernym.verity.protocol.engine.asyncapi.wallet
 import com.evernym.verity.actor.wallet._
 import com.evernym.verity.config.ConfigConstants.SALT_WALLET_NAME
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
-import com.evernym.verity.ledger.{LedgerRequest, Submitter}
 import com.evernym.verity.protocol.container.actor.AsyncAPIContext
 import com.evernym.verity.protocol.container.asyncapis.BaseAsyncAccessImpl
 import com.evernym.verity.protocol.engine.ParticipantId
@@ -113,10 +112,10 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
       handleAsyncOpResult(handler)
     )
 
-  override def createSchema(issuerDID:  DidStr,
-                            name:  String,
-                            version:  String,
-                            data:  String)
+  override def createSchema(issuerDID: DidStr,
+                            name: String,
+                            version: String,
+                            data: String)
                            (handler: Try[SchemaCreatedResult] => Unit): Unit =
     asyncOpRunner.withFutureOpRunner(
       {
@@ -130,7 +129,7 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
   override def createCredDef(issuerDID: DidStr,
                              schemaJson: String,
                              tag: String,
-                             sigType:  Option[String],
+                             sigType: Option[String],
                              revocationDetails: Option[String])
                             (handler: Try[CredDefCreatedResult] => Unit): Unit =
     asyncOpRunner.withAsyncOpRunner(
@@ -203,22 +202,6 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
     )
   }
 
-  override def signRequest(submitterDID: DidStr,
-                           request: String)
-                          (handler: Try[LedgerRequestResult] => Unit): Unit =
-    asyncOpRunner.withAsyncOpRunner(
-      {runSignRequest(submitterDID, request)},
-      handleAsyncOpResult(handler)
-    )
-
-  override def multiSignRequest(submitterDID: DidStr,
-                                request: String)
-                               (handler: Try[LedgerRequestResult] => Unit): Unit =
-    asyncOpRunner.withAsyncOpRunner(
-      {runMultiSignRequest(submitterDID, request)},
-      handleAsyncOpResult(handler)
-    )
-
   private def getDIDFromParticipantId(participantId: ParticipantId): DidStr = {
     ParticipantUtil.DID(participantId)
   }
@@ -227,18 +210,6 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
   private def runSign(msg: Array[Byte], signerDidOpt: Option[DidStr]=None): Unit = {
     val did = signerDidOpt.getOrElse(getDIDFromParticipantId(selfParticipantId))
     walletApi.tell(SignMsg(KeyParam.fromDID(did), msg))
-  }
-
-  private def runSignRequest(submitterDID: DidStr, request: String): Unit = {
-    val ledgerRequest = LedgerRequest(request)
-    val submitter = Submitter(submitterDID, Some(wap))
-    walletApi.tell(SignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq, senderActorRef)
-  }
-
-  private def runMultiSignRequest(submitterDID: DidStr, request: String): Unit = {
-    val ledgerRequest = LedgerRequest(request)
-    val submitter = Submitter(submitterDID, Some(wap))
-    walletApi.tell(MultiSignLedgerRequest(ledgerRequest, submitter))(submitter.wapReq, senderActorRef)
   }
 
   //AnonCredRequestsAPI
@@ -277,17 +248,6 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
 
         case c: ProofCreated => ProofCreatedResult(c.proof)
         case c: ProofVerifResult => ProofVerificationResult(c.result)
-
-        case c: LedgerRequest => LedgerRequestResult(
-          c.req,
-          c.needsSigning,
-          c.taa.map(t=>TransactionAuthorAgreement(
-            t.version,
-            t.digest,
-            t.mechanism,
-            t.timeOfAcceptance
-          ))
-        )
       }
         .map(_.asInstanceOf[T])
     )

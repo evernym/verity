@@ -22,7 +22,7 @@ import com.evernym.verity.observability.metrics.CustomMetrics.AS_NEW_PROTOCOL_CO
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.asyncapi.{AsyncOpRunner, RoutingContext}
 import com.evernym.verity.protocol.engine.asyncapi.endorser.EndorserAccessAdapter
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccessAdapter
+import com.evernym.verity.protocol.engine.asyncapi.vdr.VdrAccessAdapter
 import com.evernym.verity.protocol.engine.asyncapi.segmentstorage.SegmentStoreAccessAdapter
 import com.evernym.verity.protocol.engine.asyncapi.urlShorter.UrlShorteningAccessAdapter
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccessAdapter
@@ -35,6 +35,7 @@ import com.evernym.verity.texter.SmsInfo
 import com.evernym.verity.util.Util
 import com.evernym.verity.util.Util.getActorRefFromSelection
 import com.evernym.verity.util2.{ActorResponse, ServiceEndpoint}
+import com.evernym.verity.vdr.LedgerPrefix
 import com.typesafe.scalalogging.Logger
 
 import java.util.UUID
@@ -311,9 +312,9 @@ class ActorProtocolContainer[
   implicit def asyncOpRunner: AsyncOpRunner = this
 
 
-  lazy val vdrMultiLedgerSupportEnabled: Boolean = appConfig.getBooleanReq(VDR_MULTI_LEDGER_SUPPORT_ENABLED)
-  lazy val vdrUnqualifiedLedgerPrefix: String = appConfig.getStringReq(VDR_UNQUALIFIED_LEDGER_PREFIX)
-  lazy val vdrLedgerPrefixMappings: Map[String, String] = appConfig.getMap(VDR_LEDGER_PREFIX_MAPPINGS)
+  lazy val isVdrMultiLedgerSupportEnabled: Boolean = appConfig.getBooleanReq(VDR_MULTI_LEDGER_SUPPORT_ENABLED)
+  lazy val vdrUnqualifiedLedgerPrefix: LedgerPrefix = appConfig.getStringReq(VDR_UNQUALIFIED_LEDGER_PREFIX)
+  lazy val vdrLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix] = appConfig.getMap(VDR_LEDGER_PREFIX_MAPPINGS)
 
   override lazy val wallet =
     new WalletAccessAdapter(
@@ -321,11 +322,11 @@ class ActorProtocolContainer[
       getRoster.selfId_!
     )
 
-  override lazy val ledger =
-    new LedgerAccessAdapter(
+  override lazy val vdr =
+    new VdrAccessAdapter(
       agentActorContext.vdrAdapter,
       agentActorContext.vdrCache,
-      vdrMultiLedgerSupportEnabled,
+      isVdrMultiLedgerSupportEnabled,
       vdrUnqualifiedLedgerPrefix,
       vdrLedgerPrefixMappings
     )

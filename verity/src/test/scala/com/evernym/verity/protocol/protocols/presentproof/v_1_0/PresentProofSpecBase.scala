@@ -2,11 +2,11 @@ package com.evernym.verity.protocol.protocols.presentproof.v_1_0
 
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerAccess
+import com.evernym.verity.protocol.engine.asyncapi.vdr.VdrAccess
 import com.evernym.verity.protocol.engine.asyncapi.wallet._
 import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.SegmentKey
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
-import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableWalletAccess, TestsProtocolsImpl}
+import com.evernym.verity.protocol.testkit.{MockableVdrAccess, MockableWalletAccess, TestsProtocolsImpl}
 import com.evernym.verity.testkit.BasicFixtureSpec
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.ExecutionContextProvider
@@ -164,12 +164,12 @@ abstract class PresentProofSpecBase
     }
   }
 
-  def indyAccessMocks(f: FixtureParam, wa: WalletAccess=MockableWalletAccess.walletAccess(), la: LedgerAccess=MockableLedgerAccess()):
+  def indyAccessMocks(f: FixtureParam, wa: WalletAccess=MockableWalletAccess.walletAccess(), la: VdrAccess=MockableVdrAccess()):
   (TestEnvir, TestEnvir) = {
     val (verifier, prover) = (f.alice, f.bob)
 
-    verifier ledgerAccess la
-    prover ledgerAccess la
+    verifier vdrAccess la
+    prover vdrAccess la
 
     verifier walletAccess wa
     prover walletAccess wa

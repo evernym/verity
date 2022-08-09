@@ -3,7 +3,8 @@ package com.evernym.verity.agentmsg.msgfamily.routing
 import com.evernym.verity.util2.Exceptions.MissingReqFieldException
 import com.evernym.verity.agentmsg.msgfamily.{LegacyMsgBase, TypeDetail}
 import com.evernym.verity.agentmsg.msgpacker.{AgentMsgWrapper, MsgFamilyDetail}
-import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.constants.Constants.MFV_1_0
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkRequired
 import com.evernym.verity.protocol.engine.MissingReqFieldProtocolEngineException
 import com.evernym.verity.util.JsonObjectWrapper

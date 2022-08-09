@@ -27,14 +27,14 @@ import com.evernym.verity.agentmsg.msgfamily.{BundledMsg_MFV_0_5, ConfigDetail, 
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CONN_REQ, CREATE_MSG_TYPE_CONN_REQ_ANSWER, CREATE_MSG_TYPE_GENERAL, MSG_TYPE_CREATE_KEY, MSG_TYPE_CREATE_MSG, MSG_TYPE_DETAIL_ACCEPT_CONN_REQ, MSG_TYPE_DETAIL_CONN_REQ, MSG_TYPE_DETAIL_CREATE_AGENT, MSG_TYPE_DETAIL_CREATE_KEY, MSG_TYPE_MSG_DETAIL, MSG_TYPE_UPDATE_COM_METHOD, MSG_TYPE_UPDATE_CONFIGS}
 import com.evernym.verity.agentmsg.msgfamily.configs.{ConfigsUpdatedRespMsg_MFV_0_5, UpdateConfigReqMsg}
 import com.evernym.verity.agentmsg.msgfamily.pairwise.{AnswerInviteMsgDetail_MFV_0_5, ConnReqRespMsg_MFV_0_6, GeneralCreateMsgDetail_MFV_0_5, InviteCreateMsgDetail_MFV_0_5, KeyCreatedRespMsg_MFV_0_5, KeyCreatedRespMsg_MFV_0_6}
-import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
+import com.evernym.verity.constants.Constants.{COM_METHOD_TYPE_HTTP_ENDPOINT, MTV_1_0}
 import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgId}
 import com.evernym.verity.did.{DidPair, DidStr, VerKeyStr}
 import com.evernym.verity.integration.base.sdk_provider.JsonMsgUtil.createJsonString
 import com.evernym.verity.integration.base.verity_provider.{VerityEnv, VerityEnvUrlProvider}
 import com.evernym.verity.ledger.{LedgerPoolConnManager, LedgerTxnExecutor}
 import com.evernym.verity.observability.logs.LoggingUtil.{getLoggerByClass, getLoggerByName}
-import com.evernym.verity.protocol.engine.Constants.{MSG_TYPE_CONNECT, MSG_TYPE_CREATE_AGENT, MSG_TYPE_SIGN_UP, MTV_1_0}
+import com.evernym.verity.protocol.engine.Constants.{MSG_TYPE_CONNECT, MSG_TYPE_CREATE_AGENT, MSG_TYPE_SIGN_UP}
 import com.evernym.verity.protocol.engine.util.DIDDoc
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail

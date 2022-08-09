@@ -1,7 +1,7 @@
 package com.evernym.verity.actor.maintenance
 
 import akka.actor.Props
-import com.evernym.verity.actor.persistence.{BasePersistentActor, BasePersistentTimeoutActor, DefaultPersistenceEncryption, SnapshotterExt}
+import com.evernym.verity.actor.persistence.{BasePersistentTimeoutActor, DefaultPersistenceEncryption, SnapshotterExt}
 import com.evernym.verity.actor.{ActorMessage, State}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.Constants.YES

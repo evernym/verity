@@ -108,7 +108,6 @@ object VDRActor {
 
   def waitingForLedgerRegistration(vdrToolsBuilder: VdrToolsBuilder)
                                   (implicit buffer: StashBuffer[Cmd],
-                                   actorContext: ActorContext[Cmd],
                                    executionContext: ExecutionContext): Behavior[Cmd] =
     Behaviors.receiveMessage {
       case LedgersRegistered(namespaces) =>

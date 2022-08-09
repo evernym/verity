@@ -28,6 +28,7 @@ import com.evernym.verity.util.PackedMsgWrapper
 import com.evernym.verity.util.Util._
 import com.evernym.verity.vault.KeyParam
 import com.evernym.verity.util2.{Exceptions, UrlParam}
+import com.evernym.verity.vdr.Ledgers
 import com.evernym.verity.vdr.service.VDRAdapterUtil
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -105,7 +106,7 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
     // However, it's not very troubling, because the closure just sends a response;
     // it doesn't modify the actor's state. However, in protocols, when this type of
     // pattern occurs, the state might be modified, and that would be bad.
-    val addUrlFutResp = agentActorContext.ledgerSvc.addAttrib(ledgerReqSubmitter, state.myDid_!,
+    val addUrlFutResp = agentActorContext.legacyLedgerSvc.addAttrib(ledgerReqSubmitter, state.myDid_!,
       VDRAdapterUtil.URL, url.toString)
     addUrlFutResp.map { tr =>
       logger.debug("url added", (LOG_KEY_SRC_DID, state.myDid_!), ("transaction", tr))

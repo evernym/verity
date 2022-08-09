@@ -8,6 +8,7 @@ import com.evernym.verity.agentmsg.msgfamily.TypeDetail
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper._
 import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.config.AppConfig
+import com.evernym.verity.constants.Constants.{MFV_0_5, MFV_0_6}
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgFamilyVersion
 import com.evernym.verity.vault._
 import com.evernym.verity.protocol.engine.Constants._

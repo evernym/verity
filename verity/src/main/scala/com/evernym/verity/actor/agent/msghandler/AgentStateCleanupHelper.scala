@@ -351,9 +351,9 @@ trait AgentStateCleanupHelper {
       MigrateThreadContexts)
   }
 
-  scheduleThreadContextMigrationJobIfNotScheduled()
+  //scheduleThreadContextMigrationJobIfNotScheduled()
 
-  self ! FixThreadMigrationState
+  //self ! FixThreadMigrationState
 
   private val throttledLogger = new ThrottledLogger[ActorStateCleanupHelper](logger, min_period = 10.minutes)
 }

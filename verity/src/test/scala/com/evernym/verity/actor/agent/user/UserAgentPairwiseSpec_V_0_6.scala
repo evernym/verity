@@ -9,7 +9,7 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.{CREATE_MSG_TYPE_CRED
 import com.evernym.verity.agentmsg.msgfamily.pairwise.ConnReqAcceptedMsg_MFV_0_6
 import com.evernym.verity.did.didcomm.v1.Thread
 import com.evernym.verity.agentmsg.msgpacker.PackMsgParam
-import com.evernym.verity.protocol.engine.Constants.MTV_1_0
+import com.evernym.verity.constants.Constants.MTV_1_0
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.testkit.util.AgentPackMsgUtil

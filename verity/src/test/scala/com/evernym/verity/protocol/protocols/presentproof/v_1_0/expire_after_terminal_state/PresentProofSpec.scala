@@ -9,7 +9,7 @@ import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{Role, _}
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
-import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableUrlShorteningAccess, MockableWalletAccess}
+import com.evernym.verity.protocol.testkit.{MockableVdrAccess, MockableUrlShorteningAccess, MockableWalletAccess}
 import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 import org.json.JSONObject
 
@@ -793,7 +793,7 @@ class PresentProofSpec
           f.checkTotalSegments(0)
           val (verifier, prover) = indyAccessMocks(f)
 
-          verifier ledgerAccess MockableLedgerAccess(false)
+          verifier vdrAccess MockableVdrAccess(false)
 
           // Verifier starts protocol
           (verifier engage prover) ~ Ctl.Request(

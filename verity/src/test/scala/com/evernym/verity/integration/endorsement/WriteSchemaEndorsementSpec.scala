@@ -9,7 +9,7 @@ import com.evernym.verity.eventing.event_handlers.TOPIC_REQUEST_ENDORSEMENT
 import com.evernym.verity.integration.base.{EndorsementReqMsgHandler, EndorserUtil, PortProvider, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.{IssuerSdk, SdkProvider}
 import com.evernym.verity.integration.base.verity_provider.VerityEnv
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
+import com.evernym.verity.protocol.engine.asyncapi.vdr.VdrRejectException
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{NeedsEndorsement, ProblemReport, StatusReport, Write}
 import com.evernym.verity.util.TestExecutionContextProvider
@@ -129,7 +129,7 @@ class WriteSchemaEndorsementSpec
                            endorsement: FqCredDefId): Future[TxnResult] = {
       val node = JacksonMsgCodec.docFromStrUnchecked(new String(txnBytes))
       node.get(TYPE).asText() match {
-        case SCHEMA  => Future.failed(LedgerRejectException("Not enough ENDORSER signatures"))
+        case SCHEMA  => Future.failed(VdrRejectException("Not enough ENDORSER signatures"))
         case _       => super.submitTxn(namespace, txnBytes, signatureSpec, signature, endorsement)
       }
     }

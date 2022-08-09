@@ -6,7 +6,8 @@ import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.protocol.{Control, SponsorRel}
-import com.evernym.verity.protocol.engine.Constants.{MFV_0_7, MSG_FAMILY_AGENT_PROVISIONING, MSG_TYPE_CREATE_AGENT}
+import com.evernym.verity.constants.Constants._
+import com.evernym.verity.protocol.engine.Constants.{MSG_FAMILY_AGENT_PROVISIONING, MSG_TYPE_CREATE_AGENT}
 import com.evernym.verity.protocol.engine.util.DbcUtil.requireNotNull
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.util.TimeUtil._
@@ -198,9 +199,6 @@ object AgentProvisioningMsgFamily extends MsgFamily {
   }
   case object InvalidSponsorVerKey    extends ProvisioningException {
     def err = "Token contains verkey which doesn't match sponsor's information"
-  }
-  case object InvalidTokenErr extends ProvisioningException {
-    def err = "Token is invalid"
   }
   case object MissingToken extends ProvisioningException {
     def err = "Token is required for provisioning"

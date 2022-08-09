@@ -7,18 +7,19 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.ledger.Submitter
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.vdr.{VDRAdapter, VDRUtil}
+import com.evernym.verity.vdr.{LedgerPrefix, VDRAdapter, VDRUtil}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class LedgerVerKeyCacheFetcher(val vdr: VDRAdapter,
-                               val appConfig: AppConfig, executionContext: ExecutionContext)
+                               val appConfig: AppConfig,
+                               executionContext: ExecutionContext)
   extends AsyncCacheValueFetcher {
   override implicit def futureExecutionContext: ExecutionContext = executionContext
 
-  lazy val vdrMultiLedgerSupportEnabled: Boolean = appConfig.getBooleanReq(VDR_MULTI_LEDGER_SUPPORT_ENABLED)
-  lazy val vdrUnqualifiedLedgerPrefix: String = appConfig.getStringReq(VDR_UNQUALIFIED_LEDGER_PREFIX)
-  lazy val vdrLedgerPrefixMappings: Map[String, String] = appConfig.getMap(VDR_LEDGER_PREFIX_MAPPINGS)
+  lazy val isVdrMultiLedgerSupportEnabled: Boolean = appConfig.getBooleanReq(VDR_MULTI_LEDGER_SUPPORT_ENABLED)
+  lazy val vdrUnqualifiedLedgerPrefix: LedgerPrefix = appConfig.getStringReq(VDR_UNQUALIFIED_LEDGER_PREFIX)
+  lazy val vdrLedgerPrefixMappings: Map[LedgerPrefix, LedgerPrefix] = appConfig.getMap(VDR_LEDGER_PREFIX_MAPPINGS)
 
   lazy val fetcherParam: FetcherParam = LEDGER_GET_VER_KEY_CACHE_FETCHER
   lazy val cacheConfigPath: Option[String] = Option(ROUTING_DETAIL_CACHE)
@@ -35,7 +36,7 @@ class LedgerVerKeyCacheFetcher(val vdr: VDRAdapter,
 
   override def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]] = {
     val gvkp = kd.keyAs[GetVerKeyParam]
-    val didDocFut = vdr.resolveDID(VDRUtil.toFqDID(gvkp.did, vdrMultiLedgerSupportEnabled, vdrUnqualifiedLedgerPrefix, vdrLedgerPrefixMappings))
+    val didDocFut = vdr.resolveDID(VDRUtil.toFqDID(gvkp.did, isVdrMultiLedgerSupportEnabled, vdrUnqualifiedLedgerPrefix, vdrLedgerPrefixMappings))
     didDocFut
       .map { dd =>Map(gvkp.did -> dd.verKey)}
       .recover {

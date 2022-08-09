@@ -8,7 +8,7 @@ import com.evernym.verity.agentmsg.msgpacker.AgentMsgWrapper
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.MsgName
 import com.evernym.verity.protocol.HasMsgType
-import com.evernym.verity.protocol.engine.Constants._
+import com.evernym.verity.constants.Constants._
 import com.evernym.verity.protocol.engine.validate.ValidateHelper.checkOptionalNotEmpty
 import com.evernym.verity.protocol.protocols.connecting.v_0_5.{ConnectingMsgFamily => ConnectingMsgFamily_0_5}
 import com.evernym.verity.protocol.protocols.connecting.v_0_6.{ConnectingMsgFamily => ConnectingMsgFamily_0_6}

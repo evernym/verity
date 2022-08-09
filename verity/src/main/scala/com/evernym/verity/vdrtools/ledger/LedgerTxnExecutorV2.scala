@@ -7,7 +7,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.ledger.{TransactionAuthorAgreement, TxnResp}
 import com.evernym.verity.vdrtools.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.did.DidStr
-import com.evernym.verity.protocol.engine.asyncapi.ledger.LedgerRejectException
+import com.evernym.verity.protocol.engine.asyncapi.vdr.VdrRejectException
 import com.evernym.verity.vault.wallet_api.WalletAPI
 import com.evernym.vdrtools.pool.Pool
 
@@ -19,7 +19,7 @@ class LedgerTxnExecutorV2(val actorSystem: ActorSystem,
                           val pool: Option[Pool],
                           val currentTAA: Option[TransactionAuthorAgreement],
                           executionContext: ExecutionContext)
-  extends LedgerTxnExecutorBase{
+  extends LedgerTxnExecutorBase {
 
   override def futureExecutionContext: ExecutionContext = executionContext
 
@@ -68,7 +68,7 @@ object V2TxnRespBuilder {
       TxnResp(from, dest, Option(data), txnType, txnTime, reqId, seqNo)
     } catch {
       case _: MissingReqFieldException =>
-        throw LedgerRejectException(resp(REASON).asInstanceOf[String])
+        throw VdrRejectException(resp(REASON).asInstanceOf[String])
     }
   }
 }

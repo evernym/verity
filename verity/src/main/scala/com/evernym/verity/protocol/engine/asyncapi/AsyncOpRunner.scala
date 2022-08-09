@@ -83,7 +83,7 @@ trait AsyncOpRunner {
 
 
   /**
-   * Things like the url shortener and the wallet and ledger services are internal to a protocol and need to be complete
+   * Things like the url shortener, wallet and vdr services are internal to a protocol and need to be complete
    *  before segmented state storage and event persistent which are post protocol.
    */
   def isAllAsyncOpsCompleted: Boolean = asyncOpCallbackHandlers.isEmpty

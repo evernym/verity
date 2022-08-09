@@ -1,7 +1,5 @@
 package com.evernym.verity.protocol.engine.segmentedstate
 
-import com.evernym.verity.protocol.engine.segmentedstate.SegmentedStateTypes.{SegmentAddress, SegmentKey}
-
 
 object SegmentedStateTypes {
 
@@ -26,5 +24,3 @@ object SegmentedStateTypes {
   type SegmentAddress = String
 
 }
-
-case class PendingSegment(segmentAddress: SegmentAddress, segmentKey: SegmentKey, value: Any)

@@ -6,7 +6,7 @@ import com.evernym.verity.actor.agent.user.ComMethodDetail
 import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil.MSG_TYPE_DETAIL_GET_TOKEN
 import com.evernym.verity.agentmsg.msgpacker.{FwdRouteMsg, PackMsgParam}
 import com.evernym.verity.agentmsg.tokenizer.GetToken
-import com.evernym.verity.protocol.engine.Constants.MFV_1_0
+import com.evernym.verity.constants.Constants.MFV_1_0
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.testkit.agentmsg.AgentMsgHelper
 import com.evernym.verity.testkit.util.AgentPackMsgUtil.{preparePackedRequestForAgent, preparePackedRequestForRoutes}

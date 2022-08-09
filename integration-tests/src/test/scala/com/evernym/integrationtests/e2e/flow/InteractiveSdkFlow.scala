@@ -17,7 +17,7 @@ import com.evernym.verity.did.{DidStr, VerKeyStr}
 import com.evernym.verity.fixture.TempDir
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByName
 import com.evernym.verity.observability.metrics.CustomMetrics.AS_NEW_PROTOCOL_COUNT
-import com.evernym.verity.protocol.engine.Constants.`@TYPE`
+import com.evernym.verity.constants.Constants.`@TYPE`
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.BasicMessageMsgFamily
 import com.evernym.verity.protocol.protocols.committedAnswer.v_1_0.CommittedAnswerMsgFamily
 import com.evernym.verity.protocol.protocols.connections.v_1_0.ConnectionsMsgFamily
@@ -1701,7 +1701,7 @@ trait InteractiveSdkFlow extends MetricsFlow {
         }
       }
 
-      s"[$questioner.name] reuse thread should fail" in {
+      s"[${questioner.name}] reuse thread should fail" in {
         // if tried to reuse this thread a problem-report is received.
         committedAnswer.ask(questionerSdk.context)
 

@@ -22,7 +22,6 @@ import com.evernym.verity.util2.UrlParam
 import com.evernym.verity.util2.Exceptions
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Left
 
 
 /**

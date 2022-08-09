@@ -163,7 +163,7 @@ object PusherUtil  {
           .getOrElse( throw new InvalidComMethodException(Some("Sponsor Id not Given -- COM_METHOD_TYPE_SPR_PUSH" +
             " requires a Sponsor Id")))
         val pushProvider = sponsorPushProvider(config, sponsorIdVal, executionContext)
-          .getOrElse( throw new InvalidComMethodException(Some(s"Push provider for sponsor Id '$sponsorIdVal' did not" +
+          .getOrElse( throw new InvalidComMethodException(Some(s"Push provider for sponsor Id '$sponsorIdVal' did not " +
             "produce a valid push provider")))
         (pushProvider, comMethod.value)
       case t =>

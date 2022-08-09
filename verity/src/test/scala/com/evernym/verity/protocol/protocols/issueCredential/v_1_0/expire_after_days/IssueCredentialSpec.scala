@@ -10,7 +10,7 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.OfferCred
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0._
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.testkit.DSL.{signal, state}
-import com.evernym.verity.protocol.testkit.{MockableLedgerAccess, MockableUrlShorteningAccess, MockableWalletAccess}
+import com.evernym.verity.protocol.testkit.{MockableVdrAccess, MockableUrlShorteningAccess, MockableWalletAccess}
 import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
 
@@ -115,7 +115,7 @@ class IssueCredentialSpec
         holder expect signal[Sig.AcceptOffer]
 
         holder walletAccess MockableWalletAccess()
-        holder ledgerAccess MockableLedgerAccess()
+        holder vdrAccess MockableVdrAccess()
 
         holder ~ buildSendRequest()
         f.checkTotalSegments(6)
@@ -146,7 +146,7 @@ class IssueCredentialSpec
         holder expect signal[Sig.AcceptOffer]
 
         holder walletAccess MockableWalletAccess()
-        holder ledgerAccess MockableLedgerAccess()
+        holder vdrAccess MockableVdrAccess()
 
         // delete the stored segment (simulation of expire)
         val offerReceived = holder expect state[State.OfferReceived]
@@ -183,7 +183,7 @@ class IssueCredentialSpec
         holder expect signal[Sig.AcceptOffer]
 
         holder walletAccess MockableWalletAccess()
-        holder ledgerAccess MockableLedgerAccess()
+        holder vdrAccess MockableVdrAccess()
         holder ~ buildSendRequest()
         f.checkTotalSegments(6)
         holder expect signal[Sig.Sent]
@@ -217,7 +217,7 @@ class IssueCredentialSpec
         holder expect signal[Sig.AcceptOffer]
 
         holder walletAccess MockableWalletAccess()
-        holder ledgerAccess MockableLedgerAccess()
+        holder vdrAccess MockableVdrAccess()
         holder ~ buildSendRequest()
         f.checkTotalSegments(6)
         holder expect signal[Sig.Sent]
@@ -253,7 +253,7 @@ class IssueCredentialSpec
         holder expect signal[Sig.AcceptOffer]
 
         holder walletAccess MockableWalletAccess()
-        holder ledgerAccess MockableLedgerAccess()
+        holder vdrAccess MockableVdrAccess()
         holder ~ buildSendRequest()
         f.checkTotalSegments(6)
         holder expect signal[Sig.Sent]
@@ -288,7 +288,7 @@ class IssueCredentialSpec
       holder expect signal[Sig.AcceptOffer]
 
       holder walletAccess MockableWalletAccess()
-      holder ledgerAccess MockableLedgerAccess()
+      holder vdrAccess MockableVdrAccess()
       holder ~ buildSendRequest()
       f.checkTotalSegments(4)
       holder expect signal[Sig.Sent]
@@ -320,7 +320,7 @@ class IssueCredentialSpec
       holder expect signal[Sig.AcceptOffer]
 
       holder walletAccess MockableWalletAccess()
-      holder ledgerAccess MockableLedgerAccess()
+      holder vdrAccess MockableVdrAccess()
       holder ~ buildSendRequest()
       f.checkTotalSegments(4)
       holder expect signal[Sig.Sent]
@@ -352,7 +352,7 @@ class IssueCredentialSpec
       holder expect signal[Sig.AcceptOffer]
 
       holder walletAccess MockableWalletAccess()
-      holder ledgerAccess MockableLedgerAccess()
+      holder vdrAccess MockableVdrAccess()
       holder ~ buildSendRequest()
       f.checkTotalSegments(6)
       holder expect signal[Sig.Sent]
@@ -379,7 +379,7 @@ class IssueCredentialSpec
       holder expect signal[Sig.AcceptOffer]
 
       holder walletAccess MockableWalletAccess()
-      holder ledgerAccess MockableLedgerAccess()
+      holder vdrAccess MockableVdrAccess()
       holder ~ buildSendRequest()
       f.checkTotalSegments(4)
       holder expect signal[Sig.Sent]
@@ -414,9 +414,9 @@ class IssueCredentialSpec
       val (issuer, holder) = (f.alice, f.bob)
 
       issuer walletAccess MockableWalletAccess()
-      issuer ledgerAccess MockableLedgerAccess()
+      issuer vdrAccess MockableVdrAccess()
       holder walletAccess MockableWalletAccess()
-      holder ledgerAccess MockableLedgerAccess()
+      holder vdrAccess MockableVdrAccess()
 
       issuer urlShortening MockableUrlShorteningAccess.shortened
       (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))
@@ -506,7 +506,7 @@ class IssueCredentialSpec
 
       issuer walletAccess MockableWalletAccess()
       holder walletAccess MockableWalletAccess()
-      holder ledgerAccess MockableLedgerAccess()
+      holder vdrAccess MockableVdrAccess()
 
       issuer urlShortening MockableUrlShorteningAccess.shortened
       (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))
@@ -593,9 +593,9 @@ class IssueCredentialSpec
       val (issuer, holder) = (f.alice, f.bob)
 
       issuer walletAccess MockableWalletAccess()
-      issuer ledgerAccess MockableLedgerAccess()
+      issuer vdrAccess MockableVdrAccess()
       holder walletAccess MockableWalletAccess()
-      holder ledgerAccess MockableLedgerAccess()
+      holder vdrAccess MockableVdrAccess()
       issuer urlShortening MockableUrlShorteningAccess.shorteningFailed
 
       (issuer engage holder) ~ Offer(createTest1CredDef, credValues, Option(price), by_invitation = Some(true))

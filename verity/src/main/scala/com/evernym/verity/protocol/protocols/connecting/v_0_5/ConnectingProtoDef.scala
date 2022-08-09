@@ -10,7 +10,7 @@ import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily.{MsgFamilyName, MsgFamilyQualifier, MsgFamilyVersion, MsgName}
 import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.container.actor.UpdateMsgDeliveryStatus
-import com.evernym.verity.protocol.engine.Constants.MFV_0_5
+import com.evernym.verity.constants.Constants.MFV_0_5
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.context.ProtocolContextApi
 import com.evernym.verity.protocol.engine.msg.Init

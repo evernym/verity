@@ -13,7 +13,6 @@ import com.evernym.verity.ledger._
 import com.evernym.verity.vdrtools.ledger.LedgerTxnExecutorBase._
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
 import com.evernym.verity.did.{DidPair, DidStr}
-import com.evernym.verity.protocol.engine.asyncapi.wallet.LedgerRequestResult
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.util.LogUtil.logFutureDuration
 import com.evernym.verity.util.Util.getJsonStringFromMap
@@ -24,8 +23,7 @@ import com.typesafe.scalalogging.Logger
 import com.evernym.vdrtools.IndyException
 import com.evernym.vdrtools.ledger.Ledger
 import com.evernym.vdrtools.ledger.Ledger._
-import com.evernym.vdrtools.vdr.VDR
-import com.evernym.vdrtools.pool.{LedgerNotFoundException, Pool}
+import com.evernym.vdrtools.pool.Pool
 import com.evernym.verity.actor.agent.{AttrName, AttrValue}
 import com.evernym.verity.vdrtools.ledger.LedgerTxnUtil.appendTAAToRequest
 
@@ -38,7 +36,6 @@ class TaaConfiguredVersionInvalidError(msg: String) extends Exception(msg)
 class TaaConfigurationForVersionNotFoundError(msg: String) extends Exception(msg)
 class TaaFailedToGetCurrentVersionError(msg: String) extends Exception(msg)
 class TaaRequiredButDisabledError(msg: String) extends Exception(msg)
-class TaaNotRequiredButIncludedError(msg: String) extends Exception(msg)
 class UnhandledIndySdkException(msg: String) extends Exception(msg)
 
 object LedgerTxnExecutorBase {
@@ -64,19 +61,6 @@ object LedgerTxnExecutorBase {
 
   type LedgerResult = Map[String, Any]
   type RawLedgerResponse = String
-
-  def toLedgerRequest(result: LedgerRequestResult): LedgerRequest = {
-    LedgerRequest(
-      result.req,
-      result.needsSigning,
-      result.taa.map(t => TransactionAuthorAgreement(
-        t.version,
-        t.digest,
-        t.mechanism,
-        t.timeOfAcceptance
-      ))
-    )
-  }
 }
 
 trait SubmitToLedger {

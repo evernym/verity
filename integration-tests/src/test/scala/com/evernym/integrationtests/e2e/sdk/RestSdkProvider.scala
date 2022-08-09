@@ -12,7 +12,6 @@ import com.evernym.verity.constants.Constants._
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.did.didcomm.v1.messages.MsgFamily
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
-import com.evernym.verity.protocol.engine.Constants._
 import com.evernym.verity.protocol.engine.ProtoRef
 import com.evernym.verity.sdk.exceptions.WalletException
 import com.evernym.verity.sdk.protocols.basicmessage.v1_0.BasicMessageV1_0

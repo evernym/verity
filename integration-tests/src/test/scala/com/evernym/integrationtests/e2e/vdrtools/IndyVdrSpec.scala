@@ -29,6 +29,7 @@ import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util.JsonUtil.seqToJson
 import com.evernym.verity.vault.WalletUtil.generateWalletParamSync
 import com.evernym.verity.vault.WalletDoesNotExist
+import com.evernym.verity.vault.operation_executor.AnoncredsWalletOpExecutor.SIG_TYPE_CL
 import com.evernym.verity.vault.operation_executor.FutureConverter
 import com.evernym.verity.vdr.service.{VDRToolsConfig, VDRToolsFactory, VdrToolsBuilderImpl}
 import com.evernym.verity.vdr.{CredDef, DidDoc, LedgerPrefix, LedgerStatus, Namespace, PreparedTxn, Schema, SubmittedTxn, VDRActorAdapter, VDRAdapter, VDRUtil}
@@ -194,7 +195,7 @@ class IndyVdrSpec
               issuerDID.did,
               schema.json,
               "latest",
-             "CL",
+              SIG_TYPE_CL,
              configJson
             ).map(r => CredDefCreated(r.getCredDefId, r.getCredDefJson)))
           credDefCreated = CredDef(result.credDefId, schema.fqId, result.credDefJson)

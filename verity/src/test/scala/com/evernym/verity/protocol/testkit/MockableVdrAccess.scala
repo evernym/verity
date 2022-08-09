@@ -16,8 +16,8 @@ import com.evernym.verity.testkit.{BasicSpecBase, TestWallet}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util2.{ExecutionContextProvider, Status}
 import com.evernym.verity.vault.WalletAPIParam
+import com.evernym.verity.vault.operation_executor.AnoncredsWalletOpExecutor.SIG_TYPE_CL
 import com.evernym.verity.vdr._
-
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import org.json.JSONObject
 
@@ -243,7 +243,7 @@ object MockLedgerData {
         DefaultMsgCodec.toJson(
           CredDefV1(
             "NcYxiDXkpYi6ov5FcYDi1e:3:CL:NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0:Tag1",
-            "CL",
+            SIG_TYPE_CL,
             "NcYxiDXkpYi6ov5FcYDi1e:2:gvt:1.0",
             "tag",
             "1.0",

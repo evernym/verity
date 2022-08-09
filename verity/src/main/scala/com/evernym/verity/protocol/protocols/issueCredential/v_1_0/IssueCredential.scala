@@ -314,14 +314,14 @@ trait IssueCredentialHelpers
           case Failure(e) =>
             ctx.signal(
               Sig.buildProblemReport(
-                s"unable to create credential offer - store segment error: $e",
+                s"unable to create credential offer - store segment error: ${e.getMessage}",
                 credentialOfferCreation
               ))
         }
-      case Failure(_) =>
+      case Failure(e) =>
         ctx.signal(
           Sig.buildProblemReport(
-            "unable to create credential offer",
+            s"unable to create credential offer - ${e.getMessage}",
             credentialOfferCreation
           )
         )
@@ -344,14 +344,14 @@ trait IssueCredentialHelpers
           case Failure(e) =>
             ctx.signal(
               Sig.buildProblemReport(
-                s"unable to create credential offer",
+                s"unable to create credential offer - ${e.getMessage}",
                 credentialOfferCreation
               ))
         }
-      case Failure(_) =>
+      case Failure(e) =>
         ctx.signal(
           Sig.buildProblemReport(
-            "unable to create credential offer",
+            s"unable to create credential offer - ${e.getMessage})",
             credentialOfferCreation
           )
         )

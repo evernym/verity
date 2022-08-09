@@ -167,7 +167,7 @@ class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, 
       case e: HandledErrorException if e.respCode == INVALID_VALUE.statusCode =>
         WalletCmdErrorResponse(StatusDetail(e.respCode, e.responseMsg))
       case e: HandledErrorException =>
-        logger.error(s"[$actorId] [$id] handled error while wallet operation: " + e.errorDetail.getOrElse(e.getMessage))
+        logger.info(s"[$actorId] [$id] handled error while wallet operation: " + e.errorDetail.getOrElse(e.getMessage))
         WalletCmdErrorResponse(StatusDetail(e.respCode, e.responseMsg))
       case e: Throwable =>
         logger.error(s"[$actorId] [$id] unhandled error while wallet operation: " + buildErrorDetail(e))

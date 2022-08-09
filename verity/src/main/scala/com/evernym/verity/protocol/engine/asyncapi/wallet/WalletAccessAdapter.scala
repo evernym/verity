@@ -248,6 +248,9 @@ class WalletAccessAdapter(protected val walletApi: WalletAPI,
 
         case c: ProofCreated => ProofCreatedResult(c.proof)
         case c: ProofVerifResult => ProofVerificationResult(c.result)
+
+        case w: WalletCmdErrorResponse =>
+          throw new RuntimeException(s"${w.sd.statusMsg}")
       }
         .map(_.asInstanceOf[T])
     )

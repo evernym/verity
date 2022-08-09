@@ -22,6 +22,7 @@ import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.typesafe.scalalogging.Logger
 import com.evernym.vdrtools.anoncreds.Anoncreds
 import com.evernym.vdrtools.ledger.Ledger.buildGetNymRequest
+import com.evernym.verity.vault.operation_executor.AnoncredsWalletOpExecutor.SIG_TYPE_CL
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.duration.DurationInt
@@ -460,7 +461,7 @@ class WalletActorSpec
     issuerWalletActor ! CreateCredDef(issuerDID = issuerDidPair.did,
       schemaJson = schema.getSchemaJson,
       tag = "tag",
-      sigType = Some("CL"),
+      sigType = Some(SIG_TYPE_CL),
       revocationDetails = Some(RevocationDetails(support_revocation = false, "tails_file", 5).toString))
     val createdCredDef = expectMsgType[CredDefCreated](60.second)
     logger.info("cred def created")

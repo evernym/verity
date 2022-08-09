@@ -85,7 +85,9 @@ object VDRToolsConfig {
       val genesisDataSrc = fromFile(config.getStringReq("genesis-txn-file-location"))
       val genesisData = genesisDataSrc.mkString
       genesisDataSrc.close()
-
+      if (genesisData.trim.isEmpty) {
+        throw new RuntimeException("genesis txn can't be empty")
+      }
       IndyLedger(
         namespaces,
         genesisData,

@@ -3,8 +3,6 @@ package com.evernym.verity.storage_services.leveldb
 import akka.actor.ActorSystem
 import akka.Done
 import akka.http.scaladsl.model.{ContentType, ContentTypes}
-import com.evernym.verity.util2.Exceptions.BadRequestErrorException
-import com.evernym.verity.util2.Status.DATA_NOT_FOUND
 import com.evernym.verity.actor.StorageInfo
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.observability.logs.LoggingUtil.getLoggerByClass
@@ -33,20 +31,18 @@ class LeveldbAPI(appConfig: AppConfig,
                 (implicit val as: ActorSystem)
   extends StorageAPI(appConfig, executionContext, overrideConfig) {
 
-  val logger: Logger = getLoggerByClass(getClass)
+  private val logger: Logger = getLoggerByClass(getClass)
 
-  private implicit val futureExecutionContext: ExecutionContext = executionContext
-
-  val path: String = overrideConfig
+  private val path: String = overrideConfig
     .withFallback(appConfig.config.getConfig("verity.blob-store"))
     .getString("local-store-path")
 
-  val options: Options = new Options()
+  private val options: Options = new Options()
     .createIfMissing(true)
     .paranoidChecks(true)
     .verifyChecksums(true)
 
-  val db: DB = synchronized {
+  private val db: DB = synchronized {
     Try(Iq80DBFactory.factory.open(new File(path), options)) match {
       case Success(db) =>
         logger.debug(s"successfully opened blob storage file '$path'")
@@ -57,11 +53,14 @@ class LeveldbAPI(appConfig: AppConfig,
     }
   }
 
-  def withDB[T](f: DB => T): T = synchronized {
-    f(db)
+  private def withDB[T](bucketName: String, id: String)(f: (String, DB) => T): T = synchronized {
+    val key = dbKey(bucketName, id)
+    f(key, db)
   }
 
   private def dbKey(bucketName: String, id: String): String = s"$bucketName-$id"
+
+  override def ping: Future[Unit] = Future.successful((): Unit)
 
   /**
    * @param id needs to be unique or data can be overwritten
@@ -70,38 +69,35 @@ class LeveldbAPI(appConfig: AppConfig,
           id: String,
           data: Array[Byte],
           contentType: ContentType = ContentTypes.`application/octet-stream`): Future[StorageInfo] = {
-    Future {
-      withDB { db =>
-        db.put(dbKey(bucketName, id).getBytes(), data)
-        StorageInfo(dbKey(bucketName, id))
-      }
+    withDB(bucketName, id) { (key, db) =>
+      db.put(key.getBytes(), data)
+      Future.successful(StorageInfo(key))
     }
   }
 
   def get(bucketName: String, id: String): Future[Option[Array[Byte]]] = {
-    withDB { db =>
-      Option(db.get(dbKey(bucketName, id).getBytes())) match {
-        case Some(x: Array[Byte]) => Future(Some(x))
-        case None => failure(DATA_NOT_FOUND.statusCode, s"No object for id: $id in bucket: $bucketName")
-      }
+    withDB(bucketName, id) { (key, db) =>
+      Future.successful(Option(db.get(key.getBytes())))
     }
   }
 
   def delete(bucketName: String, id: String): Future[Done] = {
-    withDB { db =>
-      db.delete(dbKey(bucketName, id).getBytes())
-      Future(Done)
+    withDB(bucketName, id) { (key, db) =>
+      db.delete(key.getBytes())
+      Future.successful(Done)
     }
   }
 
-  private def failure(code: String, msg: String): Future[Nothing] =
-    Future.failed(new LeveldbFailure(code, Some(msg)))
-
-  class LeveldbFailure(statusCode: String,
-                       statusMsg: Option[String] = None,
-                       statusMsgDetail: Option[String] = None,
-                       errorDetail: Option[Any] = None)
-    extends BadRequestErrorException(statusCode, statusMsg, statusMsgDetail, errorDetail)
-
-  override def ping: Future[Unit] = Future.successful((): Unit)
+  /**
+   * in case of this leveldb storage api, when "test verity instance" has to restart during the spec execution,
+   * it wasn't able to acquire lock because the previous acquired lock wasn't released
+   * when the "test verity instance" was stopped (as part of restart process)
+   * there is no api to release the lock only without deleting/destroying the whole db file
+   * so below is just a hack to get rid of the lock issue without deleting/destroying the db file content.
+   * @return
+   */
+  override def stop(): Future[Unit] = {
+    new File(path + "/LOCK").delete()
+    Future.successful(())
+  }
 }

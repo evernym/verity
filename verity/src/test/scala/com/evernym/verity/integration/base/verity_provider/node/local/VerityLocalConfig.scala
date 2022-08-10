@@ -7,7 +7,6 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 import java.net.InetAddress
 import java.nio.file.Path
-import scala.util.Random
 
 object VerityLocalConfig {
 
@@ -164,7 +163,7 @@ object VerityLocalConfig {
   private def blobStore(port: Int): Config = {
     ConfigFactory.parseString(
       s"""
-         |verity.blob-store.local-store-path = "/tmp/verity/leveldb/$port-${Random.nextInt(100)}"
+         |verity.blob-store.local-store-path = "/tmp/verity/leveldb/$port"
          |""".stripMargin
     )
   }

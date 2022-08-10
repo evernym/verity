@@ -164,10 +164,10 @@ object SharedLibrary {
   Downloads package via `apt`, unpackage the package and extract target library
    */
   private def downloadSharedLibrary(packageName: String,
-                            libName: String,
-                            packageVersion: String,
-                            dest: Path,
-                            logger: ManagedLogger): Unit = logExceptions(logger) {
+                                    libName: String,
+                                    packageVersion: String,
+                                    dest: Path,
+                                    logger: ManagedLogger): Unit = logExceptions(logger) {
     val packageDest = dest.resolve(packageSubDir)
     val packageUnpackedDest = packageDest.resolve(s"$packageName-$packageVersion-unpacked")
     val libDest = dest.resolve(libsSubDir)

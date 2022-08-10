@@ -3,8 +3,6 @@ package com.evernym.verity.protocol.protocols.questionAnswer.v_1_0
 import java.util.Base64
 
 import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.actor.testkit.{CommonSpecUtil, TestAppConfig}
-import com.evernym.verity.config.AppConfig
 import com.evernym.verity.protocol.protocols.CommonProtoTypes.{SigBlock, Timing => BaseTiming}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl._
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.QuestionAnswerProtocol._

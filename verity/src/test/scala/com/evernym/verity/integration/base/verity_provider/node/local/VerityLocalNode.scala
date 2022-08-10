@@ -56,13 +56,13 @@ case class VerityLocalNode(tmpDirPath: Path,
   }
 
   def stop()(implicit ec: ExecutionContext): Future[Unit] = {
+    isAvailable = false
     Future {
       stopGracefully()
     }
   }
 
   private def stopGracefully(): Unit = {
-    isAvailable = false
     if (httpServer == null){
       logger.warn(s"Verity node ${portProfile.artery} 'stopGracefully' called, but it seems like node was not be started")
       return

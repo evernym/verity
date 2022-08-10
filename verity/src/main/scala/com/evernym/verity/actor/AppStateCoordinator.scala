@@ -52,11 +52,13 @@ class AppStateCoordinator(appConfig: AppConfig,
   }
 
   private def preDraining(): Future[Done] = {
-    val fut1 = platform.eventConsumerAdapter.map(_.stop()).getOrElse(Future.successful(Done))
-    val fut2 = platform.basicEventStore.map(_.stop()).getOrElse(Future.successful(Done))
+    val stopEventConsumer = platform.eventConsumerAdapter.map(_.stop()).getOrElse(Future.successful(Done))
+    val stopEventStore = platform.basicEventStore.map(_.stop()).getOrElse(Future.successful(Done))
+    val stopStorageAPI = platform.agentActorContext.storageAPI.stop()
     for (
-      _ <- fut1;
-      _ <- fut2
+      _ <- stopEventConsumer;
+      _ <- stopEventStore;
+      _ <- stopStorageAPI
     ) yield {
       Done
     }

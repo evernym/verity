@@ -63,7 +63,7 @@ class LeveldbAPISpec extends BasicAsyncSpec with BeforeAndAfterAll{
 
       "should fail to get the deleted object" in {
         val get = leveldbAPI.get(BUCKET, ID1)
-        ScalaFutures.whenReady(get.failed) {e => e shouldBe a [leveldbAPI.LeveldbFailure]}
+        ScalaFutures.whenReady(get) {r => r shouldBe None}
       }
     }
 

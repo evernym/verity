@@ -19,6 +19,8 @@ abstract class StorageAPI(val appConfig: AppConfig,
   def get(bucketName: String, id: String): Future[Option[Array[Byte]]]
   def delete(bucketName: String, id: String): Future[Done]
   def ping: Future[Unit]
+
+  def stop(): Future[Unit] = Future.successful(())
 }
 
 object StorageAPI {

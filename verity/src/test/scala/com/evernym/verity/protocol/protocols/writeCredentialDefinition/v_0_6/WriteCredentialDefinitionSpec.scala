@@ -5,7 +5,7 @@ import com.evernym.verity.config.AppConfig
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID}
 import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
 import com.evernym.verity.did.exception.DIDException
-import com.evernym.verity.integration.base.EndorserUtil
+import com.evernym.verity.integration.base.endorser_svc_provider.MockEndorserUtil
 import com.evernym.verity.protocol.engine.asyncapi.endorser.Endorser
 import com.evernym.verity.protocol.testkit.DSL.signal
 import com.evernym.verity.protocol.testkit.{MockableEndorserAccess, MockableVdrAccess, MockableWalletAccess, TestsProtocolsImpl}
@@ -83,7 +83,7 @@ class WriteCredentialDefinitionSpec
           MY_ISSUER_DID -> MockableVdrAccess.MOCK_NO_DID
         ))
         interaction(f.writer) {
-          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+          withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
               withDefaultVdrAccess(f, {
                 f.writer ~ Write(credDefName, schemaId, None, None)
@@ -103,7 +103,7 @@ class WriteCredentialDefinitionSpec
           MY_ISSUER_DID -> MockableVdrAccess.MOCK_NO_DID
         ))
         interaction(f.writer) {
-          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+          withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
               withDefaultVdrAccess(f, {
                 f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
@@ -125,7 +125,7 @@ class WriteCredentialDefinitionSpec
           MY_ISSUER_DID -> MockableVdrAccess.MOCK_NOT_ENDORSER
         ))
         interaction(f.writer) {
-          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+          withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
               withDefaultVdrAccess(f, {
                 f.writer ~ Write(credDefName, schemaId, None, None)
@@ -145,7 +145,7 @@ class WriteCredentialDefinitionSpec
           MY_ISSUER_DID -> MockableVdrAccess.MOCK_NOT_ENDORSER
         ))
         interaction(f.writer) {
-          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+          withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
               withDefaultVdrAccess(f, {
                 f.writer ~ Write(credDefName, schemaId, None, None, Some(userEndorser))
@@ -166,7 +166,7 @@ class WriteCredentialDefinitionSpec
         MY_ISSUER_DID -> MockableVdrAccess.MOCK_NOT_ENDORSER
       ))
       interaction(f.writer) {
-        withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+        withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
             withDefaultVdrAccess(f, {
               f.writer ~ Write(credDefName, schemaId, None, None)

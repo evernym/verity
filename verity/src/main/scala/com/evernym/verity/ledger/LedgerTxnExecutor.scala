@@ -5,9 +5,6 @@ import com.evernym.verity.did.{DidPair, DidStr}
 
 import scala.concurrent.Future
 
-case class LedgerExecutorException(message: String,
-                                   cause: Throwable = None.orNull) extends Exception(message, cause)
-
 trait LedgerTxnExecutor {
 
   //NOTE: this `addNym` is only used by tests, may be we should replace it with vdr api calls

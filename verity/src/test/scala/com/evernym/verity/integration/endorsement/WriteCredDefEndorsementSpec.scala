@@ -1,14 +1,11 @@
 package com.evernym.verity.integration.endorsement
 
-import com.evernym.verity.actor.testkit.TestAppConfig
-import com.evernym.verity.actor.testkit.actor.ActorSystemVanilla
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
-import com.evernym.verity.eventing.adapters.basic.consumer.BasicConsumerAdapter
-import com.evernym.verity.eventing.adapters.basic.producer.BasicProducerAdapter
-import com.evernym.verity.eventing.event_handlers.TOPIC_REQUEST_ENDORSEMENT
 import com.evernym.verity.integration.base.sdk_provider.{IssuerSdk, SdkProvider}
 import com.evernym.verity.integration.base.verity_provider.VerityEnv
 import com.evernym.verity.integration.base._
+import com.evernym.verity.integration.base.endorser_svc_provider.MockEndorserUtil.{activeEndorserDid, INDY_LEDGER_PREFIX}
+import com.evernym.verity.integration.base.endorser_svc_provider.{MockEndorserServiceProvider, MockEndorserUtil}
 import com.evernym.verity.protocol.engine.asyncapi.vdr.VdrRejectException
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.{NeedsEndorsement, ProblemReport, StatusReport, Write}
@@ -18,11 +15,9 @@ import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import com.evernym.verity.vdr.base.PayloadConstants.{CRED_DEF, TYPE}
 import com.evernym.verity.vdr.{FqCredDefId, MockIndyLedger, MockLedgerRegistry, MockLedgerRegistryBuilder, MockVdrTools, Namespace, TxnResult}
-import com.typesafe.config.{Config, ConfigValueFactory}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.jdk.CollectionConverters._
 
 
 class WriteCredDefEndorsementSpec
@@ -34,19 +29,7 @@ class WriteCredDefEndorsementSpec
     .build(VAS)
   lazy val issuerSDK: IssuerSdk = setupIssuerSdk(issuerVAS, futureExecutionContext)
   var schemaId: String = ""
-
-  lazy val eventProducer: BasicProducerAdapter = {
-    val actorSystem = ActorSystemVanilla("event-producer", endorserServiceEventAdapters)
-    new BasicProducerAdapter(new TestAppConfig(Option(endorserServiceEventAdapters), clearValidators = true))(
-      actorSystem, executionContextProvider.futureExecutionContext)
-  }
-
-  lazy val endorsementEventConsumer: BasicConsumerAdapter = {
-    val testAppConfig = new TestAppConfig(Option(endorserServiceEventAdapters), clearValidators = true)
-    val actorSystem = ActorSystemVanilla("event-consumer", endorserServiceEventAdapters)
-    new BasicConsumerAdapter(testAppConfig,
-      new EndorsementReqMsgHandler(testAppConfig.config, eventProducer))(actorSystem, executionContextProvider.futureExecutionContext)
-  }
+  lazy val endorserSvcProvider: MockEndorserServiceProvider = MockEndorserServiceProvider(issuerVAS)
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -55,7 +38,6 @@ class WriteCredDefEndorsementSpec
     issuerSDK.registerWebhook()
     issuerSDK.sendMsg(Create())
     issuerSDK.expectMsgOnWebhook[PublicIdentifierCreated]()
-    Await.result(endorsementEventConsumer.start(), 10.seconds)
     issuerSDK.sendMsg(SchemaWrite("name", "1.0", Seq("name", "age")))
     schemaId = issuerSDK.expectMsgOnWebhook[SchemaStatusReport]().msg.schemaId
   }
@@ -70,7 +52,7 @@ class WriteCredDefEndorsementSpec
     }
     "when sent Write message with an explicit endorserDID" - {
       "should get NeedsEndorsement message" in {
-        issuerSDK.sendMsg(Write("name", schemaId, None, None, endorserDID = Option(EndorserUtil.inactiveEndorserDid)))
+        issuerSDK.sendMsg(Write("name", schemaId, None, None, endorserDID = Option(MockEndorserUtil.inactiveEndorserDid)))
         issuerSDK.expectMsgOnWebhook[NeedsEndorsement](timeout = Duration(1, SECONDS))
       }
     }
@@ -79,7 +61,7 @@ class WriteCredDefEndorsementSpec
   "EndorserService" - {
     "when published active endorser event" - {
       "should be successful" in {
-        Await.result(EndorserUtil.registerActiveEndorser(EndorserUtil.activeEndorserDid, EndorserUtil.indyLedgerLegacyDefaultPrefix, eventProducer), 5.seconds)
+        Await.result(endorserSvcProvider.publishEndorserActivatedEvent(activeEndorserDid, INDY_LEDGER_PREFIX), 5.seconds)
       }
     }
   }
@@ -88,7 +70,7 @@ class WriteCredDefEndorsementSpec
 
     "when sent Write message with inactive endorser DID" - {
       "should get NeedsEndorsement message" in {
-        issuerSDK.sendMsg(Write("name", schemaId, None, None, endorserDID = Option(EndorserUtil.inactiveEndorserDid)))
+        issuerSDK.sendMsg(Write("name", schemaId, None, None, endorserDID = Option(MockEndorserUtil.inactiveEndorserDid)))
         issuerSDK.expectMsgOnWebhook[NeedsEndorsement]()
       }
     }
@@ -102,19 +84,11 @@ class WriteCredDefEndorsementSpec
 
     "when sent Write message with active endorser DID" - {
       "should be successful" in {
-        issuerSDK.sendMsg(Write("name", schemaId, None, None, endorserDID = Option(EndorserUtil.activeEndorserDid)))
+        issuerSDK.sendMsg(Write("name", schemaId, None, None, endorserDID = Option(MockEndorserUtil.activeEndorserDid)))
         issuerSDK.expectMsgOnWebhook[StatusReport]()
       }
     }
   }
-
-  lazy val endorserServiceEventAdapters: Config =
-    issuerVAS.headVerityLocalNode
-      .platform.appConfig.config.getConfig("verity.eventing")
-      .withValue("verity.eventing.basic-store.http-listener.port", ConfigValueFactory.fromAnyRef(issuerVAS.headVerityLocalNode.portProfile.basicEventStorePort))
-      .withValue("verity.eventing.basic-source.id", ConfigValueFactory.fromAnyRef("endorser"))
-      .withValue("verity.eventing.basic-source.http-listener.port", ConfigValueFactory.fromAnyRef(PortProvider.getFreePort))
-      .withValue("verity.eventing.basic-source.topics", ConfigValueFactory.fromIterable(List(TOPIC_REQUEST_ENDORSEMENT).asJava))
 
   val dummyVdrTools = new DummyVdrTools(MockLedgerRegistryBuilder(Map(INDY_SOVRIN_NAMESPACE -> MockIndyLedger("genesis.txn file path", None))).build())(futureExecutionContext)
 

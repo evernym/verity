@@ -1,11 +1,11 @@
-package com.evernym.verity.integration.with_basic_sdk.data_retention.expire_after_ternminal_state
+package com.evernym.verity.integration.non_multi_ledger.with_issuer_setup_v0_6
 
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
-import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
+import com.evernym.verity.integration.base.endorser_svc_provider.MockEndorserServiceProvider
+import com.evernym.verity.integration.base.endorser_svc_provider.MockEndorserUtil._
 import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider, VerifierSdk}
 import com.evernym.verity.integration.base.verity_provider.VerityEnv
-import com.evernym.verity.integration.with_basic_sdk.data_retention.DataRetentionBaseSpec
+import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.{AcceptRequest, Sent}
@@ -14,28 +14,33 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPrese
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProofAttribute
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults.ProofValidated
-import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
+import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.util.TestExecutionContextProvider
-import com.typesafe.config.ConfigFactory
+import com.evernym.verity.util2.ExecutionContextProvider
+import com.typesafe.config.{Config, ConfigFactory}
 
+import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 
 
-class PresentProofSpec
+class PresentationFlowSpec
   extends VerityProviderBaseSpec
-    with DataRetentionBaseSpec
     with SdkProvider {
 
   lazy val ecp = TestExecutionContextProvider.ecp
   lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
-  var issuerVerityEnv: VerityEnv = _
-  var verifierVerityEnv: VerityEnv = _
+  lazy val issuerVerityEnv: VerityEnv = VerityEnvBuilder.default().withConfig(OVERRIDDEN_CONFIG).build(VAS)
+  lazy val verifierVerityEnv: VerityEnv = VerityEnvBuilder.default().withConfig(OVERRIDDEN_CONFIG).build(VAS)
+  lazy val holderVerityEnv: VerityEnv = VerityEnvBuilder.default().withConfig(OVERRIDDEN_CONFIG).build(CAS)
 
-  var issuerSDK: IssuerSdk = _
-  var verifierSDK: VerifierSdk = _
-  var holderSDK: HolderSdk = _
+  lazy val issuerSDK: IssuerSdk = setupIssuerSdk(issuerVerityEnv, executionContext)
+  lazy val verifierSDK: VerifierSdk = setupVerifierSdk(verifierVerityEnv, executionContext)
+  lazy val holderSDK: HolderSdk = setupHolderSdk(holderVerityEnv, executionContext,
+    defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, isMultiLedgerSupported = false)
+
+  lazy val endorserSvcProvider: MockEndorserServiceProvider = MockEndorserServiceProvider(issuerVerityEnv)
 
   val issuerHolderConn = "connId1"
   val verifierHolderConn = "connId2"
@@ -51,36 +56,11 @@ class PresentProofSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val issuerVerityEnvFut =
-      VerityEnvBuilder
-        .default()
-        .withServiceParam(buildSvcParam)
-        .withConfig(DATA_RETENTION_CONFIG)
-        .buildAsync(VAS)
-
-    val verifierVerityEnvFut =
-      VerityEnvBuilder.
-        default()
-        .withServiceParam(buildSvcParam)
-        .withConfig(DATA_RETENTION_CONFIG)
-        .buildAsync(VAS)
-
-    val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
-
-    val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
-    val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnvFut, executionContext)
-    val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, ledgerTxnExecutor, vdrTools, executionContext)
-
-    issuerVerityEnv = Await.result(issuerVerityEnvFut, ENV_BUILD_TIMEOUT)
-    verifierVerityEnv = Await.result(verifierVerityEnvFut, ENV_BUILD_TIMEOUT)
-
-    issuerSDK = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
-    verifierSDK = Await.result(verifierSDKFut, SDK_BUILD_TIMEOUT)
-    holderSDK = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)
-
     provisionEdgeAgent(issuerSDK)
     provisionEdgeAgent(verifierSDK)
     provisionCloudAgent(holderSDK)
+
+    Await.result(endorserSvcProvider.publishEndorserActivatedEvent(activeEndorserDid, INDY_LEDGER_PREFIX), 5.seconds)
 
     setupIssuer_v0_6(issuerSDK)
     schemaId = writeSchema_v0_6(issuerSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
@@ -100,7 +80,6 @@ class PresentProofSpec
         issuerSDK.sendMsgForConn(issuerHolderConn, offerMsg)
         val receivedMsg = issuerSDK.expectMsgOnWebhook[Sent]()
         issuerSDK.checkMsgOrders(receivedMsg.threadOpt, 0, Map.empty)
-        issuerVerityEnv.checkBlobObjectCount("3d", 1)
       }
     }
   }
@@ -127,7 +106,6 @@ class PresentProofSpec
       "should get 'accept-request' (issue-credential 1.0)" in {
         val receivedMsg = issuerSDK.expectMsgOnWebhook[AcceptRequest]()
         issuerSDK.checkMsgOrders(receivedMsg.threadOpt, 0, Map(issuerHolderConn -> 0))
-        issuerVerityEnv.checkBlobObjectCount("3d", 2)
       }
     }
 
@@ -137,7 +115,6 @@ class PresentProofSpec
         issuerSDK.sendMsgForConn(issuerHolderConn, issueMsg, lastReceivedThread)
         val receivedMsg = issuerSDK.expectMsgOnWebhook[Sent]()
         issuerSDK.checkMsgOrders(receivedMsg.threadOpt, 1, Map(issuerHolderConn -> 0))
-        issuerVerityEnv.checkBlobObjectCount("3d", 0)
       }
     }
   }
@@ -167,7 +144,6 @@ class PresentProofSpec
           None
         )
         verifierSDK.sendMsgForConn(verifierHolderConn, msg)
-        verifierVerityEnv.checkBlobObjectCount("3d", 1)
       }
     }
   }
@@ -196,37 +172,16 @@ class PresentProofSpec
       requestPresentation.revealed_attrs.size shouldBe 2
       requestPresentation.unrevealed_attrs.size shouldBe 0
       requestPresentation.self_attested_attrs.size shouldBe 0
-      verifierVerityEnv.checkBlobObjectCount("3d", 0)
     }
   }
 
-  val DATA_RETENTION_CONFIG = ConfigFactory.parseString {
-    """
-      |verity {
-      |  retention-policy {
-      |    protocol-state {
-      |      default {
-      |        undefined-fallback {
-      |          expire-after-days = 3 day
-      |          expire-after-terminal-state = true
-      |        }
-      |      }
-      |    }
-      |  }
-      |  blob-store {
-      |   storage-service = "com.evernym.verity.testkit.mock.blob_store.MockBlobStore"
-      |
-      |   # The bucket name will contain <env> depending on which environment is used -> "verity-<env>-blob-storage"
-      |   bucket-name = "local-blob-store"
-      |   # Path to StorageAPI class to be used. Currently there is a LeveldbAPI and AlpakkaS3API
-      |  }
-      |}
-      |""".stripMargin
-  }
+  val OVERRIDDEN_CONFIG: Config =
+    ConfigFactory.parseString(
+      """
+         verity.vdr.multi-ledger-support-enabled = false
+        """.stripMargin
+    )
 
-  /**
-   * custom thread pool executor
-   */
   override def futureExecutionContext: ExecutionContext = executionContext
 
   override def executionContextProvider: ExecutionContextProvider = ecp

@@ -49,10 +49,10 @@ class IncorrectPayloadSpec
 
     provisionEdgeAgent(issuerRestSDK)
     provisionCloudAgent(holderSDK)
-    setupIssuer(issuerRestSDK)
+    setupIssuer_v0_6(issuerRestSDK)
 
-    schemaId = writeSchema(issuerRestSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
-    credDefId = writeCredDef(issuerRestSDK, writeCredDef0_6.Write("name", schemaId, None, None))
+    schemaId = writeSchema_v0_6(issuerRestSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
+    credDefId = writeCredDef_v0_6(issuerRestSDK, writeCredDef0_6.Write("name", schemaId, None, None))
 
     establishConnection(issuerHolderConn, issuerRestSDK, holderSDK)
   }

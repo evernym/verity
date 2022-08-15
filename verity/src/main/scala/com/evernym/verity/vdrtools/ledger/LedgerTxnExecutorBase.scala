@@ -326,7 +326,8 @@ trait LedgerTxnExecutorBase extends LedgerTxnExecutor with HasExecutionContextPr
 }
 
 object LedgerTxnUtil {
-  def appendTAAToRequest(ledgerRequest: LedgerRequest, taa: Option[TransactionAuthorAgreement])
+  def appendTAAToRequest(ledgerRequest: LedgerRequest,
+                         taa: Option[TransactionAuthorAgreement])
                         (implicit ec: ExecutionContext): Future[LedgerRequest] = {
     // IMPORTANT - Either use (text and version) OR (digest). Sending text or version with digest will result
     //             in an IndyException - Error: Invalid structure Caused by: Invalid combination of params:

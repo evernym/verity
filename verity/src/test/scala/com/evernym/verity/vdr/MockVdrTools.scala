@@ -125,4 +125,12 @@ class MockVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionCon
   def getAttrib(submitter: Submitter, did: DidStr, attrName: AttrName): Future[GetAttribResp] = {
     Future(withLedger(did).getAttrib(submitter, did, attrName))
   }
+
+  def getSchema(schemaId: FqSchemaId): Future[VdrSchema] = {
+    Future(withLedger(schemaId).getSchema(schemaId))
+  }
+
+  def getCredDef(credDefId: FqCredDefId): Future[VdrCredDef] = {
+    Future(withLedger(credDefId).getCredDef(credDefId))
+  }
 }

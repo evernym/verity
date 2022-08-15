@@ -44,7 +44,7 @@ class MockAgentActorContext(val system: ActorSystem,
   lazy val vdrTools: VdrTools = vdrBuilderFactory().build()
   override lazy val vdrAdapter: VDRAdapter = createVDRAdapter(vdrTools)
   override lazy val legacyLedgerSvc: LegacyLedgerSvc = new MockLegacyLedgerSvc(appConfig, vdrAdapter)
-  override lazy val poolConnManager: LedgerPoolConnManager = new InMemLedgerPoolConnManager(ecp.futureExecutionContext, appConfig, vdrAdapter)(system.dispatcher)
+  override lazy val poolConnManager: LedgerPoolConnManager = new InMemLedgerPoolConnManager(ecp.futureExecutionContext, appConfig, vdrAdapter)
   override lazy val agentMsgRouter: AgentMsgRouter = mockAgentMsgRouter.getOrElse(
     new MockAgentMsgRouter(executionContext)(appConfig, system)
   )

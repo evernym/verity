@@ -55,9 +55,9 @@ class ReuseConnectionSpec
     provisionEdgeAgent(issuerSDK)
     provisionCloudAgent(holderSDK)
 
-    setupIssuer(issuerSDK)
-    schemaId = writeSchema(issuerSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
-    credDefId = writeCredDef(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))
+    setupIssuer_v0_6(issuerSDK)
+    schemaId = writeSchema_v0_6(issuerSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
+    credDefId = writeCredDef_v0_6(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))
 
     establishConnection(issuerHolderConn, issuerSDK, holderSDK)
   }
@@ -119,7 +119,7 @@ class ReuseConnectionSpec
 
     "when sent 'request-credential' (issue-credential 1.0) message" - {
       "should be successful" in {
-        holderSDK.sendCredRequest(issuerHolderConn, credDefId, offerCred, lastReceivedThread)
+        holderSDK.sendCredRequest(issuerHolderConn, offerCred, lastReceivedThread)
       }
     }
   }

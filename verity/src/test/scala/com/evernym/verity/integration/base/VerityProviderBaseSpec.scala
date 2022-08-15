@@ -30,6 +30,7 @@ import com.evernym.verity.protocol.engine.events.{DataRetentionPolicySet, Domain
 import com.evernym.verity.protocol.engine.{DomainId, MockVDRAdapter, PinstId, ProtoDef, RelationshipId, ThreadId}
 import com.evernym.verity.protocol.protocols.protocolRegistry
 import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
+import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util.Util.buildTimeout
 import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider, RouteId}
 import com.evernym.verity.vault.WalletAPIParam
@@ -60,26 +61,27 @@ trait VerityProviderBaseSpec
     with HasExecutionContextProvider {
     this: Suite =>
 
-  val ENV_BUILD_TIMEOUT = 1 minute
-  val SDK_BUILD_TIMEOUT = 1 minute
+  val ENV_BUILD_TIMEOUT: FiniteDuration = 1 minute
+  val SDK_BUILD_TIMEOUT: FiniteDuration = 1 minute
+
+  val executionContextProvider: ExecutionContextProvider = TestExecutionContextProvider.ecp
+  implicit val executionContext: ExecutionContext = executionContextProvider.futureExecutionContext
+  override val futureExecutionContext: ExecutionContext = executionContext
 
   implicit def contextClassLoader: ClassLoader = Thread.currentThread().getContextClassLoader
 
   object VerityEnvBuilder {
     val localVerityBaseConfig: ConfigMergeable = ConfigFactory.load()
 
-    def empty: VerityEnvBuilder = VerityEnvBuilder(0, None, None)
+    def apply(): VerityEnvBuilder = apply(nodeCount = 1)
 
-    def default(nodeCount: Int = 1): VerityEnvBuilder =
+    def apply(nodeCount: Int): VerityEnvBuilder =
       VerityEnvBuilder(nodeCount, Option(defaultSvcParam))
   }
-
-  case class RemoteVerityNodeParam(count: Int, fromJarPath: String)
 
   case class VerityEnvBuilder(nodeCount: Int,
                               serviceParam: Option[ServiceParam] = None,
                               overriddenConfig: Option[Config] = None) {
-
 
     def withServiceParam(param: ServiceParam): VerityEnvBuilder = copy(serviceParam = Option(param))
     def withConfig(config: Config): VerityEnvBuilder = copy(overriddenConfig = Option(config))
@@ -94,7 +96,7 @@ trait VerityProviderBaseSpec
 
     private val logger: Logger = LoggingUtil.getLoggerByName("VerityEnvBuilder")
 
-    def buildAsync(appType: AppType)(implicit ec: ExecutionContext = futureExecutionContext): Future[VerityEnv] = {
+    def buildAsync(appType: AppType): Future[VerityEnv] = {
       Future {
         createNodes(appType)
       } flatMap {
@@ -151,7 +153,6 @@ trait VerityProviderBaseSpec
     }
 
     private def createEnv(verityNodes: Seq[VerityNode], appSeed: String): VerityEnv = {
-      implicit val ec = futureExecutionContext
       logger.info(s"Start verity nodes with ports ${verityNodes.map(_.portProfile.artery)}")
       try {
         startVerityNodes(verityNodes, VerityEnv.START_MAX_TIMEOUT)
@@ -167,7 +168,6 @@ trait VerityProviderBaseSpec
     }
 
     private def createEnvAsync(verityNodes: Seq[VerityNode], appSeed: String): Future[VerityEnv] = {
-      implicit val ec: ExecutionContext = futureExecutionContext
       logger.info(s"Start verity nodes with ports ${verityNodes.map(_.portProfile.artery)}")
       try {
         startVerityNodesAsync(verityNodes, VerityEnv.START_MAX_TIMEOUT) map { _ =>
@@ -184,14 +184,14 @@ trait VerityProviderBaseSpec
       }
     }
 
-    private def startVerityNodes(verityNodes: Seq[VerityNode], maxStartTimeout: FiniteDuration)(implicit ec: ExecutionContext): Unit = {
+    private def startVerityNodes(verityNodes: Seq[VerityNode], maxStartTimeout: FiniteDuration): Unit = {
       val otherNodes = verityNodes.drop(1)
       Await.result(verityNodes.head.start(), maxStartTimeout)
       Await.result(Future.sequence(otherNodes.map(_.start())), maxStartTimeout)
       logger.info(s" Verity nodes with ports ${verityNodes.map(_.portProfile.artery)} started")
     }
 
-    private def startVerityNodesAsync(verityNodes: Seq[VerityNode], maxStartTimeout: FiniteDuration)(implicit ec: ExecutionContext): Future[Seq[Unit]] = {
+    private def startVerityNodesAsync(verityNodes: Seq[VerityNode], maxStartTimeout: FiniteDuration): Future[Seq[Unit]] = {
       val otherNodes = verityNodes.drop(1)
       Await.result(verityNodes.head.start(), maxStartTimeout)
       Future.sequence(otherNodes.map(_.start()))
@@ -232,7 +232,6 @@ trait VerityProviderBaseSpec
 
   override def afterAll(): Unit = {
     super.afterAll()
-    implicit val ec = futureExecutionContext
     val future = Future.sequence(
       allVerityEnvs.flatMap(e => e.nodes).map(_.stop())
     )
@@ -529,7 +528,7 @@ trait VerityProviderBaseSpec
       |
       |""".stripMargin
   )
-  def executionContextProvider: ExecutionContextProvider
+
 }
 
 trait AppType

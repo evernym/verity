@@ -11,19 +11,15 @@ import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.base.{CAS, EAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
 import com.evernym.verity.testkit.util.HttpUtil
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
-
-import scala.concurrent.ExecutionContext
 
 
 class GetUpgradeInfoSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVAS = VerityEnvBuilder.default().build(VAS)
-  lazy val issuerEAS = VerityEnvBuilder.default().build(EAS)
-  lazy val holderCAS = VerityEnvBuilder.default().build(CAS)
+  lazy val issuerVAS = VerityEnvBuilder().build(VAS)
+  lazy val issuerEAS = VerityEnvBuilder().build(EAS)
+  lazy val holderCAS = VerityEnvBuilder().build(CAS)
 
   lazy val issuerSDKVAS = setupIssuerSdk(issuerVAS, executionContext)
   lazy val issuerSDKEAS = setupIssuerSdk(issuerEAS, executionContext)
@@ -130,9 +126,4 @@ class GetUpgradeInfoSpec
       }
     }
   }
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureExecutionContext: ExecutionContext = executionContext
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

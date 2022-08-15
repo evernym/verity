@@ -793,7 +793,7 @@ object ReceivedMsgParam {
     Try {
       val bm = AgentMsgParseUtil.convertTo[BundledMsg_MFV_0_5](msg)
       if (bm.bundled.size == 1) {
-        Option(ReceivedMsgParam(MessagePackUtil.convertPackedMsgToJsonString(bm.bundled.head)))
+        Option(ReceivedMsgParam[T](MessagePackUtil.convertPackedMsgToJsonString(bm.bundled.head)))
       } else {
         val clazz = implicitly[ClassTag[T]].runtimeClass
         if (classOf[CreateInviteResp_MFV_0_5].isAssignableFrom(clazz)) {

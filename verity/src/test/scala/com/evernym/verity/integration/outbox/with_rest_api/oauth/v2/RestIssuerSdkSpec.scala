@@ -16,20 +16,16 @@ import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.Update
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResult
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{Config => AgentConfig}
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{Write, StatusReport => WSStatusReport}
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
+
 import com.typesafe.config.{Config, ConfigFactory}
 
 import java.util.UUID
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 
 
 class RestIssuerSdkSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   var issuerRestSDK: IssuerRestSDK = _
   var holderSDK: HolderSdk = _
@@ -37,8 +33,8 @@ class RestIssuerSdkSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val issuerVerityEnv = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).buildAsync(VAS)
-    val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
+    val issuerVerityEnv = VerityEnvBuilder().withConfig(REST_API_CONFIG).buildAsync(VAS)
+    val holderVerityEnv = VerityEnvBuilder().buildAsync(CAS)
 
     val issuerRestSDKFut = setupIssuerRestSdkAsync(issuerVerityEnv, executionContext, Option(V2OAuthParam("fixed-token")))
     val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
@@ -206,11 +202,4 @@ class RestIssuerSdkSpec
          verity.rest-api.enabled = true
         """.stripMargin
     )
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

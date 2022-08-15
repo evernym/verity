@@ -13,18 +13,14 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.Presentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults.ProofValidated
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
-import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.util.TestExecutionContextProvider
 
-import scala.concurrent.{Await, ExecutionContext}
+
+import scala.concurrent.Await
 
 
 class PresentProofSpec
   extends VerityProviderBaseSpec
   with SdkProvider {
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   var issuerSDK: IssuerSdk = _
   var verifierSDK: VerifierSdk = _
@@ -44,9 +40,9 @@ class PresentProofSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val issuerVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
-    val verifierVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
-    val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
+    val issuerVerityEnv = VerityEnvBuilder().buildAsync(VAS)
+    val verifierVerityEnv = VerityEnvBuilder().buildAsync(VAS)
+    val holderVerityEnv = VerityEnvBuilder().buildAsync(CAS)
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext)
     val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnv, executionContext)
@@ -173,10 +169,4 @@ class PresentProofSpec
     }
   }
 
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

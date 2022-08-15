@@ -9,13 +9,10 @@ import com.evernym.verity.integration.base.sdk_provider.msg_listener.JsonMsgList
 import com.evernym.verity.integration.base.sdk_provider.{JsonMsgUtil, SdkProvider}
 import com.evernym.verity.integration.base.{CAS, EAS, PortProvider, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.ConfigFactory
 import org.json.JSONObject
 
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext
 
 // when senderName is set in the agent config
 //  and not explicitly provided/overridden during send message
@@ -25,8 +22,8 @@ class PushNotifWithAgentSenderNameSpec
   extends VerityProviderBaseSpec
   with SdkProvider {
 
-  lazy val issuerEAS = VerityEnvBuilder.default().build(EAS)
-  lazy val holderCAS = VerityEnvBuilder.default().build(CAS)
+  lazy val issuerEAS = VerityEnvBuilder().build(EAS)
+  lazy val holderCAS = VerityEnvBuilder().build(CAS)
 
   lazy val issuerSDKEAS = setupIssuerSdk(issuerEAS, executionContext)
   lazy val holderSDKCAS = setupHolderSdk(holderCAS, executionContext, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools)
@@ -115,9 +112,4 @@ class PushNotifWithAgentSenderNameSpec
       | }
       |}
       |""".stripMargin)
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-  override def executionContextProvider: ExecutionContextProvider = ecp
-  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

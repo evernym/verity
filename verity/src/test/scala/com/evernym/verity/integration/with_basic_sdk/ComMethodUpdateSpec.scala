@@ -5,19 +5,14 @@ import com.evernym.verity.constants.Constants.COM_METHOD_TYPE_HTTP_ENDPOINT
 import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider, V1OAuthParam}
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
 
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
 class ComMethodUpdateSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
-
-  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   var issuerSDK: IssuerSdk = _
   var holderSDK: HolderSdk = _
@@ -28,8 +23,8 @@ class ComMethodUpdateSpec
   override protected def beforeAll(): Unit = {
     super.beforeAll()
 
-    val issuerVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
-    val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
+    val issuerVerityEnv = VerityEnvBuilder().buildAsync(VAS)
+    val holderVerityEnv = VerityEnvBuilder().buildAsync(CAS)
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext, Option(V1OAuthParam(5.seconds)))
     val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, V1OAuthParam(5.seconds), executionContext)
@@ -323,11 +318,4 @@ class ComMethodUpdateSpec
       }
     }
   }
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

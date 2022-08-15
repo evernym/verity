@@ -10,18 +10,16 @@ import com.evernym.verity.integration.base.sdk_provider.{IssuerSdk, SdkProvider}
 import com.evernym.verity.integration.base.verity_provider.VerityEnv
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.IssuerSetup.{identifierAlreadyCreatedErrorMsg, identifierNotCreatedProblem}
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.{Create, CurrentPublicIdentifier, IssuerSetupDefinition, ProblemReport, PublicIdentifier}
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
 import org.json.JSONObject
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 
 class IssuerSetupEndorsementSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVAS: VerityEnv = VerityEnvBuilder.default().build(VAS)
+  lazy val issuerVAS: VerityEnv = VerityEnvBuilder().build(VAS)
   lazy val issuerSDK: IssuerSdk = setupIssuerSdk(issuerVAS, futureExecutionContext)
   lazy val endorserSvcProvider: MockEndorserServiceProvider = MockEndorserServiceProvider(issuerVAS)
 
@@ -114,7 +112,4 @@ class IssuerSetupEndorsementSpec
     modifyUserAgentActorState(issuerVAS, issuerSDK.domainDID, eventMapper = userAgentEventMapper)
     deleteProtocolActorState(issuerVAS, IssuerSetupDefinition, issuerSDK.domainDID, None, None)
   }
-
-  override lazy val executionContextProvider: ExecutionContextProvider = TestExecutionContextProvider.ecp
-  override lazy val futureExecutionContext: ExecutionContext = executionContextProvider.futureExecutionContext
 }

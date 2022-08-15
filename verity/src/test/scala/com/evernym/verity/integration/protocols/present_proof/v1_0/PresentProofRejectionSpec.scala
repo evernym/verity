@@ -12,20 +12,16 @@ import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvita
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.{Request, Status}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{Msg, ProofAttribute}
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
-import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
-import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
 
 import java.util.UUID
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 
 
 class PresentProofRejectionSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   var verifierVerityEnv: VerityEnv = _
   var verifierSDK: IssuerSdk = _
@@ -40,8 +36,8 @@ class PresentProofRejectionSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val issuerVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
-    val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
+    val issuerVerityEnvFut = VerityEnvBuilder().buildAsync(VAS)
+    val holderVerityEnvFut = VerityEnvBuilder().buildAsync(CAS)
 
     val verifierSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
     val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
@@ -145,12 +141,4 @@ class PresentProofRejectionSpec
       problemReport.description shouldBe ProblemDescription(Some("Rejected -- rejecting the presentation offer"), "rejection")
     }
   }
-
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

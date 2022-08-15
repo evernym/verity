@@ -1,7 +1,6 @@
 package com.evernym.verity.integration.base.verity_provider
 
 import akka.actor.ActorSystem
-import akka.cluster.MemberStatus
 import akka.cluster.MemberStatus.{Down, Removed, Up}
 import akka.testkit.TestKit
 import com.evernym.verity.actor.persistence.recovery.base.PersistentStoreTestKit
@@ -50,8 +49,7 @@ case class VerityEnv(seed: String,
     val nodesToBeChecked = remainingNodes.map { curNode =>
       val excludeArteryPorts = (targetNodes :+ curNode).map(_.portProfile.artery)
       val otherNodes = remainingNodes.filter { n => ! excludeArteryPorts.contains(n.portProfile.artery)}
-      val otherNodeStatus: Map[VerityNode, List[MemberStatus]] =
-        otherNodes.map(_ -> List(Up)).toMap ++ targetNodes.map(_ -> List(Removed, Down)).toMap
+      val otherNodeStatus = otherNodes.map(_ -> List(Up)).toMap ++ targetNodes.map(_ -> List(Removed, Down)).toMap
       (curNode, otherNodeStatus)
     }
 
@@ -117,14 +115,10 @@ case class VerityEnv(seed: String,
 
   init()
 
-  lazy val endpointProvider: VerityEnvUrlProvider = VerityEnvUrlProvider(nodes)
-
   val system: ActorSystem = ActorSystemVanilla(UUID.randomUUID().toString)
-
+  lazy val endpointProvider: VerityEnvUrlProvider = VerityEnvUrlProvider(nodes)
   lazy val persStoreTestKit = new PersistentStoreTestKit(ec, headVerityLocalNode.platform.actorSystem)
-
   lazy val headVerityLocalNode: VerityLocalNode = nodes.head.asInstanceOf[VerityLocalNode]
-
 }
 
 object VerityEnv {

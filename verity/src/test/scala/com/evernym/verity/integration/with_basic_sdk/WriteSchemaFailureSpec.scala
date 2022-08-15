@@ -3,7 +3,6 @@ package com.evernym.verity.integration.with_basic_sdk
 import com.evernym.vdrtools.vdr.VdrParams.CacheOptions
 import com.evernym.vdrtools.vdr.VdrResults
 import com.evernym.vdrtools.vdr.VdrResults.PreparedTxnResult
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.agentmsg.msgcodec.jackson.JacksonMsgCodec
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
@@ -13,26 +12,22 @@ import com.evernym.verity.integration.base.verity_provider.node.local.ServicePar
 import com.evernym.verity.ledger.LedgerSvcException
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, CurrentPublicIdentifier, ProblemReport, PublicIdentifier, PublicIdentifierCreated}
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.Write
-import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.vdr.base.{INDY_SOVRIN_NAMESPACE, InMemLedger}
 import com.evernym.verity.vdr.{FqCredDefId, FqDID, FqSchemaId, MockIndyLedger, MockLedgerRegistry, MockLedgerRegistryBuilder, MockVdrTools, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 
 class WriteSchemaFailureSpec
   extends VerityProviderBaseSpec
     with SdkProvider  {
 
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-
   override lazy val defaultSvcParam: ServiceParam =
     ServiceParam
       .empty
-      .withVdrTools(new DummyVdrTools(MockLedgerRegistryBuilder(Map(INDY_SOVRIN_NAMESPACE -> MockIndyLedger("genesis.txn file path", None))).build())(futureExecutionContext))
+      .withVdrTools(new DummyVdrTools(MockLedgerRegistryBuilder(INDY_SOVRIN_NAMESPACE, MockIndyLedger("genesis.txn file path", None)).build()))
 
-  lazy val issuerVerityApp = VerityEnvBuilder.default().build(VAS)
+  lazy val issuerVerityApp = VerityEnvBuilder().build(VAS)
   lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext)
 
   override def beforeAll(): Unit = {
@@ -60,7 +55,7 @@ class WriteSchemaFailureSpec
   }
 
   //in-memory version of VDRTools to be used in tests unit/integration tests
-  class DummyVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionContext)
+  class DummyVdrTools(ledgerRegistry: MockLedgerRegistry)
     extends MockVdrTools(ledgerRegistry) {
 
     //TODO: as we add/integrate actual VDR apis and their tests,
@@ -109,11 +104,4 @@ class WriteSchemaFailureSpec
 
     override def prepareDid(txnSpecificParams: TxnSpecificParams, submitterDid: FqDID, endorser: Option[String]): Future[PreparedTxnResult] = ???
   }
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

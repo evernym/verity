@@ -10,21 +10,19 @@ import com.evernym.verity.protocol.engine.asyncapi.vdr.VdrRejectException
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.{NeedsEndorsement, ProblemReport, StatusReport, Write}
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{StatusReport => SchemaStatusReport, Write => SchemaWrite}
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import com.evernym.verity.vdr.base.PayloadConstants.{CRED_DEF, TYPE}
 import com.evernym.verity.vdr.{FqCredDefId, MockIndyLedger, MockLedgerRegistry, MockLedgerRegistryBuilder, MockVdrTools, Namespace, TxnResult}
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, Future}
 
 
 class WriteCredDefEndorsementSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVAS: VerityEnv = VerityEnvBuilder.default()
+  lazy val issuerVAS: VerityEnv = VerityEnvBuilder()
     .withVdrTools(dummyVdrTools)
     .build(VAS)
   lazy val issuerSDK: IssuerSdk = setupIssuerSdk(issuerVAS, futureExecutionContext)
@@ -90,12 +88,9 @@ class WriteCredDefEndorsementSpec
     }
   }
 
-  val dummyVdrTools = new DummyVdrTools(MockLedgerRegistryBuilder(Map(INDY_SOVRIN_NAMESPACE -> MockIndyLedger("genesis.txn file path", None))).build())(futureExecutionContext)
+  val dummyVdrTools = new DummyVdrTools(MockLedgerRegistryBuilder(INDY_SOVRIN_NAMESPACE, MockIndyLedger("genesis.txn file path", None)).build())
 
-  override lazy val executionContextProvider: ExecutionContextProvider = TestExecutionContextProvider.ecp
-  override lazy val futureExecutionContext: ExecutionContext = executionContextProvider.futureExecutionContext
-
-  class DummyVdrTools(ledgerRegistry: MockLedgerRegistry)(implicit ec: ExecutionContext)
+  class DummyVdrTools(ledgerRegistry: MockLedgerRegistry)
     extends MockVdrTools(ledgerRegistry) {
 
     override def submitTxn(namespace: Namespace,

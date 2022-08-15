@@ -1,6 +1,5 @@
 package com.evernym.verity.integration.with_basic_sdk.data_retention.expire_after_days
 
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider, VerifierSdk}
@@ -16,19 +15,15 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.Presentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults.ProofValidated
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
-import com.evernym.verity.util.TestExecutionContextProvider
 import com.typesafe.config.ConfigFactory
 
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 
 
 class PresentProofSpec
   extends VerityProviderBaseSpec
     with DataRetentionBaseSpec
     with SdkProvider {
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   var issuerVerityEnv: VerityEnv = _
   var verifierVerityEnv: VerityEnv = _
@@ -52,20 +47,18 @@ class PresentProofSpec
     super.beforeAll()
 
     val issuerVerityEnvFut =
-      VerityEnvBuilder
-        .default()
+      VerityEnvBuilder()
         .withServiceParam(buildSvcParam)
         .withConfig(DATA_RETENTION_CONFIG)
         .buildAsync(VAS)
 
     val verifierVerityEnvFut =
-      VerityEnvBuilder
-        .default()
+      VerityEnvBuilder()
         .withServiceParam(buildSvcParam)
         .withConfig(DATA_RETENTION_CONFIG)
         .buildAsync(VAS)
 
-    val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
+    val holderVerityEnvFut = VerityEnvBuilder().buildAsync(CAS)
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
     val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnvFut, executionContext)
@@ -223,11 +216,4 @@ class PresentProofSpec
       |}
       |""".stripMargin
   }
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

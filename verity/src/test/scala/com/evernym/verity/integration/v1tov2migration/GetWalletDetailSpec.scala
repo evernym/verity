@@ -4,17 +4,13 @@ import com.evernym.verity.actor.agent.user.GetWalletMigrationDetailResp
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.base.{VAS, VerityProviderBaseSpec}
 import com.evernym.verity.testkit.util.HttpUtil
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
-
-import scala.concurrent.ExecutionContext
 
 
 class GetWalletDetailSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerity = VerityEnvBuilder.default().build(VAS)
+  lazy val issuerVerity = VerityEnvBuilder().build(VAS)
   lazy val issuerSDK = setupIssuerSdk(issuerVerity, executionContext)
 
 
@@ -39,9 +35,4 @@ class GetWalletDetailSpec
       }
     }
   }
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  implicit lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureExecutionContext: ExecutionContext = executionContext
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

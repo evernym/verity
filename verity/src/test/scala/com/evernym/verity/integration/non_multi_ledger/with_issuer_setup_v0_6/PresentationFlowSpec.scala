@@ -4,7 +4,6 @@ import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.integration.base.endorser_svc_provider.MockEndorserServiceProvider
 import com.evernym.verity.integration.base.endorser_svc_provider.MockEndorserUtil._
 import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider, VerifierSdk}
-import com.evernym.verity.integration.base.verity_provider.VerityEnv
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
@@ -16,24 +15,19 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.Presentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults.ProofValidated
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 
 
 class PresentationFlowSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-
-  lazy val issuerVerityEnv: VerityEnv = VerityEnvBuilder.default().withConfig(OVERRIDDEN_CONFIG).build(VAS)
-  lazy val verifierVerityEnv: VerityEnv = VerityEnvBuilder.default().withConfig(OVERRIDDEN_CONFIG).build(VAS)
-  lazy val holderVerityEnv: VerityEnv = VerityEnvBuilder.default().withConfig(OVERRIDDEN_CONFIG).build(CAS)
+  lazy val issuerVerityEnv = VerityEnvBuilder().withConfig(OVERRIDDEN_CONFIG).build(VAS)
+  lazy val verifierVerityEnv = VerityEnvBuilder().withConfig(OVERRIDDEN_CONFIG).build(VAS)
+  lazy val holderVerityEnv = VerityEnvBuilder().withConfig(OVERRIDDEN_CONFIG).build(CAS)
 
   lazy val issuerSDK: IssuerSdk = setupIssuerSdk(issuerVerityEnv, executionContext)
   lazy val verifierSDK: VerifierSdk = setupVerifierSdk(verifierVerityEnv, executionContext)
@@ -181,8 +175,4 @@ class PresentationFlowSpec
          verity.vdr.multi-ledger-support-enabled = false
         """.stripMargin
     )
-
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

@@ -13,8 +13,7 @@ import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvita
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
-import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
-import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
 
 import scala.concurrent.{Await, ExecutionContext}
@@ -23,9 +22,6 @@ import scala.concurrent.{Await, ExecutionContext}
 class IssueCredRejectionSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   var issuerVerityEnv: VerityEnv = _
 
@@ -44,8 +40,8 @@ class IssueCredRejectionSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val issuerVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
-    val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
+    val issuerVerityEnvFut = VerityEnvBuilder().buildAsync(VAS)
+    val holderVerityEnvFut = VerityEnvBuilder().buildAsync(CAS)
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
     val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
@@ -117,11 +113,4 @@ class IssueCredRejectionSpec
       problemReport.description shouldBe ProblemDescription(Some("rejecting the credential offer"), "rejection")
     }
   }
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

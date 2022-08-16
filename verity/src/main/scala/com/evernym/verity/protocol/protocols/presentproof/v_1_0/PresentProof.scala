@@ -198,7 +198,7 @@ class PresentProof(implicit val ctx: PresentProofContext)
 
   def handleMsgPresentation(msg: Msg.Presentation)(requestUsed: RequestUsed): Unit = {
     recordSenderId()
-    val proofRequest = DefaultMsgCodec.fromJson[ProofRequest](requestUsed.requestRaw)
+    val proofRequest = adaptedProofReq(DefaultMsgCodec.fromJson[ProofRequest](requestUsed.requestRaw))
     val proofRequestJson = DefaultMsgCodec.toJson(_checkRevocationInterval(proofRequest))
 
     extractPresentation(msg) match {
@@ -209,7 +209,6 @@ class PresentProof(implicit val ctx: PresentProofContext)
             send(Msg.Ack("OK"))
 
             val simplifiedProof: AttributesPresented = PresentationResults.presentationToResults(presentation)
-            //TODO (VE-3569): failing somewhere in below code
             retrieveLedgerElements(presentation.identifiers, proofRequest.allowsAllSelfAttested) {
               case Success((schemaJson, credDefJson)) =>
                 ctx.metricsWriter.runWithSpan("processPresentation","PresentProof", InternalSpan) {

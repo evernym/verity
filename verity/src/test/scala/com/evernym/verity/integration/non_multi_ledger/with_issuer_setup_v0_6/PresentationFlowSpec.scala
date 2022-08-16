@@ -4,6 +4,7 @@ import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
 import com.evernym.verity.integration.base.endorser_svc_provider.MockEndorserServiceProvider
 import com.evernym.verity.integration.base.endorser_svc_provider.MockEndorserUtil._
 import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider, VerifierSdk}
+import com.evernym.verity.integration.base.verity_provider.VerityEnv
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
@@ -26,9 +27,9 @@ class PresentationFlowSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val issuerVerityEnv = VerityEnvBuilder().withConfig(OVERRIDDEN_CONFIG).build(VAS)
-  lazy val verifierVerityEnv = VerityEnvBuilder().withConfig(OVERRIDDEN_CONFIG).build(VAS)
-  lazy val holderVerityEnv = VerityEnvBuilder().withConfig(OVERRIDDEN_CONFIG).build(CAS)
+  lazy val issuerVerityEnv: VerityEnv = VerityEnvBuilder().withConfig(OVERRIDDEN_CONFIG).build(VAS)
+  lazy val verifierVerityEnv: VerityEnv = VerityEnvBuilder().withConfig(OVERRIDDEN_CONFIG).build(VAS)
+  lazy val holderVerityEnv: VerityEnv = VerityEnvBuilder().withConfig(OVERRIDDEN_CONFIG).build(CAS)
 
   lazy val issuerSDK: IssuerSdk = setupIssuerSdk(issuerVerityEnv, executionContext)
   lazy val verifierSDK: VerifierSdk = setupVerifierSdk(verifierVerityEnv, executionContext)
@@ -132,7 +133,7 @@ class PresentationFlowSpec
           Option(List(
             ProofAttribute(
               None,
-              Option(List("name", "age")),
+              Option(List("name")),
               Option(List(
                 RestrictionsV1(
                   schema_id = Option(schemaId),
@@ -146,11 +147,10 @@ class PresentationFlowSpec
               None,
               self_attest_allowed = false)
           )),
-          //TODO (VE-3569): FIX below parameter with correct values
           Option(List(
             ProofPredicate(
               "age",
-              "ge",
+              ">=",
               20,
               Option(List(
                 RestrictionsV1(
@@ -192,7 +192,8 @@ class PresentationFlowSpec
       val receivedMsgParam = verifierSDK.expectMsgOnWebhook[PresentationResult]()
       receivedMsgParam.msg.verification_result shouldBe ProofValidated
       val requestPresentation = receivedMsgParam.msg.requested_presentation
-      requestPresentation.revealed_attrs.size shouldBe 2
+      requestPresentation.revealed_attrs.size shouldBe 1
+      requestPresentation.predicates.size shouldBe 1
       requestPresentation.unrevealed_attrs.size shouldBe 0
       requestPresentation.self_attested_attrs.size shouldBe 0
     }

@@ -209,6 +209,7 @@ class PresentProof(implicit val ctx: PresentProofContext)
             send(Msg.Ack("OK"))
 
             val simplifiedProof: AttributesPresented = PresentationResults.presentationToResults(presentation)
+            //TODO (VE-3569): failing somewhere in below code
             retrieveLedgerElements(presentation.identifiers, proofRequest.allowsAllSelfAttested) {
               case Success((schemaJson, credDefJson)) =>
                 ctx.metricsWriter.runWithSpan("processPresentation","PresentProof", InternalSpan) {
@@ -318,14 +319,51 @@ class PresentProof(implicit val ctx: PresentProofContext)
         ctx.storeSegment(segment=RequestUsed(str)) {
           case Success(s) =>
             ctx.apply(RequestUsedRef(s.segmentKey))
-            val presentationRequest = Msg.RequestPresentation("", Vector(buildAttachment(Some(AttIds.request0), str)))
-            if(!ctr.by_invitation.getOrElse(false)) { ctx.send(presentationRequest) }
-            else { sendInvite(presentationRequest, stateData) }
+
+            if(!ctr.by_invitation.getOrElse(false)) {
+              val proofReq = adaptedProofReq(proofRequest.get)
+              val adaptedProofReqJson = DefaultMsgCodec.toJson(proofReq)
+              val presentationRequest = Msg.RequestPresentation("", Vector(buildAttachment(Some(AttIds.request0), adaptedProofReqJson)))
+              ctx.send(presentationRequest)
+            } else {
+              val presentationRequest = Msg.RequestPresentation("", Vector(buildAttachment(Some(AttIds.request0), str)))
+              sendInvite(presentationRequest, stateData)
+            }
           case Failure(e) => reportSegStoreFailed("error during processing request")
         }
       case Failure(e) =>
         signal(Sig.buildProblemReport(s"Invalid Request -- ${e.getMessage}", invalidRequestedPresentation))
     }
+  }
+
+  private def adaptedProofReq(pr: ProofRequest): ProofRequest = {
+    val reqAttributes: Map[String, ProofAttribute] =
+      pr.requested_attributes.map { item =>
+        val adaptedRestrictions = item._2.restrictions.map(adaptedRestrictionsIdentifiers)
+        item._1 -> item._2.copy(restrictions = adaptedRestrictions)
+      }
+
+    val reqPredicates: Map[String, ProofPredicate] =
+      pr.requested_predicates.map { item =>
+        val adaptedRestrictions = item._2.restrictions.map(adaptedRestrictionsIdentifiers)
+        item._1 -> item._2.copy(restrictions = adaptedRestrictions)
+      }
+
+    pr.copy(requested_attributes = reqAttributes, requested_predicates = reqPredicates)
+  }
+
+  private def adaptedRestrictionsIdentifiers(restrictions: List[RestrictionsV1]): List[RestrictionsV1]  = {
+    restrictions
+      .map { restriction =>
+        val identifierOption = List(restriction.cred_def_id, restriction.schema_id, restriction.issuer_did).head
+        identifierOption match {
+          case Some(identifier) =>
+            val restrictionJson = DefaultMsgCodec.toJson(restriction)
+            val adaptedRestrictionJson = downgradeIdentifiersIfRequired(restrictionJson, identifier, ctx.vdr.isMultiLedgerSupportEnabled)
+            DefaultMsgCodec.fromJson[RestrictionsV1](adaptedRestrictionJson)
+          case None => restriction
+        }
+      }
   }
 
   def sendInvite(presentationRequest: Msg.RequestPresentation, stateData: StateData): Unit = {

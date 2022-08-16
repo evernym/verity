@@ -28,7 +28,6 @@ import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUr
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
 import com.evernym.verity.vdr.{CredDef, CredDefId}
-import org.json.JSONObject
 
 import scala.util.{Failure, Success, Try}
 

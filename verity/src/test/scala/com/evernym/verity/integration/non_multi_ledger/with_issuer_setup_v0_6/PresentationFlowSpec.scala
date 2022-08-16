@@ -11,7 +11,7 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.{AcceptRe
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.PublicIdentifier
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.Request
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{ProofAttribute, RestrictionsV1}
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{ProofAttribute, ProofPredicate, RestrictionsV1}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults.ProofValidated
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
@@ -127,7 +127,8 @@ class PresentationFlowSpec
   "VerifierSDK" - {
     "sent 'request' (present-proof 1.0) message" - {
       "should be successful" in {
-        val msg = Request("name-age",
+        val msg = Request(
+          "name-age",
           Option(List(
             ProofAttribute(
               None,
@@ -145,7 +146,24 @@ class PresentationFlowSpec
               None,
               self_attest_allowed = false)
           )),
-          None,
+          //TODO (VE-3569): FIX below parameter with correct values
+          Option(List(
+            ProofPredicate(
+              "age",
+              "ge",
+              20,
+              Option(List(
+                RestrictionsV1(
+                  schema_id = Option(schemaId),
+                  schema_issuer_did = None,
+                  schema_name = None,
+                  schema_version = None,
+                  issuer_did = Option(pubIdentifier.did),
+                  cred_def_id = Option(credDefId)
+                )
+              )),
+              None)
+          )),
           None
         )
         verifierSDK.sendMsgForConn(verifierHolderConn, msg)

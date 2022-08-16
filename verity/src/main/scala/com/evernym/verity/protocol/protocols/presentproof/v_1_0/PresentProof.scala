@@ -318,7 +318,6 @@ class PresentProof(implicit val ctx: PresentProofContext)
         ctx.storeSegment(segment=RequestUsed(str)) {
           case Success(s) =>
             ctx.apply(RequestUsedRef(s.segmentKey))
-
             val presentationRequest = Msg.RequestPresentation("", Vector(buildAttachment(Some(AttIds.request0), str)))
             if(!ctr.by_invitation.getOrElse(false)) { ctx.send(presentationRequest) }
             else { sendInvite(presentationRequest, stateData) }
@@ -592,11 +591,11 @@ object PresentProof {
       .forall(identity)
   }
 
-  def credentialsToUse(credentialsNeeded: Try[AvailableCredentials],
+  def credentialsToUse(availableCredentials: Try[AvailableCredentials],
                        selfAttestedAttributes: Map[String, String]=Map.empty): (Try[String], Set[(String, String)]) = {
     val ids: mutable.Buffer[(String,String)] = mutable.Buffer()
 
-    val credentialsUsedJson = credentialsNeeded
+    val credentialsUsedJson = availableCredentials
       .map{ creds =>
         val requestedAttributes: Map[String, AttributeUsed] = creds.attrs
           .foldLeft(Map[String, AttributeUsed]()) { (col, entity) =>

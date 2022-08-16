@@ -8,9 +8,10 @@ import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.{AcceptRequest, Sent}
+import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.PublicIdentifier
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.Request
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProofAttribute
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{ProofAttribute, RestrictionsV1}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults.ProofValidated
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
@@ -39,6 +40,7 @@ class PresentationFlowSpec
   val issuerHolderConn = "connId1"
   val verifierHolderConn = "connId2"
 
+  var pubIdentifier: PublicIdentifier = _
   var schemaId: SchemaId = _
   var credDefId: CredDefId = _
   var offerCred: OfferCred = _
@@ -56,7 +58,7 @@ class PresentationFlowSpec
 
     Await.result(endorserSvcProvider.publishEndorserActivatedEvent(activeEndorserDid, INDY_LEDGER_PREFIX), 5.seconds)
 
-    setupIssuer_v0_6(issuerSDK)
+    pubIdentifier = setupIssuer_v0_6(issuerSDK)
     schemaId = writeSchema_v0_6(issuerSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
     credDefId = writeCredDef_v0_6(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))
 
@@ -130,7 +132,16 @@ class PresentationFlowSpec
             ProofAttribute(
               None,
               Option(List("name", "age")),
-              None,
+              Option(List(
+                RestrictionsV1(
+                  schema_id = Option(schemaId),
+                  schema_issuer_did = None,
+                  schema_name = None,
+                  schema_version = None,
+                  issuer_did = Option(pubIdentifier.did),
+                  cred_def_id = Option(credDefId)
+                )
+              )),
               None,
               self_attest_allowed = false)
           )),

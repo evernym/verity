@@ -191,18 +191,24 @@ trait SdkProvider { this: BasicSpec =>
     inviterSDK.expectConnectionComplete(connId)
   }
 
-  def setupIssuer_v0_6(issuerSDK: VeritySdkBase): issuerSetup0_6.PublicIdentifierCreated = {
+  def setupIssuer_v0_6(issuerSDK: VeritySdkBase): issuerSetup0_6.PublicIdentifier = {
     issuerSDK.sendMsg(issuerSetup0_6.Create())
     val receivedMsg = issuerSDK.expectMsgOnWebhook[issuerSetup0_6.PublicIdentifierCreated]()
-    receivedMsg.msg
+    receivedMsg.msg.identifier
   }
 
   def setupIssuer_v0_7(issuerSDK: VeritySdkBase,
                        ledgerPrefix: LedgerPrefix,
-                       endorser: Option[String] = None): Unit = {
+                       endorser: Option[String] = None): issuerSetup0_7.PublicIdentifier = {
     issuerSDK.sendMsg(issuerSetup0_7.Create(ledgerPrefix, endorser))
     val receivedMsg = issuerSDK.expectMsgOnWebhook[JSONObject]().msg
     receivedMsg.getString("@type") shouldBe "did:sov:123456789abcdefghi1234;spec/issuer-setup/0.7/public-identifier-created"
+    val pubIdentifier = receivedMsg.getJSONObject("identifier")
+    val did = pubIdentifier.getString("did")
+    val verKey = pubIdentifier.getString("verKey")
+    did.trim.nonEmpty shouldBe true
+    verKey.trim.nonEmpty shouldBe true
+    issuerSetup0_7.PublicIdentifier(did, verKey)
   }
 
   def writeSchema_v0_6(issuerSDK: VeritySdkBase, write: writeSchema0_6.Write): SchemaId = {

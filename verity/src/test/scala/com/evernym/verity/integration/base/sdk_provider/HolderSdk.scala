@@ -179,9 +179,9 @@ case class HolderSdk(override val ec: ExecutionContext,
                      selfAttestedAttrs: Map[String, String],
                      thread: Option[MsgThread]): Unit = {
     val proofRequestJson = extractAttachment(AttIds.request0, proofReq.`request_presentations~attach`).get
-    val credCreated = Try(testWalletAPI.executeSync[CredForProofReqCreated](CredForProofReq(proofRequestJson)))
-    val credentialsNeeded = credCreated.map(_.cred).map(DefaultMsgCodec.fromJson[AvailableCredentials](_))
-    val (credentialsUsedJson, ids) = credentialsToUse(credentialsNeeded, selfAttestedAttrs)
+    val credForProofReq = Try(testWalletAPI.executeSync[CredForProofReqCreated](CredForProofReq(proofRequestJson)))
+    val availableCredentials = credForProofReq.map(_.cred).map(DefaultMsgCodec.fromJson[AvailableCredentials](_))
+    val (credentialsUsedJson, ids) = credentialsToUse(availableCredentials, selfAttestedAttrs)
     val (schemaJson, credDefJson) = doSchemaAndCredDefRetrieval(ids, allowsAllSelfAttested = false)
     val proofCreated = crateProof(
       proofRequestJson,

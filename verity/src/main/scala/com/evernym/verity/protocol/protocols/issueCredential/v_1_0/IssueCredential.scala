@@ -27,7 +27,7 @@ import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
-import com.evernym.verity.vdr.CredDef
+import com.evernym.verity.vdr.{CredDef, CredDefId}
 import org.json.JSONObject
 
 import scala.util.{Failure, Success, Try}
@@ -166,13 +166,13 @@ object IssueCredential {
     extractString(attachment)
   }
 
-  def getCredentialDataFromMessage(credentialValues: Map[String, String]): String = {
-    val jsonObject: JSONObject = new JSONObject()
-    for ((key, value) <- credentialValues) {
-      jsonObject.put(key, value)
-    }
-    jsonObject.toString()
-  }
+//  def getCredentialDataFromMessage(credentialValues: Map[String, String]): String = {
+//    val jsonObject: JSONObject = new JSONObject()
+//    for ((key, value) <- credentialValues) {
+//      jsonObject.put(key, value)
+//    }
+//    jsonObject.toString()
+//  }
 
   def setSenderRole(senderId: String, senderRole: Role, roster: Roster[Role]): Roster[Role] = {
     val r = roster.withParticipant(senderId)
@@ -307,7 +307,8 @@ trait IssueCredentialHelpers
             ))
 
             if(!m.by_invitation.getOrElse(false)) {
-              ctx.send(offer)
+              val adaptedOfferCred = downgradeOfferCredIdentifiersIfRequired(offer, m.cred_def_id, ctx.vdr.isMultiLedgerSupportEnabled)
+              ctx.send(adaptedOfferCred)
               ctx.signal(Sig.Sent(offer))
             }
             else sendInvite(offer, s)
@@ -339,7 +340,8 @@ trait IssueCredentialHelpers
               s.segmentKey,
               m.auto_issue.getOrElse(false)
             ))
-            ctx.send(offer)
+            val adaptedOfferCred = downgradeOfferCredIdentifiersIfRequired(offer, m.cred_def_id, ctx.vdr.isMultiLedgerSupportEnabled)
+            ctx.send(adaptedOfferCred)
             ctx.signal(Sig.Sent(offer))
           case Failure(e) =>
             ctx.signal(
@@ -385,7 +387,7 @@ trait IssueCredentialHelpers
     val credOfferJson = extractCredOfferJson(credOffer)
     ctx.wallet.createCredReq(m.cred_def_id, myPwDid, credDefJson, credOfferJson) {
       case Success(credRequest: CredReqCreatedResult) =>
-        val attachment = buildAttachment(Some("libindy-cred-req-0"), payload=credRequest.credReqJson)
+        val attachment = buildAttachment(Some(LIBINDY_CRED_REQ_0), payload=credRequest.credReqJson)
         val attachmentEventObject = toAttachmentObject(attachment)
         val credRequested = CredRequested(Seq(attachmentEventObject), commentReq(m.comment))
         //TODO: store cred req metadata to be used later on
@@ -449,20 +451,23 @@ trait IssueCredentialHelpers
                         `~please_ack`: Option[PleaseAck]=None): Unit = {
     val credOfferJson = extractCredOfferJson(credOffer)
     val credReqJson = extractCredReqJson(credRequest)
+    val credDefId = extractCredDefId(credOfferJson)
     val credValuesJson = IssueCredential.buildCredValueJson(credOffer.credential_preview)
+
     ctx.wallet.createCred(credOfferJson, credReqJson, credValuesJson, revRegistryId.orNull, -1) {
       case Success(createdCred: CredCreatedResult) =>
-        val attachment = buildAttachment(Some("libindy-cred-0"), payload=createdCred.cred)
-        val attachmentEventObject = toAttachmentObject(attachment)
-        val credIssued = CredIssued(Seq(attachmentEventObject), commentReq(comment))
+        val attachment = buildAttachment(Some(LIBINDY_CRED_0), payload=createdCred.cred)
+        val credIssued = CredIssued(Seq(toAttachmentObject(attachment)), commentReq(comment))
 
         ctx.storeSegment(segment = credIssued) {
           case Success(s) =>
             ctx.apply(IssueCredSent(s.segmentKey))
-            val issueCred = IssueCred(Vector(attachment), Option(credIssued.comment), `~please_ack` = `~please_ack`)
-            ctx.send(issueCred)
-            ctx.signal(Sig.Sent(issueCred))
-          case Failure(e) =>
+            val adaptedCred = downgradeIdentifiersIfRequired(createdCred.cred, credDefId, ctx.vdr.isMultiLedgerSupportEnabled)
+            val adaptedAttachment = buildAttachment(Some(LIBINDY_CRED_0), payload=adaptedCred)
+            val adaptedIssueCred = IssueCred(Vector(adaptedAttachment), Option(credIssued.comment), `~please_ack` = `~please_ack`)
+            ctx.send(adaptedIssueCred)
+            ctx.signal(Sig.Sent(adaptedIssueCred))
+          case Failure(_) =>
             ctx.signal(
               Sig.buildProblemReport(
                 s"cred issuance failed",
@@ -610,7 +615,7 @@ trait IssueCredentialHelpers
       case Success(coc: CredOfferCreatedResult) =>
         val credPreview = buildCredPreview(m.credential_values)
         val credPreviewEventObject = credPreview.toOption.map(_.toCredPreviewObject)
-        val attachment = buildAttachment(Some("libindy-cred-offer-0"), payload = coc.offer)
+        val attachment = buildAttachment(Some(LIBINDY_CRED_OFFER_0), payload = coc.offer)
         val attachmentEventObject = toAttachmentObject(attachment)
 
         val credOffered = CredOffered(
@@ -713,4 +718,20 @@ trait IssueCredentialHelpers
   def commentReq(comment: Option[String]): String = {
     comment.getOrElse("")
   }
+
+  private def downgradeOfferCredIdentifiersIfRequired(o: OfferCred,
+                                                      credDefId: CredDefId,
+                                                      isMultiLedgerSupportEnabled: Boolean): OfferCred = {
+    val adaptedAttachments = o.`offers~attach`.map { attach =>
+      val jsonString = extractString(attach)
+      val adaptedJson = downgradeIdentifiersIfRequired(jsonString, credDefId, isMultiLedgerSupportEnabled)
+      buildAttachment(Some(LIBINDY_CRED_OFFER_0), adaptedJson)
+    }
+
+    OfferCred(o.credential_preview, adaptedAttachments, o.comment, o.price)
+  }
+
+  private val LIBINDY_CRED_OFFER_0 = "libindy-cred-offer-0"
+  private val LIBINDY_CRED_REQ_0 = "libindy-cred-req-0"
+  private val LIBINDY_CRED_0 = "libindy-cred-0"
 }

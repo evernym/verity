@@ -1,15 +1,16 @@
-This package contains integration test which spins up verity platform (with http server)
+This package contains integration tests which spins up verity platform (with http server)
 and tests the complete flow (including agent actors and protocol actors).
 
 Notes:
 * The 'LocalVerity' used in these specs uses:
-  * leveldb for 
+  * `leveldb` for 
     * event journal
-    * segment storage (mock for S3)  
-  * local storage for snapshot store  
-  * file based wallet storage
-  * 'in-memory' mocked ledger
-  * mock url shortener (it returns the same long url)
+    * segment storage  
+  * `local storage` snapshot store  
+  * `file based` wallet storage
+  * `in-memory` mocked ledger service
+  * mocked url shortener (it returns the same long url)
+  * mocked endorser service
 <br/>
 
 
@@ -32,4 +33,3 @@ To be aware of:
         * To avoid those, we are using _PersistencePluginProxy_ to share the leveldb journal/snapshot storage across multiple nodes.
         * At this point, we don't know any known issues around it which may create issues in writing tests against it in the future.
     * there are few global singleton objects which may/will cause some issues sooner or later.
-    

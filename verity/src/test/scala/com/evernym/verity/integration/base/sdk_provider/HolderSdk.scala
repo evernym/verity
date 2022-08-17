@@ -38,7 +38,7 @@ import com.evernym.verity.testkit.util.HttpUtil._
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.util2.Status
 import com.evernym.verity.vault.KeyParam
-import com.evernym.verity.vdr.{CredDef, CredDefId, Schema, SchemaId, VDRUtil}
+import com.evernym.verity.vdr.{CredDef, CredDefId, MockVdrTools, Schema, SchemaId}
 import com.evernym.verity.vdr.service.VdrTools
 import org.json.JSONObject
 
@@ -54,12 +54,14 @@ import scala.util.{Failure, Success, Try}
  * @param param sdk parameters
  * @param ledgerTxnExecutor ledger txn executor
  */
-case class HolderSdk(param: SdkParam,
-                     ledgerTxnExecutor: Option[LedgerTxnExecutor],
+case class HolderSdk(override val ec: ExecutionContext,
+                     param: SdkParam,
                      vdrTools: Option[VdrTools],
-                     override val ec: ExecutionContext,
-                     oauthParam: Option[OAuthParam]=None
-                    ) extends SdkBase(param, ec) {
+                     ledgerTxnExecutor: Option[LedgerTxnExecutor],
+                     oauthParam: Option[OAuthParam]=None,
+                     isMultiLedgerSupported: Boolean = true)
+  extends SdkBase(param, ec) {
+
   implicit val executionContext: ExecutionContext = ec
 
   def registerWebhook(updateComMethod: UpdateComMethodReqMsg): ComMethodUpdated = {
@@ -142,12 +144,14 @@ case class HolderSdk(param: SdkParam,
   }
 
   def sendCredRequest(connId: String,
-                      credDefId: String,
                       offerCred: OfferCred,
                       thread: Option[MsgThread]): Unit = {
+    val credOfferJsonString = IssueCredential.extractCredOfferJson(offerCred)
+    val credOfferJson =  new JSONObject(credOfferJsonString)
+    val credDefId = credOfferJson.getString("cred_def_id")
     val credDefJson = getCredDefJson(credDefId)
-    val credOfferJson = IssueCredential.extractCredOfferJson(offerCred)
-    val credReqCreated = createCredRequest(connId, credDefId, credDefJson, credOfferJson)
+
+    val credReqCreated = createCredRequest(connId, credDefId, credDefJson, credOfferJsonString)
     val attachment = buildAttachment(Some("libindy-cred-req-0"), payload = credReqCreated.credReqJson)
     val attachmentEventObject = IssueCredential.toAttachmentObject(attachment)
     val credRequested = CredRequested(Seq(attachmentEventObject))
@@ -175,9 +179,9 @@ case class HolderSdk(param: SdkParam,
                      selfAttestedAttrs: Map[String, String],
                      thread: Option[MsgThread]): Unit = {
     val proofRequestJson = extractAttachment(AttIds.request0, proofReq.`request_presentations~attach`).get
-    val credCreated = Try(testWalletAPI.executeSync[CredForProofReqCreated](CredForProofReq(proofRequestJson)))
-    val credentialsNeeded = credCreated.map(_.cred).map(DefaultMsgCodec.fromJson[AvailableCredentials](_))
-    val (credentialsUsedJson, ids) = credentialsToUse(credentialsNeeded, selfAttestedAttrs)
+    val credForProofReq = Try(testWalletAPI.executeSync[CredForProofReqCreated](CredForProofReq(proofRequestJson)))
+    val availableCredentials = credForProofReq.map(_.cred).map(DefaultMsgCodec.fromJson[AvailableCredentials](_))
+    val (credentialsUsedJson, ids) = credentialsToUse(availableCredentials, selfAttestedAttrs)
     val (schemaJson, credDefJson) = doSchemaAndCredDefRetrieval(ids, allowsAllSelfAttested = false)
     val proofCreated = crateProof(
       proofRequestJson,
@@ -266,21 +270,13 @@ case class HolderSdk(param: SdkParam,
   }
 
   private def getCredDefFromLedger(credDefId: CredDefId): Future[CredDef] = {
-    vdrTools match {
-      case Some(vt)  =>
-        val fqCredDefId = VDRUtil.toFqCredDefId_v0(credDefId, None, Option(vdrUnqualifiedLedgerPrefix), vdrMultiLedgerSupportEnabled)
-        vt.resolveCredDef(fqCredDefId).map(CredDef(fqCredDefId, "", _))
-      case None       => ???
-    }
+    if (isMultiLedgerSupported) vdrTools.get.resolveCredDef(credDefId).map(CredDef(credDefId, "", _))
+    else vdrTools.get.asInstanceOf[MockVdrTools].getCredDef(credDefId).map(CredDef(credDefId, "", _))
   }
 
   private def getSchemaFromLedger(schemaId: SchemaId): Future[Schema] = {
-    vdrTools match {
-      case Some(vt)  =>
-        val fqSchemaId = VDRUtil.toFqSchemaId_v0(schemaId, None, Option(vdrUnqualifiedLedgerPrefix), vdrMultiLedgerSupportEnabled)
-        vt.resolveSchema(fqSchemaId).map(Schema(fqSchemaId, _))
-      case None       => ???
-    }
+    if (isMultiLedgerSupported) vdrTools.get.resolveSchema(schemaId).map(Schema(schemaId, _))
+    else vdrTools.get.asInstanceOf[MockVdrTools].getSchema(schemaId).map(Schema(schemaId, _))
   }
 
   //----------------------

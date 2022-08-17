@@ -10,18 +10,13 @@ import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestio
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Msg.{Answer, Question}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.AnswerGiven
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
-import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.util.TestExecutionContextProvider
 
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 
 
 class QuestionAnswerSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   var issuerVerityEnv: VerityEnv = _
   var holderVerityEnv: VerityEnv = _
@@ -35,8 +30,8 @@ class QuestionAnswerSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val issuerVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
-    val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
+    val issuerVerityEnvFut = VerityEnvBuilder().buildAsync(VAS)
+    val holderVerityEnvFut = VerityEnvBuilder().buildAsync(CAS)
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
     val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
@@ -143,11 +138,4 @@ class QuestionAnswerSpec
       receivedMsg.msg.answer shouldBe "I am fine after restart too"
     }
   }
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

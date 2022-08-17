@@ -15,14 +15,11 @@ import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.protocol.engine.registry.PinstIdResolution.V0_2
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.RelationshipDef
 import com.evernym.verity.testkit.util.HttpUtil
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 
 import java.util.UUID
-import scala.concurrent.ExecutionContext
 
 
 class ConnectionMigrationSpec
@@ -30,9 +27,9 @@ class ConnectionMigrationSpec
     with SdkProvider
     with Eventually {
 
-  lazy val holderCAS = VerityEnvBuilder.default().build(CAS)
-  lazy val issuerEAS = VerityEnvBuilder.default().withConfig(TEST_KIT_CONFIG).build(EAS)
-  lazy val issuerVAS = VerityEnvBuilder.default().withConfig(REST_API_CONFIG.withFallback(TEST_KIT_CONFIG)).build(VAS)
+  lazy val holderCAS = VerityEnvBuilder().build(CAS)
+  lazy val issuerEAS = VerityEnvBuilder().withConfig(TEST_KIT_CONFIG).build(EAS)
+  lazy val issuerVAS = VerityEnvBuilder().withConfig(REST_API_CONFIG.withFallback(TEST_KIT_CONFIG)).build(VAS)
 
   lazy val verity1HolderSDK = setupHolderSdk(holderCAS, futureExecutionContext)
   lazy val verity1IssuerRestSDK = setupIssuerRestSdk(issuerEAS, futureExecutionContext)
@@ -161,10 +158,6 @@ class ConnectionMigrationSpec
     issuerEAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, theirPairwiseRelAgentDIDPair)
     issuerEAS.persStoreTestKit.storeTheirKey(mySelfRelAgentEntityId, theirAgencyAgentDIDPair)
   }
-
-  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
-  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def executionContextProvider: ExecutionContextProvider = ecp
 
   val REST_API_CONFIG: Config =
     ConfigFactory.parseString(

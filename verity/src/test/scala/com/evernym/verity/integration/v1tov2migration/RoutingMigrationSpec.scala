@@ -8,26 +8,24 @@ import com.evernym.verity.actor.persistence.recovery.base.AgentIdentifiers._
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.persistence.recovery.base.PersistenceIdParam
 import com.evernym.verity.agentmsg.DefaultMsgCodec
-import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.{GetUpgradeInfo, PairwiseUpgradeInfoRespMsg_MFV_1_0}
+import com.evernym.verity.agentmsg.msgfamily.v1tov2migration.PairwiseUpgradeInfoRespMsg_MFV_1_0
 import com.evernym.verity.constants.ActorNameConstants.{ACTOR_TYPE_USER_AGENT_ACTOR, ACTOR_TYPE_USER_AGENT_PAIRWISE_ACTOR, USER_AGENT_PAIRWISE_REGION_ACTOR_NAME}
 import com.evernym.verity.constants.Constants.NO
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.base.{CAS, EAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.testkit.util.HttpUtil
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.{ExecutionContextProvider, Status}
+import com.evernym.verity.util2.Status
 import com.typesafe.config.{Config, ConfigFactory}
 
-import scala.concurrent.ExecutionContext
 
 
 class RoutingMigrationSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val holderCAS = VerityEnvBuilder.default().withConfig(TEST_KIT_CONFIG).build(CAS)
-  lazy val issuerEAS = VerityEnvBuilder.default().withConfig(TEST_KIT_CONFIG).build(EAS)
-  lazy val issuerVAS = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).build(VAS)
+  lazy val holderCAS = VerityEnvBuilder().withConfig(TEST_KIT_CONFIG).build(CAS)
+  lazy val issuerEAS = VerityEnvBuilder().withConfig(TEST_KIT_CONFIG).build(EAS)
+  lazy val issuerVAS = VerityEnvBuilder().withConfig(REST_API_CONFIG).build(VAS)
 
   lazy val verity1HolderSDK = setupHolderSdk(holderCAS, futureExecutionContext)
   lazy val verity1IssuerSDK = setupIssuerSdk(issuerEAS, futureExecutionContext)
@@ -152,9 +150,6 @@ class RoutingMigrationSpec
   def totalPairwiseEvents(): Seq[Any] = {
     holderCAS.persStoreTestKit.getEvents(PersistenceIdParam(USER_AGENT_PAIRWISE_REGION_ACTOR_NAME, myPairwiseRelAgentEntityId))
   }
-  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
-  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def executionContextProvider: ExecutionContextProvider = ecp
 
   val REST_API_CONFIG: Config =
     ConfigFactory.parseString(

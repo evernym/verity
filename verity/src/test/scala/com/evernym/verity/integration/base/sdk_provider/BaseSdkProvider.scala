@@ -38,7 +38,8 @@ import com.evernym.verity.protocol.engine.Constants.{MSG_TYPE_CONNECT, MSG_TYPE_
 import com.evernym.verity.protocol.engine.util.DIDDoc
 import com.evernym.verity.protocol.protocols
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
-import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
+import com.evernym.verity.protocol.protocols.issuersetup.{v_0_6 => issuerSetup0_6}
+import com.evernym.verity.protocol.protocols.issuersetup.{v_0_7 => issuerSetup0_7}
 import com.evernym.verity.testkit.agentmsg.{CreateInviteResp_MFV_0_5, InviteAcceptedResp_MFV_0_5}
 import com.evernym.verity.testkit.util.{AcceptConnReq_MFV_0_6, AgentCreated_MFV_0_5, AgentCreated_MFV_0_6, ComMethodUpdated_MFV_0_5, ConnReqAccepted_MFV_0_6, ConnReq_MFV_0_6, Connect_MFV_0_5, Connected_MFV_0_5, CreateAgent_MFV_0_5, CreateAgent_MFV_0_6, CreateKey_MFV_0_5, CreateKey_MFV_0_6, CreateMsg_MFV_0_5, InviteMsgDetail_MFV_0_5, MsgCreated_MFV_0_5, MsgsSent_MFV_0_5, SignUp_MFV_0_5, SignedUp_MFV_0_5, TestComMethod, TestConfigDetail, UpdateComMethod_MFV_0_5, UpdateConfigs_MFV_0_5}
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
@@ -46,6 +47,7 @@ import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
 import com.evernym.verity.testkit.util.HttpUtil._
 import com.evernym.verity.vault.service.ActorWalletService
 import com.evernym.verity.vault.wallet_api.StandardWalletAPI
+import com.evernym.verity.vdr.LedgerPrefix
 import com.evernym.verity.vdr.service.VdrTools
 import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
 import com.typesafe.scalalogging.Logger
@@ -82,25 +84,26 @@ trait SdkProvider { this: BasicSpec =>
                      ledgerTxnExecutor: LedgerTxnExecutor,
                      vdrTools: VdrTools,
                      executionContext: ExecutionContext): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), Option(ledgerTxnExecutor), Option(vdrTools), executionContext, None)
+    HolderSdk(executionContext, buildSdkParam(verityEnv), Option(vdrTools), Option(ledgerTxnExecutor), None)
 
   def setupHolderSdk(verityEnv: VerityEnv,
                      executionContext: ExecutionContext,
                      ledgerTxnExecutor: Option[LedgerTxnExecutor],
-                     vdrTools: Option[VdrTools]): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, vdrTools, executionContext, None)
+                     vdrTools: Option[VdrTools],
+                     isMultiLedgerSupported: Boolean): HolderSdk =
+    HolderSdk(executionContext, buildSdkParam(verityEnv), vdrTools, ledgerTxnExecutor, None, isMultiLedgerSupported)
 
   def setupHolderSdk(verityEnv: VerityEnv,
                      oauthParam: OAuthParam,
                      executionContext: ExecutionContext): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), None, None, executionContext, Option(oauthParam))
+    HolderSdk(executionContext, buildSdkParam(verityEnv), None, None, Option(oauthParam))
 
   def setupHolderSdk(verityEnv: VerityEnv,
                      executionContext: ExecutionContext,
                      ledgerTxnExecutor: Option[LedgerTxnExecutor] = None,
                      vdrTools: Option[VdrTools] = None,
                      oauthParam: Option[OAuthParam] = None): HolderSdk =
-    HolderSdk(buildSdkParam(verityEnv), ledgerTxnExecutor, vdrTools, executionContext, oauthParam)
+    HolderSdk(executionContext, buildSdkParam(verityEnv), vdrTools, ledgerTxnExecutor, oauthParam)
 
   def setupIssuerSdkAsync(verityEnv: Future[VerityEnv],
                           executionContext: ExecutionContext,
@@ -150,15 +153,6 @@ trait SdkProvider { this: BasicSpec =>
       setupHolderSdk(env, oauthParam, executionContext)
     })(executionContext)
 
-  def setupHolderSdkAsync(verityEnv: Future[VerityEnv],
-                          ledgerTxnExecutor: Option[LedgerTxnExecutor],
-                          vdrTools: Option[VdrTools],
-                          oauthParam: Option[OAuthParam],
-                          executionContext: ExecutionContext): Future[HolderSdk] =
-    verityEnv.map(env => {
-      setupHolderSdk(env, executionContext, ledgerTxnExecutor, vdrTools, oauthParam)
-    })(executionContext)
-
   private def buildSdkParam(verityEnv: VerityEnv): SdkParam = {
     SdkParam(VerityEnvUrlProvider(verityEnv.nodes))
   }
@@ -197,19 +191,33 @@ trait SdkProvider { this: BasicSpec =>
     inviterSDK.expectConnectionComplete(connId)
   }
 
-  def setupIssuer(issuerSDK: VeritySdkBase): PublicIdentifierCreated = {
-    issuerSDK.sendMsg(Create())
-    val receivedMsg = issuerSDK.expectMsgOnWebhook[PublicIdentifierCreated]()
-    receivedMsg.msg
+  def setupIssuer_v0_6(issuerSDK: VeritySdkBase): issuerSetup0_6.PublicIdentifier = {
+    issuerSDK.sendMsg(issuerSetup0_6.Create())
+    val receivedMsg = issuerSDK.expectMsgOnWebhook[issuerSetup0_6.PublicIdentifierCreated]()
+    receivedMsg.msg.identifier
   }
 
-  def writeSchema(issuerSDK: VeritySdkBase, write: writeSchema0_6.Write): SchemaId = {
+  def setupIssuer_v0_7(issuerSDK: VeritySdkBase,
+                       ledgerPrefix: LedgerPrefix,
+                       endorser: Option[String] = None): issuerSetup0_7.PublicIdentifier = {
+    issuerSDK.sendMsg(issuerSetup0_7.Create(ledgerPrefix, endorser))
+    val receivedMsg = issuerSDK.expectMsgOnWebhook[JSONObject]().msg
+    receivedMsg.getString("@type") shouldBe "did:sov:123456789abcdefghi1234;spec/issuer-setup/0.7/public-identifier-created"
+    val pubIdentifier = receivedMsg.getJSONObject("identifier")
+    val did = pubIdentifier.getString("did")
+    val verKey = pubIdentifier.getString("verKey")
+    did.trim.nonEmpty shouldBe true
+    verKey.trim.nonEmpty shouldBe true
+    issuerSetup0_7.PublicIdentifier(did, verKey)
+  }
+
+  def writeSchema_v0_6(issuerSDK: VeritySdkBase, write: writeSchema0_6.Write): SchemaId = {
     issuerSDK.sendMsg(write)
     val receivedMsg = issuerSDK.expectMsgOnWebhook[writeSchema0_6.StatusReport]()
     receivedMsg.msg.schemaId
   }
 
-  def writeCredDef(issuerSDK: VeritySdkBase, write: writeCredDef0_6.Write): CredDefId = {
+  def writeCredDef_v0_6(issuerSDK: VeritySdkBase, write: writeCredDef0_6.Write): CredDefId = {
     issuerSDK.sendMsg(write)
     val receivedMsg = issuerSDK.expectMsgOnWebhook[writeCredDef0_6.StatusReport]()
     receivedMsg.msg.credDefId
@@ -791,7 +799,7 @@ object ReceivedMsgParam {
     Try {
       val bm = AgentMsgParseUtil.convertTo[BundledMsg_MFV_0_5](msg)
       if (bm.bundled.size == 1) {
-        Option(ReceivedMsgParam(MessagePackUtil.convertPackedMsgToJsonString(bm.bundled.head)))
+        Option(ReceivedMsgParam[T](MessagePackUtil.convertPackedMsgToJsonString(bm.bundled.head)))
       } else {
         val clazz = implicitly[ClassTag[T]].runtimeClass
         if (classOf[CreateInviteResp_MFV_0_5].isAssignableFrom(clazz)) {

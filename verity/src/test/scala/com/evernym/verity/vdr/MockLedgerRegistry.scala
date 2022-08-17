@@ -7,6 +7,11 @@ import scala.concurrent.Future
 import scala.util.Try
 
 
+object MockLedgerRegistryBuilder {
+  def apply(namespace: Namespace, ledger: InMemLedger): MockLedgerRegistryBuilder = {
+    MockLedgerRegistryBuilder(Map(namespace -> ledger))
+  }
+}
 case class MockLedgerRegistryBuilder(ledgers: Map[Namespace, InMemLedger] = Map.empty) {
 
   def withLedger(namespace: Namespace, ledger: InMemLedger): MockLedgerRegistryBuilder= {

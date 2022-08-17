@@ -9,13 +9,11 @@ import com.evernym.verity.integration.base.verity_provider.VerityEnv
 import com.evernym.verity.integration.base.{CAS, PortProvider, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestion
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.ConfigFactory
 import org.json.JSONObject
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 
 
 //when the agent configuration is updated with `senderName`
@@ -36,8 +34,8 @@ class PushNotifWithPairwiseSenderNameSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val issuerVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
-    val holderVerityEnvFut = VerityEnvBuilder.default().withConfig(CAS_CONFIG).buildAsync(CAS)
+    val issuerVerityEnvFut = VerityEnvBuilder().buildAsync(VAS)
+    val holderVerityEnvFut = VerityEnvBuilder().withConfig(CAS_CONFIG).buildAsync(CAS)
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext, Option(V1OAuthParam(5.seconds)))
     val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
@@ -117,9 +115,4 @@ class PushNotifWithPairwiseSenderNameSpec
       | }
       |}
       |""".stripMargin)
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-  override def executionContextProvider: ExecutionContextProvider = ecp
-  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

@@ -4,8 +4,6 @@ import com.evernym.verity.integration.base.{VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
-import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.util.TestExecutionContextProvider
 import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 
 import scala.concurrent.duration.DurationInt
@@ -17,10 +15,7 @@ class AllClusterNodeRestartSpec
     with SdkProvider
     with Eventually {
 
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-
-  lazy val verityEnv = VerityEnvBuilder.default(nodeCount = 3).build(VAS)
+  lazy val verityEnv = VerityEnvBuilder(nodeCount = 3).build(VAS)
   lazy val issuerSDK = setupIssuerSdk(verityEnv, executionContext)
 
   "VerityAdmin" - {
@@ -46,7 +41,6 @@ class AllClusterNodeRestartSpec
 
       "when try to restart all nodes" - {
         "should be successful" in {
-          implicit val ec: ExecutionContext = executionContext
           val restartFutures = verityEnv.availableNodes.map(n => n.restart())
           val future = Future.sequence(restartFutures)
           assert(future.isReadyWithin(30.seconds), "Cluster restart failed")
@@ -63,11 +57,4 @@ class AllClusterNodeRestartSpec
       }
     }
   }
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

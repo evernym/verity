@@ -1,34 +1,47 @@
-package com.evernym.verity.integration.with_basic_sdk
+package com.evernym.verity.integration.non_multi_ledger.with_issuer_setup_v0_6
 
-import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
-import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider, VerifierSdk}
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
+import com.evernym.verity.integration.base.endorser_svc_provider.MockEndorserServiceProvider
+import com.evernym.verity.integration.base.endorser_svc_provider.MockEndorserUtil._
+import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider, VerifierSdk}
+import com.evernym.verity.integration.base.verity_provider.VerityEnv
+import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.{AcceptRequest, Sent}
+import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.PublicIdentifier
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Ctl.Request
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Msg.RequestPresentation
-import com.evernym.verity.protocol.protocols.presentproof.v_1_0.ProofAttribute
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{ProofAttribute, ProofPredicate, RestrictionsV1}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults.ProofValidated
-import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
+import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
+import com.typesafe.config.{Config, ConfigFactory}
 
-
+import scala.concurrent.duration._
 import scala.concurrent.Await
 
 
-class PresentProofSpec
+class PresentationFlowSpec
   extends VerityProviderBaseSpec
-  with SdkProvider {
+    with SdkProvider {
 
-  var issuerSDK: IssuerSdk = _
-  var verifierSDK: VerifierSdk = _
-  var holderSDK: HolderSdk = _
+  lazy val issuerVerityEnv: VerityEnv = VerityEnvBuilder().withConfig(OVERRIDDEN_CONFIG).build(VAS)
+  lazy val verifierVerityEnv: VerityEnv = VerityEnvBuilder().withConfig(OVERRIDDEN_CONFIG).build(VAS)
+  lazy val holderVerityEnv: VerityEnv = VerityEnvBuilder().withConfig(OVERRIDDEN_CONFIG).build(CAS)
+
+  lazy val issuerSDK: IssuerSdk = setupIssuerSdk(issuerVerityEnv, executionContext)
+  lazy val verifierSDK: VerifierSdk = setupVerifierSdk(verifierVerityEnv, executionContext)
+  lazy val holderSDK: HolderSdk = setupHolderSdk(holderVerityEnv, executionContext,
+    defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, isMultiLedgerSupported = false)
+
+  lazy val endorserSvcProvider: MockEndorserServiceProvider = MockEndorserServiceProvider(issuerVerityEnv)
 
   val issuerHolderConn = "connId1"
   val verifierHolderConn = "connId2"
 
+  var pubIdentifier: PublicIdentifier = _
   var schemaId: SchemaId = _
   var credDefId: CredDefId = _
   var offerCred: OfferCred = _
@@ -40,23 +53,13 @@ class PresentProofSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val issuerVerityEnv = VerityEnvBuilder().buildAsync(VAS)
-    val verifierVerityEnv = VerityEnvBuilder().buildAsync(VAS)
-    val holderVerityEnv = VerityEnvBuilder().buildAsync(CAS)
-
-    val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext)
-    val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnv, executionContext)
-    val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
-
-    issuerSDK   = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
-    verifierSDK = Await.result(verifierSDKFut, SDK_BUILD_TIMEOUT)
-    holderSDK   = Await.result(holderSDKFut, SDK_BUILD_TIMEOUT)
-
     provisionEdgeAgent(issuerSDK)
     provisionEdgeAgent(verifierSDK)
     provisionCloudAgent(holderSDK)
 
-    setupIssuer_v0_6(issuerSDK)
+    Await.result(endorserSvcProvider.publishEndorserActivatedEvent(activeEndorserDid, INDY_LEDGER_PREFIX), 5.seconds)
+
+    pubIdentifier = setupIssuer_v0_6(issuerSDK)
     schemaId = writeSchema_v0_6(issuerSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
     credDefId = writeCredDef_v0_6(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))
 
@@ -125,16 +128,42 @@ class PresentProofSpec
   "VerifierSDK" - {
     "sent 'request' (present-proof 1.0) message" - {
       "should be successful" in {
-        val msg = Request("name-age",
+        val msg = Request(
+          "name-age",
           Option(List(
             ProofAttribute(
               None,
-              Option(List("name", "age")),
-              None,
+              Option(List("name")),
+              Option(List(
+                RestrictionsV1(
+                  schema_id = Option(schemaId),
+                  schema_issuer_did = None,
+                  schema_name = None,
+                  schema_version = None,
+                  issuer_did = Option(pubIdentifier.did),
+                  cred_def_id = Option(credDefId)
+                )
+              )),
               None,
               self_attest_allowed = false)
           )),
-          None,
+          Option(List(
+            ProofPredicate(
+              "age",
+              ">=",
+              20,
+              Option(List(
+                RestrictionsV1(
+                  schema_id = Option(schemaId),
+                  schema_issuer_did = None,
+                  schema_name = None,
+                  schema_version = None,
+                  issuer_did = Option(pubIdentifier.did),
+                  cred_def_id = Option(credDefId)
+                )
+              )),
+              None)
+          )),
           None
         )
         verifierSDK.sendMsgForConn(verifierHolderConn, msg)
@@ -163,10 +192,17 @@ class PresentProofSpec
       val receivedMsgParam = verifierSDK.expectMsgOnWebhook[PresentationResult]()
       receivedMsgParam.msg.verification_result shouldBe ProofValidated
       val requestPresentation = receivedMsgParam.msg.requested_presentation
-      requestPresentation.revealed_attrs.size shouldBe 2
+      requestPresentation.revealed_attrs.size shouldBe 1
+      requestPresentation.predicates.size shouldBe 1
       requestPresentation.unrevealed_attrs.size shouldBe 0
       requestPresentation.self_attested_attrs.size shouldBe 0
     }
   }
 
+  val OVERRIDDEN_CONFIG: Config =
+    ConfigFactory.parseString(
+      """
+         verity.vdr.multi-ledger-support-enabled = false
+        """.stripMargin
+    )
 }

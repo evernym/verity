@@ -4,7 +4,6 @@ import akka.http.scaladsl.model.StatusCodes.Accepted
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerRestSDK, SdkProvider}
 import com.evernym.verity.did.didcomm.v1.{Thread => MsgThread}
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, PublicIdentifierCreated}
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Ctl.AskQuestion
 import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Msg.{Answer, Question}
@@ -19,18 +18,13 @@ import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{Write, StatusRep
 import com.typesafe.config.{Config, ConfigFactory}
 
 import java.util.UUID
-import com.evernym.verity.util.TestExecutionContextProvider
 
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 
 
 class RestIssuerSdkSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-
 
   var issuerRestSDK: IssuerRestSDK = _
   var holderSDK: HolderSdk = _
@@ -38,8 +32,8 @@ class RestIssuerSdkSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val issuerVerityEnvFut = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).buildAsync(VAS)
-    val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
+    val issuerVerityEnvFut = VerityEnvBuilder().withConfig(REST_API_CONFIG).buildAsync(VAS)
+    val holderVerityEnvFut = VerityEnvBuilder().buildAsync(CAS)
     val issuerRestSDKFut = setupIssuerRestSdkAsync(issuerVerityEnvFut, executionContext)
     val holderSDKFut = setupHolderSdkAsync(holderVerityEnvFut, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
 
@@ -196,10 +190,4 @@ class RestIssuerSdkSpec
         """.stripMargin
     )
 
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

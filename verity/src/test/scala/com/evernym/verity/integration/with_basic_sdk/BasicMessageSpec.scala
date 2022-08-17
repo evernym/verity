@@ -8,17 +8,12 @@ import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, S
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Ctl.SendMessage
 import com.evernym.verity.protocol.protocols.basicMessage.v_1_0.Msg.Message
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
-import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.util.TestExecutionContextProvider
 
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 
 
 class BasicMessageSpec extends VerityProviderBaseSpec
   with SdkProvider {
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   var issuerSDK: IssuerSdk = _
   var holderSDK: HolderSdk = _
@@ -29,8 +24,8 @@ class BasicMessageSpec extends VerityProviderBaseSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val issuerVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
-    val holderVerityEnv = VerityEnvBuilder.default().buildAsync(CAS)
+    val issuerVerityEnv = VerityEnvBuilder().buildAsync(VAS)
+    val holderVerityEnv = VerityEnvBuilder().buildAsync(CAS)
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext)
     val holderSDKFut = setupHolderSdkAsync(holderVerityEnv, defaultSvcParam.ledgerTxnExecutor, defaultSvcParam.vdrTools, executionContext)
@@ -87,11 +82,4 @@ class BasicMessageSpec extends VerityProviderBaseSpec
       issuerSDK.expectMsgOnWebhook[Message]()
     }
   }
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

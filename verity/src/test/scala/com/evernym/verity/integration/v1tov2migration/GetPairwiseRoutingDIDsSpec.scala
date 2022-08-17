@@ -10,11 +10,7 @@ import com.evernym.verity.constants.ActorNameConstants.ACTOR_TYPE_USER_AGENT_ACT
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.integration.base.{EAS, VerityProviderBaseSpec}
 import com.evernym.verity.testkit.util.HttpUtil
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.ConfigFactory
-
-import scala.concurrent.ExecutionContext
 
 
 class GetPairwiseRoutingDIDsSpec
@@ -27,7 +23,7 @@ class GetPairwiseRoutingDIDsSpec
   }
 
 
-  lazy val issuerEAS = VerityEnvBuilder.default().withConfig(TEST_KIT_CONFIG).build(EAS)
+  lazy val issuerEAS = VerityEnvBuilder().withConfig(TEST_KIT_CONFIG).build(EAS)
   lazy val issuerRestSDK = setupIssuerRestSdk(issuerEAS, futureExecutionContext)
 
   "Verity1ToVerity2Migration Internal API" - {
@@ -118,10 +114,6 @@ class GetPairwiseRoutingDIDsSpec
     issuerEAS.persStoreTestKit.storeAgentRoute(mySelfRelAgentDIDPair.did, ACTOR_TYPE_USER_AGENT_ACTOR, mySelfRelAgentPersistenceId.entityId)
     issuerEAS.persStoreTestKit.addEventsToPersistentStorage(mySelfRelAgentPersistenceId, basicUserAgentEvents ++ pairwiseDIDEvents)
   }
-
-  lazy val ecp: ExecutionContextProvider = TestExecutionContextProvider.ecp
-  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
-  override def executionContextProvider: ExecutionContextProvider = ecp
 
   private val TEST_KIT_CONFIG =
     ConfigFactory.empty

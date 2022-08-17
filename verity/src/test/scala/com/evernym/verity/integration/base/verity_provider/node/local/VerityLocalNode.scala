@@ -40,7 +40,7 @@ case class VerityLocalNode(tmpDirPath: Path,
   private val logger: Logger = LoggingUtil.getLoggerByName("VerityLocalNode")
 
   def start()(implicit ec: ExecutionContext): Future[Unit] = {
-    logger.info(s"Start verity instance with artery port ${portProfile.artery} and http port ${portProfile.http}")
+    logger.info(s"Verity node [${portProfile.artery}]: start with http port ${portProfile.http}")
     if (!isAvailable) {
       Future {
         startVerityInstance()
@@ -48,7 +48,7 @@ case class VerityLocalNode(tmpDirPath: Path,
         srv =>
           _httpServer = srv
           isAvailable = true
-          logger.info(s"Verity instance ${portProfile.artery} started")
+          logger.info(s"Verity node [${portProfile.artery}]: started")
       }
     } else {
       Future.successful(())
@@ -64,7 +64,7 @@ case class VerityLocalNode(tmpDirPath: Path,
 
   private def stopGracefully(): Unit = {
     if (httpServer == null){
-      logger.warn(s"Verity node ${portProfile.artery} 'stopGracefully' called, but it seems like node was not be started")
+      logger.warn(s"Verity node [${portProfile.artery}]: 'stopGracefully' called, but it seems like node was not be started")
       return
     }
     val cluster = Cluster(platform.actorSystem)

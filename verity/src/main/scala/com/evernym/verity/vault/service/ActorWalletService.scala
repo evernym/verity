@@ -16,7 +16,10 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 
-class ActorWalletService(system: ActorSystem, appConfigParam: AppConfig, poolConnManager: LedgerPoolConnManager, executionContext: ExecutionContext)
+class ActorWalletService(system: ActorSystem,
+                         appConfigParam: AppConfig,
+                         poolConnManager: LedgerPoolConnManager,
+                         executionContext: ExecutionContext)
   extends WalletService with ShardUtil {
 
   override def appConfig: AppConfig = appConfigParam

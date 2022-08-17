@@ -103,7 +103,7 @@ object LocalVerity {
           appConfig,
           vdrAdapter,
           serviceParam.flatMap(_.ledgerTxnExecutor)
-        )(executor)
+        )
       }
       override lazy val storageAPI: StorageAPI = {
         serviceParam

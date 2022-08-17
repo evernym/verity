@@ -7,7 +7,11 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.util.OptionUtil
+import com.evernym.verity.vdr.{CredDefId, DID_PREFIX}
 import com.typesafe.scalalogging.Logger
+import org.json.{JSONException, JSONObject}
+
+import scala.util.{Failure, Success, Try}
 
 trait ProtocolHelpers[P,R,M,E,S,I] {
   type Context = ProtocolContextApi[P, R, M, E, S, String]
@@ -70,6 +74,37 @@ trait ProtocolHelpers[P,R,M,E,S,I] {
   def buildQualifiedIdentifier(identifier: Option[DidStr])(implicit ctx: Context): Option[DidStr] = {
     ProtocolHelpers.buildQualifiedIdentifier(identifier, ctx)
   }
+
+  def downgradeIdentifiersIfRequired(jsonStr: String,
+                                     identifier: String,
+                                     isMultiLedgerSupportEnabled: Boolean)
+                                     (implicit ctx: Context): String = {
+    val isFQIdentifier = identifier.startsWith(DID_PREFIX)
+    if (isFQIdentifier && !isMultiLedgerSupportEnabled) {
+      JsonValueReplacer(jsonStr)
+        .replaceIfExists(ISSUER_DID, ctx.vdr.toLegacyNonFqId)
+        .replaceIfExists(SCHEMA_ID, ctx.vdr.toLegacyNonFqSchemaId)
+        .replaceIfExists(CRED_DEF_ID, ctx.vdr.toLegacyNonFqCredDefId)
+        .jsonString
+    } else {
+      jsonStr
+    }
+  }
+
+  def extractOptionalField(json: String, fieldName: String): Option[String] = {
+    Try {
+      val jsonObject = new JSONObject(json)
+      jsonObject.getString(fieldName)
+    }.toOption
+  }
+
+  def extractCredDefId(json: String): CredDefId = {
+    extractOptionalField(json, CRED_DEF_ID).getOrElse(throw new RuntimeException(s"'$CRED_DEF_ID' not found"))
+  }
+
+  val ISSUER_DID = "issuer_did"
+  val SCHEMA_ID = "schema_id"
+  val CRED_DEF_ID = "cred_def_id"
 }
 
 object ProtocolHelpers {
@@ -90,6 +125,17 @@ object ProtocolHelpers {
     identifier.map { id =>
       if (ctx.vdr.isMultiLedgerSupportEnabled) ctx.vdr.fqDID(id, force = true)
       else "did:sov:" + id
+    }
+  }
+}
+
+case class JsonValueReplacer(jsonString: String) {
+  def replaceIfExists(fieldName: String, replacerWith: String => String): JsonValueReplacer = {
+    val jsonObject = new JSONObject(jsonString)
+    Try(jsonObject.getString(fieldName)) match {
+      case Success(value) => JsonValueReplacer(jsonObject.put(fieldName, replacerWith(value)).toString)
+      case Failure(_: JSONException) => this
+      case Failure(e) => throw e
     }
   }
 }

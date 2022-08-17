@@ -81,7 +81,7 @@ class IssueCredentialSpec
         issuer expect signal[Sig.AcceptProposal]
 
         issuer walletAccess MockableWalletAccess()
-
+        issuer vdrAccess MockableVdrAccess()
         issuer ~ buildSendOffer()
         f.checkTotalSegments(4)
         issuer expect signal[Sig.Sent]
@@ -108,6 +108,7 @@ class IssueCredentialSpec
         issuer expect signal[Sig.AcceptProposal]
 
         issuer walletAccess MockableWalletAccess()
+        issuer vdrAccess MockableVdrAccess()
 
         issuer ~ buildSendOffer()
         f.checkTotalSegments(4)
@@ -139,7 +140,7 @@ class IssueCredentialSpec
         issuer expect signal[Sig.AcceptProposal]
 
         issuer walletAccess MockableWalletAccess()
-
+        issuer vdrAccess MockableVdrAccess()
         issuer ~ buildSendOffer()
         f.checkTotalSegments(4)
         issuer expect signal[Sig.Sent]
@@ -177,6 +178,7 @@ class IssueCredentialSpec
         issuer expect signal[Sig.AcceptProposal]
 
         issuer walletAccess MockableWalletAccess()
+        issuer vdrAccess MockableVdrAccess()
         issuer ~ buildSendOffer()
         f.checkTotalSegments(4)
         issuer expect signal[Sig.Sent]
@@ -211,6 +213,7 @@ class IssueCredentialSpec
         issuer expect signal[Sig.AcceptProposal]
 
         issuer walletAccess MockableWalletAccess()
+        issuer vdrAccess MockableVdrAccess()
         issuer ~ buildSendOffer()
         f.checkTotalSegments(4)
         issuer expect signal[Sig.Sent]
@@ -247,6 +250,7 @@ class IssueCredentialSpec
         issuer expect signal[Sig.AcceptProposal]
 
         issuer walletAccess MockableWalletAccess()
+        issuer vdrAccess MockableVdrAccess()
         issuer ~ buildSendOffer()
         f.checkTotalSegments(4)
         issuer expect signal[Sig.Sent]
@@ -282,6 +286,7 @@ class IssueCredentialSpec
       val (issuer, holder) = (f.alice, f.bob)
 
       issuer walletAccess MockableWalletAccess()
+      issuer vdrAccess MockableVdrAccess()
       (issuer engage holder) ~ buildSendOffer(None)
       f.checkTotalSegments(2)
       issuer expect signal[Sig.Sent]
@@ -314,6 +319,7 @@ class IssueCredentialSpec
       val (issuer, holder) = (f.alice, f.bob)
 
       issuer walletAccess MockableWalletAccess()
+      issuer vdrAccess MockableVdrAccess()
       (issuer engage holder) ~ buildSendOffer(Option(false))
       f.checkTotalSegments(2)
       issuer expect signal[Sig.Sent]
@@ -346,6 +352,7 @@ class IssueCredentialSpec
       val (issuer, holder) = (f.alice, f.bob)
 
       issuer walletAccess MockableWalletAccess()
+      issuer vdrAccess MockableVdrAccess()
       (issuer engage holder) ~ buildSendOffer(Option(true))
       f.checkTotalSegments(2)
       issuer expect signal[Sig.Sent]
@@ -373,6 +380,7 @@ class IssueCredentialSpec
       val (issuer, holder) = (f.alice, f.bob)
 
       issuer walletAccess MockableWalletAccess()
+      issuer vdrAccess MockableVdrAccess()
       (issuer engage holder) ~ buildSendOffer(Option(false))
       f.checkTotalSegments(2)
       issuer expect signal[Sig.Sent]
@@ -505,6 +513,7 @@ class IssueCredentialSpec
       issuer.initParams(defaultInitParams.updated(MY_PUBLIC_DID, ""))
 
       issuer walletAccess MockableWalletAccess()
+      issuer vdrAccess MockableVdrAccess()
       holder walletAccess MockableWalletAccess()
       holder vdrAccess MockableVdrAccess()
 

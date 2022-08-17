@@ -58,11 +58,11 @@ trait InMemLedger {
         val s = JacksonMsgCodec.fromJson[MockVdrSchema](new String(txnBytes))
         val schemaJson = new JSONObject(s.json)
         schemaJson.put("seqNo", 10)
-        schemas = schemas + (s.schemaId -> schemaJson.toString.getBytes)
+        schemas = schemas + (unqualifiedSchemaId(s.schemaId) -> schemaJson.toString.getBytes)
 
       case CRED_DEF =>
         val cd = JacksonMsgCodec.fromJson[MockVdrCredDef](new String(txnBytes))
-        credDefs = credDefs + (cd.credDefId -> cd.json.getBytes)
+        credDefs = credDefs + (unqualifiedCredDefId(cd.credDefId) -> cd.json.getBytes)
 
       case other =>
         throw new RuntimeException("payload type not supported: " + other)
@@ -71,19 +71,19 @@ trait InMemLedger {
   }
 
   def resolveSchema(fqSchemaId: FqSchemaId): VdrSchema = {
-    val data = schemas.getOrElse(fqSchemaId,
+    val data = schemas.getOrElse(unqualifiedSchemaId(fqSchemaId),
       throw new RuntimeException("schema not found for given id: " + fqSchemaId))
     new String(data)
   }
 
   def resolveCredDef(fqCredDefId: FqCredDefId): VdrCredDef = {
-    val data = credDefs.getOrElse(fqCredDefId,
+    val data = credDefs.getOrElse(unqualifiedCredDefId(fqCredDefId),
       throw new RuntimeException("cred def not found for given id: " + fqCredDefId))
     new String(data)
   }
 
   def resolveDid(fqDid: FqDID): VdrDid = {
-    val data = didDocs.getOrElse(VDRUtil.toLegacyNonFqDid(fqDid, vdrMultiLedgerSupportEnabled = false),
+    val data = didDocs.getOrElse(unqualifiedDid(fqDid),
       throw new RuntimeException("did doc not found for given id: " +
       fqDid + s" (available did docs: ${didDocs.keys.mkString(", ")})"))
     new String(data)
@@ -92,6 +92,17 @@ trait InMemLedger {
   def addDidDoc(dd: MockVdrDIDDoc): Unit = {
     val ddJson = JacksonMsgCodec.toJson(dd)
     didDocs = didDocs + (dd.id -> ddJson.getBytes)
+  }
+
+  private def unqualifiedDid(didStr: DidStr): DidStr = {
+    VDRUtil.toLegacyNonFqDid(didStr, vdrMultiLedgerSupportEnabled = false)
+  }
+  private def unqualifiedSchemaId(schemaId: SchemaId): SchemaId = {
+    VDRUtil.toLegacyNonFqSchemaId(schemaId, vdrMultiLedgerSupportEnabled = false)
+  }
+
+  private def unqualifiedCredDefId(credDefId: CredDefId): CredDefId = {
+    VDRUtil.toLegacyNonFqCredDefId(credDefId, vdrMultiLedgerSupportEnabled = false)
   }
 
   private def extractSchemaId(json: String): String = {
@@ -138,6 +149,17 @@ trait InMemLedger {
     }
   }
 
+  def getSchema(schemaId: SchemaId): VdrSchema = {
+    val data = schemas.getOrElse(schemaId,
+      throw new RuntimeException("schema not found for given id: " + schemaId))
+    new String(data)
+  }
+
+  def getCredDef(credDefId: CredDefId): VdrCredDef = {
+    val data = credDefs.getOrElse(credDefId,
+      throw new RuntimeException("cred def not found for given id: " + credDefId))
+    new String(data)
+  }
 }
 
 

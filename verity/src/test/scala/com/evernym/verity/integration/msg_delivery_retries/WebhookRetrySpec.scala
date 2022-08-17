@@ -9,24 +9,18 @@ import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.{Created,
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Ctl.Update
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.Sig.ConfigResult
 import com.evernym.verity.protocol.protocols.updateConfigs.v_0_6.{Config => AgentConfig}
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Seconds, Span}
 
 import java.util.UUID
-import scala.concurrent.ExecutionContext
 
 class WebhookRetrySpec
   extends VerityProviderBaseSpec
     with SdkProvider
     with Eventually {
 
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().withConfig(REST_API_CONFIG).build(VAS)
+  lazy val issuerVerityEnv = VerityEnvBuilder().withConfig(REST_API_CONFIG).build(VAS)
 
   lazy val issuerRestSDK = setupIssuerRestSdk(issuerVerityEnv, executionContext)
 
@@ -74,11 +68,4 @@ class WebhookRetrySpec
          verity.rest-api.enabled = true
         """.stripMargin
     )
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

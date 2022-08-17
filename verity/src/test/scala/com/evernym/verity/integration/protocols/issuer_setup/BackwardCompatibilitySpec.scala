@@ -7,13 +7,8 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.{VAS, VerityProviderBaseSpec}
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.protocol.engine.asyncapi.wallet.WalletAccess.KEY_ED25519
-import com.evernym.verity.protocol.protocols.issuersetup.v_0_7.IssuerSetup
 import com.evernym.verity.protocol.protocols.issuersetup.{v_0_6 => issuerSetup_v0_6}
 import com.evernym.verity.protocol.protocols.issuersetup.{v_0_7 => issuerSetup_v0_7}
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
-
-import scala.concurrent.ExecutionContext
 
 
 //confirms that issuer setup 0.6 is backward compatible with legacy events
@@ -21,10 +16,7 @@ class BackwardCompatibilitySpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
+  lazy val issuerVerityEnv = VerityEnvBuilder().build(VAS)
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
 
   var issuerKey: NewKeyCreated = null
@@ -95,11 +87,4 @@ class BackwardCompatibilitySpec
     )
     newDID
   }
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

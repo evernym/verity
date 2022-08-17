@@ -13,12 +13,11 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.{Invitati
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.OutOfBandInvitation
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
-import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
-import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 
 
 class InvitationSpec
@@ -33,7 +32,7 @@ class InvitationSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val issuerVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
+    val issuerVerityEnvFut = VerityEnvBuilder().buildAsync(VAS)
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext, Option(V1OAuthParam(5.seconds)))
     issuerVerityEnv = Await.result(issuerVerityEnvFut, ENV_BUILD_TIMEOUT)
     issuerSDK = Await.result(issuerSDKFut, SDK_BUILD_TIMEOUT)
@@ -45,9 +44,9 @@ class InvitationSpec
     issuerSDK.registerWebhook()
     issuerSDK.sendUpdateConfig(UpdateConfigReqMsg(Set(ConfigDetail("name", "config-issuer-name"), ConfigDetail("logoUrl", "config-issuer-logo-url"))))
 
-    setupIssuer(issuerSDK)
-    schemaId = writeSchema(issuerSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
-    credDefId = writeCredDef(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))
+    setupIssuer_v0_6(issuerSDK)
+    schemaId = writeSchema_v0_6(issuerSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
+    credDefId = writeCredDef_v0_6(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))
   }
 
   "IssuerSDK" - {
@@ -162,8 +161,4 @@ class InvitationSpec
 
   var lastReceivedMsgThread: Option[MsgThread] = None
 
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-  override def executionContextProvider: ExecutionContextProvider = ecp
-  override def futureExecutionContext: ExecutionContext = ecp.futureExecutionContext
 }

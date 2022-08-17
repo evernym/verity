@@ -22,14 +22,13 @@ import com.evernym.verity.protocol.protocols.questionAnswer.v_1_0.Signal.AnswerG
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.testkit.TestSponsor
-import com.evernym.verity.util.{TestExecutionContextProvider, TimeUtil}
-import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.util.TimeUtil
 import com.typesafe.config.ConfigFactory
 import org.json.JSONObject
 
 import java.util.UUID
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 
 
 class SponsorPushNotifsSpec
@@ -58,9 +57,9 @@ class SponsorPushNotifsSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val issuerVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
-    val verifierVerityEnv = VerityEnvBuilder.default().buildAsync(VAS)
-    val holderVerityEnv = VerityEnvBuilder.default().withConfig(CAS_CONFIG).buildAsync(CAS)
+    val issuerVerityEnv = VerityEnvBuilder().buildAsync(VAS)
+    val verifierVerityEnv = VerityEnvBuilder().buildAsync(VAS)
+    val holderVerityEnv = VerityEnvBuilder().withConfig(CAS_CONFIG).buildAsync(CAS)
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnv, executionContext)
     val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnv, executionContext)
@@ -90,9 +89,9 @@ class SponsorPushNotifsSpec
       ComMethod("id", 1, s"FCM:localhost:${pushNotifListener.port}/webhook", None, None)
     ))
 
-    setupIssuer(issuerSDK)
-    schemaId = writeSchema(issuerSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
-    credDefId = writeCredDef(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))
+    setupIssuer_v0_6(issuerSDK)
+    schemaId = writeSchema_v0_6(issuerSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
+    credDefId = writeCredDef_v0_6(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))
 
     establishConnection(issuerHolderConn, issuerSDK, holderSDK)         //TODO: you can provide a label in the 2nd parameter if you want to
     checkHolderPushNotif { pushNotifJson =>
@@ -184,7 +183,7 @@ class SponsorPushNotifsSpec
 
     "when sent 'request-credential' (issue-credential 1.0) message" - {
       "should be successful" in {
-        holderSDK.sendCredRequest(issuerHolderConn, credDefId, offerCred, lastReceivedThread)
+        holderSDK.sendCredRequest(issuerHolderConn, offerCred, lastReceivedThread)
       }
     }
   }
@@ -288,11 +287,6 @@ class SponsorPushNotifsSpec
     val pushNotif = new JSONObject(msg)
     check(pushNotif)
   }
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureExecutionContext: ExecutionContext = executionContext
-  override def executionContextProvider: ExecutionContextProvider = ecp
 
   lazy val CAS_CONFIG = ConfigFactory.parseString(
     s"""

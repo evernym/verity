@@ -13,29 +13,24 @@ import com.evernym.verity.ledger.LedgerSvcException
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6._
 import com.evernym.verity.protocol.protocols.writeSchema.v_0_6.{StatusReport => WriteSchemaStatusReport, Write => WriteSchema}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.v_0_6.{Write => WriteCredDef}
-import com.evernym.verity.util2.ExecutionContextProvider
-import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.vdr.base.PayloadConstants.{CRED_DEF, TYPE}
 import com.evernym.verity.vdr.base.{INDY_SOVRIN_NAMESPACE, InMemLedger}
 import com.evernym.verity.vdr.service.VDRAdapterUtil
 import com.evernym.verity.vdr.{FqCredDefId, FqDID, FqSchemaId, MockIndyLedger, MockLedgerRegistry, MockVdrTools, Namespace, TxnResult, TxnSpecificParams, VdrCredDef, VdrDid, VdrSchema}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 
 class WriteCredDefFailureSpec
   extends VerityProviderBaseSpec
     with SdkProvider  {
 
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-
   override lazy val defaultSvcParam: ServiceParam =
     ServiceParam
       .empty
-      .withVdrTools(new DummyVdrTools(MockIndyLedger("genesis.txn file path", None))(futureExecutionContext))
+      .withVdrTools(new DummyVdrTools(MockIndyLedger("genesis.txn file path", None)))
 
-  lazy val issuerVerityApp = VerityEnvBuilder.default().build(VAS)
+  lazy val issuerVerityApp = VerityEnvBuilder().build(VAS)
   lazy val issuerSDK = setupIssuerSdk(issuerVerityApp, executionContext)
   var schemaId: String = ""
 
@@ -67,7 +62,7 @@ class WriteCredDefFailureSpec
   }
 
   //in-memory version of VDRTools to be used in tests unit/integration tests
-  class DummyVdrTools(ledger: InMemLedger)(implicit ec: ExecutionContext)
+  class DummyVdrTools(ledger: InMemLedger)
     extends MockVdrTools(new MockLedgerRegistry(Map(INDY_SOVRIN_NAMESPACE -> ledger))) {
 
     //TODO: as we add/integrate actual VDR apis and their tests,
@@ -136,11 +131,4 @@ class WriteCredDefFailureSpec
 
     override def submitQuery(namespace: Namespace, query: String): Future[TxnResult] = ???
   }
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

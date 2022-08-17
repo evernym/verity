@@ -10,22 +10,20 @@ import com.evernym.verity.integration.base.sdk_provider.msg_listener.JsonMsgList
 import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, JsonMsgUtil, SdkProvider, VerifierSdk}
 import com.evernym.verity.integration.base.{CAS, EAS, PortProvider, VerityProviderBaseSpec}
 import com.evernym.verity.protocol.protocols.connecting.common.InviteDetail
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.{ExecutionContextProvider, Status}
+import com.evernym.verity.util2.Status
 import com.typesafe.config.ConfigFactory
 import org.json.JSONObject
 
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext
 
 
 class VariousPushNotifsSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  val issuerVerityEnv = VerityEnvBuilder.default().build(EAS)
-  val verifierVerityEnv = VerityEnvBuilder.default().build(EAS)
-  val holderVerityEnv = VerityEnvBuilder.default().withConfig(CAS_CONFIG).build(CAS)
+  val issuerVerityEnv = VerityEnvBuilder().build(EAS)
+  val verifierVerityEnv = VerityEnvBuilder().build(EAS)
+  val holderVerityEnv = VerityEnvBuilder().withConfig(CAS_CONFIG).build(CAS)
 
   var issuerSDK: IssuerSdk = setupIssuerSdk(issuerVerityEnv, executionContext)
   var verifierSDK: VerifierSdk = setupVerifierSdk(verifierVerityEnv, executionContext)
@@ -138,11 +136,6 @@ class VariousPushNotifsSpec
     val pushNotif = new JSONObject(msg)
     check(pushNotif)
   }
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-  override def futureExecutionContext: ExecutionContext = executionContext
-  override def executionContextProvider: ExecutionContextProvider = ecp
 
   lazy val CAS_CONFIG = ConfigFactory.parseString(
     s"""

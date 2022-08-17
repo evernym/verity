@@ -7,19 +7,12 @@ import com.evernym.verity.agentmsg.msgfamily.configs.UpdateConfigReqMsg
 import com.evernym.verity.integration.base.sdk_provider.SdkProvider
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.IssuerSetup.alreadyCreatingProblem
 import com.evernym.verity.protocol.protocols.issuersetup.v_0_6.{Create, IssuerSetupDefinition, ProblemReport, PublicIdentifierCreated}
-import com.evernym.verity.util.TestExecutionContextProvider
-import com.evernym.verity.util2.ExecutionContextProvider
-
-import scala.concurrent.ExecutionContext
 
 class ActorStateModifierSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
 
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
-
-  lazy val issuerVerityEnv = VerityEnvBuilder.default().build(VAS)
+  lazy val issuerVerityEnv = VerityEnvBuilder().build(VAS)
   lazy val issuerSDK = setupIssuerSdk(issuerVerityEnv, executionContext)
 
   override def beforeAll(): Unit = {
@@ -63,9 +56,4 @@ class ActorStateModifierSpec
       }
     }
   }
-
-
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

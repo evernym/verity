@@ -18,11 +18,10 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResu
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
-import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
-import com.evernym.verity.util2.ExecutionContextProvider
+import com.evernym.verity.util.Base64Util
 import org.json.JSONObject
 
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.Await
 
 
 //Holder connects with Issuer via a "cred offer attached OOB invitation" and responds to the attached message.
@@ -34,9 +33,6 @@ import scala.concurrent.{Await, ExecutionContext}
 class ReuseAttachmentSpec
   extends VerityProviderBaseSpec
     with SdkProvider {
-
-  lazy val ecp = TestExecutionContextProvider.ecp
-  lazy val executionContext: ExecutionContext = ecp.futureExecutionContext
 
   var issuerVerityEnv: VerityEnv = _
   var verifierVerityEnv: VerityEnv = _
@@ -63,9 +59,9 @@ class ReuseAttachmentSpec
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    val issuerVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
-    val verifierVerityEnvFut = VerityEnvBuilder.default().buildAsync(VAS)
-    val holderVerityEnvFut = VerityEnvBuilder.default().buildAsync(CAS)
+    val issuerVerityEnvFut = VerityEnvBuilder().buildAsync(VAS)
+    val verifierVerityEnvFut = VerityEnvBuilder().buildAsync(VAS)
+    val holderVerityEnvFut = VerityEnvBuilder().buildAsync(CAS)
 
     val issuerSDKFut = setupIssuerSdkAsync(issuerVerityEnvFut, executionContext)
     val verifierSDKFut = setupVerifierSdkAsync(verifierVerityEnvFut, executionContext)
@@ -82,9 +78,9 @@ class ReuseAttachmentSpec
     provisionEdgeAgent(issuerSDK)
     provisionEdgeAgent(verifierSDK)
     provisionCloudAgent(holderSDK)
-    setupIssuer(issuerSDK)
-    schemaId = writeSchema(issuerSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
-    credDefId = writeCredDef(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))
+    setupIssuer_v0_6(issuerSDK)
+    schemaId = writeSchema_v0_6(issuerSDK, writeSchema0_6.Write("name", "1.0", Seq("name", "age")))
+    credDefId = writeCredDef_v0_6(issuerSDK, writeCredDef0_6.Write("name", schemaId, None, None))
   }
 
   "IssuerSDK creating first OOB cred offer" - {
@@ -130,7 +126,7 @@ class ReuseAttachmentSpec
           val attachmentJsonObj = new JSONObject(oobOfferCredAttachment)
           offerCred = JacksonMsgCodec.fromJson[OfferCred](attachmentJsonObj.toString())
           lastReceivedThread = Option(MsgThread(Option(attachmentJsonObj.getJSONObject("~thread").getString("thid"))))
-          holderSDK.sendCredRequest(oobIssuerHolderConn, credDefId, offerCred, lastReceivedThread)
+          holderSDK.sendCredRequest(oobIssuerHolderConn, offerCred, lastReceivedThread)
         }
       }
     }
@@ -169,7 +165,7 @@ class ReuseAttachmentSpec
         val attachmentJsonObj = new JSONObject(oobOfferCredAttachment)
         offerCred = JacksonMsgCodec.fromJson[OfferCred](attachmentJsonObj.toString())
         lastReceivedThread = Option(MsgThread(Option(attachmentJsonObj.getJSONObject("~thread").getString("thid"))))
-        holderSDK.sendCredRequest(oobIssuerHolderConn, credDefId, offerCred, lastReceivedThread)
+        holderSDK.sendCredRequest(oobIssuerHolderConn, offerCred, lastReceivedThread)
 
         val receivedMsg = holderSDK.downloadMsg[IssueCredProblemReport](oobIssuerHolderConn)
         receivedMsg.msg.description shouldBe ProblemDescription(
@@ -263,11 +259,4 @@ class ReuseAttachmentSpec
       }
     }
   }
-
-  /**
-   * custom thread pool executor
-   */
-  override def futureExecutionContext: ExecutionContext = executionContext
-
-  override def executionContextProvider: ExecutionContextProvider = ecp
 }

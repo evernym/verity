@@ -7,7 +7,7 @@ import com.evernym.verity.actor.testkit.TestAppConfig
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.exception.DIDException
 import com.evernym.verity.constants.InitParamConstants.{DEFAULT_ENDORSER_DID, MY_ISSUER_DID, MY_ISSUER_VERKEY}
-import com.evernym.verity.integration.base.EndorserUtil
+import com.evernym.verity.integration.base.endorser_svc_provider.MockEndorserUtil
 import com.evernym.verity.protocol.engine.InvalidFieldValueProtocolEngineException
 import com.evernym.verity.protocol.engine.asyncapi.endorser.{ENDORSEMENT_RESULT_SUCCESS_CODE, Endorser}
 import com.evernym.verity.protocol.testkit.DSL.signal
@@ -92,7 +92,7 @@ class IssuerSetupSpec
           MY_ISSUER_VERKEY -> "jhygfvawergrvfdag3475htbserdf"
         ))
         interaction(f.owner) {
-          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+          withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
               withDefaultVdrAccess(f, {
                 f.owner ~ Create(ledgerPrefix, Option("otherEndorser"))
@@ -113,7 +113,7 @@ class IssuerSetupSpec
           MY_ISSUER_VERKEY -> "jhygfvawergrvfdag3475htbserdf"
         ))
         interaction(f.owner) {
-          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+          withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
               withDefaultVdrAccess(f, {
                 f.owner ~ CurrentPublicIdentifier()
@@ -134,7 +134,7 @@ class IssuerSetupSpec
           MY_ISSUER_VERKEY -> ""
         ))
         interaction(f.owner) {
-          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+          withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
               withDefaultVdrAccess(f, {
                 f.owner ~ Create("did:indy:sovrin", Some("someEndorser"))
@@ -160,7 +160,7 @@ class IssuerSetupSpec
           MY_ISSUER_VERKEY -> ""
         ))
         interaction(f.owner) {
-          withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+          withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
             withDefaultWalletAccess(f, {
               withDefaultVdrAccess(f, {
                 f.owner ~ Create(ledgerPrefix, Option("otherEndorser"))
@@ -188,7 +188,7 @@ class IssuerSetupSpec
         interaction(f.owner) {
           withDefaultWalletAccess(f, {
             withDefaultVdrAccess(f, {
-              withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))) ,f, {
+              withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))) ,f, {
                 f.owner ~ Create(ledgerPrefix, None)
 
                 f.owner.state shouldBe a[State.WaitingOnEndorser]
@@ -207,7 +207,7 @@ class IssuerSetupSpec
       interaction(f.owner) {
         withDefaultWalletAccess(f, {
           withDefaultVdrAccess(f, {
-            withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))) ,f, {
+            withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))) ,f, {
 
               f.owner ~ Create(ledgerPrefix, Some(userEndorser))
 
@@ -228,7 +228,7 @@ class IssuerSetupSpec
         MY_ISSUER_VERKEY -> ""
       ))
       interaction(f.owner) {
-        withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+        withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
             withDefaultVdrAccess(f, {
               f.owner ~ Create(ledgerPrefix, Some("endorserDid"))
@@ -237,7 +237,7 @@ class IssuerSetupSpec
               sig.status shouldBe a[WrittenToLedger]
 
               sig.status match {
-                case wtl: WrittenToLedger => wtl.writtenToLedger shouldBe EndorserUtil.indyLedgerLegacyDefaultPrefix
+                case wtl: WrittenToLedger => wtl.writtenToLedger shouldBe MockEndorserUtil.INDY_LEDGER_PREFIX
                 case _ => throw new AssertionError
               }
             })
@@ -254,7 +254,7 @@ class IssuerSetupSpec
         MY_ISSUER_VERKEY -> ""
       ))
       interaction(f.owner) {
-        withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+        withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
             withDefaultVdrAccess(f, {
               f.owner ~ Create(ledgerPrefix, Some("otherDID"))
@@ -279,7 +279,7 @@ class IssuerSetupSpec
         MY_ISSUER_VERKEY -> ""
       ))
       interaction(f.owner) {
-        withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+        withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
             withDefaultVdrAccess(f, {
               f.owner ~ CurrentPublicIdentifier()
@@ -295,7 +295,7 @@ class IssuerSetupSpec
         MY_ISSUER_VERKEY -> ""
       ))
       interaction(f.owner) {
-        withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+        withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
             withDefaultVdrAccess(f, {
               f.owner ~ CurrentPublicIdentifier()
@@ -316,7 +316,7 @@ class IssuerSetupSpec
         MY_ISSUER_VERKEY -> "jhygfvawergrvfdag3475htbserdf"
       ))
       interaction(f.owner) {
-        withEndorserAccess(Map(EndorserUtil.indyLedgerLegacyDefaultPrefix -> List(Endorser("endorserDid"))), f, {
+        withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))), f, {
           withDefaultWalletAccess(f, {
             withDefaultVdrAccess(f, {
               f.owner ~ CurrentPublicIdentifier()

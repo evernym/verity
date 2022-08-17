@@ -11,7 +11,7 @@ import com.evernym.verity.testkit.agentmsg
 import com.evernym.verity.testkit.agentmsg.AgentMsgPackagingContext
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.actor.wallet.PackedMsg
-import com.evernym.verity.integration.legacy.{CloudAgentDetail, WalletBackupSpecUtil}
+import com.evernym.verity.integration.features.legacy.{CloudAgentDetail, WalletBackupSpecUtil}
 import com.evernym.verity.testkit.mock.agent.MockEdgeAgent
 
 

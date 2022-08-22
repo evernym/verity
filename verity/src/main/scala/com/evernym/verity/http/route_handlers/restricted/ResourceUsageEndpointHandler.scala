@@ -5,7 +5,6 @@ import akka.http.scaladsl.model.StatusCodes._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import akka.util.Timeout
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.cluster_singleton.resourceusagethrottling.blocking._
@@ -25,8 +24,6 @@ import scala.concurrent.Future
 
 trait ResourceUsageEndpointHandler extends BaseRequestHandler with HasExecutionContextProvider {
   this: PlatformWithExecutor =>
-
-  implicit val responseTimeout: Timeout
 
   protected def getBlockedResources(gblc: GetBlockedList): Future[Any] = {
     platform.singletonParentProxy ? ForResourceBlockingStatusMngr(gblc)

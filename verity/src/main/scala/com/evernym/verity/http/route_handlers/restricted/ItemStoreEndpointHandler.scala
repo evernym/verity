@@ -1,6 +1,5 @@
 package com.evernym.verity.http.route_handlers.restricted
 
-import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask

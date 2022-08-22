@@ -29,13 +29,11 @@ import com.evernym.verity.protocol.container.actor.ActorProtocol
 import com.evernym.verity.protocol.engine.events.{DataRetentionPolicySet, DomainIdSet, StorageIdSet}
 import com.evernym.verity.protocol.engine.{DomainId, MockVDRAdapter, PinstId, ProtoDef, RelationshipId, ThreadId}
 import com.evernym.verity.protocol.protocols.protocolRegistry
-import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure}
+import com.evernym.verity.testkit.{BasicSpec, CancelGloballyAfterFailure, TestActorWalletService, TestWalletAPI}
 import com.evernym.verity.util.TestExecutionContextProvider
 import com.evernym.verity.util.Util.buildTimeout
 import com.evernym.verity.util2.{ExecutionContextProvider, HasExecutionContextProvider, RouteId}
 import com.evernym.verity.vault.WalletAPIParam
-import com.evernym.verity.vault.service.ActorWalletService
-import com.evernym.verity.vault.wallet_api.StandardWalletAPI
 import com.evernym.verity.vdr.base.INDY_SOVRIN_NAMESPACE
 import com.evernym.verity.vdr.service.VdrTools
 import com.evernym.verity.vdr.{MockIndyLedger, MockLedgerRegistryBuilder, MockVdrTools}
@@ -270,8 +268,8 @@ trait VerityProviderBaseSpec
     val actorSystem = verityNode.platform.actorSystem
     val appConfig = verityNode.platform.appConfig
     val ledgerPoolConnManager = new IndyLedgerPoolConnManager(actorSystem, appConfig, futureExecutionContext)
-    val walletAPI = new StandardWalletAPI(
-      new ActorWalletService(
+    val walletAPI = new TestWalletAPI(
+      new TestActorWalletService(
         actorSystem,
         appConfig,
         ledgerPoolConnManager,
@@ -279,7 +277,7 @@ trait VerityProviderBaseSpec
       )
     )
     implicit val wap: WalletAPIParam = WalletAPIParam(walletId)
-    walletAPI.executeSync[T](cmd)
+    Await.result(walletAPI.executeAsync[T](cmd), 100.seconds)
   }
 
   protected def getAgentRoute(verityEnv: VerityEnv,

@@ -17,7 +17,7 @@ import com.evernym.verity.protocol.protocols.connections.v_1_0.Msg
 import com.evernym.verity.protocol.protocols.relationship.v_1_0.Signal.Invitation
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
-import com.evernym.verity.testkit.{BasicSpec, TestSponsor}
+import com.evernym.verity.testkit.{BasicSpec, TestSponsor, TestWalletAPI}
 import com.evernym.verity.util.{Base64Util, MessagePackUtil, Util}
 import com.evernym.verity.vault.{KeyParam, WalletAPIParam}
 import com.evernym.verity.util2.ServiceEndpoint
@@ -45,8 +45,7 @@ import com.evernym.verity.testkit.util.{AcceptConnReq_MFV_0_6, AgentCreated_MFV_
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util2.Status.MSG_STATUS_ACCEPTED
 import com.evernym.verity.testkit.util.HttpUtil._
-import com.evernym.verity.vault.service.ActorWalletService
-import com.evernym.verity.vault.wallet_api.StandardWalletAPI
+import com.evernym.verity.testkit.TestActorWalletService
 import com.evernym.verity.vdr.LedgerPrefix
 import com.evernym.verity.vdr.service.VdrTools
 import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
@@ -416,9 +415,10 @@ abstract class SdkBase(param: SdkParam,
 
   val logger: Logger = getLoggerByClass(getClass)
 
-  protected lazy val testWalletAPI: StandardWalletAPI = {
+  protected lazy val testWalletAPI: TestWalletAPI = {
     val poolConnManager: LedgerPoolConnManager = new IndyLedgerPoolConnManager(system, testAppConfig, executionContext)
-    val walletAPI: StandardWalletAPI = new StandardWalletAPI(new ActorWalletService(system, testAppConfig, poolConnManager, executionContext))
+    val testActorWalletService = new TestActorWalletService(system, testAppConfig, poolConnManager, executionContext)
+    val walletAPI = new TestWalletAPI(testActorWalletService)
     walletAPI.executeSync[WalletCreated.type](CreateWallet())
     walletAPI
   }

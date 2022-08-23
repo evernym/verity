@@ -40,7 +40,6 @@ class ActorWalletService(system: ActorSystem,
   override val metricsWriter: MetricsWriter = MetricsWriterExtension(system).get()
 
   override def execute(walletId: String, cmd: WalletCommand): Future[Any] = {
-    //TODO: finalize timeout
     walletActorRegion.ask(ForIdentifier(walletId, cmd))(Timeout(FiniteDuration(200, TimeUnit.SECONDS)))
   }
 

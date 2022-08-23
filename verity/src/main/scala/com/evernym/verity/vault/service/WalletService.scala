@@ -5,7 +5,7 @@ import java.time.temporal.ChronoUnit
 import akka.actor.ActorRef
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException}
 import com.evernym.verity.util2.HasExecutionContextProvider
-import com.evernym.verity.util2.Status.{ALREADY_EXISTS, INVALID_VALUE, SIGNATURE_VERIF_FAILED}
+import com.evernym.verity.util2.Status.{ALREADY_EXISTS, INVALID_VALUE, SIGNATURE_VERIF_FAILED, StatusDetail}
 import com.evernym.verity.actor.wallet.{WalletCmdErrorResponse, WalletCommand}
 import com.evernym.verity.constants.LogKeyConstants.LOG_KEY_ERR_MSG
 import com.evernym.verity.observability.metrics.CustomMetrics.{AS_SERVICE_LIBINDY_WALLET_FAILED_COUNT, AS_SERVICE_LIBINDY_WALLET_SUCCEED_COUNT}
@@ -25,9 +25,7 @@ trait WalletService extends HasExecutionContextProvider {
 
   protected val logger: Logger = LoggingUtil.getLoggerByName("WalletService")
 
-  lazy val BAD_REQ_ERRORS = Set(INVALID_VALUE, SIGNATURE_VERIF_FAILED, ALREADY_EXISTS)
-
-  def tell(walletId: String, cmd: WalletCommand)(implicit sender: ActorRef): Unit
+  lazy val BAD_REQ_ERRORS: Set[StatusDetail] = Set(INVALID_VALUE, SIGNATURE_VERIF_FAILED, ALREADY_EXISTS)
 
   /**
    * asynchronous/non-blocking wallet service call
@@ -75,4 +73,7 @@ trait WalletService extends HasExecutionContextProvider {
    * @return
    */
   protected def execute(walletId: String, cmd: WalletCommand): Future[Any]
+
+  def tell(walletId: String, cmd: WalletCommand)(implicit sender: ActorRef): Unit
+
 }

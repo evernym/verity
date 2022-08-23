@@ -4,12 +4,12 @@ import java.util.concurrent.TimeUnit
 import com.evernym.verity.actor.wallet.{CreateWallet, WalletCreated}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.did.DidPair
+import com.evernym.verity.testkit.TestWalletAPI
 import com.evernym.verity.testkit.util.TestUtil
 import com.evernym.verity.util.Base58Util
 import com.evernym.verity.util.Util.getSeed
 import com.evernym.verity.vault._
 import com.evernym.verity.vault.WalletUtil._
-import com.evernym.verity.vault.wallet_api.StandardWalletAPI
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
@@ -51,7 +51,7 @@ trait CommonSpecUtil extends CanGenerateDid {
     generateNewDid(seedOpt = Option(seed))
   }
 
-  def createWallet(walletId: String, walletAPI: StandardWalletAPI): WalletAPIParam = {
+  def createWallet(walletId: String, walletAPI: TestWalletAPI): WalletAPIParam = {
     val wap = WalletAPIParam(walletId)
     try {
       walletAPI.executeSync[WalletCreated.type](CreateWallet())(wap)

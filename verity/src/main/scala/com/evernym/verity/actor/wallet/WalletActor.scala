@@ -26,7 +26,9 @@ import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class WalletActor(val appConfig: AppConfig, poolManager: LedgerPoolConnManager, executionContext: ExecutionContext)
+class WalletActor(val appConfig: AppConfig,
+                  poolManager: LedgerPoolConnManager,
+                  executionContext: ExecutionContext)
   extends CoreActor
     with Stash {
 

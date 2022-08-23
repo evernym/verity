@@ -7,7 +7,7 @@ import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Offer, R
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred, RequestCred}
 import com.evernym.verity.protocol.testkit.DSL.state
 import com.evernym.verity.protocol.testkit.TestsProtocolsImpl
-import com.evernym.verity.testkit.BasicFixtureSpec
+import com.evernym.verity.testkit.{BasicFixtureSpec, JsonStringCompareUtil}
 import com.evernym.verity.util.{Base64Util, TestExecutionContextProvider}
 
 import scala.concurrent.ExecutionContext
@@ -142,7 +142,7 @@ abstract class IssueCredSpecBase
         attachedOffer.mimeType shouldBe "application/json"
         attachedOffer.dataBase64.nonEmpty shouldBe true
         val dataBase64Decoded = new String(Base64Util.getBase64Decoded(attachedOffer.dataBase64))
-        dataBase64Decoded shouldBe expectedOfferAttachment
+        JsonStringCompareUtil.shouldBeEqual(dataBase64Decoded, expectedOfferAttachment)
       case Success(None) => throw new Exception("No item")
       case Failure(e) => throw e
     }

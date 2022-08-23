@@ -18,10 +18,6 @@ package object vault {
   case class WalletNotOpened(override val message: String = "") extends BaseWalletException
   case class WalletAlreadyOpened(override val message: String = "") extends BaseWalletException
 
-  case class WalletNotClosed(override val message: String = "") extends BaseWalletException
-  case class WalletNotDeleted(override val message: String = "") extends BaseWalletException
-  case class WalletUnhandledError(override val message: String = "") extends BaseWalletException
-
   /**
    * contains information to be used during accessing (which will require opening the wallet too) the wallet
    * all of this information is needed during accessing libindy wallet

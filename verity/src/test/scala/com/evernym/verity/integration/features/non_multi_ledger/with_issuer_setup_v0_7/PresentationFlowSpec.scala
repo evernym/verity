@@ -128,78 +128,104 @@ class PresentationFlowSpec
     }
   }
 
-  "VerifierSDK" - {
-    "sent 'request' (present-proof 1.0) message" - {
+  "Verifier and Holder" - {
+    "when tested various proof presentation" - {
       "should be successful" in {
-        val msg = Request(
-          "name-age",
-          Option(List(
-            ProofAttribute(
-              None,
-              Option(List("name")),
-              Option(List(
-                RestrictionsV1(
-                  schema_id = Option(schemaId),
-                  schema_issuer_did = None,
-                  schema_name = None,
-                  schema_version = None,
-                  issuer_did = Option(pubIdentifier.did),
-                  cred_def_id = Option(credDefId)
-                )
-              )),
-              None,
-              self_attest_allowed = false)
-          )),
-          Option(List(
-            ProofPredicate(
-              "age",
-              ">=",
-              20,
-              Option(List(
-                RestrictionsV1(
-                  schema_id = Option(schemaId),
-                  schema_issuer_did = None,
-                  schema_name = None,
-                  schema_version = None,
-                  issuer_did = Option(pubIdentifier.did),
-                  cred_def_id = Option(credDefId)
-                )
-              )),
-              None)
-          )),
-          None
+
+        val restrictionCombinations = Seq(
+          //restriction with only issuer_did attribute
+          List(
+            RestrictionsV1(
+              schema_id = None,
+              schema_issuer_did = None,
+              schema_name = None,
+              schema_version = None,
+              issuer_did = Option(pubIdentifier.did),
+              cred_def_id = None
+            )
+          ),
+          //restriction with only schema_id attribute
+          List(
+            RestrictionsV1(
+              schema_id = Option(schemaId),
+              schema_issuer_did = None,
+              schema_name = None,
+              schema_version = None,
+              issuer_did = None,
+              cred_def_id = None
+            )
+          ),
+          //restriction with only cred_def_id attribute
+          List(
+            RestrictionsV1(
+              schema_id = None,
+              schema_issuer_did = None,
+              schema_name = None,
+              schema_version = None,
+              issuer_did = None,
+              cred_def_id = Option(credDefId)
+            )
+          ),
+          //restriction with mixed attributes
+          List(
+            RestrictionsV1(
+              schema_id = Option(schemaId),
+              schema_issuer_did = None,
+              schema_name = None,
+              schema_version = None,
+              issuer_did = Option(pubIdentifier.did),
+              cred_def_id = Option(credDefId)
+            )
+          ),
+
         )
-        verifierSDK.sendMsgForConn(verifierHolderConn, msg)
+        restrictionCombinations.foreach { restrictions =>
+          //tests the presentation flow with given `restrictions`
+          performProofPresentation(
+            Option(List(
+              ProofAttribute(
+                None,
+                Option(List("name")),
+                Option(restrictions),
+                None,
+                self_attest_allowed = false)
+            )),
+            Option(List(
+              ProofPredicate(
+                "age",
+                ">=",
+                20,
+                Option(restrictions),
+                None)
+            ))
+          )
+        }
       }
     }
   }
 
-  "HolderSDK" - {
-    "when tried to get un viewed messages" - {
-      "should get 'request-presentation' (present-proof 1.0) message" in {
-        val receivedMsg = holderSDK.downloadMsg[RequestPresentation](verifierHolderConn)
-        lastReceivedThread = receivedMsg.threadOpt
-        proofReq = receivedMsg.msg
-      }
-    }
+  def performProofPresentation(proof_attrs: Option[List[ProofAttribute]],
+                               proof_predicates: Option[List[ProofPredicate]]): Unit = {
+    val msg = Request(
+      "name-age",
+      proof_attrs,
+      proof_predicates,
+      None
+    )
+    verifierSDK.sendMsgForConn(verifierHolderConn, msg)
 
-    "when tried to send 'presentation' (present-proof 1.0) message" - {
-      "should be successful" in {
-        holderSDK.acceptProofReq(verifierHolderConn, proofReq, Map.empty, lastReceivedThread)
-      }
-    }
-  }
+    val receivedMsg = holderSDK.downloadMsg[RequestPresentation](verifierHolderConn)
+    lastReceivedThread = receivedMsg.threadOpt
+    proofReq = receivedMsg.msg
 
-  "VerifierSDK" - {
-    "should receive 'presentation-result' (present-proof 1.0) message on webhook" in {
-      val receivedMsgParam = verifierSDK.expectMsgOnWebhook[PresentationResult]()
-      receivedMsgParam.msg.verification_result shouldBe ProofValidated
-      val requestPresentation = receivedMsgParam.msg.requested_presentation
-      requestPresentation.revealed_attrs.size shouldBe 1
-      requestPresentation.predicates.size shouldBe 1
-      requestPresentation.unrevealed_attrs.size shouldBe 0
-      requestPresentation.self_attested_attrs.size shouldBe 0
-    }
+    holderSDK.acceptProofReq(verifierHolderConn, proofReq, Map.empty, lastReceivedThread)
+    val receivedMsgParam = verifierSDK.expectMsgOnWebhook[PresentationResult]()
+    receivedMsgParam.msg.verification_result shouldBe ProofValidated
+    val requestPresentation = receivedMsgParam.msg.requested_presentation
+    requestPresentation.revealed_attrs.size shouldBe proof_attrs.getOrElse(List.empty).size
+    requestPresentation.predicates.size shouldBe proof_predicates.getOrElse(List.empty).size
+    requestPresentation.unrevealed_attrs.size shouldBe 0
+    requestPresentation.self_attested_attrs.size shouldBe 0
   }
 
   val OVERRIDDEN_CONFIG: Config =

@@ -5,7 +5,6 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import akka.util.Timeout
 import com.evernym.verity.actor._
 import com.evernym.verity.actor.agent.maintenance._
 import com.evernym.verity.actor.agent.msgrouter.InternalMsgRouteParam
@@ -24,8 +23,6 @@ import scala.concurrent.Future
 
 trait MaintenanceEndpointHandler extends BaseRequestHandler {
   this: PlatformWithExecutor =>
-
-  implicit val responseTimeout: Timeout
 
   protected def reloadConfig(onAllNodes: String): Future[Any] = {
     if (onAllNodes == YES) {
@@ -58,10 +55,6 @@ trait MaintenanceEndpointHandler extends BaseRequestHandler {
 
   protected def resetActorStateCleanupManager(): Future[Any] = {
     platform.singletonParentProxy ? ForActorStateCleanupManager(Reset)
-  }
-
-  protected def updateActorStateCleanupConfig(cmd: Any): Future[Any] = {
-    platform.singletonParentProxy ? ForActorStateCleanupManager(cmd)
   }
 
   protected def getActorStateManagerCleanupStatus(detailOpt: Option[String]): Future[Any] = {

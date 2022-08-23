@@ -7,7 +7,6 @@ import com.evernym.verity.actor.ShardUtil
 import com.evernym.verity.actor.testkit.{HasBasicActorSystem, TestAppConfig}
 import com.evernym.verity.testkit.{BasicAsyncSpec, CleansUpIndyClientFirst, HasTestAgentWalletAPI}
 import com.evernym.verity.actor.agent.relationship.Tags.{AGENT_KEY_TAG, CLOUD_AGENT_KEY, EDGE_AGENT_KEY, RECIP_KEY}
-import com.evernym.verity.actor.base.Done
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, WalletActor, WalletCreatedBase}
 import com.evernym.verity.constants.ActorNameConstants.WALLET_REGION_ACTOR_NAME
 import com.evernym.verity.vdrtools.ledger.IndyLedgerPoolConnManager
@@ -97,7 +96,7 @@ class DidDocBuilderSpec
           .withDid(relDidPair.did)
           .withAuthKey(relDidPair.did, relDidPair.verKey, Set(EDGE_AGENT_KEY))
           .withAuthKey(thisAgentKey.did, "", Set.empty)
-          .updatedDidDocWithMigratedAuthKeys(Set.empty, agentWalletAPI)
+          .updatedDidDocWithMigratedAuthKeys(Set.empty, standardWalletAPI)
           .map { didDoc =>
             didDoc.did shouldBe relDidPair.did
             didDoc.authorizedKeys.value shouldBe AuthorizedKeys(Seq(
@@ -116,7 +115,7 @@ class DidDocBuilderSpec
           .withDid(relDidPair.did)
           .withAuthKey(relDidPair.did, relDidPair.verKey, Set(EDGE_AGENT_KEY))
           .withAuthKey("", "", Set.empty)
-          .updatedDidDocWithMigratedAuthKeys(Set.empty, agentWalletAPI)
+          .updatedDidDocWithMigratedAuthKeys(Set.empty, standardWalletAPI)
           .map { didDoc =>
             didDoc.did shouldBe relDidPair.did
             didDoc.authorizedKeys.value shouldBe AuthorizedKeys(Seq(
@@ -185,7 +184,7 @@ class DidDocBuilderSpec
             .updatedWithEndpoint(HttpEndpoint("1", "http://abc.xyz.com", Seq(relDidPair.did, relDidPair.verKey)))
 
         DidDocBuilder(executionContext, updatedDidDoc)
-        .updatedDidDocWithMigratedAuthKeys(Set.empty, agentWalletAPI)
+        .updatedDidDocWithMigratedAuthKeys(Set.empty, standardWalletAPI)
           .map { didDoc =>
             didDoc.did shouldBe relDidPair.did
             didDoc.authorizedKeys.value shouldBe AuthorizedKeys(Seq(

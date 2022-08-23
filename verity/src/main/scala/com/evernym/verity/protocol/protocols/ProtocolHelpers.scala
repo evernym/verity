@@ -7,7 +7,6 @@ import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.?=>
 import com.evernym.verity.util.OptionUtil
-import com.evernym.verity.vdr.{CredDefId, DID_PREFIX}
 import com.typesafe.scalalogging.Logger
 import org.json.{JSONException, JSONObject}
 
@@ -76,11 +75,9 @@ trait ProtocolHelpers[P,R,M,E,S,I] {
   }
 
   def downgradeIdentifiersIfRequired(jsonStr: String,
-                                     identifier: String,
                                      isMultiLedgerSupportEnabled: Boolean)
                                      (implicit ctx: Context): String = {
-    val isFQIdentifier = identifier.startsWith(DID_PREFIX)
-    if (isFQIdentifier && !isMultiLedgerSupportEnabled) {
+    if (!isMultiLedgerSupportEnabled) {
       JsonValueReplacer(jsonStr)
         .replaceIfExists(ISSUER_DID, ctx.vdr.toLegacyNonFqId)
         .replaceIfExists(SCHEMA_ID, ctx.vdr.toLegacyNonFqSchemaId)
@@ -89,17 +86,6 @@ trait ProtocolHelpers[P,R,M,E,S,I] {
     } else {
       jsonStr
     }
-  }
-
-  def extractOptionalField(json: String, fieldName: String): Option[String] = {
-    Try {
-      val jsonObject = new JSONObject(json)
-      jsonObject.getString(fieldName)
-    }.toOption
-  }
-
-  def extractCredDefId(json: String): CredDefId = {
-    extractOptionalField(json, CRED_DEF_ID).getOrElse(throw new RuntimeException(s"'$CRED_DEF_ID' not found"))
   }
 
   val ISSUER_DID = "issuer_did"

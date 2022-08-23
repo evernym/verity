@@ -27,7 +27,7 @@ import com.evernym.verity.protocol.protocols.outofband.v_1_0.InviteUtil
 import com.evernym.verity.protocol.protocols.outofband.v_1_0.Msg.prepareInviteUrl
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
-import com.evernym.verity.vdr.{CredDef, CredDefId}
+import com.evernym.verity.vdr.CredDef
 
 import scala.util.{Failure, Success, Try}
 
@@ -306,7 +306,7 @@ trait IssueCredentialHelpers
             ))
 
             if(!m.by_invitation.getOrElse(false)) {
-              val adaptedOfferCred = downgradeOfferCredIdentifiersIfRequired(offer, m.cred_def_id, ctx.vdr.isMultiLedgerSupportEnabled)
+              val adaptedOfferCred = downgradeOfferCredIdentifiersIfRequired(offer, ctx.vdr.isMultiLedgerSupportEnabled)
               ctx.send(adaptedOfferCred)
               ctx.signal(Sig.Sent(offer))
             }
@@ -339,7 +339,7 @@ trait IssueCredentialHelpers
               s.segmentKey,
               m.auto_issue.getOrElse(false)
             ))
-            val adaptedOfferCred = downgradeOfferCredIdentifiersIfRequired(offer, m.cred_def_id, ctx.vdr.isMultiLedgerSupportEnabled)
+            val adaptedOfferCred = downgradeOfferCredIdentifiersIfRequired(offer, ctx.vdr.isMultiLedgerSupportEnabled)
             ctx.send(adaptedOfferCred)
             ctx.signal(Sig.Sent(offer))
           case Failure(e) =>
@@ -450,7 +450,6 @@ trait IssueCredentialHelpers
                         `~please_ack`: Option[PleaseAck]=None): Unit = {
     val credOfferJson = extractCredOfferJson(credOffer)
     val credReqJson = extractCredReqJson(credRequest)
-    val credDefId = extractCredDefId(credOfferJson)
     val credValuesJson = IssueCredential.buildCredValueJson(credOffer.credential_preview)
 
     ctx.wallet.createCred(credOfferJson, credReqJson, credValuesJson, revRegistryId.orNull, -1) {
@@ -461,7 +460,7 @@ trait IssueCredentialHelpers
         ctx.storeSegment(segment = credIssued) {
           case Success(s) =>
             ctx.apply(IssueCredSent(s.segmentKey))
-            val adaptedCred = downgradeIdentifiersIfRequired(createdCred.cred, credDefId, ctx.vdr.isMultiLedgerSupportEnabled)
+            val adaptedCred = downgradeIdentifiersIfRequired(createdCred.cred, ctx.vdr.isMultiLedgerSupportEnabled)
             val adaptedAttachment = buildAttachment(Some(LIBINDY_CRED_0), payload=adaptedCred)
             val adaptedIssueCred = IssueCred(Vector(adaptedAttachment), Option(credIssued.comment), `~please_ack` = `~please_ack`)
             ctx.send(adaptedIssueCred)
@@ -719,11 +718,10 @@ trait IssueCredentialHelpers
   }
 
   private def downgradeOfferCredIdentifiersIfRequired(o: OfferCred,
-                                                      credDefId: CredDefId,
                                                       isMultiLedgerSupportEnabled: Boolean): OfferCred = {
     val adaptedAttachments = o.`offers~attach`.map { attach =>
       val jsonString = extractString(attach)
-      val adaptedJson = downgradeIdentifiersIfRequired(jsonString, credDefId, isMultiLedgerSupportEnabled)
+      val adaptedJson = downgradeIdentifiersIfRequired(jsonString, isMultiLedgerSupportEnabled)
       buildAttachment(Some(LIBINDY_CRED_OFFER_0), adaptedJson)
     }
 

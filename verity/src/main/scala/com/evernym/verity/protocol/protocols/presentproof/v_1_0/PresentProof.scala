@@ -354,14 +354,9 @@ class PresentProof(implicit val ctx: PresentProofContext)
   private def adaptedRestrictionsIdentifiers(restrictions: List[RestrictionsV1]): List[RestrictionsV1]  = {
     restrictions
       .map { restriction =>
-        val identifierOption = List(restriction.cred_def_id, restriction.schema_id, restriction.issuer_did).head
-        identifierOption match {
-          case Some(identifier) =>
-            val restrictionJson = DefaultMsgCodec.toJson(restriction)
-            val adaptedRestrictionJson = downgradeIdentifiersIfRequired(restrictionJson, identifier, ctx.vdr.isMultiLedgerSupportEnabled)
-            DefaultMsgCodec.fromJson[RestrictionsV1](adaptedRestrictionJson)
-          case None => restriction
-        }
+        val restrictionJson = DefaultMsgCodec.toJson(restriction)
+        val adaptedRestrictionJson = downgradeIdentifiersIfRequired(restrictionJson, ctx.vdr.isMultiLedgerSupportEnabled)
+        DefaultMsgCodec.fromJson[RestrictionsV1](adaptedRestrictionJson)
       }
   }
 

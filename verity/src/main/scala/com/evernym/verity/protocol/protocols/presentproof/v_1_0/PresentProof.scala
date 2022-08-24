@@ -25,6 +25,8 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResu
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.legacy.PresentProofLegacy
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
+import com.evernym.verity.vdr.DID_PREFIX
+import org.json.JSONObject
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -208,7 +210,6 @@ class PresentProof(implicit val ctx: PresentProofContext)
             ctx.apply(PresentationGivenRef(s.segmentKey))
             send(Msg.Ack("OK"))
 
-            val simplifiedProof: AttributesPresented = PresentationResults.presentationToResults(presentation)
             retrieveLedgerElements(presentation.identifiers, proofRequest.allowsAllSelfAttested) {
               case Success((schemaJson, credDefJson)) =>
                 ctx.metricsWriter.runWithSpan("processPresentation","PresentProof", InternalSpan) {
@@ -229,6 +230,8 @@ class PresentProof(implicit val ctx: PresentProofContext)
                       }
                       .getOrElse(ProofUndefined) // verifyProof throw an exception
 
+                    val adaptedProofPresentation = adaptedPresentation(credDefJson, presentation)
+                    val simplifiedProof = PresentationResults.presentationToResults(adaptedProofPresentation)
                     apply(ResultsOfVerification(validity))
                     signal(Sig.PresentationResult(validity, simplifiedProof))
                   }
@@ -237,7 +240,11 @@ class PresentProof(implicit val ctx: PresentProofContext)
                 // Unable to get Ledger Assets
                 val validity = ProofUndefined
                 apply(ResultsOfVerification(validity))
-                signal(Sig.PresentationResult(validity , simplifiedProof))
+                //NOTE: in this situation, there is no way to determine if the identifiers in presentation
+                // needs to be upgraded or not. To maintain backward compatibility it is decided
+                // to leave it as it is
+                val simplifiedProof = PresentationResults.presentationToResults(presentation)
+                signal(Sig.PresentationResult(validity, simplifiedProof))
             }
           case Failure(e) => reportSegStoreFailed("error during processing presentation")
         }
@@ -349,6 +356,22 @@ class PresentProof(implicit val ctx: PresentProofContext)
       }
 
     pr.copy(requested_attributes = reqAttributes, requested_predicates = reqPredicates)
+  }
+
+  private def adaptedPresentation(credDefJson: String,
+                                  presentation: ProofPresentation): ProofPresentation = {
+    val credDefJsonObject = new JSONObject(credDefJson)
+    val credDefValueJson = credDefJsonObject.getJSONObject(presentation.identifiers.head.cred_def_id)
+    val isFQIdentifier = credDefValueJson.getString("id").startsWith(DID_PREFIX)
+    if (isFQIdentifier) {
+      val updatedIdentifiers = presentation.identifiers.map { identifier =>
+        val updatedIdentifier = upgradeIdentifiersIfRequired(DefaultMsgCodec.toJson(identifier), ctx.vdr.isMultiLedgerSupportEnabled)
+        DefaultMsgCodec.fromJson[Identifier](updatedIdentifier)
+      }
+      presentation.copy(identifiers = updatedIdentifiers)
+    } else {
+      presentation
+    }
   }
 
   private def adaptedRestrictionsIdentifiers(restrictions: List[RestrictionsV1]): List[RestrictionsV1]  = {

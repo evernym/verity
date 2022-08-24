@@ -460,11 +460,16 @@ trait IssueCredentialHelpers
         ctx.storeSegment(segment = credIssued) {
           case Success(s) =>
             ctx.apply(IssueCredSent(s.segmentKey))
+            //adapt cred if required for the holder
             val adaptedCred = downgradeIdentifiersIfRequired(createdCred.cred, ctx.vdr.isMultiLedgerSupportEnabled)
             val adaptedAttachment = buildAttachment(Some(LIBINDY_CRED_0), payload=adaptedCred)
             val adaptedIssueCred = IssueCred(Vector(adaptedAttachment), Option(credIssued.comment), `~please_ack` = `~please_ack`)
             ctx.send(adaptedIssueCred)
-            ctx.signal(Sig.Sent(adaptedIssueCred))
+
+            //send cred without any adaptation to the issuer
+            val attachment = buildAttachment(Some(LIBINDY_CRED_0), payload = createdCred.cred)
+            val issueCred = IssueCred(Vector(attachment), Option(credIssued.comment), `~please_ack` = `~please_ack`)
+            ctx.signal(Sig.Sent(issueCred))
           case Failure(_) =>
             ctx.signal(
               Sig.buildProblemReport(

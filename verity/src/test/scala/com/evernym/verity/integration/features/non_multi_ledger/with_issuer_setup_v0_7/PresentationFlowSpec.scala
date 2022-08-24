@@ -6,6 +6,7 @@ import com.evernym.verity.integration.base.endorser_svc_provider.MockEndorserUti
 import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider, VerifierSdk}
 import com.evernym.verity.integration.base.verity_provider.VerityEnv
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
+import com.evernym.verity.integration.features.non_multi_ledger.{checkCredSentForFQIdentifiers, checkOfferSentForFQIdentifiers, checkPresentationForFQIdentifiers}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.{AcceptRequest, Sent}
@@ -79,6 +80,7 @@ class PresentationFlowSpec
         )
         issuerSDK.sendMsgForConn(issuerHolderConn, offerMsg)
         val receivedMsg = issuerSDK.expectMsgOnWebhook[Sent]()
+        checkOfferSentForFQIdentifiers(receivedMsg.msg)
         issuerSDK.checkMsgOrders(receivedMsg.threadOpt, 0, Map.empty)
       }
     }
@@ -114,6 +116,7 @@ class PresentationFlowSpec
         val issueMsg = Issue()
         issuerSDK.sendMsgForConn(issuerHolderConn, issueMsg, lastReceivedThread)
         val receivedMsg = issuerSDK.expectMsgOnWebhook[Sent]()
+        checkCredSentForFQIdentifiers(receivedMsg.msg)
         issuerSDK.checkMsgOrders(receivedMsg.threadOpt, 1, Map(issuerHolderConn -> 0))
       }
     }
@@ -133,6 +136,17 @@ class PresentationFlowSpec
       "should be successful" in {
 
         val restrictionCombinations = Seq(
+          //restriction without any identifiers
+          List(
+            RestrictionsV1(
+              schema_id = None,
+              schema_issuer_did = None,
+              schema_name = None,
+              schema_version = None,
+              issuer_did = None,
+              cred_def_id = None
+            )
+          ),
           //restriction with only issuer_did attribute
           List(
             RestrictionsV1(
@@ -176,8 +190,7 @@ class PresentationFlowSpec
               issuer_did = Option(pubIdentifier.did),
               cred_def_id = Option(credDefId)
             )
-          ),
-
+          )
         )
         restrictionCombinations.foreach { restrictions =>
           //tests the presentation flow with given `restrictions`
@@ -220,6 +233,7 @@ class PresentationFlowSpec
 
     holderSDK.acceptProofReq(verifierHolderConn, proofReq, Map.empty, lastReceivedThread)
     val receivedMsgParam = verifierSDK.expectMsgOnWebhook[PresentationResult]()
+    checkPresentationForFQIdentifiers(receivedMsgParam.msg)
     receivedMsgParam.msg.verification_result shouldBe ProofValidated
     val requestPresentation = receivedMsgParam.msg.requested_presentation
     requestPresentation.revealed_attrs.size shouldBe proof_attrs.getOrElse(List.empty).size

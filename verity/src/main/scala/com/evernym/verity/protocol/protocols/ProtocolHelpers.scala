@@ -6,6 +6,7 @@ import com.evernym.verity.protocol.Control
 import com.evernym.verity.protocol.engine._
 import com.evernym.verity.protocol.engine.context.{ProtocolContextApi, Roster}
 import com.evernym.verity.protocol.engine.util.?=>
+import com.evernym.verity.protocol.protocols.ProtocolHelpers._
 import com.evernym.verity.util.OptionUtil
 import com.typesafe.scalalogging.Logger
 import org.json.{JSONException, JSONObject}
@@ -88,12 +89,27 @@ trait ProtocolHelpers[P,R,M,E,S,I] {
     }
   }
 
-  val ISSUER_DID = "issuer_did"
-  val SCHEMA_ID = "schema_id"
-  val CRED_DEF_ID = "cred_def_id"
+  def upgradeIdentifiersIfRequired(jsonStr: String,
+                                   isMultiLedgerSupportEnabled: Boolean)
+                                  (implicit ctx: Context): String = {
+    if (!isMultiLedgerSupportEnabled) {
+      JsonValueReplacer(jsonStr)
+        .replaceIfExists(ISSUER_DID, ctx.vdr.fqDID(_, force = true))
+        .replaceIfExists(SCHEMA_ID, ctx.vdr.fqSchemaId(_, None, force = true))
+        .replaceIfExists(CRED_DEF_ID, ctx.vdr.fqCredDefId(_, None, force = true))
+        .jsonString
+    } else {
+      jsonStr
+    }
+  }
 }
 
 object ProtocolHelpers {
+
+  val ISSUER_DID = "issuer_did"
+  val SCHEMA_ID = "schema_id"
+  val CRED_DEF_ID = "cred_def_id"
+
   val noHandleProtoMsg = "This protocol don't have protocol messages! getting here should not be passable"
 
   def noHandleProtoMsg[S, R, M](customMsg: String = noHandleProtoMsg): (S, Option[R], M) ?=> Any = {

@@ -56,18 +56,34 @@ trait InMemLedger {
 
       case SCHEMA =>
         val s = JacksonMsgCodec.fromJson[MockVdrSchema](new String(txnBytes))
-        val schemaJson = new JSONObject(s.json)
-        schemaJson.put("seqNo", 10)
-        schemas = schemas + (unqualifiedSchemaId(s.schemaId) -> schemaJson.toString.getBytes)
+        val schemaJson = prepareSchemaJson(s.json)
+        schemas = schemas + (unqualifiedSchemaId(s.schemaId) -> schemaJson.getBytes)
 
       case CRED_DEF =>
         val cd = JacksonMsgCodec.fromJson[MockVdrCredDef](new String(txnBytes))
-        credDefs = credDefs + (unqualifiedCredDefId(cd.credDefId) -> cd.json.getBytes)
+        val credDefJson = prepareCredDefJson(cd.json)
+        credDefs = credDefs + (unqualifiedCredDefId(cd.credDefId) -> credDefJson.toString.getBytes)
 
       case other =>
         throw new RuntimeException("payload type not supported: " + other)
     }
     "{}"
+  }
+
+  private def prepareSchemaJson(jsonString: String): String = {
+    val schemaJson = new JSONObject(jsonString)
+    val nonFQSchemaId = VDRUtil.toLegacyNonFqSchemaId(schemaJson.getString("id"), vdrMultiLedgerSupportEnabled = false)
+    schemaJson.put("seqNo", 10)
+    schemaJson.put("id", nonFQSchemaId)   //to mimic how indy ledger converts these identifiers to non FQs
+    schemaJson.toString
+  }
+
+  private def prepareCredDefJson(jsonString: String): String = {
+    val credDefJson = new JSONObject(jsonString)
+    val nonFQCredDefId = VDRUtil.toLegacyNonFqSchemaId(credDefJson.getString("id"), vdrMultiLedgerSupportEnabled = false)
+    credDefJson.put("seqNo", 10)
+    credDefJson.put("id", nonFQCredDefId)   //to mimic how indy ledger converts these identifiers to non FQs
+    credDefJson.toString
   }
 
   def resolveSchema(fqSchemaId: FqSchemaId): VdrSchema = {

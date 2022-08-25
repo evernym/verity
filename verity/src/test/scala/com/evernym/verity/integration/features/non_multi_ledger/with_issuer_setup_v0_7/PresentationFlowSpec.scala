@@ -6,7 +6,7 @@ import com.evernym.verity.integration.base.endorser_svc_provider.MockEndorserUti
 import com.evernym.verity.integration.base.sdk_provider.{HolderSdk, IssuerSdk, SdkProvider, VerifierSdk}
 import com.evernym.verity.integration.base.verity_provider.VerityEnv
 import com.evernym.verity.integration.base.{CAS, VAS, VerityProviderBaseSpec}
-import com.evernym.verity.integration.features.non_multi_ledger.{checkCredSentForFQIdentifiers, checkOfferSentForFQIdentifiers, checkPresentationForFQIdentifiers}
+import com.evernym.verity.integration.features.non_multi_ledger.{checkCredSentForFQIdentifiers, checkOfferSentForFQIdentifiers, checkPresentationForFQIdentifiers, checkPresentationForNonFQIdentifiers, extractRestrictionIdentifiers}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Ctl.{Issue, Offer}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Msg.{IssueCred, OfferCred}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.{AcceptRequest, Sent}
@@ -18,7 +18,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.Presentation
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResults.ProofValidated
 import com.evernym.verity.protocol.protocols.writeCredentialDefinition.{v_0_6 => writeCredDef0_6}
 import com.evernym.verity.protocol.protocols.writeSchema.{v_0_6 => writeSchema0_6}
-import com.evernym.verity.vdr.DID_PREFIX
+import com.evernym.verity.vdr.{DID_PREFIX, VDRUtil}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.duration._
@@ -180,10 +180,21 @@ class PresentationFlowSpec
               cred_def_id = Option(credDefId)
             )
           ),
-          //restriction with mixed attributes
+          //restriction with multiple attributes
           List(
             RestrictionsV1(
               schema_id = Option(schemaId),
+              schema_issuer_did = None,
+              schema_name = None,
+              schema_version = None,
+              issuer_did = Option(pubIdentifier.did),
+              cred_def_id = Option(credDefId)
+            )
+          ),
+          //restriction with mixed identifier types
+          List(
+            RestrictionsV1(
+              schema_id = Option(VDRUtil.toLegacyNonFqSchemaId(schemaId, vdrMultiLedgerSupportEnabled = false)),
               schema_issuer_did = None,
               schema_name = None,
               schema_version = None,
@@ -217,12 +228,12 @@ class PresentationFlowSpec
     }
   }
 
-  def performProofPresentation(proof_attrs: Option[List[ProofAttribute]],
-                               proof_predicates: Option[List[ProofPredicate]]): Unit = {
+  def performProofPresentation(proofAttrs: Option[List[ProofAttribute]],
+                               proofPredicates: Option[List[ProofPredicate]]): Unit = {
     val msg = Request(
       "name-age",
-      proof_attrs,
-      proof_predicates,
+      proofAttrs,
+      proofPredicates,
       None
     )
     verifierSDK.sendMsgForConn(verifierHolderConn, msg)
@@ -233,11 +244,22 @@ class PresentationFlowSpec
 
     holderSDK.acceptProofReq(verifierHolderConn, proofReq, Map.empty, lastReceivedThread)
     val receivedMsgParam = verifierSDK.expectMsgOnWebhook[PresentationResult]()
-    checkPresentationForFQIdentifiers(receivedMsgParam.msg)
+    val identifiers = extractRestrictionIdentifiers(proofAttrs, proofPredicates)
+    val hasFQIdentifiers = identifiers.exists(_.startsWith(DID_PREFIX))
+    val hasNonFQIdentifiers = identifiers.exists(!_.startsWith(DID_PREFIX))
+    val hasMixedIdentifiers = hasFQIdentifiers && hasNonFQIdentifiers
+    if (hasFQIdentifiers && ! hasNonFQIdentifiers) checkPresentationForFQIdentifiers(receivedMsgParam.msg)
+    else if (! hasMixedIdentifiers) checkPresentationForNonFQIdentifiers(receivedMsgParam.msg)
+    else if (identifiers.nonEmpty){
+      receivedMsgParam.msg.requested_presentation.identifiers.foreach { identifier =>
+        identifiers.contains(identifier.schema_id) shouldBe true
+        identifiers.contains(identifier.cred_def_id) shouldBe true
+      }
+    }
     receivedMsgParam.msg.verification_result shouldBe ProofValidated
     val requestPresentation = receivedMsgParam.msg.requested_presentation
-    requestPresentation.revealed_attrs.size shouldBe proof_attrs.getOrElse(List.empty).size
-    requestPresentation.predicates.size shouldBe proof_predicates.getOrElse(List.empty).size
+    requestPresentation.revealed_attrs.size shouldBe proofAttrs.getOrElse(List.empty).size
+    requestPresentation.predicates.size shouldBe proofPredicates.getOrElse(List.empty).size
     requestPresentation.unrevealed_attrs.size shouldBe 0
     requestPresentation.self_attested_attrs.size shouldBe 0
   }

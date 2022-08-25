@@ -3,6 +3,7 @@ package com.evernym.verity.integration.features
 import com.evernym.verity.agentmsg.DefaultMsgCodec
 import com.evernym.verity.protocol.protocols.ProtocolHelpers.{CRED_DEF_ID, ISSUER_DID, SCHEMA_ID}
 import com.evernym.verity.protocol.protocols.issueCredential.v_1_0.Sig.Sent
+import com.evernym.verity.protocol.protocols.presentproof.v_1_0.{ProofAttribute, ProofPredicate, RestrictionsV1}
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.Sig.PresentationResult
 import com.evernym.verity.util.Base64Util
 import com.evernym.verity.vdr.VDRUtil
@@ -91,6 +92,19 @@ package object non_multi_ledger {
           if (expectsFQIdentifiers) VDRUtil.toFqCredDefId_v0(fieldValue, None, Option(UNQUALIFIED_LEDGER_PREFIX), vdrMultiLedgerSupportEnabled = true)
           else VDRUtil.toLegacyNonFqCredDefId(fieldValue, vdrMultiLedgerSupportEnabled = false)
         checkFieldValue(fieldName, fieldValue, expectedFieldValue)
+    }
+  }
+
+  def extractRestrictionIdentifiers(proofAttrs: Option[List[ProofAttribute]],
+                                    proofPredicates: Option[List[ProofPredicate]]): List[String] = {
+    val reqAttribIdentifiers = extractIdentifiersFromRestrictions(proofAttrs.getOrElse(List.empty).flatMap(_.restrictions).flatten)
+    val reqPredicateIdentifiers = extractIdentifiersFromRestrictions(proofPredicates.getOrElse(List.empty).flatMap(_.restrictions).flatten)
+    (reqAttribIdentifiers ++ reqPredicateIdentifiers).distinct
+  }
+
+  private def extractIdentifiersFromRestrictions(restrictions: List[RestrictionsV1]): List[String] = {
+    restrictions.flatMap { restriction =>
+      List(restriction.issuer_did, restriction.schema_id, restriction.cred_def_id).filter(_.nonEmpty).flatten
     }
   }
 

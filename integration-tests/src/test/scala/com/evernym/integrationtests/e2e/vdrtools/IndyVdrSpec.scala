@@ -200,6 +200,8 @@ class IndyVdrSpec
             ).map(r => CredDefCreated(r.getCredDefId, r.getCredDefJson)))
           credDefCreated = CredDef(result.credDefId, schema.fqId, result.credDefJson)
           credDefCreated.fqId shouldBe s"${issuerDID.did}/anoncreds/v0/CLAIM_DEF/$seqNo/latest"
+          val credDefJSONObject = new JSONObject(result.credDefJson)
+          credDefJSONObject.get("id") shouldBe s"${issuerDID.did}/anoncreds/v0/CLAIM_DEF/$seqNo/latest"
           vdrAdapter.prepareCredDefTxn(
             credDefCreated.json,
             VDRUtil.toFqSchemaId_v0(credDefCreated.fqId, Option(issuerDID.did), Option(unqualifiedLedgerPrefix), vdrMultiLedgerSupportEnabled),
@@ -231,6 +233,8 @@ class IndyVdrSpec
         val z = primary.getString("z")
         val n = primary.getString("n")
         val rctxt = primary.getString("rctxt")
+
+        val credDef = runAsSync(vdrAdapter.resolveCredDef(credDefCreated.fqId))
       }
     }
 

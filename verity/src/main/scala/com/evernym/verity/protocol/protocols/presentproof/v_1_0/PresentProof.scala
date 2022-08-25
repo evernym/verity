@@ -25,8 +25,7 @@ import com.evernym.verity.protocol.protocols.presentproof.v_1_0.VerificationResu
 import com.evernym.verity.protocol.protocols.presentproof.v_1_0.legacy.PresentProofLegacy
 import com.evernym.verity.urlshortener.{UrlShortened, UrlShorteningFailed}
 import com.evernym.verity.util.{MsgIdProvider, OptionUtil}
-import com.evernym.verity.vdr.DID_PREFIX
-import org.json.JSONObject
+import com.evernym.verity.vdr.{DID_PREFIX, VDRUtil}
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -230,7 +229,7 @@ class PresentProof(implicit val ctx: PresentProofContext)
                       }
                       .getOrElse(ProofUndefined) // verifyProof throw an exception
 
-                    val adaptedProofPresentation = adaptedPresentation(credDefJson, presentation)
+                    val adaptedProofPresentation = adaptedPresentation(requestUsed, presentation)
                     val simplifiedProof = PresentationResults.presentationToResults(adaptedProofPresentation)
                     apply(ResultsOfVerification(validity))
                     signal(Sig.PresentationResult(validity, simplifiedProof))
@@ -358,19 +357,60 @@ class PresentProof(implicit val ctx: PresentProofContext)
     pr.copy(requested_attributes = reqAttributes, requested_predicates = reqPredicates)
   }
 
-  private def adaptedPresentation(credDefJson: String,
+  private def adaptedPresentation(requestUsed: RequestUsed,
                                   presentation: ProofPresentation): ProofPresentation = {
-    val credDefJsonObject = new JSONObject(credDefJson)
-    val credDefValueJson = credDefJsonObject.getJSONObject(presentation.identifiers.head.cred_def_id)
-    val isFQIdentifier = credDefValueJson.getString("id").startsWith(DID_PREFIX)
-    if (isFQIdentifier) {
-      val updatedIdentifiers = presentation.identifiers.map { identifier =>
-        val updatedIdentifier = upgradeIdentifiersIfRequired(DefaultMsgCodec.toJson(identifier), ctx.vdr.isMultiLedgerSupportEnabled)
-        DefaultMsgCodec.fromJson[Identifier](updatedIdentifier)
+
+    val proofReq = DefaultMsgCodec.fromJson[ProofRequest](requestUsed.requestRaw)
+    val reqAttribIdentifiers = extractIdentifiersFromRestrictions(proofReq.requested_attributes.flatMap(_._2.restrictions.getOrElse(List.empty)).toList)
+    val reqPredicateIdentifiers = extractIdentifiersFromRestrictions(proofReq.requested_predicates.flatMap(_._2.restrictions.getOrElse(List.empty)).toList)
+    val proofReqIdentifiers = (reqAttribIdentifiers ++ reqPredicateIdentifiers).distinct
+    val hasFQIdentifiers = proofReqIdentifiers.exists(_.startsWith(DID_PREFIX))
+    val hasNonFQIdentifiers = proofReqIdentifiers.exists(!_.startsWith(DID_PREFIX))
+    val hasMixedIdentifiers = hasFQIdentifiers && hasNonFQIdentifiers
+
+    if (proofReqIdentifiers.nonEmpty) {
+      if (! hasMixedIdentifiers) {
+        if (hasFQIdentifiers) {
+          val updatedIdentifiers = presentation.identifiers.map { identifier =>
+            val updatedIdentifier = upgradeIdentifiersIfRequired(DefaultMsgCodec.toJson(identifier), ctx.vdr.isMultiLedgerSupportEnabled)
+            DefaultMsgCodec.fromJson[Identifier](updatedIdentifier)
+          }
+          presentation.copy(identifiers = updatedIdentifiers)
+        } else {
+          val updatedIdentifiers = presentation.identifiers.map { identifier =>
+            val updatedIdentifier = downgradeIdentifiersIfRequired(DefaultMsgCodec.toJson(identifier), ctx.vdr.isMultiLedgerSupportEnabled)
+            DefaultMsgCodec.fromJson[Identifier](updatedIdentifier)
+          }
+          presentation.copy(identifiers = updatedIdentifiers)
+        }
+      } else {
+        val updatedIdentifiers = presentation.identifiers.map { identifier =>
+          val schemaId = {
+              val nonFqSchemaId = VDRUtil.toLegacyNonFqSchemaId(identifier.schema_id, vdrMultiLedgerSupportEnabled = false)
+              val fqSchemaId = VDRUtil.toFqSchemaId_v0(identifier.schema_id, None, Option(ctx.vdr.unqualifiedLedgerPrefix()), vdrMultiLedgerSupportEnabled = true)
+              if (proofReqIdentifiers.contains(nonFqSchemaId)) nonFqSchemaId
+              else if (proofReqIdentifiers.contains(fqSchemaId)) fqSchemaId
+              else identifier.schema_id
+            }
+          val credDefId = {
+            val nonFqCredDefId = VDRUtil.toLegacyNonFqCredDefId(identifier.cred_def_id, vdrMultiLedgerSupportEnabled = false)
+            val fqCredDefId = VDRUtil.toFqCredDefId_v0(identifier.cred_def_id, None, Option(ctx.vdr.unqualifiedLedgerPrefix()), vdrMultiLedgerSupportEnabled = true)
+            if (proofReqIdentifiers.contains(nonFqCredDefId)) nonFqCredDefId
+            else if (proofReqIdentifiers.contains(fqCredDefId)) fqCredDefId
+            else identifier.cred_def_id
+          }
+          identifier.copy(schema_id = schemaId, cred_def_id = credDefId)
+        }
+        presentation.copy(identifiers = updatedIdentifiers)
       }
-      presentation.copy(identifiers = updatedIdentifiers)
     } else {
       presentation
+    }
+  }
+
+  private def extractIdentifiersFromRestrictions(restrictions: List[RestrictionsV1]): List[String] = {
+    restrictions.flatMap { restriction =>
+      List(restriction.issuer_did, restriction.schema_id, restriction.cred_def_id).filter(_.nonEmpty).flatten
     }
   }
 

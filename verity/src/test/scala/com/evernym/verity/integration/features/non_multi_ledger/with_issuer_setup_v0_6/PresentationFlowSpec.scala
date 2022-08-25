@@ -181,7 +181,7 @@ class PresentationFlowSpec
               cred_def_id = Option(credDefId)
             )
           ),
-          //restriction with mixed attributes
+          //restriction with multiple attributes
           List(
             RestrictionsV1(
               schema_id = Option(schemaId),
@@ -218,12 +218,12 @@ class PresentationFlowSpec
     }
   }
 
-  def performProofPresentation(proof_attrs: Option[List[ProofAttribute]],
-                               proof_predicates: Option[List[ProofPredicate]]): Unit = {
+  def performProofPresentation(proofAttrs: Option[List[ProofAttribute]],
+                               proofPredicates: Option[List[ProofPredicate]]): Unit = {
     val msg = Request(
       "name-age",
-      proof_attrs,
-      proof_predicates,
+      proofAttrs,
+      proofPredicates,
       None
     )
     verifierSDK.sendMsgForConn(verifierHolderConn, msg)
@@ -237,8 +237,8 @@ class PresentationFlowSpec
     checkPresentationForNonFQIdentifiers(receivedMsgParam.msg)
     receivedMsgParam.msg.verification_result shouldBe ProofValidated
     val requestPresentation = receivedMsgParam.msg.requested_presentation
-    requestPresentation.revealed_attrs.size shouldBe proof_attrs.getOrElse(List.empty).size
-    requestPresentation.predicates.size shouldBe proof_predicates.getOrElse(List.empty).size
+    requestPresentation.revealed_attrs.size shouldBe proofAttrs.getOrElse(List.empty).size
+    requestPresentation.predicates.size shouldBe proofPredicates.getOrElse(List.empty).size
     requestPresentation.unrevealed_attrs.size shouldBe 0
     requestPresentation.self_attested_attrs.size shouldBe 0
   }

@@ -37,7 +37,9 @@ class AgencyIdentityCacheFetcher(val agentMsgRouter: AgentMsgRouter,
     val gadcp = kd.keyAs[GetAgencyIdentityCacheParam]
     val gadFutResp = agentMsgRouter.execute(InternalMsgRouteParam(gadcp.localAgencyDID, gadcp.gad))
     gadFutResp.map {
-      case ai: AgencyInfo if ! ai.isErrorFetchingAnyData => Map(gadcp.gad.did -> ai)
+      case ai: AgencyInfo if ! ai.isErrorFetchingAnyData =>
+        logger.info(s"agency info received from source for '${gadcp.gad.did}': " + ai)
+        Map(gadcp.gad.did -> ai)
       case ai: AgencyInfo if ai.verKeyErrorOpt.isDefined =>
         throw buildUnexpectedResponse(ai.verKeyErrorOpt.get)
       case ai: AgencyInfo if ai.endpointErrorOpt.isDefined =>

@@ -226,9 +226,9 @@ trait ConnectingProtocolBase[P,R,S <: ConnectingStateBase[S],I]
     if (definition.protoRef.msgFamilyVersion == MFV_0_5) MPF_MSG_PACK else MPF_INDY_PACK
 
   protected def sendMsgToRemoteCloudAgent(uid: MsgId, msgPackFormat: MsgPackFormat): Unit = {
-    val answeredMsg = ctx.getState.connectingMsgState.getMsgReq(uid)
     try {
-      val agentMsgs: List[Any] = buildConnReqAnswerMsgForRemoteCloudAgent(uid)
+      val answeredMsg = ctx.getState.connectingMsgState.getMsgReq(uid)
+      val agentMsgs = buildConnReqAnswerMsgForRemoteCloudAgent(uid)
       val packedMsg = buildReqMsgForTheirRoutingService(msgPackFormat, agentMsgs, msgPackFormat == MPF_MSG_PACK, answeredMsg.`type`)
       sendToTheirAgencyEndpoint(buildSendMsgParam(uid, answeredMsg.getType, packedMsg.msg), ctx.metricsWriter)
     } catch {

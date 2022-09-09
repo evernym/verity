@@ -67,7 +67,9 @@ trait AgentMsgSender
     sm.theirRoutingParam.route match {
       case Left(theirAgencyDID) =>
         theirAgencyEndpointFut(sm.localAgencyDID, theirAgencyDID, mw).map { cqr =>
-          cqr.getAgencyInfoReq(theirAgencyDID).endpointOpt.getOrElse(
+          val theirAgencyInfo = cqr.getAgencyInfoReq(theirAgencyDID)
+          logger.info(s"theirAgencyInfo received for '$theirAgencyDID': " + theirAgencyInfo)
+          theirAgencyInfo.endpointOpt.getOrElse(
             throw handleRemoteAgencyEndpointNotFound(theirAgencyDID)
           )
         }.recover {
@@ -90,6 +92,7 @@ trait AgentMsgSender
       r
     }.recover {
       case e: Exception =>
+        logger.error("error while sending message to their agency endpoint '${sm.theirRoutingParam.route}': " + Exceptions.getStackTraceAsString(e))
         handleMsgDeliveryResult(MsgDeliveryResult.failed(sm, MSG_DELIVERY_STATUS_FAILED, Exceptions.getErrorMsg(e)))
         throw e
     }

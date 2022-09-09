@@ -32,7 +32,7 @@ trait MsgDeliveryResultHandler {
   }
 
   def handleFailedMsgDelivery(sm: SendMsgParam, statusCode: String, statusMsg: Option[String]): Unit = {
-    logger.info("handle failed msg delivery", (LOG_KEY_UID, sm.uid))
+    logger.info(s"handle failed msg delivery => uid: ${sm.uid}, statusCode: $statusCode, statusMsg: $statusMsg")
     if (!sm.isItARetryAttempt && statusCode == UNHANDLED.statusCode) {
       //if this is a first attempt and failure is unknown, record it as failed (it should be retried)
       logger.debug(s"first condition, isItARetryAttempt: ${sm.isItARetryAttempt} and statusCode: $statusCode")

@@ -20,7 +20,7 @@ import com.evernym.verity.actor.msg_tracer.progress_tracker.{HasMsgProgressTrack
 import com.evernym.verity.actor.resourceusagethrottling.EntityId
 import com.evernym.verity.agentmsg.msgcodec.UnknownFormatType
 import com.evernym.verity.cache.{AGENCY_IDENTITY_CACHE_FETCHER, AGENT_ACTOR_CONFIG_CACHE_FETCHER, KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER}
-import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, ReqParam}
 import com.evernym.verity.cache.fetchers.{AgentConfigCacheFetcher, CacheValueFetcher, GetAgencyIdentityCacheParam}
 import com.evernym.verity.config.ConfigConstants.{AKKA_SHARDING_REGION_NAME_USER_AGENT, VDR_LEDGER_PREFIX_MAPPINGS, VDR_UNQUALIFIED_LEDGER_PREFIX, VERITY_ENDORSER_DEFAULT_DID}
 import com.evernym.verity.did.didcomm.v1.messages.{MsgFamily, MsgType, TypedMsgLike}
@@ -200,7 +200,7 @@ trait AgentCommon
       case (Some(adp), Some(ak)) if adp.DID.nonEmpty => Future.successful(adp.copy(verKey = ak.verKey))
       case (Some(adp), _) if adp.DID.nonEmpty && adp.verKey.isEmpty => agencyDidPairFutByCache(adp.DID)
       case _ =>
-        val gcop = GetCachedObjectParam(KeyDetail(AGENCY_DID_KEY, required = false), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER)
+        val gcop = GetCachedObjectParam(ReqParam(AGENCY_DID_KEY, required = false), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER)
         generalCache.getByParamAsync(gcop).flatMap { cqr =>
           agencyDidPairFutByCache(cqr.getAgencyDIDReq)
         }
@@ -209,7 +209,7 @@ trait AgentCommon
 
   def agencyDidPairFutByCache(agencyDID: DidStr): Future[DidPair] = {
     val gadp = GetAgencyIdentityCacheParam(agencyDID, GetAgencyIdentity(agencyDID, getEndpoint = false))
-    val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER)
+    val gadfcParam = GetCachedObjectParam(ReqParam(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER)
     generalCache.getByParamAsync(gadfcParam)
       .map(cqr => DidPair(agencyDID, cqr.getAgencyInfoReq(agencyDID).verKeyReq))
   }

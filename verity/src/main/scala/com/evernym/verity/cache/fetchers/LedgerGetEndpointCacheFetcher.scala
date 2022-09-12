@@ -1,7 +1,7 @@
 package com.evernym.verity.cache.fetchers
 
 import com.evernym.verity.cache.LEDGER_GET_ENDPOINT_CACHE_FETCHER
-import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
+import com.evernym.verity.cache.base.{CacheRequest, FetcherParam, ReqParam, RespParam}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.ledger.{AttribResult, LegacyLedgerSvc, Submitter}
@@ -25,21 +25,19 @@ class EndpointCacheFetcher (val legacyLedgerSvc: LegacyLedgerSvc,
   //time to live in seconds, afterwards they will be considered as expired and re-fetched from source
   override lazy val defaultExpiryTimeInSeconds: Option[Int] = Option(1800)
 
-  override def toKeyDetailMappings(keyDetails: Set[KeyDetail]): Set[KeyMapping] = {
-    keyDetails.map { kd =>
-      val gvp = kd.keyAs[GetEndpointParam]
-      KeyMapping(kd, gvp.did, gvp.did)
-    }
+  override def toCacheRequests(rp: ReqParam): Set[CacheRequest] = {
+    val gvp = rp.cmdAs[GetEndpointParam]
+    Set(CacheRequest(rp, gvp.did, gvp.did))
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]] = {
-    val gep = kd.keyAs[GetEndpointParam]
+  override def getByRequest(cr: CacheRequest): Future[Option[RespParam]] = {
+    val gep = cr.reqParam.cmdAs[GetEndpointParam]
     //TODO: at present vdr apis doesn't support getting endpoints (either via did doc or otherwise)
     // in future when vdr api supports it, we should replace below call accordingly
     val gepFut = legacyLedgerSvc.getAttrib(gep.submitterDetail, gep.did, VDRAdapterUtil.URL)
     gepFut.map {
       case ar: AttribResult if ar.value.isDefined =>
-        Map(gep.did -> ar.value.map(_.toString).orNull)
+        Option(RespParam(ar.value.map(_.toString).orNull))
       case ar: AttribResult if ar.value.isEmpty =>
         throw new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("endpoint not found for DID: " + gep.did))
       case x =>

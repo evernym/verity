@@ -1,7 +1,7 @@
 package com.evernym.verity.cache
 
-import com.evernym.verity.actor.testkit.{ActorSpec, TestAppConfig}
-import com.evernym.verity.cache.base.{Cache, FetcherParam, GetCachedObjectParam, KeyDetail, KeyMapping}
+import com.evernym.verity.actor.testkit.ActorSpec
+import com.evernym.verity.cache.base.{Cache, CacheRequest, FetcherParam, GetCachedObjectParam, ReqParam, RespParam}
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetcher}
 import com.evernym.verity.config.AppConfig
@@ -23,7 +23,7 @@ class CacheMaxWeightSpec
     "when asked for object 1" - {
       "should respond with appropriate value" in {
         val value = Array.range(0, 270).map(_.toByte)
-        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("1", Right(value)), required = true), mockFetcher)
+        val gcop = GetCachedObjectParam(ReqParam(GetMaxWeightCacheReq("1", Right(value)), required = true), mockFetcher)
         cache.getByParamAsync(gcop).map { _ =>
           cache.allKeys shouldBe Set("1")
           cache.allCacheHitCount shouldBe 0
@@ -35,7 +35,7 @@ class CacheMaxWeightSpec
     "when asked for object 2" - {
       "should respond with appropriate value" in {
         val value = Array.range(0, 270).map(_.toByte)
-        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("2", Right(value)), required = true), mockFetcher)
+        val gcop = GetCachedObjectParam(ReqParam(GetMaxWeightCacheReq("2", Right(value)), required = true), mockFetcher)
         cache.getByParamAsync(gcop).map { _ =>
           cache.allKeys shouldBe Set("1", "2")
           cache.allCacheHitCount shouldBe 0
@@ -47,7 +47,7 @@ class CacheMaxWeightSpec
     "when asked for object 3" - {
       "should respond with appropriate value" in {
         val value = Array.range(0, 270).map(_.toByte)
-        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("3", Right(value)), required = true), mockFetcher)
+        val gcop = GetCachedObjectParam(ReqParam(GetMaxWeightCacheReq("3", Right(value)), required = true), mockFetcher)
         cache.getByParamAsync(gcop).map { _ =>
           cache.allKeys shouldBe Set("1", "2", "3")
           cache.allCacheHitCount shouldBe 0
@@ -61,7 +61,7 @@ class CacheMaxWeightSpec
         //1MB is the total weight for the cache, so anything which makes
         // total cache size to cross ~1MB should result in eviction
         val largerObject = Array.range(0, 270).map(_.toByte)
-        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("larger", Right(largerObject)), required = true), mockFetcher)
+        val gcop = GetCachedObjectParam(ReqParam(GetMaxWeightCacheReq("larger", Right(largerObject)), required = true), mockFetcher)
         cache.getByParamAsync(gcop).map { _ =>
           eventually(timeout(Span(10, Seconds)), interval(Span(300, Millis))) {
             cache.allKeys shouldBe Set("2", "3", "larger")
@@ -74,7 +74,7 @@ class CacheMaxWeightSpec
 
     "when asked for a larger object again" - {
       "should be responded from the cache itself" in {
-        val gcop = GetCachedObjectParam(KeyDetail(GetMaxWeightCacheReq("larger", Right("test")), required = true), mockFetcher)
+        val gcop = GetCachedObjectParam(ReqParam(GetMaxWeightCacheReq("larger", Right("test")), required = true), mockFetcher)
         cache.getByParamAsync(gcop).map { _ =>
           cache.allKeys shouldBe Set("2", "3", "larger")
           cache.allCacheHitCount shouldBe 1
@@ -109,18 +109,16 @@ class MockMaxWeightCacheFetcher(ec: ExecutionContext, val _appConfig: AppConfig)
   override lazy val defaultMaxWeightInBytes: Option[Long] = Option(1000)
   override lazy val defaultMaxSize: Option[Int] = Option(100)   //this won't matter as the max weight will take precedence
 
-  override def toKeyDetailMappings(keyDetails: Set[KeyDetail]): Set[KeyMapping] = {
-    keyDetails.map { kd =>
-      val gvp = kd.keyAs[GetMaxWeightCacheReq]
-      KeyMapping(kd, gvp.id, gvp.id)
-    }
+  override def toCacheRequests(rp: ReqParam): Set[CacheRequest] = {
+    val gvp = rp.cmdAs[GetMaxWeightCacheReq]
+    Set(CacheRequest(rp, gvp.id, gvp.id))
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]] = {
-    val getReq = kd.keyAs[GetMaxWeightCacheReq]
+  override def getByRequest(cr: CacheRequest): Future[Option[RespParam]] = {
+    val getReq = cr.reqParam.cmdAs[GetMaxWeightCacheReq]
     val respFut = Future(getReq.resp)
     respFut.map {
-      case Right(resp) => Map(getReq.id -> resp)
+      case Right(resp) => Option(RespParam(resp))
       case Left(d)     => throw buildUnexpectedResponse(d)
     }
   }

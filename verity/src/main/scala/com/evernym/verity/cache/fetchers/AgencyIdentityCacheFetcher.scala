@@ -3,7 +3,7 @@ package com.evernym.verity.cache.fetchers
 import com.evernym.verity.actor.agent.agency.{AgencyInfo, GetAgencyIdentity}
 import com.evernym.verity.actor.agent.msgrouter._
 import com.evernym.verity.cache.AGENCY_IDENTITY_CACHE_FETCHER
-import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
+import com.evernym.verity.cache.base.{CacheRequest, CacheKey, FetcherParam, ReqParam, RespParam}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.did.DidStr
@@ -26,20 +26,18 @@ class AgencyIdentityCacheFetcher(val agentMsgRouter: AgentMsgRouter,
   //time to live in seconds, afterwards they will be considered as expired and re-fetched from source
   override lazy val defaultExpiryTimeInSeconds: Option[Int] = Option(1800)
 
-  override def toKeyDetailMappings(keyDetails: Set[KeyDetail]): Set[KeyMapping] = {
-    keyDetails.map { kd =>
-      val gadcp = kd.keyAs[GetAgencyIdentityCacheParam]
-      KeyMapping(kd, gadcp.gad.did, gadcp.gad.did)
-    }
+  override def toCacheRequests(rp: ReqParam): Set[CacheRequest] = {
+    val gadcp = rp.cmdAs[GetAgencyIdentityCacheParam]
+    Set(CacheRequest(rp, gadcp.gad.did, buildCacheKey(gadcp.gad)))
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]] = {
-    val gadcp = kd.keyAs[GetAgencyIdentityCacheParam]
+  override def getByRequest(cr: CacheRequest): Future[Option[RespParam]] = {
+    val gadcp = cr.reqParam.cmdAs[GetAgencyIdentityCacheParam]
     val gadFutResp = agentMsgRouter.execute(InternalMsgRouteParam(gadcp.localAgencyDID, gadcp.gad))
     gadFutResp.map {
       case ai: AgencyInfo if ! ai.isErrorFetchingAnyData =>
         logger.info(s"agency info received from source for '${gadcp.gad.did}': " + ai)
-        Map(gadcp.gad.did -> ai)
+        Option(RespParam(ai))
       case ai: AgencyInfo if ai.verKeyErrorOpt.isDefined =>
         throw buildUnexpectedResponse(ai.verKeyErrorOpt.get)
       case ai: AgencyInfo if ai.endpointErrorOpt.isDefined =>
@@ -47,6 +45,8 @@ class AgencyIdentityCacheFetcher(val agentMsgRouter: AgentMsgRouter,
       case x => throw buildUnexpectedResponse(x)
     }
   }
+
+  private def buildCacheKey(gad: GetAgencyIdentity): CacheKey = s"${gad.did}:${gad.getVerKey}:${gad.getEndpoint}"
 }
 
 case class GetAgencyIdentityCacheParam(localAgencyDID: DidStr, gad: GetAgencyIdentity)

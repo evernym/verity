@@ -1,7 +1,7 @@
 package com.evernym.verity.cache
 
 import com.evernym.verity.actor.testkit.ActorSpec
-import com.evernym.verity.cache.base.{Cache, CacheQueryResponse, FetcherParam, GetCachedObjectParam, KeyDetail, KeyMapping}
+import com.evernym.verity.cache.base.{Cache, CacheRequest, FetcherParam, GetCachedObjectParam, QueryResult, ReqParam, RespParam}
 import com.evernym.verity.util2.Status.StatusDetail
 import com.evernym.verity.cache.fetchers.{AsyncCacheValueFetcher, CacheValueFetcher}
 import com.evernym.verity.config.AppConfig
@@ -27,10 +27,10 @@ class CacheMaxSizeSpec
     "when kept adding objects more than max size" - {
       "should respect the max size cap" in {
         (1 to 100).foreach { i =>
-          val gcop = GetCachedObjectParam(KeyDetail(GetMaxSizeCacheReq(i.toString, Right(i.toString)), required = true), mockFetcher)
+          val gcop = GetCachedObjectParam(ReqParam(GetMaxSizeCacheReq(i.toString, Right(i.toString)), required = true), mockFetcher)
           val fut = cache.getByParamAsync(gcop)
           val cqr = Await.result(fut, 2.second)
-          cqr shouldBe CacheQueryResponse(Map(s"$i" -> s"$i"))
+          cqr shouldBe QueryResult(Map(s"$i" -> s"$i"))
         }
         eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
           mockMaxSizeFetcher.maxSize shouldBe Option(20)
@@ -61,18 +61,16 @@ class MockMaxSizeCacheFetcher(val appConfig: AppConfig, ec: ExecutionContext)
   override lazy val defaultExpiryTimeInSeconds: Option[Int] = Option(300)
   override lazy val defaultMaxSize: Option[Int] = Option(20)
 
-  override def toKeyDetailMappings(keyDetails: Set[KeyDetail]): Set[KeyMapping] = {
-    keyDetails.map { kd =>
-      val gvp = kd.keyAs[GetMaxSizeCacheReq]
-      KeyMapping(kd, gvp.id, gvp.id)
-    }
+  override def toCacheRequests(rp: ReqParam): Set[CacheRequest] = {
+    val gvp = rp.cmdAs[GetMaxSizeCacheReq]
+    Set(CacheRequest(rp, gvp.id, gvp.id))
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]] = {
-    val getReq = kd.keyAs[GetMaxSizeCacheReq]
+  override def getByRequest(cr: CacheRequest): Future[Option[RespParam]] = {
+    val getReq = cr.reqParam.cmdAs[GetMaxSizeCacheReq]
     val respFut = Future(getReq.resp)
     respFut.map {
-      case Right(resp) => Map(getReq.id -> resp)
+      case Right(resp) => Option(RespParam(resp))
       case Left(d)     => throw buildUnexpectedResponse(d)
     }
   }

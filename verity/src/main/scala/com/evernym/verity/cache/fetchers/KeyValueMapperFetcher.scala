@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import com.evernym.verity.actor.cluster_singleton.{ForKeyValueMapper, GetValue}
 import com.evernym.verity.cache.KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER
-import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
+import com.evernym.verity.cache.base.{CacheRequest, FetcherParam, ReqParam, RespParam}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.constants.ActorNameConstants._
@@ -30,15 +30,15 @@ class KeyValueMapperFetcher(val as: ActorSystem,
   lazy val singletonParentProxyActor: ActorRef = getActorRefFromSelection(SINGLETON_PARENT_PROXY, as)(appConfig)
 
 
-  override def toKeyDetailMappings(keyDetails: Set[KeyDetail]): Set[KeyMapping] = {
-    keyDetails.map(kd => KeyMapping(kd, kd.key.toString, kd.key.toString))
+  override def toCacheRequests(rp: ReqParam): Set[CacheRequest] = {
+    Set(CacheRequest(rp, rp.cmd.toString, rp.cmd.toString))
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]] = {
-    val gdFut = singletonParentProxyActor ? ForKeyValueMapper(GetValue(kd.key.toString))
+  override def getByRequest(cr: CacheRequest): Future[Option[RespParam]] = {
+    val gdFut = singletonParentProxyActor ? ForKeyValueMapper(GetValue(cr.respKey))
     gdFut map {
-      case Some(v: String) => Map(kd.key.toString -> v)
-      case None => Map.empty[String, AnyRef]
+      case Some(v: String) => Option(RespParam(v))
+      case None => None
       case e => throw buildUnexpectedResponse(e)
     }
   }

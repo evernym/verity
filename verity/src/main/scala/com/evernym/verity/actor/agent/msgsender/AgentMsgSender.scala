@@ -11,7 +11,7 @@ import com.evernym.verity.ledger.LedgerSvcException
 import com.evernym.verity.protocol.protocols.connecting.common.TheirRoutingParam
 import com.evernym.verity.actor.wallet.PackedMsg
 import com.evernym.verity.cache.AGENCY_IDENTITY_CACHE_FETCHER
-import com.evernym.verity.cache.base.{CacheQueryResponse, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.base.{QueryResult, GetCachedObjectParam, ReqParam}
 import com.evernym.verity.cache.fetchers.GetAgencyIdentityCacheParam
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.did.didcomm.v1.messages.MsgId
@@ -40,27 +40,23 @@ trait AgentMsgSender
 
   def getAgencyIdentityFut(localAgencyDID: String,
                            gad: GetAgencyIdentity,
-                           mw: MetricsWriter): Future[CacheQueryResponse] = {
+                           mw: MetricsWriter): Future[QueryResult] = {
     mw.runWithSpan("getAgencyIdentityFut", "AgentMsgSender", InternalSpan) {
       val gadp = GetAgencyIdentityCacheParam(localAgencyDID, gad)
-      val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER)
+      val gadfcParam = GetCachedObjectParam(ReqParam(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER)
       generalCache.getByParamAsync(gadfcParam)
     }
   }
 
   private def theirAgencyEndpointFut(localAgencyDID:DidStr,
                                      theirAgencyDID: DidStr,
-                                     mw: MetricsWriter): Future[CacheQueryResponse] = {
+                                     mw: MetricsWriter): Future[QueryResult] = {
     val gad = GetAgencyIdentity(theirAgencyDID)
     getAgencyIdentityFut(localAgencyDID, gad, mw)
   }
 
-  private def handleRemoteAgencyEndpointNotFound(theirAgencyDID: DidStr): Exception = {
-    val errorMsg =
-      "error while getting endpoint from ledger (" +
-        "possible-causes: ledger pool not reachable/up/responding etc, " +
-        s"target DID: $theirAgencyDID)"
-    LedgerSvcException(errorMsg)
+  private def handleRemoteAgencyEndpointNotFound(theirAgencyDID: DidStr, errorMsg: String): Exception = {
+    LedgerSvcException(s"error while getting endpoint from ledger (target DID: $theirAgencyDID): $errorMsg")
   }
 
   private def getRemoteAgencyEndpoint(implicit sm: SendMsgParam, mw: MetricsWriter): Future[String] = {
@@ -70,10 +66,10 @@ trait AgentMsgSender
           val theirAgencyInfo = cqr.getAgencyInfoReq(theirAgencyDID)
           logger.info(s"theirAgencyInfo received for '$theirAgencyDID': " + theirAgencyInfo)
           theirAgencyInfo.endpointOpt.getOrElse(
-            throw handleRemoteAgencyEndpointNotFound(theirAgencyDID)
+            throw handleRemoteAgencyEndpointNotFound(theirAgencyDID, "endpoint found to be empty (via cache)")
           )
         }.recover {
-          case _: Exception => throw handleRemoteAgencyEndpointNotFound(theirAgencyDID)
+          case e: Exception => throw handleRemoteAgencyEndpointNotFound(theirAgencyDID, e.getMessage)
         }
       case Right(endpoint) => Future.successful(endpoint)
     }
@@ -92,7 +88,7 @@ trait AgentMsgSender
       r
     }.recover {
       case e: Exception =>
-        logger.error("error while sending message to their agency endpoint '${sm.theirRoutingParam.route}': " + Exceptions.getStackTraceAsString(e))
+        logger.error(s"error while sending message to their agency endpoint '${sm.theirRoutingParam.route}': " + Exceptions.getStackTraceAsString(e))
         handleMsgDeliveryResult(MsgDeliveryResult.failed(sm, MSG_DELIVERY_STATUS_FAILED, Exceptions.getErrorMsg(e)))
         throw e
     }

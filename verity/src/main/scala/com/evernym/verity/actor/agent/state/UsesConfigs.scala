@@ -9,7 +9,7 @@ import com.evernym.verity.util2.Status.getUnhandledError
 import com.evernym.verity.actor.agent.user.{AgentConfig, AgentConfigs, GetConfigDetail, GetConfigs}
 import com.evernym.verity.agentmsg.msgfamily.ConfigDetail
 import com.evernym.verity.cache.AGENT_ACTOR_CONFIG_CACHE_FETCHER
-import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.base.{Cache, GetCachedObjectParam, ReqParam}
 import com.evernym.verity.cache.fetchers.GetConfigCacheParam
 import com.evernym.verity.did.DidStr
 
@@ -59,9 +59,9 @@ trait UsesConfigs extends HasAppConfig with HasExecutionContextProvider {
 
   def getConfigsFromUserAgent(configs: Set[GetConfigDetail]): Future[AgentConfigs] = {
 
-    def buildKeyDetails(gcd: Set[GetConfigDetail], req: Boolean): Set[KeyDetail] = {
-      if (gcd.nonEmpty) Set(KeyDetail(GetConfigCacheParam(ownerAgentKeyDIDReq, GetConfigs(gcd.map(_.name))), required = req))
-      else Set.empty[KeyDetail]
+    def buildKeyDetails(gcd: Set[GetConfigDetail], req: Boolean): Set[ReqParam] = {
+      if (gcd.nonEmpty) Set(ReqParam(GetConfigCacheParam(ownerAgentKeyDIDReq, GetConfigs(gcd.map(_.name))), required = req))
+      else Set.empty[ReqParam]
     }
 
     val (reqs, nonReqs) = configs.partition(_.req)

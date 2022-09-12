@@ -2,7 +2,7 @@ package com.evernym.verity.cache.fetchers
 
 import com.evernym.verity.util2.Status.StatusDetailException
 import com.evernym.verity.cache.LEDGER_GET_VER_KEY_CACHE_FETCHER
-import com.evernym.verity.cache.base.{FetcherParam, KeyDetail, KeyMapping}
+import com.evernym.verity.cache.base.{CacheRequest, FetcherParam, ReqParam, RespParam}
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.ledger.Submitter
@@ -27,18 +27,16 @@ class LedgerVerKeyCacheFetcher(val vdr: VDRAdapter,
   //time to live in seconds, afterwards they will be considered as expired and re-fetched from source
   override lazy val defaultExpiryTimeInSeconds: Option[Int] = Option(1800)
 
-  override def toKeyDetailMappings(keyDetails: Set[KeyDetail]): Set[KeyMapping] = {
-    keyDetails.map { kd =>
-      val gvp = kd.keyAs[GetVerKeyParam]
-      KeyMapping(kd, gvp.did, gvp.did)
-    }
+  override def toCacheRequests(rp: ReqParam): Set[CacheRequest] = {
+    val gvp = rp.cmdAs[GetVerKeyParam]
+    Set(CacheRequest(rp, gvp.did, gvp.did))
   }
 
-  override def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]] = {
-    val gvkp = kd.keyAs[GetVerKeyParam]
-    val didDocFut = vdr.resolveDID(VDRUtil.toFqDID(gvkp.did, isVdrMultiLedgerSupportEnabled, vdrUnqualifiedLedgerPrefix, vdrLedgerPrefixMappings))
+  override def getByRequest(cr: CacheRequest): Future[Option[RespParam]] = {
+    val gvp = cr.reqParam.cmdAs[GetVerKeyParam]
+    val didDocFut = vdr.resolveDID(VDRUtil.toFqDID(gvp.did, isVdrMultiLedgerSupportEnabled, vdrUnqualifiedLedgerPrefix, vdrLedgerPrefixMappings))
     didDocFut
-      .map { dd =>Map(gvkp.did -> dd.verKey)}
+      .map { dd => Option(RespParam(dd.verKey))}
       .recover {
         case StatusDetailException(sd) => throw buildUnexpectedResponse(sd)
       }

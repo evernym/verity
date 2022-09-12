@@ -14,7 +14,7 @@ import com.evernym.verity.actor.cluster_singleton.{AddMapping, ForKeyValueMapper
 import com.evernym.verity.actor.wallet.{CreateNewKey, CreateWallet, NewKeyCreated, WalletCreated}
 import com.evernym.verity.agentmsg.msgpacker.UnpackParam
 import com.evernym.verity.cache.{LEDGER_GET_ENDPOINT_CACHE_FETCHER, LEDGER_GET_VER_KEY_CACHE_FETCHER}
-import com.evernym.verity.cache.base.{GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.base.{GetCachedObjectParam, ReqParam}
 import com.evernym.verity.cache.fetchers.{GetEndpointParam, GetVerKeyParam}
 import com.evernym.verity.config.ConfigConstants
 import com.evernym.verity.constants.ActorNameConstants._
@@ -211,13 +211,13 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
   //dhh Same note about caching as above.
   def getCachedEndpointFromLedger(did: DidStr, req: Boolean = false): Future[Option[Either[StatusDetail, String]]] = {
     val gep = GetEndpointParam(did, ledgerReqSubmitter)
-    val gcop = GetCachedObjectParam(KeyDetail(gep, required = req), LEDGER_GET_ENDPOINT_CACHE_FETCHER)
+    val gcop = GetCachedObjectParam(ReqParam(gep, required = req), LEDGER_GET_ENDPOINT_CACHE_FETCHER)
     getCachedStringValue(did, gcop)
   }
 
   def getCachedVerKeyFromLedger(did: DidStr, req: Boolean = false): Future[Option[Either[StatusDetail, String]]] = {
     val gvkp = GetVerKeyParam(did, ledgerReqSubmitter)
-    val gcop = GetCachedObjectParam(KeyDetail(gvkp, required = req), LEDGER_GET_VER_KEY_CACHE_FETCHER)
+    val gcop = GetCachedObjectParam(ReqParam(gvkp, required = req), LEDGER_GET_VER_KEY_CACHE_FETCHER)
     getCachedStringValue(did, gcop)
   }
 

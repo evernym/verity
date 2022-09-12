@@ -208,7 +208,7 @@ trait AgentCommon
   }
 
   def agencyDidPairFutByCache(agencyDID: DidStr): Future[DidPair] = {
-    val gadp = GetAgencyIdentityCacheParam(agencyDID, GetAgencyIdentity(agencyDID, getEndpoint = false))
+    val gadp = GetAgencyIdentityCacheParam(agencyDID, GetAgencyIdentity(agencyDID))
     val gadfcParam = GetCachedObjectParam(KeyDetail(gadp, required = true), AGENCY_IDENTITY_CACHE_FETCHER)
     generalCache.getByParamAsync(gadfcParam)
       .map(cqr => DidPair(agencyDID, cqr.getAgencyInfoReq(agencyDID).verKeyReq))

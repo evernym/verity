@@ -55,12 +55,8 @@ trait AgentMsgSender
     getAgencyIdentityFut(localAgencyDID, gad, mw)
   }
 
-  private def handleRemoteAgencyEndpointNotFound(theirAgencyDID: DidStr): Exception = {
-    val errorMsg =
-      "error while getting endpoint from ledger (" +
-        "possible-causes: ledger pool not reachable/up/responding etc, " +
-        s"target DID: $theirAgencyDID)"
-    LedgerSvcException(errorMsg)
+  private def handleRemoteAgencyEndpointNotFound(theirAgencyDID: DidStr, errorMsg: String): Exception = {
+    LedgerSvcException(s"error while getting endpoint from ledger (target DID: $theirAgencyDID): $errorMsg")
   }
 
   private def getRemoteAgencyEndpoint(implicit sm: SendMsgParam, mw: MetricsWriter): Future[String] = {
@@ -70,10 +66,10 @@ trait AgentMsgSender
           val theirAgencyInfo = cqr.getAgencyInfoReq(theirAgencyDID)
           logger.info(s"theirAgencyInfo received for '$theirAgencyDID': " + theirAgencyInfo)
           theirAgencyInfo.endpointOpt.getOrElse(
-            throw handleRemoteAgencyEndpointNotFound(theirAgencyDID)
+            throw handleRemoteAgencyEndpointNotFound(theirAgencyDID, "endpoint found to be empty (via cache)")
           )
         }.recover {
-          case _: Exception => throw handleRemoteAgencyEndpointNotFound(theirAgencyDID)
+          case e: Exception => throw handleRemoteAgencyEndpointNotFound(theirAgencyDID, e.getMessage)
         }
       case Right(endpoint) => Future.successful(endpoint)
     }
@@ -92,7 +88,7 @@ trait AgentMsgSender
       r
     }.recover {
       case e: Exception =>
-        logger.error("error while sending message to their agency endpoint '${sm.theirRoutingParam.route}': " + Exceptions.getStackTraceAsString(e))
+        logger.error(s"error while sending message to their agency endpoint '${sm.theirRoutingParam.route}': " + Exceptions.getStackTraceAsString(e))
         handleMsgDeliveryResult(MsgDeliveryResult.failed(sm, MSG_DELIVERY_STATUS_FAILED, Exceptions.getErrorMsg(e)))
         throw e
     }

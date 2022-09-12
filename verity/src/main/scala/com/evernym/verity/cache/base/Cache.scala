@@ -20,9 +20,6 @@ trait CacheBase extends HasExecutionContextProvider {
 
   private implicit def executionContext: ExecutionContext = futureExecutionContext
 
-  type Key = String
-  type FetcherId = Int
-
   protected val logger: Logger = getLoggerByClass(classOf[CacheBase])
 
   def name: String
@@ -62,12 +59,12 @@ trait CacheBase extends HasExecutionContextProvider {
     cacheByFetcher.getOrElse(fetcherParam, throw new RuntimeException("cache provider not found for fetcher: " + fetcherParam))
   }
 
-  def getCachedObjectsByFetcherId(fetcherParam: FetcherParam): Map[Key, Any] = {
+  def getCachedObjectsByFetcherId(fetcherParam: FetcherParam): Map[CacheKey, Any] = {
     val cacheProvider = getCacheProvider(fetcherParam)
     cacheProvider.cachedObjects
   }
 
-  private def addToFetcherCache(fetcherParam: FetcherParam, key: Key, value: AnyRef): Unit = {
+  private def addToFetcherCache(fetcherParam: FetcherParam, key: CacheKey, value: AnyRef): Unit = {
     val cacheProvider = getCacheProvider(fetcherParam)
     cacheProvider.put(key, value)
     logger.debug("cached object added: " + fetcherParam)
@@ -105,25 +102,25 @@ trait CacheBase extends HasExecutionContextProvider {
   }
 
   //this function gets executed when cache has to go to the source and fetch the actual value
-  private def processFetchResultFromSource(fetchedResult: Map[String, AnyRef])
-                                          (implicit frfc: FetchResultFromCache): Map[String, AnyRef] = {
+  private def processFetchResultFromSource(fetchedResult: Map[CacheRequest, RespParam])
+                                          (implicit frfc: FetchResultFromCache): Map[CacheRequest, AnyRef] = {
     logMsg(frfc.gcop.fetcherParam, frfc.reqId, "fetched data from source: " + fetchedResult)
-    fetchedResult.foreach { case (k, v) =>
+    fetchedResult.foreach { case (cr, rp) =>
       if (frfc.fetcherExpiryTimeInSeconds.forall(_ > 0)) {
-        addToFetcherCache(frfc.gcop.fetcherParam, k, v)
+          addToFetcherCache(frfc.gcop.fetcherParam, cr.storageKey, rp.result)
       }
     }
-    val found = frfc.cachedObjectsFound.map(fc => fc._1 -> fc._2)
-    found ++ fetchedResult
+    val found = frfc.objectsFoundInCache.map(fc => fc._1 -> fc._2)
+    found ++ fetchedResult.map(r => r._1 -> r._2.result)
   }
 
-  private def prepareFinalResponse(finalResult: Map[String, AnyRef])
-                                  (implicit frfc: FetchResultFromCache): CacheQueryResponse = {
+  private def prepareFinalResponse(finalResult: Map[CacheRequest, AnyRef])
+                                  (implicit frfc: FetchResultFromCache): QueryResult = {
     logStats(frfc.gcop.fetcherParam, frfc.reqId)
     collectMetrics()
     val fetcher = getFetcherById(frfc.gcop.fetcherParam)
-    val requiredKeyNames = frfc.keyMappings.filter(_.keyDetail.required).map(_.loggingKey)
-    val missingKeys = frfc.keyMappings.map(_.loggingKey).diff(finalResult.keySet)
+    val requiredKeyNames = frfc.cacheRequests.filter(_.reqParam.required).map(_.storageKey)
+    val missingKeys = frfc.cacheRequests.map(_.storageKey).diff(finalResult.keySet.map(_.storageKey))
     val requiredButMissing = missingKeys.intersect(requiredKeyNames)
     if (requiredButMissing.nonEmpty) {
       logMsg(frfc.gcop.fetcherParam, frfc.reqId, "given required keys neither found in cache nor in source: " +
@@ -131,7 +128,7 @@ trait CacheBase extends HasExecutionContextProvider {
       throw fetcher.throwRequiredKeysNotFoundException(requiredButMissing)
     } else {
       logMsg(frfc.gcop.fetcherParam, frfc.reqId, "returning requested keys: " + finalResult.keySet.mkString(", "))
-      CacheQueryResponse(finalResult)
+      QueryResult(finalResult.map(r => r._1.respKey -> r._2))
     }
   }
 
@@ -140,62 +137,69 @@ trait CacheBase extends HasExecutionContextProvider {
     val id = UUID.randomUUID.toString
     logMsg(gcop.fetcherParam, id, "input param: " + gcop)
     val fetcher = getFetcherById(gcop.fetcherParam)
-    val keyMappings = fetcher.toKeyDetailMappings(gcop.kds)
-    val requestedCacheKeys = keyMappings.map(_.cacheKey)
+    val cacheRequests = gcop.reqParams.flatMap(fetcher.toCacheRequests)
+    val requestedCacheKeys = cacheRequests.map(_.storageKey)
     val cacheProvider = getCacheProvider(gcop.fetcherParam)
 
     val cachedObjectsFound =
-      requestedCacheKeys
-        .map(k => k -> cacheProvider.get(k))
+      cacheRequests
+        .map(cr => cr -> cacheProvider.get(cr.storageKey))
         .filter(_._2.isDefined)
         .map(r => r._1 -> r._2.get)
         .toMap
 
-    val keysFoundInCache = cachedObjectsFound.keySet
+    val keysFoundInCache = cachedObjectsFound.keySet.map(_.storageKey)
     val keysNotFoundInCache = requestedCacheKeys.diff(keysFoundInCache)
-    val originalKeysNotFound = keyMappings.filter(km => keysNotFoundInCache.contains(km.cacheKey)).map(_.keyDetail)
-    logMsg(gcop.fetcherParam, id,
-      "keys found in cache : " +
-      keyMappings
-        .filter(km => keysFoundInCache.contains(km.cacheKey))
-        .map(k =>k.loggingKey)
+    val originalKeysNotFound = cacheRequests.filter(cr => keysNotFoundInCache.contains(cr.storageKey))
+    logMsg(
+      gcop.fetcherParam,
+      id,
+      msg = "keys found in cache : " +
+        cacheRequests
+          .filter(cr => keysFoundInCache.contains(cr.storageKey))
+          .map(cr => cr.storageKey)
     )
     if (keysNotFoundInCache.nonEmpty)
-      logMsg(gcop.fetcherParam, id, "keys NOT found in cache : " + keyMappings.filter(km =>
-        keysNotFoundInCache.contains(km.cacheKey)).map(_.loggingKey))
+      logMsg(
+        gcop.fetcherParam,
+        id,
+        msg = "keys NOT found in cache : " +
+          cacheRequests
+            .filter(cr => keysNotFoundInCache.contains(cr.storageKey))
+      )
 
-    FetchResultFromCache(gcop, id, keyMappings, fetcher.expiryTimeInSeconds, requestedCacheKeys,
-      cachedObjectsFound, keysFoundInCache, keysNotFoundInCache, originalKeysNotFound)
+    FetchResultFromCache(id, gcop, cacheRequests, fetcher.expiryTimeInSeconds, requestedCacheKeys,
+      keysFoundInCache, keysNotFoundInCache, originalKeysNotFound, cachedObjectsFound)
   }
 
-  def getByParamSync(gcop: GetCachedObjectParam): CacheQueryResponse = {
+  def getByParamSync(gcop: GetCachedObjectParam): QueryResult = {
     val fetcher = getSyncFetcherById(gcop.fetcherParam)
 
     implicit val frfc: FetchResultFromCache = fetchFromCache(gcop)
 
     val finalResult = if (frfc.keysNotFoundInCache.nonEmpty) {
-      processFetchResultFromSource(fetcher.getByKeyDetails(frfc.originalKeysNotFound))
+      processFetchResultFromSource(fetcher.getByRequests(frfc.objectsNotFoundInCache))
     } else {
-      frfc.cachedObjectsFound.map(fc => fc._1 -> fc._2)
+      frfc.objectsFoundInCache.map(fc => fc._1 -> fc._2)
     }
 
     prepareFinalResponse(finalResult)
   }
 
-  def getByParamAsync(gcop: GetCachedObjectParam): Future[CacheQueryResponse] = {
+  def getByParamAsync(gcop: GetCachedObjectParam): Future[QueryResult] = {
 
     val fetcher = getAsyncFetcherById(gcop.fetcherParam)
 
     implicit val cpfr: FetchResultFromCache = fetchFromCache(gcop)
 
     val finalResult = if (cpfr.keysNotFoundInCache.nonEmpty) {
-      fetcher.getByKeyDetails(cpfr.originalKeysNotFound).map { r =>
+      fetcher.getByRequests(cpfr.objectsNotFoundInCache).map { r =>
         processFetchResultFromSource(r)
       }.recover {
         case e: Exception => throw e
       }
     } else {
-      Future(cpfr.cachedObjectsFound.map(fc => fc._1 -> fc._2))
+      Future(cpfr.objectsFoundInCache.map(fc => fc._1 -> fc._2))
     }
 
     finalResult map { fr =>
@@ -209,7 +213,7 @@ trait CacheBase extends HasExecutionContextProvider {
  *
  * @param data response data as "map of key value pair"
  */
-case class CacheQueryResponse(data: Map[String, Any]) extends CacheResponseUtil
+case class QueryResult(data: Map[RespKey, Any]) extends CacheResponseUtil
 
 class Cache(override val name: String,
             override val fetchers: Map[FetcherParam, CacheValueFetcher],
@@ -220,44 +224,45 @@ class Cache(override val name: String,
    */
   override def futureExecutionContext: ExecutionContext = executionContext
 }
+
 /**
  *
- * @param key key used by code for search/lookup purposes
+ * @param cmd cache client provides the command to be used by cache fetcher
  * @param required is it required (either it should exists/provided by source or cache)
  */
-case class KeyDetail(key: Any, required: Boolean) {
-  def keyAs[T]: T = key.asInstanceOf[T]
+case class ReqParam(cmd: Any, required: Boolean) {
+  def cmdAs[T]: T = cmd.asInstanceOf[T]
 }
 
 /**
  *
- * @param keyDetail key detail
- * @param cacheKey key used for cache value lookup
- * @param loggingKey key to be used for logging
+ * @param result the fetched item from the source
  */
-case class KeyMapping(keyDetail: KeyDetail, cacheKey: String, loggingKey: String)
+case class RespParam(result: AnyRef)
+
+case class CacheRequest(reqParam: ReqParam, respKey: RespKey, storageKey: CacheKey)
 
 object GetCachedObjectParam {
 
-  def apply(kd: KeyDetail, fetcherParam: FetcherParam): GetCachedObjectParam =
+  def apply(kd: ReqParam, fetcherParam: FetcherParam): GetCachedObjectParam =
     GetCachedObjectParam(Set(kd), fetcherParam)
 }
 /**
  * input parameter to cache, multiple keys can be requested from cache
  *
- * @param kds set of key detail
+ * @param reqParams set of key detail
  * @param fetcherParam fetcherParam
  */
-case class GetCachedObjectParam(kds: Set[KeyDetail], fetcherParam: FetcherParam)
+case class GetCachedObjectParam(reqParams: Set[ReqParam], fetcherParam: FetcherParam)
 
-case class FetchResultFromCache(gcop: GetCachedObjectParam,
-                                reqId: String,
-                                keyMappings: Set[KeyMapping],
+case class FetchResultFromCache(reqId: String,
+                                gcop: GetCachedObjectParam,
+                                cacheRequests: Set[CacheRequest],
                                 fetcherExpiryTimeInSeconds: Option[Int],
-                                requestedCacheKeys: Set[String],
-                                cachedObjectsFound: Map[String, AnyRef],
-                                keysFoundInCache: Set[String],
-                                keysNotFoundInCache: Set[String],
-                                originalKeysNotFound: Set[KeyDetail])
+                                requestedCacheKeys: Set[CacheKey],
+                                keysFoundInCache: Set[CacheKey],
+                                keysNotFoundInCache: Set[CacheKey],
+                                objectsNotFoundInCache: Set[CacheRequest],
+                                objectsFoundInCache: Map[CacheRequest, AnyRef])
 
 case class FetcherParam(id: Int, name: String)

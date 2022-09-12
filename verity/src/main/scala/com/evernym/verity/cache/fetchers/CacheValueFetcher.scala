@@ -4,7 +4,7 @@ import akka.util.Timeout
 import com.evernym.verity.util2.Exceptions.{BadRequestErrorException, HandledErrorException, InternalServerErrorException}
 import com.evernym.verity.util2.HasExecutionContextProvider
 import com.evernym.verity.util2.Status.{DATA_NOT_FOUND, StatusDetail, getUnhandledError}
-import com.evernym.verity.cache.base.{DEFAULT_MAX_CACHE_SIZE, FetcherParam, KeyDetail, KeyMapping}
+import com.evernym.verity.cache.base.{CacheRequest, DEFAULT_MAX_CACHE_SIZE, FetcherParam, ReqParam, RespParam}
 import com.evernym.verity.cache.providers.MaxWeightParam
 import com.evernym.verity.config.AppConfig
 import com.evernym.verity.config.ConfigConstants.TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS
@@ -58,11 +58,11 @@ trait CacheValueFetcher extends HasExecutionContextProvider {
     (keySize + valueSize).toInt
   }
 
-  //NOTE: this provides mapping from key detail to KeyMapping
-  def toKeyDetailMappings(keyDetails: Set[KeyDetail]): Set[KeyMapping]
+  //NOTE: this provides mapping from key param to Cache Request
+  def toCacheRequests(rp: ReqParam): Set[CacheRequest]
 
-  def composeMultiKeyDetailResult(result: Set[Map[String, AnyRef]]): Map[String, AnyRef] =
-    result.flatten.map(e => e._1 -> e._2).toMap
+  def composeMultiKeyDetailResult(result: Set[(CacheRequest, Option[RespParam])]): Map[CacheRequest, RespParam] =
+    result.filter(_._2.isDefined).map(r => r._1 -> r._2.get).toMap
 
   def throwRequiredKeysNotFoundException(reqKeysNotFound: Set[String]): HandledErrorException = {
     new BadRequestErrorException(DATA_NOT_FOUND.statusCode, Option("required keys not found: " + reqKeysNotFound.mkString(", ")))
@@ -80,12 +80,10 @@ trait CacheValueFetcher extends HasExecutionContextProvider {
 
 
 trait SyncCacheValueFetcher extends CacheValueFetcher {
-  def getByKeyDetail(kd: KeyDetail): Map[String, AnyRef]
+  def getByRequest(cr: CacheRequest): Option[RespParam]
 
-  def getByKeyDetails(kds: Set[KeyDetail]): Map[String, AnyRef] = {
-    val result = kds.map { kd =>
-      getByKeyDetail(kd)
-    }
+  def getByRequests(crs: Set[CacheRequest]): Map[CacheRequest, RespParam] = {
+    val result = crs.map { cr => cr -> getByRequest(cr)}
     composeMultiKeyDetailResult(result)
   }
 }
@@ -95,15 +93,13 @@ trait AsyncCacheValueFetcher extends CacheValueFetcher {
 
   implicit val timeout: Timeout = buildTimeout(appConfig, TIMEOUT_GENERAL_ACTOR_ASK_TIMEOUT_IN_SECONDS, DEFAULT_GENERAL_RESPONSE_TIMEOUT_IN_SECONDS)
 
-  def getByKeyDetail(kd: KeyDetail): Future[Map[String, AnyRef]]
+  def getByRequest(cr: CacheRequest): Future[Option[RespParam]]
 
-  def getByKeyDetails(kds: Set[KeyDetail]): Future[Map[String, AnyRef]] = {
-    Future.traverse(kds) { kd =>
-      getByKeyDetail(kd)
+  def getByRequests(crs: Set[CacheRequest]): Future[Map[CacheRequest, RespParam]] = {
+    Future.traverse(crs) { cr =>
+      getByRequest(cr).map(r => cr -> r)
     } flatMap { result =>
-      Future {
-        composeMultiKeyDetailResult(result)
-      }
+      Future.successful(composeMultiKeyDetailResult(result))
     }
   }
 }

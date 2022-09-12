@@ -8,7 +8,7 @@ import com.evernym.verity.actor.agent.agency.{CreateKey, SetEndpoint, UpdateEndp
 import com.evernym.verity.actor.agent.msgrouter.{ActorAddressDetail, GetRoute}
 import com.evernym.verity.actor.{AgencyPublicDid, EndpointSet}
 import com.evernym.verity.cache.KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER
-import com.evernym.verity.cache.base.{GetCachedObjectParam, KeyDetail}
+import com.evernym.verity.cache.base.{GetCachedObjectParam, ReqParam}
 import com.evernym.verity.constants.Constants.AGENCY_DID_KEY
 import com.evernym.verity.did.DidStr
 import com.evernym.verity.http.HttpUtil.optionalEntityAs
@@ -44,7 +44,7 @@ trait AgencySetupEndpointHandler extends BaseRequestHandler {
   }
 
   protected def getAgencyDIDOptFut: Future[Option[String]] = {
-    val gcop = GetCachedObjectParam(KeyDetail(AGENCY_DID_KEY, required = false), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER)
+    val gcop = GetCachedObjectParam(ReqParam(AGENCY_DID_KEY, required = false), KEY_VALUE_MAPPER_ACTOR_CACHE_FETCHER)
     platform.agentActorContext.generalCache.getByParamAsync(gcop).map { cqr =>
       cqr.getAgencyDIDOpt
     }

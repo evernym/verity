@@ -212,22 +212,24 @@ class AgencyAgent(val agentActorContext: AgentActorContext,
   def getCachedEndpointFromLedger(did: DidStr, req: Boolean = false): Future[Option[Either[StatusDetail, String]]] = {
     val gep = GetEndpointParam(did, ledgerReqSubmitter)
     val gcop = GetCachedObjectParam(ReqParam(gep, required = req), LEDGER_GET_ENDPOINT_CACHE_FETCHER)
-    getCachedStringValue(did, gcop)
+    getCachedStringValue(did, gcop, "endpoint")
   }
 
   def getCachedVerKeyFromLedger(did: DidStr, req: Boolean = false): Future[Option[Either[StatusDetail, String]]] = {
     val gvkp = GetVerKeyParam(did, ledgerReqSubmitter)
     val gcop = GetCachedObjectParam(ReqParam(gvkp, required = req), LEDGER_GET_VER_KEY_CACHE_FETCHER)
-    getCachedStringValue(did, gcop)
+    getCachedStringValue(did, gcop, "verKey")
   }
 
-  def getCachedStringValue(forDid: DidStr, gcop: GetCachedObjectParam): Future[Option[Either[StatusDetail, String]]] = {
+  private def getCachedStringValue(forDid: DidStr,
+                                   gcop: GetCachedObjectParam,
+                                   valueType: String): Future[Option[Either[StatusDetail, String]]] = {
     generalCache.getByParamAsync(gcop).map { cqr =>
       cqr.get[String](forDid).map(v => Right(v))
     }.recover {
       case e: Exception =>
-        Option(Left(UNHANDLED.withMessage("error while getting value (error-msg: " +
-          Exceptions.getErrorMsg(e) + ")")))
+        Option(Left(UNHANDLED.withMessage(
+          s"error while getting cached '$valueType' for '$forDid' (error-msg: " + Exceptions.getErrorMsg(e) + ")")))
     }
   }
 

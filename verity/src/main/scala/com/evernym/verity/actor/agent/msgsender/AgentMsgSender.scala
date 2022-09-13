@@ -64,7 +64,6 @@ trait AgentMsgSender
       case Left(theirAgencyDID) =>
         theirAgencyEndpointFut(sm.localAgencyDID, theirAgencyDID, mw).map { cqr =>
           val theirAgencyInfo = cqr.getAgencyInfoReq(theirAgencyDID)
-          logger.info(s"theirAgencyInfo received for '$theirAgencyDID': " + theirAgencyInfo)
           theirAgencyInfo.endpointOpt.getOrElse(
             throw handleRemoteAgencyEndpointNotFound(theirAgencyDID, "endpoint found to be empty (via cache)")
           )

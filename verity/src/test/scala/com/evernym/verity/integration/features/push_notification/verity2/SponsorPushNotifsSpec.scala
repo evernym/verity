@@ -301,8 +301,8 @@ class SponsorPushNotifsSpec
        |      keys: [{"verKey": "${testSponsor.verKey}"}]
        |      active: true
        |      push-msg-overrides: {
-       |        general-new-msg-body-template = "Sponsor: Your credit union has sent you #{msgType}"
-       |        questionanswer_1.0_question-new-msg-body-template = "Sponsor: Your credit union is asking you #{msgType}"
+       |        "general-new-msg-body-template" = "Sponsor: Your credit union has sent you #{msgType}"
+       |        "questionanswer_1.0_question-new-msg-body-template" = "Sponsor: Your credit union is asking you #{msgType}"
        |      }
        |    }
        |  ]

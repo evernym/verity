@@ -321,19 +321,21 @@ class Platform(val aac: AgentActorContext, services: PlatformServices, val execu
     .entries
     .map { e =>
       val ap = ActorProtocol(e.protoDef)
+      val passivateIdleEntityAfter = {
+        val duration = ConfigUtil.getReceiveTimeout(
+          appConfig,
+          ActorProtocol.defaultPassivationTimeout,
+          ActorProtocol.entityCategory,
+          ap.typeName,
+          null
+        )
+        if (duration.isFinite) Some(FiniteDuration(duration.toSeconds, TimeUnit.SECONDS))
+        else None
+      }
       val region = createProtoActorRegion(
         ap.typeName,
         ap.props(agentActorContext, executionContextProvider.futureExecutionContext),
-        passivateIdleEntityAfter = Some(FiniteDuration(
-          ConfigUtil.getReceiveTimeout(
-            appConfig,
-            ActorProtocol.defaultPassivationTimeout,
-            ActorProtocol.entityCategory,
-            ap.typeName,
-            null
-          ).toSeconds,
-          TimeUnit.SECONDS
-        ))
+        passivateIdleEntityAfter = passivateIdleEntityAfter
       )
       ap.typeName -> region
     }.toMap

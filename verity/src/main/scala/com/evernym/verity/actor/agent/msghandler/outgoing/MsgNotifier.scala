@@ -20,7 +20,6 @@ import com.evernym.verity.agentmsg.msgfamily.MsgFamilyUtil._
 import com.evernym.verity.agentmsg.msgfamily.pairwise.MsgExtractor
 import com.evernym.verity.config.ConfigConstants._
 import com.evernym.verity.config.ConfigUtil
-import com.evernym.verity.config.validator.base.ConfigReadHelper
 import com.evernym.verity.constants.Constants._
 import com.evernym.verity.constants.LogKeyConstants._
 import com.evernym.verity.did.DidStr
@@ -43,6 +42,7 @@ import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 
@@ -178,9 +178,15 @@ trait MsgNotifierForStoredMsgs
     val sponsorNewMsgTemplate: Option[String] = sponsorId.flatMap { sponsorId =>
       ConfigUtil.findSponsorConfigWithId(sponsorId, appConfig).flatMap { sd =>
         Try {
-          val overriddenConfig = ConfigReadHelper(ConfigFactory.parseString(sd.pushMsgOverrides))
-          overriddenConfig.getStringOption(msgTypeBasedTemplateConfigName)
-            .orElse(overriddenConfig.getStringOption(generalNewMsgTemplateConfigName))
+          val overriddenConfig = ConfigFactory
+            .parseString(sd.pushMsgOverrides)
+            .root()
+            .entrySet()
+            .asScala
+            .map(entry => entry.getKey -> entry.getValue.unwrapped().toString)
+            .toMap
+          overriddenConfig.get(msgTypeBasedTemplateConfigName)
+            .orElse(overriddenConfig.get(generalNewMsgTemplateConfigName))
         }.toOption.flatten
       }
     }

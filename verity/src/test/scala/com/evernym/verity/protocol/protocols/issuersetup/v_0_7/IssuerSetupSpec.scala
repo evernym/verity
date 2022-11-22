@@ -138,12 +138,14 @@ class IssuerSetupSpec
             withDefaultWalletAccess(f, {
               withDefaultVdrAccess(f, {
                 f.owner ~ Create("did:indy:sovrin", Some("someEndorser"))
-                val sig1 = f.owner expect signal[PublicIdentifierCreated]
+                val sig1 = f.owner expect signal[GetIssuerIdentifier]
+                f.owner ~ CurrentIssuerIdentifierResult(sig1.create, None)
+                val sig2 = f.owner expect signal[PublicIdentifierCreated]
                 f.owner ~ CurrentPublicIdentifier()
-                val sig2 = f.owner expect signal[PublicIdentifier]
+                val sig3 = f.owner expect signal[PublicIdentifier]
 
-                sig1.identifier.did shouldBe sig2.did
-                sig1.identifier.verKey shouldBe sig2.verKey
+                sig2.identifier.did shouldBe sig3.did
+                sig2.identifier.verKey shouldBe sig3.verKey
 
                 f.owner.state shouldBe a[State.Created]
               })
@@ -164,7 +166,8 @@ class IssuerSetupSpec
             withDefaultWalletAccess(f, {
               withDefaultVdrAccess(f, {
                 f.owner ~ Create(ledgerPrefix, Option("otherEndorser"))
-
+                val gii = f.owner expect signal[GetIssuerIdentifier]
+                f.owner ~ CurrentIssuerIdentifierResult(gii.create, None)
                 val pi = f.owner expect signal[PublicIdentifierCreated]
                 pi.identifier shouldBe a[PublicIdentifier]
                 pi.identifier.did shouldBe a[String]
@@ -190,7 +193,9 @@ class IssuerSetupSpec
             withDefaultVdrAccess(f, {
               withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))) ,f, {
                 f.owner ~ Create(ledgerPrefix, None)
-
+                f.owner.state shouldBe a[State.Initialized]
+                val gii = f.owner expect signal[GetIssuerIdentifier]
+                f.owner ~ CurrentIssuerIdentifierResult(gii.create, None)
                 f.owner.state shouldBe a[State.WaitingOnEndorser]
               })
             })
@@ -210,7 +215,8 @@ class IssuerSetupSpec
             withEndorserAccess(Map(MockEndorserUtil.INDY_LEDGER_PREFIX -> List(Endorser("endorserDid"))) ,f, {
 
               f.owner ~ Create(ledgerPrefix, Some(userEndorser))
-
+              val gii = f.owner expect signal[GetIssuerIdentifier]
+              f.owner ~ CurrentIssuerIdentifierResult(gii.create, None)
               val sig = f.owner expect signal[PublicIdentifierCreated]
               sig.status shouldBe a[NeedsEndorsement]
               f.owner.state shouldBe a[State.Created]
@@ -232,6 +238,8 @@ class IssuerSetupSpec
           withDefaultWalletAccess(f, {
             withDefaultVdrAccess(f, {
               f.owner ~ Create(ledgerPrefix, Some("endorserDid"))
+              val gii = f.owner expect signal[GetIssuerIdentifier]
+              f.owner ~ CurrentIssuerIdentifierResult(gii.create, None)
               f.owner ~ EndorsementResult(ENDORSEMENT_RESULT_SUCCESS_CODE, "successful")
               val sig = f.owner expect signal[PublicIdentifierCreated]
               sig.status shouldBe a[WrittenToLedger]
@@ -258,6 +266,8 @@ class IssuerSetupSpec
           withDefaultWalletAccess(f, {
             withDefaultVdrAccess(f, {
               f.owner ~ Create(ledgerPrefix, Some("otherDID"))
+              val gii = f.owner expect signal[GetIssuerIdentifier]
+              f.owner ~ CurrentIssuerIdentifierResult(gii.create, None)
               val sig = f.owner expect signal[PublicIdentifierCreated]
               sig.status shouldBe a[NeedsEndorsement]
 
@@ -303,6 +313,8 @@ class IssuerSetupSpec
 
               sig.message shouldBe "Issuer Identifier has not been created yet"
               f.owner ~ Create("did:indy:sovrin", None)
+              val gii = f.owner expect signal[GetIssuerIdentifier]
+              f.owner ~ CurrentIssuerIdentifierResult(gii.create, None)
               f.owner.state shouldBe an[State.WaitingOnEndorser]
             })
           })

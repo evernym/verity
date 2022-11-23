@@ -49,10 +49,11 @@ class IssuerSetupSpec
       s.owner vdrAccess MockableVdrAccess()
 
       s.owner ~ Create()
-
       s.owner.backState.roster.selfRole.value shouldBe Role.Owner
+      s.owner.state shouldBe an [State.InitializedWithParams]
 
-      s.owner.state shouldBe an [State.Created]
+      s.owner expect signal [GetIssuerIdentifier]
+      s.owner ~ CurrentIssuerIdentifierResult(None)
       s.owner.state.asInstanceOf[State.Created].data.createNonce shouldBe None
 
       s.owner expect signal [PublicIdentifierCreated]
@@ -85,6 +86,10 @@ class IssuerSetupSpec
 
       s.owner.backState.roster.selfRole.value shouldBe Role.Owner
 
+      s.owner.state shouldBe an [State.InitializedWithParams]
+      s.owner expect signal [GetIssuerIdentifier]
+
+      s.owner ~ CurrentIssuerIdentifierResult(None)
       s.owner.state shouldBe an [State.Created]
 
       s.owner expect signal [PublicIdentifier]

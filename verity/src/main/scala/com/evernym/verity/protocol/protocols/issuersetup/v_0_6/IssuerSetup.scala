@@ -47,7 +47,15 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
 
   override def handleControl: Control ?=> Any = statefulHandleControl {
     case (State.Uninitialized(), _, c: Init) => ctx.apply(ProtocolInitialized(c.parametersStored.toSeq))
+
     case (init: State.InitializedWithParams, _, Create()) =>
+      ctx.signal(GetIssuerIdentifier())
+
+    case (init: State.InitializedWithParams, _, CurrentIssuerIdentifierResult(Some(pid: PublicIdentifier))) =>
+      ctx.apply(CreatePublicIdentifierCompleted(pid.did, pid.verKey))
+      ctx.signal(PublicIdentifier(pid.did, pid.verKey))
+
+    case (init: State.InitializedWithParams, _, CurrentIssuerIdentifierResult(None)) =>
       val issuerDid = init.parameters.paramValue(MY_ISSUER_DID).map(ctx.vdr.toLegacyNonFqId)
       issuerDid match {
         case Some(issuerDid) if issuerDid.nonEmpty => ctx.wallet.verKey(issuerDid) {
@@ -70,6 +78,7 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, A
               ctx.signal(ProblemReport(didCreateErrorMsg))
           }
       }
+
     //******** Query *************
     case (State.Created(d), _, CurrentPublicIdentifier()) =>
       d.identity match {

@@ -15,16 +15,18 @@ object IssuerSetupMsgFamily extends MsgFamily {
   override val version: MsgFamilyVersion = "0.7"
 
   override protected val controlMsgs: Map[MsgName, Class[_]] = Map (
-    "initialize"                -> classOf[Initialize],
-    "create"                    -> classOf[Create],
-    "current-public-identifier" -> classOf[CurrentPublicIdentifier],
-    "endorsement-result"        -> classOf[EndorsementResult],
+    "initialize"                       -> classOf[Initialize],
+    "create"                           -> classOf[Create],
+    "current-public-identifier"        -> classOf[CurrentPublicIdentifier],
+    "endorsement-result"               -> classOf[EndorsementResult],
+    "current-issuer-identifier-result" -> classOf[CurrentIssuerIdentifierResult]
   )
 
   override protected val signalMsgs: Map[Class[_], MsgName] = Map (
     classOf[ProblemReport]            -> "problem-report",
     classOf[PublicIdentifierCreated]  -> "public-identifier-created",
     classOf[PublicIdentifier]         -> "public-identifier",
+    classOf[GetIssuerIdentifier]      -> "get-issuer-identifier"
   )
 
   override protected val protocolMsgs: Map[MsgName, Class[_ <: MsgBase]] = Map.empty
@@ -51,12 +53,13 @@ case class Create(ledgerPrefix: LedgerPrefix, endorser: Option[String]) extends 
 }
 case class CurrentPublicIdentifier() extends IssuerSetupControl
 case class EndorsementResult(code: String, description: String) extends IssuerSetupControl
+case class CurrentIssuerIdentifierResult(create: Create, identifier: Option[PublicIdentifier]) extends IssuerSetupControl
 
 sealed trait Sig extends Msg
 case class PublicIdentifier(did: DidStr, verKey: VerKeyStr) extends Sig
 case class PublicIdentifierCreated(identifier: PublicIdentifier, status: EndorsementStatus) extends Sig
 case class ProblemReport(message: String) extends Sig
-
+case class GetIssuerIdentifier(create: Create) extends Sig
 sealed trait EndorsementStatus
 case class NeedsEndorsement(needsEndorsement: ledgerRequestStr) extends Sig with EndorsementStatus
 case class WrittenToLedger(writtenToLedger: ledgerPrefixStr) extends Sig with EndorsementStatus

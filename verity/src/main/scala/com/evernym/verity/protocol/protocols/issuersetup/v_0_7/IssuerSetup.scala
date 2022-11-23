@@ -45,7 +45,13 @@ class IssuerSetup(implicit val ctx: ProtocolContextApi[IssuerSetup, Role, Msg, E
 
   override def handleControl: Control ?=> Any = statefulHandleControl {
     case (State.Uninitialized(), _, c: Initialize) => ctx.apply(Initialized(c.parametersStored))
-    case (init: State.Initialized, _, Create(ledgerPrefix, endorser)) => handleCreateIdentifier(init, ledgerPrefix, endorser)
+    case (init: State.Initialized, _, cr @ Create(ledgerPrefix, endorser)) =>
+      ctx.signal(GetIssuerIdentifier(cr))
+    case (init: State.Initialized, _, CurrentIssuerIdentifierResult(cr, Some(pid))) =>
+      ctx.apply(CreatePublicIdentifierCompleted(pid.did, pid.verKey))
+      ctx.signal(PublicIdentifier(pid.did, pid.verKey))
+    case (init: State.Initialized, _, CurrentIssuerIdentifierResult(cr, None)) =>
+      handleCreateIdentifier(init, cr.ledgerPrefix, cr.endorser)
     case (s: State.WaitingOnEndorser, _, m: EndorsementResult) => handleEndorsementResult(m, s)
 
     //******** Query *************

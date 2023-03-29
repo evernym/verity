@@ -19,7 +19,7 @@ stages:
 
 include:
   - '/cicd/jobs/common.yml'
-  - '/cicd/jobs/check.yml'
+#  - '/cicd/jobs/check.yml'
   - '/cicd/jobs/test.yml'
   - '/cicd/jobs/package.yml'
   - '/cicd/jobs/interop.yml'

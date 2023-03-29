@@ -32,10 +32,7 @@ Additional Use Grant: You may make use of the Licensed Work, including
                       assisted in transmitting or receiving data during the
                       calendar month.
 
-Change Date:          The third anniversary of the date the specific version
-                      of the Licensed Work was publicly committed to the Code
-                      Repository, as recorded in the file
-                      LICENSE_CHANGE_DATE.txt contained in the Code Repository.
+Change Date:          2023-03-28
 
 Change License:       Apache License, Version 2.0
 

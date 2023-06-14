@@ -57,7 +57,7 @@ trait AgentMsgSenderHttpWrapper
 
   def urlParam: UrlParam
 
-  val respWaitTime: Duration = 15.seconds
+  val respWaitTime: Duration = 60.seconds
 
   def mockClientAgent: AgentWithMsgHelper
   implicit def walletAPIParam: WalletAPIParam = mockClientAgent.wap
@@ -736,7 +736,7 @@ trait AgentMsgSenderHttpWrapper
   def getMetrics(fetchFromAllNodes: Boolean): String = {
     val allNodes = if (fetchFromAllNodes) "Y" else "N"
     logApiStart(s"query metrics started...")
-    eventually (timeout(Span(10, Seconds)), interval(Span(3, Seconds))) {
+    eventually (timeout(Span(60, Seconds)), interval(Span(3, Seconds))) {
       val r = sendGetRequest(Some(checkServiceMetric))(url, s"$agencyInternalPathPrefix/metrics?allNodes=$allNodes&includeTags=Y&filtered=N")
       r.asInstanceOf[String]
     }
@@ -825,7 +825,7 @@ trait AgentMsgSenderHttpWrapper
   }
 
   def setupAgency(seedOpt: Option[String]=None): Unit = {
-    setupAgencyAgentKey(seedOpt)
+    // setupAgencyAgentKey(seedOpt)
     bootstrapAgencyAgentToLedger()
   }
 

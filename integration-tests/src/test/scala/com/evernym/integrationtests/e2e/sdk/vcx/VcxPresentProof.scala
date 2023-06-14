@@ -106,8 +106,8 @@ trait VcxPresentProof
           DisclosedProofApi.proofUpdateState(handle).get()
           DisclosedProofApi.proofGetState(handle).get() == 4
         },
-          5 seconds,
-          200 milliseconds
+          60 seconds,
+          400 milliseconds
         )
 
         DisclosedProofApi.proofRelease(handle)

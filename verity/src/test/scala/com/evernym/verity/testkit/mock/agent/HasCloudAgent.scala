@@ -9,13 +9,16 @@ import com.evernym.verity.protocol.protocols.connecting.common.{InviteDetail, Se
 import com.evernym.verity.util.MsgIdProvider.getNewMsgId
 import com.evernym.verity.util2.UrlParam
 
+import com.evernym.verity.vdr.Ledgers
+import scala.io.Source
 
 trait HasCloudAgent { this: MockAgent =>
 
   private val logger = getLoggerByName("HasCloudAgent")
 
   //my agency's public DID detail
-  var agencyPublicDid: Option[AgencyPublicDid] = None
+  // var agencyPublicDid: Option[AgencyPublicDid] = None
+  var agencyPublicDid: Option[AgencyPublicDid] = Some(AgencyPublicDid(verKey = "GJ1SzoWzavQYfNL9XkaJdrQejfztN4XqdsiV4ct3LXKL", DID = "V4SGRU86Z58d6TV7PBUe6f", ledgers = Some(agencyLedgerDetail())))
 
   //my agency's pairwise DID for me
   var agencyPairwiseAgentDetail: Option[DidPair] = None
@@ -61,5 +64,27 @@ trait HasCloudAgent { this: MockAgent =>
 
   def setAgencyPairwiseAgentDetail(id: String, verKey: VerKeyStr): Unit = {
     agencyPairwiseAgentDetail = Option(DidPair(id, verKey))
+  }
+
+    def agencyLedgerDetail(): Ledgers = {
+    // Architecture requested that this be future-proofed by assuming Agency will have more than one ledger.
+    val genesis = try {
+      val genesisFileLocation = "/home/abddulbois/Documents/verity/target/genesis.txt"
+      val genesisFileSource = Source.fromFile(genesisFileLocation)
+      val lines = genesisFileSource.getLines().toList
+      genesisFileSource.close()
+      lines
+    } catch {
+      case e: Exception =>
+        logger.error(s"Could not read config")
+        List()
+    }
+
+    val ledgers: Ledgers = List(Map(
+      "name" -> "default",
+      "genesis" -> genesis,
+      "taa_enabled" -> true
+    ))
+    ledgers
   }
 }

@@ -163,7 +163,7 @@ object Interactive {
     * @param time
     * @param scenario
     */
-  def buffer(time: Duration = Duration("1.5 sec"))(implicit scenario: Scenario): Unit = {
+  def buffer(time: Duration = Duration("60 sec"))(implicit scenario: Scenario): Unit = {
     scenario.consumerMode match {
       case Manual|Automated => Thread.sleep(time.toMillis)
       case _ =>

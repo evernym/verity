@@ -38,19 +38,38 @@ spec:
             revision: {{ .Release.Revision | quote }}
       terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
       containers:
+      - name: indy-pool
+        image: registry.gitlab.com/evernym/containers/indy-pool:1.12.4_1.0.9
+        resources:
+          requests:
+            memory: 256Mi
+            cpu: 250m
+          limits:
+            memory: 512Mi
+            cpu: 500m
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 9701
+          - containerPort: 9702
+          - containerPort: 9703
+          - containerPort: 9704
+          - containerPort: 9705
+          - containerPort: 9706
+          - containerPort: 9707
+          - containerPort: 9708
+          - containerPort: 5678
+          - containerPort: 5679
+        args:
+          - "--TAA_ENABLED=false"
       - name: dev-cas
         image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag }}
-        lifecycle:
-          preStart:
-            exec:
-              command: ["/bin/sh", "-c", "sleep 60"]
         resources:
           requests:
             memory: 512Mi
             cpu: 500m
           limits:
-            memory: 1024Mi
-            cpu: 1000m
+            memory: 2048Mi
+            cpu: 1500m
         startupProbe:
           httpGet:
             path: {{ .Values.deployment.probes.startup.path }}
@@ -98,29 +117,6 @@ spec:
           containerPort: {{ .Values.vars.VERITY_AKKA_MANAGEMENT_HTTP_PORT }}
           protocol: TCP
         imagePullPolicy: {{ .Values.deployment.imagePullPolicy }}
-      - name: indy-pool
-        image: registry.gitlab.com/evernym/containers/indy-pool:1.12.4_1.0.9
-        resources:
-          requests:
-            memory: 256Mi
-            cpu: 250m
-          limits:
-            memory: 512Mi
-            cpu: 500m
-        imagePullPolicy: IfNotPresent
-        ports:
-          - containerPort: 9701
-          - containerPort: 9702
-          - containerPort: 9703
-          - containerPort: 9704
-          - containerPort: 9705
-          - containerPort: 9706
-          - containerPort: 9707
-          - containerPort: 9708
-          - containerPort: 5678
-          - containerPort: 5679
-        args:
-          - "--TAA_ENABLED=true"
       volumes:
       - name: config-files
         configMap:

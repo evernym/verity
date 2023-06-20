@@ -45,9 +45,9 @@ vars:
   VERITY_BASIC_EVENT_CONSUMER_PORT: "8800"
   VERITY_DYNAMODB_JOURNAL_TABLE: "agency_akka_cas"
   VERITY_DYNAMODB_SNAPSHOT_TABLE: "agency_akka_snapshot_cas"
-  TAA_ENABLE: "true"
-  LIB_INDY_LEDGER_TAA_ENABLED: "true"
-  GENESIS_TXN_FILE_LOCATION: "/var/lib/indy/genesis.txt"
+  TAA_ENABLE: "false"
+  LIB_INDY_LEDGER_TAA_ENABLED: "false"
+  GENESIS_TXN_FILE_LOCATION: "/etc/verity/verity-application/genesis.txt"
 
 # List of customers of Verity
 customers:

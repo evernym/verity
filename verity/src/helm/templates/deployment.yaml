@@ -4,6 +4,8 @@ metadata:
   name: {{ .Values.deployment.name }}
   labels:
     app: {{ .Values.deployment.name }}
+    tags.datadoghq.com/service: {{ .Values.deployment.name }}
+    tags.datadoghq.com/env: dev
 spec:
   strategy:
     type: RollingUpdate
@@ -19,7 +21,12 @@ spec:
       labels:
         app: {{ .Values.deployment.name }}
         revision: {{ .Release.Revision | quote }}
-        actorSystemName: {{ .Values.deployment.name }}
+        actorSystemName: verity
+        tags.datadoghq.com/service: {{ .Values.deployment.name }}
+        tags.datadoghq.com/env: dev
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9095"
     spec:
       affinity:
         nodeAffinity:

@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dev-cas
+  name: {{ .Values.deployment.name }}
   labels:
-    app.kubernetes.io/type: app
+    app: {{ .Values.deployment.name }}
 spec:
   strategy:
     type: RollingUpdate
@@ -12,29 +12,38 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      app: dev-cas
+      app: {{ .Values.deployment.name }}
   replicas: {{ .Values.startReplicas }}
   template:
     metadata:
       labels:
-        app: dev-cas
+        app: {{ .Values.deployment.name }}
         revision: {{ .Release.Revision | quote }}
-        actorSystemName: verity
+        actorSystemName: {{ .Values.deployment.name }}
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - {{ .Values.deployment.name }} 
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: topology.kubernetes.io/zone
         whenUnsatisfiable: DoNotSchedule
         labelSelector:
           matchLabels:
-            app: dev-cas
+            app: {{ .Values.deployment.name }}
             revision: {{ .Release.Revision | quote }}
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
         whenUnsatisfiable: DoNotSchedule
         labelSelector:
           matchLabels:
-            app: dev-cas
+            app: {{ .Values.deployment.name }}
             revision: {{ .Release.Revision | quote }}
       terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
       containers:
@@ -61,15 +70,15 @@ spec:
           - containerPort: 5679
         args:
           - "--TAA_ENABLED=false"
-      - name: dev-cas
+      - name: {{ .Values.deployment.name }}
         image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag }}
         resources:
           requests:
-            memory: 512Mi
-            cpu: 500m
+            memory: 768Mi
+            cpu: 250m
           limits:
-            memory: 2048Mi
-            cpu: 1500m
+            memory: 1024Mi
+            cpu: 1000m
         startupProbe:
           httpGet:
             path: {{ .Values.deployment.probes.startup.path }}
@@ -93,7 +102,7 @@ spec:
           failureThreshold: {{ .Values.deployment.probes.liveness.failureThreshold }}
         envFrom:
         - configMapRef:
-            name: vars-dev-cas
+            name: vars-{{ .Values.deployment.name }}
         env:
         - name: CINNAMON__CHMETRICS__DATADOG_REPORTER__HOST
           valueFrom:
@@ -103,6 +112,13 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        # The Kubernetes API discovery will use this service name to look for
+        # nodes with this value in the 'app' label.
+        - name: AKKA_CLUSTER_BOOTSTRAP_SERVICE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: "metadata.labels['app']"
         volumeMounts:
         - name: config-files
           mountPath: /etc/verity/verity-application/config-map
@@ -112,25 +128,25 @@ spec:
           readOnly: true
         ports:
         - name: http
-          containerPort: {{ .Values.vars.VERITY_HTTP_PORT }}
+          containerPort: {{ .Values.deployment.containerPort }}
         - name: management
-          containerPort: {{ .Values.vars.VERITY_AKKA_MANAGEMENT_HTTP_PORT }}
+          containerPort: 8558
           protocol: TCP
         imagePullPolicy: {{ .Values.deployment.imagePullPolicy }}
       volumes:
       - name: config-files
         configMap:
-          name: file-dev-cas
+          name: file-{{ .Values.deployment.name }}
       - name: ledger-genesis-files
         configMap:
-          name: ledger-genesis-dev-cas
+          name: ledger-genesis-{{ .Values.deployment.name }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: dev-cas
+  name: {{ .Values.deployment.name }}
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      app: dev-cas
+      app: {{ .Values.deployment.name }}

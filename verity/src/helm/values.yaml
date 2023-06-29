@@ -60,7 +60,7 @@ vars:
   # VERITY__EVENTING__EVENT_SOURCE: "verity.eventing.kafka-source"
   # VERITY__EVENTING__EVENT_SINK: "verity.eventing.kafka-sink"
   # VERITY__METRICS__BACKEND: com.evernym.verity.metrics.backend.LightbendTelemetryMetricsBackend
-  GENESIS_TXN_FILE_LOCATION: "/etc/verity/verity-application/genesis.txt"
+  GENESIS_TXN_FILE_LOCATION: "/var/lib/indy/genesis.txt"
   VERITY__LIB_INDY__LEDGER__POOL_CONFIG__TIMEOUT: "40"
   LIB_INDY_LEDGER_TAA_ENABLED: "false"
   TAA_ENABLE: "false"
@@ -91,8 +91,9 @@ vars:
   AKKA__SHARDING_REGION_NAME__USER_AGENT_PAIRWISE: ConsumerAgentPairwise
   VERITY__METRICS__PROTOCOL__TAGS__USES_SPONSOR: "true"
   VERITY__SERVICES__PUSH_NOTIF_SERVICE__ENABLED: "true"
-  VERITY__KAFKA__COMMON__CLIENT__ID: "CAS"
-  VERITY__KAFKA__CONSUMER__GROUP__ID: "CAS"
+  
+  # VERITY__KAFKA__COMMON__CLIENT__ID: "CAS"
+  # VERITY__KAFKA__CONSUMER__GROUP__ID: "CAS"
   # VERITY__SERVICES__PUSH_NOTIF_SERVICE__DEFAULT_LOGO_URL: <set a default logo-url>
 
 
@@ -111,6 +112,7 @@ vars:
   # VERITY__REST_API__ENABLED: "true"
   # VERITY__SERVICES__URL_SHORTENER_SERVICE__SELECTED: com.evernym.verity.urlshortener.S3ShortenerSvc
   # KAMON__ENVIRONMENT__SERVICE: "dev-vas"
+
   # KAMON__METRIC__TICK_INTERVAL: "30"
   # VERITY__SERVICES__SMS_SERVICE__EXTERNAL_SERVICES__INFO_BIP__SENDER_ID: "79087"
   # VERITY__KAFKA__COMMON__CLIENT__ID: "VAS"

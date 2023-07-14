@@ -28,15 +28,6 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9095"
     spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - {{ .Values.deployment.name }} 
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: topology.kubernetes.io/zone
@@ -53,6 +44,7 @@ spec:
             app: {{ .Values.deployment.name }}
             revision: {{ .Release.Revision | quote }}
       terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
       containers:
       - name: {{ .Values.deployment.name }}
         image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag }}
@@ -104,6 +96,9 @@ spec:
               apiVersion: v1
               fieldPath: "metadata.labels['app']"
         volumeMounts:
+        - name: secrets-store-inline
+          mountPath: "/vault/secrets"
+          readOnly: true
         - name: config-files
           mountPath: /etc/verity/verity-application/config-map
           readOnly: true
@@ -118,6 +113,12 @@ spec:
           protocol: TCP
         imagePullPolicy: {{ .Values.deployment.imagePullPolicy }}
       volumes:
+      - name: secrets-store-inline
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: aws-secrets-{{ .Values.deployment.name }}
       - name: config-files
         configMap:
           name: file-{{ .Values.deployment.name }}

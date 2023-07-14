@@ -1,11 +1,9 @@
 deployment:
   name: "dev-cas"
-  image: "609723053065.dkr.ecr.ap-southeast-1.amazonaws.com/dev-cas"
-  # name: "dev-vas"
-  # image: "609723053065.dkr.ecr.ap-southeast-1.amazonaws.com/dev-vas"
-  tag: "latest"
+  image: "609723053065.dkr.ecr.ap-southeast-1.amazonaws.com/iac-verity-cas"
+  tag: "boisplusconf2"
   imagePullPolicy: "IfNotPresent"
-  containerPort: 9001
+  containerPort: 9000
   vault:
     enable: true
   terminationGracePeriodSeconds: 120
@@ -28,27 +26,27 @@ deployment:
 k8sService:
   type: NodePort
   port: 80
-  targetPort: 9001
+  targetPort: 9000
 ingress:
-  force_ssl: false
-  healthcheckPath: "/verity/node/readiness"
-  healthcheckIntervalSeconds: 5
-  healthcheckTimeoutSeconds: 2
-  unhealthyThresholdCount: 2
-  deregistrationDelay: 120
+  # targetGroupARNarn: "arn:aws:elasticloadbalancing:ap-southeast-1:609723053065:targetgroup/iac-cas/bf2b04271c90f846" #TODO: make external
+  targetGroupARNarn: ""
+serviceAccount:
+  name: "kubernetes-external-secrets"
+  # arn: "arn:aws:iam::609723053065:role/iac-external-secrets" #TODO: make external
+  arn: ""
+secrets:
+  # awsSecretsNameCredentialsTf: "iac/app/cas/credentials-tf" #TODO: make external
+  awsSecretsNameCredentialsTf: ""
 
 vars:
-  VERITY__WALLET_STORAGE__READ_HOST_IP: "dev-db-cluster.cluster-ro-cl1ymvkbtgtc.ap-southeast-1.rds.amazonaws.com"
-  VERITY__WALLET_STORAGE__WRITE_HOST_IP: "dev-db-cluster.cluster-cl1ymvkbtgtc.ap-southeast-1.rds.amazonaws.com"
-  VERITY__WALLET_STORAGE__CREDENTIALS_USERNAME: "msuser"
-  VERITY__WALLET_STORAGE__CREDENTIALS_PASSWORD: "mspassword"
   _JAVA_OPTIONS: "-Xmx1024m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5005"
   AKKA__LOGLEVEL: INFO
   AKKA__MANAGEMENT__CLUSTER__BOOTSTRAP__ENABLED: "true"
   AKKA__MANAGEMENT__HTTP__ENABLED: "true"
   AKKA__STDOUT_LOGLEVEL: INFO
   ALPAKKA__S3__PATH_STYLE_ACCESS: "false"
-  VERITY__BLOB_STORE__STORAGE_SERVICE: com.evernym.verity.storage_services.aws_s3.S3AlpakkaApi
+  # VERITY__BLOB_STORE__STORAGE_SERVICE: com.evernym.verity.storage_services.aws_s3.S3AlpakkaApi
+  VERITY__BLOB_STORE__STORAGE_SERVICE: "com.evernym.verity.storage_services.leveldb.LeveldbAPI"
   VERITY__DYNAMODB_COMMON__JOURNAL_NAME: agency_event
   VERITY__ENDORSEMENT__REQUEST__TXN_STORE__BUCKET_NAME: "dev-endorsement-txn"
   VERITY__ENDPOINT__PORT: "443"
@@ -77,17 +75,17 @@ vars:
   VERITY__RETENTION_POLICY__OUTBOX_STATE__DEFAULT__UNDEFINED_FALLBACK__INTRA_DOMAIN__EXPIRE_AFTER_DAYS: 3 day
   VERITY__RETENTION_POLICY__OUTBOX_STATE__DEFAULT__UNDEFINED_FALLBACK__INTRA_DOMAIN__EXPIRE_AFTER_TERMINAL_STATE: "false"
   VERITY__SERVICES__URL_MAPPER_SERVICE__ENDPOINT__HOST: dev-cas
-  VERITY__SERVICES__URL_MAPPER_SERVICE__ENDPOINT__PORT: "9001"
+  VERITY__SERVICES__URL_MAPPER_SERVICE__ENDPOINT__PORT: "9000"
   VERITY__URL_MAPPER_API__ENABLED: "true"
   VERITY__VDR__UNQUALIFIED_LEDGER_PREFIX: "did:indy:sovrin:staging"
   VERITY__WALLET_STORAGE__CONNECTION_LIMIT: "10"
   VERITY__WALLET_STORAGE__DB_NAME: wallet
   VERITY_LOGGING_LEVEL: INFO
 # ENV CAS
-  VERITY_HTTP_PORT: "9001"
+  VERITY_HTTP_PORT: "9000"
   KAMON__ENVIRONMENT__SERVICE: "dev-cas"
-  VERITY_DYNAMODB_JOURNAL_TABLE: "agency_akka_cas"
-  VERITY_DYNAMODB_SNAPSHOT_TABLE: "agency_akka_snapshot_cas"
+  VERITY_DYNAMODB_JOURNAL_TABLE: "iac-cas-journal"
+  VERITY_DYNAMODB_SNAPSHOT_TABLE: "iac-cas-snapshot"
   AKKA__SHARDING_REGION_NAME__USER_AGENT: ConsumerAgent
   AKKA__SHARDING_REGION_NAME__USER_AGENT_PAIRWISE: ConsumerAgentPairwise
   VERITY__METRICS__PROTOCOL__TAGS__USES_SPONSOR: "true"
@@ -96,29 +94,6 @@ vars:
   # VERITY__KAFKA__COMMON__CLIENT__ID: "CAS"
   # VERITY__KAFKA__CONSUMER__GROUP__ID: "CAS"
   # VERITY__SERVICES__PUSH_NOTIF_SERVICE__DEFAULT_LOGO_URL: <set a default logo-url>
-
-
-# ENV VAS
-  # VERITY_HTTP_PORT: "9000"
-  # VERITY_DYNAMODB_JOURNAL_TABLE: "verity_akka_application"
-  # VERITY_DYNAMODB_SNAPSHOT_TABLE: "verity_akka_snapshot_application"
-  # AKKA__SHARDING_REGION_NAME__USER_AGENT_PAIRWISE: VerityAgentPairwise
-  # AKKA__SHARDING_REGION_NAME__USER_AGENT: VerityAgent
-  # VERITY__AGENT__STATE__MESSAGES__CLEANUP__DAYS_TO_RETAIN_DELIVERED_MSGS: "0"
-  # VERITY__AGENT__STATE__MESSAGES__CLEANUP__TOTAL_MSGS_TO_RETAIN: "15"
-  # VERITY__METRICS__PROTOCOL__TAGS__USES_SPONSEE: "true"
-  # VERITY__PROVISIONING__CACHE_USED_TOKENS: "true"
-  # VERITY__PROVISIONING__SPONSOR_REQUIRED: "true"
-  # VERITY__PROVISIONING__TOKEN_WINDOW: "1 day"
-  # VERITY__REST_API__ENABLED: "true"
-  # VERITY__SERVICES__URL_SHORTENER_SERVICE__SELECTED: com.evernym.verity.urlshortener.S3ShortenerSvc
-  # KAMON__ENVIRONMENT__SERVICE: "dev-vas"
-
-  # KAMON__METRIC__TICK_INTERVAL: "30"
-  # VERITY__SERVICES__SMS_SERVICE__EXTERNAL_SERVICES__INFO_BIP__SENDER_ID: "79087"
-  # VERITY__KAFKA__COMMON__CLIENT__ID: "VAS"
-  # VERITY__KAFKA__CONSUMER__GROUP__ID: "VAS"
-
 
 # Custom and Adhoc Configuration for Verity in HOCON Notation
 # Intended to allow quick injection of config that is

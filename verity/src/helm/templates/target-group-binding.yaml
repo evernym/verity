@@ -1,0 +1,9 @@
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: {{ template "verity.fullname" . }}
+spec:
+  serviceRef:
+    name: {{ template "verity.fullname" . }}
+    port: {{ .Values.k8sService.port }}
+  targetGroupARN: {{ .Values.ingress.targetGroupARNarn }}

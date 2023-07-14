@@ -5,9 +5,6 @@ metadata:
   labels:
     tags.datadoghq.com/service: {{ .Values.service }}
     tags.datadoghq.com/env: {{ .Values.env }}
-  annotations:
-    app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
-    app.gitlab.com/env: {{ .Values.gitlab_ci_environment_slug }}
 spec:
   strategy:
     type: RollingUpdate
@@ -26,29 +23,6 @@ spec:
         actorSystemName: verity
         tags.datadoghq.com/service: {{ .Values.service }}
         tags.datadoghq.com/env: {{ .Values.env }}
-      annotations:
-        app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
-        app.gitlab.com/env: {{ .Values.gitlab_ci_environment_slug }}
-        {{- if .Values.deployment.vault.enable }}
-        {{- $credentials := printf "kubernetes_secrets/eks-%s/%s-%s" .Values.gitlab_env .Values.name .Values.service }}
-        {{- $credentials_tf := printf "kubernetes_secrets/eks-%s/%s-%s-tf" .Values.gitlab_env .Values.name .Values.service }}
-        {{- $app_confluent := printf "kubernetes_secrets/eks-%s/%s/app-confluent" .Values.gitlab_env .Values.name }}
-        vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/role: "k8s-eks-{{ coalesce .Values.vault_auth_role .Values.env }}"
-        vault.hashicorp.com/auth-path: "auth/k8s/eks-{{ coalesce .Values.vault_auth_path .Values.gitlab_env }}"
-        vault.hashicorp.com/agent-inject-secret-credentials: "{{ $credentials }}"
-        vault.hashicorp.com/agent-inject-secret-credentials-tf: "{{ $credentials_tf }}"
-        vault.hashicorp.com/agent-inject-secret-app-confluent: "{{ $app_confluent }}"
-        vault.hashicorp.com/tls-secret: vault-tls-secret
-        vault.hashicorp.com/ca-cert: /vault/tls/evernym-root-ca.crt
-        vault.hashicorp.com/agent-pre-populate-only : "true"
-        vault.hashicorp.com/agent-inject-template-credentials: |
-{{ include "verity.vaultInjectTemplate" (dict "Secret" $credentials) | indent 10 }}
-        vault.hashicorp.com/agent-inject-template-credentials-tf: |
-{{ include "verity.vaultInjectTemplate" (dict "Secret" $credentials_tf) | indent 10 }}
-        vault.hashicorp.com/agent-inject-template-app-confluent: |
-{{ include "verity.vaultInjectTemplate" (dict "Secret" $app_confluent) | indent 10 }}
-        {{- end }}
     spec:
       topologySpreadConstraints:
       - maxSkew: 1
@@ -66,6 +40,7 @@ spec:
             app: {{ template "verity.fullname" . }}
             revision: {{ .Release.Revision | quote }}
       terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
+      serviceAccountName: {{ template "verity.serviceAccountName" . }}
       containers:
       - name: {{ template "verity.fullname" . }}
         image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag }}
@@ -110,6 +85,9 @@ spec:
             fieldRef:
               fieldPath: metadata.name
         volumeMounts:
+        - name: secrets-store-inline
+          mountPath: "/vault/secrets"
+          readOnly: true
         - name: config-files
           mountPath: /etc/verity/verity-application/config-map
           readOnly: true
@@ -124,6 +102,12 @@ spec:
           protocol: TCP
         imagePullPolicy: {{ .Values.deployment.imagePullPolicy }}
       volumes:
+      - name: secrets-store-inline
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: aws-secrets-{{ template "verity.fullname" . }}
       - name: config-files
         configMap:
           name: file-{{ template "verity.fullname" . }}

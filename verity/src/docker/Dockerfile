@@ -43,7 +43,8 @@ ADD jars/*.jar /usr/lib/verity-application/
 # copy static Verity configuration files
 ADD configuration/* /etc/verity/verity-application/
 
-# Add entrypoint script
+# Add scripts
+ADD scripts/json_to_config.py /usr/local/bin/json_to_config.py
 ADD scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 CMD [ "/usr/local/bin/entrypoint.sh" ]

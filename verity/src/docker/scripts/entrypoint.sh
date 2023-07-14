@@ -10,13 +10,15 @@ function stop_sig {
     fi
 }
 
-VAULT_SECRETS=("/vault/secrets/credentials-tf" "/vault/secrets/credentials" "/vault/secrets/app-confluent")
+VAULT_SECRETS=("/vault/secrets/credentials-tf.json" "/vault/secrets/credentials.json" "/vault/secrets/app-confluent.json")
 
 # Source secret files injected from Vault (if they exist)
 for f in "${VAULT_SECRETS[@]}" ; do
     if [ -f $f ]; then
-        source $f
-        # rm $f
+        tmp_conf_file=$(mktemp /tmp/XXXXXXXX)
+        python3 /usr/local/bin/json_to_config.py -j $f -c $tmp_conf_file
+        source $tmp_conf_file
+        rm $tmp_conf_file
     fi
 done
 

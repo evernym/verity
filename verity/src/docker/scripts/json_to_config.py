@@ -25,7 +25,7 @@ def convert_json_to_conf(json_path, conf_path):
                 print(f'WARNING: value of the {key} parameter is None and will be omitted')
                 continue
 
-            conf_file.write(f"{key}='{value}'\n")
+            conf_file.write(f"export {key}='{value}'\n")
 
 
 if __name__ == "__main__":

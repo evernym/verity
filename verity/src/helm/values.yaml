@@ -1,11 +1,10 @@
 deployment:
-  name: "dev-cas"
-  image: "609723053065.dkr.ecr.ap-southeast-1.amazonaws.com/iac-verity-cas"
-  tag: "boisplusconf2"
-  imagePullPolicy: "IfNotPresent"
-  containerPort: 9000
+  image: "609723053065.dkr.ecr.ap-southeast-1.amazonaws.com/dev-cas" # FIXME non-prefixed image for both cas and vas
+  tag: "latest"
+  imagePullPolicy: "IfNotPresent" # TODO legacy Always
+  containerPort: 9001 # TODO legacy 9000
   vault:
-    enable: true
+    enable: false
   terminationGracePeriodSeconds: 120
   probes:
     startup:
@@ -23,11 +22,18 @@ deployment:
       periodSeconds: 5
       timeoutSeconds: 2
       failureThreshold: 2
+  useAffinity: false # TODO requires better configuraton
 k8sService:
   type: NodePort
   port: 80
-  targetPort: 9000
+  targetPort: 9001 # TODO legacy 9000
 ingress:
+  force_ssl: false
+  healthcheckPath: "/verity/node/readiness"
+  healthcheckIntervalSeconds: 5
+  healthcheckTimeoutSeconds: 2
+  unhealthyThresholdCount: 2
+  deregistrationDelay: 120
   # targetGroupARNarn: "arn:aws:elasticloadbalancing:ap-southeast-1:609723053065:targetgroup/iac-cas/bf2b04271c90f846" #TODO: make external
   targetGroupARNarn: ""
 serviceAccount:
@@ -38,62 +44,15 @@ secrets:
   # awsSecretsNameCredentialsTf: "iac/app/cas/credentials-tf" #TODO: make external
   awsSecretsNameCredentialsTf: ""
 
-vars:
-  _JAVA_OPTIONS: "-Xmx1024m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5005"
-  AKKA__LOGLEVEL: INFO
-  AKKA__MANAGEMENT__CLUSTER__BOOTSTRAP__ENABLED: "true"
-  AKKA__MANAGEMENT__HTTP__ENABLED: "true"
-  AKKA__STDOUT_LOGLEVEL: INFO
-  ALPAKKA__S3__PATH_STYLE_ACCESS: "false"
-  # VERITY__BLOB_STORE__STORAGE_SERVICE: com.evernym.verity.storage_services.aws_s3.S3AlpakkaApi
-  VERITY__BLOB_STORE__STORAGE_SERVICE: "com.evernym.verity.storage_services.leveldb.LeveldbAPI"
-  VERITY__DYNAMODB_COMMON__JOURNAL_NAME: agency_event
-  VERITY__ENDORSEMENT__REQUEST__TXN_STORE__BUCKET_NAME: "dev-endorsement-txn"
-  VERITY__ENDPOINT__PORT: "443"
-  # AKKA__COORDINATED_SHUTDOWN__PHASES__BEFORE_SERVICE_UNBIND__TIMEOUT: "20 s"
-  # METRICS_AGENT: cinnamon-agent
-  KAMON__MODULES__DATADOG_AGENT__ENABLED: "true"
-  # KAMON__MODULES__DATADOG_TRACE_AGENT__ENABLED: "true"
-  KAMON__ENVIRONMENT__TAG__ENV: "dev"
-  # VERITY__EVENTING__EVENT_SOURCE: "verity.eventing.kafka-source"
-  # VERITY__EVENTING__EVENT_SINK: "verity.eventing.kafka-sink"
-  # VERITY__METRICS__BACKEND: com.evernym.verity.metrics.backend.LightbendTelemetryMetricsBackend
-  GENESIS_TXN_FILE_LOCATION: "/var/lib/indy/genesis.txt"
-  VERITY__LIB_INDY__LEDGER__POOL_CONFIG__TIMEOUT: "40"
-  LIB_INDY_LEDGER_TAA_ENABLED: "false"
-  TAA_ENABLE: "false"
-  TAA_ACCEPT_DATE: "2023-06-29"
-  VERITY__LIB_INDY__WALLET__TYPE: mysql
-  VERITY__LIB_VDRTOOLS__LEDGER__INDY__LEGACY_DEFAULT_PREFIX: "did:indy:sovrin:staging"
-  VERITY__LIB_VDRTOOLS__LEDGER__INDY__POOL_CONFIG__TIMEOUT: "40"
-  VERITY__LIB_VDRTOOLS__LEDGER__INDY__TRANSACTION_AUTHOR_AGREEMENT__ENABLED: "false"
-  VERITY__LIB_VDRTOOLS__WALLET__TYPE: mysql
-  VERITY__RETENTION_POLICY__DEFAULT__UNDEFINED_FALLBACK__EXPIRE_AFTER_DAYS: 3 day
-  VERITY__RETENTION_POLICY__DEFAULT__UNDEFINED_FALLBACK__EXPIRE_AFTER_TERMINAL_STATE: "false"
-  VERITY__RETENTION_POLICY__OUTBOX_STATE__DEFAULT__UNDEFINED_FALLBACK__INTER_DOMAIN__EXPIRE_AFTER_DAYS: 3 day
-  VERITY__RETENTION_POLICY__OUTBOX_STATE__DEFAULT__UNDEFINED_FALLBACK__INTER_DOMAIN__EXPIRE_AFTER_TERMINAL_STATE: "false"
-  VERITY__RETENTION_POLICY__OUTBOX_STATE__DEFAULT__UNDEFINED_FALLBACK__INTRA_DOMAIN__EXPIRE_AFTER_DAYS: 3 day
-  VERITY__RETENTION_POLICY__OUTBOX_STATE__DEFAULT__UNDEFINED_FALLBACK__INTRA_DOMAIN__EXPIRE_AFTER_TERMINAL_STATE: "false"
-  VERITY__SERVICES__URL_MAPPER_SERVICE__ENDPOINT__HOST: dev-cas
-  VERITY__SERVICES__URL_MAPPER_SERVICE__ENDPOINT__PORT: "9000"
-  VERITY__URL_MAPPER_API__ENABLED: "true"
-  VERITY__VDR__UNQUALIFIED_LEDGER_PREFIX: "did:indy:sovrin:staging"
-  VERITY__WALLET_STORAGE__CONNECTION_LIMIT: "10"
-  VERITY__WALLET_STORAGE__DB_NAME: wallet
-  VERITY_LOGGING_LEVEL: INFO
-# ENV CAS
-  VERITY_HTTP_PORT: "9000"
-  KAMON__ENVIRONMENT__SERVICE: "dev-cas"
-  VERITY_DYNAMODB_JOURNAL_TABLE: "iac-cas-journal"
-  VERITY_DYNAMODB_SNAPSHOT_TABLE: "iac-cas-snapshot"
-  AKKA__SHARDING_REGION_NAME__USER_AGENT: ConsumerAgent
-  AKKA__SHARDING_REGION_NAME__USER_AGENT_PAIRWISE: ConsumerAgentPairwise
-  VERITY__METRICS__PROTOCOL__TAGS__USES_SPONSOR: "true"
-  VERITY__SERVICES__PUSH_NOTIF_SERVICE__ENABLED: "true"
-  
-  # VERITY__KAFKA__COMMON__CLIENT__ID: "CAS"
-  # VERITY__KAFKA__CONSUMER__GROUP__ID: "CAS"
-  # VERITY__SERVICES__PUSH_NOTIF_SERVICE__DEFAULT_LOGO_URL: <set a default logo-url>
+# TODO don't we need sponsors, taa, vdr ???
+# List of sponsors for Verity
+#sponsors:
+# List configuration for TAA.
+#taa:
+# VDR configuration
+#vdr:
+
+vars: {} # TODO not declared in legacy
 
 # Custom and Adhoc Configuration for Verity in HOCON Notation
 # Intended to allow quick injection of config that is

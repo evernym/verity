@@ -1,5 +1,5 @@
 apiVersion: v2
-name: dev-cas
+name: dev-cas # FIXME
 # name: dev-vas
 description: A Helm chart for Kubernetes
 

@@ -28,6 +28,7 @@ k8sService:
   port: 80
   targetPort: 9001 # TODO legacy 9000
 ingress:
+  enabled: false
   force_ssl: false
   healthcheckPath: "/verity/node/readiness"
   healthcheckIntervalSeconds: 5

@@ -1,0 +1,128 @@
+deployment:
+  name: "dev-cas"
+  image: "609723053065.dkr.ecr.ap-southeast-1.amazonaws.com/dev-cas"
+  # name: "dev-vas"
+  # image: "609723053065.dkr.ecr.ap-southeast-1.amazonaws.com/dev-vas"
+  tag: "latest"
+  imagePullPolicy: "IfNotPresent"
+  containerPort: 9000
+  vault:
+    enable: true
+  terminationGracePeriodSeconds: 120
+  probes:
+    startup:
+      path: "/verity/node/liveness"
+      periodSeconds: 10
+      timeoutSeconds: 2
+      failureThreshold: 20
+    readiness:
+      path: "/verity/node/readiness"
+      periodSeconds: 5
+      timeoutSeconds: 2
+      failureThreshold: 1
+    liveness:
+      path: "/verity/node/liveness"
+      periodSeconds: 5
+      timeoutSeconds: 2
+      failureThreshold: 2
+k8sService:
+  type: NodePort
+  port: 80
+  targetPort: 9000
+ingress:
+  force_ssl: false
+  healthcheckPath: "/verity/node/readiness"
+  healthcheckIntervalSeconds: 5
+  healthcheckTimeoutSeconds: 2
+  unhealthyThresholdCount: 2
+  deregistrationDelay: 120
+
+vars:
+  VERITY__WALLET_STORAGE__READ_HOST_IP: "dev-db-cluster.cluster-ro-cl1ymvkbtgtc.ap-southeast-1.rds.amazonaws.com"
+  VERITY__WALLET_STORAGE__WRITE_HOST_IP: "dev-db-cluster.cluster-cl1ymvkbtgtc.ap-southeast-1.rds.amazonaws.com"
+  VERITY__WALLET_STORAGE__CREDENTIALS_USERNAME: "msuser"
+  VERITY__WALLET_STORAGE__CREDENTIALS_PASSWORD: "mspassword"
+  _JAVA_OPTIONS: "-Xmx1024m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5005"
+  AKKA__LOGLEVEL: INFO
+  AKKA__MANAGEMENT__CLUSTER__BOOTSTRAP__ENABLED: "true"
+  AKKA__MANAGEMENT__HTTP__ENABLED: "true"
+  AKKA__STDOUT_LOGLEVEL: INFO
+  VERITY__SERVICES__URL_SHORTENER_SERVICE__S3_SHORTENER__URL_PREFIX: "https://dev-s3-url-shortener.s3.ap-southeast-1.amazonaws.com"
+  ALPAKKA__S3__PATH_STYLE_ACCESS: "false"
+  VERITY__BLOB_STORE__STORAGE_SERVICE: com.evernym.verity.storage_services.aws_s3.S3AlpakkaApi
+  VERITY__DYNAMODB_COMMON__JOURNAL_NAME: agency_event
+  VERITY__ENDORSEMENT__REQUEST__TXN_STORE__BUCKET_NAME: "dev-endorsement-txn"
+  VERITY__ENDPOINT__HOST: "dev-vas.acentrid.com"
+  VERITY__ENDPOINT__PORT: "443"
+  # AKKA__COORDINATED_SHUTDOWN__PHASES__BEFORE_SERVICE_UNBIND__TIMEOUT: "20 s"
+  # METRICS_AGENT: cinnamon-agent
+  KAMON__MODULES__DATADOG_AGENT__ENABLED: "true"
+  # KAMON__MODULES__DATADOG_TRACE_AGENT__ENABLED: "true"
+  KAMON__ENVIRONMENT__TAG__ENV: "dev"
+  # VERITY__EVENTING__EVENT_SOURCE: "verity.eventing.kafka-source"
+  # VERITY__EVENTING__EVENT_SINK: "verity.eventing.kafka-sink"
+  # VERITY__METRICS__BACKEND: com.evernym.verity.metrics.backend.LightbendTelemetryMetricsBackend
+  GENESIS_TXN_FILE_LOCATION: "/var/lib/indy/genesis.txt"
+  VERITY__LIB_INDY__LEDGER__POOL_CONFIG__TIMEOUT: "40"
+  LIB_INDY_LEDGER_TAA_ENABLED: "false"
+  TAA_ENABLE: "false"
+  TAA_ACCEPT_DATE: "2023-06-29"
+  VERITY__LIB_INDY__WALLET__TYPE: mysql
+  VERITY__LIB_VDRTOOLS__LEDGER__INDY__LEGACY_DEFAULT_PREFIX: "did:indy:sovrin:staging"
+  VERITY__VDR__UNQUALIFIED_LEDGER_PREFIX: "did:indy:sovrin:staging"
+  VERITY__LIB_VDRTOOLS__LEDGER__INDY__POOL_CONFIG__TIMEOUT: "40"
+  VERITY__LIB_VDRTOOLS__LEDGER__INDY__TRANSACTION_AUTHOR_AGREEMENT__ENABLED: "false"
+  VERITY__LIB_VDRTOOLS__WALLET__TYPE: mysql
+  VERITY__RETENTION_POLICY__DEFAULT__UNDEFINED_FALLBACK__EXPIRE_AFTER_DAYS: 3 day
+  VERITY__RETENTION_POLICY__DEFAULT__UNDEFINED_FALLBACK__EXPIRE_AFTER_TERMINAL_STATE: "false"
+  VERITY__RETENTION_POLICY__OUTBOX_STATE__DEFAULT__UNDEFINED_FALLBACK__INTER_DOMAIN__EXPIRE_AFTER_DAYS: 3 day
+  VERITY__RETENTION_POLICY__OUTBOX_STATE__DEFAULT__UNDEFINED_FALLBACK__INTER_DOMAIN__EXPIRE_AFTER_TERMINAL_STATE: "false"
+  VERITY__RETENTION_POLICY__OUTBOX_STATE__DEFAULT__UNDEFINED_FALLBACK__INTRA_DOMAIN__EXPIRE_AFTER_DAYS: 3 day
+  VERITY__RETENTION_POLICY__OUTBOX_STATE__DEFAULT__UNDEFINED_FALLBACK__INTRA_DOMAIN__EXPIRE_AFTER_TERMINAL_STATE: "false"
+  VERITY__SERVICES__URL_MAPPER_SERVICE__ENDPOINT__HOST: "dev-cas"
+  VERITY__SERVICES__URL_MAPPER_SERVICE__ENDPOINT__PORT: "80"
+  VERITY__URL_MAPPER_API__ENABLED: "true"
+  VERITY__WALLET_STORAGE__CONNECTION_LIMIT: "10"
+  VERITY__WALLET_STORAGE__DB_NAME: wallet
+  VERITY_LOGGING_LEVEL: INFO
+# ENV CAS
+  VERITY_HTTP_PORT: "9000"
+  KAMON__ENVIRONMENT__SERVICE: "dev-cas"
+  VERITY_DYNAMODB_JOURNAL_TABLE: "agency_akka_cas"
+  VERITY_DYNAMODB_SNAPSHOT_TABLE: "agency_akka_snapshot_cas"
+  AKKA__SHARDING_REGION_NAME__USER_AGENT: ConsumerAgent
+  AKKA__SHARDING_REGION_NAME__USER_AGENT_PAIRWISE: ConsumerAgentPairwise
+  VERITY__METRICS__PROTOCOL__TAGS__USES_SPONSOR: "true"
+  VERITY__SERVICES__PUSH_NOTIF_SERVICE__ENABLED: "true"
+  
+  # VERITY__KAFKA__COMMON__CLIENT__ID: "CAS"
+  # VERITY__KAFKA__CONSUMER__GROUP__ID: "CAS"
+  # VERITY__SERVICES__PUSH_NOTIF_SERVICE__DEFAULT_LOGO_URL: <set a default logo-url>
+
+
+# ENV VAS
+  # VERITY_HTTP_PORT: "9000"
+  # KAMON__ENVIRONMENT__SERVICE: "dev-vas"
+  # VERITY_DYNAMODB_JOURNAL_TABLE: "dev-vas-akka-application"
+  # VERITY_DYNAMODB_SNAPSHOT_TABLE: "verity_akka_snapshot_application"
+  # AKKA__SHARDING_REGION_NAME__USER_AGENT_PAIRWISE: VerityAgentPairwise
+  # AKKA__SHARDING_REGION_NAME__USER_AGENT: VerityAgent
+  # VERITY__AGENT__STATE__MESSAGES__CLEANUP__DAYS_TO_RETAIN_DELIVERED_MSGS: "0"
+  # VERITY__AGENT__STATE__MESSAGES__CLEANUP__TOTAL_MSGS_TO_RETAIN: "15"
+  # VERITY__METRICS__PROTOCOL__TAGS__USES_SPONSEE: "true"
+  # VERITY__PROVISIONING__CACHE_USED_TOKENS: "true"
+  # REQUIRE_SPONSOR: "false"
+  # VERITY__PROVISIONING__TOKEN_WINDOW: "1 day"
+  # VERITY__REST_API__ENABLED: "true"
+  # VERITY__SERVICES__URL_SHORTENER_SERVICE__SELECTED: com.evernym.verity.urlshortener.S3ShortenerSvc
+
+  # KAMON__METRIC__TICK_INTERVAL: "30"
+  # VERITY__SERVICES__SMS_SERVICE__EXTERNAL_SERVICES__INFO_BIP__SENDER_ID: "79087"
+  # VERITY__KAFKA__COMMON__CLIENT__ID: "VAS"
+  # VERITY__KAFKA__CONSUMER__GROUP__ID: "VAS"
+
+
+# Custom and Adhoc Configuration for Verity in HOCON Notation
+# Intended to allow quick injection of config that is
+# not managed by this helm chart
+customConfig: |

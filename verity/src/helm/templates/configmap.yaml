@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: vars-{{ .Values.deployment.name }}
+  name: vars-{{ template "verity.fullname" . }}
   labels:
     tags.datadoghq.com/service: {{ .Values.service }}
     tags.datadoghq.com/env: {{ .Values.env }}
@@ -11,19 +11,192 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: file-{{ .Values.deployment.name }}
+  name: file-{{ template "verity.fullname" . }}
   labels:
     tags.datadoghq.com/service: {{ .Values.service }}
     tags.datadoghq.com/env: {{ .Values.env }}
 data:
-{{- tpl ((.Files.Glob "assets/*").AsConfig) . | nindent 2 }}
+  customers.conf: |
+    {{- if .Values.customers }}
+    {
+      "verity": {
+
+        "msg-template": {
+          "agent-specific": {
+            {{- range $domainDid, $values := .Values.customers }}
+            {{- if .templates }}
+              {{ $domainDid | quote }}: {
+                {{ if .templates.inviteUrl }}"sms-msg-template-invite-url": {{.templates.inviteUrl | quote }}{{- end -}}
+                {{ if .templates.offerConnMsg }}"sms-msg-template-offer-conn-msg": {{.templates.offerConnMsg | quote }}{{- end }}
+                {{ if .templates.deeplinkUrl }}"sms-offer-template-deeplink-url": {{.templates.deeplinkUrl | quote }}{{- end }}
+              }
+            {{- end }}
+            {{- end }}
+          }
+        }
+
+        "agent": {
+          "authentication": {
+            "keys": {
+              {{- range $domainDid, $values := .Values.customers }}
+              {{- if .authorizedKeys }}
+                {{ $domainDid | quote }}: [{{ join ", " .authorizedKeys }}]
+              {{- end }}
+              {{- end }}
+            }
+          }
+        }
+
+        {{- if .retentionPolicies }}
+        "retention-policy": {
+          "protocol-state": {
+            {{- range $domainDid, $values := .Values.customers }}
+            {{ $domainDid | quote }}: {
+              {{ if .retentionPolicies.fallback }}"undefined-fallback": {{.retentionPolicies.fallback | quote }}{{- end }}
+              {{- if .retentionPolicies.protocols }}
+                {{- range .retentionPolicies.protocols }}
+              {{ .ref | quote }}: {{ .time | quote }}
+                {{- end }}
+              {{- end }}
+            }
+            {{- end }}
+          }
+          "outbox-state": {
+            {{- range $domainDid, $values := .Values.customers }}
+            {{ $domainDid | quote }}: {
+              {{ if .retentionPolicies.fallback }}"undefined-fallback": {{.retentionPolicies.fallback | quote }}{{- end }}
+              {{- if .retentionPolicies.outbox }}
+                {{- range .retentionPolicies.outbox }}
+              {{ .ref | quote }}: {{ .time | quote }}
+                {{- end }}
+              {{- end }}
+            }
+            {{- end }}
+          }
+        }
+        {{- end }}
+      }
+    }
+    {{- end }}
+  sponsors.conf: |
+    {{- if .Values.sponsors }}
+    {
+      "verity": {
+        "provisioning": {
+          "sponsors":
+{{ toPrettyJson .Values.sponsors | indent 10 }}
+        }
+      }
+    }
+    {{- end }}
+  metrics.conf: |
+    {{- if .Values.tracking }}
+    {
+    "verity": {
+      "metrics":
+{{ toPrettyJson .Values.tracking | indent 8 }}
+      }
+    }
+    {{- end }}
+  usage-rules.conf: |
+    {{- if .Values.usageRules }}
+    {
+    "verity": {
+      "resource-usage-rules":
+{{ toPrettyJson .Values.usageRules | indent 8 }}
+      }
+    }
+    {{- end }}
+  sms-preferred-order.conf: |
+    {{- if .Values.smsPreferredOrder }}
+    {
+    "verity": {
+      "services": {
+        "sms-service": {
+          "external-services":
+{{ toPrettyJson .Values.smsPreferredOrder | indent 12 }}
+          }
+        }
+      }
+    }
+    {{- end }}
+  internal-api-allowed-ips.conf: |
+    {{- if .Values.internalAPI }}
+    {
+    "verity": {
+      "internal-api":
+{{ toPrettyJson .Values.internalAPI | indent 8 }}
+      }
+    }
+    {{- end }}
+  msg-types-for-alert-push-notif.conf: |
+    {{- if .Values.msgTypesAlertPushNotif }}
+    {
+    "verity": {
+      "services": {
+        "push-notif-service":
+{{ toPrettyJson .Values.msgTypesAlertPushNotif | indent 10 }}
+        }
+      }
+    }
+    {{- end }}
+  logback.xml: |
+    <?xml version='1.0' encoding='UTF-8'?>
+    <configuration scan="true" scanPeriod="60 seconds">
+      <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class='ch.qos.logback.core.encoder.LayoutWrappingEncoder'>
+          <layout class='com.evernym.verity.LogLayout' />
+        </encoder>
+      </appender>
+
+      <root level="{{ .Values.vars.VERITY_LOGGING_LEVEL | default "INFO" }}">
+        <appender-ref ref="STDOUT" />
+      </root>
+
+      <turboFilter class="com.evernym.verity.IgnoreLoggerFilter" />
+    </configuration>
+  ledgers.conf: |
+    {{- if .Values.taa }}
+    verity.lib-vdrtools.ledger.indy.transaction_author_agreement.agreements = {
+      {{- range .Values.taa }}
+      "{{ .version }}" {
+          "digest" = "{{ .digest }}"
+          "mechanism" = "{{ .mechanism }}"
+          "time-of-acceptance" = "{{ .timeOfAcceptance }}"
+      }
+      {{- end }}
+    }
+    #THIS IS ADDED FOR BACKWARDS COMPATIBILITY, REMOVE AFTER VDR DEPLOY IS DONE
+    #BEGIN VDR BACKWARD COMPAT
+    verity.lib-indy.ledger.transaction_author_agreement.agreements = {
+      {{- range .Values.taa }}
+      "{{ .version }}" {
+          "digest" = "{{ .digest }}"
+          "mechanism" = "{{ .mechanism }}"
+          "time-of-acceptance" = "{{ .timeOfAcceptance }}"
+      }
+      {{- end }}
+    }
+    #END VDR BACKWARD COMPATIBILITY
+    {{- end }}
+  vdr.conf: |
+    {{- if .Values.vdr }}
+    {
+    "verity": {
+      "vdr":
+{{ toPrettyJson .Values.vdr | indent 8 }}
+      }
+    }
+    {{- end }}
+  custom.conf: |
+{{ .Values.customConfig | default "" | indent 4 }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: ledger-genesis-{{ .Values.deployment.name }}
+  name: ledger-genesis-{{ template "verity.fullname" . }}
   labels:
     tags.datadoghq.com/service: {{ .Values.service }}
     tags.datadoghq.com/env: {{ .Values.env }}
 data:
-{{- tpl ((.Files.Glob "assets/genesis.txt").AsConfig) . | nindent 2 }}
+{{ index .Values "ledger-genesis" | toPrettyJson | indent 2 }}

@@ -1,13 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "verity.fullname" . }}
+  name: {{ .Values.deployment.name }}
   labels:
-    tags.datadoghq.com/service: {{ .Values.service }}
-    tags.datadoghq.com/env: {{ .Values.env }}
-  annotations:
-    app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
-    app.gitlab.com/env: {{ .Values.gitlab_ci_environment_slug }}
+    app: {{ .Values.deployment.name }}
+    tags.datadoghq.com/service: {{ .Values.deployment.name }}
+    tags.datadoghq.com/env: dev
 spec:
   strategy:
     type: RollingUpdate
@@ -16,66 +14,55 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      app: {{ template "verity.fullname" . }}
+      app: {{ .Values.deployment.name }}
   replicas: {{ .Values.startReplicas }}
   template:
     metadata:
       labels:
-        app: {{ template "verity.fullname" . }}
+        app: {{ .Values.deployment.name }}
         revision: {{ .Release.Revision | quote }}
         actorSystemName: verity
-        tags.datadoghq.com/service: {{ .Values.service }}
-        tags.datadoghq.com/env: {{ .Values.env }}
+        tags.datadoghq.com/service: {{ .Values.deployment.name }}
+        tags.datadoghq.com/env: dev
       annotations:
-        app.gitlab.com/app: {{ .Values.gitlab_ci_project_path_slug }}
-        app.gitlab.com/env: {{ .Values.gitlab_ci_environment_slug }}
-        {{- if .Values.deployment.vault.enable }}
-        {{- $credentials := printf "kubernetes_secrets/eks-%s/%s-%s" .Values.gitlab_env .Values.name .Values.service }}
-        {{- $credentials_tf := printf "kubernetes_secrets/eks-%s/%s-%s-tf" .Values.gitlab_env .Values.name .Values.service }}
-        {{- $app_confluent := printf "kubernetes_secrets/eks-%s/%s/app-confluent" .Values.gitlab_env .Values.name }}
-        vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/role: "k8s-eks-{{ coalesce .Values.vault_auth_role .Values.env }}"
-        vault.hashicorp.com/auth-path: "auth/k8s/eks-{{ coalesce .Values.vault_auth_path .Values.gitlab_env }}"
-        vault.hashicorp.com/agent-inject-secret-credentials: "{{ $credentials }}"
-        vault.hashicorp.com/agent-inject-secret-credentials-tf: "{{ $credentials_tf }}"
-        vault.hashicorp.com/agent-inject-secret-app-confluent: "{{ $app_confluent }}"
-        vault.hashicorp.com/tls-secret: vault-tls-secret
-        vault.hashicorp.com/ca-cert: /vault/tls/evernym-root-ca.crt
-        vault.hashicorp.com/agent-pre-populate-only : "true"
-        vault.hashicorp.com/agent-inject-template-credentials: |
-{{ include "verity.vaultInjectTemplate" (dict "Secret" $credentials) | indent 10 }}
-        vault.hashicorp.com/agent-inject-template-credentials-tf: |
-{{ include "verity.vaultInjectTemplate" (dict "Secret" $credentials_tf) | indent 10 }}
-        vault.hashicorp.com/agent-inject-template-app-confluent: |
-{{ include "verity.vaultInjectTemplate" (dict "Secret" $app_confluent) | indent 10 }}
-        {{- end }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9095"
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - {{ .Values.deployment.name }} 
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: topology.kubernetes.io/zone
         whenUnsatisfiable: DoNotSchedule
         labelSelector:
           matchLabels:
-            app: {{ template "verity.fullname" . }}
+            app: {{ .Values.deployment.name }}
             revision: {{ .Release.Revision | quote }}
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
         whenUnsatisfiable: DoNotSchedule
         labelSelector:
           matchLabels:
-            app: {{ template "verity.fullname" . }}
+            app: {{ .Values.deployment.name }}
             revision: {{ .Release.Revision | quote }}
       terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
       containers:
-      - name: {{ template "verity.fullname" . }}
+      - name: {{ .Values.deployment.name }}
         image: {{ .Values.deployment.image }}:{{ .Values.deployment.tag }}
         resources:
           requests:
-            memory: {{ .Values.deployment.resources.requests.memory }}
-            cpu: {{ .Values.deployment.resources.requests.cpu }}
+            memory: 768Mi
+            cpu: 250m
           limits:
-            memory: {{ .Values.deployment.resources.limits.memory }}
-            cpu: {{ .Values.deployment.resources.limits.cpu }}
+            memory: 1024Mi
+            cpu: 1000m
         startupProbe:
           httpGet:
             path: {{ .Values.deployment.probes.startup.path }}
@@ -99,7 +86,7 @@ spec:
           failureThreshold: {{ .Values.deployment.probes.liveness.failureThreshold }}
         envFrom:
         - configMapRef:
-            name: vars-{{ template "verity.fullname" . }}
+            name: vars-{{ .Values.deployment.name }}
         env:
         - name: CINNAMON__CHMETRICS__DATADOG_REPORTER__HOST
           valueFrom:
@@ -109,6 +96,13 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        # The Kubernetes API discovery will use this service name to look for
+        # nodes with this value in the 'app' label.
+        - name: AKKA_CLUSTER_BOOTSTRAP_SERVICE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: "metadata.labels['app']"
         volumeMounts:
         - name: config-files
           mountPath: /etc/verity/verity-application/config-map
@@ -126,17 +120,17 @@ spec:
       volumes:
       - name: config-files
         configMap:
-          name: file-{{ template "verity.fullname" . }}
+          name: file-{{ .Values.deployment.name }}
       - name: ledger-genesis-files
         configMap:
-          name: ledger-genesis-{{ template "verity.fullname" . }}
+          name: ledger-genesis-{{ .Values.deployment.name }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ template "verity.fullname" . }}
+  name: {{ .Values.deployment.name }}
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      app: {{ template "verity.fullname" . }}
+      app: {{ .Values.deployment.name }}

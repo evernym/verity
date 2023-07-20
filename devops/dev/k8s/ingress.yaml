@@ -1,0 +1,53 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dev-alb
+  labels:
+    app: dev-alb
+    # tags.datadoghq.com/service: {{ .Values.service }}
+    # tags.datadoghq.com/env: {{ .Values.env }}
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/load-balancer-name: dev-alb
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/subnets: subnet-011ea3e76f7273579, subnet-0c14ea72d7b075671, subnet-0bcf28fd00e104afd
+    alb.ingress.kubernetes.io/certificate-arn:  "arn:aws:acm:ap-southeast-1:609723053065:certificate/23799a82-73c8-464a-af8c-6de9134bc041"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}, {"HTTP":80}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443' 
+    # {{- if .Values.ingress.wafv2_acl_id }}
+    # alb.ingress.kubernetes.io/wafv2-acl-id: {{ .Values.ingress.wafv2_acl_id }}
+    # {{- end}}
+    # {{- if .Values.ingress.wafv2_acl_arn }}
+    # alb.ingress.kubernetes.io/wafv2-acl-arn: {{ .Values.ingress.wafv2_acl_arn }}
+    # {{- end}}
+    # alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=access-logs-{{ .Values.service }}-eks-{{ .Values.env }}
+    alb.ingress.kubernetes.io/healthcheck-path: "/verity/node/readiness"
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '5'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/target-group-attributes: "deregistration_delay.timeout_seconds=120"
+    alb.ingress.kubernetes.io/tags: "Name=dev-alb"
+    # external-dns.alpha.kubernetes.io/hostname: {{ .Values.vars.VERITY__ENDPOINT__HOST }}
+spec:
+  rules:
+  - host: dev-cas.acentrid.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dev-cas
+            port:
+              number: 80
+  - host: dev-vas.acentrid.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dev-vas
+            port:
+              number: 80

@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vars-{{ .Values.deployment.name }}
+  labels:
+    tags.datadoghq.com/service: {{ .Values.service }}
+    tags.datadoghq.com/env: {{ .Values.env }}
+data:
+{{ toYaml .Values.vars | indent 2 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: file-{{ .Values.deployment.name }}
+  labels:
+    tags.datadoghq.com/service: {{ .Values.service }}
+    tags.datadoghq.com/env: {{ .Values.env }}
+data:
+{{- tpl ((.Files.Glob "assets/*").AsConfig) . | nindent 2 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ledger-genesis-{{ .Values.deployment.name }}
+  labels:
+    tags.datadoghq.com/service: {{ .Values.service }}
+    tags.datadoghq.com/env: {{ .Values.env }}
+data:
+{{- tpl ((.Files.Glob "assets/genesis.txt").AsConfig) . | nindent 2 }}

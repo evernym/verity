@@ -1,25 +1,25 @@
-# datadog:
-#   apiKey: 8a48cd8a0e60a04dde47d15c71d2a7d8
-#   site: us5.datadoghq.com
-#   logs:
-#     enabled: true
-#     containerCollectAll: true
+datadog:
+  apiKey: 8a48cd8a0e60a04dde47d15c71d2a7d8
+  site: us5.datadoghq.com
+  logs:
+    enabled: true
+    containerCollectAll: true
   
-#   prometheusScrape:
-#     enabled: true
-#     serviceEndpoints: true
-#     additionalConfigs:
-#       -
-#         configurations:
-#         - timeout: 5
-#           send_distribution_buckets: true
-#         autodiscovery:
-#           kubernetes_container_names:
-#             - dev-cas
-#             - dev-vas
-          # kubernetes_annotations:
-          #   include:
-          #     app: my-app
+  prometheusScrape:
+    enabled: true
+    serviceEndpoints: true
+    additionalConfigs:
+      -
+        configurations:
+        - timeout: 5
+          send_distribution_buckets: true
+        autodiscovery:
+          kubernetes_container_names:
+            - dev-cas
+            - dev-vas
+          kubernetes_annotations:
+            include:
+              app: my-app
 
 # ## Default values for Datadog Agent
 # ## See Datadog helm documentation to learn more:

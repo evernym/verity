@@ -1,6 +1,6 @@
 datadog:
-  apiKey: 8a48cd8a0e60a04dde47d15c71d2a7d8
-  site: us5.datadoghq.com
+  apiKey: 
+  site: ap1.datadoghq.com
   logs:
     enabled: true
     containerCollectAll: true

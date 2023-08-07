@@ -1,7 +1,7 @@
 
-Create a role, `pod-reader`, that can list pods and
-bind the default service account in the namespace
-that the binding is deployed to to that role.
+# Create a role, `pod-reader`, that can list pods and
+# bind the default service account in the namespace
+# that the binding is deployed to to that role.
 
 
 kind: Role

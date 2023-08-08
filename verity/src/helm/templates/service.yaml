@@ -12,4 +12,3 @@ spec:
   ports:
     - port: {{ .Values.k8sService.port }}
       targetPort: {{ .Values.k8sService.targetPort }}
-

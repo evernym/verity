@@ -48,11 +48,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Create the name of the service account to use
 */}}
 {{- define "verity.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "verity.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.serviceAccount.name }}
-{{- end }}
+{{- include "verity.fullname" . }}
 {{- end }}
 
 {{/*

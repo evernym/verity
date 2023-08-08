@@ -157,6 +157,7 @@ data:
     </configuration>
   ledgers.conf: |
     {{- if .Values.taa }}
+    verity.lib-vdrtools.ledger.indy.transaction_author_agreement.enabled = false #TODO disabled to let application to start
     verity.lib-vdrtools.ledger.indy.transaction_author_agreement.agreements = {
       {{- range .Values.taa }}
       "{{ .version }}" {
